@@ -277,6 +277,8 @@ async function optionalCsv(name){
 async function loadAreaData(){
   await loadBand();
   try{
+    REQ=await optionalCsv('BLD-requirement.csv');
+    THERMOS=await optionalCsv('BLD-thermometer.csv');
     var rf=await findDriveFile('BLD-area_reading.csv');
     if(rf){
       var txt=await readDriveFile(rf);
@@ -286,16 +288,15 @@ async function loadAreaData(){
         var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
         var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
-        if(!AREA_DAYS[date][r.area_id])AREA_DAYS[date][r.area_id]={};
-        AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes'};
+        var u=unitFor(r.area_id,r.thermometer_id);
+        if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
+        AREA_DAYS[date][u][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes'};
       });
     }
     SPAN={}; FIRST_DAY='';
     Object.keys(AREA_DAYS).forEach(function(d){ if(!FIRST_DAY||d<FIRST_DAY) FIRST_DAY=d; });
     Object.keys(AREA_DAYS).forEach(function(d){ Object.keys(AREA_DAYS[d]).forEach(function(aid){
       var s=SPAN[aid]||(SPAN[aid]={first:d,last:d}); if(d<s.first)s.first=d; if(d>s.last)s.last=d; }); });
-    REQ=await optionalCsv('BLD-requirement.csv');
-    THERMOS=await optionalCsv('BLD-thermometer.csv');
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
@@ -449,10 +450,23 @@ function needStart(aid){
     if(r.need_type==='reading.temperature'&&r.target_table==='thermometer'&&ids[r.target_id]&&f&&(!start||f<start)) start=f; });
   return start||FIRST_DAY;
 }
-function neededOn(aid,day){
-  if(!(aid in AREA_NAMES||aid in SPAN)) return false;
+/* A line is a unit: the room, or, for a room with two or more thermometers (H5/6: H5 and H6), "room|thermometer"
+   (Lisa 11 Nov 2026: each reading shown in the room by thermometer name). A reading names its thermometer
+   (thermometer_id); an older one with none counts for the room's only thermometer, or stays on a room line. */
+function roomThermos(aid){ return THERMOS.filter(function(t){ return t.area_id===aid; }).sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'en',{numeric:true}); }); }
+function multi(aid){ return roomThermos(aid).length>1; }
+function unitFor(aid,tid){ return tid&&multi(aid)?aid+'|'+tid:aid; }
+function unitArea(u){ return String(u).split('|')[0]; }
+function unitThermo(u){ var tid=String(u).split('|')[1]||''; return tid?THERMOS.filter(function(t){ return t.id===tid; })[0]||{id:tid}:null; }
+function unitName(u){ var t=unitThermo(u); return areaName(unitArea(u))+(t?' · '+(t.name||t.id):''); }
+function unitsOf(aid){ return multi(aid)?[aid].concat(roomThermos(aid).map(function(t){ return aid+'|'+t.id; })):[aid]; }
+function neededOn(u,day){
+  var aid=unitArea(u), t=unitThermo(u);
+  if(!(aid in AREA_NAMES||u in SPAN)) return false;
+  if(!t&&multi(aid)) return false;   /* a room line beside named thermometers holds only older readings */
   var first=needStart(aid); if(!first||day<first||day>TODAY_STR) return false;
-  return roomInUse(aid,day)&&thermoNeeded(aid,day);
+  var T=window.BLDThermometer;
+  return roomInUse(aid,day)&&(t&&T?T.neededOn(t,day,REQ):thermoNeeded(aid,day));
 }
 function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* One slot: in / out / nolimit / miss / due / none */
@@ -475,9 +489,11 @@ function slotState(t,aid,day,slot){
 /* The rooms shown for a day: needed that day or with a reading, in round order. */
 function dayRooms(day){
   var ar=AREA_DAYS[day]||{};
-  return areasInWalk(Object.keys(ar).concat(Object.keys(SPAN),THERMOS.map(function(t){ return t.area_id; }))).filter(function(aid){ return ar[aid]||neededOn(aid,day); }).map(function(aid){
-    var r=ar[aid]||{};
-    return {aid:aid, name:areaName(aid), am:slotState(r.am,aid,day,'am'), pm:slotState(r.pm,aid,day,'pm')};
+  var ids=Object.keys(ar).concat(Object.keys(SPAN)).map(unitArea).concat(THERMOS.map(function(t){ return t.area_id; }));
+  var units=[]; areasInWalk(ids).forEach(function(aid){ units=units.concat(unitsOf(aid)); });
+  return units.filter(function(u){ return ar[u]||neededOn(u,day); }).map(function(u){
+    var r=ar[u]||{};
+    return {aid:u, name:unitName(u), am:slotState(r.am,u,day,'am'), pm:slotState(r.pm,u,day,'pm')};
   });
 }
 function daySummary(day){

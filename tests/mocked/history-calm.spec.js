@@ -279,3 +279,26 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   await expect(jan).toHaveAttribute('data-read', String(want.read + 2));
   await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));    // R3 PM 07/01, R1 and R2 AM 08/01 covered
 });
+
+// Two named thermometers in one room (Lisa 11 Nov 2026, H5/6): one line each, "H5/6 · H5" and "H5/6 · H6", each
+// missed on its own. An older reading with no thermometer_id still counts for a room with only one thermometer.
+test('audit: a room with two thermometers has a line per thermometer; a blank thermometer_id counts for a one-thermometer room', async ({ page, guard }) => {
+  const rooms = 'id,code,group_sort\narea-h,H5/6,1\narea-s,S1,2\n';
+  const thermos = 'id,tenant_id,name,area_id\nth-h6,t,H6,area-h\nth-h5,t,H5,area-h\nth-s,t,S1,area-s\n';
+  const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,thermometer_id\n'
+    + 'rdg-1,area-h,2026-01-12T09:00:00Z,2026-01-12T00:00:00+00:00,12.0,15.0,camera,th-h5\n'
+    + 'rdg-2,area-s,2026-01-12T09:00:00Z,2026-01-12T00:00:00+00:00,12.0,15.0,camera,\n';
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard, null, rooms);
+  put('BLD-area_reading.csv', readings);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  guard.world.file('bld-thermo', 'BLD-thermometer.csv', thermos, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await page.locator('#rdate').fill('2026-01-12');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile .rn')).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
+  await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H5' }).locator('.warn')).toHaveCount(0);
+  await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H6' }).locator('.warn')).toHaveText(['AM missed']);
+  await expect(page.locator('#view-d .rtile', { hasText: 'S1' }).locator('.warn')).toHaveCount(0);
+});
