@@ -77,3 +77,18 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   await page.getByRole('button', { name: 'Dog kennel cards' }).click();
   await expect(page.locator('.qcard b')).toHaveText(['Test here', 'Test offsite']);
 });
+
+test('room signs are never made for a retired room (code starting ZZ_)', async ({ page }) => {
+  const tables = {
+    area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-zz', code: 'ZZ_OLD' }], subject: [], subject_status: [], litter: [], occupancy: [],
+    qr_tag: [{ tag: 'EEEEEEEE', kind: 'area', ref_id: 'area-t1', active: 'true' }, { tag: 'FFFFFFFF', kind: 'area', ref_id: 'area-zz', active: 'true' }]
+  };
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Room signs' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['T1']);
+});

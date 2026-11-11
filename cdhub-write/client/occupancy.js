@@ -21,6 +21,8 @@
   // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
   var AWAY_STATE = 'off_site_temp';
 
+  /** A room row Lisa has retired: its code starts ZZ_ (rows are never deleted). Hidden everywhere. */
+  function inUse(a) { return !!a && !/^ZZ_/i.test(String(a.code || '')); }
   /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
@@ -51,7 +53,7 @@
    */
   function dailyList(T) {
     T = T || {};
-    var areas = (T.area || []).map(function (a) {
+    var areas = (T.area || []).filter(inUse).map(function (a) {
       return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0 };
     });
     var areaById = {};
@@ -102,5 +104,5 @@
     });
   }
 
-  return { latestRow: latestRow, offSite: offSite, dailyList: dailyList, loadViaScript: loadViaScript };
+  return { latestRow: latestRow, offSite: offSite, inUse: inUse, dailyList: dailyList, loadViaScript: loadViaScript };
 }));

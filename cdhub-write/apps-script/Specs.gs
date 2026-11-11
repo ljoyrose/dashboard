@@ -119,6 +119,43 @@ var TABLES = {
     }
   },
 
+  // ---------------------------------------------------------------- sensor_reading
+  // One room's daily low and high from a plug-in sensor (Govee export), added by the OWNER from the year report
+  // page (NEW: TEMPS, 11 Nov 2026). A separate file: a sensor day never counts as, or overwrites, a staff reading.
+  // samples = how many sensor readings made that day's low and high. Lisa creates the file (header row only);
+  // own switch TABLE_ON_sensor_reading, OFF by default. The same room, day and source twice is a repeat, not a new day.
+  sensor_reading: {
+    key: 'sensor_reading',
+    file: 'BLD-sensor_reading.csv',
+    idPrefix: 'snr',
+    columns: ['id', 'tenant_id', 'area_id', 'day', 'min_c', 'max_c', 'samples', 'source', 'device_label', 'taken_at', 'taken_by'],
+    proposedColumns: ['id', 'tenant_id', 'area_id', 'day', 'min_c', 'max_c', 'samples', 'source', 'device_label', 'taken_at', 'taken_by'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      area_id:      { type: 'ref', lookup: 'area', required: true },
+      day:          { type: 'date', required: true },
+      min_c:        { type: 'temp', required: true },
+      max_c:        { type: 'temp', required: true },
+      samples:      { type: 'text', required: true },   // checked below: a whole number (a day of minute readings is 1440)
+      source:       { type: 'text', required: true },   // e.g. govee
+      device_label: { type: 'text' }
+    },
+    dupKey: ['area_id', 'day', 'source'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.samples && row.samples !== '' && !/^\d{1,6}$/.test(row.samples)) errors.samples = 'Use a whole number.';
+      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
+          parseFloat(row.min_c) > parseFloat(row.max_c)) {
+        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      }
+    }
+  },
+
   // ---------------------------------------------------------------- check_type
   // The kennel's own list of staff checks (feeding, medicine, cleaning...): entered by the OWNER as rows, never
   // hard-coded, because they differ by kennel. NEW table, own switch, OFF by default. A change is a new row with a
@@ -605,6 +642,9 @@ var READABLE = {
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
   litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
+  temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
+  sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };
