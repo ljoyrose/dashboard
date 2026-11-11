@@ -156,6 +156,40 @@ var TABLES = {
     }
   },
 
+  // ---------------------------------------------------------------- thermometer
+  // One thermometer per place (a room or a corridor, never a field), so the round lists the thermometers, not the
+  // rooms (NEW: TEMPS, 11 Nov 2026). How many there are is rows, never code. The OWNER adds one; its QR card is made on
+  // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. To fix a row the
+  // owner edits it in place (name, area_id, valid_from, valid_to, active); to retire one, active = false. Needed from
+  // valid_from up to and including valid_to: outside those days nothing flags it for a missing reading. Own switch, OFF by default.
+  thermometer: {
+    key: 'thermometer',
+    file: 'BLD-thermometer.csv',
+    idPrefix: 'thm',
+    columns: ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'],
+    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    ownerEdit: { active: { type: 'bool' } },
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      name:      { type: 'text', required: true },
+      area_id:   { type: 'ref', lookup: 'area', required: true },
+      valid_from: { type: 'date', required: true },   // needed from this day...
+      valid_to:   { type: 'date' }                    // ...up to and including this day; blank = not ended (Lisa 11 Nov 2026)
+    },
+    dupKey: ['name'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.active = 'true'; row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.name && row.name !== '' && row.name.length > 40) errors.name = 'Use 40 characters or fewer.';
+      if (!errors.valid_from && !errors.valid_to && row.valid_from && row.valid_to && row.valid_to < row.valid_from) errors.valid_to = 'The end date cannot be before the start date.';
+    }
+  },
+
   // ---------------------------------------------------------------- check_type
   // The kennel's own list of staff checks (feeding, medicine, cleaning...): entered by the OWNER as rows, never
   // hard-coded, because they differ by kennel. NEW table, own switch, OFF by default. A change is a new row with a
@@ -399,7 +433,7 @@ var TABLES = {
     defaultMode: 'direct',
     input: {
       tag:    { type: 'text', required: true },
-      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site'], required: true },   // site = the one premises code
+      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true },   // site = the one premises code
       ref_id: { type: 'text', required: true }
     },
     dupKey: ['tag'], dupTimeCol: null,
@@ -645,6 +679,7 @@ var READABLE = {
   // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
   temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
   sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
+  thermometer:     { file: 'BLD-thermometer.csv',     vis: 'thermometer',     authorCol: 'made_by',     dateCol: 'made_at' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };

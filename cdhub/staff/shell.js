@@ -10,7 +10,7 @@
 (function () {
   'use strict';
   var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
-  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
+  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
   var ICONS = {
     report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',

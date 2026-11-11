@@ -66,6 +66,10 @@
       if (row.kind === 'area') drawRoom(row.ref_id);
       else if (row.kind === 'subject') drawDog(row.ref_id);
       else if (row.kind === 'litter') drawLitter(row.ref_id);
+      else if (row.kind === 'thermometer') {   // the temperature round (NEW: TEMPS) opens at this thermometer's place
+        try { localStorage.setItem('bld.temp.thermometer', JSON.stringify({ thermometerId: row.ref_id, at: Date.now() })); } catch (e) { /* the round still opens */ }
+        c.go('m/temperature');
+      }
       else host.appendChild(say('This QR code is not one the page knows.', 'bad'));
 
       function drawRoom(areaId) {
