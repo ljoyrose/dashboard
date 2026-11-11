@@ -94,22 +94,27 @@ test('read filter: area_id and London days narrow the rows; it never widens them
   assert.equal(read(env, { table: 'area', filter: { from: '2026-07-01' } }).code, 'BAD_FILTER');        // no date column to filter on
 });
 
-// ---- thermometers (NEW: TEMPS, 11 Nov 2026): one per place; the count is rows, not code
-const THM_HEADER = ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'];
+// ---- thermometers (NEW: TEMPS, 11 Nov 2026): one per place; the count is rows, not code. A thing carries no dates
+// (Lisa 11 Nov 2026, "A standard"): when one is needed is BLD-requirement rows.
+const THM_HEADER = ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'];
+const REQ_HEADER = ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'];
 const thmEnv = (props) => {
-  const env = env0(Object.assign({ TABLE_ON_thermometer: 'true', TABLE_ON_qr_tag: 'true', OWNER_EDIT_ENABLED: 'true' }, props || {}));
+  const env = env0(Object.assign({ TABLE_ON_thermometer: 'true', TABLE_ON_qr_tag: 'true', TABLE_ON_requirement: 'true', OWNER_EDIT_ENABLED: 'true' }, props || {}));
   env.addFile('BLD-thermometer.csv', fx.headerOnly(THM_HEADER));
+  env.addFile('BLD-requirement.csv', fx.headerOnly(REQ_HEADER));
   env.addFile('BLD-qr_tag.csv', fx.headerOnly(['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by']));
   return env;
 };
-const thm = (env, code, fields) => save(env, req(env, { code, table: 'thermometer', fields: Object.assign({ name: 'T1', area_id: areas(env)[0], valid_from: '2026-11-01' }, fields || {}) }));
+const thm = (env, code, fields) => save(env, req(env, { code, table: 'thermometer', fields: Object.assign({ name: 'T1', area_id: areas(env)[0] }, fields || {}) }));
+const need = (env, code, fields) => save(env, req(env, { code, table: 'requirement', fields: Object.assign({ need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'thm-1', from_date: '2026-11-01' }, fields || {}) }));
+const R = (type, table, id, from, to) => ({ need_type: type, target_table: table, target_id: id, from_date: from, to_date: to || '' });
 
-test('thermometer: the owner adds one straight in, stamped active; the same name twice is a repeat; staff and guests cannot add', () => {
+test('thermometer: the owner adds one straight in, with no dates and no active column; the same name twice is a repeat; staff and guests cannot add', () => {
   const env = thmEnv();
   const r = thm(env, env.codes.owner);
   assert.equal(r.ok, true); assert.match(r.result.id, /^thm-/);
   const [row] = recs(env, 'BLD-thermometer.csv');
-  assert.equal(row.active, 'true'); assert.ok(row.made_at && row.made_by);
+  assert.deepEqual(Object.keys(row), THM_HEADER); assert.ok(row.made_at && row.made_by);
   assert.equal(thm(env, env.codes.owner).code, 'DUPLICATE');
   assert.equal(thm(env, env.codes.owner, { name: 'Corridor 1', area_id: areas(env)[1] }).ok, true);
   assert.equal(thm(env, env.codes.staff, { name: 'T9' }).code, 'NOT_ALLOWED');
@@ -120,16 +125,15 @@ test('thermometer: the owner adds one straight in, stamped active; the same name
   assert.equal(thm(off, off.codes.owner).code, 'TABLE_OFF');
 });
 
-test('thermometer: a QR tag of kind thermometer can be made; the owner edit renames, moves or retires one in place', () => {
+test('thermometer: a QR tag of kind thermometer can be made; the owner edit renames or moves one in place', () => {
   const env = thmEnv();
   const id = thm(env, env.codes.owner).result.id;
   assert.equal(save(env, req(env, { code: env.codes.owner, table: 'qr_tag', fields: { tag: 'THERMO23', kind: 'thermometer', ref_id: id } })).ok, true);
   env.email = 'owner@example.test';
-  const r = env.ctx.ui_edit('thermometer', id, { name: 'Hall', area_id: areas(env)[1], valid_to: '2026-11-11', active: 'false' });
+  const r = env.ctx.ui_edit('thermometer', id, { name: 'Hall', area_id: areas(env)[1] });
   assert.equal(r.ok, true, JSON.stringify(r));
   const [row] = recs(env, 'BLD-thermometer.csv');
-  assert.equal(row.name, 'Hall'); assert.equal(row.area_id, areas(env)[1]); assert.equal(row.active, 'false'); assert.equal(row.valid_to, '2026-11-11');
-  assert.equal(env.ctx.ui_edit('thermometer', id, { valid_to: '2026-10-01' }).ok, false);   // an end before the start is refused
+  assert.equal(row.name, 'Hall'); assert.equal(row.area_id, areas(env)[1]);
   assert.equal(recs(env, 'BLD-thermometer.csv').length, 1);
   assert.equal(save(env, req(env, { code: env.codes.owner, table: 'thermometer', action: 'correct', corrects_id: id, reason: 'renamed', fields: { name: 'X', area_id: areas(env)[0] } })).ok, false);   // fixed by the owner edit, not the queue
 });
@@ -138,56 +142,82 @@ test('thermometer: staff and owner can read the list when Lisa allows it; guests
   const env = thmEnv();
   thm(env, env.codes.owner);
   assert.equal(read(env, { table: 'thermometer' }).code, 'NOT_ALLOWED');   // default-deny until the visibility rows exist
-  addVis(env, ['*', 'id', 'name', 'area_id', 'active'].map((f) => fv('thermometer', f, 'aud-staff')));
+  addVis(env, ['*', 'id', 'name', 'area_id'].map((f) => fv('thermometer', f, 'aud-staff')));
   const r = read(env, { table: 'thermometer' });
   assert.equal(r.ok, true); assert.equal(r.result.count, 1);
   assert.equal(r.result.fields.includes('made_by'), false);
   assert.equal(read(env, { table: 'thermometer', code: env.ctx.adminAddGuestCode() }).code, 'NOT_ALLOWED');
 });
 
-test('thermometer: needed from valid_from up to and including valid_to; a row with no From or an end before the start is refused', () => {
+test('requirement: the owner adds a need row straight in; From is required, an end before the start is refused; staff and guests cannot add', () => {
   const env = thmEnv();
-  assert.equal(thm(env, env.codes.owner, { valid_from: '' }).ok, false);
-  const bad = thm(env, env.codes.owner, { name: 'T2', valid_from: '2026-11-11', valid_to: '2026-11-10' });
-  assert.equal(bad.ok, false); assert.match(bad.fields.valid_to, /before the start/);
-  assert.equal(thm(env, env.codes.owner, { name: 'T3', valid_from: '2026-11-01', valid_to: '2026-11-11' }).ok, true);
-  assert.equal(recs(env, 'BLD-thermometer.csv')[0].valid_to, '2026-11-11');
+  const r = need(env, env.codes.owner, { to_date: '2026-11-11', source: 'Lisa 11 Nov' });
+  assert.equal(r.ok, true, JSON.stringify(r)); assert.match(r.result.id, /^req-/);
+  const [row] = recs(env, 'BLD-requirement.csv');
+  assert.deepEqual(Object.keys(row), REQ_HEADER);
+  assert.equal(row.to_date, '2026-11-11'); assert.ok(row.set_by && row.set_on);
+  assert.equal(need(env, env.codes.owner, { to_date: '2026-11-11' }).code, 'DUPLICATE');   // same need, same target, same From
+  assert.equal(need(env, env.codes.owner, { from_date: '' }).ok, false);
+  const bad = need(env, env.codes.owner, { from_date: '2026-11-11', to_date: '2026-11-10' });
+  assert.equal(bad.ok, false); assert.match(bad.fields.to_date, /before the start/);
+  assert.equal(need(env, env.codes.owner, { target_id: 'a b,c' }).ok, false);
+  assert.equal(need(env, env.codes.staff, { from_date: '2026-11-02' }).code, 'NOT_ALLOWED');
+  assert.equal(need(env, env.ctx.adminAddGuestCode(), { from_date: '2026-11-03' }).code, 'NOT_ALLOWED');
+  const room = need(env, env.codes.owner, { need_type: 'room.in_use', target_table: 'area', target_id: areas(env)[0] });
+  assert.equal(room.ok, true);
+  env.email = 'owner@example.test';
+  assert.equal(env.ctx.ui_edit('requirement', room.result.id, { to_date: '2026-11-11' }).ok, true);   // to end it, fill in its to_date
+  assert.equal(env.ctx.ui_edit('requirement', room.result.id, { to_date: '2026-10-01' }).ok, false);
+  assert.equal(recs(env, 'BLD-requirement.csv').length, 2);
+  const off = thmEnv({ TABLE_ON_requirement: 'false' });
+  assert.equal(need(off, off.codes.owner).code, 'TABLE_OFF');
 });
 
-test('BLDThermometer: the 2 extra thermometers are needed up to and including 11 Nov 2026, then not; nothing outside its dates is needed', () => {
+test('requirement: staff read it through visibility rows; a guest may read it too (for the room list), only as far as the rows allow', () => {
+  const env = thmEnv();
+  need(env, env.codes.owner, { need_type: 'room.in_use', target_table: 'area', target_id: areas(env)[0], to_date: '2026-11-11' });
+  assert.equal(read(env, { table: 'requirement' }).code, 'NOT_ALLOWED');
+  const F = ['*', 'id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date'];
+  addVis(env, F.map((f) => fv('requirement', f, 'aud-staff')));
+  const r = read(env, { table: 'requirement' });
+  assert.equal(r.ok, true); assert.equal(r.result.count, 1); assert.equal(r.result.fields.includes('set_by'), false);
+  const g = env.ctx.adminAddGuestCode();
+  assert.equal(read(env, { table: 'requirement', code: g }).code, 'NOT_ALLOWED');   // no guest rows yet
+  addVis(env, F.map((f) => fv('requirement', f, 'aud-guest')));
+  assert.equal(read(env, { table: 'requirement', code: g }).ok, true);
+  assert.equal(read(env, { table: 'thermometer', code: g }).code, 'NOT_ALLOWED');   // still nothing else
+});
+
+test('BLDThermometer: the 2 extra thermometers are needed up to and including 11 Nov 2026, then not; one with no need rows is always needed', () => {
   const T = require('../../cdhub/staff/lib/thermometer.js');
-  const extra = { id: 'thm-23', name: 'Extra A', valid_from: '2026-11-01', valid_to: '2026-11-11', active: 'true' };
-  const kept = { id: 'thm-1', name: 'Hall', valid_from: '2026-11-01', valid_to: '', active: 'true' };
-  const later = { id: 'thm-30', name: 'Corridor 2', valid_from: '2026-12-01', active: 'true' };
-  const retired = { id: 'thm-9', name: 'Old', valid_from: '2026-01-01', active: 'false' };
-  assert.equal(T.neededOn(extra, '2026-11-11'), true);
-  assert.equal(T.neededOn(extra, '2026-11-12'), false);
-  assert.equal(T.neededOn(extra, '2026-10-31'), false);
-  assert.equal(T.neededOn(kept, '2027-06-01'), true);
-  assert.equal(T.neededOn(later, '2026-11-30'), false);
-  assert.equal(T.neededOn(later, '2026-12-01'), true);
-  assert.equal(T.neededOn(retired, '2026-11-11'), false);
-  assert.equal(T.neededOn(kept, ''), false);
-  const all = [extra, kept, later, retired];
-  assert.deepEqual(T.neededList(all, '2026-11-11').map((t) => t.id), ['thm-23', 'thm-1']);
-  assert.deepEqual(T.neededList(all, '2026-11-12').map((t) => t.id), ['thm-1']);
-  assert.equal(T.neededOn(Object.assign({}, kept, { valid_from: '2026-11-12T08:00:00+00:00' }), '2026-11-12'), true);   // a timestamp counts by its day
+  const extra = { id: 'thm-23', name: 'Extra A' }, kept = { id: 'thm-1', name: 'Hall' }, later = { id: 'thm-30', name: 'Corridor 2' };
+  const req = [R('reading.temperature', 'thermometer', 'thm-23', '2026-11-01', '2026-11-11'), R('reading.temperature', 'thermometer', 'thm-30', '2026-12-01'),
+    R('room.in_use', 'area', 'thm-1', '2020-01-01', '2020-01-02')];   // another need_type never ends a thermometer
+  assert.equal(T.neededOn(extra, '2026-11-11', req), true);
+  assert.equal(T.neededOn(extra, '2026-11-12', req), false);
+  assert.equal(T.neededOn(extra, '2026-10-31', req), false);
+  assert.equal(T.neededOn(kept, '2027-06-01', req), true);
+  assert.equal(T.neededOn(later, '2026-11-30', req), false);
+  assert.equal(T.neededOn(later, '2026-12-01', req), true);
+  assert.equal(T.neededOn(kept, '', req), false);
+  assert.equal(T.neededOn(kept, '2026-11-12'), true);   // no need rows read at all: needed
+  const all = [extra, kept, later];
+  assert.deepEqual(T.neededList(all, '2026-11-11', req).map((t) => t.id), ['thm-23', 'thm-1']);
+  assert.deepEqual(T.neededList(all, '2026-11-12', req).map((t) => t.id), ['thm-1']);
 });
 
 test('compliance: a retired thermometer with no reading on 12 Nov is not flagged; a needed one with no reading is', () => {
   const T = require('../../cdhub/staff/lib/thermometer.js');
-  const rows = [
-    { id: 'thm-23', name: 'Extra A', area_id: 'area-3a', valid_from: '2026-11-01', valid_to: '2026-11-11', active: 'true' },
-    { id: 'thm-1', name: 'Hall', area_id: 'area-h', valid_from: '2026-11-01', valid_to: '', active: 'true' },
-    { id: 'thm-2', name: 'Cabin', area_id: 'area-c', valid_from: '2026-11-01', valid_to: '', active: 'true' }
-  ];
+  const rows = [{ id: 'thm-23', name: 'Extra A', area_id: 'area-3a' }, { id: 'thm-1', name: 'Hall', area_id: 'area-h' }, { id: 'thm-2', name: 'Cabin', area_id: 'area-c' }];
+  const req = [R('reading.temperature', 'thermometer', 'thm-23', '2026-11-01', '2026-11-11'), R('reading.temperature', 'thermometer', 'thm-1', '2026-11-01'), R('reading.temperature', 'thermometer', 'thm-2', '2026-11-01')];
   const readings = [{ area_id: 'area-c', taken_at: '2026-11-12T08:05:00+00:00' }, { area_id: 'area-3a', taken_at: '2026-11-11T08:00:00+00:00' }];
-  assert.deepEqual(T.missingOn(rows, readings, '2026-11-12').map((t) => t.id), ['thm-1']);            // Extra A ended 11 Nov: no flag
-  assert.deepEqual(T.missingOn(rows, readings, '2026-11-11').map((t) => t.id).sort(), ['thm-1', 'thm-2']);   // on 11 Nov Extra A had its reading
-  assert.deepEqual(T.missingOn(rows, [], '2026-10-31'), []);                                         // before any valid_from: nothing to flag
+  assert.deepEqual(T.missingOn(rows, readings, '2026-11-12', req).map((t) => t.id), ['thm-1']);            // Extra A ended 11 Nov: no flag
+  assert.deepEqual(T.missingOn(rows, readings, '2026-11-11', req).map((t) => t.id).sort(), ['thm-1', 'thm-2']);   // on 11 Nov Extra A had its reading
+  assert.deepEqual(T.missingOn(rows, [], '2026-10-31', req), []);                                         // before any from_date: nothing to flag
   const late = [{ area_id: 'area-h', period_start: '2026-11-12T07:00:00Z', taken_at: '2026-11-20T09:00:00+00:00' }, { area_id: 'area-c', taken_at: '2026-11-12T08:00:00+00:00' }];
-  assert.deepEqual(T.missingOn(rows, late, '2026-11-12'), []);                                        // a reading typed in on the 20th for the 12th covers the 12th
-  assert.deepEqual(T.missingOn(rows, late, '2026-11-20').map((t) => t.id).sort(), ['thm-1', 'thm-2']); // and not the day it was typed
+  assert.deepEqual(T.missingOn(rows, late, '2026-11-12', req), []);                                        // a reading typed in on the 20th for the 12th covers the 12th
+  assert.deepEqual(T.missingOn(rows, late, '2026-11-20', req).map((t) => t.id).sort(), ['thm-1', 'thm-2']); // and not the day it was typed
+  assert.deepEqual(T.missingOn(rows, [{ area_id: 'area-h', period_start: '2026-11-12T07:00:00Z', room_empty: 'yes' }, { area_id: 'area-c', taken_at: '2026-11-12T08:00:00+00:00' }], '2026-11-12', req), []);   // a Room empty row covers its slot
 });
 
 test('after a thermometer ends, a late reading for a day it was needed still saves (Lisa 11 Nov: late readings from photos)', () => {
@@ -195,10 +225,11 @@ test('after a thermometer ends, a late reading for a day it was needed still sav
   const env = standardEnv({ nowMs: Date.UTC(2026, 10, 12, 10, 0, 0), props: { TABLE_ON_thermometer: 'true' } });   // today is 12 Nov
   env.addFile('BLD-thermometer.csv', fx.headerOnly(THM_HEADER));
   const a = areas(env)[0];
-  const ended = { id: 'thm-23', name: 'Extra A', area_id: a, active: 'true', valid_from: '2026-11-01', valid_to: '2026-11-11' };
-  env.file('BLD-thermometer.csv')[0].content = [THM_HEADER.join(','), `thm-23,${fx.TENANT},Extra A,${a},true,2026-11-01,2026-11-11,2026-11-01T09:00:00+00:00,o`].join('\r\n') + '\r\n';
-  assert.equal(T.neededOn(ended, '2026-11-12'), false);   // gone from today's round and the print list
-  assert.equal(T.neededOn(ended, '2026-11-11'), true);   // its own days stay open for entry and show in History
+  const ended = { id: 'thm-23', name: 'Extra A', area_id: a };
+  const need23 = [R('reading.temperature', 'thermometer', 'thm-23', '2026-11-01', '2026-11-11')];
+  env.file('BLD-thermometer.csv')[0].content = [THM_HEADER.join(','), `thm-23,${fx.TENANT},Extra A,${a},2026-11-01T09:00:00+00:00,o`].join('\r\n') + '\r\n';
+  assert.equal(T.neededOn(ended, '2026-11-12', need23), false);   // gone from today's round and the print list
+  assert.equal(T.neededOn(ended, '2026-11-11', need23), true);   // its own days stay open for entry and show in History
   const late = save(env, req(env, { fields: { area_id: a, min_c: '18.0', max_c: '22.0', period_start: '2026-11-11T08:00:00Z' } }));
   assert.equal(late.ok, true, JSON.stringify(late));        // never refused because today is past the end date
   const rows = recs(env, 'BLD-area_reading.csv');

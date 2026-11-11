@@ -164,34 +164,66 @@ var TABLES = {
   // ---------------------------------------------------------------- thermometer
   // One thermometer per place (a room or a corridor, never a field), so the round lists the thermometers, not the
   // rooms (NEW: TEMPS, 11 Nov 2026). How many there are is rows, never code. The OWNER adds one; its QR card is made on
-  // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. To fix a row the
-  // owner edits it in place (name, area_id, valid_from, valid_to, active); to retire one, active = false. Needed from
-  // valid_from up to and including valid_to: outside those days nothing flags it for a missing reading. Own switch, OFF by default.
+  // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. A thing carries no
+  // dates (Lisa 11 Nov 2026, "A standard"): when it is needed is BLD-requirement rows (need_type reading.temperature).
+  // To fix a row the owner edits it in place (name, area_id). Own switch, OFF by default.
   thermometer: {
     key: 'thermometer',
     file: 'BLD-thermometer.csv',
     idPrefix: 'thm',
-    columns: ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'],
-    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'],
+    columns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
+    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
     computedColumns: [],
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
     perms: { add: ['OWNER'], correct: [] },
     noCorrect: true,
     ownerEditable: true,
-    ownerEdit: { active: { type: 'bool' } },
     alwaysPending: false,
     defaultMode: 'direct',
     input: {
       name:      { type: 'text', required: true },
-      area_id:   { type: 'ref', lookup: 'area', required: true },
-      valid_from: { type: 'date', required: true },   // needed from this day...
-      valid_to:   { type: 'date' }                    // ...up to and including this day; blank = not ended (Lisa 11 Nov 2026)
+      area_id:   { type: 'ref', lookup: 'area', required: true }
     },
     dupKey: ['name'], dupTimeCol: null,
-    stamp: function (row, ctx) { row.active = 'true'; row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
+    stamp: function (row, ctx) { row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
       if (!errors.name && row.name !== '' && row.name.length > 40) errors.name = 'Use 40 characters or fewer.';
-      if (!errors.valid_from && !errors.valid_to && row.valid_from && row.valid_to && row.valid_to < row.valid_from) errors.valid_to = 'The end date cannot be before the start date.';
+    }
+  },
+
+  // ---------------------------------------------------------------- requirement
+  // Need rows (Lisa 11 Nov 2026, "A standard"): when a thing is needed or in use. need_type is a row value
+  // (reading.temperature on a thermometer, room.in_use on an area; more later as rows, never columns). A target with no
+  // rows of a need_type is always needed; with rows, only on days a row covers (from_date..to_date, both inclusive,
+  // blank to_date = no end). To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
+  requirement: {
+    key: 'requirement',
+    file: 'BLD-requirement.csv',
+    idPrefix: 'req',
+    columns: ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      need_type:    { type: 'text', required: true },   // e.g. reading.temperature, room.in_use
+      target_table: { type: 'text', required: true },   // e.g. thermometer, area
+      target_id:    { type: 'text', required: true },
+      from_date:    { type: 'date', required: true },
+      to_date:      { type: 'date' },                   // blank = no end
+      source:       { type: 'text' }                    // why: a licence condition, a document, Lisa's decision
+    },
+    dupKey: ['need_type', 'target_table', 'target_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      ['need_type', 'target_table', 'target_id'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[a-z0-9_.\-]{1,60}$/i.test(row[k])) errors[k] = 'Letters, numbers, dots, dashes or _ only.';
+      });
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
     }
   },
 
@@ -685,6 +717,7 @@ var READABLE = {
   temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
   sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
   thermometer:     { file: 'BLD-thermometer.csv',     vis: 'thermometer',     authorCol: 'made_by',     dateCol: 'made_at' },
+  requirement:     { file: 'BLD-requirement.csv',     vis: 'requirement',     authorCol: 'set_by',      dateCol: 'set_on' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };
