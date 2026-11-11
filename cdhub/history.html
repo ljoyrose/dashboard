@@ -36,7 +36,7 @@ header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;
 h1,h2,h3,b,strong{font-weight:600}
 .btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
-@media(hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
+@media(hover:hover){header .btn:hover{outline:none;box-shadow:inset 0 0 0 1px var(--frame-ink)}}
 @media(max-width:544px){.btn{min-height:44px}header.top{position:static}}
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
 .bootline{margin:14px 0 0;color:var(--ink);font-weight:400}
@@ -100,7 +100,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.unknown,.sd.unknown{background:var(--soft);border:1px dashed var(--line)}
 .d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
-.d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+.d.today:not(.empty){outline:none;box-shadow:inset 0 0 0 2px var(--ink)}
 
 /* Strip view */
 .strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}

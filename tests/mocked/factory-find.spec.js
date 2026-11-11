@@ -364,7 +364,7 @@ test.describe('Factory send gate', () => {
 // drawn inside (outline 1px, offset -1px, nothing moves); a selected bottom tab only widens its colour bar (no ring); keyboard focus is a 1px ink line inside.
 test.describe('Factory selected and focus lines', () => {
   const st = (loc) => loc.evaluateAll((els) => els.map((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, s: c.outlineStyle, o: c.outlineOffset, shadow: c.boxShadow }; }));
-  const selected = async (loc) => { const all = await st(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x).toEqual({ w: '1px', s: 'solid', o: '-1px', shadow: 'none' }); }); };
+  const selected = async (loc) => { const all = await st(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x.s, 'the line follows the corner').toBe('none'); expect(x.shadow, 'selected is the 1px line inside').toMatch(/0px 0px 0px 1px inset/); }); };
 
   test('after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px @regression', async ({ page, guard }) => {
     await open(page, guard, '#/do');
@@ -385,7 +385,7 @@ test.describe('Factory selected and focus lines', () => {
     await chip(page, 'app', '').focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle, c.outlineOffset]; });
+    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); const m = /0px 0px 0px 1px inset/.test(c.boxShadow) && c.outlineStyle === 'none'; return m ? ['1px', 'solid', '-1px'] : [c.outlineWidth, c.outlineStyle, c.outlineOffset]; });
     expect(f).toEqual(['1px', 'solid', '-1px']);
     await panel(page);
     await page.locator('.fpanel [data-fx="st"]').first().click();

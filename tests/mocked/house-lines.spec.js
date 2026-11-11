@@ -1,9 +1,10 @@
-// One line, drawn inside (Lisa, 3 Nov 2026): every line is 1px and sits INSIDE the element. Hover, focus, press and selected
-// change the colour of the existing line, or draw a 1px line inside (outline-offset -1px). Never a second line, a 2px ring
-// or a ring outside the box, so nothing looks thicker or jumps.
+// One line, drawn inside (Lisa, 3 Nov 2026; it follows the corner, 11 Nov): every line is 1px and sits INSIDE the element.
+// Hover, focus, press and selected change the colour of the existing line, or draw a 1px line inside. The line is an
+// inset shadow so it follows the control's corner (outline stays square in several browsers). Never a second line, a 2px
+// ring or a ring outside the box, so nothing looks thicker or jumps.
 // On all 8 pages, every tab and More page, at 1280 and 390 (warm light): every interactive element is keyboard-focused
-// (focus-visible) and hovered, and must keep its box, draw an outline of 1px or less at offset 0 or below, and add no
-// box-shadow ring. Typing boxes may only change their border colour on focus. Pretend Google, Drive and Sheets.
+// (focus-visible) and hovered, and must keep its box. A new shadow may only be that 1px inset line (or a swap of one
+// inset line for another). Typing boxes may only change their border colour on focus. Pretend Google, Drive and Sheets.
 //
 // LINES_AUDIT=<file> adds every finding to that file (one per line) instead of failing: the before / after list in the pull request.
 const fs = require('fs');
@@ -40,16 +41,39 @@ function readOne(e) {
     shadow: s.boxShadow, border: ['Top', 'Right', 'Bottom', 'Left'].map((k) => s['border' + k + 'Width'] + ' ' + s['border' + k + 'Style']).join('/'),
   };
 }
+// Split a computed box-shadow without breaking on the commas inside rgb().
+function splitShadows(s) {
+  if (!s || s === 'none') return [];
+  const out = [];
+  let cur = '', depth = 0;
+  for (const ch of s) {
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) { out.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+function inset1(layer) { return /(?:^|\s)0px 0px 0px 1px inset$/.test(layer); }
 // The problems between a resting read and a state read.
 function judge(rest, now, typing) {
   const bad = [];
   if (now.box !== rest.box) bad.push('moves (' + rest.box + ' > ' + now.box + ')');
   if (now.border !== rest.border) bad.push('border changes width (' + rest.border + ' > ' + now.border + ')');
-  if (now.shadow !== rest.shadow) bad.push('adds a box-shadow (' + now.shadow.slice(0, 50) + ')');
+  const before = splitShadows(rest.shadow), after = splitShadows(now.shadow);
+  const missing = before.filter((x) => !after.includes(x));
+  const extra = after.filter((x) => !before.includes(x));
+  const swapped = extra.length === 1 && missing.length === 1 && inset1(extra[0]) && inset1(missing[0]);
+  const added = extra.length === 1 && missing.length === 0 && inset1(extra[0]);
+  const line = added || swapped;
   if (typing && now.ow > 0) bad.push('typing box draws an outline (' + now.ow + 'px): change only the border colour');
-  else {
+  if (typing && (extra.length || missing.length)) bad.push('typing box changes its shadow (' + now.shadow.slice(0, 50) + ')');
+  if (!typing) {
+    if (!line && (extra.length || missing.length)) bad.push('box-shadow changes (' + now.shadow.slice(0, 60) + ')');
     if (now.ow > 1) bad.push(now.ow + 'px outline');
     if (now.ow > 0 && now.oo > 0) bad.push('ring outside the box (offset ' + now.oo + 'px)');
+    if (now.ow > 0 && line) bad.push('second line (outline and inset shadow)');
   }
   return bad;
 }
@@ -85,7 +109,7 @@ function focusAll() {
 for (const [hub, P] of Object.entries(PAGES)) {
   test.describe(hub, () => {
     for (const W of [1280, 390]) {
-      test(`${W}: focus and hover keep one 1px line inside (no ring outside, no 2px, no shadow, nothing moves)`, async ({ page, guard }) => {
+        test(`${W}: focus and hover keep one 1px line inside (no ring outside, no 2px, no extra shadow, nothing moves)`, async ({ page, guard }) => {
         test.setTimeout(480_000);   // every control on every view; the shared Mac is slow under a full run
         await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
         await setLook(page, { bg: 'warm', mode: 'device', scheme: 'light' });

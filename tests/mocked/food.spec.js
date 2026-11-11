@@ -643,7 +643,7 @@ test.describe('GA Hub house look', () => {
         await page.mouse.move(0, 0);
         const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
-        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
+        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(s.boxShadow); return { ow: m ? '1px' : s.outlineWidth, os: m ? 'solid' : s.outlineStyle, oo: m ? '-1px' : s.outlineOffset, oc: m ? m[1] : s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
         expect({ ow: hv.ow, os: hv.os, oo: hv.oo, bw: hv.bw }).toEqual({ ow: '1px', os: 'solid', oo: '-1px', bw: '1px' });
         if (hv.coloured) { expect(hv.oc).not.toBe(ink); expect(hv.oc, 'keeps its resting colour line').toBe(st.c); } else expect(hv.oc).toBe(ink);
         // Lisa's sweep (3 Nov 2026): every control hovers with the line only, never a fill.
@@ -686,7 +686,8 @@ test.describe('GA Hub house look', () => {
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
       const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--hmc').trim(); // the house meaning colour (house.css)
         const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
-        return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, own: oc, bg: s.backgroundColor }; });
+        const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(s.boxShadow);
+        return { ow: m ? '1px' : s.outlineWidth, os: m ? 'solid' : s.outlineStyle, oo: m ? '-1px' : s.outlineOffset, oc: m ? m[1] : s.outlineColor, own: oc, bg: s.backgroundColor }; });
       const check = (l, what) => {
         expect({ ow: l.ow, os: l.os, oo: l.oo }, what).toEqual({ ow: '1px', os: 'solid', oo: '-1px' });
         expect(l.oc, what + ': line is not ink').not.toBe(ink);

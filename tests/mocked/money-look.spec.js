@@ -161,7 +161,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
             : kind === 'frame'
               ? { line: probe('color', 'var(--frame-ink)') }
               : { line: probe('color', 'var(--ink)') };
-          return { box: [r.x, r.y, r.width, r.height], ow: cs.outlineWidth, os: cs.outlineStyle, oo: cs.outlineOffset, oc: cs.outlineColor, bg: cs.backgroundColor, want, ink: probe('color', 'var(--ink)') };
+          const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(cs.boxShadow);
+          return { box: [r.x, r.y, r.width, r.height], ow: m && cs.outlineStyle === 'none' ? '1px' : cs.outlineWidth, os: m && cs.outlineStyle === 'none' ? 'solid' : cs.outlineStyle, oo: m && cs.outlineStyle === 'none' ? '-1px' : cs.outlineOffset, oc: m && cs.outlineStyle === 'none' ? m[1] : cs.outlineColor, bg: cs.backgroundColor, want, ink: probe('color', 'var(--ink)') };
         }, kind);
         const where = `${sel} (${scheme})`;
         expect(got.box, `${where} moved or resized on hover`).toEqual(before);
@@ -181,7 +182,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
   test('selected: sub-tab looks like hover (ink line, no fill: the same fill as the sub-tabs beside it); the selected bottom tab only widens its colour bar', async ({ page }) => {
     await open(page, 'light');
     await go(page, 'todo');
-    const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
+    const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(cs.boxShadow); return m && cs.outlineStyle === 'none' ? ['solid', '1px', '-1px', m[1], cs.backgroundColor] : [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
     const sub = await look('.subnav a[aria-current="page"]');
     await page.mouse.move(0, 0); // nothing hovered: the bar must be wide because it is selected
     await settle(page.locator('nav.main a[aria-current="page"]'));
@@ -219,7 +220,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     await page.locator('#view a.btn').first().focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    const f = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); return [cs.outlineWidth, cs.outlineStyle, cs.outlineColor, getComputedStyle(document.body).color, cs.outlineOffset]; });
+    const f = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(cs.boxShadow); const ink = getComputedStyle(document.body).color; return m && cs.outlineStyle === 'none' ? ['1px', 'solid', m[1], ink, '-1px'] : [cs.outlineWidth, cs.outlineStyle, cs.outlineColor, ink, cs.outlineOffset]; });
     expect(f[0]).toBe('1px');
     expect(f[4]).toBe('-1px');
     expect(f[1]).toBe('solid');

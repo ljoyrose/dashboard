@@ -107,7 +107,7 @@ test.describe('Home: house look', () => {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
         await el.hover(); await settle(el);
-        const o = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === getComputedStyle(document.body).color]; });
+        const o = await el.evaluate((e) => { const c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); const ink = getComputedStyle(document.body).color; return m && c.outlineStyle === 'none' ? ['solid', '1px', '-1px', m[1] === ink] : [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === ink]; });
         expect(o, sel + ' hover').toEqual(['solid', '1px', '-1px', true]);
       }
       // Read-only pills: hovering changes nothing.
@@ -126,7 +126,7 @@ test.describe('Home: house look', () => {
         await expect(el).toHaveAttribute('href', /^#\/do\/(urgent|soon|todo)$/);
         const box = await el.boundingBox();
         await el.hover(); await settle(el);
-        const o = await el.evaluate((e) => { const c = getComputedStyle(e); return { o: [c.outlineStyle, c.outlineWidth, c.outlineOffset].join(' '), ink: c.outlineColor === getComputedStyle(document.body).color, risk: e.classList.contains('k-risk') }; });
+        const o = await el.evaluate((e) => { const c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); const ink = getComputedStyle(document.body).color; return { o: m && c.outlineStyle === 'none' ? 'solid 1px -1px' : [c.outlineStyle, c.outlineWidth, c.outlineOffset].join(' '), ink: (m ? m[1] : c.outlineColor) === ink, risk: e.classList.contains('k-risk') }; });
         expect(o.o).toBe('solid 1px -1px');
         expect(o.ink, 'urgent keeps its rose line; the others turn ink').toBe(!o.risk);
         expect(await el.boundingBox()).toEqual(box);
@@ -154,7 +154,8 @@ test.describe('Home: house look', () => {
           const col = (v) => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d); const x = getComputedStyle(d).color; d.remove(); return x; };
           const ink = getComputedStyle(document.body).color, card = col(root.getPropertyValue('--card').trim());
           const hc = col(c.getPropertyValue('--hc').trim() || 'transparent');
-          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, ink, bg: c.backgroundColor, card, hc,
+          const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow);
+          return { outline: m && c.outlineStyle === 'none' ? 'solid 1px -1px' : c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: m && c.outlineStyle === 'none' ? m[1] : c.outlineColor, ink, bg: c.backgroundColor, card, hc,
             rest, coloured };
         }, [coloured, rest]);
       };
@@ -180,7 +181,8 @@ test.describe('Home: house look', () => {
           const c = getComputedStyle(e), d = document.createElement('i');
           d.style.color = getComputedStyle(e.closest('.hubtile')).getPropertyValue('--sc').trim() || getComputedStyle(document.body).color;
           document.body.appendChild(d); const sc = getComputedStyle(d).color; d.remove();
-          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, sc, bg: c.backgroundColor };
+          const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow);
+          return { outline: m && c.outlineStyle === 'none' ? 'solid 1px -1px' : c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: m && c.outlineStyle === 'none' ? m[1] : c.outlineColor, sc, bg: c.backgroundColor };
         });
         expect([r.outline, r.oc], sel + ': hover = 1px ring in the tile colour').toEqual(['solid 1px -1px', r.sc]);
         expect(r.bg, sel + ': no fill on hover').toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);

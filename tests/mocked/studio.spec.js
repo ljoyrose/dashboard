@@ -792,13 +792,14 @@ test.describe('Studio page', () => {
     const box0 = await other.boundingBox();
     await other.hover();
     expect(await other.boundingBox()).toEqual(box0);
-    await expect(other).toHaveCSS('outline-style', 'solid');
+    await expect(other).toHaveCSS('outline-style', 'none');
+    await expect(other).toHaveCSS('box-shadow', /0px 0px 0px 1px inset/);
     const lab = await page.locator('.col[data-stage="5"] .col-head .lab').evaluate((e) => getComputedStyle(e).color);
     expect(lab).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
     // Keyboard focus is an ink ring like hover, never the browser blue.
     await page.locator('[data-vmode="list"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
-    const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); return { o: c.outlineColor, w: c.outlineWidth, off: c.outlineOffset, ink: getComputedStyle(document.body).color }; });
+    const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); return { o: m && c.outlineStyle === 'none' ? m[1] : c.outlineColor, w: m && c.outlineStyle === 'none' ? '1px' : c.outlineWidth, off: m && c.outlineStyle === 'none' ? '-1px' : c.outlineOffset, ink: getComputedStyle(document.body).color }; });
     expect(ring.o).toBe(ring.ink);
     expect(ring.w).toBe('1px');   // one 1px line inside (Lisa, 3 Nov 2026)
     expect(ring.off).toBe('-1px');
@@ -971,7 +972,7 @@ test.describe('Studio page', () => {
       await el.scrollIntoViewIfNeeded();
       const b0 = await el.boundingBox();
       await el.hover();
-      const st = await el.evaluate((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, o: c.outlineOffset, c: c.outlineColor, s: c.outlineStyle }; });
+      const st = await el.evaluate((e) => { const c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); return m && c.outlineStyle === 'none' ? { w: '1px', o: '-1px', c: m[1], s: 'solid' } : { w: c.outlineWidth, o: c.outlineOffset, c: c.outlineColor, s: c.outlineStyle }; });
       expect(st, `${k} hover`).toEqual({ w: '1px', o: '-1px', c: ink, s: 'solid' });
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
       if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
@@ -984,18 +985,18 @@ test.describe('Studio page', () => {
     const y0 = await yes.boundingBox();
     const yRest = await yes.evaluate((e) => getComputedStyle(e).backgroundColor);
     await yes.hover();
-    const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
+    const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); return { o: m && c.outlineStyle === 'none' ? m[1] : c.outlineColor, b: c.borderTopColor, w: m && c.outlineStyle === 'none' ? '1px' : c.outlineWidth, bg: c.backgroundColor }; });
     expect(ys.o).toBe(ys.b); // rests on its green line and keeps it on hover (Lisa's approved picture), never ink
     expect(ys.o).not.toBe(ink);
     expect(ys.w).toBe('1px');
     expect(ys.bg, 'no fill on hover').toBe(yRest);
     expect(await yes.boundingBox()).toEqual(y0);
     await no.hover();
-    const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor }; });
+    const ns = await no.evaluate((e) => { const c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); return { o: m && c.outlineStyle === 'none' ? m[1] : c.outlineColor, b: c.borderTopColor }; });
     expect(ns.o).toBe(ns.b); // rose line kept
     await go(page, 'line');
     // Selected is the same line.
-    const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineWidth);
+    const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => /0px 0px 0px 1px inset/.test(getComputedStyle(e).boxShadow) ? '1px' : getComputedStyle(e).outlineWidth);
     expect(sel).toBe('1px');
   });
 

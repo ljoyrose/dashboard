@@ -206,8 +206,8 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
   await expect(dates).toBeFocused();
-  const f = await dates.evaluate((e) => ({ o: getComputedStyle(e).outlineStyle, w: getComputedStyle(e).outlineWidth, off: getComputedStyle(e).outlineOffset, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }));
-  expect(f.o).toBe('solid');
+  const f = await dates.evaluate((e) => { const s = getComputedStyle(e); const m = /0px 0px 0px 1px inset/.test(s.boxShadow); return { o: s.outlineStyle, w: m ? '1px' : s.outlineWidth, off: m ? '-1px' : s.outlineOffset, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }; });
+  expect(f.o).toBe('none');
   expect(f.w).toBe('1px');   // one 1px line inside (Lisa, 3 Nov 2026)
   expect(f.off).toBe('-1px');
   expect(f.ring).not.toMatch(TRANSPARENT);

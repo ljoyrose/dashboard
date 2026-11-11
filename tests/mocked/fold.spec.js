@@ -164,7 +164,8 @@ test('the chevron: grey outline icon in a house control (1px line), no fill and 
   await b.hover();
   const hov = await read();
   expect(hov.bg, 'no fill on hover').toBe(rest.bg); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
-  expect(hov.os + ' ' + hov.ow, 'hover is the 1px line').toBe('solid 1px');
+  expect(hov.os, 'hover line follows the corner, not a square outline').toBe('none');
+  expect(hov.shadow, 'hover is the 1px line inside').toMatch(/0px 0px 0px 1px inset/);
   await b.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
   const foc = await read();
   expect(foc.bg, 'no fill on focus').toBe(rest.bg); expect(foc.box, 'nothing moves on focus').toBe(rest.box);

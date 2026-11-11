@@ -89,13 +89,13 @@
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
   /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
-  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; }
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: none; box-shadow: inset 0 0 0 1px var(--ink); }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
-    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: none; box-shadow: inset 0 0 0 1px var(--ink); }
     .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
-      outline: 1px solid var(--mc); outline-offset: -1px; }
-    header .btn:hover { outline-color: var(--frame-ink); }
+      outline: none; box-shadow: inset 0 0 0 1px var(--mc); }
+    header .btn:hover { box-shadow: inset 0 0 0 1px var(--frame-ink); }
     .ico:hover { color: var(--hc, var(--ink)); }
     .mark:hover svg { filter: none; opacity: 1; }
     .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }
@@ -105,8 +105,8 @@
   /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). */
   a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
   /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
-  :focus-visible, label.date:has(input:focus-visible) { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
-  header :focus-visible:not(.house-menu *), nav.tabs .ht:focus-visible { outline-color: var(--frame-ink) !important; }
+  :focus-visible, label.date:has(input:focus-visible) { outline: none !important; box-shadow: inset 0 0 0 1px var(--ink) !important; }
+  header :focus-visible:not(.house-menu *), nav.tabs .ht:focus-visible { outline: none !important; box-shadow: inset 0 0 0 1px var(--frame-ink) !important; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
   .sbox:focus-within { border-color: var(--ink); }
 
@@ -320,7 +320,7 @@
   .fbar2 .srow { padding-right: 124px; }
   .fdet > summary { position: absolute; top: 0; right: 0; width: 116px; justify-content: center; list-style: none; }
   .fdet > summary::-webkit-details-marker { display: none; }
-  .fdet[open] > summary { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  .fdet[open] > summary { outline: none; box-shadow: inset 0 0 0 1px var(--ink); background: var(--hov); }
   .fdet .fbody { display: flex; flex-direction: column; gap: 8px; }
   .fdet .n { margin-left: 2px; }
   .srow .sbox { min-width: 0; }

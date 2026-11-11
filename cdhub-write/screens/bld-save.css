@@ -33,7 +33,7 @@
 .bs-field{display:grid;gap:4px;margin:0 0 10px;font-size:12px;font-weight:600;color:var(--bs-mut)}
 .bs-field[hidden]{display:none}
 .bs-in{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--bs-line);border-radius:12px;background:var(--bs-card);color:var(--bs-ink);font:inherit;font-size:16px}
-.bs-in:focus-visible,.bs-btn:focus-visible,.bs-link:focus-visible{outline: 1px solid var(--bs-accent);outline-offset: -1px}
+.bs-in:focus-visible,.bs-btn:focus-visible,.bs-link:focus-visible{outline: none;box-shadow: inset 0 0 0 1px var(--bs-accent)}
 .bs-hint{font-weight:400;font-size:11.5px}
 .bs-err{color:var(--bs-bad);font-size:12px;font-weight:600;min-height:0}
 .bs-btn{min-height:44px;border:1px solid var(--bs-line);border-radius:var(--radius,12px);padding:10px 20px;font:inherit;font-weight:600;background:var(--bs-card);color:var(--bs-ink);cursor:pointer}
@@ -77,7 +77,7 @@
 .bs-board .bs-yes:hover:not(:disabled){background:var(--bs-good);color:#fff}
 .bs-board .bs-no:hover:not(:disabled){background:var(--bs-bad);color:#fff}
 .bs-board .bs-yes:disabled,.bs-board .bs-no:disabled{opacity:.4;cursor:not-allowed}
-.bs-board .bs-yes:focus-visible,.bs-board .bs-no:focus-visible{outline: 1px solid var(--bs-accent);outline-offset: -1px}
+.bs-board .bs-yes:focus-visible,.bs-board .bs-no:focus-visible{outline: none;box-shadow: inset 0 0 0 1px var(--bs-accent)}
 .bs-board .bs-yes[hidden]{display:none}
 .bs-board .bs-yn:has(.bs-yes[hidden]){grid-template-columns:1fr}
 .bs-board .bs-move{margin-top:12px;display:grid;gap:8px}

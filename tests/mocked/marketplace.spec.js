@@ -1054,7 +1054,8 @@ test.describe('Marketplace house look', () => {
   // never ink. Selected = hover. Nothing moves; read-only pills have no hover.
   const hoverLook = (el) => el.evaluate((e) => {
     const c = getComputedStyle(e), probe = (v) => { const s = document.createElement('span'); s.style.color = v; e.appendChild(s); const x = getComputedStyle(s).color; s.remove(); return x; };
-    return { style: c.outlineStyle, width: c.outlineWidth, offset: c.outlineOffset, line: c.outlineColor, bg: c.backgroundColor,
+    const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow);
+    return { style: m && c.outlineStyle === 'none' ? 'solid' : c.outlineStyle, width: m && c.outlineStyle === 'none' ? '1px' : c.outlineWidth, offset: m && c.outlineStyle === 'none' ? '-1px' : c.outlineOffset, line: m && c.outlineStyle === 'none' ? m[1] : c.outlineColor, bg: c.backgroundColor,
       ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor };
   });
   const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
@@ -1153,7 +1154,7 @@ test.describe('Marketplace house look', () => {
     await open(page, '#/do');
     await page.locator('[data-ans="RM|1"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
-    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === getComputedStyle(document.body).color]; });
+    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); const ink = getComputedStyle(document.body).color; return m && c.outlineStyle === 'none' ? ['solid', '1px', '-1px', m[1] === ink] : [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === ink]; });
     expect(s).toEqual(['solid', '1px', '-1px', true]);
   });
 

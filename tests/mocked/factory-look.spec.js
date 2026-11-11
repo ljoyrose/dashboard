@@ -254,7 +254,8 @@ test.describe('Factory look: hover = a 1px line inside, never a fill (Lisa\'s sw
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
       const look = (el) => el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e), i = e.querySelector('.ti');
         const p = document.createElement('i'); p.style.color = c.getPropertyValue('--mc').trim(); e.appendChild(p); const mc = getComputedStyle(p).color; p.remove();
-        return { box: [r.x, r.y, r.width, r.height], ow: c.outlineWidth, os: c.outlineStyle, oo: c.outlineOffset, oc: c.outlineColor, bc: c.borderTopColor, bg: c.backgroundColor, mc, icon: i ? getComputedStyle(i).color : '' }; });
+        const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow);
+        return { box: [r.x, r.y, r.width, r.height], ow: m ? '1px' : c.outlineWidth, os: m ? 'solid' : c.outlineStyle, oo: m ? '-1px' : c.outlineOffset, oc: m ? m[1] : c.outlineColor, bc: c.borderTopColor, bg: c.backgroundColor, mc, icon: i ? getComputedStyle(i).color : '' }; });
       const neutral = { chip: '#view [data-fx="app"]:not(.on)', filter: '#filtersBtn', icon: '#view .crow .ico', flag: '#view .crow .flagb', mark: '#view .crow .mark', date: '#view label.date:not(.over):not(.soon)', search: '#view .sbox' };
       const meaning = { yes: '#view .btn.yes', no: '#view .btn.no', late: '#view label.date.over', soon: '#view label.date.soon' };
       for (const [k, sel] of Object.entries({ ...neutral, ...meaning })) {
@@ -291,11 +292,11 @@ test.describe('Factory look: hover = a 1px line inside, never a fill (Lisa\'s sw
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
     await page.mouse.move(0, 0);
     const on = page.locator('#view [data-fx="app"].on');
-    expect(await on.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineWidth, c.outlineStyle, c.outlineOffset, c.outlineColor]; })).toEqual(['1px', 'solid', '-1px', ink]);
+    expect(await on.evaluate((e) => { const c = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); return m && c.outlineStyle === 'none' ? ['1px', 'solid', '-1px', m[1]] : [c.outlineWidth, c.outlineStyle, c.outlineOffset, c.outlineColor]; })).toEqual(['1px', 'solid', '-1px', ink]);
     await page.locator('#filtersBtn').focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle, c.outlineOffset, c.outlineColor]; });
+    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(c.boxShadow); return m && c.outlineStyle === 'none' ? ['1px', 'solid', '-1px', m[1]] : [c.outlineWidth, c.outlineStyle, c.outlineOffset, c.outlineColor]; });
     expect(f).toEqual(['1px', 'solid', '-1px', ink]);
   });
 

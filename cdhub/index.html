@@ -61,8 +61,8 @@ header h1 .dot{background:var(--ljr-5)}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
 .live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
-@media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
-header .btn:focus-visible{outline: 1px solid var(--frame-ink);outline-offset: -1px}
+@media (hover:hover){header .btn:hover{outline:none;box-shadow:inset 0 0 0 1px var(--frame-ink)}}
+header .btn:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--frame-ink)}
 .backhome{text-decoration:none}
 
 html.dash-locked header .backhome{color:var(--ink);border-color:var(--press)}
@@ -79,14 +79,14 @@ h3{font-size:var(--fs-head);margin:24px 0 12px;display:flex;align-items:center;g
 code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-nums;background:transparent;padding:0}
 
 
-.card{margin:0 0 12px;box-shadow:var(--shadow)}
+.card{margin:0 0 12px;--lift:var(--shadow);box-shadow:var(--shadow)}
 .card.dash{border-style:dashed}
 .card h4,.card .hx4{margin:0 0 12px;font-size:var(--fs-head);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
 .card p{margin:0 0 8px;font-size:var(--fs-body)}.card p:last-child{margin-bottom:0}
 
 .card.acc2>:is(h4,.hx4):first-child::before,.card.acc5>:is(h4,.hx4):first-child::before{content:"";width:10px;height:10px;border-radius:50%;flex:none;border:1px solid var(--ljr-2);background:var(--ljr-2-tint)}
 .card.acc5>:is(h4,.hx4):first-child::before{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
-.card .card{box-shadow:none}
+.card .card{--lift:none;box-shadow:none}
 
 
 .btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{
@@ -95,19 +95,19 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
-@media (hover:hover){.filt select:hover, .fpanel select:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){.filt select:hover, .fpanel select:hover {outline:none;box-shadow:inset 0 0 0 1px var(--sel-bd);background:var(--hov-fill)}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {outline:none;box-shadow:inset 0 0 0 1px var(--sel-bd);}}
 .tile.tl:hover,.ci:hover{border-color:var(--press)}
-.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;}
+.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:none;box-shadow:inset 0 0 0 1px var(--sel-bd);}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 
 
-@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);}.btn.no:hover{outline-color:var(--house-risk);}}
+@media (hover:hover){.btn.yes:hover{box-shadow:inset 0 0 0 1px var(--house-ok);}.btn.no:hover{box-shadow:inset 0 0 0 1px var(--house-risk);}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
-:focus-visible{outline: 1px solid var(--ink)!important;outline-offset: -1px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);box-shadow:none}
+:focus-visible{outline:none!important;box-shadow:inset 0 0 0 1px var(--ink)}
 /* Typing boxes: one 1px line inside the rounded box; focus recolours that line. Never a second square ring. */
-:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink);box-shadow:none!important}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
 @media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
@@ -128,7 +128,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dpill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
 .dpill.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .dpill.soon{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
-.pill:hover,.cnt:hover,.dpill:hover,.live:hover{outline:none}
+.pill:hover,.cnt:hover,.dpill:hover,.live:hover{outline:none;box-shadow:none}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0));flex:none;vertical-align:0}
 .info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
 
@@ -139,7 +139,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .tile .k{font-size:var(--fs-small);font-weight:600;margin-top:2px}
 .tile .src{font-size:var(--fs-small);color:var(--muted);margin-top:4px;line-height:1.4}
 button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
-@media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){button.tile:hover{outline:none;box-shadow:inset 0 0 0 1px var(--sel-bd);}}
 
 
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
@@ -171,7 +171,7 @@ tr:last-child td{border-bottom:none}
 .three .sum.over .big{border-color:var(--house-late)}
 .three .sum .big.zero{border-color:transparent}
 .mecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start;margin:0 0 12px}
-.mcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;--lift:var(--shadow);box-shadow:var(--shadow);min-width:0}
 .mcard h3{margin:0 0 4px;font-size:var(--fs-head);display:flex;align-items:center;gap:8px}
 .mcard h3 .ti{color:var(--muted)}
 @media (hover:hover){.mcard:hover h3 .ti{color:var(--hc,var(--muted))}}
@@ -186,7 +186,7 @@ tr:last-child td{border-bottom:none}
 
 #sopcard .mrow,#sopcard .mrow:first-child{border:1px solid var(--line);box-shadow:none;border-radius:var(--radius);background:var(--card);padding:0;margin:0 0 8px}
 @media (hover:hover){#sopcard .mrow:has(.sopopen:hover){border-color:var(--sel-bd)}}
-#sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important}
+#sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important;box-shadow:none!important}
 #sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink)}
 /* The card is the frame. The button is the words inside it, so it is not a second one-line control. */
 #main #sopcard button.sopopen{background:transparent;border:0;border-radius:0;box-shadow:none;min-height:44px;height:auto;padding:10px 12px;width:100%;min-width:0;display:flex;align-items:flex-start;text-align:left;cursor:pointer;color:inherit;font-weight:600}
@@ -312,15 +312,15 @@ tr:last-child td{border-bottom:none}
 .dcrow .mut{color:var(--muted)}
 .dcrow .up{font-weight:600}
 .dcrow .dn{font-weight:600}
-.dcrow.tap{cursor:pointer;border-radius:0px;padding:1px 3px;margin-left:-3px}
-.dcrow.tap:focus-visible{outline:1px solid var(--press);outline-offset:-1px}
+.dcrow.tap{cursor:pointer;border-radius:var(--radius);padding:1px 3px;margin-left:-3px}
+.dcrow.tap:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--press)}
 .wt{display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);flex-wrap:wrap}
 .wt .lb,.chipline .lb{font-size:var(--fs-small);color:var(--muted)}
 .wt b{color:var(--ink)}
 .wt .up,.wt .dn{color:var(--ink);font-weight:600}
 .wt.none{color:var(--muted);font-size:var(--fs-small)}
 .wtc{cursor:pointer;border-radius:var(--radius);padding:2px 4px;margin:-2px -4px;border:1px solid transparent}
-@media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){.wtc:hover{outline:none;box-shadow:inset 0 0 0 1px var(--sel-bd);}}
 .spk{color:var(--ljr-6);overflow:visible}
 .chipline{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-small);color:var(--muted)}
 .chipline .vl{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -369,9 +369,6 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
  .botring,.bootdots i{animation:none}
  .botring{stroke-dasharray:none}
 }
-.map svg text{font-family:var(--house-font)}
-.map .scroll{border:0}
-.map svg{display:block;min-width:1180px}
 @media (max-width:544px){header.top{position:static}}
 
 
@@ -381,7 +378,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
 .dcs>summary::-webkit-details-marker{display:none}
-@media (hover:hover){.dcs>summary:hover{outline:var(--house-line) solid var(--sel-bd);outline-offset:calc(-1 * var(--house-line))}}
+@media (hover:hover){.dcs>summary:hover{outline:none;box-shadow:inset 0 0 0 var(--house-line) var(--sel-bd)}}
 .dcs>summary svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
@@ -425,6 +422,10 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 var OPTIONAL_FILES={'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+/* Historical subjects. Ids resolve joins only. They are not dogs, licence counts, or any list on this page.
+   The file is optional: a folder without it still boots. */
+var ARCHIVE_SUBJECT='BLD-subject-Archive.csv';
+var ARCHIVE_SUBJECT_IDS={};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy}; }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
@@ -658,7 +659,7 @@ function signOut(){
   var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
   if(window.DashAuth) DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
-  T={}; CD={}; LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
+  T={}; CD={}; ARCHIVE_SUBJECT_IDS={}; LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
 }
 function initGoogle(){
   if(!auth.init()) return false;
@@ -673,7 +674,7 @@ function restoreShared(){
 restoreShared();
 
 if(window.DashAuth) DashAuth.onChange(function(saved){
-  if(!saved||!DashAuth.hasScope(saved,SCOPE)){ if(TOKEN){ TOKEN=null; TOKEN_EXP=0; T={}; CD={}; LOAD={state:'signin',err:'Signed out in another tab.',storedAt:null,notes:[]}; render(); } return; }
+  if(!saved||!DashAuth.hasScope(saved,SCOPE)){ if(TOKEN){ TOKEN=null; TOKEN_EXP=0; T={}; CD={}; ARCHIVE_SUBJECT_IDS={}; LOAD={state:'signin',err:'Signed out in another tab.',storedAt:null,notes:[]}; render(); } return; }
   var was=TOKEN; TOKEN=saved.access_token; TOKEN_EXP=saved.expires_at;
   if(!was||LOAD.state==='signin'||LOAD.state==='err') load();
 });
@@ -720,8 +721,10 @@ async function load(){
   if(missing.length) LOAD.notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
   var present=WANT.filter(function(t){ return byTitle[t]; });
   WANT.forEach(function(t){ if(!byTitle[t]) T[t]=[]; });
+  ARCHIVE_SUBJECT_IDS={};
+  var archive=byTitle[ARCHIVE_SUBJECT]?[ARCHIVE_SUBJECT]:[];
   var got={};
-  await readPool(present, READ_AT_ONCE, function(title){
+  await readPool(present.concat(archive), READ_AT_ONCE, function(title){
     return readDriveFile(byTitle[title][0]).then(function(txt){ got[title]={ok:true,txt:txt}; }, function(e){ got[title]={ok:false,e:e}; });
   });
   var done=0;
@@ -732,6 +735,11 @@ async function load(){
     if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
     T[title]=parseCSV(txt); done++;
   });
+  if(archive.length){
+    var ar=got[ARCHIVE_SUBJECT];
+    if(!ar||!ar.ok) LOAD.notes.push(ARCHIVE_SUBJECT+': '+((ar&&ar.e&&ar.e.code)||'read failed'));
+    else parseCSV(String(ar.txt||'').replace(/^\uFEFF/,'')).forEach(function(r){ if(r.id) ARCHIVE_SUBJECT_IDS[r.id]=1; });
+  }
   LOAD.state='ok'; LOAD.files=done;
   DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
   foldAreaReadings(T['BLD-area_reading.csv']||[]);
@@ -966,8 +974,11 @@ function refAudit(){
  Object.keys(REFMAP).forEach(function(c){ var f=REFMAP[c];
   if(idsOf[f]||absent[f]) return;
   var rows=T[f];
-  if(!rows||!rows.length){ absent[f]=1; return; }
-  var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
+  var archived=f==='BLD-subject.csv' && Object.keys(ARCHIVE_SUBJECT_IDS).length;
+  if((!rows||!rows.length) && !archived){ absent[f]=1; return; }
+  var s={}; (rows||[]).forEach(function(r){ if(r.id) s[r.id]=1; });
+  if(f==='BLD-subject.csv') Object.keys(ARCHIVE_SUBJECT_IDS).forEach(function(id){ s[id]=1; });
+  idsOf[f]=s; });
  var seen={};
  Object.keys(T||{}).forEach(function(f){
   var rows=T[f]; if(!rows||!rows.length) return;
@@ -2356,119 +2367,6 @@ function pageWork(){
 }
 
 
-var MAPTGT={subject_id:'subject',dam_subject_id:'subject',sire_subject_id:'subject',dam_id:'subject',
- sire_id:'subject',birth_litter_id:'litter',litter_id:'litter',area_id:'area',
- coat_colour_id:'coat_colour',coat_pattern_id:'coat_pattern',nose_pigment_id:'nose_pigment',
- product_id:'medicinal_product',association_id:'association',marker_code:'dna_marker'};
-
-var GHOSTS=[['person',10,'Families, retirement homes, rehomes, staff'],
-            ['document',13,'every certificate, scan and vaccine card'],
-            ['media',8,'photos and galleries'],
-            ['product',12,'the shop side'],
-            ['sop_version',9,'procedures']];
-function mapModel(){
- var nodes={}, edges=[];
- Object.keys(T||{}).forEach(function(f){
-  var rows=T[f]; if(!rows||!rows.length) return;
-  var t=f.replace(/^BLD-|\.csv$/g,'');
-  if(/^_|^SWEEP|^WORK$|^MAP-/.test(t)) return;
-  nodes[t]={id:t,rows:rows.length,in:0,out:0};
- });
- Object.keys(T||{}).forEach(function(f){
-  var rows=T[f]; if(!rows||!rows.length) return;
-  var t=f.replace(/^BLD-|\.csv$/g,''); if(!nodes[t]) return;
-  Object.keys(rows[0]).forEach(function(c){
-   var tgt=MAPTGT[c]; if(!tgt||tgt===t||!nodes[tgt]) return;
-   var filled=0; for(var i=0;i<rows.length;i++){ if((rows[i][c]||'').trim()) filled++; }
-   if(!filled) return;
-   edges.push({from:t,to:tgt,col:c,filled:filled,of:rows.length,pct:Math.round(100*filled/rows.length)});
-   nodes[tgt].in++; nodes[t].out++;
-  });
- });
- return {nodes:nodes,edges:edges};
-}
-function pageShape(){
- var m=mapModel(), N=m.nodes, E=m.edges;
- var SPINE=['subject','litter','area'];
- var look=Object.keys(N).filter(function(t){return N[t].in>0 && SPINE.indexOf(t)<0;}).sort();
- var ev=Object.keys(N).filter(function(t){return N[t].out>0 && SPINE.indexOf(t)<0 && look.indexOf(t)<0;})
-          .sort(function(a,b){return N[b].rows-N[a].rows;});
- var loose=Object.keys(N).filter(function(t){return N[t].in===0&&N[t].out===0;}).sort();
-
- /* foundation: data model map (records, lookups, events and how full each link is). Real text sizes: the map sits in its own
-    sideways-scrolling box, so it is never shrunk below 13px. Colour only in the lines, never the words. */
- var W=1180, PAD=28, colL=PAD+10, colS=430, colE=800, STEP=56, BH=46;
- var rowsH=Math.max(look.length,ev.length,3);
- var H=Math.max(600, 110+rowsH*STEP);
- function box(x,y,w,h,label,sub,cls){
-  return '<g><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="12" '+cls+'/>'
-   +'<text x="'+(x+12)+'" y="'+(y+20)+'" font-size="14" font-weight="600" fill="currentColor">'+esc(label)+'</text>'
-   +(sub?'<text x="'+(x+12)+'" y="'+(y+38)+'" font-size="13" style="fill:var(--muted)">'+esc(sub)+'</text>':'')
-   +'</g>';
- }
- var g='';
-
- var spineY={}, sy=100;
- SPINE.forEach(function(t){
-  if(!N[t]) return;
-  var h=50+Math.min(34,Math.round(N[t].rows/12));
-  spineY[t]=sy+h/2;
-  g+=box(colS,sy,260,h,t,N[t].rows+' rows · '+N[t].in+' tables point here',
-     'fill="none" style="stroke:var(--ljr-2)" stroke-width="1"');
-  sy+=h+30;
- });
-
- var lookY={};
- look.forEach(function(t,i){ var y=100+i*STEP; lookY[t]=y+BH/2;
-  g+=box(colL,y,200,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--press)" stroke-width="1"'); });
-
- var evY={};
- ev.forEach(function(t,i){ var y=100+i*STEP; evY[t]=y+BH/2;
-  g+=box(colE,y,250,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--ljr-5)" stroke-width="1"'); });
-
- function yOf(t){ return spineY[t]!==undefined?spineY[t]:(lookY[t]!==undefined?lookY[t]:evY[t]); }
-
- E.forEach(function(e){
-  var y1=yOf(e.from), y2=yOf(e.to); if(y1===undefined||y2===undefined) return;
-  var x1,x2;
-  if(evY[e.from]!==undefined){ x1=colE; x2=colS+260; }
-  else if(lookY[e.from]!==undefined){ x1=colL+200; x2=colS; }
-  else if(spineY[e.from]!==undefined && lookY[e.to]!==undefined){ x1=colS; x2=colL+200; }
-  else { x1=colS; x2=colS+260; }
-  var thin=e.pct<25, mid=e.pct<75;
-  var col=thin?'var(--ljr-2)':(mid?'var(--ljr-3)':'var(--ljr-5)');
-  var mx=(x1+x2)/2;
-  g+='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" style="stroke:'+col+'"'
-    +' stroke-width="'+(thin?1:(mid?1.8:2.6))+'"'+(thin?' stroke-dasharray="3 3"':'')+' opacity="'+(thin?.95:.7)+'"/>'
-    +'<text x="'+(mx)+'" y="'+((y1+y2)/2-6)+'" font-size="13" text-anchor="middle" fill="currentColor">'+e.pct+'%</text>';
- });
- var svg='<figure style="margin:0"><div class="scroll" tabindex="0" role="group" aria-label="Map, scroll sideways for more"><svg role="img" aria-label="Map of the breeder tables: subject is the spine with '
-  +(N.subject?N.subject.in:0)+' tables pointing at it; arrow weight shows how much of each join is actually filled." '
-  +'viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">'
-  +'<text x="'+colL+'" y="44" font-size="15" font-weight="600" fill="currentColor">Looked up</text>'
-  +'<text x="'+colS+'" y="44" font-size="15" font-weight="600" fill="currentColor">The spine</text>'
-  +'<text x="'+colE+'" y="44" font-size="15" font-weight="600" fill="currentColor">What happens to a dog</text>'
-  +'<text x="'+colL+'" y="66" font-size="13" style="fill:var(--muted)">colour, markers, products</text>'
-  +'<text x="'+colS+'" y="66" font-size="13" style="fill:var(--muted)">what a thing is</text>'
-  +'<text x="'+colE+'" y="66" font-size="13" style="fill:var(--muted)">one row per event, never a column</text>'
-  +g+'</svg></div><figcaption class="mut" style="margin-top:8px">Line weight and colour are the <b>fill rate</b>, not the relationship: solid green is 75%+ of rows carrying the link, amber 25 to 74%, dashed rose under 25%. Box height is row count. Drawn from the tables loaded on this page.</figcaption></figure>';
-
- var thin=E.filter(function(e){return e.pct<25;}).sort(function(a,b){return a.pct-b.pct;});
- var h='<h2>Table map</h2>'+'<div class="mecards">'+checksCard()+'</div>'
-  +'<p class="note">Who points at whom · rows · <b>how full each link is</b> (a join can be almost empty).</p>'
-  +'<div class="card map">'+svg+'</div>'
-  +'<div class="card acc2"><h4>Joins that exist but are nearly empty'+cntPill(thin.length)+'</h4>'
-  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
-  +thin.map(function(e){return '<tr><td>'+esc(e.from)+'</td><td class="mut">'+esc(e.col)+'</td><td>'+esc(e.to)+'</td><td><span class="pill no">'+e.pct+'%</span> '+e.filled+' of '+e.of+'</td></tr>';}).join('')
-  +'</tbody></table></div></div>'
-  +'<div class="card acc4"><h4>tenant_id is on every table and is deliberately not drawn</h4><p style="margin-bottom:0">All '+Object.keys(N).length+' tables carry it at 100%, so drawing it would add a line to every box and say nothing. It is a band across the whole picture, not a relationship. <b>And one tenant in the data never proves isolation</b> — that needs a second tenant.</p></div>'
-  +'<div class="card acc7"><h4>Tables other tables point at that do not exist</h4>'
-  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
-  +GHOSTS.map(function(x){return '<tr><td><b>'+esc(x[0])+'</b></td><td><span class="pill no">'+x[1]+' tables</span></td><td class="mut">'+esc(x[2])+'</td></tr>';}).join('')
-  +'</tbody></table></div></div>'
-  +(loose.length?'<div class="card"><h4>Loaded but joined to nothing'+cntPill(loose.length)+'</h4><p style="margin-bottom:0" class="mut">'+loose.map(esc).join(', ')+'</p></div>':'');
- return h;
-}
 
 function pageSops(){
  if(SOP.err) return '<h2>SOPs</h2><div class="card dash"><h3 class="hx4">The SOP list could not be read</h3><p style="margin-bottom:0" class="mut">'+esc(SOP.err)+'</p></div>';

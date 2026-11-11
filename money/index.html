@@ -62,7 +62,10 @@
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }
   details[open] > summary::after { content: "\25B4"; }
   details[open] > summary { margin-bottom: 12px; }
-  @media (hover: hover) { a.ent:hover, details > summary:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) {
+    a.ent:hover, a.sum:hover { outline: none; box-shadow: inset 0 0 0 1px var(--sel-bd), var(--lift, none); }
+    details > summary:hover { outline: none; box-shadow: inset 0 0 0 1px var(--sel-bd); }
+  }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   @media (max-width: 600px) { html { scroll-padding-bottom: 120px; } }
@@ -76,8 +79,8 @@
   #view { display: flex; flex-direction: column; gap: 12px; }
 
   /* Cards: one white panel, the softer 1px line, 12px padding; 16px under the header line before the first item. */
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
-  .card.pending { border-style: dashed; box-shadow: none; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 12px; --lift: var(--shadow); box-shadow: var(--shadow); min-width: 0; }
+  .card.pending { border-style: dashed; --lift: none; box-shadow: none; }
   /* Section colour: one small dot before the card title (dots may be solid; words stay ink). */
   .c-risk { --c: var(--c-risk); } .c-fin { --c: var(--c-fin); } .c-ops { --c: var(--c-ops); } .c-ok { --c: var(--c-ok); }
   .c-sales { --c: var(--c-sales); } .c-ideas { --c: var(--c-ideas); } .c-ink, .c-mute { --c: var(--c-mute); }
@@ -128,7 +131,7 @@
   /* Summary strip: On track / Needs you / Overdue, each a big ringed number. */
   .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   a.sum { color: inherit; text-decoration: none; }
-  .sum { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 12px; min-width: 0; box-shadow: var(--shadow); }
+  .sum { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 12px; min-width: 0; --lift: var(--shadow); box-shadow: var(--shadow); }
   /* The summary rings (Lisa's pick A, 2 Nov): a 14px number, the same size as the words beside it, in the house count box.
      Ring only, no fill: rose = overdue, grey = waiting. */
   .sum .num { box-sizing: border-box; font-size: var(--fs-small); font-weight: 600; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh);
@@ -204,7 +207,8 @@
   /* Calm focus: a typing box shows a slightly darker line; keyboard focus is the 1px ink line inside (never the browser blue). */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus, summary:focus { outline: none; }
-  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
+  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--ink); }
+  a.card:focus-visible, a.sum:focus-visible, button.card:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--ink), var(--lift, none); }
   header a:focus-visible, header button:focus-visible { outline-color: var(--frame-ink); }
 </style>
 </head>

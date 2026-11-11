@@ -190,7 +190,13 @@ function audit(o) {
 function hoverRead(sel) {
   const e = document.querySelector(sel); if (!e) return null;
   const s = getComputedStyle(e), r = e.getBoundingClientRect();
-  return { x: r.x, y: r.y, w: r.width, h: r.height, outline: s.outlineStyle + ' ' + s.outlineWidth + ' ' + s.outlineColor, offset: s.outlineOffset, ow: s.outlineWidth, os: s.outlineStyle, oc: s.outlineColor, bg: s.backgroundColor, border: s.borderTopColor, shadow: s.boxShadow, transform: s.transform };
+  // The inside line is an inset shadow so it follows the corner. Report it in the outline fields the look test already checks.
+  const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(s.boxShadow);
+  const lined = m && (s.outlineStyle === 'none' || !(parseFloat(s.outlineWidth) > 0));
+  return { x: r.x, y: r.y, w: r.width, h: r.height,
+    outline: lined ? 'solid 1px ' + m[1] : s.outlineStyle + ' ' + s.outlineWidth + ' ' + s.outlineColor,
+    offset: lined ? '-1px' : s.outlineOffset, ow: lined ? '1px' : s.outlineWidth, os: lined ? 'solid' : s.outlineStyle, oc: lined ? m[1] : s.outlineColor,
+    bg: s.backgroundColor, border: s.borderTopColor, shadow: s.boxShadow, transform: s.transform };
 }
 
 module.exports = { RULES, audit, hoverRead };

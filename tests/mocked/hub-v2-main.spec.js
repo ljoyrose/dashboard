@@ -78,7 +78,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       const st = await sel.evaluate((e) => { const c = getComputedStyle(e); return { bg: c.backgroundColor, l: c.borderLeftWidth + c.borderLeftColor, t: c.borderTopWidth + c.borderTopColor, r: c.borderRightWidth + c.borderRightColor, b: c.borderBottomWidth + c.borderBottomColor }; });
       expect(st.bg, title + ': no fill on the selected view').toBe('rgba(0, 0, 0, 0)');
       expect([st.t, st.r, st.b], title + ': one even border all round').toEqual([st.l, st.l, st.l]);
-      const o = await sel.evaluate((e) => { const c = getComputedStyle(e); return c.outlineStyle + ' ' + c.outlineWidth; });
+      const o = await sel.evaluate((e) => { const c = getComputedStyle(e); return /0px 0px 0px 1px inset/.test(c.boxShadow) && c.outlineStyle === 'none' ? 'solid 1px' : c.outlineStyle + ' ' + c.outlineWidth; });
       expect(o, title + ': the selected view under More shows a 1px line').toBe('solid 1px');
       await expect.poll(() => page.locator('#mainNav [data-house-more] .bar').evaluate((e) => e.getBoundingClientRect().width), { message: title + ': More shows where you are' }).toBeCloseTo(40, 0);
       await expect(page.locator('#hereTitle')).toBeFocused();

@@ -1,0 +1,8 @@
+{
+  "home": 600,
+  "factory": 1000,
+  "marketplace": 1100,
+  "money": 1600,
+  "studio": 1000,
+  "why": "Hover, selected and focus lines follow the 12px corner. The shared house rule and each hub page draw that 1px line as an inset shadow, because outline stays square in several browsers. Measured over the previous budget: home 437851, factory 300923, marketplace 272097, money 252375, studio 392720."
+}

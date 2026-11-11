@@ -64,8 +64,8 @@
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: var(--fs-small); font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
   /* One line rule (like Links and HubSpot): every edge is 1px; hover = selected = that same 1px edge turns ink (an outline laid exactly over it), so it darkens, never thickens or moves. Keyboard focus keeps the 2px ink ring. */
-  .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; }
-  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: none; box-shadow: inset 0 0 0 1px var(--sel-bd); }
+  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: none; box-shadow: inset 0 0 0 1px var(--sel-bd); } }
   .n:empty { display: none; }
   /* Counts: the house count pill (../house.css, 30 x 22). Studio's counts wear an ink ring; "needs you" counts the rose ring + tint. */
   .cnt, .fbtn .n:not(:empty) { border-color: var(--ink); }
@@ -78,7 +78,7 @@
   .banner.info { border-color: var(--line); }
   .banner.ex { border-color: var(--me); }
   .banner.ex .ti { color: var(--ljr-7-text); }
-  .card { border-color: var(--bd); box-shadow: var(--shadow); } /* the house card (../house.css): 12px inside */
+  .card { border-color: var(--bd); --lift: var(--shadow); box-shadow: var(--shadow); } /* the house card (../house.css): 12px inside */
   .muted { color: var(--muted); font-size: var(--fs-small); }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); border-radius: var(--radius); padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
@@ -213,8 +213,8 @@
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; } /* never the browser blue */
-  a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; border-color: var(--ink) !important; }
+  :focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--ink); } /* never the browser blue */
+  a:focus-visible, button:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--ink); border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: var(--fs-small); padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
@@ -257,7 +257,7 @@
   .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
   .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); position: relative; }
   .col-list .crow .ttl { font-weight: 600; font-size: var(--fs-head); }
-  .col-list .crow.sel { outline: 1px solid var(--sel-bd); outline-offset: -1px; }
+  .col-list .crow.sel { outline: none; box-shadow: inset 0 0 0 1px var(--sel-bd); }
   /* An empty column shrinks to one short line; full columns keep the full height. */
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
@@ -374,7 +374,7 @@
   .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line and keep it on hover */
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
-  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; } }
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { outline: none; box-shadow: inset 0 0 0 1px var(--hmc, var(--sel-bd)); } }
   /* Meaning-coloured buttons keep their colour on hover (the --hmc rule above, from ../house.css); icons keep it too. */
   .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
   .fbtn .n.wide { width: auto; padding: 0 6px; }

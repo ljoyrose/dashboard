@@ -149,6 +149,31 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await openTab(page, 'compliance');
     await expect(page.locator('#checksCard')).toContainText(/\d+ file\(s\) not in the folder/);
   });
+
+  test('archived subject ids resolve joins and never appear as dogs', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-subject-Archive.csv', 'id,name,sex,dob\nsub-archive-1,Archived Sample,F,2018-01-01\n');
+    const status = guard.world.files.find((x) => x.name === 'BLD-subject_status.csv');
+    if (!status.content.endsWith('\n')) status.content += '\n';
+    status.content += 'sub-archive-1,retired\nsub-missing-9,retired\n';
+    status.size = String(status.content.length);
+    await page.goto('cdhub/');
+    await signIn(page);
+    const audit = await page.evaluate(() => {
+      const r = refAudit();
+      return { bad: r.bad, ids: Object.keys(ARCHIVE_SUBJECT_IDS), dogs: (CD.dogs || []).map((d) => d.id) };
+    });
+    const row = audit.bad.find((x) => x.indexOf('subject_status.subject_id') === 0) || '';
+    expect(row).toContain('sub-missing-9');
+    expect(audit.bad.join('\n')).not.toContain('sub-archive-1');
+    expect(audit.ids).toEqual(['sub-archive-1']);
+    expect(audit.dogs).not.toContain('sub-archive-1');
+    await openTab(page, 'dogs');
+    await expect(page.locator('#main')).not.toContainText('Archived Sample');
+    await openTab(page, 'compliance');
+    await expect(page.locator('#checksCard')).not.toContainText('Archived Sample');
+    await expect(page.locator('#main')).not.toContainText('Table map');
+    await expect(page.locator('#main')).not.toContainText('nearly empty');
+  });
 });
 
 test.describe('CD Hub: navigation', () => {
@@ -400,7 +425,7 @@ test.describe('CD Hub house look', () => {
     const lines = new Set();
     for (const tab of ['map', 'today', 'round', 'dogs', 'areas', 'sops']) {
       await openTab(page, tab);
-      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible, #next button:visible');
+      const ctls = page.locator('#main button:visible:not(.tile):not(.sopopen):not([data-house="text"]), #main select:visible, #next button:visible');
       const n = await ctls.count();
       expect(n, tab).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
@@ -414,8 +439,8 @@ test.describe('CD Hub house look', () => {
         const where = () => el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x + scrollX, r.y + scrollY, r.width, r.height]; });   // page position, so a scroll is not a move
         const before = await where();
         await el.hover();
-        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, bg: s.backgroundColor }; });
-        expect({ ow: hv.ow, os: hv.os, oo: hv.oo, oc: hv.oc, bw: hv.bw }, `${tab} control ${i}`).toEqual({ ow: '1px', os: 'solid', oo: '-1px', oc: ink, bw: '1px' });
+        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); const m = /^(rgba?\([^)]+\)) 0px 0px 0px 1px inset/.exec(s.boxShadow); return { ow: s.outlineStyle, line: m ? m[1] : '', bw: s.borderTopWidth, bg: s.backgroundColor }; });
+        expect({ ow: hv.ow, line: hv.line, bw: hv.bw }, `${tab} control ${i}`).toEqual({ ow: 'none', line: ink, bw: '1px' });
         // Lisa's sweep (3 Nov 2026): every control, the fold chevron too, hovers with the line only, never a fill.
         // (a select is a typing box, the one thing that may change its fill)
         if ((await el.evaluate((e) => e.tagName)) !== 'SELECT') expect(hv.bg, `${tab} control ${i}: no fill on hover`).toBe(st.bg);

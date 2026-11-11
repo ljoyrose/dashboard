@@ -57,10 +57,10 @@
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
   .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; }
   .more { background: transparent; padding: 0 14px; align-self: flex-start; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) { a.tile:hover { outline: none; box-shadow: inset 0 0 0 1px var(--sel-bd); } }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }   /* keyboard focus: 1px ink inside, never the browser blue */
+  :focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--ink); }   /* keyboard focus: 1px ink inside, never the browser blue */
   .top :focus-visible { outline-color: var(--frame-ink); }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
@@ -144,8 +144,8 @@
     input.txtin { flex: 1 1 160px; max-width: none; }   /* Search and Filter share one calm row */
   }
   /* Keyboard focus always stays the 1px ink line inside, over any hover or selected line. */
-  #view :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
-  header :focus-visible:not(.house-menu *) { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
+  #view :focus-visible { outline: none !important; box-shadow: inset 0 0 0 1px var(--ink) !important; }
+  header :focus-visible:not(.house-menu *) { outline: none !important; box-shadow: inset 0 0 0 1px var(--frame-ink) !important; }
 </style>
 </head>
 <body>
