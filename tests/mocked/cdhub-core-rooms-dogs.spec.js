@@ -123,6 +123,22 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(flap).toContainText('2 of 2 chosen');
   });
 
+  test('The round on a past date lists the rooms in use THAT day: one retired since still shows, one added since does not', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA.replace(/\r\n$/, '') + '\r\nar-d,t,Room D,A,1,7,u-m2,yes,,,\r\n');
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ.replace(/\r\n$/, '') + '\r\nreq-3,t,room.in_use,area,ar-d,2026-11-01,,Pretend new room,,\r\n');
+    await HUBS.cdhub.open(page, guard);
+    const on = (day) => page.evaluate((d) => { CD._roundDate = d; return liveCabins().map((a) => a.code); }, day);
+    expect(await on('2020-06-01')).toEqual(['Room A', 'Room B', 'Room C']);
+    expect(await on(await page.evaluate(() => todayISO()))).toEqual(['Room A', 'Room B', 'Room D']);
+    await page.evaluate(() => { CD._roundDate = '2020-06-01'; go('round', false); });
+    await expect(page.locator('#main')).toContainText('Room C');
+    await expect(page.locator('#main')).not.toContainText('Room D');
+  });
+
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-area.csv', AREA);
