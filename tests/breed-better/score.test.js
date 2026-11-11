@@ -258,3 +258,25 @@ test('skip: with no record the line leaves the total (a maiden has no last litte
   assert.equal(some.points_available, 10);
   assert.equal(some.points_earned, 3);
 });
+
+/* Age weighting is the breeder's own row (Lisa: an X-ray before 12 months counts half; 12 months on is final). */
+const awSet = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { age_weight: '0-11:0.5' })] });
+const awInput = (on) => Object.assign({}, awSet, { subject: { id: 'a1', dob: '2025-03-02' }, asOf: '2026-11-01',
+  evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on), exam('e2', 'a1', 'eye', 'clear', on)] } });
+
+test('age weight: a record before 12 months scores half; at 12 months it is full', () => {
+  const young = score(awInput('2026-03-01'));
+  assert.equal(young.lines[1].age_months, 11);
+  assert.equal(young.lines[1].points, 5);
+  assert.equal(young.points_available, 10);
+  const final = score(awInput('2026-03-02'));
+  assert.equal(final.lines[1].age_months, 12);
+  assert.equal(final.lines[1].points, 10);
+});
+
+test('age weight: bad rows are refused; no birth date means no weighting', () => {
+  const bad = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { age_weight: 'under a year' })] });
+  assert.match(validateScheme(bad).join(), /age_weight must look like/);
+  const r = score(Object.assign(awInput('2026-03-01'), { subject: { id: 'a1' } }));
+  assert.equal(r.lines[1].points, 10);
+});

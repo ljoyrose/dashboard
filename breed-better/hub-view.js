@@ -134,6 +134,7 @@
     else if (l.kind === 'status') res = '<span class="bb-pts">' + esc(l.answer_then) + '</span>';
     else res = l.points === '' ? vpill('unverified', w) : '<span class="bb-pts">' + l.points + ' of ' + l.points_max + '</span>';
     var when = l.date_then ? ' \u00b7 ' + esc(day(l.date_then)) : '';
+    if (l.weight !== undefined && l.weight < 1) when += ' \u00b7 at ' + l.age_months + ' months, ' + (l.weight === 0.5 ? 'half' : Math.round(l.weight * 100) + '%') + ' points';
     var why = l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
     if (l.due_date && !l.due) why += ' \u00b7 due ' + esc(day(l.due_date));
     res += dueHtml(l);

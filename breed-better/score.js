@@ -46,6 +46,25 @@
     return /^percent\b/i.test(text(scheme.target_is)) ? Math.ceil(available * Number(n) / 100) : Number(n);
   }
 
+  /** Whole months from a to b (both YYYY-MM-DD). */
+  function monthsBetween(a, b) {
+    var p = a.split('-').map(Number), q = b.split('-').map(Number);
+    return (q[0] - p[0]) * 12 + (q[1] - p[1]) - (q[2] < p[2] ? 1 : 0);
+  }
+
+  /** "0-11:0.5" (months at the record date : share of the points), pairs joined by ';'. null when not understood. */
+  function parseAgeWeight(spec) {
+    if (!text(spec)) return [];
+    var out = [];
+    var ok = text(spec).split(';').every(function (pair) {
+      var m = /^\s*(\d+)-(\d+)\s*:\s*(\d+(?:\.\d+)?)\s*$/.exec(pair);
+      if (!m || Number(m[3]) > 1) return false;
+      out.push({ from: Number(m[1]), to: Number(m[2]), weight: Number(m[3]) });
+      return true;
+    });
+    return ok ? out : null;
+  }
+
   /** Parse an answer rule. Fixed forms only; returns null when the rule is not one of them. */
   function parseMatch(rule) {
     var r = text(rule), m;
@@ -109,6 +128,8 @@
       if (text(c.due_soon_days) && !/^\d+$/.test(text(c.due_soon_days))) errors.push(c.id + ': due_soon_days must be a whole number');
       if (text(c.due_soon_days) && !text(c.valid_months)) errors.push(c.id + ': due_soon_days needs valid_months');
       if (text(c.lapsed_affects_verdict) && !/^(true|false)$/i.test(text(c.lapsed_affects_verdict))) errors.push(c.id + ': lapsed_affects_verdict must be TRUE or FALSE');
+      if (parseAgeWeight(c.age_weight) === null) errors.push(c.id + ': age_weight must look like 0-11:0.5 (months:share, share 0 to 1)');
+      if (text(c.age_weight) && !text(c.date_field)) errors.push(c.id + ': age_weight needs a date_field');
       var rows = (set.points || []).filter(function (p) { return p.criterion_id === c.id; });
       if (band.kind !== 'status' && !rows.length) errors.push(c.id + ': has no answers');
       rows.forEach(function (p) {
@@ -233,6 +254,17 @@
           unknownCount++;
         } else if (rule) {
           line.points = Number(rule.points) || 0;
+          /* the breeder's own rule: e.g. an X-ray before 12 months counts for half */
+          var aw = parseAgeWeight(c.age_weight);
+          if (aw.length && ev.row && isDate(input.subject.dob) && isDate(line.date_then)) {
+            line.age_months = monthsBetween(input.subject.dob, line.date_then);
+            aw.some(function (w) {
+              if (line.age_months < w.from || line.age_months > w.to) return false;
+              line.points = Math.round(line.points * w.weight * 10) / 10;
+              line.weight = w.weight;
+              return true;
+            });
+          }
           earned += line.points;
         } else if (when === 'zero' || when === 'fail') {
           line.points = 0;
@@ -256,5 +288,5 @@
     };
   }
 
-  return { score: score, targetFor: targetFor, pickScheme: pickScheme, validateScheme: validateScheme, parseMatch: parseMatch, addMonths: addMonths };
+  return { score: score, targetFor: targetFor, parseAgeWeight: parseAgeWeight, monthsBetween: monthsBetween, pickScheme: pickScheme, validateScheme: validateScheme, parseMatch: parseMatch, addMonths: addMonths };
 });
