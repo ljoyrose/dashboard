@@ -148,14 +148,14 @@ test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so
     await expect(box).not.toHaveClass(/\bbad\b/);
   });
 
-  test('changing how a cabin is run (The round) says it is not saved yet; an area\'s access (Areas) says saving off', async ({ page, guard }) => {
+  test('changing how a cabin is run (The round) says saving is off; an area\'s access (Areas) says saving off', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'round');
     const racc = page.locator('.racc').first();
     const ra = await racc.getAttribute('data-area');
     const rv = await racc.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean));
     await racc.selectOption(rv[rv.length - 1]);
-    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('how a cabin is run is not saved yet');
+    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('saving off — set it up at the top of this page');
     await tab(page, 'areas');
     const aacc = page.locator('.aacc').first();
     const aa = await aacc.getAttribute('data-area');

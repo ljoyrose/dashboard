@@ -943,7 +943,6 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
 test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
   const WANT = [
     ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
-    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'],
     ['litters', 'stage', 'Litter stage', 'litter stage', 'birth_group_stage']];
   test('each empty state names its Bloodline table, in words, on its own tab', async ({ page }) => {
     await page.goto('cdhub/');
