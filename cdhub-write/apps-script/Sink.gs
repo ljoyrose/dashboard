@@ -128,10 +128,10 @@ function retentionYears_(section, tenant) {
   return years || BLD.LIMITS.RETENTION_DEFAULT_YEARS;
 }
 
-/** A reading typed in more than 7 days late may never fill a slot already filled: the same room and period_start at any time is a repeat. */
+/** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
 function sameSlot_(late, clean, rows, nowMs) {
   if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
-  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && rows[i][late.field] === clean[late.field]) return rows[i];
+  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && (rows[i].thermometer_id || '') === (clean.thermometer_id || '') && rows[i][late.field] === clean[late.field]) return rows[i];
   return null;
 }
 
@@ -456,7 +456,8 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (want === String(cur[name] || '')) continue;
       changedDefs[name] = defs[name]; changedVals[name] = want;
     }
-    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, store_lookups_({ lookups: spec.lookups }, tenant), nowMs, ageCap_(spec, tenant, nowMs));
+    var editLookups = store_lookups_({ lookups: spec.lookups }, tenant);
+    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, editLookups, nowMs, ageCap_(spec, tenant, nowMs));
     for (name in v.errors) if (Object.prototype.hasOwnProperty.call(v.errors, name)) errors[name] = v.errors[name];
     var next = {}, c;
     for (c in cur) if (Object.prototype.hasOwnProperty.call(cur, c)) next[c] = cur[c];
@@ -466,7 +467,7 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (v.clean[name] === String(cur[name] || '')) continue;       // "22" typed over "22.00" is not a change
       next[name] = v.clean[name]; changed.push(name);
     }
-    if (spec.checkRow) spec.checkRow(next, errors);
+    if (spec.checkRow) spec.checkRow(next, errors, editLookups);
     if (Object.keys(errors).length) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
     if (!changed.length) throw err_('NOTHING_CHANGED', 'Nothing was different from what is already there, so nothing was changed.');
     try {

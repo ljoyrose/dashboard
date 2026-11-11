@@ -25,10 +25,16 @@
    * day (the day of period_start, else of taken_at). Any row counts, a room_empty row with no temperatures too.
    * A thermometer outside its need rows is never flagged.
    */
+  // A reading covers thermometer t when it names t (thermometer_id), or names none and t is the only thermometer in its
+  // room (older rows, the CD Hub round). Any row counts, a Room empty one too (Lisa 11 Nov 2026).
   function missingOn(rows, readings, on, reqRows) {
-    var seen = {};
-    (readings || []).forEach(function (r) { if (day(r.period_start || r.taken_at) === day(on)) seen[r.area_id] = true; });
-    return neededList(rows, on, reqRows).filter(function (t) { return !seen[t.area_id]; });
+    var perRoom = {}, byId = {}, byRoom = {};
+    (rows || []).forEach(function (t) { if (t) perRoom[t.area_id] = (perRoom[t.area_id] || 0) + 1; });
+    (readings || []).forEach(function (r) {
+      if (day(r.period_start || r.taken_at) !== day(on)) return;
+      if (r.thermometer_id) byId[r.thermometer_id] = true; else byRoom[r.area_id] = true;
+    });
+    return neededList(rows, on, reqRows).filter(function (t) { return !byId[t.id] && !(byRoom[t.area_id] && perRoom[t.area_id] === 1); });
   }
   return { neededOn: neededOn, neededList: neededList, missingOn: missingOn };
 }));
