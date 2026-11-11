@@ -3,7 +3,8 @@
  * Each BLD-thermometer row has valid_from and valid_to (the date naming BLD scheme rows use).
  * A thermometer is needed from valid_from up to and including valid_to; a blank valid_from means always,
  * a blank valid_to means it has not ended; active=false retires it. Outside those dates nothing may flag it
- * for a missing reading. Pure functions; works in a browser (window.BLDThermometer) and in Node.
+ * for a missing reading. After its end date it drops out of today's round and the print list, but its records
+ * stay, and a late reading for a day it was needed is still entered: ask neededOn(t, readingDay), never today. Pure functions; works in a browser (window.BLDThermometer) and in Node.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();

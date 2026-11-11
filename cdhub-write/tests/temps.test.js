@@ -186,3 +186,18 @@ test('compliance: a retired thermometer with no reading on 12 Nov is not flagged
   assert.deepEqual(T.missingOn(rows, readings, '2026-11-11').map((t) => t.id).sort(), ['thm-1', 'thm-2']);   // on 11 Nov Extra A had its reading
   assert.deepEqual(T.missingOn(rows, [], '2026-10-31'), []);                                         // before any valid_from: nothing to flag
 });
+
+test('after a thermometer ends, a late reading for a day it was needed still saves (Lisa 11 Nov: late readings from photos)', () => {
+  const T = require('../../cdhub/staff/lib/thermometer.js');
+  const env = standardEnv({ nowMs: Date.UTC(2026, 10, 12, 10, 0, 0), props: { TABLE_ON_thermometer: 'true' } });   // today is 12 Nov
+  env.addFile('BLD-thermometer.csv', fx.headerOnly(THM_HEADER));
+  const a = areas(env)[0];
+  const ended = { id: 'thm-23', name: 'Extra A', area_id: a, active: 'true', valid_from: '2026-11-01', valid_to: '2026-11-11' };
+  env.file('BLD-thermometer.csv')[0].content = [THM_HEADER.join(','), `thm-23,${fx.TENANT},Extra A,${a},true,2026-11-01,2026-11-11,2026-11-01T09:00:00+00:00,o`].join('\r\n') + '\r\n';
+  assert.equal(T.neededOn(ended, '2026-11-12'), false);   // gone from today's round and the print list
+  assert.equal(T.neededOn(ended, '2026-11-11'), true);   // its own days stay open for entry and show in History
+  const late = save(env, req(env, { fields: { area_id: a, min_c: '18.0', max_c: '22.0', period_start: '2026-11-11T08:00:00Z' } }));
+  assert.equal(late.ok, true, JSON.stringify(late));        // never refused because today is past the end date
+  const rows = recs(env, 'BLD-area_reading.csv');
+  assert.equal(rows.length, 1); assert.equal(rows[0].area_id, a); assert.equal(rows[0].period_start, '2026-11-11T08:00:00Z');
+});
