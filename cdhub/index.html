@@ -794,7 +794,7 @@ function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
   var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
       MC=idx(T['BLD-microchip.csv'],'subject_id');
-  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||'',src:r.source||''}); });
+  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||''}); }); /* source column stays in the sheet, not shown (Lisa, 12 Nov 2026) */
   Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
   var DSP={}; (T['BLD-dispense.csv']||[]).forEach(function(r){
     (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:r.given_on,product:r.product,pres:r.presentation,
@@ -1846,13 +1846,12 @@ function showWeights(id){
  var el=document.getElementById('wpanel'); if(!el) return;
  if(!d.weights.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no weighings</h4></div>'; return; }
  var h='<div class="card"><h4>'+esc(d.name)+': weighings'+cntPill(d.weights.length)+'</h4>'
-  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th><th>source</th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th></tr></thead><tbody>';
  for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
   var dl=pv?(w.kg-pv.kg):null;
   h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
    +'<td>'+(dl===null?'<span class="mut">first</span>':'<span class="'+(dl>0?'up':(dl<0?'dn':''))+'">'+(dl>0?'+':'')+dl.toFixed(1)+'</span>')+'</td>'
-   +'<td>'+(w.bcs?'<span class="pill '+(w.bcs==='5'?'ok':(parseInt(w.bcs,10)>5?'w':'no'))+'">'+esc(w.bcs)+'</span>':'<span class="mut">\u2014</span>')+'</td>'
-   +'<td class="mut">'+esc(w.src||'')+'</td></tr>'; }
+   +'<td>'+(w.bcs?'<span class="pill '+(w.bcs==='5'?'ok':(parseInt(w.bcs,10)>5?'w':'no'))+'">'+esc(w.bcs)+'</span>':'<span class="mut">\u2014</span>')+'</td></tr>'; }
  h+='</tbody></table></div><button id="wclose" class="cb" style="margin-top:8px">close</button></div>';
  el.innerHTML=h;
  var c=document.getElementById('wclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });

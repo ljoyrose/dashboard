@@ -40,6 +40,9 @@ test.describe('CD Hub: Dogs search, Clear filters and the weighings panel', () =
     await expect(panel.locator('tbody tr').first()).toContainText('14.6 kg');
     await expect(panel.locator('tbody tr').first()).toContainText('+0.4');
     await expect(panel.locator('tbody tr').last()).toContainText('first');
+    // the weight source column stays in the sheet but is not shown (Lisa, 12 Nov 2026)
+    await expect(panel.locator('thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);
+    await expect(panel).not.toContainText('invented');
     await panel.locator('#wclose').click();
     await expect(panel).toBeEmpty();
   });
