@@ -240,7 +240,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round).not.toContainText(/\bactual/i);
     await expect(round).not.toContainText(/source/i);
     await page.getByRole('button', { name: 'Month cards' }).click();
-    await expect(page.locator('#view-c')).toContainText('outside limit');
+    await expect(page.locator('#view-c')).toContainText('outside');
     await expect(page.locator('#view-c')).toContainText('High');
     await expect(page.locator('#view-c')).toContainText('missed');
     await expect(page.locator('#view-c')).not.toContainText('cold days');

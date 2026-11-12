@@ -2,6 +2,8 @@
 // "the info i need without looking alarming"). Pretend Drive only; every row here is invented.
 // RULES is the one list later screens reuse (round, year report, prints).
 const { test, expect } = require('../support/test');
+// The page builds a whole year of views before it says "Up to date"; under a full parallel run that can pass 7 s (quality review 12 Nov).
+const LOADED = { timeout: 20000 };
 const fs = require('fs');
 const path = require('path');
 
@@ -75,7 +77,7 @@ async function open(page, guard, size, rooms) {
   await page.addInitScript(() => localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: 'FAKE-TEST-TOKEN', expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' })));
   await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export\?/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: OUTDOOR }));
   await page.goto('cdhub/history.html');
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
 }
 const day = (page, iso) => page.locator(`#view-a [data-cal="indoors"] button.d[title^="${+iso.slice(8)} Jan 2026 indoors"]`);
@@ -227,9 +229,21 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(jan).toHaveAttribute('data-read', String(want.read));
   await expect(jan).toHaveAttribute('data-out', String(want.out));
   await expect(jan).toHaveAttribute('data-miss', String(want.miss));
-  await expect(jan).toContainText(`${want.read} read`);
-  await expect(jan).toContainText(`${want.out} outside limit`);
+  await expect(jan).toContainText(`${want.read - want.out} in limit`);
+  await expect(jan).toContainText(`${want.out} outside`);
   await expect(jan).toContainText(`${want.miss} missed`);
+  await expect(jan).toContainText(`${Math.round(100 * (want.read - want.out) / (want.read + want.miss))}% in limit`);
+  // quality review 12 Nov: no card for a month that has not started; a card opens its month on the heat map
+  await expect(page.locator('#view-c .mitem')).toHaveCount(1);
+  await jan.click();
+  await expect(page.locator('#view-a')).toBeVisible();
+  await expect(page.locator('#view-a .mc[data-m="1"]').first()).toBeInViewport();
+});
+
+test('phone: the round shows room cards only, never the table beside them (quality review 12 Nov)', async ({ page, guard }) => {
+  await open(page, guard, { width: 390, height: 844 });
+  await expect(page.locator('#view-d .rtile').first()).toBeVisible();
+  await expect(page.locator('#view-d .rscroll')).toBeHidden();
 });
 
 test('audit: a room in use with no readings at all is listed and shows missed, never hidden', async ({ page, guard }) => {
@@ -260,7 +274,7 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   await open(page, guard);
   put('BLD-area_reading.csv', readings);
   await page.reload();
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
   await openDay(page, '2026-01-07');
   await expect(page.locator('#drill .rl', { hasText: 'R3' })).toContainText('PM empty');
@@ -294,7 +308,7 @@ test('audit: a room with two thermometers has a line per thermometer; a blank th
   const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
   guard.world.file('bld-thermo', 'BLD-thermometer.csv', thermos, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
   await page.reload();
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('#rdate').fill('2026-01-12');
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile .rn')).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
@@ -320,7 +334,7 @@ test('audit: area links show old rooms\' readings in the new rooms, widest for a
   const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
   guard.world.file('bld-links', 'BLD-area_link.csv', links, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
   await page.reload();
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('#rdate').fill('2026-01-12');
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile', { hasText: '3B.1/2/3 (from 3B.1/2, 3B.3/4)' })).toContainText('10.0–15.0');
