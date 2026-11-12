@@ -29,7 +29,7 @@ function book() {
       ['AAA', 'AAA0012KZPSXZZZ', 'Grain Free', 'Dog', 'Adult', 'GF Sample Fish', '12kg', '12', '31.20', '31.20', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'ON SALE (Shopify)', 'Sample Doodle', '', '', '', '', 'Y', '65', '63', '', '', '8.17'],
       ['BBB', '', 'Grain Free', 'Dog', 'Adult', 'GF Sample Rabbit', '6kg', '6', '21.97', '21.97', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'DDF-ELIGIBLE: check data sheet, then list', '', '', '', '', '', 'N', '', '', '', '', ''],
       ['CCC', '', 'Connoisseur Cat', 'Cat', 'Adult', 'Sample Cat Fish', '5kg', '5', '22.55', '', '', '', 'Y', 'N', 'N', 'CHECK', 'CAT range', '', '', '', '', '', 'N', '', '', '', '', '']],
-    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', ''], ['SHOPIFY_STORE', 'samplestore', ''], ['GA_ORDER_TO', 'orders@example.test', ''], ['GA_XML_CONTACT', 'Sample Person, sample.person@example.test', '']],
+    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['VAT_RATE', '20', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', ''], ['SHOPIFY_STORE', 'samplestore', ''], ['GA_ORDER_TO', 'orders@example.test', ''], ['GA_XML_CONTACT', 'Sample Person, sample.person@example.test', '']],
   };
 }
 // Pretend Sheets: batchGet returns the five tabs, single-row reads return the card row, every PUT is recorded.
@@ -83,7 +83,7 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view > .card[data-key]')).toHaveCount(3);
     await expect(page.locator('#view > .card[data-key] h2').first()).toContainText('GA price up');
     await page.goto('food/#/invoices');
-    await expect(page.locator('#view a.tile', { hasText: 'Next GA payment due' })).toContainText('06/12/2026');
+    await expect(page.locator('#view a.tile', { hasText: 'Next GA payment due' })).toContainText('06/12/26');
   });
 
   test('Apply writes ONLY the 4 answer cells of that row (answer, note, when, who), then Undo clears them', async ({ page }) => {
@@ -127,28 +127,49 @@ test.describe('GA Hub page', () => {
     const writes = await sheets(page, b);
     await open(page, '#/orders');
     const first = page.locator('#view .row', { hasText: '#9202' }), second = page.locator('#view .row', { hasText: '#9201' });
-    await expect(second).toContainText('placed 07/11/2026 · 2 × Sample Doodle 12kg · Dog · sale £70.00');
-    await expect(first).toContainText('📤 Sent by XML 08/11/2026: waiting for GA');
+    await expect(second).toContainText('placed 07/11/26 · 2 × Sample Doodle 12kg · Dog · sale £70.00');
+    await expect(first).toContainText('Sent by XML 08/11/26: waiting for GA');
     await second.locator('button[data-v="Send"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Cards!G2:J2');
     expect(writes[0].body.values[0][0]).toBe('Send');
   });
 
-  // G1 (Lisa, 30 Oct 2026): the low-profit warning is under £8. The value is read from MIN_PROFIT; a blank cell means 8.
-  test('low profit: blank MIN_PROFIT means £8; under 8 is flagged, exactly 8 and over are not; a typed value still wins', async ({ page }) => {
+  // G1 (Lisa, 30 Oct 2026) and the quality review (12 Nov 2026): the minimum is read from MIN_PROFIT only. A blank cell is
+  // "not set": no built-in number, so nothing is flagged low.
+  test('low profit: blank MIN_PROFIT shows "not set" and flags nothing; the GA page says to add it', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
-    b.orders = [b.orders[0], row('9101', '7.99'), row('9102', '8.00'), row('9103', '8.01')];
+    b.orders = [b.orders[0], row('9101', '7.99'), row('9102', '8.00'), row('9103', '-2.00')];
     b.settings = b.settings.filter((s) => s[0] !== 'MIN_PROFIT');
     await sheets(page, b);
     await open(page, '#/review');
-    await expect(page.locator('#view > .tiles')).toContainText('Under £8 profit');
-    await expect(page.locator('#view .tile', { hasText: 'Under £8 profit' }).locator('.v')).toHaveText('1');
+    await expect(page.locator('#view .tile', { hasText: 'Minimum profit' }).locator('.v')).toHaveText('not set');
+    await expect(page.locator('#view')).not.toContainText('Under £8');
     await page.goto('food/#/orders');
+    await expect(page.locator('#view .row .amt.red')).toHaveCount(0);
     await page.locator('[data-ofilter="low"]').click();
-    await expect(page.locator('#view .row')).toHaveCount(1);
-    await expect(page.locator('#view .row')).toContainText('#9101');
-    await expect(page.locator('#view .row .amt.red')).toHaveText('Profit £7.99');
+    await expect(page.locator('#view .card')).toContainText('Minimum profit not set');
+    await page.goto('food/#/ga');
+    await expect(page.locator('#view .row', { hasText: 'Minimum profit per order' })).toContainText('Not set: add MIN_PROFIT in Settings');
+    await expect(page.locator('#view .row', { hasText: 'VAT rate' })).toContainText('20%');
+  });
+  // Quality review (12 Nov 2026): VAT is a Settings row (VAT_RATE, a percent), never a built-in 1.2.
+  test('VAT rate: blank VAT_RATE gives no profit estimate and says why; 20 gives the estimate', async ({ page }) => {
+    const b = book(), h = b.orders[0].concat(['species'].filter((c) => !b.orders[0].includes(c)));
+    const r = h.map(() => ''), set = (c, v) => { r[h.indexOf(c)] = v; };
+    set('order_no', '9401'); set('source', 'Shopify'); set('brand', 'DDF'); set('supplier', 'GA'); set('status', 'Placed'); set('order_type', 'One-off (Online Store)'); set('sale_inc_vat', '140.00'); set('customer_orders', '1');
+    set('placed_at', '2026-11-09T09:00:00Z'); set('shop_lines', JSON.stringify([{ code: 'AAA0012KZPSXZZZ', qty: 2 }])); set('check', 'Waiting for GA');
+    b.orders = [h, r];
+    b.cards = [['SEND-9401', 'send', 'Orders', 'Send order #9401 to GA?', '{}', ago(5)]];
+    b.settings = b.settings.filter((s) => s[0] !== 'VAT_RATE');
+    await sheets(page, b);
+    await open(page, '#/do');
+    const a = page.locator('#view .card[data-key="SEND-9401"]');
+    await expect(a.locator('.fact', { hasText: 'profit' }).locator('.v')).toHaveText('–');
+    await expect(a.locator('.warn')).toContainText('VAT rate not set (VAT_RATE in Settings), so profit cannot be estimated');
+    b.settings = b.settings.concat([['VAT_RATE', '20', '']]);
+    await page.locator('#refresh').click();
+    await expect(a.locator('.fact', { hasText: 'Est. profit' })).toContainText('£39.60');
   });
   test('low profit: MIN_PROFIT typed as 8 gives the same line; typed as 10 moves it (never hard-coded)', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
@@ -261,7 +282,7 @@ test.describe('GA Hub page', () => {
     await open(page);
     await expect(page.locator('#view a.hm-n[data-k="Owe GA"] .hm-v')).toHaveText('£50.42');   // the same figure as the Dashboard's Food tile
     await page.goto('food/#/invoices');
-    await expect(page.locator('#view .tile').first()).toContainText('GA statement 19/10/2026');
+    await expect(page.locator('#view .tile').first()).toContainText('GA statement 19/10/26');
     await expect(page.locator('#view .tile').first()).toContainText('£1234.56');
   });
 
@@ -347,7 +368,7 @@ test.describe('GA Hub page', () => {
     await sheets(page, book());
     await open(page, '#/orders');
     const row = page.locator('#view .row', { hasText: '#9001' });
-    await expect(row).toContainText('🔁 Subscription (PayWhirl) · Shopify · DDF · customer\'s 22nd order');
+    await expect(row).toContainText('Subscription (PayWhirl) · Shopify · DDF · customer\'s 22nd order');
     await expect(row.locator('a', { hasText: 'Track' })).toHaveAttribute('href', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001');
     await expect(row.locator('a', { hasText: 'Shopify' })).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders?query=9001');
     await expect(page.locator('#view .row', { hasText: '#9002' }).locator('a', { hasText: 'Track' })).toHaveCount(0);   // no tracking link yet
@@ -363,9 +384,9 @@ test.describe('GA Hub page', () => {
     await page.locator('[data-filter="all"]').click();
     await expect(page.locator('#view .grp')).toHaveText(['Grain Free · 2', 'Connoisseur Cat · 1']);
     const rabbit = page.locator('#view .row', { hasText: 'GF Sample Rabbit' });
-    await expect(rabbit.locator('.badge')).toHaveText(['🐶 Adult', '🌾🚫 Grain free', '🐔 Chicken', '🥩 60% meat', '💪 28% protein']);
-    await expect(rabbit.locator('.badge.no')).toHaveText('🐔 Chicken');
-    await expect(page.locator('#view .row', { hasText: 'Sample Cat Fish' }).locator('.badge')).toHaveText(['🐱 Adult', '🌾 Grain: check']);
+    await expect(rabbit.locator('.badge')).toHaveText(['Dog · Adult', 'Grain free', 'Chicken', '60% meat', '28% protein']);
+    await expect(rabbit.locator('.badge.no')).toHaveText('Chicken');
+    await expect(page.locator('#view .row', { hasText: 'Sample Cat Fish' }).locator('.badge')).toHaveText(['Cat · Adult', 'Grain: check']);
     await expect(page.locator('#view .row', { hasText: 'Sample Doodle' }).locator('a', { hasText: 'Data sheet' })).toHaveAttribute('href', 'https://example.test/sheet.pdf');
   });
 
@@ -388,10 +409,10 @@ test.describe('GA Hub page', () => {
     const card = page.locator('#view .card', { hasText: 'Order #9003' });
     await expect(card.locator('a', { hasText: 'GA Portal' })).toHaveAttribute('href', 'https://partners.example.test');
     await page.goto('food/#/orders');
-    await expect(page.locator('#view .row', { hasText: '#9001' }).locator('.badge')).toHaveText('✅ Matched with GA');
-    await expect(page.locator('#view .row', { hasText: '#9002' }).locator('.badge.no')).toHaveText('⚠️ GA sent different items');
-    await expect(page.locator('#view .row', { hasText: '#9003' }).locator('.badge.no')).toHaveText('❌ Not at GA: check the Portal');
-    await expect(page.locator('#view .row', { hasText: '#9005' }).locator('.badge')).toHaveText('📥 At GA (confirmed)');
+    await expect(page.locator('#view .row', { hasText: '#9001' }).locator('.badge')).toHaveText('Matched with GA');
+    await expect(page.locator('#view .row', { hasText: '#9002' }).locator('.badge.no')).toHaveText('GA sent different items');
+    await expect(page.locator('#view .row', { hasText: '#9003' }).locator('.badge.no')).toHaveText('Not at GA: check the Portal');
+    await expect(page.locator('#view .row', { hasText: '#9005' }).locator('.badge')).toHaveText('At GA (confirmed)');
     await page.locator('[data-ofilter="check"]').click();
     await expect(page.locator('#view .row')).toHaveCount(2);   // the two red ones
     await page.locator('[data-ofilter="ga"]').click();
@@ -407,9 +428,9 @@ test.describe('GA Hub page', () => {
     b.orders.push(['9203', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'No GA items']);
     await sheets(page, b);
     await open(page, '#/orders');
-    await expect(page.locator('#view .row', { hasText: '#9201' }).locator('.badge')).toHaveText('🏠 Pack at home: tap Packed once posted');
-    await expect(page.locator('#view .row', { hasText: '#9202' }).locator('.badge')).toHaveText('🏠 Packed at home');
-    await expect(page.locator('#view .row', { hasText: '#9203' }).locator('.badge')).toHaveText('📭 No GA items: see its card');
+    await expect(page.locator('#view .row', { hasText: '#9201' }).locator('.badge')).toHaveText('Pack at home: tap Packed once posted');
+    await expect(page.locator('#view .row', { hasText: '#9202' }).locator('.badge')).toHaveText('Packed at home');
+    await expect(page.locator('#view .row', { hasText: '#9203' }).locator('.badge')).toHaveText('No GA items: see its card');
     await expect(page.locator('#view')).not.toContainText('Packed at home (no GA items)');
   });
 
@@ -421,8 +442,8 @@ test.describe('GA Hub page', () => {
       ['partner_type', 'B', 'Breeder or breeder club', '', '', 'Y'], ['partner_type', 'R', 'Reseller', '', '', 'Y'], ['partner', 'R01', 'Sample Pet Shop', '', '', 'Y'], ['channel', 'ZZ', 'Old shop', '', '', 'N']];
     await sheets(page, b);
     await open(page, '#/orders');
-    await expect(page.locator('#view .row', { hasText: '#9001 ' }).first()).toContainText('🤝 Breeder or breeder club 07');
-    await expect(page.locator('#view .row', { hasText: '#9001-R1' }).locator('.badge')).toHaveText('🔁 Replacement, sent again');
+    await expect(page.locator('#view .row', { hasText: '#9001 ' }).first()).toContainText('Breeder or breeder club 07');
+    await expect(page.locator('#view .row', { hasText: '#9001-R1' }).locator('.badge')).toHaveText('Replacement, sent again');
     await page.goto('food/#/ga');
     const codes = page.locator('#view .card', { hasText: 'Shopify order number only, digits' });
     await expect(codes).toContainText('DDF Designer Dog Foods');
@@ -528,7 +549,7 @@ test.describe('GA Hub page', () => {
     const b = book(); b.dds = [['date', 'amount', 'bank_ref', 'invoices_paid'], ['2026-10-07', '529.37', 'GA PETFOOD DDL', ''], ['2026-10-14', '512.46', 'GA PETFOOD DDL', 'SI-1000001']];
     await sheets(page, b);
     await open(page, '#/invoices');
-    await expect(page.locator('#view .tiles')).toContainText('Last GA direct debit 14/10/2026');
+    await expect(page.locator('#view .tiles')).toContainText('Last GA direct debit 14/10/26');
     await expect(page.locator('#view .tiles')).toContainText('£512.46');
     await expect(page.locator('#view .tiles')).toContainText('£1041.83');   // both are in this financial year
   });
@@ -875,7 +896,7 @@ test.describe('GA Hub house look', () => {
     const card = page.locator('#view .card').first();
     await expect(card).toContainText('1 recipe sold · data sheet linked for 1');
     await expect(card).toContainText('Sample Doodle');
-    await expect(card).toContainText('GA price list: 28/10/2026 · SAMPLE price list');
+    await expect(card).toContainText('GA price list: 28/10/26 · SAMPLE price list');
     await expect(card.locator('a', { hasText: 'Price list' })).toHaveAttribute('href', /FILEPL00000000000000000001/);
     await expect(page.locator('#view .card').nth(1)).toContainText('ZZZ0006KZPSXZZZ (no data sheet)');
   });
