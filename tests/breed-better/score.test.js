@@ -280,3 +280,81 @@ test('age weight: bad rows are refused; no birth date means no weighting', () =>
   const r = score(Object.assign(awInput('2026-03-01'), { subject: { id: 'a1' } }));
   assert.equal(r.lines[1].points, 10);
 });
+
+/* Dated rules (Lisa, 12 Nov 2026): a record is graded by the rows in force on its own date. */
+test('dated rules: an old record keeps the points of the rule in force on its date', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [crit('hip', 'g'), crit('eye', 'p')],
+    points: [pt('1', 'hip', 'any', '', 'pass'),
+      Object.assign(pt('3', 'eye', 'is:clear', 10), { to_date: '2026-03-01' }),
+      Object.assign(pt('4', 'eye', 'is:clear', 6), { from_date: '2026-03-02' })]
+  });
+  const run = (on) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01',
+    evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on), exam('e2', 'a1', 'eye', 'clear', on)] } }));
+  const old = run('2026-03-01');
+  assert.equal(old.points_earned, 10);
+  assert.equal(old.points_available, 10);
+  assert.equal(old.lines[1].rules_then, true);
+  const recent = run('2026-03-02');
+  assert.equal(recent.points_earned, 6);
+  assert.equal(recent.lines[1].rules_then, false);
+});
+
+test('dated rules: a gate made stricter later never fails an old pass', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [crit('hip', 'g'), crit('eye', 'p')],
+    points: [Object.assign(pt('1', 'hip', 'in:sound|fair', '', 'pass'), { to_date: '2026-01-31' }),
+      Object.assign(pt('2', 'hip', 'is:sound', '', 'pass'), { from_date: '2026-02-01' }),
+      Object.assign(pt('5', 'hip', 'any', '', 'fail'), { from_date: '2026-02-01' }),
+      pt('3', 'eye', 'any', 1)]
+  });
+  const run = (on) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01',
+    evidence: { exam: [exam('e1', 'a1', 'hip', 'fair', on), exam('e2', 'a1', 'eye', 'x', on)] } }));
+  assert.equal(run('2026-01-15').gate_result, 'pass');
+  assert.equal(run('2026-02-15').gate_result, 'fail');
+});
+
+test('dated rules: versions of one check share a key; the record date picks how long it lasts', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [Object.assign(crit('hip-v1', 'g', { key: 'hip', evidence_match: 'kind=hip', valid_months: '24' }), { to_date: '2026-01-31' }),
+      Object.assign(crit('hip-v2', 'g', { key: 'hip', evidence_match: 'kind=hip', valid_months: '6' }), { from_date: '2026-02-01' })],
+    points: [pt('1', 'hip-v1', 'any', '', 'pass'), pt('2', 'hip-v2', 'any', '', 'pass')]
+  });
+  const run = (on) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-12-01',
+    evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on)] } }));
+  const old = run('2025-12-01');
+  assert.equal(old.gate_result, 'pass');
+  assert.equal(old.lines.length, 1);
+  assert.equal(old.lines[0].criterion_id, 'hip-v1');
+  assert.equal(old.lines[0].due_date, '2027-12-01');
+  const newer = run('2026-03-01');
+  assert.equal(newer.gate_result, 'unverified');
+  assert.equal(newer.lines[0].unknown_reason, 'expired');
+});
+
+test('dated rules: a check ended before the scoring date is not scored', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [crit('hip', 'g'), Object.assign(crit('eye', 'p'), { to_date: '2026-01-01' })]
+  });
+  const r = score(dogInput([exam('e1', 'a1', 'hip', 'sound', '2026-02-01')]));
+  const r2 = score(Object.assign({}, dogInput([exam('e1', 'a1', 'hip', 'sound', '2026-02-01')]), set));
+  assert.equal(r.lines.length, 2);
+  assert.equal(r2.lines.length, 1);
+});
+
+test('dated rules: overlapping versions and bad dates are refused', () => {
+  const bad = Object.assign({}, DOG, {
+    criteria: [crit('a', 'g', { key: 'hip', from_date: '2026-01-01' }), crit('b', 'g', { key: 'hip', from_date: '2026-03-01' }), crit('eye', 'p')],
+    points: DOG.points.concat(pt('a1', 'a', 'any', '', 'pass'), pt('b1', 'b', 'any', '', 'pass'), Object.assign(pt('x', 'eye', 'any', 1), { from_date: '2 Mar 2026' }))
+  });
+  const errs = validateScheme(bad).join(' ');
+  assert.match(errs, /overlap/);
+  assert.match(errs, /from_date must be a date/);
+  assert.match(validateScheme(Object.assign({}, DOG, { criteria: [crit('hip', 'g', { from_date: '2026-03-01', to_date: '2026-02-01' }), crit('eye', 'p')] })).join(' '), /to_date is before from_date/);
+});
+
+test('dated rules: a scheme with a to_date stops being picked after it', () => {
+  const s = [{ id: 'x', status: 'active', species_id: 'dog', effective_from: '2026-01-01', to_date: '2026-05-31' }];
+  assert.equal(pickScheme(s, 'dog', '', '2026-05-31').id, 'x');
+  assert.equal(pickScheme(s, 'dog', '', '2026-06-01'), null);
+});
