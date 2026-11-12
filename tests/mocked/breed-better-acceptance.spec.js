@@ -3,9 +3,9 @@
 // The full spec is the Drive file RR_Breed-Better_CD-Hub_spec-and-acceptance.md in the Breed Better folder. Each test names the
 // spec line it proves (S1, S2 ...). Invented animals only: the hub's own sample dogs plus tests/fixtures/breed-better/.
 //
-// Fixture, calculator, owner page, dog-card chip, missing-data and staff checks all run. Only the inspector view (S10)
-// is test.fixme: it needs a time-limited read-only link, which is not built yet. If a test fails, fix the PAGE, no
-// the test, unless Lisa has changed the spec. Selectors: #/breed, data-bb-*, .bb-chip (breed-better/hub-view.js).
+// Fixture, calculator, owner page, dog-card chip, missing-data, staff and inspector (S10) checks all run. The inspector
+// page is cdhub/staff/inspect/ (#441, #442); its script is mocked here with a fake id and fake code. If a test fails,
+// fix the PAGE, not the test, unless Lisa has changed the spec. Selectors: #/breed, data-bb-*, .bb-chip (breed-better/hub-view.js).
 const fs = require('fs');
 const path = require('path');
 const { test: base, expect } = require('../support/test');
@@ -16,7 +16,6 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const BB = path.join(ROOT, 'tests', 'fixtures', 'breed-better');
 const BB_FILES = fs.readdirSync(BB).filter((f) => f.endsWith('.csv'));
 const SCORE_FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv'];
-const PENDING_INSPECTOR = 'Inspector view (spec S10, Lisa 11 Nov 2026) is not built. The route and data-bb-inspector hook are proposed; change selectors only.';
 const MONTHS = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
 
 // Expected results for the invented rows (see tests/fixtures/breed-better/README.md). Best first.
@@ -315,38 +314,81 @@ asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)'
   });
 });
 
-// ---------------------------------------------------------------- inspector (pending, spec S10)
+// ---------------------------------------------------------------- inspector (spec S10): the staff inspect page, script mocked
 
-asOwner.describe('Breed Better acceptance: inspector view', () => {
-  asOwner.fixme(true, PENDING_INSPECTOR);
+const INS_ID = 'FAKE-TEST-ID-456';
+const INS_SCRIPT = 'https://script.google.com/macros/s/' + INS_ID + '/exec';
+const INS_LINK = 'cdhub/staff/inspect/#s=' + INS_ID + '&c=FAKEINSPECTCODEY';
+const INS_CORS = { 'access-control-allow-origin': '*' };
+// What the save script hands an inspector code: ticked dogs, ticked columns, chip already cut to its last 4 digits.
+const INS_DATA = {
+  subject: { fields: ['id', 'name', 'sex', 'dob'], rows: [
+    { id: 'z', name: 'Test Dog Zed', sex: 'male', dob: '2021-05-04' },
+    { id: 'a', name: 'Test Dog Able', sex: 'female', dob: '2022-03-02' },
+    { id: 'm', name: 'Test Dog Mid', sex: 'female', dob: '2020-11-30' }] },
+  microchip: { fields: ['id', 'subject_id', 'chip_number'], redacted: { chip_number: 'last4' }, rows: [{ id: 'c1', subject_id: 'a', chip_number: '0042' }] },
+  health_screen: { fields: ['id', 'subject_id', 'test', 'grade', 'tested_on'], rows: [{ id: 'h1', subject_id: 'a', test: 'hips', grade: '5', tested_on: '2024-02-03' }] }
+};
+const inspectRoute = async (page) => {
+  const asked = [];
+  await page.route(INS_SCRIPT, (r) => {
+    if (r.request().method() === 'GET') return r.fulfill({ headers: INS_CORS, json: { saveEnabled: false, readEnabled: true, tables: [], version: 'test' } });
+    const b = JSON.parse(r.request().postData());
+    asked.push(b.table);
+    const t = INS_DATA[b.table];
+    if (!t) return r.fulfill({ headers: INS_CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'no' } });
+    return r.fulfill({ headers: INS_CORS, json: { ok: true, result: Object.assign({ ends: '2026-11-18T17:00:00' }, t) } });
+  });
+  return asked;
+};
+
+base.describe('Breed Better acceptance: inspector view', () => {
+  base.use({ allowedConsole: [/404/] });
   const openInspector = async (page) => {
-    await page.goto('cdhub/#inspect');
-    await expect(page.locator('[data-bb-inspector]')).toBeVisible();
+    const asked = await inspectRoute(page);
+    await page.goto(INS_LINK);
+    await expect(page.locator('.ins-dog')).toHaveCount(3);
+    return asked;
   };
 
-  asOwner('S10.1 read only: no buttons that change anything', async ({ page }) => {
+  base('S10.1 read only: no buttons, boxes or forms that change anything', async ({ page }) => {
     await openInspector(page);
-    const root = page.locator('[data-bb-inspector]');
-    await expect(root).toContainText('Read only');
-    await expect(root.locator('input, textarea, select, [data-save], [data-edit]')).toHaveCount(0);
+    await expect(page.locator('#screen')).toContainText('Read only');
+    await expect(page.locator('button, input, textarea, select, form, [contenteditable], [data-save], [data-edit]')).toHaveCount(0);
   });
 
-  asOwner('S10.2 shows the four must-pass checks, never points, target or ranking', async ({ page }) => {
-    await openInspector(page);
-    const root = page.locator('[data-bb-inspector]');
-    for (const label of ['Hips', 'Elbows', 'Patella', 'Fit to Breed']) await expect(root).toContainText(label);
-    await expect(root).not.toContainText(/\d+ of (20|85|100)\b|Below target|target|points/i);
+  base('S10.2 shows the shared records, never points, target, verdict or ranking, and never asks for a score list', async ({ page }) => {
+    const asked = await openInspector(page);
+    await expect(page.locator('#screen')).toContainText('Health tests');
+    await expect(page.locator('#screen')).not.toContainText(/\d+ of \d+|Below target|target|points|Unverified|\bPass\b|\bFail\b|Testing/i);
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.some((t) => /score|enrol|judg/i.test(t))).toBe(false);
   });
 
-  asOwner('S10.3 dogs are A to Z, not best to worst', async ({ page }) => {
+  base('S10.3 dogs are A to Z, not best to worst', async ({ page }) => {
     await openInspector(page);
-    const names = await page.locator('[data-bb-inspector] [data-bb-dog]').allInnerTexts();
-    const first = names.map((n) => n.split('\n')[0].trim());
-    expect(first).toEqual([...first].sort((a, b) => a.localeCompare(b)));
+    await expect(page.locator('.ins-dog h2')).toHaveText(['Test Dog Able', 'Test Dog Mid', 'Test Dog Zed']);
   });
 
-  asOwner('S10.4 the link shows when it ends, as a date like 18 Nov 2026', async ({ page }) => {
+  base('S10.4 the link shows when it ends, as a date like 18 Nov 2026', async ({ page }) => {
     await openInspector(page);
-    await expect(page.locator('[data-bb-inspector]')).toContainText(new RegExp('Ends \\d{1,2} (' + MONTHS + ') \\d{4}'));
+    await expect(page.locator('.ins-ends').first()).toHaveText(new RegExp('Read only\\. This link ends \\d{1,2} (' + MONTHS + ') \\d{4}\\.'));
+    await expect(page.locator('.ins-ends').first()).toHaveText('Read only. This link ends 18 Nov 2026.');
+  });
+
+  base('S10.5 a microchip ticked as last 4 shows only those 4 digits, and the code leaves the address bar', async ({ page }) => {
+    await openInspector(page);
+    const able = page.locator('.ins-dog', { hasText: 'Test Dog Able' });
+    await expect(able.locator('.ins-list', { hasText: 'Microchip' })).toContainText('Chip number 0042');
+    expect(await page.locator('#screen').innerText()).not.toMatch(/\d{5,}/);
+    expect(page.url()).not.toContain('FAKEINSPECTCODEY');
+    expect(page.url()).not.toContain(INS_ID);
+  });
+
+  base('S10.6 an inspector page on a phone (360px) needs no sideways scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openInspector(page);
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(wide).toBeLessThanOrEqual(0);
   });
 });
