@@ -1,5 +1,6 @@
 // The style sweep (Lisa, 3 Nov 2026): one set of in-page checks, read back from the drawn page and its style sheets.
-//  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable).
+//  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable) and the ONE
+//    pale grey state fill (Lisa, 12 Nov 2026: hover, tap and selected = --hov / --sel-fill; on the dark frame --frame-hov).
 //  2 Numbers side by side in one group are the same size (and weight).
 //  3 No explainer lines or sub-lines that restate a label.
 //  4 Nothing moves on hover or focus.
@@ -15,7 +16,8 @@ function stateRules() {
   // Typing boxes may change their background; so may an on/off switch (a form control: its track shows on or off).
   const TYPING = /(^|[\s>+~(,])(input|textarea|select)\b|\[contenteditable|::placeholder|::-webkit|::selection|\.fin\b|\.sw\b/;
   const noNot = (x) => { let y = x, z; while ((z = y.replace(/:not\([^()]*\)/g, '')) !== y) y = z; return y; };   // :not(:hover) is the resting state
-  const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|rgba\(0, 0, 0, 0\))$/;
+  // The one pale grey state fill (Lisa, 12 Nov 2026) is the house rule, not a fill to find.
+  const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|var\(--(hov|sel-fill|frame-hov)\)|rgba\(0, 0, 0, 0\))$/;
   const out = [];
   const walk = (rules, sheet) => {
     for (const r of rules) {
@@ -60,7 +62,10 @@ function drawn() {
   const typing = (e) => e.matches('input, textarea, select, [contenteditable="true"], [contenteditable=""], .sw, [role="switch"]');
   const out = { selected: [], groups: [], explainers: [], rose: [], broken: [] };
 
-  // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on.
+  // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on, or the one pale
+  //   grey selected fill (--sel-fill, Lisa 12 Nov 2026).
+  const pr = document.createElement('span'); pr.style.background = 'var(--sel-fill, transparent)'; document.body.appendChild(pr);
+  const selFill = getComputedStyle(pr).backgroundColor; pr.remove();
   const SEL = '[aria-pressed="true"], [aria-current="page"], [aria-current="true"], [aria-selected="true"], .on, .sel, .selected';
   for (const e of document.querySelectorAll(SEL)) {
     if (!seen(e) || typing(e) || e.closest('svg') || e.matches('html, body, main, #view, section, .card, li, tr, td, dialog')) continue;
@@ -68,7 +73,7 @@ function drawn() {
     const sib = [...(e.parentElement ? e.parentElement.children : [])].find((x) => x !== e && x.tagName === e.tagName && !x.matches(SEL) && seen(x));
     const want = sib ? getComputedStyle(sib).backgroundColor : (e.parentElement ? bgOf(e.parentElement) : 'rgb(255, 255, 255)');
     const got = s.backgroundColor;
-    const same = got === want || (alpha(got) < 0.05 && !sib);
+    const same = got === want || got === selFill || (alpha(got) < 0.05 && !sib);
     if (!same || (s.backgroundImage !== 'none' && !/url\(/.test(s.backgroundImage))) out.selected.push(name(e) + ': selected fill ' + got + (s.backgroundImage !== 'none' ? ' ' + s.backgroundImage.slice(0, 40) : '') + ' (beside ' + want + ')');
   }
 
@@ -164,4 +169,58 @@ function lateShown(brokenToo) {
   return /(?<![a-z])(late|overdue|down|expired|past (its|their) due)(?![a-z])/i.test(v.innerText || '');
 }
 
-module.exports = { stateRules, drawn, roseTabs, lateShown };
+// Text contrast (Lisa, 3 Nov 2026): every piece of text holds 4.5:1 or better on what it actually sits on.
+// Runs in the page: walks the visible text nodes, finds the colour behind each one (up through the parents to the first
+// solid background, blending any see-through layers on the way), and returns one line per element under 4.5:1.
+// Skipped: disabled controls (WCAG excuses them), aria-hidden text (decorative), text over a picture or gradient
+// (no single colour behind it to measure), and text clipped to nothing (screen-reader-only labels).
+function textContrast(min = 4.5) {
+  const rgba = (c) => { const m = (c || '').match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[,/ ]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; };
+  const over = (top, under) => { const a = top[3]; return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1); };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const name = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + ([...e.classList].slice(0, 3).map((c) => '.' + c).join('')) + ' "' + (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) + '"';
+  const hex = (c) => '#' + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+  // The colour behind e: see-through layers are kept and laid over the first solid one; a picture or gradient means "unknown".
+  const behind = (e) => {
+    const layers = [];
+    for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
+      const s = getComputedStyle(x);
+      if (s.backgroundImage && s.backgroundImage !== 'none') return null;
+      const c = rgba(s.backgroundColor);
+      if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+    }
+    let base = layers.length && layers[layers.length - 1][3] >= 1 ? layers.pop() : rgba(getComputedStyle(document.documentElement).backgroundColor) || [255, 255, 255, 1];
+    if (base[3] < 1) base = over(base, [255, 255, 255, 1]);
+    while (layers.length) base = over(layers.pop(), base);
+    return base;
+  };
+  const out = new Map();
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.nodeValue.trim()) continue;
+    const e = n.parentElement;
+    if (!e || out.has(e) || e.closest('svg, script, style, noscript, template, [aria-hidden="true"], [hidden]')) continue;
+    if (e.closest(':disabled, [aria-disabled="true"], fieldset:disabled')) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width <= 1 || r.height <= 1 || !e.getClientRects().length) continue;
+    const s = getComputedStyle(e);
+    if (s.visibility !== 'visible' || /rect\(0(px)?,? 0(px)?,? 0(px)?,? 0(px)?\)|inset\(50%\)/.test(s.clip + ' ' + s.clipPath)) continue;
+    // A faded parent (opacity under 1) fades its text too: counted as a see-through text colour.
+    let fade = 1;
+    for (let x = e; x && x.nodeType === 1; x = x.parentElement) fade *= +getComputedStyle(x).opacity;
+    if (fade === 0) continue;
+    // The text's own box must be on the page (a scroller's hidden part still counts: it scrolls into view).
+    const range = document.createRange(); range.selectNodeContents(n);
+    const tr = range.getBoundingClientRect(); if (tr.width < 1 || tr.height < 1) continue;
+    const bg = behind(e); if (!bg) continue;
+    const fg0 = rgba(s.color); if (!fg0 || fg0[3] === 0) continue;
+    fg0[3] *= fade;
+    const fg = fg0[3] < 1 ? over(fg0, bg) : fg0;
+    const k = ratio(fg, bg);
+    if (k < min - 1e-9) out.set(e, name(e) + ': ' + hex(fg) + ' on ' + hex(bg) + ' = ' + k.toFixed(2) + ':1');
+  }
+  return [...out.values()];
+}
+
+module.exports = { stateRules, drawn, roseTabs, lateShown, textContrast };

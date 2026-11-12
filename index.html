@@ -128,7 +128,10 @@
       var decide = cs.filter(function (r) { return r.key && !/^PACK-/.test(r.key) && !r.answer && !r.applied_at; }).map(function (r) {
         return { hub: 'food', kind: detail(r).red ? 'late' : 'wait', text: r.title || r.key, href: 'food/#/home' };
       });
-      return { ok: true, xml: late.length === 0, nums: [['Late', late.length, late.length > 0], ['Owe GA', '£' + owed.toFixed(2)], ['Today', placed]], needs: needs, decide: decide, todo: [], packs: cs };
+      // Orders waiting for Lisa's Send tap (SEND_MODE HOLD): an open SEND- card whose order has no GA number yet (8 Nov 2026).
+      var hasS = {}; orders.forEach(function (o) { if (o.s_no) hasS[String(o.order_no)] = true; });
+      var toSend = cs.filter(function (r) { return /^SEND-/.test(r.key || '') && !r.answer && !r.applied_at && !hasS[r.key.slice(5)]; }).length;
+      return { ok: true, xml: late.length === 0 && toSend === 0, toSend: toSend, nums: [['Late', late.length, late.length > 0], ['Owe GA', '£' + owed.toFixed(2)], ['Today', placed]], needs: needs, decide: decide, todo: [], packs: cs };
     }).catch(none);
   }
 
@@ -362,7 +365,7 @@
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
   .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: var(--fs-small); }
-  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); font-weight: 600; border-color: var(--s7); }
+  .subnav a[aria-current="page"] { background: var(--sel-fill); outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); font-weight: 600; border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
   .stat .num { font-size: var(--fs-figure); font-weight: 600; }
@@ -387,6 +390,8 @@
   .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
   .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
   .btn.ai { border-color: var(--ljr-7-solid); background: var(--ljr-7-solid); color: var(--ljr-7-on); font-weight: 600; }
+  /* A filled control's focus line is its own text colour, 1px inside, so it shows on the fill. */
+  html body .btn.danger.solid:focus-visible { outline-color: var(--ljr-2-on) !important; } html body .btn.ai:focus-visible { outline-color: var(--ljr-7-on) !important; }
   /* Folded cards: summary always shows title + count; body opens on click and stays open across redraws. */
   details.fold > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
   details.fold > summary::-webkit-details-marker { display: none; }
@@ -457,14 +462,15 @@
     font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; }
   .hk b.need { border-color: var(--house-late); }
   .hk > span:last-child, .hsub { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
+  .hubtile a.xml.need { border: 1px solid var(--house-late); border-radius: 999px; padding: 0 8px; }
   .hubtile a.xml { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); font-size: var(--fs-small); font-weight: 600; padding: 0 4px; pointer-events: auto; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
-  /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 2px ink ring. */
+  /* Hover and press: the pale grey fill, no line (Lisa, 12 Nov 2026); nothing moves. Keyboard focus: the 1px ink line inside. */
   .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
   .hubtile a:focus:not(:focus-visible) { outline: none; }
-  @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; } }
-  .hubtile a:active { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; }
-  .hubtile a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  @media (hover: hover) { .hubtile a:hover { background:var(--hov); } }
+  .hubtile a:active { background:var(--hov); }
+  .hubtile a:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
   ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
   .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
@@ -504,7 +510,7 @@
 
   /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
 
   /* Hub V2 (25 Oct 2026, same layout as Marketplace): five sections in a bar at the bottom, in thumb reach on the phone.
      Dashboard, Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
@@ -522,7 +528,7 @@
   .hint { margin: 0; font-size: var(--fs-small); color: var(--muted); }
 
   /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
-     1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
+     1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 1px ink inside. One radius, 12px.
      No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. Dark frame top and bottom. ==== */
   /* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css.
      Home's own: the Bin tab colour (slot 8 as warm charcoal, never black). */
@@ -585,10 +591,10 @@
   .btn, .subnav a, .picker select, input.find { border-color: var(--ctl); }
   .subnav a { display: inline-flex; align-items: center; }
   @media (max-width: 600px) { .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 44px; } }
-  /* Hover = selected = the same 1px edge turns ink. An outline laid over the edge: never thicker, never moves. */
-  .subnav a[aria-current="page"] { outline: 1px solid var(--ink); outline-offset: -1px; background: transparent; border-color: var(--ctl); }
+  /* Hover: the pale grey fill, no line. Selected: the same fill plus the 1px quiet grey line inside (Lisa, 12 Nov 2026). Never moves. */
+  .subnav a[aria-current="page"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); border-color: var(--ctl); }
   @media (hover: hover) {
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { background:var(--hov); }
     .btn:hover, .subnav a:hover, a.keytile:hover, a.ment:hover { border-color: var(--ctl); }
     a.ment.bad:hover { border-color: var(--ljr-2); }
     a.card[class]:hover { border-color: var(--ctl); }
@@ -599,8 +605,8 @@
   .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
   .ment.bad { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   /* Colour on hover only: a section's colour shows on its icon ring when pointed at. */
-  /* Keyboard focus: 2px ink ring (the one exception to 1px). The screen title keeps no box. */
-  html body :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). The screen title keeps no box. */
+  html body :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
   /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
@@ -611,9 +617,9 @@
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
   .needs a.needsmore { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
-  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
-    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); } }
-  .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  @media (hover: hover) { .hsplit a.cnt:hover { background:var(--hov); }
+    .hsplit a.cnt.k-risk:hover { background:var(--hov); } }
+  .hsplit a.cnt:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
   .nextcard .hint { flex: 1 1 180px; }
@@ -624,30 +630,29 @@
   /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
   header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }
-  @media (hover: hover) { header .btn:hover { outline-color: var(--frame-ink); border-color: var(--ctl); } }
+  @media (hover: hover) { header .btn:hover { background:var(--frame-hov); border-color: var(--ctl); } }
   /* Signed out the sign-in gate hides the header box (and its dark frame), so the one Sign in button sits on the page: page colours. */
   html.dash-locked header .btn, html.dash-locked header .btn.vision { color: var(--ink); background: var(--surface); }
-  @media (hover: hover) { html.dash-locked header .btn:hover { outline-color: var(--ink); } }
+  @media (hover: hover) { html.dash-locked header .btn:hover { background:var(--hov); } }
   html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
   html body header :focus-visible { outline-color: var(--frame-ink) !important; }
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
-  html body nav.house-tabs .ht:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  html body nav.house-tabs .ht:focus-visible { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
-  /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
-     (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
-     of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 2px ink ring. */
+  /* House hover rule (Lisa, 12 Nov 2026, replaces 28 Oct): hover and tap = the pale grey fill, no line, for every control, meaning
+     colours too. Selected = the same fill plus the 1px quiet grey line inside (--sel-bd). Focus stays the 1px ink line inside. */
   .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); --hmc: var(--ljr-2); }
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+  .subnav a[aria-current="page"] { background: var(--sel-fill); outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
   @media (hover: hover) {
     .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
-      outline: 1px solid var(--ink); outline-offset: -1px; }
+      background:var(--hov); }
     .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover {
-      outline: 1px solid var(--hl); outline-offset: -1px; }
-    header .btn:hover { outline-color: var(--frame-ink); }
-    html.dash-locked header .btn:hover { outline-color: var(--frame-ink); }
+      background:var(--hov); }
+    header .btn:hover { background:var(--frame-hov); }
+    html.dash-locked header .btn:hover { background:var(--hov); }
   }
 </style>
 </head>
@@ -804,7 +809,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), icloud: blank(), mac: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), icloud: blank(), mac: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1437,7 +1442,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); if (window.DoQ) DoQ.reset(); }
+    if (!timed) { F = {}; S.bin = blank(); S.canva = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); if (window.DoQ) DoQ.reset(); }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -1525,19 +1530,20 @@
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
   var ledgerSurf = {}; // 'surface file_id' keys, e.g. 'drive-personal 1abc'
-  function idsFromLedgerCsv(text) {
+  function idsFromLedgerCsv(text, info) {
     var rows = parseCsv(text);
     // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
     // Only that one note line is skipped; anything else without a file_id header still fails safe (nothing binned).
     if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
-    var col = head.indexOf('file_id'), sc = head.indexOf('surface');
+    var col = head.indexOf('file_id'), sc = head.indexOf('surface'), mcol = head.indexOf('merged_into');
     if (col < 0) return null;
     var ids = {};
     for (var i = 1; i < rows.length; i++) {
       var id = String(rows[i][col] || '').trim();
       if (id) ids[id] = true;
+      if (id && info && mcol >= 0) info[id] = String(rows[i][mcol] || '');
       if (id && sc >= 0) ledgerSurf[String(rows[i][sc] || '').trim().toLowerCase() + ' ' + id] = 1;
     }
     return ids;
@@ -1567,16 +1573,17 @@
             if (String(f.name || '').indexOf(SLIP_PREFIX) === 0) files.push(f);
           });
         });
+        var info = {};
         return mapLimit(files, 3, function (f) {
           return readDriveText(f.id).then(function (text) {
-            var ids = idsFromLedgerCsv(text);
+            var ids = idsFromLedgerCsv(text, info);
             if (!ids) throw new Error('slip');
             return ids;
           });
         }).then(function (sets) {
           var ids = {};
           sets.forEach(function (s) { Object.keys(s).forEach(function (id) { ids[id] = true; }); });
-          return { ok: true, ids: ids };
+          return { ok: true, ids: ids, info: info };
         });
       });
     }).catch(function () { return { ok: false, ids: {} }; });
@@ -1585,12 +1592,14 @@
     if (ledgerCache) return ledgerCache;
     ledgerCache = readDriveText(LEDGER_FILE_ID).then(function (text) {
       ledgerSurf = {};
-      var ids = idsFromLedgerCsv(text);
+      var info = {};
+      var ids = idsFromLedgerCsv(text, info);
       if (!ids) return { ok: false, ids: {}, note: LEDGER_FAIL };
       return findSlipIds().then(function (extra) {
         if (!extra.ok) return { ok: false, ids: {}, note: LEDGER_FAIL };
         Object.keys(extra.ids).forEach(function (id) { ids[id] = true; });
-        return { ok: true, ids: ids, note: '' };
+        Object.keys(extra.info).forEach(function (id) { info[id] = extra.info[id]; });
+        return { ok: true, ids: ids, info: info, note: '' };
       });
     }, function () { return { ok: false, ids: {}, note: LEDGER_FAIL }; });
     return ledgerCache;
@@ -1836,6 +1845,7 @@
     if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
     if (group[0] === 'q') return window.PBin ? PBin.list(group) : [];
     if (group === 'usb') return U.matches || [];
+    if (group === 'canvalog' || group === 'canvamove') return canvaRows(group);
     return [];
   }
   function rowAllowed(group, it) {
@@ -1846,6 +1856,8 @@
     if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip && !isZeroByte(it));
     if (group === 'pcpmark') return !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name) && !isZeroByte(it);
+    if (group === 'canvalog') return !CANVA_DRY && !!it._log && isDeleteName(it.name);
+    if (group === 'canvamove') return !CANVA_DRY && !!it._ready && isDeleteName(it.name);
     if (group[0] === 'q') return !!window.PBin && PBin.allowed(group, it);
     return false;
   }
@@ -2673,7 +2685,8 @@
         return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + (why ? ' aria-label="' + esc(h.name + ', ' + k[0] + ': ' + v + ' ' + why) + '"' : '') + '>' + '<b' + (why ? ' class="' + DashKit.count.cls(v, n[2]).trim() + '"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
       // Same target as the Food hub's own tick: orders filtered to "Not at GA yet".
-      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>' : '';
+      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>'
+        : h.key === 'food' && x.ok && x.toSend ? '<a class="xml need" data-send href="food/#/do"' + HUB_TAB + '>' + x.toSend + ' to send</a>' : '';   // never "✓ XML" while an order waits for Send
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
       return '<div class="card house-lbar hubtile" data-open-row data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo house-open" href="' + esc(head) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
     }).join('') + '</div></section>';
@@ -2967,6 +2980,7 @@
     if (P.ledgerNote) out.push('sweep');
     if (S.check.status === 'failed') out.push('check');
     if (S.dbx.status === 'failed') out.push('dropbox');
+    if (S.canva.status === 'failed') out.push('canva');
     return out;
   }
   function needsNowCard() {
@@ -2977,6 +2991,7 @@
     return '<section class="card slot8" id="needsNow" aria-labelledby="needsNowT"><h3 id="needsNowT">Needs you now</h3><div class="index top">' +
       jump('sweep', readyN, 'file ready for you to approve', 'files ready for you to approve') +
       jump('check', checkN, 'item to check', 'items to check') +
+      jump('canva', canvaCount(), 'Canva design marked', 'Canva designs marked') +
       jump(probs[0] || 'log', probs.length, 'problem', 'problems') + '</div></section>';
   }
   function readyRow(group, f, place) {
@@ -3127,6 +3142,165 @@
       '<li>2: in Dropbox Deleted files, select all, then Permanently delete. Yours to do; it cannot be automated on a personal account.</li></ul>';
     return html + sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
   }
+  // ---- Canva: ZZ_ designs (TidyUp Apps stage 1). The page never calls Canva: there is no Canva token in a public page
+  // and Canva has no trash API. It reads CANVA-BIN-STATE.json (written by the register-listed CANVA-BIN bot) from
+  // CFG.canvaBin.folderId; a design can be ticked only with a ledger row (same rule as ZZ_DELETE_ on Drive). With dryRun
+  // off and after a confirm it writes (a) pending ledger rows as one SLIP_PREFIX slip (surface canva-<label>) and
+  // (b) one CANVA-BIN-REQUEST_<UK time>.json per account. The bot re-reads each design live and moves it to ZZ_BIN only
+  // if the title, last-modified time and page count still match the ledger row; Lisa trashes in Canva. Contract:
+  // docs/CANVA-BIN.md.
+  var CANVA = CFG.canvaBin || {};
+  var CANVA_DRY = CANVA.dryRun !== false;
+  var CANVA_ACCOUNTS = CANVA.accounts || [];
+  // UNVERIFIED against Canva's docs: Canva publishes no URL scheme. Folder links follow what the Canva web app shows.
+  var CANVA_PROJECTS_URL = 'https://www.canva.com/projects';
+  function canvaFolderUrl(id) { return /^[A-Za-z0-9_-]{6,}$/.test(String(id || '')) ? 'https://www.canva.com/folder/' + id : CANVA_PROJECTS_URL; }
+  function ukNameStamp(ms) { // 2026-11-03-1405 (UK time), for file names
+    var p = {}; ukParts.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
+    return p.year + '-' + p.month + '-' + p.day + '-' + p.hour + p.minute;
+  }
+  // The check the bot repeats before a move, kept in the ledger row's merged_into: "check: modified=<ISO>; pages=<n>".
+  function canvaCheckText(f) { return 'check: modified=' + f.modified + '; pages=' + f.pages; }
+  function canvaCheckOf(text) {
+    var m = /modified=([^;\s]+)/.exec(text || ''), n = /pages=(\d+)/.exec(text || '');
+    return m && n ? { modified: m[1], pages: parseInt(n[1], 10) } : null;
+  }
+  function sameTime(a, b) { var x = Date.parse(a), y = Date.parse(b); return !isNaN(x) && x === y; }
+  function canvaClassify(state, led) {
+    var all = (state && state.accounts) || {};
+    return {
+      accounts: CANVA_ACCOUNTS.map(function (label) {
+        var a = all[label], acc = { label: label, missing: !a, generated: a && a.generated || '', zzBin: a && a.zz_bin_folder || null, ready: [], held: [], rename: [] };
+        ((a && a.items) || []).forEach(function (it) {
+          var f = { id: String(it.design_id || ''), name: String(it.title || ''), type: String(it.type || ''), pages: parseInt(it.pages, 10), modified: String(it.last_modified || ''), folder: String(it.folder || ''), account: label };
+          if (!f.id) return;
+          if (!isDeleteName(f.name)) { f._block = 'Name needs fixing: only ZZ_DELETE_ designs can move.'; f._say = 'Name needs fixing by the tidy bot'; acc.rename.push(f); return; }
+          if (!led.ok) { f._block = 'Ledger could not be read.'; f._say = 'Waiting: the log could not be read'; acc.held.push(f); return; }
+          if (!led.ids[f.id]) { f._block = 'No ledger row.'; f._say = 'Not logged yet: tick it to log it'; f._log = true; acc.held.push(f); return; }
+          var chk = canvaCheckOf((led.info || {})[f.id]);
+          if (!chk || !sameTime(chk.modified, f.modified) || chk.pages !== f.pages) { f._block = 'Last-modified time or page count differs from the ledger row.'; f._say = 'Changed since it was logged: held'; acc.held.push(f); return; }
+          f._ready = true; acc.ready.push(f);
+        });
+        return acc;
+      }),
+      ledgerOk: led.ok
+    };
+  }
+  function loadCanva() {
+    if (!signedIn || !accessToken) return;
+    if (!CANVA.folderId) { S.canva = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
+    run('canva', driveList({
+      q: "'" + CANVA.folderId + "' in parents and name = '" + CANVA.stateFile + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return { none: true };
+      return Promise.all([apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true'), loadLedgerSet()])
+        .then(function (x) { return canvaClassify(x[0], x[1]); });
+    }));
+  }
+  function canvaRows(group) {
+    var d = S.canva.data, out = [];
+    if (!d || !d.accounts) return out;
+    d.accounts.forEach(function (a) { out = out.concat(group === 'canvamove' ? a.ready : a.held.filter(function (f) { return f._log; })); });
+    return out;
+  }
+  function canvaCount() {
+    var d = S.canva.data;
+    if (!d) return null;
+    if (!d.accounts) return 0;
+    return d.accounts.reduce(function (n, a) { return n + a.ready.length + a.held.length + a.rename.length; }, 0);
+  }
+  function driveUpload(name, mime, text) {
+    var meta = { name: name, parents: [CANVA.folderId], mimeType: mime }, b = 'cv' + Date.now();
+    var body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: ' + mime + '\r\n\r\n' + text + '\r\n--' + b + '--';
+    return KIT.googleFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'multipart/related; boundary=' + b }, body: body
+    }).then(function (res) { if (!res.ok) throw new ApiError(res.status, 'Upload failed', ''); return res.json(); });
+  }
+  function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+  function canvaLog() {
+    var items = pickedItems('canvalog');
+    if (busy || CANVA_DRY || !items.length) return;
+    if (!writeGranted) { requestWrite(); return; }
+    FOLD.canva = true;
+    if (!window.confirm('Write ' + items.length + ' ledger row' + (items.length === 1 ? '' : 's') + ' for these Canva designs? Nothing moves yet. The rows record the last-modified time and page count the tidy bot checks before any move.')) return;
+    var now = Date.now(), day = ukNameStamp(now).slice(0, 10);
+    var text = 'date,old_name,file_id,merged_into,agent,surface\n' + items.map(function (f) {
+      return [day, f.name, f.id, 'Canva ZZ_BIN (bot move), then Canva trash by Lisa (30 days); ' + canvaCheckText(f), 'dashboard Canva card', 'canva-' + f.account].map(csvCell).join(',');
+    }).join('\n') + '\n';
+    busy = true; render();
+    driveUpload(SLIP_PREFIX + ukNameStamp(now) + '_01.csv', 'text/csv', text).then(function () {
+      R.canva = { at: now, ok: true, text: 'Wrote ' + items.length + ' ledger row' + (items.length === 1 ? '' : 's') + '. Nothing moved.' };
+    }, function (err) {
+      R.canva = { at: now, ok: false, text: 'Not written: ' + friendlyError(err).text };
+    }).then(function () { busy = false; PICK.canvalog = {}; ledgerCache = null; S.canva = blank(); render(); });
+  }
+  function canvaMove() {
+    var items = pickedItems('canvamove').filter(function (f) { return f._ready && isDeleteName(f.name); });
+    if (busy || CANVA_DRY || !items.length) return;
+    if (!writeGranted) { requestWrite(); return; }
+    FOLD.canva = true;
+    if (!window.confirm('Ask the tidy bot to move ' + items.length + ' Canva design' + (items.length === 1 ? '' : 's') + ' to ZZ_BIN? It checks each one again first and skips any that changed. Nothing is deleted; you trash them in Canva yourself.')) return;
+    var now = Date.now(), by = {};
+    items.forEach(function (f) { (by[f.account] = by[f.account] || []).push(f); });
+    busy = true; render();
+    var labels = Object.keys(by);
+    mapLimit(labels, 1, function (label) {
+      var req = { kind: 'CANVA-BIN-REQUEST', v: 1, action: 'move to ZZ_BIN', account: label, requested_at: new Date(now).toISOString(),
+        items: by[label].map(function (f) { return { design_id: f.id, title: f.name, last_modified: f.modified, pages: f.pages }; }) };
+      return driveUpload('CANVA-BIN-REQUEST_' + ukNameStamp(now) + (labels.length > 1 ? '_' + label : '') + '.json', 'application/json', JSON.stringify(req, null, 2));
+    }).then(function () {
+      R.canva = { at: now, ok: true, text: 'Asked the tidy bot to move ' + items.length + ' to ZZ_BIN. Press Refresh after it runs.' };
+    }, function (err) {
+      R.canva = { at: now, ok: false, text: 'Not sent: ' + friendlyError(err).text };
+    }).then(function () { busy = false; PICK.canvamove = {}; render(); });
+  }
+  function canvaRow(group, f) {
+    var label = esc(f.name);
+    var meta = '<div class="meta"><span class="chip">' + esc(f.type || 'Design') + '</span><span class="chip">' + num(f.pages || 0) + (f.pages === 1 ? ' page' : ' pages') + '</span>' +
+      (f.modified ? '<span>Changed ' + esc(fmtTime(f.modified)) + '</span>' : '') + (f.folder ? '<span class="mtag">' + esc(f.folder) + '</span>' : '') + '</div>';
+    // In a dry run, or when the row cannot be acted on, there is no tick box at all (never a disabled one).
+    var tick = group && rowAllowed(group, f);
+    return '<li data-id="' + esc(f.id) + '" data-group="' + esc(group || 'held') + '"' + (f._block ? ' title="' + esc(f._block) + '"' : '') + '>' +
+      (tick ? tickBox(group, f.id, false, label) : '<div class="fname">' + label + '</div>') + meta +
+      (f._say ? '<p class="note">' + esc(f._say) + '</p>' : '') + '</li>';
+  }
+  function canvaCard() {
+    var p = S.canva, d = p.data;
+    var html = foldOpen('canva', false, 'card slot2' + cardClass(p), 'canvaCard') + '<summary><h3>Canva: designs marked to delete</h3>' + stateBadge(p, d ? canvaCount() : null) + '</summary><div class="fbody">';
+    html += failNote(p);
+    if (d && d.notConnected) html += '<p class="note">Canva is not connected yet.</p>';
+    else if (d && d.none) html += '<p class="note">No Canva list published yet. Nothing is waiting.</p>';
+    else if (d && d.accounts) {
+      var ready = canvaRows('canvamove').length;
+      html += CANVA_DRY ? '<p class="note" data-canva-dry>Dry run: ' + num(ready) + ' would move to the bin folder. Nothing changes.</p>'
+        : '<p class="note">' + num(ready) + ' ready to move to the bin folder.</p>';
+      if (!d.ledgerOk) html += '<p class="note fail">' + esc(LEDGER_FAIL) + '</p>';
+      d.accounts.forEach(function (a) {
+        html += '<div data-canva-account="' + esc(a.label) + '"><h4>Canva ' + esc(a.label) + '</h4>';
+        if (a.missing) html += '<p class="note">Not in the list yet.</p>';
+        else {
+          html += '<p class="note">Listed ' + esc(fmtTime(a.generated) || 'date unknown') + '.</p>';
+          var rows = a.ready.map(function (f) { return canvaRow('canvamove', f); })
+            .concat(a.held.map(function (f) { return canvaRow(f._log ? 'canvalog' : '', f); }))
+            .concat(a.rename.map(function (f) { return canvaRow('', f); }));
+          html += rows.length ? '<div class="scrollbox"><ul class="files">' + rows.join('') + '</ul></div>' : '<p class="note">No marked designs.</p>';
+        }
+        html += '<div class="actions"><a class="btn" href="' + esc(a.zzBin ? canvaFolderUrl(a.zzBin) : CANVA_PROJECTS_URL) + '" target="_blank" rel="noopener" data-canva-trash="' + esc(a.label) + '"><span>Step 2: Trash in Canva (' + esc(a.label) + ')</span></a></div></div>';
+      });
+      var nLog = pickCount('canvalog'), nMove = pickCount('canvamove');
+      html += '<div class="actions" data-pick-bar="canva">' +
+        '<button class="btn" type="button" data-action="canvalog"' + (nLog && !busy ? '' : ' disabled') + '><span>' + (nLog ? 'Log these (' + nLog + ')' : CANVA_DRY ? 'Log these: dry run' : 'Log these: tick a design first') + '</span></button>' +
+        '<button class="btn" type="button" data-action="canvamove"' + (nMove && !busy ? '' : ' disabled') + '><span>' + (nMove ? 'Move to the bin folder (' + nMove + ')' : CANVA_DRY ? 'Move to the bin folder: dry run' : 'Move to the bin folder: tick a design first') + '</span></button></div>';
+    }
+    if (R.canva) html += '<p class="res ' + (R.canva.ok ? 'ok' : 'bad') + '" data-canva-result>' + esc(stamp(R.canva.at)) + ': ' + esc(R.canva.text) + '</p>';
+    html += '<ul class="notes"><li>1: the tidy bot moves logged designs to a bin folder in that Canva account, after checking each one again.</li>' +
+      '<li>2: you trash them in Canva. Canva Trash keeps them 30 days. Only you empty it.</li><li>The page never calls Canva.</li></ul>' +
+      whyFold('canvawhy', 'How the Canva bin works', ['Only ZZ_DELETE_ designs can move. Other ZZ_ names: name needs fixing, never moved.', 'Each design needs a ledger row first (surface canva-main or canva-book), written as an AA_DELETE-LEDGER-ROWS_ slip.',
+        'The row keeps the last-modified time and page count. Canva shows no size or checksum, so those two are the check.', 'Move: the page drops one CANVA-BIN-REQUEST_ file. The tidy bot re-reads each design and moves it to ZZ_BIN only if the name, time and pages still match.',
+        'Dry run is on until Lisa switches it off. In a dry run nothing is written.', 'Step 2 links are not checked against Canva docs (UNVERIFIED).']);
+    return html + sourceLine('Canva list', CANVA.folderId ? folderUrl(CANVA.folderId) : 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
+  }
   function binsCard() {
     var p = S.bin, d = p.data, html = '';
     // Already in the bin: per shared drive, read only, folded.
@@ -3181,7 +3355,7 @@
   }
 
   function viewBin() {
-    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + appsCard() + dropboxCard();
+    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + appsCard() + canvaCard() + dropboxCard();
   }
 
   var SUBS = [
@@ -3322,6 +3496,7 @@
     if (r.view === 'do' && signedIn) loadDoQ();
     if ((r.view === 'bin' || r.view === 'dropbox') && S.dbx.status === 'idle') loadDbx();
     if ((r.view === 'icloud' || r.view === 'mac') && S[r.view].status === 'idle') loadReport(r.view, REPORT_NAMES[r.view]);
+    if (r.view === 'bin' && S.canva.status === 'idle') loadCanva();
     if (r.view === 'bin' && S.runlog.status === 'idle') loadRunLog();
   }
   function tabBadge(key, n, label, late) {
@@ -3422,6 +3597,8 @@
     onToken: onToken,
     onError: function (e) {
       var type = e && e.type ? e.type : '';
+      // J34-F01: the Bin permission window closing is a "no" to the Bin, not a failed sign-in; the person is still signed in.
+      if (wantWrite) { wantWrite = false; if (signedIn) { showBanner('Bin access not granted. Browsing still works.', false, false); return; } }
       showBanner(type === 'popup_failed_to_open' ? 'Sign-in window blocked by browser.' : type === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true);
     },
     onSilentFail: onSilentFail
@@ -3466,6 +3643,8 @@
     }
     else if (a === 'showall') { SHOW[t.getAttribute('data-list')] = 'all'; render(); }
     else if (a === 'sweep') sweep();
+    else if (a === 'canvalog') canvaLog();
+    else if (a === 'canvamove') canvaMove();
     else if (a === 'checkzz') openGuard('zzdelete');
     else if (a === 'checkai') openGuard('refer');
     else if (a === 'foldjump') {

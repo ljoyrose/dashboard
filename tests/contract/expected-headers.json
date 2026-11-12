@@ -132,6 +132,10 @@
       "columns": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"],
       "read": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"]
     },
+    "BLD-area_reading.csv": {
+      "columns": ["id", "tenant_id", "area_id", "reading_type", "min_c", "max_c", "spot_c", "precision_dp", "period_start", "taken_at", "taken_by", "device_id", "reset_after_reading", "applied_limit_id", "in_range", "compliant", "mitigation_required", "corrects_id", "mitigation_note"],
+      "read": ["id", "area_id", "min_c", "max_c", "period_start", "taken_at"]
+    },
     "BLD-coat_colour.csv": {
       "columns": ["id", "name", "base_family", "swatch_hex", "nose_pigment_applies"],
       "read": ["id", "name", "base_family", "swatch_hex", "nose_pigment_applies"]
@@ -164,13 +168,13 @@
       "columns": ["subject_id", "state"],
       "read": ["subject_id", "state"]
     },
+    "BLD-temperature_band.csv": {
+      "columns": ["id", "tenant_id", "band", "age_from_days", "age_to_days", "min_temp", "temp_unit_id", "max_temp", "basis", "ruling_needed", "note"],
+      "read": ["id", "band", "age_from_days", "age_to_days", "min_temp", "max_temp", "basis", "ruling_needed", "note"]
+    },
     "BLD-tenant.csv": {
       "columns": ["id", "name"],
       "read": ["id", "name"]
-    },
-    "BLD-area_reading.csv": {
-      "columns": ["id", "tenant_id", "area_id", "reading_type", "min_c", "max_c", "spot_c", "precision_dp", "period_start", "taken_at", "taken_by", "device_id", "reset_after_reading", "applied_limit_id", "in_range", "compliant", "mitigation_required", "corrects_id", "mitigation_note"],
-      "read": ["area_id", "min_c", "max_c", "taken_at"]
     },
     "BLD-weight.csv": {
       "columns": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"],
@@ -211,7 +215,7 @@
       "header_row": 1,
       "columns": ["key", "value", "note"],
       "read": ["key", "value", "note"],
-      "keys_read": ["FY_START_MONTH", "MIN_PROFIT", "SHOPIFY_STORE", "GA_PORTAL", "BANK_FOLDER_ID", "BANK_LEDGER_FILE_ID", "GA_PAYMENT", "GA_ACCOUNT_CODE", "GA_PHONE_ORDERS", "GA_PHONE_ACCOUNTS", "GA_PARTNER_MANAGER", "GA_FIELD_MANAGER", "GA_TERMS", "GA_CUTOFF", "DELIVERY_FIRST_BOX", "DELIVERY_NEXT_BOX", "GA_DELIVERY_ZONE_C", "GA_PALLET", "GA_ORDER_TO", "GA_XML_CONTACT", "GA_ORDER_FROM", "GA_SHIP_FROM", "GA_INVOICE_FROM", "COMMERCIAL_INVOICE_TO", "SUB_DISCOUNT"]
+      "keys_read": ["FY_START_MONTH", "MIN_PROFIT", "SHOPIFY_STORE", "GA_PORTAL", "GA_PAYMENT", "GA_ACCOUNT_CODE", "GA_PHONE_ORDERS", "GA_PHONE_ACCOUNTS", "GA_PARTNER_MANAGER", "GA_FIELD_MANAGER", "GA_TERMS", "GA_CUTOFF", "DELIVERY_FIRST_BOX", "DELIVERY_NEXT_BOX", "GA_DELIVERY_ZONE_C", "GA_PALLET", "GA_ORDER_TO", "GA_XML_CONTACT", "GA_ORDER_FROM", "GA_SHIP_FROM", "GA_INVOICE_FROM", "COMMERCIAL_INVOICE_TO", "SUB_DISCOUNT"]
     },
     "Statements": {
       "range": "Statements!A1:E",

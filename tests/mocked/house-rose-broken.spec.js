@@ -96,10 +96,10 @@ for (const scheme of ['light', 'dark']) {
       await page.locator('#nav [data-house-more]').click();
       await page.locator('#houseMore button[data-go="shape"]').click();
       const c = page.locator('#checksCard h3 .cnt');
-      await expect(c).toHaveText('4');
+      await expect(c).toHaveText('6');
       await expect(c).toHaveClass(/\bbroken\b/);
       await expect(c).not.toHaveClass(/\bneed\b/);
-      await expect(page.locator('#checksCard h3')).toContainText('4 failed');
+      await expect(page.locator('#checksCard h3')).toContainText('6 failed');
       const v = await c.evaluate(look());
       expect([v.bg, v.ink]).toEqual(BLACK[scheme]);
     });
@@ -171,7 +171,7 @@ test.describe('Search dialog (390px)', () => {
       await page.keyboard.press('Tab');
       await expect(close).toBeFocused();
       const fc = await st();
-      expect([fc.ow, fc.os, fc.oo], 'keyboard focus: the 2px ring').toEqual(['2px', 'solid', '2px']);
+      expect([fc.ow, fc.os, fc.oo], 'keyboard focus: one 1px line inside (Lisa, 3 Nov 2026)').toEqual(['1px', 'solid', '-1px']);
       expect([fc.bg, fc.box]).toEqual([rest.bg, rest.box]);
     });
   }

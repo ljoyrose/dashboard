@@ -11,6 +11,17 @@ Written 16 Oct 2026 by claude-job4. Nothing in this file has been run on real Go
 4. Nothing is merged, nothing is deleted. If a step fails, **stop, write down the exact words of the failure, and carry on only with steps that do not depend on it.**
 5. Report as you go in one line per step: `P<n> PASS` / `P<n> FAIL: <exact message>` / `P<n> SKIPPED: <why>`.
 
+## 7 Nov 2026: Sheets
+
+The live tables are now Google Sheets with `.csv` names. Copy **`BLD-area_reading.csv` too** (it exists now). "Check each copy's size" becomes: open the copy and check the row count matches. Where a step says "byte-for-byte", compare cell text (File > Download > CSV of the old and new copy) instead. Extra checks for this run:
+
+| # | Do | Expected |
+|---|---|---|
+| S.1 | On CD Hub, The round page, set up saving with the practice address and the Practice Staff code; type a morning min and max for one room | `saved ✓`; one new row at the bottom of the practice reading Sheet, 1 decimal place, the unnamed 7th column = max minus min, the cells formatted as plain text |
+| S.2 | Type `21.47` | refused: "1 decimal place only" and nothing sent |
+| S.3 | Add a dog to a cabin | `sent — waiting for approval` (inside the 14 days) or `saved ✓` with `MODE_occupancy` = `direct` |
+| S.4 | Type a row into the practice reading Sheet by hand while a save is being sent (two people) | the save refuses with "changed while saving"; nothing is lost |
+
 ## Steps
 
 **P1. Make the practice folder.**

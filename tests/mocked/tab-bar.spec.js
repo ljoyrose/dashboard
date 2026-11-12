@@ -26,8 +26,8 @@ const PLAN = {
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Table map', 'The round', 'Areas', 'Litters', 'Vet link', 'Assocs'] },
-  food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
+  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Compliance', 'Table map', 'The round', 'Areas', 'Litters', 'Assocs'] },
+  food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov)
 };
 // phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
@@ -208,9 +208,10 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
   await expect(dates).toBeFocused();
-  const f = await dates.evaluate((e) => ({ o: getComputedStyle(e).outlineStyle, w: getComputedStyle(e).outlineWidth, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }));
+  const f = await dates.evaluate((e) => ({ o: getComputedStyle(e).outlineStyle, w: getComputedStyle(e).outlineWidth, off: getComputedStyle(e).outlineOffset, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }));
   expect(f.o).toBe('solid');
-  expect(f.w).toBe('2px');
+  expect(f.w).toBe('1px');   // one 1px line inside (Lisa, 3 Nov 2026)
+  expect(f.off).toBe('-1px');
   expect(f.ring).not.toMatch(TRANSPARENT);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/dates$/);

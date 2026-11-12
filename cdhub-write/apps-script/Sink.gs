@@ -107,13 +107,71 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
   return null;
 }
 
+/**
+ * Readings (Lisa 11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
+ * its section's records are kept. Returns { oldestMs, keepYears, field } for those tables, else null (the 7-day rule).
+ * The kept years are the retention row in force on the record's own date (Lisa 12 Nov 2026), else today's.
+ */
+function ageCap_(spec, tenant, nowMs, fields) {
+  var cap = spec.ageCap;
+  if (!cap) return null;
+  var own = String((fields && fields[cap.field]) || '').slice(0, 10);
+  var day = /^\d{4}-\d{2}-\d{2}$/.test(own) ? own : Utilities.formatDate(new Date(nowMs), BLD.TZ, 'yyyy-MM-dd');
+  var years = retentionYears_(cap.retentionSection, tenant, day), oldest = new Date(nowMs);
+  oldest.setUTCFullYear(oldest.getUTCFullYear() - years);   // the same date and time, that many years ago
+  return { oldestMs: oldest.getTime(), keepYears: years, field: cap.field };
+}
+
+/**
+ * Rows in force on a day (Lisa 12 Nov 2026: every limit is a dated, editable row; a past record is judged by the row
+ * in force on its own date). The start is fromKey (default from_date); a blank or missing start = in force from
+ * always, a blank or missing to_date = no end. Both ends count (inclusive), compared as YYYY-MM-DD, so a missing
+ * column is safe before the header has it. The same reading as BLDCapacity.inForce in cdhub/staff/lib/capacity.js.
+ */
+function rowsInForce_(rows, ymd, fromKey) {
+  var day = String(ymd || '').slice(0, 10), fk = fromKey || 'from_date';
+  function d(v) { v = String(v || '').trim().slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
+  return (rows || []).filter(function (r) {
+    var f = d(r[fk]), t = d(r.to_date);
+    return (!f || f <= day) && (!t || day <= t);
+  });
+}
+
+/** Of the rows in force, the one that started last (a row with no start ranks lowest; a tie goes to the later row). */
+function latestInForce_(rows, ymd, fromKey) {
+  var fk = fromKey || 'from_date', best = null;
+  rowsInForce_(rows, ymd, fk).forEach(function (r) {
+    if (!best || String(r[fk] || '').slice(0, 10) >= String(best[fk] || '').slice(0, 10)) best = r;
+  });
+  return best;
+}
+
+/** Years a section's records are kept: its BLD-retention_setting row in force on the day, else the Config.gs default. */
+function retentionYears_(section, tenant, ymd) {
+  var r = store_read_(BLD.RETENTION_FILE, false);
+  if (!r) return BLD.LIMITS.RETENTION_DEFAULT_YEARS;
+  var ok = r.records.filter(function (x) {
+    return (!x.tenant_id || x.tenant_id === tenant) && String(x.section || '').trim() === section &&
+      /^\d{1,2}$/.test(String(x.keep_years || '').trim()) && parseInt(x.keep_years, 10) > 0;
+  });
+  var row = latestInForce_(ok, ymd || Utilities.formatDate(new Date(), BLD.TZ, 'yyyy-MM-dd'));
+  return row ? parseInt(row.keep_years, 10) : BLD.LIMITS.RETENTION_DEFAULT_YEARS;
+}
+
+/** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
+function sameSlot_(late, clean, rows, nowMs) {
+  if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
+  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && (rows[i].thermometer_id || '') === (clean.thermometer_id || '') && rows[i][late.field] === clean[late.field]) return rows[i];
+  return null;
+}
+
 /** Main entry for a save. Returns a result object or throws err_. */
 function sinkHandle_(req) {
   var now = new Date(), nowMs = now.getTime();
 
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
-  if (req.action !== 'add' && req.action !== 'correct') throw err_('BAD_REQUEST', 'Unknown action.');
+  if (req.action !== 'add' && req.action !== 'correct' && req.action !== 'add_site') throw err_('BAD_REQUEST', 'Unknown action.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
@@ -128,15 +186,81 @@ function sinkHandle_(req) {
   if (req.action === 'correct' && spec.noCorrect) {
     throw err_('CORRECT_NOT_SUPPORTED', 'This list has no way to point at an earlier row. Fix a wrong room by moving the dog again.');
   }
-  if (spec.perms[req.action].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  if (req.action === 'add_site' && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
+  if (spec.perms[req.action === 'add_site' ? 'add' : req.action].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
 
   var cache = CacheService.getScriptCache();
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
 
-  var result = withLock_(function () { return sinkProcess_(spec, req, who, now, nowMs); });
+  var result = withLock_(function () { return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
   cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
   return result;
+}
+
+/**
+ * One whole-site tap on a staff check. A job about a place (bowls) stays one line. A job about dogs (site_scope per_dog)
+ * writes one line per dog named in fields.dog_ids, in one append: all of them or none. A dog is left out, and counted in
+ * the answer, if it is in a room the check's not_in_areas lists, has no known room (so it cannot be shown not to be in
+ * isolation), is off site, or already has this check inside the repeat-tap window.
+ * A room job about dogs (target area, site_scope per_dog) works the same way for the dogs ticked in that room; a dog
+ * whose latest room is another room is left out, so a tap can only cover dogs the records place there.
+ */
+function sinkSiteProcess_(spec, req, who, now, nowMs) {
+  var tenant = prop_(BLD.PROP.TENANT_ID);
+  if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
+  var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
+  if (req.values !== undefined && req.values !== null) throw err_('BAD_REQUEST', 'A whole-site tap has no form. Record it on its own to answer the questions.');
+  var typeRead = store_read_(TABLES.check_type.file, true);
+  var type = typeRead.records.filter(function (r) { return r.id === String(f.check_type_id || '') && r.tenant_id === tenant; })[0];
+  if (!type) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check was not found.' } });
+  var room = type.target === 'area' && type.site_scope === 'per_dog';
+  if (type.target !== 'none' && !room) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
+  if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
+
+  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : 'site_tap' };
+  if (room) fields.area_id = f.area_id;
+  if (type.site_scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
+
+  var target = store_read_(spec.file, true);
+  if (!sameHeader_(target.header, spec.columns)) {
+    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+  }
+  var lookups = store_lookups_(spec, tenant);
+  var v = validateInput_(spec, fields, lookups, nowMs);
+  var dogs = validateInput_({ input: { dog_ids: { type: 'idlist', lookup: 'subject', required: true } } }, { dog_ids: f.dog_ids }, lookups, nowMs);
+  var errors = v.errors;
+  if (dogs.errors.dog_ids) errors.dog_ids = dogs.errors.dog_ids;
+  if (Object.keys(errors).length) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
+
+  var never = {};
+  String(type.not_in_areas || '').split('|').forEach(function (a) { a = a.trim(); if (a) never[a] = true; });
+  var occ = store_read_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
+  var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
+  var ids = {}, rows = [], made = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
+  target.records.forEach(function (r) { ids[r.id] = true; });
+  dogs.clean.dog_ids.split('|').forEach(function (dog) {
+    var at = occupancyLatest_(occ, dog);
+    if (at && (String(at.off_site_kind || '') !== '' || permanentlyGone_(at))) { left.off_site++; return; }
+    if (!at || !at.area_id) { left.no_room++; return; }
+    if (room && at.area_id !== v.clean.area_id) { left.no_room++; return; }
+    if (never[at.area_id]) { left.isolation++; return; }
+    var clean = {}; for (var k in v.clean) if (Object.prototype.hasOwnProperty.call(v.clean, k)) clean[k] = v.clean[k];
+    clean.subject_id = dog;
+    if (findDuplicate_(spec, clean, target.records, nowMs, today)) { left.repeat++; return; }
+    var rowId = newId_(spec.idPrefix, now);
+    while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
+    ids[rowId] = true;
+    var row = buildRow_(spec, clean, { rowId: rowId, tenantId: tenant, nowIso: londonIso_(now), today: today, who: who.who, whoId: who.id || '', correctsId: '' });
+    made.push(row); rows.push(rowValues_(spec.columns, row));
+  });
+  if (!rows.length) {
+    if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.', { duplicate_of: '' });
+    throw err_('INVALID', room ? 'None of those dogs are shown in this room.' : 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
+  }
+  try { store_appendMany_(spec.file, spec.columns, rows, target); }
+  catch (e) { logWriteFailure_(e, spec, made[0].id, who.who, now); throw e; }
+  return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at };
 }
 
 function sinkProcess_(spec, req, who, now, nowMs) {
@@ -148,7 +272,8 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var lookups = store_lookups_(spec, tenant);
-  var v = validateInput_(spec, req.fields, lookups, nowMs);
+  var late = ageCap_(spec, tenant, nowMs, req.fields);
+  var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
 
@@ -177,12 +302,14 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     }
   }
 
+  var form = spec.key === 'check_log' ? formAnswers_(req, v.clean, tenant, today, needPending, errors) : null;
+
   if (Object.keys(errors).length) {
     throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
   }
 
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today);
+    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
@@ -199,10 +326,26 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   });
 
   if (!needPending) {
+    // a form's answers go in first: if the check_log row then fails, the answers point at no record and are never
+    // shown; a record is never saved with half its answers
+    if (form && form.answers.length) {
+      var vSpec = TABLES.check_value, vIds = {};
+      form.read.records.forEach(function (r) { vIds[r.id] = true; });
+      var vRows = form.answers.map(function (a) {
+        var vid = newId_(vSpec.idPrefix, now);
+        while (vIds[vid]) vid = newId_(vSpec.idPrefix, now);
+        vIds[vid] = true;
+        return rowValues_(vSpec.columns, { id: vid, tenant_id: tenant, check_log_id: rowId, check_field_id: a.field.id, field_key: a.field.field_key, value: a.value });
+      });
+      try { store_appendMany_(vSpec.file, vSpec.columns, vRows, form.read); }
+      catch (e) { logWriteFailure_(e, vSpec, rowId, who.who, now); throw e; }
+    }
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
-    return { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '' };
+    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '' };
+    if (form) out.answers = form.answers.length;
+    return out;
   }
 
   var pid = newId_('pnd', now);
@@ -213,6 +356,59 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     row_id: rowId, corrects_id: correctsId, note: reason, payload_json: JSON.stringify(row), result: ''
   });
   return { status: 'queued', table: spec.key, file: spec.file, id: rowId, pending_id: pid };
+}
+
+/**
+ * A check's form answers (SOP jobs, 12 Nov 2026), sent as req.values {field_key: value} with a check_log add.
+ * Checked against the check's questions in force today (BLD-check_field: the latest row per field_key with
+ * effective_from on or before today, and active). Any problem goes into errors, so the whole save is refused.
+ * Returns null when there is nothing to save, else {read, answers: [{field, value}]} (blank answers are not saved).
+ * While check_value is switched off, answers are refused and no question is required.
+ */
+function formAnswers_(req, clean, tenant, today, needPending, errors) {
+  var given = req.values !== undefined && req.values !== null;
+  if (given && (typeof req.values !== 'object' || Array.isArray(req.values))) { errors.values = 'The answers were not understood.'; return null; }
+  if (!tableOn_(TABLES.check_value)) {
+    if (given && Object.keys(req.values).length) throw err_('TABLE_OFF', 'Saving form answers is switched off.');
+    return null;
+  }
+  if (errors.check_type_id) return null;
+  var type = store_read_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === clean.check_type_id && r.tenant_id === tenant; })[0];
+  var fRead = store_read_(TABLES.check_field.file, false);
+  var now = {};
+  if (type && fRead) fRead.records.forEach(function (r) {
+    if (r.tenant_id !== tenant || r.type_key !== type.type_key || !r.effective_from || r.effective_from > today) return;
+    if (!now[r.field_key] || r.effective_from > now[r.field_key].effective_from) now[r.field_key] = r;
+  });
+  var fields = Object.keys(now).map(function (k) { return now[k]; }).filter(function (r) { return r.active !== 'false'; });
+  var vals = given ? req.values : {};
+  if (!fields.length && !Object.keys(vals).length) return null;
+  if (Object.keys(vals).length > 60) { errors.values = 'Too many answers.'; return null; }
+  var known = {}, answers = [], ferr = {};
+  fields.forEach(function (f) { known[f.field_key] = f; });
+  Object.keys(vals).forEach(function (k) { if (!known[k]) ferr['values.' + k] = 'This question is not on the form.'; });
+  fields.forEach(function (f) {
+    var raw = vals[f.field_key], v = raw === undefined || raw === null ? '' : String(raw).trim(), bad = '';
+    if (v === '') { if (f.required === 'true') ferr['values.' + f.field_key] = 'This is needed.'; return; }
+    if (f.kind === 'number') { if (!/^-?\d{1,7}(\.\d{1,3})?$/.test(v)) bad = 'Type a number, e.g. 12.5.'; }
+    else if (f.kind === 'date') { if (!isRealDate_(v)) bad = 'Use a real date as YYYY-MM-DD.'; }
+    else if (f.kind === 'yesno') { if (v !== 'yes' && v !== 'no') bad = 'Choose yes or no.'; }
+    else if (f.kind === 'choice') { if (String(f.choices || '').split('|').indexOf(v) < 0) bad = 'Not one of: ' + String(f.choices || '').split('|').join(', ') + '.'; }
+    else if (v.length > BLD.LIMITS.MAX_TEXT_CHARS) bad = 'Too long (keep it under ' + BLD.LIMITS.MAX_TEXT_CHARS + ' characters).';
+    else if (CONTROL_RE_.test(v)) bad = 'Please use plain text on one line.';
+    else if (/^[=+\-@\t]/.test(v)) bad = 'Please do not start with = + - or @ (spreadsheets would treat it as a formula).';
+    if (bad) ferr['values.' + f.field_key] = bad; else answers.push({ field: f, value: v });
+  });
+  if (!answers.length && !Object.keys(ferr).length) return null;
+  // the approval queue holds one row, so a form is only saved straight in, with a new record
+  if (req.action !== 'add' || needPending) { errors.values = 'Form answers can only be saved straight in, with a new record.'; return null; }
+  for (var k in ferr) if (Object.prototype.hasOwnProperty.call(ferr, k)) errors[k] = ferr[k];
+  if (!answers.length) return null;
+  var read = store_read_(TABLES.check_value.file, true);
+  if (!sameHeader_(read.header, TABLES.check_value.columns)) {
+    throw err_('HEADER_MISMATCH', TABLES.check_value.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+  }
+  return { read: read, answers: answers };
 }
 
 /** Queued items, newest last, for the approval page. */
@@ -362,7 +558,8 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (want === String(cur[name] || '')) continue;
       changedDefs[name] = defs[name]; changedVals[name] = want;
     }
-    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, store_lookups_({ lookups: spec.lookups }, tenant), nowMs);
+    var editLookups = store_lookups_({ lookups: spec.lookups }, tenant);
+    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, editLookups, nowMs, ageCap_(spec, tenant, nowMs, Object.prototype.hasOwnProperty.call(changedVals, (spec.ageCap || {}).field) ? changedVals : cur));
     for (name in v.errors) if (Object.prototype.hasOwnProperty.call(v.errors, name)) errors[name] = v.errors[name];
     var next = {}, c;
     for (c in cur) if (Object.prototype.hasOwnProperty.call(cur, c)) next[c] = cur[c];
@@ -372,7 +569,7 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (v.clean[name] === String(cur[name] || '')) continue;       // "22" typed over "22.00" is not a change
       next[name] = v.clean[name]; changed.push(name);
     }
-    if (spec.checkRow) spec.checkRow(next, errors);
+    if (spec.checkRow) spec.checkRow(next, errors, editLookups);
     if (Object.keys(errors).length) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
     if (!changed.length) throw err_('NOTHING_CHANGED', 'Nothing was different from what is already there, so nothing was changed.');
     try {

@@ -190,7 +190,10 @@ function audit(o) {
 function hoverRead(sel) {
   const e = document.querySelector(sel); if (!e) return null;
   const s = getComputedStyle(e), r = e.getBoundingClientRect();
-  return { x: r.x, y: r.y, w: r.width, h: r.height, outline: s.outlineStyle + ' ' + s.outlineWidth + ' ' + s.outlineColor, offset: s.outlineOffset, ow: s.outlineWidth, os: s.outlineStyle, oc: s.outlineColor, bg: s.backgroundColor, border: s.borderTopColor, shadow: s.boxShadow, transform: s.transform };
+  // The pale grey hover fill (house.css --hov, Lisa 12 Nov 2026), read through a probe beside the element so dark mode and looks count.
+  const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr);
+  const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+  return { hov, x: r.x, y: r.y, w: r.width, h: r.height, outline: s.outlineStyle + ' ' + s.outlineWidth + ' ' + s.outlineColor, offset: s.outlineOffset, ow: s.outlineWidth, os: s.outlineStyle, oc: s.outlineColor, bg: s.backgroundColor, border: s.borderTopColor, shadow: s.boxShadow, transform: s.transform };
 }
 
 module.exports = { RULES, audit, hoverRead };
