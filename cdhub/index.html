@@ -2059,17 +2059,13 @@ function pageBuyers(){
  var live=CD.assoc.filter(function(a){return a.status!=='DEFUNCT';});
  var cob=live.filter(function(a){return a.recognises_cobberdog==='true';});
  var h='<h2>Assocs</h2>'
- +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','BLD-prospect.csv')
- +tile('b5',live.length,'live associations','BLD-association.csv')
+ +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','')
+ +tile('b5',live.length,'live associations','')
  +tile('b2',cob.length,'recognise the Cobberdog','of '+live.length)
  +tile('b3',new Set(CD.assoc.map(function(a){return a.country_iso;})).size,'countries','')+'</div>'
- +'<div class="card acc2"><h4>The Cobberdog buyer pool is small, and there is no list to download</h4>'
- +'<p style="margin-bottom:0">Only <b>three live bodies recognise the Australian Cobberdog at all</b> \u2014 MDBA, ACS and ACCA. '
- +'MDBA is the registry that matters and it has <b>no browsable member directory</b>: Classifieds is the only public place to reach its members. '
- +'The big Labradoodle directories hold far more breeders, but <b>ALAA Rule 15 requires a 6-generation AKC/CKC-traceable pedigree</b>, '
- +'which an MDBA Cobberdog pedigree is not. Volume and eligibility point in opposite directions.</p></div>';
- if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects harvested yet</h4>'
-  +'<p style="margin-bottom:0">Empty on purpose. Pass 2 fills it from the directories below. Nothing invented.</p></div>';
+ ;
+ if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects yet</h4>'
+  +'</div>';
  h+='<h3><span class="dot" style="background:var(--p2)"></span>Associations</h3>'
  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
  +'<th>breeders listed</th><th>directory</th></tr></thead><tbody>';
@@ -2087,9 +2083,7 @@ function pageBuyers(){
  if(dead.length) h+='<div class="card dash"><h4>'+dead.length+' bodies are dead but still linked from breeder sites</h4>'
   +'<p style="margin-bottom:0" class="mut">'+dead.map(function(a){return esc(a.acronym)+' \u2014 '+esc(a.note);}).join('<br>')+'</p></div>';
  h+='<h3><span class="dot" style="background:var(--p3)"></span>Getting a dog there</h3>'
- +'<div class="card acc3"><h4>Every sale is a commercial export</h4>'
- +'<p style="margin-bottom:0">A change of ownership is commercial even where no money moves, so the ordinary pet travel certificate does not apply. '
- +'Read each route before promising a buyer a date.</p></div>'
+ +'<p class="mut">Every sale abroad is a commercial export, even with no money.</p>'
  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
  CD.exportRoutes.forEach(function(e){
   var cls=e.difficulty==='LOW'?'ok':(e.difficulty==='HIGH'?'no':'w');
