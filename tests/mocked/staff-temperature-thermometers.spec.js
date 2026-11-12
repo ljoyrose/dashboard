@@ -109,3 +109,23 @@ test('year report: a room with two thermometers can be opened whole or per therm
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('16.0');
 });
+
+// OVERSEER 5, 12 Nov 2026: each round card says Due, the reading, Outside (with the reading), or Room empty.
+test('round cards show due, the reading, outside the limit, or room empty', async ({ page }) => {
+  const t = base();
+  t.area.push({ id: 'area-e', code: 'E1', group_sort: '3' });
+  t.thermometer.push({ id: 'th-e', name: 'E1', area_id: 'area-e' });
+  t.area_reading = [
+    { id: 'r1', area_id: 'area-s', thermometer_id: 'th-s', period_start: '2026-11-12T00:00:00+00:00', min_c: '12.0', max_c: '15.0' },
+    { id: 'r2', area_id: 'area-h', thermometer_id: 'th-h6', period_start: '2026-11-12T00:00:00+00:00', min_c: '8.5', max_c: '15.0', mitigation_note: 'Heater on' },
+    { id: 'r3', area_id: 'area-e', thermometer_id: 'th-e', period_start: '2026-11-12T00:00:00+00:00', room_empty: 'yes' }
+  ];
+  await setup(page, t);
+  await page.goto('cdhub/staff/#m/temperature');
+  const ds = (name) => page.locator('.cards .card', { hasText: name }).locator('.ds');
+  await expect(ds('H5/6 · H5')).toHaveText('Due');
+  await expect(ds('H5/6 · H6')).toHaveText('Outside 8.5–15.0');
+  await expect(page.locator('.cards .card', { hasText: 'H5/6 · H6' })).toHaveClass(/tg-out/);
+  await expect(ds('S1')).toHaveText('12.0–15.0');
+  await expect(ds('E1')).toHaveText('Room empty');
+});
