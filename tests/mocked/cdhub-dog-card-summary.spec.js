@@ -49,7 +49,8 @@ test.describe('CD Hub dog card summary', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
     await expect(card).toHaveCount(1);
-    await expect(card.locator('[data-k="weight"]')).toHaveText('8.4 kg ↑ 0.3 · 12/01/26');
+    await expect(card.locator('[data-k="weight"]')).toHaveText('8.4 kg ↑ 0.3 · 12/01/26 BCS 5');
+    await expect(card.locator('[data-k="bcs"]')).toHaveAttribute('title', 'BCS 5/9 on 12/01/26');
     await expect(card.locator('[data-k="meds"]')).toHaveText('2 medications · last 03/11/26');
     await expect(card.locator('[data-k="dna"] [data-dna="clear"]')).toHaveText('PRA clear');
     await expect(card.locator('[data-k="dna"] [data-dna="carrier"]')).toHaveText('VWD carrier');
@@ -134,6 +135,28 @@ test.describe('CD Hub dog card summary', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);
     await expect(page.locator('#rows [data-k="size"]')).toHaveCount(0);
+  });
+
+  test('vaccinations: count, last date, next due from the card (late marked), newest first inside', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-vaccination.csv', csv('id,tenant_id,subject_id,event_kind,product,product_shorthand,diseases_covered,batch,batch_use_by,given_on,route,administered_by,practice,titre_result,titre_lab,titre_protective,next_due_on_card,next_due_source,certificate_media_id,source,ruling_needed,note', [
+      'v1,t,sub-x1,vaccination,Pretend Vax Long Name,PVX,DHP,,,2024-02-01,,,,,,,2025-02-01,Pretend card,,Pretend,,',
+      'v2,t,sub-x1,vaccination,Pretend Vax Long Name,PVX,DHP,,,2025-02-03,,,,,,,2026-02-03,Pretend card,,Pretend,,',
+      'v3,t,sub-x2,vaccination,Pretend Vax,PV,L4,,,2026-10-01,,,,,,,2099-10-01,Pretend card,,Pretend,,'
+    ]));
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => go('dogs/sub-x1'));
+    const v = page.locator('#rows [data-k="vacc"]');
+    await expect(v).toHaveText('2 vaccinations \u00b7 last 03/02/25 due 03/02/26');
+    await expect(v.locator('[data-due]')).toHaveAttribute('data-due', 'late');
+    await page.locator('#rows details.vacc summary').click();
+    await expect(page.locator('#rows details.vacc .dcs-row').first()).toContainText('03/02/25');
+    await page.evaluate(() => go('dogs/sub-x2'));
+    await expect(page.locator('#rows [data-k="vacc"] [data-due]')).toHaveAttribute('data-due', 'ok');
+    // next due is blank by design on some rows: say so (licence audit 12 Nov, item 28)
+    expect(await page.evaluate(() => { var d = CD._byId['sub-x2']; var keep = d.vacc; d.vacc = [{ on: '2026-10-01', product: 'PV', due: '' }]; var h = vaccRow(d); d.vacc = keep; return h; })).toContain('next due not entered');
   });
 
   test('DNA kind reads the lab words first, then the copy count', async ({ page, guard }) => {
