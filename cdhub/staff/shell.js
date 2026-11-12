@@ -140,11 +140,11 @@
     var list = h('div', { class: 'cards' });
     modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
       list.appendChild(h('button', { class: 'card go', type: 'button', 'data-module': m.id, onclick: function () { go('m/' + m.id); } }, [
-        h('div', { class: 'nm' }, [h('span', { class: 'ic', html: m.icon || ICONS.dogs }), m.title]), m.desc ? h('div', { class: 'ds', text: m.desc }) : null
+        h('div', { class: 'nm' }, [h('span', { class: 'ic', html: m.icon || ICONS.dogs }), m.title])
       ]));
     });
     list.appendChild(h('a', { class: 'card go', href: '../checks/', 'data-link': 'checks' }, [
-      h('div', { class: 'nm' }, [h('span', { class: 'ic', html: ICONS.dogs }), 'Staff checks']), h('div', { class: 'ds', text: 'Record the daily checks' })
+      h('div', { class: 'nm' }, [h('span', { class: 'ic', html: ICONS.dogs }), 'Checks'])
     ]));
     screen.appendChild(list);
   }
@@ -208,7 +208,7 @@
   }
   loadAll().then(function () {
     if (!modules.some(function (m) { return m.id === 'temperature'; })) {
-      window.StaffPage.register({ id: 'temperature', title: 'Room temperatures', desc: 'Type the min and max', icon: ICONS.temp, order: 20, open: function (host, c) {
+      window.StaffPage.register({ id: 'temperature', title: 'Temps', icon: ICONS.temp, order: 20, open: function (host, c) {
         c.data().then(function (d) { BLDScreens.temperatureEntry(host, { save: c.save, areas: d.ok ? d.areas : [] }); });
       } });
     }
