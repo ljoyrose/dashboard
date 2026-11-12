@@ -261,7 +261,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   }
   try { store_appendMany_(spec.file, spec.columns, rows, target); }
   catch (e) { logWriteFailure_(e, spec, made[0].id, who.who, now); throw e; }
-  return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at };
+  return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at, who: who.who };
 }
 
 function sinkProcess_(spec, req, who, now, nowMs) {
@@ -344,7 +344,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
-    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '' };
+    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
     if (form) out.answers = form.answers.length;
     return out;
   }
@@ -356,7 +356,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     kind: req.action === 'correct' ? 'correction' : 'new',
     row_id: rowId, corrects_id: correctsId, note: reason, payload_json: JSON.stringify(row), result: ''
   });
-  return { status: 'queued', table: spec.key, file: spec.file, id: rowId, pending_id: pid };
+  return { status: 'queued', table: spec.key, file: spec.file, id: rowId, pending_id: pid, who: who.who };
 }
 
 /**
