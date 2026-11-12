@@ -199,3 +199,25 @@ test('Areas room card: limits as door-sign chips for the current flap mode, the 
   await expect(room.locator('table')).toBeVisible();
   await expect(room.locator('[data-print-sign="ar-a"]')).toHaveAttribute('href', 'staff/print/');
 });
+
+test('Areas room card: today\'s temperature line in the round\'s words, the limit from the band rows, and a history link', async ({ page, guard }) => {
+  const w = guard.world;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+  put(w, 'BLD-area.csv', csv('id,tenant_id,code,grouping,group_sort,area_value,area_unit_id,m2_confirmed,m2_note,use,source', ['ar-a,t,Room A,A,1,10,u-m2,yes,,,', 'ar-b,t,Room B,A,1,8,u-m2,yes,,,']));
+  put(w, 'BLD-temperature_band.csv', csv('id,band,age_from_days,age_to_days,min_temp,max_temp,basis,note', ['tb-1,Pretend adult,,,10,26,Pretend vet,']));
+  put(w, 'BLD-thermometer.csv', csv('id,tenant_id,area_id,name', ['th-1,t,ar-a,Pretend left', 'th-2,t,ar-a,Pretend right']));
+  put(w, 'BLD-area_reading.csv', csv('id,area_id,thermometer_id,min_c,max_c,period_start,taken_at,room_empty,corrects_id', [
+    `rd-1,ar-a,th-1,12,15,${today}T08:00:00,${today}T08:05:00,,`,
+    `rd-2,ar-a,th-1,9,15,${today}T18:00:00,${today}T18:05:00,,`,
+    `rd-3,ar-a,th-2,12,14,${today}T08:00:00,${today}T08:05:00,,`]));
+  await HUBS.cdhub.open(page, guard);
+  await page.evaluate(() => go('areas/ar-a'));
+  const t = page.locator('[data-temp="ar-a"]');
+  await expect(t.locator('> div').first()).toContainText('Pretend left AM 12.0–15.0 ✓ · PM Outside 9.0–15.0');
+  await expect(t.locator('[data-tstate="out"]')).toHaveClass(/pill no/);           // a ring, never a fill
+  await expect(t.locator('> div').nth(1)).toContainText('Pretend right AM 12.0–14.0 ✓');
+  await expect(t.locator('[data-temp-limit]')).toHaveText('Limit 10.0–26.0 °C');
+  await expect(t.locator('a')).toHaveAttribute('href', './history.html');
+  await page.evaluate(() => go('areas/ar-b'));
+  await expect(page.locator('[data-temp="ar-b"]')).toHaveCount(0);                    // no thermometer here: no line
+});

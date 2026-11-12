@@ -12,7 +12,9 @@
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/thermometer.js"></script>
+<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
@@ -2041,6 +2043,18 @@ async function accessSave(aid,mode,msgEl){
 function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]&&ROUND[k].subjects) return ROUND[k].subjects;
  return (CD.dogs||[]).filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;}); }
 
+/* Room card: today's temperature (TEMPS helper BLDAreaTempLine; same words as The round; colour as a ring, never a fill).
+   Limit from BLD-temperature_band rows via the youngest dog in the room. No thermometer in the room: no line. */
+function roomTempLine(aid,who,date){ if(!window.BLDAreaTempLine) return '';
+ var young=null; (who||[]).forEach(function(sid){ var d=CD._byId[sid], n=d?ageDays(d.dob,date):null; if(n!==null&&(young===null||n<young)) young=n; });
+ var r=BLDAreaTempLine.lineFor(aid,T['BLD-area_reading.csv']||[],T['BLD-thermometer.csv']||[],T['BLD-area_link.csv']||[],T['BLD-temperature_band.csv']||[],date,{youngestDays:young,req:CD.req||[]});
+ if(!r.lines.length) return '';
+ function part(x){ var c=x.state==='out'?'pill no':x.state==='missed'?'pill w':''; return '<span'+(c?' class="'+c+'"':'')+' data-tstate="'+x.state+'">'+esc(x.text)+'</span>'; }
+ var lim=r.limit&&r.limit.lo!==null?'Limit '+r.limit.lo.toFixed(1)+'\u2013'+r.limit.hi.toFixed(1)+' \u00b0C':(r.limit&&r.limit.source==='by age'?'Limit by age':'');
+ return '<div class="tline" data-temp="'+esc(aid)+'" style="margin-top:6px"><b>Temperature</b>'
+  +r.lines.map(function(l){ return '<div>'+(l.label?esc(l.label)+' ':'')+part(l.am)+' \u00b7 '+part(l.pm)+'</div>'; }).join('')
+  +(lim?'<div class="mut" data-temp-limit>'+lim+'</div>':'')
+  +'<a href="./history.html">Temperature history</a></div>'; }
 function pageAreas(){
  var date=CD._roundDate||todayISO();
  var shown=AREAFOCUS?CD.areas.filter(function(a){return a.id===AREAFOCUS;}):CD.areas;   /* opened from a dog card: just that room */
@@ -2090,7 +2104,7 @@ function pageAreas(){
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
      +'</tbody></table></div></details>';
-    h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
+    h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')+roomTempLine(a.id,who,date)
      +'<div class="mut" style="margin-top:6px">in here on '+esc(dmyShort(date))+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];
         return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.sizeWord||d.size)+esc(d.name||sid)+'</a>'
