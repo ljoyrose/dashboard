@@ -359,8 +359,10 @@
           setMsg(msg, (r.code === 'DUPLICATE' ? 'Already saved for this ' + slot.label.toLowerCase() + '.' : r.message) + extra, 'bad'); return;
         }
         form.hidden = true; camBox.textContent = ''; camMsg.textContent = '';
+        // Lisa 12 Nov 2026: the item shows its tick as soon as the save reply is OK, even if CLR pressed / Done is never tapped
+        if (o.onSaved) o.onSaved(f);
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
-          h('div', { class: 'nm', text: r.status === 'queued' ? 'Sent' : 'Saved' }),
+          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') }),
           past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' })
         ]));
         host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(f); } }));
@@ -405,7 +407,8 @@
           o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot,
             dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length,
             limit: limitFor(a.id, o.bands, (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }), slot.date),
-            onDone: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); show(); } }));
+            onSaved: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); },
+            onDone: function () { show(); } }));
         } }, [h('div', { class: 'nm', text: (done[k] ? '✓ ' : '') + a.label }), done[k] ? h('div', { class: 'ds', text: 'Already has a reading' }) : null]));
       });
       list.appendChild(cards);
@@ -430,7 +433,7 @@
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
       stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
-        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onDone: function (f) { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = f || true; list(); } });
+        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = f || true; }, onDone: function () { list(); } });
     }
     /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
     function cardState(a, d) {

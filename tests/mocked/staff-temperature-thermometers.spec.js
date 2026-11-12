@@ -129,3 +129,17 @@ test('round cards show due, the reading, outside the limit, or room empty', asyn
   await expect(ds('S1')).toHaveText('12.0–15.0');
   await expect(ds('E1')).toHaveText('Room empty');
 });
+
+test('Lisa 12 Nov: the card shows its tick as soon as the save reply is OK, even when CLR pressed is never tapped', async ({ page }) => {
+  const sent = await setup(page, base());
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card', { hasText: 'S1' }).click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MAX').fill('18.0');
+  await page.getByLabel('MIN').fill('12.0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await expect(page.getByText('✓ Saved')).toBeVisible();
+  await page.getByRole('button', { name: '← Rooms' }).click();
+  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', '✓ S1']);
+});
