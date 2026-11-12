@@ -5,6 +5,14 @@ const path = require('node:path');
 
 test('Breed Better calculator tests pass', () => {
   const root = path.resolve(__dirname, '..', '..');
-  const run = spawnSync(process.execPath, ['--test', 'tests/breed-better/score.test.js', 'tests/breed-better/hub-view.test.js'], { cwd: root, encoding: 'utf8' });
+  const run = spawnSync(process.execPath, ['--test', 'tests/breed-better/score.test.js', 'tests/breed-better/hub-view.test.js', 'tests/breed-better/inspect.test.js', 'tests/breed-better/score.property.test.js'], { cwd: root, encoding: 'utf8' });
+  expect(run.status, run.stdout + run.stderr).toBe(0);
+});
+
+// Each key condition in score.js, flipped one at a time, must turn a calculator test red (tools/bb-mutate).
+test('Breed Better mutation check: every flipped condition is caught', () => {
+  test.setTimeout(120_000);
+  const root = path.resolve(__dirname, '..', '..');
+  const run = spawnSync(process.execPath, ['tools/bb-mutate/run.mjs'], { cwd: root, encoding: 'utf8' });
   expect(run.status, run.stdout + run.stderr).toBe(0);
 });

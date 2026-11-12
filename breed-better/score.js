@@ -28,6 +28,8 @@
   function text(v) { return v === undefined || v === null ? '' : String(v).trim(); }
   function same(a, b) { return text(a).toLowerCase() === text(b).toLowerCase(); }
   function isDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(text(v)); }
+  /* points may carry decimals (0.1 + 0.2): round sums to 6 places so totals and targets never drift */
+  function tidy(n) { return Math.round(n * 1e6) / 1e6; }
 
   /** Add whole months to YYYY-MM-DD, holding the day inside the shorter month (31 Jan + 1 = 28 Feb). */
   function addMonths(date, months) {
@@ -48,7 +50,8 @@
   function targetFor(scheme, available) {
     var n = text(scheme && scheme.target_points);
     if (!/^\d+(\.\d+)?$/.test(n)) return '';
-    return /^percent\b/i.test(text(scheme.target_is)) ? Math.ceil(available * Number(n) / 100) : Number(n);
+    /* rounded up to whole points, but never more than can be earned (decimal points: 100% of 0.6 is 0.6, not 1) */
+    return /^percent\b/i.test(text(scheme.target_is)) ? Math.min(Number(n) <= 100 ? tidy(available) : Infinity, Math.ceil(tidy(available * Number(n) / 100))) : Number(n);
   }
 
   /** Whole months from a to b (both YYYY-MM-DD). */
@@ -308,7 +311,8 @@
         var outcome;
         if (rule) outcome = rule.gate_outcome;
         else if (ev.reason === 'expired') outcome = 'unverified';
-        else if (when === 'fail') outcome = 'fail';
+        /* when_missing is for a missing record; an answer no rule knows is a gap in the rules, never a Fail */
+        else if (when === 'fail' && ev.reason) outcome = 'fail';
         else outcome = 'unverified';
         line.gate_outcome = outcome;
         gates[outcome]++;
@@ -336,7 +340,7 @@
             });
           }
           earned += line.points;
-        } else if (when === 'zero' || when === 'fail') {
+        } else if (ev.reason && (when === 'zero' || when === 'fail')) {
           line.points = 0;
         } else {
           unverified += max;
@@ -346,6 +350,7 @@
       lines.push(line);
     });
 
+    earned = tidy(earned); available = tidy(available); unverified = tidy(unverified);
     var gateResult = gates.fail ? 'fail' : (gates.unverified ? 'unverified' : 'pass');
     var target = targetFor(input.scheme, available);
     /* one verdict: Fail, then Unverified, then the target. Points still unknown that could reach the target keep it Unverified */

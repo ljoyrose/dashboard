@@ -47,8 +47,10 @@
   function compute(v) {
     var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
-    if (memo && memo.key === key) return memo;
-    var out = { key: key, results: [], byId: {}, error: '', setUp: !!(T['BLD-score_enrolment.csv'] || []).length };
+    /* the same row counts can hold different rows (a re-read after an edit): reuse only when every table is the very same one */
+    var names = Object.keys(T).sort(), held = names.map(function (f) { return T[f]; });
+    if (memo && memo.key === key && memo.names === names.join('|') && memo.held.every(function (x, i) { return x === held[i]; })) return memo;
+    var out = { key: key, names: names.join('|'), held: held, results: [], byId: {}, error: '', setUp: !!(T['BLD-score_enrolment.csv'] || []).length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var evidence = new Proxy({}, { get: function (o, name) { return T[name + '.csv']; } });
