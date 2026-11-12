@@ -2665,6 +2665,9 @@ async function accessSave(aid,mode,msgEl){
 }
 
 function inCabin(aid,date){
+ date=date||todayISO();
+ var occ=T['BLD-occupancy.csv']||[];
+ if(window.BLDOccupancy&&BLDOccupancy.inArea) return BLDOccupancy.inArea(occ,aid,date);
  return (CD.dogs||[]).filter(function(d){
   if(d.off) return false;
   var st=typeof statusOf==='function'?statusOf(d).code:'';

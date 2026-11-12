@@ -267,11 +267,8 @@ function daysBetween(a,b){ var x=Date.parse(a+'T00:00:00Z'), y=Date.parse(b+'T00
 /* the room a dog was in on a day: its occupancy row with the latest moved_in on or before the day (rows are never
    edited; a move adds a row), unless that row's moved_out is before the day */
 function roomOfDog(sid,day){
-  var best=null;
-  (OCC_BY_DOG[sid]||[]).forEach(function(r){ var mi=String(r.moved_in||'').slice(0,10); if(mi&&mi>day) return; if(!best||mi>=String(best.moved_in||'').slice(0,10)) best=r; });
-  if(!best) return '';
-  var mo=String(best.moved_out||'').slice(0,10);
-  return mo&&mo<day?'':best.area_id;
+  var O=window.BLDOccupancy, row=O&&O.rowOn?O.rowOn(OCC_BY_DOG[sid]||[],sid,day):null;
+  return row&&row.area_id?row.area_id:'';
 }
 var YOUNG_CACHE={};
 function youngestIn(aid,day){
@@ -329,7 +326,7 @@ async function loadBand(){
 async function loadDogs(){
   SUBJ_DOB={}; OCC_BY_DOG={}; YOUNG_CACHE={};
   (await optionalCsv('BLD-subject.csv')).forEach(function(r){ var d=String(r.dob||'').slice(0,10); if(r.id&&/^\d{4}-\d{2}-\d{2}$/.test(d)) SUBJ_DOB[r.id]=d; });
-  (await optionalCsv('BLD-occupancy.csv')).forEach(function(r){ if(r.subject_id&&r.area_id) (OCC_BY_DOG[r.subject_id]||(OCC_BY_DOG[r.subject_id]=[])).push(r); });
+  (await optionalCsv('BLD-occupancy.csv')).forEach(function(r){ if(r.subject_id) (OCC_BY_DOG[r.subject_id]||(OCC_BY_DOG[r.subject_id]=[])).push(r); });   /* include leave rows so rowOn can end a stay */
 }
 async function optionalCsv(name){
   try{ var f=await findDriveFile(name); return f?parseCSV(await readDriveFile(f)):[]; }
