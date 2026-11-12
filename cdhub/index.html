@@ -449,7 +449,7 @@ var FOLDER=window.DASH_CONFIG.cdhub.folderId;
 var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
- 'BLD-occupancy.csv','BLD-MAP-animana.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
+ 'BLD-occupancy.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
@@ -877,23 +877,9 @@ function build(){
     return {dir:r.direction,at:parseFloat(r.threshold_c),action:r.action,source:r.source};
   }).sort(function(a,b){return b.at-a.at;});
   CD.litters=T['BLD-litter.csv']||[];
-  CD.vetlink=T['BLD-MAP-animana.csv']||[]; CD.manifest=T['BLD-_MANIFEST.csv']||[];
+  CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
-  var vmScore=function(m){ var sc=0, st=String(m.vet_status||''), nm=String(m.vet_name||''), cl=String(m.vet_client||'');
-    if(m.vet_active==='true') sc+=8;
-    if(/status\.normal$/i.test(st)) sc+=4;
-    if(/otherowner/i.test(st)) sc-=20;
-    if(/\bmoved\b/i.test(nm)||/moved to another client/i.test(m.warning||'')) sc-=20;
-    if(/^Carson,\s*Lisa$/i.test(cl.trim())) sc+=3; else if(/Carson/i.test(cl)) sc+=1;
-    if(m.matched_on_chip) sc+=(MCN[m.subject_id]&&MCN[m.subject_id]===m.matched_on_chip)?3:1;
-    return sc; };
-  var VM={}, VDOD={}; CD.vetlink.forEach(function(m){ if(!m.subject_id) return;
-    if(m.date_of_death) VDOD[m.subject_id]=m.date_of_death;
-    var cur=VM[m.subject_id]; if(!cur || vmScore(m)>vmScore(cur)) VM[m.subject_id]=m; });
-  CD.dogs.forEach(function(d){ var m=VM[d.id]; if(!m) return; d.vetRec=m;
-   d.vetStatus=m.vet_status||''; d.vetActive=m.vet_active||''; d.descent=m.descent||'';
-   if(!d.breed) d.breed=m.breed||''; d.dod=m.date_of_death||VDOD[d.id]||''; d.insurance=m.insurance_number||''; d.warning=m.warning||'';
-   if(!d.chip && m.matched_on_chip) d.chip=m.matched_on_chip; });
+  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // Animana map archived (Lisa, 12 Nov 2026): status comes from BLD-subject_status only
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
   CD._built=Date.now(); CD._needs=null;
