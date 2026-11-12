@@ -254,17 +254,59 @@ function readDriveFile(f){
     return gget(DRIVE_API+'/'+id+'/export?mimeType='+encodeURIComponent('text/csv')+'&supportsAllDrives=true');
   return gget(DRIVE_API+'/'+id+'?alt=media&supportsAllDrives=true');
 }
-/* Limits come from the open-ended (adult) rows of BLD-temperature_band. Lisa 12 Nov 2026: every limit is a dated
-   row, and a past reading is judged by the row in force on its own day (from_date blank or <= day, to_date blank or
-   >= day; two in force: the later from_date wins). No row in force = 'unknown'. BAND = today's row, for the key. */
-var BANDS=[], BAND=null;
-function bandOn(day){
-  var best=null;   /* in force: the shared rule (staff/lib/capacity.js) */
-  BLDCapacity.inForce(BANDS,String(day||'').slice(0,10)).forEach(function(b){ if(!best||b.from_date>best.from_date) best=b; });
-  return best;
+/* Limits come from BLD-temperature_band rows, never typed here (Lisa 12 Nov 2026: every limit is a dated row).
+   A reading is judged by the rows in force on its own day (the shared rule, staff/lib/capacity.js; two in force: the
+   later from_date wins), for its room: a row for this room beats a row for every room, and when rows have ages the
+   youngest dog in the room that day picks the row (as the staff round and the hub do). The youngest dog comes from
+   BLD-occupancy (the dog's row in force that day) and BLD-subject.dob; a room linked into this one (BLD-area_link)
+   counts its dogs too. No dog with a date of birth: the open-ended (adult) row. No row = 'unknown'.
+   BAND = today's adult row, for the key. */
+var BANDS=[], BAND=null, SUBJ_DOB={}, OCC_BY_DOG={};
+function num(v){ if(v===''||v==null) return null; var n=parseFloat(v); return isNaN(n)?null:n; }
+function daysBetween(a,b){ var x=Date.parse(a+'T00:00:00Z'), y=Date.parse(b+'T00:00:00Z'); return isNaN(x)||isNaN(y)?null:Math.round((y-x)/86400000); }
+/* the room a dog was in on a day: its occupancy row with the latest moved_in on or before the day (rows are never
+   edited; a move adds a row), unless that row's moved_out is before the day */
+function roomOfDog(sid,day){
+  var best=null;
+  (OCC_BY_DOG[sid]||[]).forEach(function(r){ var mi=String(r.moved_in||'').slice(0,10); if(mi&&mi>day) return; if(!best||mi>=String(best.moved_in||'').slice(0,10)) best=r; });
+  if(!best) return '';
+  var mo=String(best.moved_out||'').slice(0,10);
+  return mo&&mo<day?'':best.area_id;
 }
-function tempCls(min,max,day){
-  var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR);
+var YOUNG_CACHE={};
+function youngestIn(aid,day){
+  var key=aid+'|'+day; if(key in YOUNG_CACHE) return YOUNG_CACHE[key];
+  return (YOUNG_CACHE[key]=youngestCalc(aid,day));
+}
+function youngestCalc(aid,day){
+  var rooms={}; rooms[aid]=1;
+  (LINKS||[]).forEach(function(l){ if(l.to_area_id===aid&&BLDCapacity.inForce([l],day).length) rooms[l.from_area_id]=1; });
+  var young=null;
+  Object.keys(SUBJ_DOB).forEach(function(sid){
+    var dob=SUBJ_DOB[sid]; if(!dob||dob>day) return;
+    if(!rooms[roomOfDog(sid,day)]) return;
+    var a=daysBetween(dob,day); if(a!==null&&(young===null||a<young)) young=a;
+  });
+  return young;
+}
+function bandOn(day,aid){
+  day=String(day||'').slice(0,10);
+  var on=BLDCapacity.inForce(BANDS,day);
+  var own=aid?on.filter(function(b){ return b.area_id===aid; }):[];
+  var rows=own.length?own:on.filter(function(b){ return !b.area_id; });
+  if(!rows.length) return null;
+  var aged=rows.some(function(b){ return b.age_from!==null||b.age_to!==null; });
+  var young=aged&&aid?youngestIn(aid,day):null;
+  var fits=rows.filter(function(b){
+    if(!aged||(b.age_from===null&&b.age_to===null)) return true;
+    if(young===null) return b.age_to===null;   /* no dogs or no dates of birth: the open-ended (adult) row */
+    return young>=(b.age_from||0)&&(b.age_to===null||young<=b.age_to);
+  });
+  fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
+  return fits[0]||null;
+}
+function tempCls(min,max,day,aid){
+  var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR,aid);
   if(isNaN(lo)&&isNaN(hi))return'';
   if(!B)return'unknown';
   if(!isNaN(lo)&&lo<B.min)return'cold';
@@ -277,11 +319,17 @@ async function loadBand(){
     var f=await findDriveFile('BLD-temperature_band.csv');
     if(!f)return;
     parseCSV(await readDriveFile(f)).forEach(function(r){
-      var lo=parseFloat(r.min_temp),hi=parseFloat(r.max_temp);
-      if(!r.age_to_days&&!isNaN(lo)&&!isNaN(hi))BANDS.push({min:lo,max:hi,from_date:String(r.from_date||'').slice(0,10),to_date:String(r.to_date||'').slice(0,10)});
+      var lo=num(r.min_temp),hi=num(r.max_temp);
+      if(lo!==null&&hi!==null)BANDS.push({min:lo,max:hi,age_from:num(r.age_from_days),age_to:num(r.age_to_days),area_id:r.area_id||'',
+        from_date:String(r.from_date||'').slice(0,10),to_date:String(r.to_date||'').slice(0,10)});
     });
     BAND=bandOn(TODAY_STR);
   }catch(e){console.warn('Temperature limits load failed:',e);}
+}
+async function loadDogs(){
+  SUBJ_DOB={}; OCC_BY_DOG={}; YOUNG_CACHE={};
+  (await optionalCsv('BLD-subject.csv')).forEach(function(r){ var d=String(r.dob||'').slice(0,10); if(r.id&&/^\d{4}-\d{2}-\d{2}$/.test(d)) SUBJ_DOB[r.id]=d; });
+  (await optionalCsv('BLD-occupancy.csv')).forEach(function(r){ if(r.subject_id&&r.area_id) (OCC_BY_DOG[r.subject_id]||(OCC_BY_DOG[r.subject_id]=[])).push(r); });
 }
 async function optionalCsv(name){
   try{ var f=await findDriveFile(name); return f?parseCSV(await readDriveFile(f)):[]; }
@@ -293,6 +341,7 @@ async function loadAreaData(){
     REQ=await optionalCsv('BLD-requirement.csv');
     THERMOS=await optionalCsv('BLD-thermometer.csv');
     LINKS=await optionalCsv('BLD-area_link.csv');
+    await loadDogs();   /* the youngest dog picks an age row (puppies under 4 weeks are judged by their own row) */
     var rf=await findDriveFile('BLD-area_reading.csv');
     if(rf){
       var txt=await readDriveFile(rf);
@@ -501,7 +550,7 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max,day), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
+    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
     if(t.empty&&k==='out') k='eout';
     return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }

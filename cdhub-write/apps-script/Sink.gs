@@ -219,7 +219,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (type.target !== 'none' && !room) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
-  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : 'site_tap' };
+  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : (f.how_recorded || 'site_tap') };  // the real route (scanned from a dog or room, tapped); site_tap only when none is sent
   if (room) fields.area_id = f.area_id;
   if (type.site_scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 

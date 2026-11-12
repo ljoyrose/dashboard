@@ -23,6 +23,8 @@
  *   MOVES_QUEUE_UNTIL  last day (YYYY-MM-DD, London) on which a dog move goes to the approvals queue. After that
  *                    day moves go straight in. Run adminStartMovesQueue() on go-live day to set it to today + 14 days.
  *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
+ *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
+ *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
  *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
  *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
@@ -47,12 +49,15 @@ var BLD = {
     READ_ENABLED: 'READ_ENABLED',
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
+    DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID',
     INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
     INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
     MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
+    MAX_PHOTO_CHARS: 2500000, // whole dog-photo request (base64 picture included)
+    MAX_PHOTO_B64: 1800000,   // the picture itself, after whitespace is removed
     MAX_TEXT_CHARS: 500,
     FAIL_WINDOW_SEC: 600,   // bad staff codes are counted for 10 minutes
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends

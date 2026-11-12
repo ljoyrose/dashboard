@@ -345,3 +345,31 @@ test('audit: area links show old rooms\' readings in the new rooms, widest for a
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile', { hasText: '(from' })).toHaveCount(0);
 });
+
+// Lisa 12 Nov 2026 (every limit is a dated row; overseer sweep T4): a room is judged by the band for the youngest dog in
+// it that day, as the staff round and the hub do, never by the adult band alone. Invented dog and rows only.
+test('audit: a room holding a puppy under 4 weeks is judged by the puppy band that day; an adult room by the adult band', async ({ page, guard }) => {
+  const bands = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\n'
+    + 'tb-p,Puppy,0,28,26,28,,\ntb-a,Adult,29,,10,26,,\n';
+  const subj = 'id,tenant_id,name,sex,dob\npup-1,t,Pup,F,2026-01-01\n';
+  const occ = 'id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_out\nocc-1,t,pup-1,area-r1,,2026-01-01,\n';
+  await open(page, guard);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  const upsert = (id, name, content) => {
+    const f = guard.world.files.find((x) => x.name === name);
+    if (f) { f.content = content; f.size = String(content.length); }
+    else guard.world.file(id, name, content, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  };
+  upsert('bld-band', 'BLD-temperature_band.csv', bands);
+  upsert('bld-subj', 'BLD-subject.csv', subj);
+  upsert('bld-occ', 'BLD-occupancy.csv', occ);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await openDay(page, '2026-01-05');
+  // R1 holds a 4-day-old puppy: 12.0–15.0 is outside 26–28
+  await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first()).toContainText('12.0–15.0');
+  // R2 has no dogs: the adult band, 12.0–15.0 is in
+  await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
+  await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
+});
