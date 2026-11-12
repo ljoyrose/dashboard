@@ -112,6 +112,7 @@ function adminCheckSetup() {
   var noId = Object.keys(registry_()).filter(function (h) { return !registry_()[h].id; }).length;
   if (noId) Logger.log('FIX  ' + noId + ' staff code(s) have no public id yet (run adminAssignCodeIds)');
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));
+  Logger.log('--   dog photos: ' + (prop_(BLD.PROP.DOG_PHOTOS_FOLDER) ? 'folder id is set in Script Properties' : 'not set (create a Shared Drive folder and set DOG_PHOTOS_FOLDER_ID)'));
   Logger.log('--   OWNER_EDIT_ENABLED is ' + (ownerEditEnabled_() ? 'TRUE (the owner page can overwrite an entry in place; no record of the old value is kept)' : 'not true (owner edit is OFF)'));
   Logger.log('--   READ_ENABLED is ' + (readEnabled_() ? 'TRUE (staff codes can read what the permissions file allows)' : 'not true (staff cannot read)'));
   try {

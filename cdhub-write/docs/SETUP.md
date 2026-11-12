@@ -123,6 +123,21 @@ Off unless you turn it on. Each night it copies the three files into a sub-folde
 
 19. **Instant off:** set `SAVE_ENABLED` to `false` (or delete it). Reading has its own switch, `READ_ENABLED`, and owner edit has `OWNER_EDIT_ENABLED`. **Full stop:** Deploy > Manage deployments > archive both. **Undo something written:** fix it yourself with section G, or send an owner correction row (it waits in the approvals queue). In an emergency, right-click the file in Drive > **Manage versions** and restore the earlier version.
 
+## J. Dog photos on the Dogs cards
+
+The Dogs cards show the `photo` cell of `BLD-subject.csv` (the column is found by that header name; the sheet's tab name is not used). An empty cell shows the paw. **Add photo** / **Change photo** sends the picture to this save script. The script stores the file in a Shared Drive folder and writes the file id back into that dog's `photo` cell. The file is not shared with anyone new. The folder id is never put in the repository.
+
+One-time steps for the owner:
+
+1. On the **Shared Drive** (not My Drive), create a folder for dog photos.
+2. Copy that folder's id from its web address.
+3. Add the Script Property `DOG_PHOTOS_FOLDER_ID` with that id. Leave it unset and every photo upload is refused.
+4. The subject sheet needs a column whose header is exactly `photo`. The live sheet already has it, last, after `rx_moxi_file_url`.
+5. Paste the new `Photo.gs` into the script project (and update `Config.gs`, `Web.gs` and `Admin.gs` if they changed). **Deploy > Manage deployments > edit (pencil) > Version: New version > Deploy.** The web app address stays the same.
+6. On the hub, The round page already has **Saving on this device**. The same script address and staff code (owner or staff) are what a photo upload uses. `SAVE_ENABLED` must be `true`.
+
+A failed upload says so on that card and leaves the card as it was. An earlier photo file is left in the folder; only the cell changes.
+
 ## Changing the code later
 
 Edit the file, then **Deploy > Manage deployments > edit (pencil) > Version: New version > Deploy**. The address stays the same.
