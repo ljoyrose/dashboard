@@ -18,7 +18,6 @@
     var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
     var key = v.today + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
-    var site = v.logs.map(function (l) { return l.how_recorded === 'site_tap' ? Object.assign({}, l, { subject_id: '' }) : l; });
     var rows = {}, perDog = {};
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
@@ -36,7 +35,7 @@
     add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '' }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
-    add([{}], site);
+    add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '' }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {
       return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '' });
     }).sort(function (a, b) { return String(a.sop).localeCompare(String(b.sop)) || String(a.label).localeCompare(String(b.label)); });
