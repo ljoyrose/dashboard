@@ -151,8 +151,18 @@
    * optional area_id for a room of its own). The youngest dog in the room picks the band; a row for this room beats
    * a row for every room. {min, max, label} or {reason}.
    */
+  /** Lisa 12 Nov 2026: every limit is a dated row. A row is in force on a day when from_date is blank or on/before it
+   *  and to_date is blank or on/after it (YYYY-MM-DD, both ends count; a missing column is blank). The same reading
+   *  as BLDCapacity.inForce and Sink.gs rowsInForce_. A past reading is judged by the rows in force on its own day. */
+  function bandInForce(b, day) {
+    var d = String(day || '').slice(0, 10), f = String(b.from_date || '').slice(0, 10), t = String(b.to_date || '').slice(0, 10);
+    return !d || ((!f || f <= d) && (!t || t >= d));
+  }
+  function bandsOn(bands, day) { return (bands || []).filter(function (b) { return bandInForce(b, day); }); }
   function limitFor(areaId, bands, dogsInRoom, onIso) {
     if (!bands || !bands.length) return { reason: 'No room limits loaded.' };
+    bands = bandsOn(bands, onIso);
+    if (!bands.length) return { reason: 'No room limit row in force on ' + ddmmyy(String(onIso || '').slice(0, 10)) + '.' };
     var young = null;
     (dogsInRoom || []).forEach(function (d) { var a = ageDays(d.dob, onIso); if (a !== null && a >= 0 && (young === null || a < young)) young = a; });
     var fits = bands.filter(function (b) {
@@ -164,7 +174,8 @@
       return young >= (from || 0) && (to === null || young <= to);
     });
     if (!fits.length) return { reason: young === null ? 'No dates of birth for this room, so no limit.' : 'No limit row covers ' + young + ' days old.' };
-    fits.sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || (num(b.age_from_days) || 0) - (num(a.age_from_days) || 0); });
+    // this room's row first, then the narrowest age, then the later from_date (two rows in force: the newer wins)
+    fits.sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || (num(b.age_from_days) || 0) - (num(a.age_from_days) || 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); });
     var f = fits[0];
     return { min: num(f.min_temp), max: num(f.max_temp), label: f.band || '', id: f.id || '' };
   }
@@ -584,17 +595,23 @@
     }
     function draw(rows, areaId) {
       var a = { label: room.options[room.selectedIndex].text };
-      var lim = limitFor(areaId, bands, [], year.value + '-12-31');
+      // the header describes the rows in force at the year's end (or today); each reading is judged by its own day's rows
+      var endDay = String(year.value) + '-12-31', today = londonParts().date;
+      if (endDay > today) endDay = today;
+      var lim = limitFor(areaId, bands, [], endDay);
       // a room-only row (no age) is the fixed limit; otherwise the limit is set by the youngest dog on the day, so
       // the report marks a breach where staff recorded one (a "what was done" note) or the reading broke the
       // widest band in the rows.
-      var wide = (bands || []).filter(function (b) { return (!b.area_id || b.area_id === areaId) && num(b.min_temp) !== null; });
-      var lo = wide.length ? Math.min.apply(null, wide.map(function (b) { return num(b.min_temp); })) : null;
-      var hi = wide.length ? Math.max.apply(null, wide.map(function (b) { return num(b.max_temp); })) : null;
+      function widest(day) {
+        var w = bandsOn(bands, day).filter(function (b) { return (!b.area_id || b.area_id === areaId) && num(b.min_temp) !== null; });
+        return { lo: w.length ? Math.min.apply(null, w.map(function (b) { return num(b.min_temp); })) : null,
+          hi: w.length ? Math.max.apply(null, w.map(function (b) { return num(b.max_temp); })) : null };
+      }
+      var wEnd = widest(endDay), lo = wEnd.lo, hi = wEnd.hi;
       out.appendChild(h('h3', { text: a.label + ' · ' + year.value }));
       out.appendChild(h('p', { class: 'sub', text: (lim.min != null && !(bands || []).some(function (b) { return num(b.age_from_days) !== null; }) ? 'Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C. ' : (lo !== null ? 'Limits by age, ' + lo.toFixed(1) + ' to ' + hi.toFixed(1) + ' C across the rows. ' : 'No limit rows. ')) + rows.length + ' rows.' }));
       if (!rows.length) { out.appendChild(say('No readings for this room in ' + year.value + '.')); return; }
-      rows.forEach(function (r) { rowBreach(r, lo, hi); });
+      rows.forEach(function (r) { var w = widest(r.date); rowBreach(r, w.lo, w.hi); });
       // by month
       var months = {};
       rows.forEach(function (r) {
@@ -722,7 +739,7 @@
     return function () { if (stop) stop(); };
   }
 
-  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, areaRows: areaRows, backfill: function (host, o) { css(); return backfill(host, o); }, slotFor: slotFor, slotNow: slotNow, londonIso: londonIso };
+  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, bandInForce: bandInForce, yearRows: yearRows, roundAreas: roundAreas, areaRows: areaRows, backfill: function (host, o) { css(); return backfill(host, o); }, slotFor: slotFor, slotNow: slotNow, londonIso: londonIso };
   if (window.StaffPage) {
     window.StaffPage.register({ id: 'temperature', title: 'Temps', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }
