@@ -851,3 +851,23 @@ test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check`
     assert.match(after, /BLDWire\.mount\(CUR\)/);
   } finally { fsx.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('role(): the role the script reported on the last read, for showing owner-only buttons; cleared with the code (TEMPS, 12 Nov 2026)', async () => {
+  const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'OWNER' } } } });
+  const s = mkSave(srv); await s.checkStatus();
+  assert.equal(s.role(), '');
+  s.setCode('SECRETCODE1');
+  assert.equal(s.role(), '');
+  await s.read('area');
+  assert.equal(s.role(), 'OWNER');
+  srv.st.reads.area = { ok: false, code: 'BAD_CODE', message: 'no' };
+  await s.read('area');
+  assert.equal(s.role(), 'OWNER');   // a refusal does not change it; a new code does
+  s.setCode('OTHER');
+  assert.equal(s.role(), '');
+  srv.st.reads.area = { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'STAFF' } };
+  await s.read('area');
+  assert.equal(s.role(), 'STAFF');
+  s.clearCode();
+  assert.equal(s.role(), '');
+});
