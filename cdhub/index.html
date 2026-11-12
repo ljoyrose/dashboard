@@ -2770,10 +2770,35 @@ function pageCompliance(){
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
   +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p>');
+ h+=compRehearsalHtml()+compAccessHtml();
  return h;
+}
+/* REHEARSAL (mock-up 7 Nov, H-04): a practice inspection that leaves NO trace. Notes live only in this variable while it
+   runs; nothing is saved, stored in the browser, counted or scored. End (or leaving Compliance) throws it all away. */
+var REHEARSAL=null;
+function compRehearsalHtml(){ var r=REHEARSAL;
+ return compFold('compRehearsal','rehearsal','Rehearsal',r
+  ?'<div id="rhOn"><p><span class="pill w">Rehearsal</span> Nothing is saved. Ending it discards everything: no count, no score, nowhere.</p>'
+   +(r.notes.length?'<ul class="ctl" id="rhList">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>':'')
+   +'<div class="frow"><input id="rhNote" type="text" placeholder="practice finding" aria-label="practice finding" style="min-width:14em"> <button type="button" id="rhAdd">Add</button></div>'
+   +'<p><button type="button" class="btn" id="rhEnd">End and discard</button></p></div>'
+  :'<p class="mut">A practice inspection. Nothing is saved or counted.</p><p><button type="button" class="btn" id="rhStart">Start a rehearsal</button></p>'); }
+/* ACCESS (mock-up 7 Nov): who holds a staff or guest code, and Revoke, live on the save script's owner page (signed in
+   to the owner's Google account). The hub only links to it, from the save address this browser holds. */
+function compAccessHtml(){ var u=sinkGet(SINK_URL_KEY), ok=/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u);
+ return compFold('compAccess','access','Who has access',
+  '<p class="mut">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'
+  +(ok?'<p><a class="btn" id="accOpen" href="'+esc(u+'?page=approve')+'" target="_blank" rel="noopener">Open owner page</a></p>'
+     :'<p class="mut" id="accOff">Saving is not set up in this browser yet. Set it up at the top of <a href="#/round">The round</a>.</p>')); }
+function bindRehearsal(){
+ var st=document.getElementById('rhStart'), en=document.getElementById('rhEnd'), ad=document.getElementById('rhAdd'), re=function(){ go('compliance',false); };
+ if(st) st.addEventListener('click',function(){ REHEARSAL={notes:[]}; re(); });
+ if(en) en.addEventListener('click',function(){ REHEARSAL=null; re(); });
+ if(ad) ad.addEventListener('click',function(){ var i=document.getElementById('rhNote'), v=String(i&&i.value||'').trim(); if(!v||!REHEARSAL) return; REHEARSAL.notes.push(v); re(); });
 }
 function bindCompliance(){
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
+ bindRehearsal();
  var b=document.getElementById('brSave'); if(!b) return;
  b.addEventListener('click',async function(){
   var key=document.getElementById('brKey').value, val=String(document.getElementById('brVal').value||'').trim(),
@@ -2874,6 +2899,7 @@ function go(id,push){
  pill();
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
+ if(id!=='compliance') REHEARSAL=null;   /* leaving Compliance ends a rehearsal: nothing kept (H-04) */
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
