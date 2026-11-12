@@ -3,9 +3,13 @@ const { test, expect } = require('@playwright/test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 
+// Every *.test.js in tests/breed-better, so a new test file can never be left out of the run.
+const files = (root) => require('node:fs').readdirSync(path.join(root, 'tests/breed-better')).filter((f) => f.endsWith('.test.js')).map((f) => 'tests/breed-better/' + f);
+
 test('Breed Better calculator tests pass', () => {
   const root = path.resolve(__dirname, '..', '..');
-  const run = spawnSync(process.execPath, ['--test', 'tests/breed-better/score.test.js', 'tests/breed-better/hub-view.test.js', 'tests/breed-better/inspect.test.js', 'tests/breed-better/score.property.test.js'], { cwd: root, encoding: 'utf8' });
+  const run = spawnSync(process.execPath, ['--test', ...files(root)], { cwd: root, encoding: 'utf8' });
+  expect(files(root).length).toBeGreaterThanOrEqual(4);
   expect(run.status, run.stdout + run.stderr).toBe(0);
 });
 
