@@ -206,9 +206,10 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
   await expect(dates).toBeFocused();
-  const f = await dates.evaluate((e) => ({ o: getComputedStyle(e).outlineStyle, w: getComputedStyle(e).outlineWidth, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }));
+  const f = await dates.evaluate((e) => ({ o: getComputedStyle(e).outlineStyle, w: getComputedStyle(e).outlineWidth, off: getComputedStyle(e).outlineOffset, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }));
   expect(f.o).toBe('solid');
-  expect(f.w).toBe('2px');
+  expect(f.w).toBe('1px');   // one 1px line inside (Lisa, 3 Nov 2026)
+  expect(f.off).toBe('-1px');
   expect(f.ring).not.toMatch(TRANSPARENT);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/dates$/);

@@ -1050,15 +1050,16 @@ test.describe('Marketplace house look', () => {
     }
   }
 
-  // HOUSE HOVER RULE (Lisa 28 Oct): neutral = 1px ink line inside + muted tint; meaning-coloured = a line + tint of ITS colour,
-  // never ink. Selected = hover. Nothing moves; read-only pills have no hover.
+  // HOUSE HOVER RULE (Lisa, 12 Nov 2026, replaces 28 Oct): hover = the pale grey fill (--hov), no line, meaning colours too.
+  // Selected = the same fill + a 1px quiet grey line (--sel-bd), never ink or purple. Nothing moves; read-only pills have no hover.
   const hoverLook = (el) => el.evaluate((e) => {
     const c = getComputedStyle(e), probe = (v) => { const s = document.createElement('span'); s.style.color = v; e.appendChild(s); const x = getComputedStyle(s).color; s.remove(); return x; };
     return { style: c.outlineStyle, width: c.outlineWidth, offset: c.outlineOffset, line: c.outlineColor, bg: c.backgroundColor,
-      ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor };
+      ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), press: probe('var(--house-press)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor,
+      hov: (() => { const s = document.createElement('span'); s.style.background = 'var(--hov)'; e.parentElement.appendChild(s); const x = getComputedStyle(s).backgroundColor; s.remove(); return x; })() };
   });
   const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
-  test('hover: neutral controls get a 1px ink line inside and no fill (Lisa\'s sweep, 3 Nov); nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
+  test('hover: neutral controls get the pale grey fill and no line (Lisa, 12 Nov 2026); nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     for (const sel of ['#view a.btn[href*="vinted"]', '#view [data-action="pack"]', '#view .chip[data-site]:not([aria-pressed="true"])']) {
@@ -1066,14 +1067,14 @@ test.describe('Marketplace house look', () => {
       const before = await el.boundingBox(), rest = await hoverLook(el);
       await el.hover();
       const h = await hoverLook(el);
-      expect([h.style, h.width, h.offset], sel).toEqual(['solid', '1px', '-1px']);
-      expect(h.line, `${sel}: neutral hover line is ink`).toBe(h.ink);
-      expect(h.bg, `${sel}: no fill on hover`).toBe(rest.bg);
+      expect(h.style, `${sel}: no line on hover`).toBe('none');
+      expect(h.bg, `${sel}: the pale grey fill on hover`).toBe(h.hov);
       expect(await el.boundingBox(), `${sel} moved or resized on hover`).toEqual(before);
     }
-    // Selected looks the same as hover.
+    // Selected: the same pale grey fill plus a 1px line in the quiet control grey, never ink.
+    await page.mouse.move(0, 0);
     const sel = await hoverLook(page.locator('#view .chip[data-site][aria-pressed="true"]'));
-    expect([sel.style, sel.width, sel.offset, sel.line === sel.ink]).toEqual(['solid', '1px', '-1px', true]);
+    expect([sel.style, sel.width, sel.offset, sel.line === sel.press, sel.line === sel.ink, sel.bg === sel.hov]).toEqual(['solid', '1px', '-1px', true, false, true]);
     for (const s of ['#view .cnt', '#view .date', '#view .pid']) {
       const el = page.locator(s).first();
       await el.hover();
@@ -1081,19 +1082,19 @@ test.describe('Marketplace house look', () => {
     }
   });
 
-  test('hover: meaning-coloured controls keep their OWN colour (line, never ink, no fill): green Yes, rose No', async ({ page }) => {
+  test('hover: meaning-coloured controls (green Yes, rose No) get the same pale grey fill, no coloured line, and keep their resting line', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/decide');
     for (const [s, key, lean] of [['[data-ans="GO|1"][data-v="Yes"]', 'ok', 'green'], ['[data-ans="GO|1"][data-v="No"]', 'need', 'red']]) {
       const el = page.locator(s), before = await el.boundingBox(), rest = await hoverLook(el);
       await el.hover();
       const h = await hoverLook(el);
-      expect([h.style, h.width, h.offset], s).toEqual(['solid', '1px', '-1px']);
-      expect(h.line, `${s}: line keeps its colour`).toBe(h[key]);
-      expect(h.line, `${s}: never ink`).not.toBe(h.ink);
-      expect(h.bg, `${s}: no fill on hover`).toBe(rest.bg);
-      const [r, g] = chan(h.line);
-      if (lean === 'green') expect(g, `${s}: line is green`).toBeGreaterThan(r); else expect(r, `${s}: line is rose`).toBeGreaterThan(g);
+      expect(h.style, `${s}: no coloured line on hover`).toBe('none');
+      expect(h.bg, `${s}: the pale grey fill on hover`).toBe(h.hov);
+      const border = await el.evaluate((e) => getComputedStyle(e).borderTopColor);
+      expect(border, `${s}: keeps its resting line`).toBe(h[key]);
+      const [r, g] = chan(border);
+      if (lean === 'green') expect(g, `${s}: resting line is green`).toBeGreaterThan(r); else expect(r, `${s}: resting line is rose`).toBeGreaterThan(g);
       expect(await el.boundingBox(), `${s} moved`).toEqual(before);
     }
   });
@@ -1148,13 +1149,13 @@ test.describe('Marketplace house look', () => {
     expect([...new Set(gaps.head)]).toEqual([16]);
   });
 
-  test('keyboard focus is a 2px ink ring', async ({ page }) => {
+  test('keyboard focus is a 1px ink line inside', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     await page.locator('[data-ans="RM|1"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
-    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineColor === getComputedStyle(document.body).color]; });
-    expect(s).toEqual(['solid', '2px', true]);
+    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === getComputedStyle(document.body).color]; });
+    expect(s).toEqual(['solid', '1px', '-1px', true]);
   });
 
   test('date pills: plain 1px ring at rest; late = rose ring + tint, today or tomorrow = amber ring + tint; words say it too', async ({ page }) => {

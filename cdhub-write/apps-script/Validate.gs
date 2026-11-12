@@ -27,7 +27,7 @@ function isRealDate_(s) {
  * Check browser input against a table spec.
  * @return {{clean:Object, errors:Object}} errors maps field name -> message.
  */
-function validateInput_(spec, fields, lookups, nowMs) {
+function validateInput_(spec, fields, lookups, nowMs, opts) {
   var errors = {}, clean = {};
   fields = fields || {};
   var name;
@@ -86,7 +86,9 @@ function validateInput_(spec, fields, lookups, nowMs) {
         } else {
           var t = Date.parse(v);
           if (t > nowMs + 5 * 60000) errors[name] = 'That time is in the future.';
-          else if (t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) errors[name] = 'That is more than 7 days ago. Ask Lisa to add it.';
+          else if (t < (opts && opts.oldestMs ? opts.oldestMs : nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000)) {
+            errors[name] = opts && opts.oldestMs ? 'That is older than these records are kept (' + opts.keepYears + ' years).' : 'That is more than 7 days ago. Ask Lisa to add it.';
+          }
           else clean[name] = v;
         }
         break;
@@ -127,7 +129,7 @@ function validateInput_(spec, fields, lookups, nowMs) {
         errors[name] = 'Unknown field type.';
     }
   }
-  if (spec.checkRow) spec.checkRow(clean, errors);
+  if (spec.checkRow) spec.checkRow(clean, errors, lookups);
   return { clean: clean, errors: errors };
 }
 

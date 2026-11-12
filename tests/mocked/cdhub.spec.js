@@ -371,6 +371,36 @@ test.describe('CD Hub house look', () => {
     });
   }
 
+  // A row that opens wears the pale grey hover fill (Lisa, 12 Nov 2026); the controls on it keep their 1px line at 3:1 or more
+  // against that fill, in every look (warm dark mixes less muted into --hov for this, tokens.css --house-hov-mix).
+  for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
+    test(`${look} ${scheme}: on a hovered row the control rings stay 3:1 against the hover fill`, async ({ page, guard }) => {
+      await page.addInitScript((bg) => localStorage.setItem('dash-look', JSON.stringify({ bg })), look);
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('cdhub/');
+      await signIn(page);
+      await openTab(page, 'shape');
+      const row = page.locator('#main [data-open-row]:has(.house-open), #main .mrow.go:has(button)').first();
+      await expect(row).toBeVisible();
+      await row.scrollIntoViewIfNeeded();
+      const b = await row.boundingBox();
+      await page.mouse.move(b.x + 4, b.y + b.height / 2);   // on the row, off its buttons
+      const r = await row.evaluate((e) => {
+        const rgb = (s) => { let m = /^rgba?\(([^)]+)\)/.exec(s); if (m) return m[1].split(/[ ,/]+/).filter(Boolean).map(Number).slice(0, 3);
+          m = /^color\(srgb ([^)]+)\)/.exec(s); return m ? m[1].split(/[ /]+/).filter(Boolean).slice(0, 3).map((x) => x * 255) : null; };
+        const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+        const bg = getComputedStyle(e).backgroundColor;
+        const rings = [...e.querySelectorAll('button, a.btn')].filter((c) => c.getBoundingClientRect().width > 0).map((c) => ratio(rgb(getComputedStyle(c).borderTopColor), rgb(bg)));
+        return { hovered: bg === hov, rings };
+      });
+      expect(r.hovered, 'the row wears the pale grey hover fill').toBe(true);
+      expect(r.rings.length).toBeGreaterThan(0);
+      for (const x of r.rings) expect(x, `${look} ${scheme}: control ring on the hovered row`).toBeGreaterThanOrEqual(3);
+    });
+  }
+
   test('reads Studio\'s saved look (dash-look) and never writes it; Cool clear turns the page and the frame cool, never black', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
@@ -392,7 +422,7 @@ test.describe('CD Hub house look', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 
-  test('controls: every one rests on the same clear 1px line (never ink, 3:1), 12px corners, 14px/600, 36px tall; hover = 1px ink line inside and never a fill, nothing moves', async ({ page }) => {
+  test('controls: every one rests on the same clear 1px line (never ink, 3:1), 12px corners, 14px/600, 36px tall; hover = the pale grey fill and no line, nothing moves', async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto('cdhub/');
     await signIn(page);
@@ -414,11 +444,12 @@ test.describe('CD Hub house look', () => {
         const where = () => el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x + scrollX, r.y + scrollY, r.width, r.height]; });   // page position, so a scroll is not a move
         const before = await where();
         await el.hover();
-        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, bg: s.backgroundColor }; });
-        expect({ ow: hv.ow, os: hv.os, oo: hv.oo, oc: hv.oc, bw: hv.bw }, `${tab} control ${i}`).toEqual({ ow: '1px', os: 'solid', oo: '-1px', oc: ink, bw: '1px' });
-        // Lisa's sweep (3 Nov 2026): every control, the fold chevron too, hovers with the line only, never a fill.
-        // (a select is a typing box, the one thing that may change its fill)
-        if ((await el.evaluate((e) => e.tagName)) !== 'SELECT') expect(hv.bg, `${tab} control ${i}: no fill on hover`).toBe(st.bg);
+        const hv = await el.evaluate((e) => { const s = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+          return { os: s.outlineStyle, bw: s.borderTopWidth, bg: s.backgroundColor, hov }; });
+        // Lisa (12 Nov 2026): "purple outline on hover/click is a lot". Every control, the fold chevron too, hovers with the pale
+        // grey fill and no line.
+        expect({ os: hv.os, bw: hv.bw }, `${tab} control ${i}`).toEqual({ os: 'none', bw: '1px' });
+        expect(hv.bg, `${tab} control ${i}: the pale grey fill on hover`).toBe(hv.hov);
         expect(await where(), `${tab} control ${i}: nothing moves`).toEqual(before);
         await page.mouse.move(0, 0);
       }
@@ -616,6 +647,19 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page).toHaveURL(/\/history\.html$/);
     await expect(page.locator('h1')).toHaveText('Temperatures');
     await expect(page.locator('h1')).not.toContainText(/outdoor/i);
+  });
+
+  // Lisa 11 Nov 2026: "+ Thermometer" on the owner's hub (signed in with Google) opens the owner print page at Add
+  // thermometer. The staff page never shows it, and only an OWNER code can save on the print page.
+  test('Temperatures today has "+ Thermometer", which opens the print page in add mode', async ({ page }) => {
+    await page.goto('cdhub/');
+    await expect(page.locator('#addThermo')).toHaveCount(0);   // nothing before the owner signs in
+    await signIn(page);
+    await openTab(page, 'today');
+    const add = page.locator('#tempsCard .mfoot').getByRole('link', { name: '+ Thermometer' });
+    await expect(add).toHaveAttribute('href', './staff/print/?add=thermometer');
+    const box = await add.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(36);
   });
 
   test('Temperatures today shows the next 6 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {

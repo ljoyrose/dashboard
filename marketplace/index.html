@@ -50,7 +50,7 @@
   /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
   html.dash-locked header .btn { color: var(--ink); border-color: var(--ctl); }
 
-  /* Buttons, chips, the hover rule (a meaning colour, --hmc, keeps its own colour), focus, the bottom tabs and the counts:
+  /* Buttons, chips, the hover rule (pale grey fill, no line), focus, the bottom tabs and the counts:
      ../house.css. Every pressable rests on the same clear line; Yes / No differ by their words, place and hover colour. */
   .btn.big { width: 100%; justify-content: center; }
   .btn.saving, .btn.saving:hover { border-style: dashed; border-color: var(--muted); color: var(--muted); cursor: progress; }
@@ -60,14 +60,14 @@
   .chips.people { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   /* .mkwho: whose items, the people chips (and the phone's one Filter button) at the top of the page, out of the top bar. */
   .mkwho:has(> #people.hidden) { display: none; }
-  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; }
+  .chip[aria-pressed="true"], .chip.on { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
   @media (hover: hover) {
-    a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
-    html.dash-locked header .btn:hover { outline-color: var(--ink); }
+    a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { background:var(--hov); }
+    html.dash-locked header .btn:hover { background:var(--hov); }
   }
-  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). */
   a:focus, button:focus, summary:focus { outline: none; }
-  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   header :focus-visible:not(.house-menu *), header a:focus-visible:not(.house-menu *), header button:focus-visible:not(.house-menu *) { outline-color: var(--frame-ink); }
   input:focus { outline: none; border-color: var(--ink); }
 

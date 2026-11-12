@@ -143,3 +143,22 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   expect(sent[0].fields.area_id).toBe('area-1');
   expect(sent[0].fields.how_recorded).toBe('scanned');
 });
+
+test('a scanned room has a Temperature button that opens the temperature screen', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await page.getByRole('button', { name: 'Move dogs' }).click();
+  await page.getByRole('button', { name: 'Temperature' }).click();
+  await expect(page).toHaveURL(/#m\/temperature$/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bld.move.room')).areaId)).toBe('area-1');
+});
+
+test('a thermometer scan opens the temperature round at that thermometer, and saves nothing', async ({ page }) => {
+  const sent = await setup(page, { qr_tag: TABLES.qr_tag.concat([{ tag: 'THERMO23', kind: 'thermometer', ref_id: 'thm-1', active: 'true' }]) });
+  await page.goto('cdhub/staff/#s/THERMO23');
+  await expect(page).toHaveURL(/#m\/temperature$/);
+  const t = await page.evaluate(() => JSON.parse(localStorage.getItem('bld.temp.thermometer')));
+  expect(t.thermometerId).toBe('thm-1');
+  expect(Math.abs(Date.now() - t.at)).toBeLessThan(60000);
+  expect(sent).toHaveLength(0);
+});

@@ -10,9 +10,14 @@
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
+<script src="staff/lib/needs.js"></script>
+<script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
+<script src="../breed-better/score.js"></script>
+<script src="../breed-better/hub-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -26,15 +31,24 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
 <style>
+/* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
+   Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
+   turns ink (outline over it), nothing moves; keyboard focus 1px ink inside. ONE radius, 12px (circles only for status dots and
+   who rings). No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints.
+   Dark frame top and bottom. Greys follow Warm clear (default) or Cool clear, read from Studio's Look ('dash-look', read only).
+   Screens are built on generic Bloodline foundation concepts (record, round, check, rule, place, person, document);
+   animal-only parts are marked "kit: animal". ==== */
+/* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css,
+   the same on every hub. CD Hub's own names below: the LJR7 slots, the kit (sex) colours and the old short names. */
 
 
-:root{--sel-fill:transparent;--hov-fill:var(--hov);
+:root{--sel-fill:var(--hov);
 
  --p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
 
  --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
-:root.sel-soft{--sel-fill:var(--soft);}
+:root.sel-soft{--sel-fill:var(--hov);}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
 h1,h2,h3,h4,b,strong,th{font-weight:600}
@@ -52,8 +66,8 @@ header h1 .dot{background:var(--ljr-5)}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
 .live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
-@media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
-header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
+@media (hover:hover){header .btn:hover{background:var(--frame-hov);}}
+header .btn:focus-visible{outline: 1px solid var(--frame-ink);outline-offset: -1px}
 .backhome{text-decoration:none}
 
 html.dash-locked header .backhome{color:var(--ink);border-color:var(--press)}
@@ -66,6 +80,7 @@ h2{font-size:var(--fs-head);margin:24px 0 4px;line-height:1.3}
 h3{font-size:var(--fs-head);margin:24px 0 12px;display:flex;align-items:center;gap:8px}
 .sub{color:var(--muted);font-size:var(--fs-body);margin:0 0 16px;max-width:74ch}
 .mut{color:var(--muted);font-size:var(--fs-small)}
+.szd{display:inline-block;width:10px;height:10px;border-radius:50%;border:3px solid;margin-right:4px;vertical-align:-1px;box-sizing:border-box}
 .note{font-size:var(--fs-small);color:var(--muted);margin:8px 0 12px}
 code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-nums;background:transparent;padding:0}
 
@@ -86,17 +101,21 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
-@media (hover:hover){.filt select:hover, .fpanel select:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){.filt select:hover, .fpanel select:hover {background:var(--hov);}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .tile.tl:hover,.ci:hover{border-color:var(--press)}
-.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;}
+.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 
 
-@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);}.btn.no:hover{outline-color:var(--house-risk);}}
+@media (hover:hover){.btn.yes:hover{background:var(--hov);}.btn.no:hover{background:var(--hov);}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
-:focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
+:focus-visible{outline: 1px solid var(--ink)!important;outline-offset: -1px}
+/* Typing boxes: one 1px line inside the rounded box; focus recolours that line. Never a second square ring. */
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
+.sbox input:is(:focus,:focus-visible){outline:none!important}
+.sbox:focus-within{border-color:var(--ink)}
 @media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
 
@@ -126,7 +145,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .tile .k{font-size:var(--fs-small);font-weight:600;margin-top:2px}
 .tile .src{font-size:var(--fs-small);color:var(--muted);margin-top:4px;line-height:1.4}
 button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
-@media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){button.tile:hover{background:var(--hov);}}
 
 
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
@@ -171,13 +190,27 @@ tr:last-child td{border-bottom:none}
 .mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 
-#sopcard .mrow:first-child{border-top:0;padding-top:0}
+#sopcard .mrow,#sopcard .mrow:first-child{border:1px solid var(--line);box-shadow:none;border-radius:var(--radius);background:var(--card);padding:0;margin:0 0 8px}
+@media (hover:hover){#sopcard .mrow:has(.sopopen:hover){background:var(--hov)}}
+#sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important}
+#sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink)}
+/* The card is the frame. The button is the words inside it, so it is not a second one-line control. */
+#main #sopcard button.sopopen{background:transparent;border:0;border-radius:0;box-shadow:none;min-height:44px;height:auto;padding:10px 12px;width:100%;min-width:0;display:flex;align-items:flex-start;text-align:left;cursor:pointer;color:inherit;font-weight:600}
+#sopcard .sopopen .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;overflow:visible;-webkit-line-clamp:unset;line-clamp:unset}
+#sopcard .sopopen .t .n{font-size:var(--fs-small);font-weight:600;line-height:1.2}
+#sopcard .sopopen .t small{display:block;font-size:var(--fs-small);font-weight:400;line-height:1.2;color:var(--ink)}
+#sopcard .sopopen .t{display:block;text-align:left}#sopcard .sopopen .t .fq{font-size:var(--fs-small);font-weight:400;color:var(--muted)}
+#sopcard .sopgrp{margin:0 0 12px}#sopcard .sopgrp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;height:var(--house-btn);box-sizing:border-box;padding:0 12px;margin:0 0 8px;border:1px solid var(--press);border-radius:var(--radius);font-weight:600;--house-lbar-out:1px}
+#sopcard .sopgrp>summary::-webkit-details-marker{display:none}@media(max-width:767px){#sopcard .sopgrp>summary{height:var(--house-btn-phone)}}#sopcard .sopgrp>summary .n{font-weight:400;color:var(--muted)}
+#sopcard .sopgrp .mrow{margin-left:12px}
+.compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
+.compfold>summary h3{margin:0;flex:1}.compfold>summary::after{content:"\25BE";color:var(--muted);margin-left:8px}.compfold:not([open])>summary::after{content:"\25B8"}
+ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ctemps .ctl{margin:4px 0 0;padding-left:20px;font-size:var(--fs-small)}
+#compJobs td[data-n] a{text-decoration:none;display:inline-flex;min-height:32px;align-items:center}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
-#sopcard .sopopen{display:flex;flex:1;align-items:center;gap:12px;min-width:0;min-height:44px;padding:0 10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
 #sopcard .mrow:has(.sopopen){flex-wrap:wrap}
 #sopcard .sopopen{flex:1 1 100%}
-#sopcard .sopopen .t{white-space:normal;overflow:visible}
 .sopsigns{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:var(--fs-small);font-weight:600}
 .sopsigns .ti{width:18px;height:18px}
 .sopbody{margin:0 0 12px;padding:4px 0 4px 12px;border-left:3px solid var(--hc,var(--line));border-radius:var(--radius);overflow-wrap:anywhere}
@@ -294,14 +327,14 @@ tr:last-child td{border-bottom:none}
 .dcrow .up{font-weight:600}
 .dcrow .dn{font-weight:600}
 .dcrow.tap{cursor:pointer;border-radius:0px;padding:1px 3px;margin-left:-3px}
-.dcrow.tap:focus-visible{outline:2px solid var(--press)}
+.dcrow.tap:focus-visible{outline:1px solid var(--press);outline-offset:-1px}
 .wt{display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);flex-wrap:wrap}
 .wt .lb,.chipline .lb{font-size:var(--fs-small);color:var(--muted)}
 .wt b{color:var(--ink)}
 .wt .up,.wt .dn{color:var(--ink);font-weight:600}
 .wt.none{color:var(--muted);font-size:var(--fs-small)}
 .wtc{cursor:pointer;border-radius:var(--radius);padding:2px 4px;margin:-2px -4px;border:1px solid transparent}
-@media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){.wtc:hover{background:var(--hov);}}
 .spk{color:var(--ljr-6);overflow:visible}
 .chipline{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-small);color:var(--muted)}
 .chipline .vl{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -361,7 +394,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
 .dcs>summary::-webkit-details-marker{display:none}
-@media (hover:hover){.dcs>summary:hover{outline:var(--house-line) solid var(--sel-bd);outline-offset:calc(-1 * var(--house-line))}}
+@media (hover:hover){.dcs>summary:hover{background:var(--hov);}}
 .dcs>summary svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
@@ -402,10 +435,17 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
-function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy}; }
+var OPTIONAL_FILES={'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
+function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
+/* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
+var COMP={shut:{}};
+function compOpen(k){ return COMP.shut[k]?'':' open'; }
+function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
+function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
+function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -416,7 +456,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>
 
 
 
-var SOP={rows:null,err:'',pending:null,cards:null,cardsErr:'',cardsPending:null,open:''};
+var SOP={rows:null,err:'',pending:null,cards:null,cardsErr:'',cardsPending:null,open:'',shut:{}};
 var SOP_CARDS_FILE='BLD-sop_cards.json';
 var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
 var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
@@ -428,6 +468,8 @@ var SOP_ROLE_RANK=SOP_ROLES.concat(['inspector_view']);
 var SOP_ROLE_LABEL={licence_holder:'Licence holder',manager:'Manager',kennel_staff:'Kennel staff',all_staff:'All staff',inspector_view:'Inspector view'};
 var SOP_DOT={White:'--ljr-0',Red:'--ljr-2',Orange:'--ljr-3',Yellow:'--ljr-4',Green:'--ljr-5',Blue:'--ljr-6',Purple:'--ljr-7'};
 function sopDot(c){ return SOP_DOT[c]||'--ljr-0'; }
+/* the colour's meaning on the LJR7 spine (tokens.css), as on Lisa's 5 Nov SOP mock-up: "Yellow – operations" */
+var SOP_MEANING={White:'vision',Red:'risk and legal',Orange:'money',Yellow:'operations',Green:'connection',Blue:'sales',Purple:'ideas'};
 function sopLabel(r){ return r.colour+' \u2013 '+r.frequency+': '+r.short_name; }
 function sopRoleLabel(code){ return SOP_ROLE_LABEL[code]||code||''; }
 function sopNorm(r){
@@ -772,19 +814,28 @@ function build(){
   });
 
 
-  CD.areas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
+  /* rooms in use today: a room with room.in_use rows in BLD-requirement is shown only on days a row covers (need rows, Lisa 11 Nov 2026).
+     No rows = always in use. Rows are never deleted; a retired room keeps its code and its records. */
+  var _req=T['BLD-requirement.csv']||[], _day=BLDNeeds.today();
+  CD.req=_req;
+  CD.allAreas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
     grouping:r.grouping||'other',group_sort:r.group_sort||'99',
-    m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||''}; });
+    m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||'',use:r.use||'',src:r.source||''}; });
+  CD.areas=CD.allAreas.filter(function(a){ return BLDOccupancy.inUse(a,_day,_req); });
   var CAP={}; (T['BLD-area_capacity.csv']||[]).forEach(function(r){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
   CD.cap=CAP;
   CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ CD.accessCsv[r.area_id]=r; });
 
-  var _an={}; (T['BLD-area.csv']||[]).forEach(function(a){ _an[a.id]=a.code||a.id; });
+  var _an={}; CD.areas.forEach(function(a){ _an[a.id]=a.code||a.id; });
   CD.dogs.forEach(function(d){
-   d.where = d.area_id ? (_an[d.area_id]||d.area_id) : (d.off ? ('off site \u2014 '+d.off) : '');
+   d.room = (d.area_id && _an[d.area_id]) ? d.area_id : '';   /* a room in use; a retired or unknown room reads as not recorded */
+   d.where = d.room ? _an[d.room] : (d.off ? ('off site \u2014 '+d.off) : '');
   });
+  /* size colours: Lisa's rule rows (size_colour.small etc.), never fixed in code */
+  CD.sizeColour={}; (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var m=/^size_colour\.(\w+)$/.exec(r.rule_key||'');
+   if(m && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value||'')) CD.sizeColour[m[1].toLowerCase()]=r.value; });
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
             min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
@@ -1074,6 +1125,8 @@ var BREED_RULES=[
  ['min_dam_age_months','Youngest age a bitch can be mated','months'],
  ['max_litters_per_dam','Most litters per bitch','litters'],
  ['min_months_between_litters','Shortest time between litters','months']];
+/* settings kept in the same rule list (one rule list, Lisa 9 Nov), not breeding checks: not in the "3 rules not set" count */
+var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days']];
 function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
@@ -1212,7 +1265,7 @@ function needsToday(){
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
    tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
- (CD.areas||[]).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
+ areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  /* foundation: work record (an open item waiting on the owner) */
  (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
@@ -1339,22 +1392,23 @@ function outdoorStrip(date){
 }
 /* foundation: readings against a rule band (temperature per place, per round slot) */
 function tempsCard(){
- var date=CD._roundDate||todayISO(), N=(CD.areas||[]).length;
- var has=function(slot){ return (CD.areas||[]).filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
+ var date=CD._roundDate||todayISO(), A=liveCabins(), N=A.length;
+ var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
- var cold=0, hot=0, swap=0, unk=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
-   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max,bd):''; if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
+ var cold=0, hot=0, swap=0, unk=0, mt=0; A.forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
+   ['am','pm'].forEach(function(s){ var t=r['t_'+s], st=t&&(t.min||t.max)?tempState(t.min,t.max,bd):''; if(t&&t.empty&&st&&st!=='ok'&&st!=='unknown'){ mt++; return; } if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
  var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
-  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':''),inState):'')
+  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':'')+(mt?((hot&&cold)||swap?' \u00b7 ':'')+mt+' out of range, Room empty (not counted)':''),inState):'')
   +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
-  +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
+  +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button>'
+  +'<a class="btn" id="addThermo" href="./staff/print/?add=thermometer">+ Thermometer</a></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
@@ -1382,8 +1436,8 @@ function mainRows(){
 
 
 function mainNums(ok){
- var c=ok?counts():null, date=CD._roundDate||todayISO(), N=ok?(CD.areas||[]).length:0;
- var t=ok?Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); }).length:0;
+ var c=ok?counts():null, date=CD._roundDate||todayISO(), A=ok?liveCabins():[], N=A.length;
+ var t=ok?A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length:0;
  return [{label:'Temps',value:ok&&N?t+' of '+N:null,href:'#/round',aria:ok&&N?'Temps: '+t+' of '+N+' cabins have a temperature today. Open The round':null},
   {label:'Unplaced',value:ok?listFor('unplaced').length:null,href:'#/today/unplaced'},
   {label:'Bitches',value:ok?c.bitches.length:null,href:'#/today/bitches',late:ok&&c.bitches.length!==c.active.length}];
@@ -1396,8 +1450,9 @@ function pageToday(){
  var c=counts(), date=CD._roundDate||todayISO();
  var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
    (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
- var temps=Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); });
- var cabins=CD.areas.length;
+ var cabinRows=liveCabins();
+ var temps=cabinRows.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; });
+ var cabins=cabinRows.length;
  var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
  var h='<h2>Today: '+esc(dmy(date))+'</h2>'
@@ -1437,12 +1492,30 @@ function pageToday(){
  +'';
  return h;
 }
+/* Live cabins for the Today checklist and The round. Retired rooms (room.in_use ended) are already left out of CD.areas.
+   The fields line is not a cabin (grouping Fields, code "Level 1 and level 5", or use Fields). It stays on Areas
+   and is not asked for a flap mode or a morning or evening cabin temperature. */
+function normPlace(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,' '); }
+function isFieldsRow(a){
+ if(!a) return false;
+ return normPlace(a.grouping)==='fields' || normPlace(a.code||a.cabin)==='level 1 and level 5' || normPlace(a.use)==='fields';
+}
+function isLiveCabin(a){
+ return !!a && !isFieldsRow(a);
+}
+/* Rooms in use on a day (Lisa: late entry stays open for every day a thing was needed). A past date on The round
+   shows the rooms in use THAT day: a room retired since still shows, a room added since does not. */
+function areasOn(day){ day=day||todayISO(); if(day===todayISO()||!CD.allAreas) return CD.areas||[];
+ return CD.allAreas.filter(function(a){ return BLDOccupancy.inUse(a,day,CD.req||[]); }); }
+function liveCabins(day){ return areasOn(day||CD._roundDate||todayISO()).filter(isLiveCabin); }
+/* A chosen flap mode is only free or limited (the sheet value, or the same value on today's round). */
+function flapChosen(v){ v=normPlace(v); return v==='free'||v==='limited'; }
 /* foundation: checklist instance for today's round. Each line is a check on the round's places (✓ done / ✗ not yet),
    worked out from what is read: placements, flap modes, readings and headcounts. Nothing is stored. */
 function todayChecklist(date,unplacedN){
- var A=CD.areas||[], N=A.length;
- var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
- var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.access||accessOf(a.id); }).length;
+ var A=liveCabins(), N=A.length;
+ var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
+ var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return flapChosen(r.access||accessOf(a.id)); }).length;
  var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc).status==='over'; }).length;
  var c=counts();
  var L=[
@@ -1666,7 +1739,10 @@ function showTreats(id){
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-var dogShown=300, unplacedShown=40;
+var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='';
+/* one size band to its colour key (small, medium, large) */
+function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
+function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }
 
 function moxiLine(d){
  var when=ukDate(d.rxExpiry), url=safeUrl(d.rxUrl);
@@ -1680,6 +1756,7 @@ function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
  var list=CD.dogs.filter(function(d){
+  if(DOGFOCUS) return d.id===DOGFOCUS;   /* opened from a room card: just this dog */
   var sc=statusOf(d).code;
   if(!fst && !(/^active$/i.test(d.state||'') && (sc==='BI'||sc==='ST'||sc==='PU'))) return false; // default list: active dogs on site (breeding dogs and puppies); the Status filter shows the rest
   if(fs==='__none'){ if(d.sex) return false; } else if(fs&&d.sex!==fs) return false;
@@ -1730,7 +1807,8 @@ function drawDogs(){
       +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
       +'<div class="meta">'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
-        +'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
+        +(d.room&&!away?'<a href="#/areas/'+esc(d.room)+'" data-room-link="'+esc(d.room)+'">'+esc(d.where)+'</a>'
+          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>')
       +'</div>'
     +'</div>'
   +'</div>'
@@ -1800,11 +1878,13 @@ function drawDogs(){
       +'</div></details>'
     :'');}())
   +'</div>'
+  +(typeof BBHubView!=='undefined'?BBHubView.chip(bbV(),d.id):'')
   +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
 +'</article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
   +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
   +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
+ if(DOGFOCUS) h='<p class="filt" data-focus="dog">'+(list.length?'One dog.':'Dog not found.')+' <a href="#/dogs">All dogs</a></p>'+h;
  document.getElementById('rows').innerHTML=h;
  document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(dogN<list.length?' · Showing '+dogN+' of '+list.length:'');
  fchips('dogs',['fs','fn','fa','fst','fc','ft']);
@@ -1829,7 +1909,7 @@ function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc
 function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
  ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
   if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
-function roomAudit(date){ return BLDCapacity.audit((CD.areas||[]).map(function(a){ var ids=inCabin(a.id,date);
+function roomAudit(date){ return BLDCapacity.audit(areasOn(date).map(function(a){ var ids=inCabin(a.id,date);
  return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids),reasons:roomReasons(ids)}; }),T['BLD-area_capacity.csv']||[]); }
 function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null;
  var c=(a[access]||{})[band]; return (c && c.n!=='' && c.n!=null)?c.n:null; }
@@ -1847,11 +1927,12 @@ function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]&&R
 
 function pageAreas(){
  var date=CD._roundDate||todayISO();
- var fam={}; CD.areas.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var shown=AREAFOCUS?CD.areas.filter(function(a){return a.id===AREAFOCUS;}):CD.areas;   /* opened from a dog card: just that room */
+ var fam={}; shown.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
  var order=Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);});
  var set=CD.areas.filter(function(a){return accessOf(a.id);}).length;
  var both=CD.areas.filter(function(a){return modesOf(a).length===2;}).length;
- var h='<h2>Areas</h2>'
+ var h='<h2>Areas</h2>'+(AREAFOCUS?'<p class="filt" data-focus="room">'+(shown.length?'One room.':'Room not found.')+' <a href="#/areas">All rooms</a></p>':'')
  +'<div class="tiles">'+tile('b4',CD.areas.length,'cabins','BLD-area.csv')
  +tile('b6',CD.areas.filter(function(a){return a.m2ok==='NO';}).length,'m\u00b2 unconfirmed','two figures were on record for one room')
  +tile(set===CD.areas.length?'b5':'b2',set,'have a mode chosen','of '+CD.areas.length)
@@ -1869,10 +1950,11 @@ function pageAreas(){
   rows.forEach(function(a){
    var cur=accessOf(a.id), who=inCabin(a.id,date);
    var m2=a.m2;
-   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'">'
+   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'" id="room-'+esc(a.id)+'" data-room="'+esc(a.id)+'">'
     +'<h4>'+esc(a.code)+' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
     +(cur?' <span class="pill '+(cur==='free'?'i':'w')+'">'+cur+'</span>':' <span class="pill no">flap?</span>')
     +(a.m2ok==='NO'?' <span class="pill w" title="'+esc(a.m2note)+'">m\u00b2 unconfirmed</span>':'')+'</h4>'
+    +(a.use?'<p class="mut" data-use="'+esc(a.id)+'" style="margin:0 0 6px">'+esc(a.use)+(a.src?' <small>('+esc(a.src)+')</small>':'')+'</p>':'')
     +'<div class="filt" style="margin-bottom:6px"><select class="aacc" data-area="'+a.id+'">'
     +'<option value="">how is it being run?</option>'
     +['free','limited'].map(function(m){
@@ -1892,7 +1974,9 @@ function pageAreas(){
      +'</tbody></table></div>'
      +(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
      +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
-     +(who.length?who.map(function(sid){var d=CD._byId[sid];return '<span class="pill i">'+esc(d?d.name:sid)+'</span>';}).join(' ')
+     +(who.length?who.map(function(sid){var d=CD._byId[sid];
+        return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.size)+esc(d.name||sid)+'</a>'
+          :'<span class="pill i">'+esc(sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
      +(function(){ var r=roomCheck(a.id,who,cur);
         return r.status==='over'?' <span class="pill no" title="'+esc(r.message)+'">over its limit</span>':''; })()
@@ -2095,7 +2179,7 @@ function rk(x){ return x in RK ? RK[x] : 9; }
 function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
 
 function walkList(){
- var fam={}; CD.areas.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var fam={}; liveCabins().forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
  var out=[], step=0;
  Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);}).forEach(function(f){
   fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);}).forEach(function(a){
@@ -2110,10 +2194,10 @@ function hereNow(){ return CD.dogs.filter(function(d){
 
 function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
- var rows=(CD.areas||[]).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
+ var rows=areasOn(date).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
- var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
-   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+'</span>'; };
+ var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
@@ -2122,6 +2206,9 @@ function keptReadings(date){
     :'<p class="mut">No readings for '+esc(date)+'.</p>')
   +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
+/* Room empty (Lisa, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
+   and never counted as non-compliant. An empty mark with no reading counts as covered. */
+function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim()); }
 function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
 function foldAreaReadings(rows){
  CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
@@ -2130,7 +2217,7 @@ function foldAreaReadings(rows){
   var at=String(r.period_start||r.taken_at||''); if(!r.area_id||at.length<10) return;   /* period_start = the slot the Round saved (Nov 2026) */
   var k=roundKey(at.slice(0,10),r.area_id), hr=parseInt(at.slice(11,13),10);
   var cur=ROUND[k]||(ROUND[k]={areaId:r.area_id,date:at.slice(0,10),subjects:null,access:''});
-  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c,at:r.taken_at||''};
+  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c,at:r.taken_at||'',empty:roomEmpty(r)};
  });
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
@@ -2154,7 +2241,7 @@ function pageRound(){
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
  var h='<h2>The round</h2>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
- +'<span class="mut" id="rstat">'+(sinkOn()?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'')+'</span></div>';
+ +'<span class="mut" id="rstat">'+(sinkOn()?(function(){ var rows=liveCabins(), n=rows.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length; return rows.length+' cabins \u00b7 '+n+' with a temperature'; })():'')+'</span></div>';
  h+=sinkCard();
  h+=keptReadings(date);   /* kept readings: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
  var unN=unplacedShown==='all'?unplaced.length:Math.min(unplaced.length, Math.max(40, unplacedShown));
@@ -2168,6 +2255,7 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
+  var cap=capFor(aid,'10-25kg (medium)',acc);
   var roomR=roomCheck(aid,sel,acc), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
@@ -2471,12 +2559,12 @@ function pageSops(){
  var cats=sopChoices(SOP.rows.map(function(r){return r.category;}), SOP_CATEGORIES);
  var roles=sopChoices(SOP.rows.map(function(r){return r.role;}), SOP_ROLES);
  return '<h2>SOPs</h2>'
-  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency'],['category','category'],['role','role']]],
+  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','colour, then how often'],['name','name A to Z'],['frequency','frequency'],['category','category'],['role','role']]],
     groups:[['Colour',fsel('sopcol','Colour',colours.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
      ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))],
      ['Category',fsel('sopcat','Category',cats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
      ['Role',fsel('soprole','Role',roles.map(function(code){return '<option value="'+esc(code)+'">'+esc(sopRoleLabel(code))+'</option>';}).join(''))]]})
-  +'<div class="card" id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>'
+  +'<div id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>'
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
@@ -2540,19 +2628,20 @@ function drawSops(){
   var hay=(sopLabel(r)+' '+r.short_name).toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every(function(w){ return hay.indexOf(w)>=0; });
  });
- var byLabel=function(a,b){ return sopLabel(a).localeCompare(sopLabel(b)); };
+ var byLabel=function(a,b){ return a.short_name.localeCompare(b.short_name); };
  var rank=function(pref,key){ return function(a,b){
   var ia=pref.indexOf(a[key]), ib=pref.indexOf(b[key]);
   if(ia<0) ia=999; if(ib<0) ib=999;
   return ia-ib||byLabel(a,b);
  }; };
- if(so==='colour') list.sort(rank(SOP_COLOURS,'colour'));
+ var grouped=!so;   /* Lisa's 5 Nov layout: one section per colour, rows "How often: Name" in frequency order */
+ if(grouped) list.sort(function(a,b){ var c=rank(SOP_COLOURS,'colour')(a,b); return SOP_COLOURS.indexOf(a.colour)-SOP_COLOURS.indexOf(b.colour)||rank(SOP_FREQS,'frequency')(a,b)||c; });
  else if(so==='frequency') list.sort(rank(SOP_FREQS,'frequency'));
  else if(so==='category') list.sort(rank(SOP_CATEGORIES,'category'));
  else if(so==='role') list.sort(rank(SOP_ROLE_RANK,'role'));
  else list.sort(byLabel);
  var el=document.getElementById('soprows'); if(!el) return;
- el.innerHTML=list.map(function(r){
+ var html=list.map(function(r){
   var label=sopLabel(r);
   var type=sopShownType(r);
   var badge=type
@@ -2562,14 +2651,26 @@ function drawSops(){
     : '';
   var form=r.form_url
     ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
-    : (r.has_form==='Y'?'<span class="mut">form not on hub yet</span>':'');
+    : '';
   var card=SOP.cards&&SOP.cards[r.short_name], signs=card&&card.links?card.links.filter(function(l){ return l.type_code==='sign'||l.type_code==='poster'; }):[];
   var signType=signs.length?sopTypeOf(signs[0].type_code):null;
   var signBadge=signType?'<span class="sopsigns" data-type-code="'+esc(signType.type_code)+'" aria-label="'+signs.length+' linked '+esc(signType.label.toLowerCase())+(signs.length>1?'s':'')+'">'+sopIcon(signType.icon_key)+signs.length+'</span>':'';
   var isOpen=SOP.open===r.short_name, pid='sopb-'+list.indexOf(r);
-  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><button type="button" class="sopopen" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span></button>'+badge+signBadge+form+'</div>'
+  return '<div class="mrow house-lbar" data-sop="'+esc(r.short_name)+'" style="--sc:var('+sopDot(r.colour)+')"><button type="button" class="sopopen" data-house="text" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="t"><span class="fq">'+esc(r.frequency)+': </span><span class="n">'+esc(r.short_name)+'</span></span><span class="sr">'+esc(r.colour)+'</span></button>'+badge+signBadge+form+'</div>'
    +(isOpen?'<div class="sopbody" id="'+pid+'" style="--hc:var('+sopDot(r.colour)+')" data-sop-body="'+esc(r.short_name)+'">'+sopCardHtml(r)+'</div>':'');
- }).join('');
+ });
+ if(grouped){
+  var out='', i=0;
+  while(i<list.length){
+   var c=list[i].colour, j=i; while(j<list.length&&list[j].colour===c) j++;
+   var shut=!!SOP.shut[c] && !list.slice(i,j).some(function(r){ return r.short_name===SOP.open; });
+   out+='<details class="sopgrp" data-group="'+esc(c)+'"'+(shut?'':' open')+'><summary class="house-lbar" style="--sc:var('+sopDot(c)+')"><span class="g">'+esc(c)+(SOP_MEANING[c]?' \u2013 '+esc(SOP_MEANING[c]):'')+'</span> <span class="n">'+(j-i)+'</span></summary>'
+     +html.slice(i,j).join('')+'</details>';
+   i=j;
+  }
+  el.innerHTML=out;
+  Array.prototype.forEach.call(el.querySelectorAll('details.sopgrp'),function(d){ d.addEventListener('toggle',function(){ SOP.shut[d.dataset.group]=!d.open; }); });
+ } else el.innerHTML=html.join('');
  var empty=document.getElementById('sopempty');
  if(empty) empty.classList.toggle('hidden', !!list.length);
  var cnt=document.getElementById('sopcnt');
@@ -2579,6 +2680,45 @@ function drawSops(){
 /* COMPLIANCE (under More). First screen: the breeder's own breeding rules (Lisa, 8 Nov 2026). Problems first, then the
    rules in force with their history, then the box to add a rule or a change. Only an OWNER code can save a rule (the save
    script refuses any other), and a change is a new row from a later date: nothing already saved is edited. */
+/* Compliance: room temperatures for the last N days, best to worst: in range, Room empty (flagged, never counted),
+   out of range, missing. Missing = BLDThermometer.missingOn: a thermometer is only flagged on days its need rows cover.
+   N is a user row (no assumed timings): BLD-breeding_rule compliance.look_back_days, the version in force today; 7 until set.
+   A reading with a thermometer_id is its own line (a room may have more than one named thermometer). */
+var COMP_DAYS_KEY='compliance.look_back_days', COMP_DAYS_DEFAULT=7;
+function compDays(){ var r=breedRule(COMP_DAYS_KEY,todayISO()), n=r?parseInt(r.value,10):NaN; return n>0&&n<=366?{n:n,set:true,src:r.source||''}:{n:COMP_DAYS_DEFAULT,set:false,src:''}; }
+function dayMinus(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
+function compTemps(){
+ var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=T['BLD-area_reading.csv']||[], days=[], i, win=compDays();
+ var tname={}; (th||[]).forEach(function(t){ tname[t.id]=t.name||t.id; });
+ for(i=0;i<win.n;i++) days.push(dayMinus(today,i));
+ var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
+ var slot={};   /* one reading per room, day and slot: a later row wins (corrections), as on The round */
+ rd.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
+  var at=String(r.period_start||r.taken_at||''), d=at.slice(0,10); if(!r.area_id||days.indexOf(d)<0) return;
+  var hr=parseInt(at.slice(11,13),10); slot[d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')+'__'+(r.thermometer_id||'')]=r; });
+ var out={ok:0,empty:[],bad:[],miss:[]};
+ Object.keys(slot).sort().reverse().forEach(function(k){ var r=slot[k], p=k.split('__');
+  if(r.min_c===''&&r.max_c===''||r.min_c==null&&r.max_c==null){ out.ok++; return; }   /* Room empty with no reading: covered */
+  var st=tempState(r.min_c,r.max_c,roomBand(r.area_id,p[0]));
+  if(st==='ok'||st==='unknown'){ out.ok++; return; }
+  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',min:r.min_c,max:r.max_c,st:st};
+  (roomEmpty(r)?out.empty:out.bad).push(x); });
+ if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
+ out.on=!!th; out.win=win; return out;
+}
+function compTempsHtml(){
+ var c=compTemps(), n=c.bad.length+c.miss.length;
+ var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
+ var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
+ return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set?(c.win.src?' (your setting: '+esc(c.win.src)+')':' (your setting)'):' (not set yet, so 7: set \u201cDays Compliance looks back\u201d below)')+', from BLD-area_reading. A reading in a room marked empty is flagged but never counted.</p>'
+  +'<ul class="ctemps">'
+  +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'
+  +'<li data-k="empty"><span class="pill w">'+c.empty.length+'</span> out of range, Room empty (not counted)'+(c.empty.length?'<ul class="ctl">'+c.empty.map(function(x){ return li(x,' \u2014 Room empty'); }).join('')+'</ul>':'')+'</li>'
+  +'<li data-k="bad"><span class="pill no">'+c.bad.length+'</span> out of range'+(c.bad.length?'<ul class="ctl">'+c.bad.map(function(x){ return li(x); }).join('')+'</ul>':'')+'</li>'
+  +'<li data-k="miss"><span class="pill no">'+c.miss.length+'</span> missing'+(c.on?'':' <span class="mut">(the thermometer list is not switched on yet)</span>')
+   +(c.miss.length?'<ul class="ctl">'+c.miss.map(function(x){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' \u2014 '+esc(x.name)+', no reading</li>'; }).join('')+'</ul>':'')+'</li>'
+  +'</ul><p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
+}
 function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
@@ -2586,33 +2726,35 @@ function pageCompliance(){
  da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+x.on+(x.est?' (estimated from the litter, no mating row)':'')+', born '+x.dob+'. Your rule: '+x.months+' months.'}); });
  lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+litDob(x.litter)+'). Your rule: '+x.max+'.'}); });
  var h='<h2>Compliance</h2><p class="sub">Breeding rules. You set them; every litter and mating is checked against the version in force on its own date.</p>';
- h+='<section class="card" id="compProblems"><h3>Needs a look'+cntPill(probs.length)+'</h3>';
- if(unset.length) h+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
- h+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b>'+esc(nameOf(p.who)||p.who)+'</b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
+ var pb='';
+ if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
+ pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
- h+='</section>';
+ h+=compFold('compProblems','problems','Needs a look'+cntPill(probs.length),pb);
  var rl=roomAudit(today);
- h+='<section class="card" id="compRooms"><h3>Room limits'+cntPill(rl.over.length)+'</h3><p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
-  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
-  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
-  +'<p><a href="#/areas">Open Areas</a></p></section>';
+ h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
+  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
+  +'<p><a href="#/areas">Open Areas</a></p>');
+ h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
- h+='<section class="card" id="compRules"><h3>Your breeding rules</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
-  +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
+ h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
+  +BREED_RULES.concat(SETTING_RULES).map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
     +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+esc(cur&&cur.source||'—')+'</td>'
     +'<td class="mut">'+(all.length>1?all.map(function(r){ return esc(r.value)+' from '+esc(dmy(r.effective_from)); }).join(' → '):(all.length?'1 version':'—'))+'</td></tr>'; }).join('')
-  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>')+'</section>';
- h+='<section class="card" id="compAdd"><h3>Add a rule or a change</h3>'
+  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>'));
+ h+=compFold('compAdd','add','Add a rule or a change',''
   +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
-  +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
+  +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
   +'<input id="brVal" type="number" inputmode="numeric" min="1" max="48" step="1" placeholder="number" aria-label="number" style="width:7em"> '
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
-  +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p></section>';
+  +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p>');
  return h;
 }
 function bindCompliance(){
+ Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  var b=document.getElementById('brSave'); if(!b) return;
  b.addEventListener('click',async function(){
   var key=document.getElementById('brKey').value, val=String(document.getElementById('brVal').value||'').trim(),
@@ -2644,12 +2786,16 @@ var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sit
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
 var MORE_VIEWS=['compliance','shape','round','areas','litters','vet','buyers'];
+function bbV(){return {T:T,today:todayISO(),esc:esc};}
+/* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
+function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
+if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; TABMETA.breed=['check','Breed Better',5]; MORE_VIEWS.push('breed'); }
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
  return TABS.map(function(t){ var n=counts[t[0]];
    return DashKit.tabs.tab({go:t[0],slot:t[2],icon:'t-'+t[3],label:t[1],count:n?String(n):'',need:!!(n&&late[t[0]])}); }).join('')
-  +DashKit.tabs.more('houseMore',MORE_VIEWS.map(function(id){ var m=TABMETA[id];
+  +DashKit.tabs.more('houseMore',MORE_VIEWS.filter(function(id){return id!=='breed'||bbOn();}).map(function(id){ var m=TABMETA[id];
    return '<button type="button" data-go="'+id+'" data-slot="'+m[2]+'"><svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg><span class="htl">'+esc(label(id))+'</span></button>'; }).join(''));
 }
 function pill(){
@@ -2707,8 +2853,8 @@ function focusView(){
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
  pill();
- var full=String(id||''), sub=null, m=/^(\w+)\/(\w+)$/.exec(full);
- if(m){ id=m[1]; sub=m[2]; }
+ var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
+ if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
@@ -2727,6 +2873,8 @@ function go(id,push){
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
  if(!PAGES[id]) id='map';
+ DOGFOCUS=(id==='dogs'&&sub)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:'';
+ if(id==='sops'&&sub) SOP.open=sub;   /* opened from a Compliance number: that SOP, unfolded */
  cdIn(true);
  document.getElementById('nav').innerHTML=navHtml();
  main.innerHTML=PAGES[id]();
@@ -2735,6 +2883,7 @@ function go(id,push){
  levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='compliance') bindCompliance();
+ if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');
   STATUS.forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
@@ -2847,7 +2996,7 @@ function go(id,push){
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
     roundSave(el.dataset.area,{subjects:cur},msg); }); });
  }
- var at=sub&&id==='today'?full:id;
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas')?full:id;
  if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
  window.scrollTo(0,0);
 }

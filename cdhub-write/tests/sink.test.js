@@ -61,7 +61,7 @@ test('bad input is refused with plain messages and nothing is written', () => {
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', reading_type: 'humidity' }, 'reading_type', /Not one of/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-10-15 07:40' }, 'period_start', /time zone/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2027-01-01T00:00:00Z' }, 'period_start', /future/],
-    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-09-01T00:00:00Z' }, 'period_start', /7 days/]
+    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2019-09-01T00:00:00Z' }, 'period_start', /kept \(6 years\)/]   // no 7-day limit on readings, only the kept years
   ];
   bad.forEach(([fields, field, re]) => {
     const r = save(env, req(env, { fields }));
@@ -116,7 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
-    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-guest_reading.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv']);
+    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-guest_reading.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sensor_reading.csv', 'BLD-thermometer.csv']);
 });
 
 test('the exact file name is accepted as an alias for the table key', () => {
@@ -317,7 +317,7 @@ test('the proposed staff table and the retired round_event are NOT on the allow-
     const r = save(env, req(env, { table: t, code: env.codes.owner, fields: {} }));
     assert.equal(r.code, 'FILE_NOT_ALLOWED', t);
   });
-  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'guest_reading', 'check_type', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'guest_reading', 'sensor_reading', 'thermometer', 'requirement', 'area_link', 'check_type', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
   assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff']);
   assert.deepEqual(Array.from(Object.keys(env.ctx.RETIRED_TABLES)), ['round_event']);
   assert.equal(env.writes.length, 0);
@@ -517,9 +517,9 @@ test('status check shows switches only: no codes, no ids, no data', () => {
   assert.equal(out.saveEnabled, true);
   const s = JSON.stringify(out);
   assert.ok(!s.includes(env.codes.staff) && !s.includes(fx.TENANT) && !s.includes('FOLDER-TEST'));
-  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'guest_reading', 'check_type', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
-  assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false, false, false, false, false, false, false, false]);        // occupancy, the daily check and breeding rules have their own switches, OFF
-  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'direct', 'direct', 'direct', 'pending', 'pending', 'direct', 'direct', 'direct', 'direct']);   // temperature straight in, moves queue, the check log and the owner's rules straight in
+  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'guest_reading', 'sensor_reading', 'thermometer', 'requirement', 'area_link', 'check_type', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
+  assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false, false, false, false, false, false, false, false, false, false, false, false]);        // occupancy, the daily check and breeding rules have their own switches, OFF
+  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'pending', 'pending', 'direct', 'direct', 'direct', 'direct']);   // temperature straight in, moves queue, the check log and the owner's rules straight in
   assert.equal(out.readEnabled, false);                                                    // reading is OFF by default
   assert.deepEqual(Array.from(out.proposed), ['staff']);
   // approval page is only for owners
@@ -889,9 +889,10 @@ test('owner edit of an OLD row: an unchanged old period_start is not re-checked 
   assert.equal(e.ok, true);
   assert.deepEqual(Array.from(e.result.changed), ['mitigation_note']);
   assert.equal(rows(env, 'BLD-area_reading.csv')[0].period_start, ps);
-  // but a CHANGED date is checked
-  const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' });
-  assert.match(bad.fields.period_start, /7 days/);
+  // but a CHANGED date is checked: readings have no 7-day limit (Lisa 11 Nov 2026), only how long records are kept
+  const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2019-01-01T00:00:00Z' });
+  assert.match(bad.fields.period_start, /kept \(6 years\)/);
+  assert.equal(env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' }).ok, true);
 });
 
 test('owner edit of an occupancy row (including moved_out, which staff can never set); other rows unchanged', () => {

@@ -107,6 +107,34 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
   return null;
 }
 
+/**
+ * Readings (Lisa 11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
+ * its section's records are kept. Returns { oldestMs, keepYears, field } for those tables, else null (the 7-day rule).
+ */
+function ageCap_(spec, tenant, nowMs) {
+  var cap = spec.ageCap;
+  if (!cap) return null;
+  var years = retentionYears_(cap.retentionSection, tenant), oldest = new Date(nowMs);
+  oldest.setUTCFullYear(oldest.getUTCFullYear() - years);   // the same date and time, that many years ago
+  return { oldestMs: oldest.getTime(), keepYears: years, field: cap.field };
+}
+
+/** Years a section's records are kept: its BLD-retention_setting row (the last one), else the Config.gs default. */
+function retentionYears_(section, tenant) {
+  var r = store_read_(BLD.RETENTION_FILE, false), years = 0;
+  if (r) r.records.forEach(function (x) {
+    if ((!x.tenant_id || x.tenant_id === tenant) && String(x.section || '').trim() === section && /^\d{1,2}$/.test(String(x.keep_years || '').trim()) && parseInt(x.keep_years, 10) > 0) years = parseInt(x.keep_years, 10);
+  });
+  return years || BLD.LIMITS.RETENTION_DEFAULT_YEARS;
+}
+
+/** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
+function sameSlot_(late, clean, rows, nowMs) {
+  if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
+  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && (rows[i].thermometer_id || '') === (clean.thermometer_id || '') && rows[i][late.field] === clean[late.field]) return rows[i];
+  return null;
+}
+
 /** Main entry for a save. Returns a result object or throws err_. */
 function sinkHandle_(req) {
   var now = new Date(), nowMs = now.getTime();
@@ -213,7 +241,8 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var lookups = store_lookups_(spec, tenant);
-  var v = validateInput_(spec, req.fields, lookups, nowMs);
+  var late = ageCap_(spec, tenant, nowMs);
+  var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
 
@@ -247,7 +276,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today);
+    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
@@ -427,7 +456,8 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (want === String(cur[name] || '')) continue;
       changedDefs[name] = defs[name]; changedVals[name] = want;
     }
-    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, store_lookups_({ lookups: spec.lookups }, tenant), nowMs);
+    var editLookups = store_lookups_({ lookups: spec.lookups }, tenant);
+    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, editLookups, nowMs, ageCap_(spec, tenant, nowMs));
     for (name in v.errors) if (Object.prototype.hasOwnProperty.call(v.errors, name)) errors[name] = v.errors[name];
     var next = {}, c;
     for (c in cur) if (Object.prototype.hasOwnProperty.call(cur, c)) next[c] = cur[c];
@@ -437,7 +467,7 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (v.clean[name] === String(cur[name] || '')) continue;       // "22" typed over "22.00" is not a change
       next[name] = v.clean[name]; changed.push(name);
     }
-    if (spec.checkRow) spec.checkRow(next, errors);
+    if (spec.checkRow) spec.checkRow(next, errors, editLookups);
     if (Object.keys(errors).length) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
     if (!changed.length) throw err_('NOTHING_CHANGED', 'Nothing was different from what is already there, so nothing was changed.');
     try {

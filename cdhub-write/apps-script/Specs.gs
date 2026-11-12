@@ -16,7 +16,7 @@ var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
 var ROLE_GUEST = 'GUEST';
 
 /** The default allow-list: the temperature log (plus the approvals queue, see Config.gs PENDING_FILE). */
-var READ_METHODS_ = ['camera', 'typed'];
+var READ_METHODS_ = ['camera', 'typed', 'photo'];   // photo (11 Nov 2026): typed later from a photo. Saved, never shown (Lisa 11 Nov)
 
 var TABLES = {
 
@@ -35,41 +35,66 @@ var TABLES = {
       'applied_limit_id', 'in_range', 'compliant', 'mitigation_required',
       'corrects_id',        // PROPOSED: pointer to the row this one corrects
       'mitigation_note',    // PROPOSED: what was done when a reading is out of band
-      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'
-      'camera_value_changed' // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
+      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'; 'photo' (11 Nov) = typed later from a photo
+      'camera_value_changed', // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
+      'room_empty',         // PROPOSED 11 Nov 2026 (Lisa): 'yes' = no dog in the room for this slot; blank = not said
+      'thermometer_id'      // PROPOSED 11 Nov 2026 (Lisa): which named thermometer, so a room with 2 has 2 readings a slot
     ],
-    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed'],
+    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty', 'thermometer_id'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
-    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    // thermometer: id -> its area_id (valCol), so a reading can only name a thermometer in its own room
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }, { name: 'thermometer', file: 'BLD-thermometer.csv', idCol: 'id', valCol: 'area_id' }],
     // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
     // the owner, who fixes it with the owner edit (or an OWNER code sends a correction row).
     perms: { add: ROLE_ALL, correct: ['OWNER'] },
     ownerEditable: true,
     alwaysPending: false,
     defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
+    // Lisa 11 Nov 2026 ("remove 7 day limit on readings"): any role may send a period_start older than 7 days, back as
+    // far as temperature records are kept (BLD-retention_setting row for section temperature, else the default in
+    // Config.gs). Never a future time. taken_at/taken_by still show when it was typed.
+    ageCap: { retentionSection: 'temperature', field: 'period_start' },
     // fields the browser may send (everything else is set by the server)
     input: {
       area_id:             { type: 'ref', lookup: 'area', required: true },
       reading_type:        { type: 'enum', values: ['temperature'], dflt: 'temperature' },
-      min_c:               { type: 'temp', required: true },
-      max_c:               { type: 'temp', required: true },
+      min_c:               { type: 'temp' },   // needed unless room_empty = yes (checkRow)
+      max_c:               { type: 'temp' },
       spot_c:              { type: 'temp' },
       period_start:        { type: 'datetime' },
       reset_after_reading: { type: 'bool' },
       mitigation_note:     { type: 'text' },
-      read_method:         { type: 'enum', values: READ_METHODS_ },
-      camera_value_changed: { type: 'bool' }
+      read_method:         { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
+      camera_value_changed: { type: 'bool' },
+      // Lisa 11 Nov 2026: a room with no dog in it. The slot counts as covered and is shown flagged "Room empty", never
+      // as non-compliant. A reading is optional then (staff may still read it: a dog may move in later), but both
+      // min and max or neither. in_range / compliant stay blank: the save never judges a reading.
+      room_empty:          { type: 'enum', values: ['yes'] },
+      // Lisa 11 Nov 2026: "room H5/6 has 2 named thermometers". Optional: blank = one reading per room per slot, as before.
+      thermometer_id:      { type: 'ref', lookup: 'thermometer' }
     },
-    // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
-    // DUP_WINDOW_MIN of taken_at. Without period_start this is the old rule: same room inside the window.
-    dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
+    // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
+    // slot sent by the hub) within DUP_WINDOW_MIN of taken_at. Without period_start: same room inside the window.
+    dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
       if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);
       row.taken_at = ctx.nowIso;
       row.taken_by = ctx.who;
     },
-    checkRow: function (row, errors) {
+    checkRow: function (row, errors, lookups) {
+      if (row.thermometer_id && !errors.thermometer_id && !errors.area_id && lookups && lookups.thermometer &&
+          lookups.thermometer[row.thermometer_id] !== row.area_id) {
+        errors.thermometer_id = 'That thermometer is in another room.';
+      }
+      if (!errors.min_c && !errors.max_c && !errors.room_empty) {
+        if (row.room_empty !== 'yes') {
+          if (row.min_c === '') errors.min_c = 'This is needed.';
+          if (row.max_c === '') errors.max_c = 'This is needed.';
+        } else if ((row.min_c === '') !== (row.max_c === '')) {
+          errors[row.min_c === '' ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
+        }
+      }
       if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
           parseFloat(row.min_c) > parseFloat(row.max_c)) {
         errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
@@ -97,13 +122,14 @@ var TABLES = {
     noCorrect: true,
     alwaysPending: false,
     defaultMode: 'direct',
+    ageCap: { retentionSection: 'temperature', field: 'period_start' },   // as area_reading (Lisa 11 Nov 2026)
     input: {
       area_id:              { type: 'ref', lookup: 'area', required: true },
       min_c:                { type: 'temp', required: true },
       max_c:                { type: 'temp', required: true },
       spot_c:               { type: 'temp' },
       period_start:         { type: 'datetime' },
-      read_method:          { type: 'enum', values: READ_METHODS_ },
+      read_method:          { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' },
       mitigation_note:      { type: 'text' },
       note:                 { type: 'text' }
@@ -116,6 +142,142 @@ var TABLES = {
         errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
       }
       checkReadMethod_(row, errors);
+    }
+  },
+
+  // ---------------------------------------------------------------- sensor_reading
+  // One room's daily low and high from a plug-in sensor (Govee export), added by the OWNER from the year report
+  // page (NEW: TEMPS, 11 Nov 2026). A separate file: a sensor day never counts as, or overwrites, a staff reading.
+  // samples = how many sensor readings made that day's low and high. Lisa creates the file (header row only);
+  // own switch TABLE_ON_sensor_reading, OFF by default. The same room, day and source twice is a repeat, not a new day.
+  sensor_reading: {
+    key: 'sensor_reading',
+    file: 'BLD-sensor_reading.csv',
+    idPrefix: 'snr',
+    columns: ['id', 'tenant_id', 'area_id', 'day', 'min_c', 'max_c', 'samples', 'source', 'device_label', 'taken_at', 'taken_by'],
+    proposedColumns: ['id', 'tenant_id', 'area_id', 'day', 'min_c', 'max_c', 'samples', 'source', 'device_label', 'taken_at', 'taken_by'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      area_id:      { type: 'ref', lookup: 'area', required: true },
+      day:          { type: 'date', required: true },
+      min_c:        { type: 'temp', required: true },
+      max_c:        { type: 'temp', required: true },
+      samples:      { type: 'text', required: true },   // checked below: a whole number (a day of minute readings is 1440)
+      source:       { type: 'text', required: true },   // e.g. govee
+      device_label: { type: 'text' }
+    },
+    dupKey: ['area_id', 'day', 'source'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.samples && row.samples !== '' && !/^\d{1,6}$/.test(row.samples)) errors.samples = 'Use a whole number.';
+      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
+          parseFloat(row.min_c) > parseFloat(row.max_c)) {
+        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- thermometer
+  // One thermometer per place (a room or a corridor, never a field), so the round lists the thermometers, not the
+  // rooms (NEW: TEMPS, 11 Nov 2026). How many there are is rows, never code. The OWNER adds one; its QR card is made on
+  // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. A thing carries no
+  // dates (Lisa 11 Nov 2026, "A standard"): when it is needed is BLD-requirement rows (need_type reading.temperature).
+  // To fix a row the owner edits it in place (name, area_id). Own switch, OFF by default.
+  thermometer: {
+    key: 'thermometer',
+    file: 'BLD-thermometer.csv',
+    idPrefix: 'thm',
+    columns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
+    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      name:      { type: 'text', required: true },
+      area_id:   { type: 'ref', lookup: 'area', required: true }
+    },
+    dupKey: ['name'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.name && row.name !== '' && row.name.length > 40) errors.name = 'Use 40 characters or fewer.';
+    }
+  },
+
+  // ---------------------------------------------------------------- requirement
+  // Need rows (Lisa 11 Nov 2026, "A standard"): when a thing is needed or in use. need_type is a row value
+  // (reading.temperature on a thermometer, room.in_use on an area; more later as rows, never columns). A target with no
+  // rows of a need_type is always needed; with rows, only on days a row covers (from_date..to_date, both inclusive,
+  // blank to_date = no end). To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
+  requirement: {
+    key: 'requirement',
+    file: 'BLD-requirement.csv',
+    idPrefix: 'req',
+    columns: ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      need_type:    { type: 'text', required: true },   // e.g. reading.temperature, room.in_use
+      target_table: { type: 'text', required: true },   // e.g. thermometer, area
+      target_id:    { type: 'text', required: true },
+      from_date:    { type: 'date', required: true },
+      to_date:      { type: 'date' },                   // blank = no end
+      source:       { type: 'text' }                    // why: a licence condition, a document, Lisa's decision
+    },
+    dupKey: ['need_type', 'target_table', 'target_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      ['need_type', 'target_table', 'target_id'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[a-z0-9_.\-]{1,60}$/i.test(row[k])) errors[k] = 'Letters, numbers, dots, dashes or _ only.';
+      });
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+    }
+  },
+
+  // ---------------------------------------------------------------- area_link
+  // Room links (Lisa 12 Nov 2026, option B via NEW: TEMPS): for from_date..to_date (both inclusive, blank to_date =
+  // no end) a reading taken in from_area_id also counts for to_area_id, e.g. while one thermometer covers two rooms.
+  // A link row, never dates on the room ("A standard"); readings are never copied or changed, the pages count them
+  // through BLDAreaLink.expand. To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
+  area_link: {
+    key: 'area_link',
+    file: 'BLD-area_link.csv',
+    idPrefix: 'alk',
+    columns: ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      from_area_id: { type: 'ref', lookup: 'area', required: true },   // the room the reading is taken in
+      to_area_id:   { type: 'ref', lookup: 'area', required: true },   // the room it also counts for
+      from_date:    { type: 'date', required: true },
+      to_date:      { type: 'date' },                                  // blank = no end
+      source:       { type: 'text' }                                   // why: Lisa's decision, an inspector's note
+    },
+    dupKey: ['from_area_id', 'to_area_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.to_area_id && row.from_area_id && row.from_area_id === row.to_area_id) errors.to_area_id = 'Choose a different room.';
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
     }
   },
 
@@ -362,7 +524,7 @@ var TABLES = {
     defaultMode: 'direct',
     input: {
       tag:    { type: 'text', required: true },
-      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site'], required: true },   // site = the one premises code
+      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true },   // site = the one premises code
       ref_id: { type: 'text', required: true }
     },
     dupKey: ['tag'], dupTimeCol: null,
@@ -605,6 +767,12 @@ var READABLE = {
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
   litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
+  temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
+  sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
+  thermometer:     { file: 'BLD-thermometer.csv',     vis: 'thermometer',     authorCol: 'made_by',     dateCol: 'made_at' },
+  requirement:     { file: 'BLD-requirement.csv',     vis: 'requirement',     authorCol: 'set_by',      dateCol: 'set_on' },
+  area_link:       { file: 'BLD-area_link.csv',       vis: 'area_link',       authorCol: 'set_by',      dateCol: 'set_on' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };

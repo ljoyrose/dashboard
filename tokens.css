@@ -8,7 +8,7 @@
      C  Shape and spacing ..... --house-radius  --house-line  --house-bar  --house-marker-w  --house-marker-h  --house-gap  --house-head-gap
                                --house-pad  --house-gutter  --house-btn  --house-btn-phone  --house-icon  --house-icon-stroke  --house-pill
                                --house-count-w  --house-count-h  --house-count-r  --house-count-lh  --house-count-pad  --house-logo  --house-menu-w
-     D  States ................ --house-state-line  --house-state-fill  --house-focus  --house-tint
+     D  States ................ --house-state-line  --house-state-fill  --house-focus  --house-tint  --house-hov-mix
      E  Type .................. --house-font  --fs-head  --fs-figure  --fs-body  --fs-small  --fs-input  --house-min  --house-press-size
      F  Top bar and look swap . --house-head  --house-head-space  --house-head-name  --house-read-size  --house-look-btn  --house-look-line
                                --house-look-hover  --house-look-on
@@ -29,21 +29,22 @@
      4 Yellow Action, operations  5 Green Connection   6 Blue Sales, marketing   7 Purple Creative, ideas   8 Black Superseded, bin
    For each slot:
      --ljr-N        the fill: stripes, dots, borders, bars
-     --ljr-N-text   the same colour dark enough to READ as text (4.5:1 or better on white, the cream page and the tinted cards)
+     --ljr-N-text   the same colour dark enough to READ as text: 4.6:1 or better on every background text sits on (white card,
+                    cream, tints, and the darker page paper / canvas / soft in both looks; Lisa, 3 Nov 2026; tests/mocked/house-text-contrast)
      --ljr-N-tint   a pale background for cards and chips of that slot
      --ljr-N-solid  the fill to use BEHIND text (red and purple use their darker text colour so white text passes)
      --ljr-N-on     the text colour to put on --ljr-N-solid (ink on orange, yellow, green and blue; white on red and purple)
    To try another palette, change only the --ljr-N lines (and their -text/-tint) below. */
 :root {
-  --ljr-ink: #2C2C2A; --ljr-paper: #FFFEFB; --ljr-cream: #FAF7F2; --ljr-muted: #6B645C;
-  --ljr-0: #C7C0B4; --ljr-0-text: #6B645C; --ljr-0-tint: #F0ECE5; --ljr-0-solid: #C7C0B4; --ljr-0-on: #2C2C2A;
+  --ljr-ink: #2C2C2A; --ljr-paper: #FFFEFB; --ljr-cream: #FAF7F2; --ljr-muted: #615A53;
+  --ljr-0: #C7C0B4; --ljr-0-text: #615A53; --ljr-0-tint: #F0ECE5; --ljr-0-solid: #C7C0B4; --ljr-0-on: #2C2C2A;
   --ljr-1: #FFFEFB; --ljr-1-text: #2C2C2A; --ljr-1-tint: #FFFEFB; --ljr-1-edge: #2C2C2A; --ljr-1-solid: #FFFEFB; --ljr-1-on: #2C2C2A;
-  --ljr-2: #E6443D; --ljr-2-text: #C32924; --ljr-2-tint: #FCE4E0; --ljr-2-solid: #C32924; --ljr-2-on: #FFFFFF; /* 2 Risk */
-  --ljr-3: #E78615; --ljr-3-text: #9E5802; --ljr-3-tint: #FCEDDB; --ljr-3-solid: #E78615; --ljr-3-on: #2C2C2A; /* 3 Money */
-  --ljr-4: #F3D84E; --ljr-4-text: #817002; --ljr-4-tint: #FDF9E3; --ljr-4-solid: #F3D84E; --ljr-4-on: #2C2C2A; /* 4 Ops */
-  --ljr-5: #51AD57; --ljr-5-text: #217A2D; --ljr-5-tint: #E7F3E4; --ljr-5-solid: #51AD57; --ljr-5-on: #2C2C2A; /* 5 Connect */
-  --ljr-6: #129FE7; --ljr-6-text: #0271A4; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
-  --ljr-7: #A570D1; --ljr-7-text: #8850B6; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #8850B6; --ljr-7-on: #FFFFFF; /* 7 Ideas */
+  --ljr-2: #E6443D; --ljr-2-text: #AF2420; --ljr-2-tint: #FCE4E0; --ljr-2-solid: #AF2420; --ljr-2-on: #FFFFFF; /* 2 Risk */
+  --ljr-3: #E78615; --ljr-3-text: #894C01; --ljr-3-tint: #FCEDDB; --ljr-3-solid: #E78615; --ljr-3-on: #2C2C2A; /* 3 Money */
+  --ljr-4: #F3D84E; --ljr-4-text: #695B01; --ljr-4-tint: #FDF9E3; --ljr-4-solid: #F3D84E; --ljr-4-on: #2C2C2A; /* 4 Ops */
+  --ljr-5: #51AD57; --ljr-5-text: #1C6A27; --ljr-5-tint: #E7F3E4; --ljr-5-solid: #51AD57; --ljr-5-on: #2C2C2A; /* 5 Connect */
+  --ljr-6: #129FE7; --ljr-6-text: #01628E; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
+  --ljr-7: #A570D1; --ljr-7-text: #76459E; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #76459E; --ljr-7-on: #FFFFFF; /* 7 Ideas */
   --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
   /* --ljr-N-icon: the shade for an icon (and its ring) on a card, 3:1 or better (Lisa's pick 3e, 2 Nov). 1 = ink (the whole picture);
      0 = the grey every tab icon rests in. Dark looks use the bright fill (below). */
@@ -107,7 +108,7 @@
   --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
   --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */
   --house-tab-dot: 8px; --house-tab-dot-top: 6px;   /* on a phone (under 768px) a tab's count is this dot, off the icon's top-right corner */
-  --house-focus: 2px;              /* keyboard focus ring */
+  --house-focus: 1px;              /* keyboard focus: ONE 1px ink line inside (offset -1px), never a ring outside (Lisa, 3 Nov 2026) */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
   --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
   --house-head-space: 8px;         /* between the things in the top bar */
@@ -130,10 +131,14 @@
   --house-pad: 12px;               /* inside a card */
   --house-logo: 20px;              /* brand logo slot (initials when there is no logo) */
   /* D  States (Lisa's sweep, 3 Nov 2026): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) in ink, or in the
-     control's meaning colour; NEVER a fill and nothing moves. Keyboard focus adds the --house-focus ring. Only typing boxes may change fill. */
+     control's meaning colour; NEVER a fill and nothing moves. Every line is 1px and INSIDE the box: keyboard focus is the --house-focus
+     line (1px, offset -1px) in ink (frame ink on the frame; the --on colour inside a filled control), never a 2px ring, a ring outside,
+     a second line or a box-shadow. Typing boxes on focus change only their border colour. Only typing boxes may change fill. */
   --house-state-line: var(--house-line);   /* the one line a state draws */
   --house-state-fill: transparent;         /* the fill a state adds: none */
   --house-tint: 14%;               /* the pale tint for a badge's own colour (brand initials); never a state */
+  --house-hov-mix: 14%;            /* how much muted goes into the card for the pale grey hover / selected fill (house.css --hov).
+                                      Warm dark uses 10% so the control line (--house-press) stays 3:1 on it (Lisa, 12 Nov 2026). */
   /* E  Typing boxes (input, textarea, select, contenteditable): 16px on every page, so a phone (iPhone Safari) never zooms in when one is
      tapped. The only size above 15px that is not a heading or figure. */
   --fs-input: 16px;
@@ -166,23 +171,23 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
-    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E; --house-hov-mix: 10%;
     --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
   }
   :root.look-cool:not([data-theme="light"]) {
     --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
-    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691; --house-hov-mix: 14%;
     --house-frame: #24323F; --house-foot: #2D3D4C;
   }
 }
 :root[data-theme="dark"] {
   --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
-  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E; --house-hov-mix: 10%;
   --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
 }
 :root.look-cool[data-theme="dark"] {
   --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
-  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691; --house-hov-mix: 14%;
   --house-frame: #24323F; --house-foot: #2D3D4C;
 }
 
