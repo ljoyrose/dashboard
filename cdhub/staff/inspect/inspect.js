@@ -18,6 +18,7 @@
 
   /* The lists, in the order they show under each dog, and the column that names the dog in each. */
   var LISTS = [
+    { key: 'microchip', title: 'Microchip', dog: 'subject_id', date: '' },
     { key: 'subject_status', title: 'Status', dog: 'subject_id', date: 'from_date' },
     { key: 'health_screen', title: 'Health tests', dog: 'subject_id', date: 'tested_on' },
     { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on' },
@@ -45,7 +46,7 @@
       var i = kv.indexOf('=');
       if (i > 0) { try { p[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) { /* ignore */ } }
     });
-    if (!/^[A-Za-z0-9_\-]{10,}$/.test(p.s || '') || !p.c) return null;
+    if (!/^[A-Za-z0-9_\-]{10,}$/.test(p.s || '') || !/^[A-Z2-9]{16}$/.test(p.c || '')) return null;
     return { script: 'https://script.google.com/macros/s/' + p.s + '/exec', code: p.c };
   }
 
@@ -69,11 +70,21 @@
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
-  function render(screen, res, ends) {
+  /* the save app's own words for the codes an inspector can meet (PR 442) */
+  var SAY = {
+    BAD_CODE: 'This link has ended. Ask the breeder for a new one if you still need it.',
+    READ_NOT_CONFIGURED: 'These records are not set up for sharing yet. Ask the breeder.',
+    LOG_FAILED: 'These records cannot be shown right now. Try again in a moment.',
+    READ_OFF: 'Sharing is switched off at the moment. Ask the breeder.',
+    NETWORK: 'Could not reach the records. Check the connection and try again.'
+  };
+
+  function render(screen, res, ends, notShared) {
     screen.textContent = '';
     screen.appendChild(el('h1', '', 'Breeding records'));
     if (ends) screen.appendChild(el('p', 'ins-ends', 'Read only. This link ends ' + day(ends) + '.'));
     var dogs = build(res);
+    if (notShared && notShared.length) screen.appendChild(el('p', 'ins-ends ins-not', 'Not shared on this link: ' + notShared.join(', ') + '.'));
     if (!dogs.length) { screen.appendChild(el('p', 'sub', 'No dogs have been shared on this link.')); return; }
     dogs.forEach(function (d) {
       var card = el('section', 'ins-dog');
@@ -109,7 +120,7 @@
     save.setCode(link.code, false);
     link = null;
     message(screen, 'Loading…');
-    var res = {}, ends = '';
+    var res = {}, ends = '', notShared = [];
     var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; }));
     var chain = Promise.resolve(true);
     keys.forEach(function (k) {
@@ -117,14 +128,18 @@
         if (!go) return false;
         return save.read(k).then(function (r) {
           if (r.ok) { res[k] = r; if (r.ends) ends = r.ends; return true; }
-          if (r.code === 'BAD_CODE') { message(screen, 'This link has ended. Ask the breeder for a new one if you still need it.'); return false; }
-          if (k === 'subject') { message(screen, r.message || 'These records cannot be shown right now.'); return false; }
-          return true;   // a list not shared on this link is simply left out
+          if (r.code === 'NOT_ALLOWED') {
+            if (k === 'subject') { message(screen, 'No dogs have been shared on this link.'); return false; }
+            notShared.push(title(k)); return true;   // that list was not ticked for this link
+          }
+          message(screen, SAY[r.code] || 'These records cannot be shown right now.');
+          return false;
         });
       });
     });
-    chain.then(function (ok) { if (ok) render(screen, res, ends); save.clearCode(); });
+    chain.then(function (ok) { if (ok) render(screen, res, ends, notShared); save.clearCode(); });
   }
+  function title(k) { var L = LISTS.filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
   function root_BLDSave() { return (typeof self !== 'undefined' ? self : this).BLDSave; }
 
   if (typeof document !== 'undefined' && document.getElementById('screen')) start();

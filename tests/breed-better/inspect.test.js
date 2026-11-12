@@ -4,7 +4,9 @@ const assert = require('node:assert');
 const I = require('../../cdhub/staff/inspect/inspect.js');
 
 test('the link carries the script id and code after the #; anything else is refused', () => {
-  assert.deepStrictEqual(I.parseHash('#s=FAKE-TEST-ID-123&c=FAKECODE'), { script: 'https://script.google.com/macros/s/FAKE-TEST-ID-123/exec', code: 'FAKECODE' });
+  assert.deepStrictEqual(I.parseHash('#s=FAKE-TEST-ID-123&c=FAKECODE23456789'), { script: 'https://script.google.com/macros/s/FAKE-TEST-ID-123/exec', code: 'FAKECODE23456789' });
+  assert.strictEqual(I.parseHash('#s=FAKE-TEST-ID-123&c=FAKECODE'), null);
+  assert.strictEqual(I.parseHash('#s=FAKE-TEST-ID-123&c=fakecode23456789'), null);
   assert.strictEqual(I.parseHash('#c=FAKECODE'), null);
   assert.strictEqual(I.parseHash('#s=bad/id&c=X'), null);
   assert.strictEqual(I.parseHash(''), null);

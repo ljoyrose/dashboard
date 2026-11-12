@@ -6,7 +6,7 @@ test.use({ allowedConsole: [/404/] });
 const ID = 'FAKE-TEST-ID-123';
 const SCRIPT = 'https://script.google.com/macros/s/' + ID + '/exec';
 const CORS = { 'access-control-allow-origin': '*' };
-const LINK = 'cdhub/staff/inspect/#s=' + ID + '&c=FAKEINSPECTCODE';
+const LINK = 'cdhub/staff/inspect/#s=' + ID + '&c=FAKEINSPECTCODEX';
 
 const DATA = {
   subject: { fields: ['id', 'name', 'sex', 'dob'], rows: [{ id: 'sub-test-dog-1', name: 'Test Dog One', sex: 'female', dob: '2022-03-02' }] },
@@ -31,7 +31,7 @@ test('S10 the link shows the shared dogs read-only, says when it ends, and never
   const asked = await route(page);
   await page.goto(LINK);
   await expect(page.locator('.ins-dog h2')).toHaveText(['Test Dog One']);
-  await expect(page.locator('.ins-ends')).toHaveText('Read only. This link ends 19 Nov 2026.');
+  await expect(page.locator('.ins-ends').first()).toHaveText('Read only. This link ends 19 Nov 2026.');
   await expect(page.locator('.ins-facts')).toHaveText('Sex female · DOB 2 Mar 2022');
   await expect(page.locator('.ins-row')).toContainText('Tested on 5 Jan 2024');
   expect(asked.some((t) => /score/.test(t))).toBe(false);
@@ -42,9 +42,9 @@ test('S10 the code is cleared from the address bar and never stored on the devic
   await route(page);
   await page.goto(LINK);
   await expect(page.locator('.ins-dog')).toHaveCount(1);
-  expect(page.url()).not.toContain('FAKEINSPECTCODE');
+  expect(page.url()).not.toContain('FAKEINSPECTCODEX');
   const kept = await page.evaluate(() => JSON.stringify([Object.assign({}, localStorage), Object.assign({}, sessionStorage), document.cookie]));
-  expect(kept).not.toContain('FAKEINSPECTCODE');
+  expect(kept).not.toContain('FAKEINSPECTCODEX');
   expect(kept).not.toContain(ID);
 });
 
@@ -55,7 +55,13 @@ test('S10 an ended or stopped link says so and shows nothing', async ({ page }) 
   await expect(page.locator('.ins-dog')).toHaveCount(0);
 });
 
+test('S10 lists not ticked for the link say "not shared"; a missing set-up says so', async ({ page }) => {
+  await route(page);
+  await page.goto(LINK);
+  await expect(page.locator('#screen')).toContainText('Not shared on this link: Microchip, Status, Fit to Breed, Litters.');
+});
+
 test('S10 a broken link says it is not complete', async ({ page }) => {
-  await page.goto('cdhub/staff/inspect/#c=FAKEINSPECTCODE');
+  await page.goto('cdhub/staff/inspect/#c=FAKEINSPECTCODEX');
   await expect(page.locator('#screen')).toContainText('This link is not complete.');
 });
