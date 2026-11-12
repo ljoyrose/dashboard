@@ -108,3 +108,16 @@ test('until the columns exist every job is as needed, and bad numbers do not gue
   ['', '0', '-3', '2.5', 'weekly', null].forEach((v) => assert.equal(D.everyDays(v), null));
   assert.equal(D.everyDays(' 12 '), 12);
 });
+
+test('a whole-site job that includes a room job restarts it in every room except the ones it never covers', () => {
+  const types = [T('site_clean', 'none', '1', { includes: 'daily_clean', not_in_areas: 'iso' }), T('daily_clean', 'area', '1'), T('bowls', 'none', '1')];
+  const logs = [L('site_clean', '2026-03-02', { subject_id: '', how_recorded: 'site_tap' })];
+  const room = D.forTarget(types, logs, { area_id: 'r1' }, '2026-03-02');
+  assert.equal(one(room, 'daily_clean').status, 'ok');
+  assert.equal(one(room, 'daily_clean').reset_by, 'site_clean');
+  assert.equal(one(D.forTarget(types, logs, { area_id: 'iso' }, '2026-03-02'), 'daily_clean').status, 'never');
+  assert.equal(one(D.forTarget(types, logs, {}, '2026-03-02'), 'site_clean').status, 'ok');
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1' }, '2026-03-02').length, 0);
+  const plain = [T('site_clean', 'none', '1', { not_in_areas: 'iso' }), T('daily_clean', 'area', '1')];
+  assert.equal(one(D.forTarget(plain, logs.map((l) => Object.assign({}, l, { check_type_id: 'cty-site_clean-1' })), { area_id: 'r1' }, '2026-03-02'), 'daily_clean').status, 'never');
+});

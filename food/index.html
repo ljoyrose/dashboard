@@ -200,6 +200,7 @@
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
     profit: { name: 'Low profit', yes: 'Seen', what: 'This order made less than your minimum. Usually a single bag in one box.' },
+    changed: { name: 'GA changed a product', yes: 'Seen', what: 'Check the shop listing, labels and price for every brand that sells it.' },
     pricelist: { name: 'New GA price list', yes: 'Seen', what: 'Saved to Drive. Rises are also caught from the next GA invoice.' },
     check: { name: 'Check', yes: 'Done', what: 'Something the engine could not finish on its own.' },
     send: { name: 'Send to GA?', yes: 'Send', no: 'Not now', what: 'Send sends this order to GA by XML within about 10 minutes. Not now leaves it for you to enter on the Portal.' },
@@ -282,7 +283,7 @@
 
   /* ---------- views ---------- */
   function waiting() { return data.cards.filter(function (r) { return !r.answer && !r.applied_at; }); }
-  var ORDER = ['alert', 'price', 'profit', 'check', 'pricelist'];
+  var ORDER = ['alert', 'price', 'changed', 'profit', 'check', 'pricelist'];
   function byUrgency(a, b) { return ORDER.indexOf(a.section) - ORDER.indexOf(b.section) || String(a.created_at).localeCompare(String(b.created_at)); }
   function unpaid() { return data.invoices.filter(function (i) { return !i.paid_date && num(i.total) > 0; }); }
   function orderFacts(o) {
@@ -430,9 +431,22 @@
       (links ? '<div class="acts">' + links + '</div>' : '');
   }
   // A card: a name line (dot + what kind; "Next" on the first one), then the title. The first card on Home is the Next card.
+  // What changed (roadmap 4, 12 Nov 2026): a GA price card (one pack) or a "GA changed a product" card (engine v1.17: recipe,
+  // protein, meat, grain, kibble or data sheet; every pack of that recipe) says which brands have sold it and which products it is.
+  function affects(r, d) {
+    var code = String(d.code || ''), tla = String(d.tla || code.substr(0, 3)); if (!code && !tla) return '';
+    var hit = function (c) { return r.section === 'price' ? c === code : String(c).substr(0, 3) === tla; }, br = {};
+    data.orders.forEach(function (o) { if (o.status === 'Cancelled') return; var l; try { l = JSON.parse(o.shop_lines || '[]'); } catch (e) { l = []; }
+      if (l.some(function (x) { return hit(x.code); })) { var k = String(o.brand || '').toUpperCase(); br[k] = (br[k] || 0) + 1; } });
+    var ps = data.products.filter(function (p) { return r.section === 'price' ? (p.full_ga_code === code || (!p.full_ga_code && p.tla === tla && p.pack === codeKg(code) + 'kg')) : p.tla === tla; })
+      .map(function (p) { return (p.ddf_name || p.recipe) + ' ' + p.pack; });
+    var bs = Object.keys(br).sort(function (a, b) { return br[b] - br[a]; }).map(function (k) { return (k ? brandName(k) : 'No brand') + ' (' + br[k] + ' order' + (br[k] === 1 ? '' : 's') + ')'; });
+    return '<p class="what" data-affects><b>Affects:</b> ' + esc(bs.length ? bs.join(', ') : 'no orders yet') + (ps.length ? '<br>Products: ' + esc(ps.join(', ')) : '') + '</p>';
+  }
   function cardHtml(r, next) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
     var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + (cardTags(r).br ? '<span class="badge brand">' + esc(brandName(cardTags(r).br)) + '</span>' : '') + '</p><h2>' + esc(r.title) + '</h2>' + (r.section === 'send' && /^SEND-/.test(r.key) ? sendBody(r) : '<p class="what">' + esc(d.why || s.what) + '</p>');
+    if (r.section === 'price' || r.section === 'changed') h += affects(r, d);
     var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
     if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
