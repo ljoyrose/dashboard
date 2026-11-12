@@ -302,6 +302,16 @@ test('site tap: a job about dogs writes one line per dog, and isolation, off-sit
   assert.ok(rows[0].taken_by);
 });
 
+test('site tap: a whole-site job about dogs tapped from a dog scan keeps the real route, not site_tap', () => {
+  const env = siteEnv(); const id = addType(env, 'health_all', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
+  const r = siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b', how_recorded: 'scanned' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].how_recorded, 'scanned');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b', how_recorded: 'magic' }).code, 'INVALID');
+});
+
 test('room tap: a room job about dogs writes one line per ticked dog in that room, as scanned', () => {
   const env = siteEnv(); const id = addType(env, 'exercise', { target: 'area', site_scope: 'per_dog' });
   const r = siteTap(env, { check_type_id: id, area_id: 'area-t1', outcome: 'ok', how_recorded: 'scanned', dog_ids: 'sub-test-a|sub-test-b' });
