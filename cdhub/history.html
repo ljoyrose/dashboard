@@ -14,6 +14,7 @@
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/area-link.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
@@ -40,7 +41,7 @@ h1,h2,h3,b,strong{font-weight:600}
 .btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media(hover:hover){header .btn:hover{background:var(--frame-hov);}}
-@media(max-width:544px){.btn{min-height:44px}header.top{position:static}}
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}#view-d .rscroll{display:none}}   /* a phone shows the room cards only (quality review 12 Nov) */
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
 .bootline{margin:14px 0 0;color:var(--ink);font-weight:400}
 .bootmark{display:inline-flex;color:var(--ink)}
@@ -100,7 +101,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.empty{background:transparent}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.unknown,.sd.unknown{background:var(--soft);border:1px dashed var(--line)}
-.d.allok{background:var(--ljr-5-tint)}.d.warn{background:var(--ljr-3)}.d.nolimit{background:var(--soft);border:1px dashed var(--line)}
+.d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 1px var(--ljr-5-text)}.d.warn{background:var(--ljr-3)}.d.nolimit{background:var(--soft);border:1px dashed var(--line)}
 .d.ocool{background:var(--ljr-6-tint)}.d.omild{background:var(--card);border:1px solid var(--line)}.d.owarm{background:var(--ljr-4-tint)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
 
@@ -120,6 +121,8 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 
 /* Month card list */
 .mlist{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+button.mitem{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+@media(hover:hover){button.mitem:hover{background:var(--soft)}}
 .mitem{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
 .mitem-head{display:flex;justify-content:space-between;align-items:baseline}
 .mitem-name{font-size:var(--fs-body);font-weight:600}
@@ -202,6 +205,7 @@ var ROUND_DATE=null;
 var SPAN={};        /* areaId -> {first,last} reading day */
 var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
+var LINKS=[];      /* BLD-area_link rows: an old room's readings also show for the room it became (Lisa 12 Nov 2026); optional */
 var THERMOS=[];     /* BLD-thermometer rows (name, area_id); optional */
 
 /* ---- helpers ---- */
@@ -279,10 +283,12 @@ async function loadAreaData(){
   try{
     REQ=await optionalCsv('BLD-requirement.csv');
     THERMOS=await optionalCsv('BLD-thermometer.csv');
+    LINKS=await optionalCsv('BLD-area_link.csv');
     var rf=await findDriveFile('BLD-area_reading.csv');
     if(rf){
       var txt=await readDriveFile(rf);
       var rows=parseCSV(txt);
+      if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
         var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
@@ -290,7 +296,16 @@ async function loadAreaData(){
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         var u=unitFor(r.area_id,r.thermometer_id);
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
-        AREA_DAYS[date][u][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes'};
+        var v={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
+        var was=AREA_DAYS[date][u][slot];
+        /* A merged room: two old rooms' readings in one slot. Never averaged: the lowest MIN and highest MAX, so a breach stays visible. */
+        /* A reading taken in the room itself wins over linked copies (same rule as Compliance, SOPS 12 Nov). */
+        if(was&&!was.from.length&&v.from.length) return;
+        if(was&&was.from.length&&v.from.length&&window.BLDAreaLink){
+          var w=window.BLDAreaLink.widest(was,v);
+          v={min:w.min===null?'':String(w.min),max:w.max===null?'':String(w.max),note:[was.note,v.note].filter(Boolean).join(' · '),empty:was.empty&&v.empty,from:was.from.concat(v.from.filter(function(f){ return was.from.indexOf(f)<0; }))};
+        }
+        AREA_DAYS[date][u][slot]=v;
       });
     }
     SPAN={}; FIRST_DAY='';
@@ -493,7 +508,8 @@ function dayRooms(day){
   var units=[]; areasInWalk(ids).forEach(function(aid){ units=units.concat(unitsOf(aid)); });
   return units.filter(function(u){ return ar[u]||neededOn(u,day); }).map(function(u){
     var r=ar[u]||{};
-    return {aid:u, name:unitName(u), am:slotState(r.am,u,day,'am'), pm:slotState(r.pm,u,day,'pm')};
+    var from=[].concat((r.am&&r.am.from)||[],(r.pm&&r.pm.from)||[]).filter(function(f,i,a){ return a.indexOf(f)===i; });
+    return {aid:u, name:unitName(u)+(from.length?' (from '+from.map(areaCode).join(', ')+')':''), am:slotState(r.am,u,day,'am'), pm:slotState(r.pm,u,day,'pm')};
   });
 }
 function daySummary(day){
@@ -538,7 +554,7 @@ function monthCal(y, classOf, kind){
   var md=mdays(y);
   var h='<div class="month-grid" data-cal="'+kind+'">';
   MONTHS.forEach(function(mn,mi){
-    h+='<div class="mc"><div class="mn">'+mn+'</div><div class="dg">';
+    h+='<div class="mc" data-m="'+(mi+1)+'"><div class="mn">'+mn+'</div><div class="dg">';
     h+='<div class="dh">M</div><div class="dh">T</div><div class="dh">W</div><div class="dh">T</div><div class="dh">F</div><div class="dh">S</div><div class="dh">S</div>';
     var firstDow=(new Date(y,mi,1).getDay()+6)%7;
     for(var i=0;i<firstDow;i++) h+='<span class="d empty"></span>';
@@ -583,8 +599,10 @@ function buildStrip(y){
 }
 function buildMonthCards(y){
   var mdn=mdays(y);
-  var h='<div class="mlist">';
+  /* Newest first; a month that has not started is not shown; a card opens that month on the heat map (quality review 12 Nov). */
+  var cards=[];
   MONTHS.forEach(function(mn,mi){
+    if(ds(y,mi,1)>TODAY_STR) return;
     var t={in:0,out:0,nolimit:0,miss:0,read:0}, hi=null, lo=null;
     for(var d=1;d<=mdn[mi];d++){
       var date=ds(y,mi,d);
@@ -598,18 +616,19 @@ function buildMonthCards(y){
         if(!isNaN(mn2)&&(lo==null||mn2<lo.v)) lo={v:mn2,name:x.name};
       }); });
     }
-    h+='<div class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'"><div class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span></div><div class="mitem-stats">';
+    var h='<button type="button" class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'" onclick="openMonth('+(mi+1)+')"><span class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span>'
+      +(t.in+t.out?'<span class="mitem-pct">'+Math.round(100*t.in/(t.in+t.out+t.miss))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
     if(!t.read&&!t.miss) h+='<span>No readings</span>';
     else{
-      h+='<span>'+t.read+' read</span>';
+      h+='<span>'+t.in+' in limit</span>';
+      h+='<span'+(t.out?' class="warn"':'')+'>'+t.out+' outside</span>';
+      h+='<span'+(t.miss?' class="warn"':'')+'>'+t.miss+' missed</span>';
       if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';
       if(lo) h+='<span>Low '+dpIndoor(lo.v)+' '+esc(lo.name)+'</span>';
-      if(t.out) h+='<span class="warn">'+t.out+' outside limit</span>';
-      if(t.miss) h+='<span class="warn">'+t.miss+' missed</span>';
     }
-    h+='</div></div>';
+    cards.unshift(h+'</span></button>');
   });
-  return h+'</div>';
+  return '<div class="mlist">'+cards.join('')+'</div>';
 }
 function buildRound(dateStr){
   var rooms=dayRooms(dateStr);
@@ -626,6 +645,10 @@ function buildRound(dateStr){
   return dateInput
     +'<section class="sec"><h3>Indoors °C</h3>'+(rooms.length?tiles:'')+table+'</section>'
     +'<section class="sec"><h3>Outside</h3><p class="oline">'+esc(out||'No outside reading')+'</p></section>';
+}
+function openMonth(m){
+  var tab=document.querySelectorAll('.tab')[1]; if(tab) setView('a',tab);
+  var mc=document.querySelector('#view-a .mc[data-m="'+m+'"]'); if(mc&&mc.scrollIntoView) mc.scrollIntoView({block:'start'});
 }
 function setRoundDate(dateStr){
   ROUND_DATE=dateStr;
@@ -654,7 +677,7 @@ function setYear(y){
 function legend(){
   var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
   return '<div class="legend">'
-    +'<div class="leg">'+sq('background:var(--ljr-5-tint);border:1px solid var(--line)')+'In limit</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-5-tint);border:1px solid var(--ljr-5-text)')+'In limit</div>'
     +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit or missed</div>'
     +'<div class="leg">'+sq('background:var(--soft);border:1px solid var(--line)')+'No readings</div>'
     +'<div class="leg">Outside: '+sq('background:var(--ljr-6-tint)')+(BAND?'below '+BAND.min:'cool')+' '+sq('background:var(--ljr-4-tint)')+(BAND?'above '+BAND.max:'warm')+'</div>'

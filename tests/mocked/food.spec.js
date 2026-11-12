@@ -551,6 +551,29 @@ test.describe('GA Hub page', () => {
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(over).toBeLessThanOrEqual(0);
   });
+  // Roadmap 4 (Lisa, 10 Nov 2026): when GA changes a price, recipe/protein or data sheet, the card lists the brands that sold it
+  // and the products it is. Price = that pack only; a product change (engine v1.17) = every pack of the recipe. Every row is invented.
+  test('What changed: price and product cards list the affected brands (with order counts) and products', async ({ page }) => {
+    const b = book(), h = b.orders[0].concat(['placed_at', 'shop_lines'].filter((c) => !b.orders[0].includes(c)));
+    const row = (no, brand, code) => { const r = h.map(() => ''); const set = (c, v) => { r[h.indexOf(c)] = v; };
+      set('order_no', no); set('source', 'Shopify'); set('brand', brand); set('status', 'Invoiced'); set('placed_at', '2026-11-09T09:00:00Z'); set('shop_lines', JSON.stringify([{ code, qty: 1 }])); return r; };
+    b.orders = [h, row('9501', 'DDF', 'AAA0012KZPSXZZZ'), row('9502', 'DDF', 'AAA0012KZPSXZZZ'), row('9503', 'SMP', 'AAA0006KZPSXZZZ'), row('9504', 'SMP', 'BBB0006KZPSXZZZ')];
+    b.products.push(['AAA', 'AAA0006KZPSXZZZ', 'Grain Free', 'Dog', 'Adult', 'GF Sample Fish', '6kg', '6', '18.00', '18.00', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'ON SALE (Shopify)', 'Sample Doodle', '', '', '', '', 'Y', '40', '38', '', '', '5.00']);
+    b.codes = [['kind', 'code', 'name', 'discount_codes', 'notes', 'active'], ['brand', 'DDF', 'Designer Dog Foods', '', '', 'Y'], ['brand', 'SMP', 'Sample Brand FAKE', '', '', 'Y']];
+    b.cards = [['PRICE-AAA0012KZPSXZZZ-32.000', 'price', 'Products', 'Sample Doodle 12kg: GA price up £31.20 → £32.00', JSON.stringify({ why: 'Shop £65.00 → £66.00', code: 'AAA0012KZPSXZZZ', red: true }), ago(30)],
+      ['CHG-AAA0012KZPSXZZZ-protein_pct-abc', 'changed', 'Products', 'Sample Doodle 12kg: protein changed', JSON.stringify({ why: 'Protein: 26 → 24. Check the shop listing, labels and price for every brand that sells it.', code: 'AAA0012KZPSXZZZ', tla: 'AAA', field: 'protein_pct', red: true }), ago(20)]];
+    await sheets(page, b);
+    await open(page, '#/do');
+    const price = page.locator('#view .card[data-key^="PRICE-"] [data-affects]'), chg = page.locator('#view .card[data-key^="CHG-"]');
+    await expect(price).toContainText('Affects: Designer Dog Foods (2 orders)');
+    await expect(price).not.toContainText('Sample Brand FAKE');   // the 6kg pack is another price
+    await expect(price).toContainText('Products: Sample Doodle 12kg');
+    await expect(chg.locator('.bline')).toContainText('GA changed a product');
+    await expect(chg).toContainText('Protein: 26 → 24');
+    await expect(chg.locator('[data-affects]')).toContainText('Affects: Designer Dog Foods (2 orders), Sample Brand FAKE (1 order)');   // every pack of the recipe; BBB is another recipe
+    await expect(chg.locator('[data-affects]')).toContainText('Products: Sample Doodle 12kg, Sample Doodle 6kg');
+    await expect(chg.locator('button[data-v="Seen"]')).toBeVisible();
+  });
 });
 
 

@@ -162,3 +162,19 @@ test('a thermometer scan opens the temperature round at that thermometer, and sa
   expect(Math.abs(Date.now() - t.at)).toBeLessThan(60000);
   expect(sent).toHaveLength(0);
 });
+
+test('a whole-site clean ticks each room\'s daily clean, but never an isolation room', async ({ page }) => {
+  const types = TYPES.concat([J('site_clean', 'Whole site cleaned', 'none', { every_days: '1', site_scope: 'one_line', includes: 'clean', not_in_areas: 'area-iso' })]);
+  const today = new Date().toISOString().slice(0, 10);
+  const log = { id: 'clg-9', check_type_id: 'cty-site_clean', outcome: 'ok', how_recorded: 'site_tap', taken_at: today + 'T09:00:00Z' };
+  const over = {
+    check_type: types, check_log: [log], area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }],
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }])
+  };
+  await setup(page, over);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await expect(page.locator('[data-job="clean"] .ds')).toContainText('Whole site cleaned');
+  await expect(page.locator('[data-job="clean"] .ds')).toContainText('Next');
+  await page.goto('cdhub/staff/#s/ISOTAG22');
+  await expect(page.locator('[data-job="clean"] .ds')).toHaveText('Due');
+});
