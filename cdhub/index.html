@@ -40,13 +40,13 @@
    the same on every hub. CD Hub's own names below: the LJR7 slots, the kit (sex) colours and the old short names. */
 
 
-:root{--sel-fill:transparent;--hov-fill:var(--hov);
+:root{--sel-fill:var(--hov);
 
  --p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
 
  --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
-:root.sel-soft{--sel-fill:var(--soft);}
+:root.sel-soft{--sel-fill:var(--hov);}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
 h1,h2,h3,h4,b,strong,th{font-weight:600}
@@ -64,7 +64,7 @@ header h1 .dot{background:var(--ljr-5)}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
 .live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
-@media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
+@media (hover:hover){header .btn:hover{background:var(--frame-hov);}}
 header .btn:focus-visible{outline: 1px solid var(--frame-ink);outline-offset: -1px}
 .backhome{text-decoration:none}
 
@@ -99,14 +99,14 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
-@media (hover:hover){.filt select:hover, .fpanel select:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){.filt select:hover, .fpanel select:hover {background:var(--hov);}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .tile.tl:hover,.ci:hover{border-color:var(--press)}
-.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;}
+.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 
 
-@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);}.btn.no:hover{outline-color:var(--house-risk);}}
+@media (hover:hover){.btn.yes:hover{background:var(--hov);}.btn.no:hover{background:var(--hov);}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline: 1px solid var(--ink)!important;outline-offset: -1px}
@@ -143,7 +143,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .tile .k{font-size:var(--fs-small);font-weight:600;margin-top:2px}
 .tile .src{font-size:var(--fs-small);color:var(--muted);margin-top:4px;line-height:1.4}
 button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
-@media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){button.tile:hover{background:var(--hov);}}
 
 
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
@@ -189,7 +189,7 @@ tr:last-child td{border-bottom:none}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 
 #sopcard .mrow,#sopcard .mrow:first-child{border:1px solid var(--line);box-shadow:none;border-radius:var(--radius);background:var(--card);padding:0;margin:0 0 8px}
-@media (hover:hover){#sopcard .mrow:has(.sopopen:hover){border-color:var(--sel-bd)}}
+@media (hover:hover){#sopcard .mrow:has(.sopopen:hover){background:var(--hov)}}
 #sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important}
 #sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink)}
 /* The card is the frame. The button is the words inside it, so it is not a second one-line control. */
@@ -332,7 +332,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .wt .up,.wt .dn{color:var(--ink);font-weight:600}
 .wt.none{color:var(--muted);font-size:var(--fs-small)}
 .wtc{cursor:pointer;border-radius:var(--radius);padding:2px 4px;margin:-2px -4px;border:1px solid transparent}
-@media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
+@media (hover:hover){.wtc:hover{background:var(--hov);}}
 .spk{color:var(--ljr-6);overflow:visible}
 .chipline{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-small);color:var(--muted)}
 .chipline .vl{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -392,7 +392,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
 .dcs>summary::-webkit-details-marker{display:none}
-@media (hover:hover){.dcs>summary:hover{outline:var(--house-line) solid var(--sel-bd);outline-offset:calc(-1 * var(--house-line))}}
+@media (hover:hover){.dcs>summary:hover{background:var(--hov);}}
 .dcs>summary svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}

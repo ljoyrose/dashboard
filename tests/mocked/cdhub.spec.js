@@ -365,6 +365,7 @@ test.describe('CD Hub house look', () => {
       for (const tab of LOOK_TABS) {
         await openTab(page, tab);
         if (tab === 'dogs') await page.locator('[data-fpanel="fp-dogs"]').click(); // the open Filter panel is checked too
+        await page.mouse.move(0, 0); // the resting look: a row left under the pointer would wear the hover fill
         const a = await page.evaluate(cdAudit);
         for (const k of Object.keys(a)) expect(a[k], `${look} ${scheme} #/${tab}: ${k}`).toEqual([]);
       }
@@ -392,7 +393,7 @@ test.describe('CD Hub house look', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 
-  test('controls: every one rests on the same clear 1px line (never ink, 3:1), 12px corners, 14px/600, 36px tall; hover = 1px ink line inside and never a fill, nothing moves', async ({ page }) => {
+  test('controls: every one rests on the same clear 1px line (never ink, 3:1), 12px corners, 14px/600, 36px tall; hover = the pale grey fill and no line, nothing moves', async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto('cdhub/');
     await signIn(page);
@@ -414,11 +415,12 @@ test.describe('CD Hub house look', () => {
         const where = () => el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x + scrollX, r.y + scrollY, r.width, r.height]; });   // page position, so a scroll is not a move
         const before = await where();
         await el.hover();
-        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, bg: s.backgroundColor }; });
-        expect({ ow: hv.ow, os: hv.os, oo: hv.oo, oc: hv.oc, bw: hv.bw }, `${tab} control ${i}`).toEqual({ ow: '1px', os: 'solid', oo: '-1px', oc: ink, bw: '1px' });
-        // Lisa's sweep (3 Nov 2026): every control, the fold chevron too, hovers with the line only, never a fill.
-        // (a select is a typing box, the one thing that may change its fill)
-        if ((await el.evaluate((e) => e.tagName)) !== 'SELECT') expect(hv.bg, `${tab} control ${i}: no fill on hover`).toBe(st.bg);
+        const hv = await el.evaluate((e) => { const s = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+          return { os: s.outlineStyle, bw: s.borderTopWidth, bg: s.backgroundColor, hov }; });
+        // Lisa (12 Nov 2026): "purple outline on hover/click is a lot". Every control, the fold chevron too, hovers with the pale
+        // grey fill and no line.
+        expect({ os: hv.os, bw: hv.bw }, `${tab} control ${i}`).toEqual({ os: 'none', bw: '1px' });
+        expect(hv.bg, `${tab} control ${i}: the pale grey fill on hover`).toBe(hv.hov);
         expect(await where(), `${tab} control ${i}: nothing moves`).toEqual(before);
         await page.mouse.move(0, 0);
       }
