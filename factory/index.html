@@ -88,14 +88,14 @@
   .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
-  /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
-  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; }
+  /* Hover and tap: the pale grey fill, no line, meaning colours too. Selected: the same fill plus the 1px quiet grey line inside (Lisa, 12 Nov 2026). Nothing moves. */
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
-    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { background:var(--hov); }
     .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
-      outline: 1px solid var(--mc); outline-offset: -1px; }
-    header .btn:hover { outline-color: var(--frame-ink); }
+      background:var(--hov); }
+    header .btn:hover { background:var(--frame-hov); }
     .ico:hover { color: var(--hc, var(--ink)); }
     .mark:hover svg { filter: none; opacity: 1; }
     .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }

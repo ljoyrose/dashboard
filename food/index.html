@@ -51,13 +51,13 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
+  @media (hover: hover) { .top .btn:hover { background:var(--frame-hov); } }
 
-  /* Things you press, the hover rule (meaning colour = --hmc), focus, the bottom tabs and the counts: ../house.css. Layout only here. */
+  /* Things you press, the hover rule (pale grey fill), focus, the bottom tabs and the counts: ../house.css. Layout only here. */
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
   .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; }
   .more { background: transparent; padding: 0 14px; align-self: flex-start; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) { a.tile:hover { background:var(--hov); } }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }   /* keyboard focus: 1px ink inside, never the browser blue */
