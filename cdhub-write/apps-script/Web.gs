@@ -40,6 +40,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'vaccination') return jsonOut_({ ok: true, result: sinkVaccination_(req) });
     if (req && typeof req === 'object' && req.action === 'vaccination_void') return jsonOut_({ ok: true, result: sinkVaccinationVoid_(req) });
     if (req && typeof req === 'object' && req.action === 'dog_details') return jsonOut_({ ok: true, result: sinkDogDetails_(req) });
+    try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
     return jsonOut_(errorBody_(ex));
@@ -50,6 +51,7 @@ function doPost(e) {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.page === 'approve') return approvePage_();
+  try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });

@@ -22,3 +22,14 @@ test('room.no_dogs is dated: before its from_date, and after its to_date, dogs c
   assert.equal(O.takesDogs(T.area[2], '2026-03-01', T.requirement), false);
   assert.equal(O.takesDogs(T.area[2], '2026-07-01', T.requirement), true);
 });
+test('room.no_overnight: dogs can still be placed, but overnight cabins leave it out', () => {
+  const req = [
+    { need_type: 'room.no_overnight', target_table: 'area', target_id: 'area-r1', from_date: '2026-11-12', to_date: '' },
+    { need_type: 'room.no_dogs', target_table: 'area', target_id: 'area-c1', from_date: '2026-11-03', to_date: '' }
+  ];
+  assert.equal(O.takesDogs(T.area[0], '2026-11-12', req), true);
+  assert.equal(O.takesOvernight(T.area[0], '2026-11-12', req), false);
+  assert.equal(O.takesOvernight(T.area[0], '2026-11-11', req), true);
+  assert.equal(O.takesDogs(T.area[1], '2026-11-12', req), false);
+  assert.equal(O.takesOvernight(T.area[1], '2026-11-12', req), false);
+});

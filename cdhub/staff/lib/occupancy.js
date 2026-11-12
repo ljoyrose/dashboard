@@ -35,6 +35,14 @@
    * No such row = dogs can be placed. The place still shows for temperatures; only the dog pickers leave it out.
    */
   function takesDogs(a, day, reqRows) { return !!a && !N.coversDay(reqRows, 'room.no_dogs', 'area', a.id, day || N.today(), { absentIs: false }); }
+  /**
+   * Overnight cabin (The round, overnight picker)? A day pen is marked by a BLD-requirement row with need_type
+   * room.no_overnight (target_table area), dated like every need row. No such row = overnight placement is allowed
+   * (if takesDogs is also true). Need type is a row value, never a room name in code.
+   */
+  function takesOvernight(a, day, reqRows) {
+    return takesDogs(a, day, reqRows) && !N.coversDay(reqRows, 'room.no_overnight', 'area', a.id, day || N.today(), { absentIs: false });
+  }
   /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
@@ -130,5 +138,5 @@
     });
   }
 
-  return { roomName: roomName, latestRow: latestRow, offSite: offSite, inUse: inUse, takesDogs: takesDogs, dailyList: dailyList, loadViaScript: loadViaScript };
+  return { roomName: roomName, latestRow: latestRow, offSite: offSite, inUse: inUse, takesDogs: takesDogs, takesOvernight: takesOvernight, dailyList: dailyList, loadViaScript: loadViaScript };
 }));

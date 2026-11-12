@@ -503,8 +503,8 @@ var TABLES = {
   // Where each dog is. LIVE table (BLD-occupancy.csv, header checked 15 Oct). EXISTING column names only.
   // A move APPENDS a new row (subject_id, area_id, moved_in = today). moved_out is NEVER written and no
   // existing row is ever edited: the current room is the row with the latest moved_in.
-  // Own switch (TABLE_ON_occupancy), OFF by default. Moves queue for Lisa for the first 14 days after go-live
-  // (MOVES_QUEUE_UNTIL), then go straight in; MODE_occupancy, if set, beats the date.
+  // Own switch (TABLE_ON_occupancy), OFF by default. Occupancy moves go straight in for every staff code
+  // (Lisa 12 Nov 2026). MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
   // There is no corrects_id column here, so a wrong room is fixed by moving the dog again.
   occupancy: {
     key: 'occupancy',
@@ -520,12 +520,12 @@ var TABLES = {
     perms: { add: ['OWNER', 'STAFF'], correct: [] },
     noCorrect: true,
     ownerEditable: true,
-    // moves queue for the first MOVES_QUEUE_DAYS days after go-live, then go straight in (modeFor_ in Sink.gs)
-    movesQueue: true,
+    // moves go straight in; MOVES_QUEUE_UNTIL is ignored for occupancy (modeFor_ in Sink.gs)
+    movesQueue: false,
     // fields ONLY the owner's in-place edit may also change (staff can never set these)
     ownerEdit: { moved_in: { type: 'date' }, moved_out: { type: 'date' } },
     alwaysPending: false,
-    defaultMode: 'pending',
+    defaultMode: 'direct',
     input: {
       subject_id: { type: 'ref', lookup: 'subject', required: true },
       area_id:    { type: 'ref', lookup: 'area', required: true },
