@@ -77,6 +77,8 @@ test.describe('CD Hub: jobs', () => {
     await tab(page, 'dogs');
     const hist = page.locator('[data-history="sub-test-dog-1"]');
     await expect(hist).toContainText('2 job records');
+    // job history sits behind More on the dog card (layout A, Lisa 12 Nov 2026)
+    await page.locator('#rows article.dc', { has: hist }).locator('details.more > summary').click();
     await hist.locator('summary').click();
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
