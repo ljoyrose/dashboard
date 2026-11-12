@@ -163,6 +163,7 @@ test.describe('CD Hub: navigation', () => {
     await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
     await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
+    await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
