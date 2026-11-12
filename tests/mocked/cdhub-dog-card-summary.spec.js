@@ -57,6 +57,15 @@ test.describe('CD Hub dog card summary', () => {
     await expect(card.locator('[data-k="dna"] [data-dna="affected"]')).toHaveText('DM affected');
     await expect(card.locator('[data-k="litters"]')).toHaveText('2 litters · last 02/06/25');
 
+    // layout A (Lisa 12 Nov 2026): weight, medications and chip show; DNA, litters and the rest sit behind More
+    await expect(card.locator('[data-k="weight"]')).toBeVisible();
+    await expect(card.locator('[data-k="meds"]')).toBeVisible();
+    await expect(card.locator('.dc-sects > details.dcs').filter({ has: page.locator('use[href="#i-chip"]') })).toBeVisible();
+    await expect(card.locator('[data-k="more"]')).not.toHaveAttribute('open', '');
+    await expect(card.locator('[data-k="dna"]')).toBeHidden();
+    await expect(card.locator('[data-k="litters"]')).toBeHidden();
+    await card.locator('[data-k="more"] > summary').click();
+    await expect(card.locator('[data-k="dna"]')).toBeVisible();
     await card.locator('[data-dam-link]').click();
     await expect(page).toHaveURL(/#\/litters\/sub-x1$/);
     await expect(page.locator('#lm')).toHaveValue('sub-x1');
@@ -151,6 +160,7 @@ test.describe('CD Hub dog card summary', () => {
     const v = page.locator('#rows [data-k="vacc"]');
     await expect(v).toHaveText('2 vaccinations \u00b7 last 03/02/25 due 03/02/26');
     await expect(v.locator('[data-due]')).toHaveAttribute('data-due', 'late');
+    await page.locator('#rows details.vacc').locator('xpath=ancestor::details[@data-k="more"]').first().locator('summary').first().click();
     await page.locator('#rows details.vacc summary').click();
     await expect(page.locator('#rows details.vacc .dcs-row').first()).toContainText('03/02/25');
     await page.evaluate(() => go('dogs/sub-x2'));
