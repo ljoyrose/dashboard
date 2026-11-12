@@ -113,6 +113,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - There is no Vet link page and no Animana patient id on screen (Lisa, 12 Nov 2026: not relevant); an old #/vet address falls back to the Map.
 - Dated limits: room limits and size cut-offs are read as at the day being checked (from_date / to_date, to_date included, blank = open), with the weight on or before that day, so a later rule never makes an old placement look wrong.
 - A dog's room is its occupancy row with the latest moved_in, even when an older row comes later in the file. A move row with a blank classification keeps the dog's licence label from its latest labelled row, so the dog stays on site (`tests/mocked/cdhub-compliance-urgent.spec.js`).
+- Staff room lists (Where, moves, checks) run by each area's group_sort, then its code in natural order (3B.4/5 before 3B.9/10); no list in code (`cdhub/staff/lib/test/room-order.test.mjs`).
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.
 - Saving stays switched off.
