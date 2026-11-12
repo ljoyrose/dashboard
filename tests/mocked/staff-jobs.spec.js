@@ -102,8 +102,14 @@ test('site code: only what is due, bowls one line, a dog job lists every dog tic
   expect(sent[0].action).toBe('add_site');
   expect(sent[0].fields.dog_ids).toBeUndefined();
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
-  await expect(page.locator('[data-job="walk"]').getByRole('checkbox', { checked: true })).toHaveCount(2);
+  const walk = page.locator('[data-job="walk"]');
+  await expect(walk.getByRole('checkbox')).toHaveCount(2);
+  await expect(walk.getByRole('checkbox', { checked: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(walk.getByText('Tick a dog.')).toBeVisible();
   expect(sent).toHaveLength(1);
+  await walk.getByRole('button', { name: 'Select all' }).click();
+  await expect(walk.getByRole('checkbox', { checked: true })).toHaveCount(2);
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
   await expect(page.getByText('Left out: 1.')).toBeVisible();
   await expect(page.locator('[data-job="walk"] .done-line')).toContainText('2 of 2 dogs');
@@ -233,6 +239,7 @@ test('a job with form questions opens its form, needs the required answers, and 
   await page.goto('cdhub/staff/#s/SITETAG2');
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
   await expect(page.locator('[data-job="walk"] [data-field]')).toHaveCount(0);
+  await page.locator('[data-job="walk"]').getByRole('button', { name: 'Select all' }).click();
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
   await expect.poll(() => sent.length).toBe(2);
   expect(sent[1].values).toBeUndefined();
@@ -253,7 +260,7 @@ test('a whole-site dog job: one dog not right is flagged on its own from the sit
   await page.goto('cdhub/staff/#s/SITETAG2');
   const card = page.locator('[data-job="walk"]');
   await card.getByRole('button', { name: 'Problem: Walk' }).click();
-  await card.getByRole('checkbox', { name: 'Pretend A' }).uncheck();
+  await card.getByRole('checkbox', { name: 'Pretend B' }).check();
   await card.getByLabel('Note').fill('Pretend note');
   await card.getByRole('button', { name: 'Concern' }).click();
   await expect.poll(() => sent.length).toBe(1);
@@ -270,18 +277,24 @@ test('a whole-site dog job can be done dog by dog: on a dog scan and on a room s
   await page.goto('cdhub/staff/#s/ROOMTAG2');
   const card = page.locator('[data-job="walk"]');
   await expect(card.getByRole('checkbox')).toHaveCount(2);
+  await card.getByRole('checkbox', { name: 'Pretend A' }).check();
+  await card.getByRole('button', { name: 'Select all' }).click();
+  await card.getByRole('checkbox', { name: 'Pretend A' }).uncheck();
   await card.getByRole('button', { name: 'Done: Walk' }).click();
   await expect.poll(() => sent.length).toBe(2);
-  expect(sent[1]).toMatchObject({ action: 'add_site', fields: { dog_ids: 'dog-1|dog-2' } });
+  expect(sent[1]).toMatchObject({ action: 'add_site', fields: { dog_ids: 'dog-2' } });
 });
 
-test('a whole-site dog job: a dog already done today starts unticked', async ({ page }) => {
+test('a whole-site dog job: every dog starts unticked; Select all skips a dog already done today', async ({ page }) => {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
   await setup(page, { check_log: [{ id: 'clg-1', check_type_id: 'cty-walk', subject_id: 'dog-1', outcome: 'ok', how_recorded: 'site_tap', taken_at: today + 'T09:00:00Z' }] });
   await page.goto('cdhub/staff/#s/ROOMTAG2');
   const card = page.locator('[data-job="walk"]');
   await expect(card.getByRole('checkbox', { name: /Pretend A/ })).not.toBeChecked();
+  await expect(card.getByRole('checkbox', { name: 'Pretend B' })).not.toBeChecked();
+  await card.getByRole('button', { name: 'Select all' }).click();
   await expect(card.getByRole('checkbox', { name: 'Pretend B' })).toBeChecked();
+  await expect(card.getByRole('checkbox', { name: /Pretend A/ })).not.toBeChecked();
   await expect(card.locator('.dog-done svg')).toHaveCount(1);
   await expect(card.locator('.dog-at')).toHaveText(/^\d\d:\d\d$/);
   await expect(card.locator('.done-line')).toContainText('1 of 2 dogs');

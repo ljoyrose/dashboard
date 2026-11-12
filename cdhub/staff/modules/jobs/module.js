@@ -181,10 +181,13 @@
           roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return dogRow(state.ticks[i], x.label, roomDid[x.id]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
           state.dogIds = roomDogs.map(function (x) { return x.id; });
         }
-        if (dogJob && !target.subject_id) {   // dogs not done today start ticked; for a dog not right, tick only that dog, then Problem
+        if (dogJob && !target.subject_id) {   // Lisa 12 Nov: every dog starts unticked; tick dogs one by one, or Select all and untick a dog that needs a comment
           var did = doneToday(t.type_key), dogs = BLDDue.dogsFor(t, target).slice().sort(function (x, y) { return String(labelOf[x.id]).localeCompare(String(labelOf[y.id])); });
-          state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: !did[x.id], onchange: function () { state.rid = null; } }); });
-          roomList = h('div', { class: 'job-dogs' }, dogs.map(function (x, i) { return dogRow(state.ticks[i], labelOf[x.id], did[x.id]); }));
+          state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, onchange: function () { state.rid = null; } }); });
+          var all = h('button', { class: 'btn quiet job-all', type: 'button', text: 'Select all', onclick: function () {
+            state.ticks.forEach(function (b, i) { if (!did[dogs[i].id]) b.checked = true; }); state.rid = null;
+          } });
+          roomList = h('div', { class: 'job-dogs' }, (dogs.length > 1 ? [all] : []).concat(dogs.map(function (x, i) { return dogRow(state.ticks[i], labelOf[x.id], did[x.id]); })));
           state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
         }
