@@ -1,4 +1,4 @@
-// CD Hub SOPs (Stage A + S2 + file types): bottom tab, Assocs under More, name labels,
+// CD Hub SOPs (Stage A + S2 + file types): bottom tab, name labels,
 // colour, frequency, category and role filters, and the labelled type icons with the format legend.
 // The seed is the public index only. It has no form addresses, so a row with a form says the form is not on the hub yet.
 // A row shows a type icon only when its type is already one of the 21. other, sheet and sds stay unmapped.
@@ -76,14 +76,14 @@ test('the public seed is 49 name rows and carries no form address', () => {
   }
 });
 
-test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is only under More', async ({ page }) => {
+test('bottom bar is Main, Do, Today, Dogs, SOPs; More is Compliance, The round and Areas', async ({ page }) => {
   await page.goto('cdhub/');
   await signIn(page);
   await expect(page.locator('#nav > button.ht .htl')).toHaveText(['Main', 'Do', 'Today', 'Dogs', 'SOPs']);
-  await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
+  await expect(page.locator('#nav button[data-go="buyers"], #nav button[data-go="shape"], #nav button[data-go="litters"], #nav button[data-go="vet"]')).toHaveCount(0);
   await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAttribute('data-slot', '6');
   await page.locator('nav.house-tabs [data-house-more]').click();
-  await expect(page.locator('#houseMore button .htl')).toHaveText(['Compliance', 'Table map', 'The round', 'Areas', 'Litters', 'Assocs']);
+  await expect(page.locator('#houseMore button .htl')).toHaveText(['Compliance', 'The round', 'Areas']);
   await tabClick(page, '#nav button[data-go="sops"]');
   await expect(page).toHaveURL(/#\/sops$/);
   await expect(page.locator('#main h2')).toHaveText('SOPs');

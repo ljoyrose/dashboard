@@ -96,7 +96,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   await expect(page.locator('[data-fold="bin-drv-alpha1"]')).toHaveJSProperty('open', true);
   await assertClean('Main dashboard bin list');
 
-  // CD Hub, all ten sections. The home-page sign-in is already valid here.
+  // CD Hub, the sections still in the menu. The home-page sign-in is already valid here.
   await open('cdhub/', 'CD Hub');
   const cdSignIn = page.locator('#signinbtn');
   if (await cdSignIn.count()) {
@@ -104,7 +104,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await cdSignIn.click();
   }
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
-  for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops']) {
+  for (const id of ['map', 'work', 'today', 'round', 'dogs', 'areas', 'sops']) {
     await tabClick(page, `#nav button[data-go="${id}"]`);
     await expect(page).toHaveURL(new RegExp(`#/${id}$`));
     await assertClean('CD Hub ' + id);

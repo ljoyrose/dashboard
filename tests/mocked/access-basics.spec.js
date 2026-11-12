@@ -18,7 +18,7 @@ test('CD Hub: every dropdown and box on every section has a name a screen reader
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
-  for (const go of ['round', 'dogs', 'areas', 'litters', 'buyers', 'sops']) {
+  for (const go of ['round', 'dogs', 'areas', 'sops']) {
     await tabClick(page, `#nav button[data-go="${go}"]`);
     const unnamed = await page.evaluate(() => Array.from(document.querySelectorAll('#main select, #main input:not([type=checkbox]):not([type=radio]):not([type=hidden])'))
       .filter((el) => !el.getAttribute('aria-label') && !(el.id && document.querySelector(`label[for="${el.id}"]`)) && !el.closest('label'))

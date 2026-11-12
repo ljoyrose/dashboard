@@ -81,7 +81,7 @@ const HUBS = {
     },
   },
   cdhub: {
-    url: 'cdhub/', views: ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'],
+    url: 'cdhub/', views: ['map', 'work', 'today', 'round', 'dogs', 'areas', 'sops'],
     async open(page) {
       await page.goto('cdhub/');
       await expect(page.locator('#signinbtn')).toBeEnabled();

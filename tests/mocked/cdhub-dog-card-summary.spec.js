@@ -59,7 +59,9 @@ test.describe('CD Hub dog card summary', () => {
 
     await card.locator('[data-dam-link]').click();
     await expect(page).toHaveURL(/#\/litters\/sub-x1$/);
-    await expect(page.locator('#lm')).toHaveValue('sub-x1');
+    await expect(page.locator('#nav button[data-go="map"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#main h2', { hasText: 'Litters' })).toHaveCount(0);
+    await expect(page.locator('#lm')).toHaveCount(0);
 
     // a weight drop shows a down arrow; a dog with no litters, meds or DNA shows no such rows
     await page.evaluate(() => go('dogs/sub-x2'));
