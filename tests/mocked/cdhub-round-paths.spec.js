@@ -145,7 +145,13 @@ test.describe('CD Hub: The round controls', () => {
     await expect(flap).toHaveValue('free');
 
     await page.locator('.rdel[data-sub="sub-test-dog-1"]').click();
-    await expect(page.locator('.rsave[data-area="area-1"]')).toContainText('Test Dog One stays in this cabin');
+    const mv = page.locator('select.rmove');
+    await expect(mv).toBeVisible();
+    await expect(mv.locator('option[value="area-1"]')).toHaveCount(0);
+    const to = await mv.locator('option').nth(1).getAttribute('value');
+    await mv.selectOption(to);
+    await expect(page.locator(`.rsave[data-area="${to}"]`).or(page.locator('.rsave[data-area="area-1"]')).first()).toContainText('NOT saved');
+    expect(sent).toHaveLength(0);
     await expect(page.locator('.card[data-area="area-1"]')).toContainText('Test Dog One');
 
     await page.evaluate(() => {

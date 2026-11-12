@@ -1677,7 +1677,8 @@ function isFieldsRow(a){
  return normPlace(a.grouping)==='fields' || normPlace(a.code||a.cabin)==='level 1 and level 5' || normPlace(a.use)==='fields';
 }
 function isLiveCabin(a){
- return !!a && !isFieldsRow(a);
+ /* a place marked room.no_dogs (e.g. a corridor, BLD-requirement row) is never offered for dogs nor on The round (Lisa 12 Nov 2026) */
+ return !!a && !isFieldsRow(a) && BLDOccupancy.takesDogs(a,CD._roundDate||todayISO(),CD.req||[]);
 }
 /* Rooms in use on a day (Lisa: late entry stays open for every day a thing was needed). A past date on The round
    shows the rooms in use THAT day: a room retired since still shows, a room added since does not. */
@@ -2757,6 +2758,21 @@ function walkList(){
    step++; out.push({step:step,family:f,cabin:a.code,area:a}); });});
  return out;
 }
+/* The Round's "add a dog" list (Lisa 12 Nov 2026): adults, then each litter on site under its own heading with a
+   "whole litter with the dam" choice. A dog already in this cabin is greyed (it is here); elsewhere shows that cabin's name. */
+function roundPickOptions(dogs,sel,placed,aid){
+ var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
+ function opt(d){ return '<option value="'+esc(d.id)+'"'+(sel.indexOf(d.id)>=0?' disabled':'')+'>'+esc(d.name||d.id)
+   +(d.colour?' \u00b7 '+esc(colourLabel(d)):'')+(sel.indexOf(d.id)>=0?' \u2014 here':(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(code[placed[d.id]]||placed[d.id]):''))+'</option>'; }
+ var pups=CD.dogs.filter(function(d){ var c=statusOf(d).code; return d.birthLitter&&c!=='CL'&&c!=='DE'&&!d.off&&months(d.dob)!==null&&months(d.dob)<6; });
+ var adults=dogs.filter(function(d){ return pups.indexOf(d)<0; }), by={};
+ pups.forEach(function(d){ (by[d.birthLitter]=by[d.birthLitter]||[]).push(d); });
+ var h=adults.map(opt).join('');
+ Object.keys(by).forEach(function(lid){ var l=(CD.litters||[]).filter(function(x){ return x.id===lid; })[0]||{}, dam=CD._byId[l.dam_subject_id];
+  h+='<optgroup label="'+esc((dam?dam.name:'Unknown dam')+' litter')+'">'
+   +'<option value="litter:'+esc(lid)+'">Whole litter'+(dam?' with '+esc(dam.name):'')+' ('+by[lid].length+')</option>'
+   +by[lid].sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||'')); }).map(opt).join('')+'</optgroup>'; });
+ return h; }
 function hereNow(){ return CD.dogs.filter(function(d){
   var c=statusOf(d).code;
   if(c==='CL'||c==='DE') return false;
@@ -2842,8 +2858,7 @@ function pageRound(){
         +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
    +'</select>'
    +'<select class="radd" data-area="'+aid+'"><option value="">add a dog\u2026</option>'
-   +dogs.map(function(d){ return '<option value="'+d.id+'"'+(sel.indexOf(d.id)>=0?' disabled':'')+'>'+esc(d.name)
-     +(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(placed[d.id].replace(/^area-/,'')):'')+'</option>'; }).join('')
+   +roundPickOptions(dogs,sel,placed,aid)
    +'</select>'
    +'<span class="mut rsave" data-area="'+aid+'">'+(flash&&flash.area===aid?esc(flash.text):'')+'</span>'
    +'</div>'
@@ -3010,6 +3025,23 @@ async function roomEmptySave(areaId,slot,msgEl){
   keptRow(areaId,ps,{room_empty:'yes'},r); roundRefresh(date);
   if(msgEl) msgEl.textContent='empty, saved'; }
 }
+/* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
+async function roundAddLitter(areaId,litterId,msgEl){
+ var l=(CD.litters||[]).filter(function(x){ return x.id===litterId; })[0]||{}, here=inCabin(areaId,CD._roundDate||todayISO());
+ var ids=CD.dogs.filter(function(d){ return d.birthLitter===litterId&&months(d.dob)!==null&&months(d.dob)<6&&!d.off; }).map(function(d){ return d.id; });
+ if(l.dam_subject_id) ids.unshift(l.dam_subject_id);
+ ids=ids.filter(function(id){ return here.indexOf(id)<0; });
+ if(!ids.length){ if(msgEl) msgEl.textContent='They are all here already.'; return; }
+ if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
+ var ok=0, bad='';
+ for(var i=0;i<ids.length;i++){ if(msgEl) msgEl.textContent='saving '+(i+1)+' of '+ids.length+'\u2026';
+  var r=await sinkPost('occupancy',{subject_id:ids[i],area_id:areaId});
+  if(r.ok&&r.result&&r.result.status==='saved'){ ok++; var d=CD._byId[ids[i]]; if(d) d.area_id=areaId; } else { bad=sinkMsg(r); break; } }
+ var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
+ cur.subjects=CD.dogs.filter(function(x){ return x.area_id===areaId; }).map(function(x){ return x.id; });
+ CD._roundMsg={area:areaId,text:ok+' moved'+(bad?'; stopped: '+bad:' \u2713')};
+ go('round',false);
+}
 /* add a dog to a cabin = one move row in BLD-occupancy (the dog's cabin is its newest row) */
 async function roundSave(areaId,patch,msgEl,sel){
  if(patch.access!=null){
@@ -3036,6 +3068,7 @@ async function roundSave(areaId,patch,msgEl,sel){
  if(r.ok&&r.result&&r.result.status==='saved'){ var d=CD._byId[patch.add]; if(d) d.area_id=areaId;
   var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   cur.subjects=(cur.subjects||CD.dogs.filter(function(x){ return x.area_id===areaId&&x.id!==patch.add; }).map(function(x){ return x.id; })).concat([patch.add]);
+  Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o!==cur&&o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==patch.add; }); });
   CD._roundMsg={area:areaId,text:sinkMsg(r)};
   go('round',false); }
 }
@@ -3770,6 +3803,7 @@ function go(id,push){
    el.addEventListener('change',function(){
     if(!el.value) return;
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
+    if(/^litter:/.test(el.value)){ roundAddLitter(el.dataset.area,el.value.slice(7),msg); return; }
     roundSave(el.dataset.area,{add:el.value},msg); }); });
   Array.prototype.forEach.call(document.querySelectorAll('.rempty'),function(el){ el.addEventListener('click',function(){
    if(!window.confirm('Mark this cabin empty for the '+(el.dataset.slot==='am'?'morning':'afternoon')+'? No dogs, so no reading is needed.')) return;
@@ -3792,9 +3826,16 @@ function go(id,push){
    el.addEventListener('change',h); el.addEventListener('blur',h); });
   Array.prototype.forEach.call(document.querySelectorAll('.rdel'),function(el){
    el.addEventListener('click',function(){
-    var d=CD._byId[el.dataset.sub], name=d&&d.name?d.name:'This dog';
+    /* Lisa 12 Nov 2026: Move opens a cabin picker; picking one records the move (dog added there). */
+    var d=CD._byId[el.dataset.sub], name=d&&d.name?d.name:'this dog';
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
-    if(msg) msg.textContent=name+' stays in this cabin. Add them on the cabin they moved to. That records the move.'; }); });
+    var sel=document.createElement('select'); sel.className='cb rmove'; sel.setAttribute('aria-label','Move '+name+' to');
+    sel.innerHTML='<option value="">to cabin\u2026</option>'+CD.areas.filter(function(a){ return isLiveCabin(a)&&a.id!==el.dataset.area; })
+     .map(function(a){ return '<option value="'+esc(a.id)+'">'+esc(a.code)+'</option>'; }).join('');
+    el.replaceWith(sel); sel.focus();
+    sel.addEventListener('change',function(){ if(!sel.value) return;
+     var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
+     roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
  var at=sub&&(id==='today'||id==='dogs'||id==='areas')?full:id;
  if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);

@@ -237,4 +237,18 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[1].fields.min_c).toBeUndefined();
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
   });
+
+  test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {
+    await open(page, guard);
+    await page.evaluate(() => {
+      const born = new Date(Date.now() - 40 * 864e5).toISOString().slice(0, 10);
+      CD.litters = [{ id: 'lit-x', dam_subject_id: 'sub-x1' }];
+      ['Pretend Pup A', 'Pretend Pup B'].forEach((n, i) => { const d = { id: 'sub-p' + i, name: n, birthLitter: 'lit-x', dob: born, sex: 'Female', state: 'Active', classification: '', area_id: '', off: '', treats: [], weights: [], findings: [], dna: [], vacc: [], littersAsDam: [] }; CD.dogs.push(d); CD._byId[d.id] = d; });
+    });
+    const html = await page.evaluate(() => roundPickOptions(CD.dogs.filter((d) => !d.birthLitter), [], { 'sub-x2': (CD.allAreas[0] || { id: 'a' }).id }, 'other'));
+    expect(html).toContain('<optgroup label="Pretend Dam One litter">');
+    expect(html).toContain('value="litter:lit-x">Whole litter with Pretend Dam One (2)');
+    expect(html).toContain('Pretend Pup A');
+    expect(html).not.toMatch(/in area-/);
+  });
 });
