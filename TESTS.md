@@ -155,6 +155,12 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
 - This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
 
+**Food Hub card notes** (`tests/mocked/food.spec.js`, `tests/mocked/job34-food-states.spec.js`, invented rows)
+- A note typed on a card is written in column H when the card is marked done: answer, note, time, and whoever is signed in.
+- Save note with no answer appends one row on the Comments tab: at, key, title, text, by.
+- An empty note writes nothing. Save note stays off until there is text.
+- A missing Comments tab shows the usual missing-tab notice and the page stays up.
+
 **Hub data contracts (Food, Marketplace, Studio)**
 - `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.
 - Each hub has invented sample data. If an engine drops, renames or adds a column or field, puts the wrong kind of value in it, or writes an empty file, the robot names the kind of change: MISSING, RENAMED, EXTRA, WRONG_TYPE or EMPTY.
