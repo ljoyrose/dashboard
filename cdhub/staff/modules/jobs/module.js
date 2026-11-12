@@ -27,7 +27,7 @@
     function moves() { c.go('mv/' + tag); }
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field')]).then(function (v) {
       var d = v[0], typesRead = v[1], logs = v[2].rows || [], tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
       host.textContent = '';
@@ -51,6 +51,15 @@
 
       var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
+      /* a job's form: the owner's check_field rows in force today, in their sort order */
+      var formOf = {}, latestField = {};
+      (v[5].rows || []).forEach(function (r) {
+        if (!r.type_key || !r.field_key || !r.effective_from || r.effective_from > today) return;
+        var k = r.type_key + '|' + r.field_key;
+        if (!latestField[k] || r.effective_from > latestField[k].effective_from) latestField[k] = r;
+      });
+      Object.keys(latestField).forEach(function (k) { var r = latestField[k]; if (isOn(r)) (formOf[r.type_key] = formOf[r.type_key] || []).push(r); });
+      Object.keys(formOf).forEach(function (k) { formOf[k].sort(function (a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.label).localeCompare(String(b.label)); }); });
       /* a whole-site tap about dogs saves one line per dog; for the site's own due date those lines count as the site */
       function view() { return site ? logs.map(function (l) { return l.how_recorded === 'site_tap' ? Object.assign({}, l, { subject_id: '' }) : l; }) : logs; }
       if (tag && !BLDDue.forTarget(types, view(), target, today).length) { moves(); return; }
@@ -76,7 +85,14 @@
         if (t.target === 'none') delete check.area_id;
         var bad = BLDChecks.checkEntry(t, check), first = Object.keys(bad)[0];
         if (first) { panelMsg.className = 'msg bad'; panelMsg.textContent = bad[first]; return; }
+        var values = {}, missing = '';
+        (state.form || []).forEach(function (q) {
+          var val = q.input.value.trim();
+          if (val) values[q.field.field_key] = val; else if (!missing && String(q.field.required).toLowerCase() === 'true') missing = q.field.label;
+        });
+        if (missing) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'This is needed: ' + missing + '.'; return; }
         var opts = { requestId: state.rid = state.rid || c.save.newRequestId() };
+        if (Object.keys(values).length) opts.values = values;
         if (state.ticks) {
           var ticked = state.ticks.filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
           if (!ticked.length) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'Tick a dog.'; return; }
@@ -85,7 +101,12 @@
         if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; if (t.site_scope === 'per_dog') entry.dog_ids = d.dogs.filter(function (x) { return !x.away; }).map(function (x) { return x.id; }).join('|'); }
         panelMsg.className = 'msg'; panelMsg.textContent = 'Saving...';
         c.save.submit('check_log', entry, opts).then(function (r) {
-          if (!r.ok) { panelMsg.className = 'msg bad'; panelMsg.textContent = r.message; if (r.code !== 'NETWORK') state.rid = null; return; }
+          if (!r.ok) {
+            var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
+            panelMsg.className = 'msg bad'; panelMsg.textContent = fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : r.message;
+            if (r.code !== 'NETWORK') state.rid = null; return;
+          }
+          (state.form || []).forEach(function (x) { x.input.value = ''; });
           logs = logs.concat([Object.assign({}, entry, { id: r.id, taken_at: new Date().toISOString() })]);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
           say(r.status === 'queued' ? r.message : (r.saved ? 'Saved: ' + r.saved + ' dogs.' + (left ? ' Left out: ' + left + '.' : '') : 'Saved.'), 'good');
@@ -93,9 +114,25 @@
         });
       }
 
+      /* one form question from a check_field row: text, number, date, yes or no, or a choice */
+      function question(f, changed) {
+        var label = f.label + (String(f.required).toLowerCase() === 'true' ? '' : ' (optional)'), el;
+        if (f.kind === 'yesno' || f.kind === 'choice') {
+          var opts = f.kind === 'yesno' ? [['yes', 'Yes'], ['no', 'No']] : String(f.choices || '').split('|').filter(Boolean).map(function (x) { return [x, x]; });
+          el = h('select', { class: 'inp', 'aria-label': label, onchange: changed }, [h('option', { value: '', text: label })].concat(opts.map(function (o) { return h('option', { value: o[0], text: o[1] }); })));
+        } else {
+          el = h('input', { class: 'inp', 'aria-label': label, placeholder: label, oninput: changed,
+            type: f.kind === 'date' ? 'date' : 'text', inputmode: f.kind === 'number' ? 'decimal' : null });
+        }
+        el.setAttribute('data-field', f.field_key);
+        return el;
+      }
+
       function jobCard(job) {
-        var t = byKey[job.type_key], a = BLDChecks.askedFields(t), needs = a.item || a.amount || a.noteRequired;
+        var t = byKey[job.type_key], a = BLDChecks.askedFields(t), many = site || BLDDue.perDogRoom(t), form = many ? [] : (formOf[t.type_key] || []);
+        var needs = a.item || a.amount || a.noteRequired || form.length > 0;   // a whole-site or per-dog tap has no form: the save script refuses one
         var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null };
+        state.form = form.map(function (f) { var q = { field: f, input: question(f, function () { state.rid = null; }) }; panel.appendChild(q.input); return q; });
         function input(key, label) { inputs[key] = h('input', { class: 'inp', 'aria-label': label, placeholder: label, oninput: function () { state.rid = null; } }); panel.appendChild(inputs[key]); }
         if (a.item) input('item', t.item_label || 'What');
         if (a.amount) input('amount', t.amount_unit ? 'Amount (' + t.amount_unit + ')' : 'Amount');
