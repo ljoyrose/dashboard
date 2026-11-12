@@ -2005,7 +2005,8 @@ function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set 
 function modesOf(a){ return ['free','limited']; }
 /* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium"; every dog counts as the largest size in the room). One calculation, shared with the staff page. */
 /* Size on a date (dated limits, Lisa 12 Nov 2026): a past day uses the cut-off rows in force that day and the latest weight on
-   or before it, so a later rule or weight never makes an old placement look wrong. Today (or no date): the card's size. */
+   or before it, so a later rule or weight never makes an old placement look wrong. Today (or no date): the card's size.
+   No weight on or before that day, or no cut-offs then: the size on the dog's record (never today's weight). */
 function sizeOn(d,date){ if(!date||date>=todayISO()) return d.sizeWord||d.size;
  var cut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],date), lw=null;
  (d.weights||[]).forEach(function(w){ if(String(w.on||'').slice(0,10)<=date) lw=w; });
