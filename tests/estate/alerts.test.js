@@ -26,6 +26,19 @@ test('certificate expiry: 29 and 30 days listed, 31 not, passed listed red', () 
   assert.equal(list.find((a) => a.key === 'd30.example').level, 'amber');
 });
 
+test('certificate red tier: 7 days or less is red, 8 to 30 stays amber', () => {
+  const list = A.alerts([
+    { key: 'd0.example', ssl_expires: '2026-10-29' },
+    { key: 'd7.example', ssl_expires: '2026-11-05' },
+    { key: 'd8.example', ssl_expires: '2026-11-06' },
+  ], TODAY);
+  assert.deepEqual(list.map((a) => a.level), ['red', 'red', 'amber']);
+  assert.match(list[0].text, /expires today/);
+  assert.match(list[1].text, /expires in 7 days/);
+  assert.equal(list[1].kind, 'ssl');
+  assert.match(list[2].text, /expires in 8 days/);
+});
+
 test('domain expiry within 30 days or passed is listed', () => {
   const list = A.alerts([{ key: 'x.example', domain_expires: '05/11/2026' }, { key: 'y.example', domain_expires: '2027-01-01' }], TODAY);
   assert.deepEqual(list.map((a) => [a.key, a.kind, a.level]), [['x.example', 'domain', 'red']]);
@@ -47,6 +60,43 @@ test('tag lost since last scan is listed; never-found or not-checked is not', ()
   assert.deepEqual(list.map((a) => a.kind), ['tag-lost']);
   assert.match(list[0].text, /GA4 tag lost/);
   assert.deepEqual(A.alerts(now, TODAY), [], 'no previous scan, no tag alert');
+});
+
+test('mail flags: weak DMARC, broken SPF, missing Google DKIM, no MX, forward hops, unknown target', () => {
+  const list = A.alerts([
+    { key: 'weak.example', dmarc: 'weak', spf: 'pass' },
+    { key: 'broken.example', spf: 'broken', dmarc: 'reject' },
+    { key: 'dkim.example', spf: 'pass', dkim: 'not found', dmarc: 'reject', mx: 'Google Workspace' },
+    { key: 'nomx.example', mx: 'none', spf: 'pass', dmarc: 'reject' },
+    { key: 'fwd.example', mx: 'ImprovMX', forward_chain: 'forward.example.net → box.example.org → gmail.com', spf: 'pass', dmarc: 'reject' },
+    { key: 'unk.example', mx: 'Namecheap email forwarding', spf: 'pass', dmarc: 'reject' },
+    { key: 'one.example', mx: 'ForwardEmail', forward_chain: 'forward.example.net → gmail.com', spf: 'pass', dmarc: 'reject' },
+    { key: 'ms.example', mx: 'Microsoft 365', dkim: 'not found', spf: 'pass', dmarc: 'reject' },
+  ], TODAY);
+  const text = (key) => list.filter((a) => a.key === key).map((a) => a.text).join(' | ');
+  assert.match(text('weak.example'), /DMARC weak/);
+  assert.match(text('broken.example'), /SPF broken/);
+  assert.match(text('dkim.example'), /DKIM missing/);
+  assert.match(text('nomx.example'), /no MX/);
+  assert.match(text('fwd.example'), /2 hops/);
+  assert.match(text('unk.example'), /target unknown, needs registrar export/);
+  assert.equal(list.filter((a) => a.key === 'one.example').length, 0, 'one hop is shown on the row, not alerted');
+  assert.equal(list.filter((a) => a.key === 'ms.example').length, 0, 'DKIM not found is not a fault off Google Workspace');
+  list.forEach((a) => assert.equal(a.level, 'amber'));
+});
+
+test('nameservers changed only when a previous value is available', () => {
+  const now = [{ key: 'example.com', nameservers: 'ns1.example.net' }];
+  assert.deepEqual(A.alerts(now, TODAY), []);
+  assert.deepEqual(A.alerts(now, TODAY, [{ key: 'example.com', nameservers: '' }]), []);
+  assert.deepEqual(A.alerts(now, TODAY, [{ key: 'example.com', nameservers: 'ns1.example.net.' }]), []);
+  const changed = A.alerts(now, TODAY, [{ key: 'example.com', nameservers: 'ns1.other.test' }]);
+  assert.equal(changed[0].kind, 'ns');
+  assert.equal(changed[0].level, 'amber');
+  assert.match(changed[0].text, /nameservers changed from ns1.other.test/);
+  const onRow = A.alerts([{ key: 'example.co.uk', nameservers: 'ns1.example.co.uk', nameservers_previous: 'ns9.example.org' }], TODAY);
+  assert.equal(onRow[0].kind, 'ns');
+  assert.match(onRow[0].text, /ns9.example.org/);
 });
 
 test('openWorkRows: plain suggested rows, one per key and kind, never written', () => {

@@ -27,6 +27,8 @@
 <script src="shop.js"></script>
 <script src="keywords.js"></script>
 <script src="views.js"></script>
+<script src="mail.js"></script>
+<script src="status.js"></script>
 <script src="alerts.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
@@ -237,11 +239,32 @@
         opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (filters[k] === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>';
     }).join('') + (Object.keys(filters).length ? '<button class="btn" type="button" data-action="clear">Clear filters</button>' : '') + '</div>';
   }
-  // Expiry badge: rose when passed or under 30 days, amber under 60, else plain.
+  // Expiry badge: red at 7 days or less (including passed), amber through 60 days, else plain.
+  // The 30-day alert still lists 8 to 30 days; that band is amber here, matching the alert.
   function expiryBadge(name, v) {
     if (!v) return '';
-    var d = E.daysUntil(v, today()), cls = d === null ? '' : d < 30 ? ' no' : d <= 60 ? ' soon' : '';
-    return '<span class="badge' + cls + '"><b>' + name + '</b>' + esc(ukDate(v)) + (d !== null && d <= 60 ? ' (' + (d < 0 ? 'passed' : d + ' days') + ')' : '') + '</span>';
+    var d = E.daysUntil(v, today()), cls = '';
+    if (d !== null && d <= 7) cls = ' no';
+    else if (d !== null && d <= 60) cls = ' soon';
+    return '<span class="badge' + cls + '" data-expiry="' + esc(name) + '"' + (d !== null ? ' data-days="' + d + '"' : '') + '><b>' + name + '</b>' + esc(ukDate(v)) + (d !== null && d <= 60 ? ' (' + (d < 0 ? 'passed' : d + ' days') + ')' : '') + '</span>';
+  }
+  var M = window.EstateMail, ST = window.EstateStatus;
+  function mailExtra(r) {
+    var h = '';
+    if (r.mx) h += check('MX', M && M.mxLabel ? M.mxLabel(r.mx) : r.mx, /^none$/i.test(String(r.mx)));
+    if (M && M.forwardChain) {
+      var f = M.forwardChain(r);
+      if (f) h += check('Forward', f.text, !!f.flag);
+    }
+    if (r.registrar) h += check('Registrar', r.registrar, false);
+    if (ST && r.nameservers) {
+      var ns = ST.nameserverList(r.nameservers);
+      if (ns.length) {
+        var ch = ST.nameserverChange(r.nameservers, r.nameservers_previous);
+        h += check('Nameservers', ns.join(', '), !!(ch && ch.changed));
+      }
+    }
+    return h;
   }
   function check(name, v, bad) { return v ? '<span class="badge' + (bad ? ' no' : '') + '"><b>' + name + '</b>' + esc(v) + '</span>' : ''; }
   function prop(r) {
@@ -251,7 +274,8 @@
     return '<div class="prop" data-key="' + esc(r.key) + '" data-status="' + s + '"' + (/house-open/.test(http) ? ' data-open-row' : '') + '><div class="pline"><span class="badge st' + stCls + '">' + E.STATUS_WORD[s] + '</span>' + http +
       '<span class="m">' + esc([r.kind, r.platform].filter(Boolean).join(' · ')) + '</span></div><div class="badges">' +
       check('HTTP', r.http_code, /^[45]/.test(r.http_code || '')) + expiryBadge('SSL', r.ssl_expires) + expiryBadge('Domain', r.domain_expires) + check('DNS', r.dns_host) +
-      check('SPF', r.spf, /two|missing|fail/i.test(r.spf || '')) + check('DKIM', r.dkim, /^missing/i.test(r.dkim || '')) + check('DMARC', r.dmarc, /missing/i.test(r.dmarc || '')) +
+      mailExtra(r) +
+      check('SPF', r.spf, /two|missing|fail|broken/i.test(r.spf || '')) + check('DKIM', r.dkim, /^missing/i.test(r.dkim || '') || (/^not found/i.test(r.dkim || '') && /google workspace/i.test(String(r.mx || '')))) + check('DMARC', r.dmarc, /missing|weak/i.test(r.dmarc || '')) +
       check('Search Console', r.gsc_verified) + check('Merchant Center', r.merchant_center) + check('GA4', r.ga4) + check('Tag Manager', r.gtm) + check('Meta pixel', r.meta_pixel) +
       check('Feed', r.feed) + check('Keywords', r.keywords_tracked) + check('Access', r.access_note) + check('Flag', r.flag, true) +
       (mail.length ? '<span class="badge no"><b>Email</b>' + esc(mail.join(', ')) + '</span>' : '') +
@@ -356,13 +380,15 @@
     E.groupRows(list, today()).forEach(function (g) { h += '<div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>'; });
     return h;
   }
-  // Alerts: down; SSL or domain inside 30 days; DMARC missing; two SPF records (tag lost is the engine's, scan to scan).
+  // Alerts: down; certificate or domain inside 30 days (red at 7 days or less); DMARC missing or weak;
+  // two SPF records or broken SPF; DKIM missing on Google Workspace; no MX; more than one forward hop
+  // or an unknown forward target; nameservers changed when a previous set is known (tag lost is scan to scan).
   // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
   function alertsCard(list) {
     var al = AL.alerts(list, today());
     if (!al.length) return '';   // one empty line per view (Lisa, 2 Nov): no alerts, no Alerts card
     return '<p class="grp">Alerts<span class="sr"> · </span><span class="cnt">' + al.length + '</span></p><div class="card" data-card="alerts">' + al.map(function (a) {
-      return '<div class="prop" data-alert="' + esc(a.kind) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
+      return '<div class="prop" data-alert="' + esc(a.kind) + '" data-level="' + esc(a.level) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
     }).join('') + '</div>';
   }
   // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then Down · Expiring · Live, built by DashKit.hubMain.
