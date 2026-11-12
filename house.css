@@ -17,7 +17,7 @@
   --frame: var(--house-frame); --frame-foot: var(--house-foot); --frame-ink: var(--house-frame-ink); --frame-line: var(--house-frame-line);
   --shadow: var(--house-shadow);
   --sel-bd: var(--house-press);   /* the selected line: the quiet control grey, never ink, never purple (Lisa, 12 Nov 2026) */
-  --hov: color-mix(in srgb, var(--house-muted) var(--house-tint), var(--house-card));   /* the pale grey fill for hover, tap and selected */
+  --hov: color-mix(in srgb, var(--house-muted) var(--house-hov-mix, var(--house-tint)), var(--house-card));   /* the pale grey fill for hover, tap and selected */
   --sel-fill: var(--hov);
   --frame-hov: color-mix(in srgb, var(--house-frame-ink) var(--house-tint), var(--house-frame));   /* the same quiet fill on the dark frame */
 }

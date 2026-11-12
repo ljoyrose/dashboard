@@ -1,2 +1,2 @@
-{"studio": 1000, "home": 1000, "cdhub": 1000, "factory": 1000, "food": 1000, "marketplace": 1000, "money": 1000,
- "why": "Hover rule (Lisa, 12 Nov 2026), PR for claude/house-hover-grey-fill: house.css section 5 rewritten (pale grey fill on hover, quiet grey selected line, --frame-hov) and Studio's cool-look hover fill; about 0.5 KB. Measured 12 Nov: studio 392130."}
+{"studio": 1000, "home": 1000, "cdhub": 1000, "factory": 1000, "food": 1000, "marketplace": 1000, "money": 1000, "privacy": 1000,
+ "why": "Hover rule (Lisa, 12 Nov 2026), PR for claude/house-hover-grey-fill: house.css section 5 rewritten (pale grey fill on hover, quiet grey selected line, --frame-hov) and Studio's cool-look hover fill; about 0.5 KB; tokens.css --house-hov-mix (warm dark 10% so the control line stays 3:1 on the hover fill). Measured 12 Nov: studio 392130, privacy 21175."}

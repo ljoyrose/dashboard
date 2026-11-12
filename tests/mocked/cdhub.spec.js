@@ -365,10 +365,39 @@ test.describe('CD Hub house look', () => {
       for (const tab of LOOK_TABS) {
         await openTab(page, tab);
         if (tab === 'dogs') await page.locator('[data-fpanel="fp-dogs"]').click(); // the open Filter panel is checked too
-        await page.mouse.move(0, 0); // the resting look: a row left under the pointer would wear the hover fill
         const a = await page.evaluate(cdAudit);
         for (const k of Object.keys(a)) expect(a[k], `${look} ${scheme} #/${tab}: ${k}`).toEqual([]);
       }
+    });
+  }
+
+  // A row that opens wears the pale grey hover fill (Lisa, 12 Nov 2026); the controls on it keep their 1px line at 3:1 or more
+  // against that fill, in every look (warm dark mixes less muted into --hov for this, tokens.css --house-hov-mix).
+  for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
+    test(`${look} ${scheme}: on a hovered row the control rings stay 3:1 against the hover fill`, async ({ page, guard }) => {
+      await page.addInitScript((bg) => localStorage.setItem('dash-look', JSON.stringify({ bg })), look);
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('cdhub/');
+      await signIn(page);
+      await openTab(page, 'shape');
+      const row = page.locator('#main [data-open-row]:has(.house-open), #main .mrow.go:has(button)').first();
+      await expect(row).toBeVisible();
+      await row.scrollIntoViewIfNeeded();
+      const b = await row.boundingBox();
+      await page.mouse.move(b.x + 4, b.y + b.height / 2);   // on the row, off its buttons
+      const r = await row.evaluate((e) => {
+        const rgb = (s) => { let m = /^rgba?\(([^)]+)\)/.exec(s); if (m) return m[1].split(/[ ,/]+/).filter(Boolean).map(Number).slice(0, 3);
+          m = /^color\(srgb ([^)]+)\)/.exec(s); return m ? m[1].split(/[ /]+/).filter(Boolean).slice(0, 3).map((x) => x * 255) : null; };
+        const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+        const bg = getComputedStyle(e).backgroundColor;
+        const rings = [...e.querySelectorAll('button, a.btn')].filter((c) => c.getBoundingClientRect().width > 0).map((c) => ratio(rgb(getComputedStyle(c).borderTopColor), rgb(bg)));
+        return { hovered: bg === hov, rings };
+      });
+      expect(r.hovered, 'the row wears the pale grey hover fill').toBe(true);
+      expect(r.rings.length).toBeGreaterThan(0);
+      for (const x of r.rings) expect(x, `${look} ${scheme}: control ring on the hovered row`).toBeGreaterThanOrEqual(3);
     });
   }
 
