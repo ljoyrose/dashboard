@@ -169,12 +169,12 @@ test.describe('CD Hub core: rooms and dogs', () => {
     expect(c.miss.filter((m) => m.startsWith('Pretend B'))).toHaveLength(5);
     expect(c.miss.filter((m) => m.startsWith('Pretend C'))).toHaveLength(7);
     await expect(page.locator('#compTemps h3 .cnt')).toHaveText(String(1 + 5 + 7));
-    await expect(page.locator('#compTemps [data-k="empty"]')).toContainText('Room empty (not counted)');
+    await expect(page.locator('#compTemps [data-k="empty"]')).toContainText('in an empty room, not counted');
     await expect(page.locator('#compTemps [data-k="empty"] a[data-room-link]')).toHaveAttribute('href', '#/areas/ar-a');
     const order = await page.locator('#compTemps > details > ul > li').evaluateAll((ls) => ls.map((l) => l.dataset.k));
     expect(order).toEqual(['ok', 'empty', 'bad', 'miss']);
     await expect(page.locator('#compTemps [data-window]')).toHaveAttribute('data-window', '7');
-    await expect(page.locator('#compTemps [data-window]')).toContainText('not set yet');
+    await expect(page.locator('#compTemps [data-window]')).toContainText('change');
     // the window is a user row; a reading with a thermometer_id is its own line, by name
     const d = await page.evaluate(() => {
       const t = todayISO();
@@ -187,7 +187,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     expect(d.n).toBe(3);
     expect(d.c).toBe(3);
     expect(d.bad.sort()).toEqual(['', 'Pretend B']);
-    await expect(page.locator('#compTemps [data-window]')).toContainText('Last 3 days (your setting: Pretend setting)');
+    await expect(page.locator('#compTemps [data-window]')).toContainText('Last 3 days (Pretend setting)');
     await expect(page.locator('#compTemps [data-k="bad"]')).toContainText('Pretend B');
   });
 

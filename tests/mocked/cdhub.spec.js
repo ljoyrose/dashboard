@@ -778,8 +778,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'round');
-    await expect(page.locator('.card[data-area] .step').first()).toHaveText('Step 1:');
-    await expect(page.locator('.card[data-area]').first()).toContainText('Step 1: Test Cabin A');
+    await expect(page.locator('.card[data-area] .step').first()).toHaveText('1.');
+    await expect(page.locator('.card[data-area]').first()).toContainText('1. Test Cabin A');
   });
 
   test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 72px thumbnail and who-has-it ring', async ({ page }) => {

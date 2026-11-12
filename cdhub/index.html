@@ -1441,7 +1441,7 @@ function tempsCard(){
  var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
-  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':'')+(mt?((hot&&cold)||swap?' \u00b7 ':'')+mt+' out of range, Room empty (not counted)':''),inState):'')
+  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':'')+(mt?((hot&&cold)||swap?' \u00b7 ':'')+mt+' in an empty room, not counted':''),inState):'')
   +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
@@ -2317,8 +2317,8 @@ function keptReadings(date){
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
       +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
       +'</tbody></table>'
-    :'<p class="mut">No readings for '+esc(date)+'.</p>')
-  +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
+    :'<p class="mut">No readings for '+esc(dmy(date))+'.</p>')
+  +(function(){ var g=generalBand(); return g?'<p class="mut" style="margin-bottom:0" data-legend>Blue under '+g.min+' \u00b0C, green '+g.min+'\u2013'+g.max+' \u00b0C, red over '+g.max+' \u00b0C</p>':''; })()+'</section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
 /* Room empty (Lisa, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
    and never counted as non-compliant. An empty mark with no reading counts as covered. */
@@ -2336,6 +2336,7 @@ function foldAreaReadings(rows){
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
 /* limits come from BLD-temperature_band; no readable row = 'unknown' */
+function ageYM(days){ var m=Math.floor((+days||0)/30.4375); return m<12?(m<1?(+days||0)+'d':m+'m'):Math.floor(m/12)+'y'+(m%12?' '+(m%12)+'m':''); }
 function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
 function generalBand(){ return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b); })[0]||null; }
 function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
@@ -2371,7 +2372,7 @@ function pageRound(){
    var m2=a.m2;
   var roomR=roomCheck(aid,sel,acc,date), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
-   +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
+   +'<h4><span class="step">'+c.step+'.</span> '+esc(c.cabin)
    +' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
    +(acc?' <span class="pill '+(acc==='free'?'i':'w')+'">'+acc+'</span>':' <span class="pill no">flap?</span>')+'</h4>'
    +'<div class="filt" style="margin-bottom:6px">'
@@ -2393,7 +2394,7 @@ function pageRound(){
    +(function(){ var bd=bandFor(sel,date);
        if(!bd) return sel.length?'<div class="mut">no date of birth for anyone in here \u2014 no band can be set</div>':'';
        return '<div class="mut"><span class="pill '+(bd.b.stated?'i':'w')+'">'+bd.b.min.toFixed(1)+'\u2013'+bd.b.max.toFixed(1)+' \u00b0C</span> '
-         +esc(bd.b.band)+' \u2014 set by '+esc(bd.dog.name)+', the youngest in here at '+bd.days+' days'
+         +esc(bd.b.band)+' \u2014 youngest: '+esc(bd.dog.name)+', '+ageYM(bd.days)
          +'</div>'; })()
    +'<div class="tmp">'
    +'<span></span><span class="hd2">min &deg;C</span><span class="hd2">max &deg;C</span><span></span>'
@@ -2518,8 +2519,7 @@ async function roundSave(areaId,patch,msgEl){
 function sinkCard(){
  var on=sinkOn();
  return '<div class="card '+(on?'acc5':'acc2')+'" id="sinkcard"><h4>Saving on this device: '+(on?'on':'off')+'</h4>'
-  +'<p class="mut">Readings and moves go to the save script, which adds one row to the Google Sheet and never changes or deletes a row. '
-  +'Temperatures are kept to 1 decimal place. The address and your code stay on this device only.</p>'
+  +'<p class="mut">Each save adds a row; nothing is changed or deleted.</p>'
   +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(sinkGet(SINK_URL_KEY))+'">'
   +'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(sinkGet(SINK_CODE_KEY)?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">'
   +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
@@ -2822,10 +2822,10 @@ function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
  var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
  var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
- return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set?(c.win.src?' (your setting: '+esc(c.win.src)+')':' (your setting)'):' (not set yet, so 7: set \u201cDays Compliance looks back\u201d below)')+', from BLD-area_reading. A reading in a room marked empty is flagged but never counted.</p>'
+ return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set&&c.win.src?' ('+esc(c.win.src)+')':'')+' \u00b7 <a href="#/compliance" data-change-window>change</a>. A reading in a room marked empty is flagged but never counted.</p>'
   +'<ul class="ctemps">'
   +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'
-  +'<li data-k="empty"><span class="pill w">'+c.empty.length+'</span> out of range, Room empty (not counted)'+(c.empty.length?'<ul class="ctl">'+c.empty.map(function(x){ return li(x,' \u2014 Room empty'); }).join('')+'</ul>':'')+'</li>'
+  +'<li data-k="empty"><span class="pill w">'+c.empty.length+'</span> in an empty room, not counted'+(c.empty.length?'<ul class="ctl">'+c.empty.map(function(x){ return li(x,' \u2014 Room empty'); }).join('')+'</ul>':'')+'</li>'
   +'<li data-k="bad"><span class="pill no">'+c.bad.length+'</span> out of range'+(c.bad.length?'<ul class="ctl">'+c.bad.map(function(x){ return li(x); }).join('')+'</ul>':'')+'</li>'
   +'<li data-k="miss"><span class="pill no">'+c.miss.length+'</span> missing'+(c.on?'':' <span class="mut">(the thermometer list is not switched on yet)</span>')
    +(c.miss.length?'<ul class="ctl">'+c.miss.map(function(x){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' \u2014 '+esc(x.name)+', no reading</li>'; }).join('')+'</ul>':'')+'</li>'
@@ -2849,7 +2849,7 @@ function pageCompliance(){
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
  h+=compFold('compProblems','problems','Needs a look'+cntPill(probs.length),pb);
  var rl=roomAudit(today), cl=closedAudit(today), clBad=cl.filter(function(x){ return x.dogs; });
- h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length+clBad.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+ h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length+clBad.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses your room limits and how each cabin is run.</p>'
   +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src?' ('+esc(x.src)+')':'')+'</span></li>'; }).join('')+'</ul>':'')
@@ -2861,7 +2861,7 @@ function pageCompliance(){
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
     +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+esc(cur&&cur.source||'—')+'</td>'
     +'<td class="mut">'+(all.length>1?all.map(function(r){ return esc(r.value)+' from '+esc(dmy(r.effective_from)); }).join(' → '):(all.length?'1 version':'—'))+'</td></tr>'; }).join('')
-  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>'));
+  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet.</p>'));
  h+=compFold('compAdd','add','Add a rule or a change',''
   +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
   +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
@@ -2990,6 +2990,7 @@ function bindRehearsal(){
  if(ad) ad.addEventListener('click',function(){ var i=document.getElementById('rhNote'), v=String(i&&i.value||'').trim(); if(!v||!REHEARSAL) return; REHEARSAL.notes.push(v); re(); });
 }
 function bindCompliance(){
+ var cw=document.querySelector('[data-change-window]'); if(cw) cw.addEventListener('click',function(e){ e.preventDefault(); var t=document.getElementById('compAdd'); if(t&&t.scrollIntoView) t.scrollIntoView({block:'start'}); });
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  bindRehearsal();
  var aa=document.getElementById('compAsAt'), at=document.getElementById('compAsAtToday');
