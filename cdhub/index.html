@@ -265,10 +265,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 
 
-.card.arrive{margin:0;box-shadow:none}.card.arrive h3{margin:0}
-.card.arrive .awhy{margin:4px 0 0;color:var(--muted);font-size:var(--fs-small)}
-.card.arrive .arrives{margin:8px 0 0;font-weight:600}
-.arrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--house-gap);margin:0 0 var(--house-gap)}
 .okempty{margin:12px 0 0;color:var(--muted);font-size:var(--fs-body);display:flex;gap:8px;align-items:center}
 .okempty::before{content:"\2713";display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px}
 
@@ -872,7 +868,8 @@ function build(){
 }
 
 var TODAY=new Date();
-function dmy(iso){ if(!iso) return ''; var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m? m[3]+'/'+m[2]+'/'+m[1] : iso; }
+function dmy(iso){ if(!iso) return ''; var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m? m[3]+'/'+m[2]+'/'+m[1].slice(2) : iso; }   /* house: DD/MM/YY */
+function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
 var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
   var mon=UKMON[+m[2]-1]; return mon?((+m[3])+' '+mon+' '+m[1]):''; }
@@ -1299,18 +1296,6 @@ function needRow(x,hide){
  return '<div class="mrow'+(hide?' hidden':'')+'" data-open-row'+(hide?' data-needmore="1"':'')+'>'+(x.tone?'<span class="ic '+x.tone+'" aria-hidden="true"></span>':'')
   +'<span class="t">'+esc(x.title)+'<small>'+esc(x.sub||'')+'</small></span>'+dpill(x.date,x.tone)+goBtn(x)+'</div>';
 }
-/* foundation: empty state that names its source. Used where a screen needs data that only the Bloodline app will hold.
-   Table names are the Stage 4 schema draft in BLOODLINE-THE-DOCUMENT (4.0a); the words are the dog pack's labels. */
-var ARRIVES={
- media:['media','media','Photos','Record cards show a grey icon until photos are kept against each record.'],
- person:['person','person','Who has it, by name','The ring says on site or off site. A named keeper needs people on file (BLD-subject_owner already points at person ids).'],
- due:['work_item','work item','Due dates on Outstanding','BLD-WORK.csv has no date column, so these rows carry no date pill.'],
- reading:['reading','reading','Temperatures that are kept','Readings typed on The round are not saved here. Kept readings need their own table.'],
- stage:['birth_group_stage','litter stage','Litter stage','Born, weaning, ready: a litter\u2019s stage is recorded, not guessed from its age.']};
-function arrives(k){ var a=ARRIVES[k];
- return '<section class="card dash arrive" id="arrive-'+k+'" data-arrives="'+esc(a[0])+'"><h3>'+esc(a[2])+'</h3>'
-  +'<p class="arrives">Arrives with Bloodline: '+esc(a[1])+'</p><p class="awhy">'+esc(a[3])+'</p></section>'; }
-
 function needsCard(){
  var n=needsToday();
  if(!n.length) return '';
@@ -1332,12 +1317,12 @@ function onSiteCard(){
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
 /* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
-function littersCard(){
+function littersCard(title){
  var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown;});
  var recent=(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=84; })
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
- var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
+ var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'+(title||'Litters')+cntPill(n)+'</h3>';
  h+=w.map(function(x){ var tone=x.day>63?'late':(x.day>=57?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of 57–72 · working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
@@ -1712,8 +1697,7 @@ function pageDogs(){
  +'<span class="info" tabindex="0" title="The dot by each name is the sex: blue male, pink female, a ring when neutered, dashed when not recorded. A dog that has been done also says spayed or neutered. The buttons are the status: tap one to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  /* foundation: record media and named people, not held yet */
- +'<div class="arrow">'+arrives('media')+arrives('person')+'</div>'
- +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
+  +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
 function ageBand(m){ if(m===null) return '__none'; if(m<6) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
 function showWeights(id){
@@ -1948,16 +1932,11 @@ function pageAreas(){
  var set=CD.areas.filter(function(a){return accessOf(a.id);}).length;
  var both=CD.areas.filter(function(a){return modesOf(a).length===2;}).length;
  var h='<h2>Areas</h2>'+(AREAFOCUS?'<p class="filt" data-focus="room">'+(shown.length?'One room.':'Room not found.')+' <a href="#/areas">All rooms</a></p>':'')
- +'<div class="tiles">'+tile('b4',CD.areas.length,'cabins','BLD-area.csv')
+ +'<div class="tiles">'+tile('b4',CD.areas.length,'cabins','')
  +tile('b6',CD.areas.filter(function(a){return a.m2ok==='NO';}).length,'m\u00b2 unconfirmed','two figures were on record for one room')
  +tile(set===CD.areas.length?'b5':'b2',set,'have a mode chosen','of '+CD.areas.length)
  +tile('b3',CD.areas.filter(function(a){return inCabin(a.id,date).length;}).length,'occupied today','from the round, else BLD-occupancy')+'</div>'
- +'<div class="card acc6"><h4>Free access and limited are the same cabin run two ways</h4>'
- +'<div class="card acc6"><h4>Free access or limited \u2014 one or the other</h4>'
- +'<p style="margin-bottom:0">One cabin, two ways to run it. Pick one to check capacity.</p></div>'
- +'<p style="margin-bottom:0"><b>Every number below is a headcount \u2014 how many dogs, not square metres.</b> '
- +'All of them come from the Welsh Government guidance s1.2 Size of Quarters. A cabin has ONE floor area; the flap only decides which minimum it must meet, because a confined dog needs more room than one that can come and go. '
- +'The three <b>+ pups</b> columns are a yes/no: can one bitch whelp and raise a litter here? That minimum is double the one-adult figure, per the SRS conditions.</p></div>';
+ +'<p class="mut" data-areas-note>Free access or limited: pick one per cabin. Numbers are dogs, from your room limits.</p>';
  order.forEach(function(f){
   var rows=fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);});
   h+='<h3><span class="dot" style="background:'+(f.charAt(0)==='H'?'var(--p5)':(f.charAt(0)==='3'?'var(--p6)':'var(--p3)'))+'"></span>'
@@ -2003,8 +1982,8 @@ function pageAreas(){
 function pageLitters(){
  var withDob=CD.litters.filter(function(l){return l.dob;}).length;
  var pups={}; CD.dogs.forEach(function(d){ (d.littersAsDam||[]).forEach(function(){}); });
- var h='<h2>Litters</h2><p class="sub">'+CD.litters.length+' rows. '+withDob+' have a date of birth.</p>'
- +'<div class="mecards">'+littersCard()+'</div>'
+ var h='<h2>Litters</h2><p class="sub">'+withDob+' of '+CD.litters.length+' have a date of birth.</p>'
+ +'<div class="mecards">'+littersCard('Due and new')+'</div>'
  +'<div class="tiles">'+tile('b7',CD.litters.length,'litters','')
  +tile('b5',withDob,'born','')+tile('b2',CD.litters.length-withDob,'no DOB','planned, in progress, or did not take')
  +tile('b6',CD.matings.length,'matings recorded','including those that did not take')+'</div>'
@@ -2012,8 +1991,6 @@ function pageLitters(){
    groups:[['Date of birth',fsel('ld','Date of birth','<option value="y">has a DOB</option><option value="n">missing a DOB</option>')],
     ['Year',fsel('ly','Year','')],['Status',fsel('ls','Status','')],['Dam',fsel('lm','Dam','')],['Sire',fsel('lp','Sire','')],
     ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
- /* kit: animal (litter stage, not held yet) */
- +'<div class="arrow">'+arrives('stage')+'</div>'
  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
@@ -2066,11 +2043,9 @@ function pageVet(){
  var hidden=CD.vetlink.length-here.length;
  var h='<h2>Vet link</h2>'
  +'<div class="tiles">'+tile('b5',here.length,'active dogs linked','collected and deceased excluded')+tile('b0',hidden,'linked but not here','still in the map file')
- +tile('b6',CD.counts.weight,'weighings','BLD-weight.csv')
+ +tile('b6',CD.counts.weight,'weighings','')
  +tile('b4',here.filter(function(l){return (byId[l.subject_id].weights||[]).length;}).length,'of these have weights','')+'</div>'
- +'<div class="card acc5"><h4>A foreign id lives in one file only</h4>'
- +'<p style="margin-bottom:0">Animana patient ids appear in <code>BLD-MAP-animana.csv</code> and nowhere else. If Animana renumbers, one file changes.</p></div>'
- +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
  here.slice().sort(function(a,b){return (a.vet_name||'')<(b.vet_name||'')?-1:1;}).forEach(function(l){
   h+='<tr><td><b>'+esc(l.vet_name)+'</b></td><td><code>'+esc(l.matched_on_chip||(byId[l.subject_id]||{}).chip||'')+'</code></td>'
    +'<td><code class="mut">'+esc(l.foreign_id)+'</code></td><td>'+(wcount[l.subject_id]||0)+'</td></tr>';});
@@ -2429,13 +2404,12 @@ function sinkCard(){
 }
 function pageWork(){
  var W=CD.work||[];
- if(!W.length) return '<h2>Outstanding</h2>'+needsCard()+'<div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">Live file. Missing or unreadable.</p></div>';
+ if(!W.length) return '<h2>Outstanding</h2>'+needsCard()+'<div class="card acc2"><h4>The work list did not load</h4></div>';
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
  var h='<h2>Outstanding</h2>'+needsCard()
-  +'<div class="arrow">'+arrives('due')+'</div>'   /* foundation: a due date on a work record, not held yet */
-  +'<p class="note">Every ask in this project, with who it is waiting on. <b>'+hers+'</b> are waiting on you, <b>'+mine+'</b> on me, <b>'+(by.DONE||[]).length+'</b> done. This is a live file \u2014 change BLD-WORK.csv and this page changes.</p>';
+  +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>';
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
   rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
@@ -2516,11 +2490,11 @@ function pageShape(){
 
  var lookY={};
  look.forEach(function(t,i){ var y=100+i*STEP; lookY[t]=y+BH/2;
-  g+=box(colL,y,200,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--press)" stroke-width="1"'); });
+  g+=box(colL,y,200,BH,t,plural(+N[t].rows,'row'),'fill="none" style="stroke:var(--press)" stroke-width="1"'); });
 
  var evY={};
  ev.forEach(function(t,i){ var y=100+i*STEP; evY[t]=y+BH/2;
-  g+=box(colE,y,250,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--ljr-5)" stroke-width="1"'); });
+  g+=box(colE,y,250,BH,t,plural(+N[t].rows,'row'),'fill="none" style="stroke:var(--ljr-5)" stroke-width="1"'); });
 
  function yOf(t){ return spineY[t]!==undefined?spineY[t]:(lookY[t]!==undefined?lookY[t]:evY[t]); }
 
