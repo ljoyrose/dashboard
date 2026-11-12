@@ -14,6 +14,7 @@
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/area-link.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
@@ -202,6 +203,7 @@ var ROUND_DATE=null;
 var SPAN={};        /* areaId -> {first,last} reading day */
 var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
+var LINKS=[];      /* BLD-area_link rows: an old room's readings also show for the room it became (Lisa 12 Nov 2026); optional */
 var THERMOS=[];     /* BLD-thermometer rows (name, area_id); optional */
 
 /* ---- helpers ---- */
@@ -279,10 +281,12 @@ async function loadAreaData(){
   try{
     REQ=await optionalCsv('BLD-requirement.csv');
     THERMOS=await optionalCsv('BLD-thermometer.csv');
+    LINKS=await optionalCsv('BLD-area_link.csv');
     var rf=await findDriveFile('BLD-area_reading.csv');
     if(rf){
       var txt=await readDriveFile(rf);
       var rows=parseCSV(txt);
+      if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
         var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
@@ -290,7 +294,16 @@ async function loadAreaData(){
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         var u=unitFor(r.area_id,r.thermometer_id);
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
-        AREA_DAYS[date][u][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes'};
+        var v={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
+        var was=AREA_DAYS[date][u][slot];
+        /* A merged room: two old rooms' readings in one slot. Never averaged: the lowest MIN and highest MAX, so a breach stays visible. */
+        /* A reading taken in the room itself wins over linked copies (same rule as Compliance, SOPS 12 Nov). */
+        if(was&&!was.from.length&&v.from.length) return;
+        if(was&&was.from.length&&v.from.length&&window.BLDAreaLink){
+          var w=window.BLDAreaLink.widest(was,v);
+          v={min:w.min===null?'':String(w.min),max:w.max===null?'':String(w.max),note:[was.note,v.note].filter(Boolean).join(' · '),empty:was.empty&&v.empty,from:was.from.concat(v.from.filter(function(f){ return was.from.indexOf(f)<0; }))};
+        }
+        AREA_DAYS[date][u][slot]=v;
       });
     }
     SPAN={}; FIRST_DAY='';
@@ -493,7 +506,8 @@ function dayRooms(day){
   var units=[]; areasInWalk(ids).forEach(function(aid){ units=units.concat(unitsOf(aid)); });
   return units.filter(function(u){ return ar[u]||neededOn(u,day); }).map(function(u){
     var r=ar[u]||{};
-    return {aid:u, name:unitName(u), am:slotState(r.am,u,day,'am'), pm:slotState(r.pm,u,day,'pm')};
+    var from=[].concat((r.am&&r.am.from)||[],(r.pm&&r.pm.from)||[]).filter(function(f,i,a){ return a.indexOf(f)===i; });
+    return {aid:u, name:unitName(u)+(from.length?' (from '+from.map(areaCode).join(', ')+')':''), am:slotState(r.am,u,day,'am'), pm:slotState(r.pm,u,day,'pm')};
   });
 }
 function daySummary(day){
