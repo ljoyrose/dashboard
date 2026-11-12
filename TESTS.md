@@ -411,6 +411,24 @@ A Google Apps Script owned by the business account (the "bin guard", code kept i
 
 The Bin page shows 00 CHECK ("Check: put back by the bin guard") with ticks, **Select all**, **Clear**, **Approve binning** and **Ask the AI to sort**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names have no tick box. Until the web app exists the card shows **Waiting for the tidy bot** instead of the buttons: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
 
+## Web Estate DNS and mail checks
+
+The estate page only reads. It never changes DNS, a registrar or a mailbox. Every name in these tests is invented (`example.com`, `example.co.uk`, `example.net`, `other.test`). DNS answers are pretend `dns.google` JSON. Registrar answers are pretend RDAP JSON. A forwarding chain is an optional `forward_chain` field on the private sheet; when the field is absent the page does not invent one.
+
+| Check | What is flagged | Test |
+|---|---|---|
+| DKIM | Google Workspace MX and no answer at `google._domainkey` or the other small selector list | `DKIM missing is flagged for Google Workspace MX when no allow-listed selector answers` in `tests/estate/mail.test.js` |
+| DMARC missing | No `v=DMARC1` record (already checked; still flagged) | `DMARC policies, missing, two records` in `tests/estate/mail.test.js` |
+| DMARC weak | `p=none` and no `rua` | `DMARC weak: p=none with no rua is flagged; p=none with rua stays a note` in `tests/estate/mail.test.js` |
+| SPF count | More than one `v=spf1` record (already checked; still never shown as passing) | `ACCEPT: two SPF records is NEVER shown as passing` in `tests/estate/mail.test.js` |
+| SPF syntax | Unknown mechanism, missing `all`, or more than 10 lookups | `SPF broken: unknown mechanism, missing all, more than 10 lookups` in `tests/estate/mail.test.js` |
+| MX | Present or none, with a provider name (Google, Microsoft, Namecheap email forwarding and other forwarders). No MX is flagged | `MX: lowest preference wins, provider words` in `tests/estate/mail.test.js` |
+| Forward hops | The chain and the hop count. More than one hop is flagged. A forwarder with no recorded target says "target unknown, needs registrar export" | `forward chain: hop count, flag over one hop, unknown target, absent field` in `tests/estate/mail.test.js` |
+| Certificate | Inside 30 days is listed (already). 7 days or less, or already passed, is red; 8 to 30 stays amber | `certificate red tier: 7 days or less is red, 8 to 30 stays amber` in `tests/estate/alerts.test.js` |
+| Nameservers and registrar | RDAP nameservers and registrar name. A nameserver change is flagged only when a previous set is known | `RDAP: nameservers and registrar from a mocked response, including a nested name` and `nameserverChange flags only when a previous set is known and different` in `tests/estate/status.test.js` |
+
+The same flags are listed on Needs a look: `mail flags: weak DMARC, broken SPF, missing Google DKIM, no MX, forward hops, unknown target` and `nameservers changed only when a previous value is available` in `tests/estate/alerts.test.js`. The page shows them in the browser: `DNS and mail flags show on the property and in Needs a look` in `tests/mocked/estate-mail-flags.spec.js` (1 check).
+
 ## Where things live
 
 | What | Where |
