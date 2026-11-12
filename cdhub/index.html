@@ -284,6 +284,12 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
 .ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
+.ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph .off{display:none !important}
+.dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.dogphoto-btn{justify-content:center;padding:0 8px}
+.dogphoto-msg{margin:0 12px 8px}
+.dogphoto-msg:empty{display:none}
 .ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center}
 .ph .gicon svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
 .ph .gicon.f{background:var(--female)}
@@ -832,6 +838,7 @@ function build(){
       treats:DSP[r.id]||[], dna:DNA[r.id]||[], vacc:VAC[r.id]||[],
       chip:m.chip_number||'',source:r.source,
       rxExpiry:r.rx_moxi_expiry||'',rxUrl:r.rx_moxi_file_url||'',
+      photo:r.photo||'',
       species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
       colour:c?{name:c.name,family:c.base_family,hex:c.swatch_hex,noseApplies:c.nose_pigment_applies==='true'}:null,
       pat:p?p.name:'',pig:g?{name:g.name,code:g.code,hex:g.swatch_hex}:null,
@@ -1909,6 +1916,118 @@ function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
   +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
   +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
   +'</a></div>'; }
+/* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
+   (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
+function dogPhotoId(v){
+ v=String(v==null?'':v).trim();
+ if(!v) return '';
+ var m=/\/file\/d\/([A-Za-z0-9_-]+)/.exec(v)||/[?&]id=([A-Za-z0-9_-]+)/.exec(v);
+ if(m) return m[1];
+ if(/^https?:/i.test(v)) return '';
+ return /^[A-Za-z0-9_-]{8,}$/.test(v)?v:'';
+}
+var DOGPHOTO_URLS=[];
+function showDogPhoto(img){
+ if(!img||img.getAttribute('data-fallback')==='1') return;
+ img.classList.remove('off');
+ var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
+ if(paw) paw.classList.add('off');
+}
+function pawDogPhoto(img){
+ if(!img) return;
+ img.setAttribute('data-fallback','1');
+ img.classList.add('off');
+ if(img.getAttribute('src')) img.removeAttribute('src');
+ var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
+ if(paw) paw.classList.remove('off');
+}
+function dogPhotoBytes(img,id){
+ img.setAttribute('data-tried','bytes');
+ if(!TOKEN){ pawDogPhoto(img); return; }
+ DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+  if(!res.ok){ pawDogPhoto(img); return; }
+  return res.blob().then(function(b){
+   if(!b||!/^image\//.test(b.type||'')){ pawDogPhoto(img); return; }
+   var url=URL.createObjectURL(b); DOGPHOTO_URLS.push(url); img.src=url;
+  });
+ }).catch(function(){ pawDogPhoto(img); });
+}
+function loadDogPhotos(){
+ Array.prototype.forEach.call(document.querySelectorAll('img.dogphoto[data-photo-id]'), function(img){
+  var id=img.getAttribute('data-photo-id');
+  if(!id||!TOKEN){ pawDogPhoto(img); return; }
+  img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
+  img.addEventListener('error', function(){
+   if(img.getAttribute('data-tried')==='bytes'){ pawDogPhoto(img); return; }
+   dogPhotoBytes(img,id);
+  });
+  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+   var link=meta&&meta.thumbnailLink;
+   if(link&&/^https:\/\//i.test(link)){ img.src=link; return; }
+   dogPhotoBytes(img,id);
+  }).catch(function(){ dogPhotoBytes(img,id); });
+ });
+}
+function photoMsg(inp,text){
+ var card=inp&&inp.closest?inp.closest('article'):null;
+ var m=card&&card.querySelector('[data-photo-msg]');
+ if(m) m.textContent=text||'';
+}
+function fileToPhotoPayload(file){
+ return new Promise(function(resolve,reject){
+  if(!file||!/^image\//.test(file.type||'')){ reject(new Error('Choose a picture.')); return; }
+  var reader=new FileReader();
+  reader.onerror=function(){ reject(new Error('That picture could not be read.')); };
+  reader.onload=function(){
+   var dataUrl=String(reader.result||''), comma=dataUrl.indexOf(','), b64=comma>=0?dataUrl.slice(comma+1):'';
+   if(!b64){ reject(new Error('That picture could not be read.')); return; }
+   if(b64.length<=1400000){ resolve({mime:file.type||'image/jpeg',b64:b64}); return; }
+   var im=new Image();
+   im.onload=function(){
+    var max=1600, w=im.width||1, h=im.height||1, s=Math.min(1,max/Math.max(w,h));
+    var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s));
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    var q=0.82, out='', b='';
+    for(var i=0;i<4;i++){ out=c.toDataURL('image/jpeg',q); b=out.slice(out.indexOf(',')+1); if(b.length<=1600000) break; q-=0.18; }
+    if(!b||b.length>1800000){ reject(new Error('That picture is too large.')); return; }
+    resolve({mime:'image/jpeg',b64:b});
+   };
+   im.onerror=function(){ reject(new Error('That picture could not be read.')); };
+   im.src=dataUrl;
+  };
+  reader.readAsDataURL(file);
+ });
+}
+/* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
+   Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
+   holds the folder id and never changes who can see the file. */
+async function uploadDogPhoto(inp){
+ var id=inp.getAttribute('data-dog-photo')||'';
+ var file=inp.files&&inp.files[0];
+ inp.value='';
+ if(!file) return;
+ if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
+ if(!sinkOn()){ photoMsg(inp,'Saving is not set up on this device.'); return; }
+ photoMsg(inp,'Saving the photo\u2026');
+ inp.disabled=true;
+ try{
+  var pic=await fileToPhotoPayload(file);
+  var res=await fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+   body:JSON.stringify({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
+  var j;
+  try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
+  if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
+  var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
+  drawDogs();
+ }catch(e){ inp.disabled=false; photoMsg(inp,(e&&e.message)||'The photo was not saved.'); }
+}
+function bindDogPhotos(){
+ while(DOGPHOTO_URLS.length){ try{ URL.revokeObjectURL(DOGPHOTO_URLS.pop()); }catch(e){} }
+ loadDogPhotos();
+ Array.prototype.forEach.call(document.querySelectorAll('[data-dog-photo]'), function(inp){
+  inp.addEventListener('change', function(){ uploadDogPhoto(inp); });
+ });
+}
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
@@ -1944,13 +2063,20 @@ function drawDogs(){
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
    var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+   var pic=dogPhotoId(d.photo);
    h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
 
   +'<div class="dc-top">'
+    +'<div class="dogphoto-col">'
     +'<div class="ph">'
-      +'<svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>'
+      +'<svg class="ti'+(pic?' off':'')+'" data-paw aria-hidden="true"><use href="#i-paw"/></svg>'
+      +(pic?'<img class="dogphoto off" alt="" data-photo-id="'+esc(pic)+'" referrerpolicy="no-referrer">':'')
       +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
       +(d.sizeWord?'<span class="szb" data-k="size" title="'+esc(d.sizeWhy)+'">'+esc(capFirst(d.sizeWord))+'</span>':'')
+    +'</div>'
+    +'<label class="btn dogphoto-btn">'+(pic?'Change photo':'Add photo')
+      +'<input type="file" accept="image/*" capture class="sr" data-dog-photo="'+esc(d.id)+'">'
+    +'</label>'
     +'</div>'
     +'<div class="dc-info">'
       +'<div class="nl">'
@@ -1971,6 +2097,7 @@ function drawDogs(){
       +'</div>'
     +'</div>'
   +'</div>'
+  +'<p class="mut dogphoto-msg" data-photo-msg role="status"></p>'
 
   +'<div class="dc-sects">'
 
@@ -2051,6 +2178,7 @@ function drawDogs(){
   +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
  if(DOGFOCUS) h='<p class="filt" data-focus="dog">'+(list.length?'One dog.':'Dog not found.')+' <a href="#/dogs">All dogs</a></p>'+h;
  document.getElementById('rows').innerHTML=h;
+ bindDogPhotos();
  document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(dogN<list.length?' · Showing '+dogN+' of '+list.length:'');
  fchips('dogs',['fs','fn','fa','fst','fc','ft']);
  focusMedDog();
