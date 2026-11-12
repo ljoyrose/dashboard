@@ -88,6 +88,54 @@ test.describe('CD Hub dog card summary', () => {
     await expect(page.locator('.sfb').first()).toBeVisible();
   });
 
+  test('size from the latest weight: Lisa\'s cut-off rows set the badge, the coloured line and the room check', async ({ page, guard }) => {
+    const w = guard.world;
+    const SUBJ = csv('id,tenant_id,name,sex,dob,kind,neuter_status,size_band', [
+      'sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire,10-25kg (medium)',
+      'sub-x2,t,Pretend Stud Two,Male,2022-01-01,Stud,entire,',
+      'sub-x3,t,Pretend No Weight,Female,2022-01-01,Breeding Female,entire,25kg+ (large)'
+    ]);
+    const RULES = csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+      'r1,t,size_colour.small,orange,2026-11-11,Pretend poster,,,',
+      'r2,t,size_colour.medium,green,2026-11-11,Pretend poster,,,',
+      'r3,t,size_from_kg.medium,10,2026-01-01,Pretend vet,,,',
+      'r4,t,size_from_kg.large,25,2026-01-01,Pretend vet,,,',
+      'r5,t,size_from_kg.large,12,2099-01-01,Pretend future row,,,'
+    ]);
+    put(w, 'BLD-subject.csv', SUBJ);
+    put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active', 's2,t,sub-x2,Active', 's3,t,sub-x3,Active']));
+    put(w, 'BLD-weight.csv', WEIGHT);
+    put(w, 'BLD-breeding_rule.csv', RULES);
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => go('dogs/sub-x1'));
+    const card = page.locator('#rows article.dc');
+    await expect(card).toHaveAttribute('data-size', 'small');          // 8.4 kg beats the record's medium
+    await expect(card).toHaveAttribute('data-size-from', 'weight');
+    await expect(card.locator('[data-k="size"]')).toHaveText('Small');
+    await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12\/01\/26 · cut-offs: Pretend vet/);
+    expect(await card.evaluate((e) => getComputedStyle(e, '::before').borderLeftWidth)).toBe('3px');   // a full-height line, drawn inside the 1px frame
+    await page.evaluate(() => go('dogs/sub-x2'));
+    await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');   // 14.1 kg; the future row is not in force
+    await page.evaluate(() => go('dogs/sub-x3'));
+    await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size-from', 'record');  // no weight: the record stands
+    await expect(page.locator('#rows [data-k="size"]')).toHaveText('Large');
+    expect(await page.evaluate(() => roomDogs(['sub-x1', 'sub-x2']).map((d) => d.size))).toEqual(['small', 'medium']);
+  });
+
+  test('size: no cut-off rows means no size from weight; a row without a source does not count', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-weight.csv', WEIGHT);
+    put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+      'r3,t,size_from_kg.medium,10,2026-01-01,,,,', 'r4,t,size_from_kg.large,25,2026-01-01,Pretend vet,,,']));
+    await HUBS.cdhub.open(page, guard);
+    expect(await page.evaluate(() => CD.sizeCut)).toBeNull();
+    await page.evaluate(() => go('dogs/sub-x1'));
+    await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);
+    await expect(page.locator('#rows [data-k="size"]')).toHaveCount(0);
+  });
+
   test('DNA kind reads the lab words first, then the copy count', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     const k = await page.evaluate(() => [
@@ -96,4 +144,17 @@ test.describe('CD Hub dog card summary', () => {
     ]);
     expect(k).toEqual(['clear', 'clear', 'affected', 'carrier', '']);
   });
+});
+
+test('Areas: a room\'s size columns come from its own capacity rows, never fixed kg bands', async ({ page, guard }) => {
+  const w = guard.world;
+  const AREA = csv('id,tenant_id,code,grouping,group_sort,area_value,area_unit_id,m2_confirmed,m2_note,use,source', ['ar-a,t,Room A,A,1,10,u-m2,yes,,,', 'ar-b,t,Room B,A,1,8,u-m2,yes,,,']);
+  put(w, 'BLD-area.csv', AREA);
+  put(w, 'BLD-area_capacity.csv', csv('id,area_id,access_type,size_band,max_dogs,basis', [
+    'c1,ar-a,limited,Pretend medium band (medium),2,', 'c2,ar-a,limited,Pretend small band (small),3,', 'c3,ar-a,limited,small + pups,1,']));
+  await HUBS.cdhub.open(page, guard);
+  await page.evaluate(() => go('areas/ar-a'));
+  await expect(page.locator('[data-room="ar-a"] thead th')).toHaveText(['flap', 'Small', 'Medium', 'Small + pups']);
+  await page.evaluate(() => go('areas/ar-b'));
+  await expect(page.locator('[data-nolimits="ar-b"]')).toHaveText('no limits recorded');
 });
