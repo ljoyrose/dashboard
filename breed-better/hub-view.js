@@ -23,7 +23,7 @@
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
   var GO = { 'BLD-fit_to_breed': 'dogs', 'BLD-litter': 'litters', 'BLD-health_screen': 'dogs', 'BLD-dna_result': 'dogs', 'BLD-subject_status': 'dogs' };
-  var state = { filter: '', dog: '', open: {} }, last = null, memo = null;
+  var state = { filter: '', dog: '', open: {}, q: '', sort: 'verdict' }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -67,7 +67,7 @@
       var points = (T['BLD-score_point.csv'] || []).filter(function (p) { return ids[p.criterion_id]; });
       try {
         var r = Score.score({ scheme: scheme, bands: bands, criteria: criteria, points: points, subject: subject, evidence: evidence, judgements: {}, asOf: v.today });
-        r.name = t(subject.name); r.bands = bands; r.words = wordsFor(scheme);
+        r.name = t(subject.name); r.dob = t(subject.dob); r.bands = bands; r.words = wordsFor(scheme);
         out.words = r.words;
         out.results.push(r); out.byId[r.subject_id] = r;
       } catch (err) { out.error = err.message; }
@@ -87,19 +87,50 @@
   function pill(r) { return vpill(verdictOf(r), r.words); }
   function unv(r) { return r.points_unverified ? ', ' + r.points_unverified + ' ' + r.words.unverified.toLowerCase() : ''; }
 
+  /* Sort choices, as on the mock-up (11 Nov 2026). Verdict best to worst is the default; "Fail to Pass" is the one opt-in reverse. */
+  var SORTS = [
+    ['verdict', 'Verdict, Pass to Fail'], ['high', 'Score, highest %'], ['low', 'Score, lowest %'], ['name', 'Name, A to Z'],
+    ['oldest', 'Oldest first'], ['youngest', 'Youngest first'], ['attention', 'Verdict, Fail to Pass']
+  ];
+  function byVerdict(a, b) { return ORDER.indexOf(verdictOf(a)) - ORDER.indexOf(verdictOf(b)); }
+  function byName(a, b) { return a.name.localeCompare(b.name); }
+  /* no date of birth sorts last either way */
+  function byDob(dir) { return function (a, b) { return (!a.dob - !b.dob) || dir * a.dob.localeCompare(b.dob); }; }
+  var SORT_FN = {
+    verdict: function (a, b) { return byVerdict(a, b) || (pct(b) - pct(a)) || byName(a, b); },
+    high: function (a, b) { return (pct(b) - pct(a)) || byVerdict(a, b) || byName(a, b); },
+    low: function (a, b) { return (pct(a) - pct(b)) || byVerdict(a, b) || byName(a, b); },
+    name: byName,
+    oldest: function (a, b) { return byDob(1)(a, b) || byName(a, b); },
+    youngest: function (a, b) { return byDob(-1)(a, b) || byName(a, b); },
+    attention: function (a, b) { return byVerdict(b, a) || (pct(a) - pct(b)) || byName(a, b); }
+  };
+  function shownRows(c) {
+    var f = state.filter, q = state.q.toLowerCase();
+    return c.results.filter(function (r) { return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1); })
+      .sort(SORT_FN[state.sort] || SORT_FN.verdict);
+  }
+  function rowsHtml(v, c) {
+    var esc = v.esc, shown = shownRows(c);
+    return shown.length ? shown.map(function (r) {
+      return '<button type="button" class="bb-dog" data-bb-open="' + esc(r.subject_id) + '"><span class="bb-name">' + esc(r.name) + '</span>' + pill(r)
+        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></button>';
+    }).join('') : '<p class="mut">None.</p>';
+  }
+
   function listHtml(v, c) {
     var esc = v.esc, f = state.filter;
     words = c.words || VERDICT;
     var counts = { '': c.results.length };
     c.results.forEach(function (r) { counts[verdictOf(r)] = (counts[verdictOf(r)] || 0) + 1; });
     var h = '<div class="bb-filt" role="group" aria-label="Filter by verdict">' + [''].concat(ORDER).map(function (k) {
-      return '<button type="button" class="bb-f" data-bb-filter="' + k + '" aria-pressed="' + (f === k) + '">' + (words[k] || 'All') + ' <span class="cnt">' + (counts[k] || '') + '</span></button>';
+      return '<button type="button" class="bb-f" data-bb-filter="' + k + '" aria-pressed="' + (f === k) + '">' + (words[k] || 'All') + ' <span class="cnt">' + (counts[k] || 0) + '</span></button>';
     }).join('') + '</div>';
-    var shown = c.results.filter(function (r) { return !f || verdictOf(r) === f; });
-    return h + (shown.length ? shown.map(function (r) {
-      return '<button type="button" class="bb-dog" data-bb-open="' + esc(r.subject_id) + '"><span class="bb-name">' + esc(r.name) + '</span>' + pill(r)
-        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></button>';
-    }).join('') : '<p class="mut">None.</p>');
+    var tools = '<div class="bb-tools"><label class="bb-lab">Find a dog<input type="search" id="bbSearch" data-bb-search="1" placeholder="Name" autocomplete="off" value="' + esc(state.q) + '"></label>'
+      + '<label class="bb-lab">Sort<select id="bbSort" data-bb-sort="1">' + SORTS.map(function (o) {
+        return '<option value="' + o[0] + '"' + (state.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label></div>';
+    return tools + h + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
   }
 
   function dogHtml(v, r) {
@@ -160,6 +191,9 @@
       '.bb-due{font-size:var(--fs-small);color:var(--muted);white-space:nowrap}.bb-overdue{color:var(--ljr-3-text)}',
       '.bb-test{border-color:var(--ljr-7);color:var(--ink)}',
       '.bb-filt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}',
+      '.bb-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:0 0 12px}',
+      '.bb-lab{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-small);color:var(--muted);min-width:0}',
+      '.bb-lab input,.bb-lab select{min-height:44px;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--card);color:var(--ink);font-size:var(--fs-input,16px)}',
       '.bb-f,.bb-dog,.bb-src,.bb-chip{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}',
       '.bb-f{min-height:44px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;font-weight:500}',
       '.bb-f:hover,.bb-dog:hover,.bb-src:hover,.bb-chip:hover,.bb-f:active,.bb-dog:active,.bb-src:active,.bb-chip:active{background:var(--hov);outline:none}',
@@ -181,7 +215,7 @@
   /** The whole page. v = { T, today, esc } */
   function page(v) {
     last = v; css();
-    return '<h2>Breed Better <span class="bb-v bb-test">Testing</span></h2><div id="bbRoot">' + inner(v) + '</div>';
+    return '<h2>Breed Better <span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></h2><div id="bbRoot">' + inner(v) + '</div>';
   }
 
   /** The score on a dog card. Empty when that animal is not enrolled. */
@@ -189,9 +223,11 @@
     last = v; css();
     var r = compute(v).byId[id];
     if (!r) return '';
-    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test">Testing</span></button>';
+    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing: trial scores, not yet signed off">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></button>';
   }
 
+  /* typing or a new sort redraws the rows only, so the search box keeps focus */
+  function redrawRows() { var el = document.getElementById('bbList'); if (el && last && memo) el.innerHTML = rowsHtml(last, memo); }
   function redraw() { var el = document.getElementById('bbRoot'); if (el && last) el.innerHTML = inner(last); }
 
   if (typeof document !== 'undefined') {
@@ -200,6 +236,12 @@
       var d = e.target;
       if (d && d.getAttribute && d.hasAttribute('data-bb-band')) state.open[d.getAttribute('data-bb-band')] = d.open;
     }, true);
+    document.addEventListener('input', function (e) {
+      if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-bb-search')) { state.q = e.target.value.trim(); redrawRows(); }
+    });
+    document.addEventListener('change', function (e) {
+      if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-bb-sort')) { state.sort = e.target.value; redrawRows(); }
+    });
     /* capture, so the chosen dog is set before the hub's own click handler opens the page */
     document.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back]');
@@ -212,5 +254,5 @@
     }, true);
   }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip, day: day, wordsFor: wordsFor };
+  return { FILES: FILES, compute: compute, page: page, chip: chip, day: day, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));

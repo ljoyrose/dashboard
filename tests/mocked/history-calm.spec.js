@@ -2,6 +2,8 @@
 // "the info i need without looking alarming"). Pretend Drive only; every row here is invented.
 // RULES is the one list later screens reuse (round, year report, prints).
 const { test, expect } = require('../support/test');
+// The page builds a whole year of views before it says "Up to date"; under a full parallel run that can pass 7 s (quality review 12 Nov).
+const LOADED = { timeout: 20000 };
 const fs = require('fs');
 const path = require('path');
 
@@ -75,7 +77,7 @@ async function open(page, guard, size, rooms) {
   await page.addInitScript(() => localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: 'FAKE-TEST-TOKEN', expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' })));
   await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export\?/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: OUTDOOR }));
   await page.goto('cdhub/history.html');
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
 }
 const day = (page, iso) => page.locator(`#view-a [data-cal="indoors"] button.d[title^="${+iso.slice(8)} Jan 2026 indoors"]`);
@@ -227,9 +229,21 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(jan).toHaveAttribute('data-read', String(want.read));
   await expect(jan).toHaveAttribute('data-out', String(want.out));
   await expect(jan).toHaveAttribute('data-miss', String(want.miss));
-  await expect(jan).toContainText(`${want.read} read`);
-  await expect(jan).toContainText(`${want.out} outside limit`);
+  await expect(jan).toContainText(`${want.read - want.out} in limit`);
+  await expect(jan).toContainText(`${want.out} outside`);
   await expect(jan).toContainText(`${want.miss} missed`);
+  await expect(jan).toContainText(`${Math.round(100 * (want.read - want.out) / (want.read + want.miss))}% in limit`);
+  // quality review 12 Nov: no card for a month that has not started; a card opens its month on the heat map
+  await expect(page.locator('#view-c .mitem')).toHaveCount(1);
+  await jan.click();
+  await expect(page.locator('#view-a')).toBeVisible();
+  await expect(page.locator('#view-a .mc[data-m="1"]').first()).toBeInViewport();
+});
+
+test('phone: the round shows room cards only, never the table beside them (quality review 12 Nov)', async ({ page, guard }) => {
+  await open(page, guard, { width: 390, height: 844 });
+  await expect(page.locator('#view-d .rtile').first()).toBeVisible();
+  await expect(page.locator('#view-d .rscroll')).toBeHidden();
 });
 
 test('audit: a room in use with no readings at all is listed and shows missed, never hidden', async ({ page, guard }) => {
@@ -260,7 +274,7 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   await open(page, guard);
   put('BLD-area_reading.csv', readings);
   await page.reload();
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
   await openDay(page, '2026-01-07');
   await expect(page.locator('#drill .rl', { hasText: 'R3' })).toContainText('PM empty');
@@ -294,11 +308,40 @@ test('audit: a room with two thermometers has a line per thermometer; a blank th
   const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
   guard.world.file('bld-thermo', 'BLD-thermometer.csv', thermos, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
   await page.reload();
-  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('#rdate').fill('2026-01-12');
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d .rtile .rn')).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H5' }).locator('.warn')).toHaveCount(0);
   await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H6' }).locator('.warn')).toHaveText(['AM missed']);
   await expect(page.locator('#view-d .rtile', { hasText: 'S1' }).locator('.warn')).toHaveCount(0);
+});
+
+// Links (Lisa 12 Nov 2026, "I need the temps to show continuously"): BLD-area_link rows make an old room's readings
+// show for the room it became. A split room shows in both new rooms; a merged room shows the widest of its old
+// readings (lowest MIN, highest MAX), never an average. The old rooms keep their own lines; nothing is rewritten.
+test('audit: area links show old rooms\' readings in the new rooms, widest for a merged slot', async ({ page, guard }) => {
+  const rooms = 'id,code,group_sort\nold-a,3B.1/2,1\nold-s,3B.3/4,2\nnew-1,3B.1/2/3,3\nnew-2,3B.4/5,4\n';
+  const links = 'id,tenant_id,from_area_id,to_area_id,from_date,to_date\n'
+    + 'l1,t,old-a,new-1,2025-01-01,2026-01-12\nl2,t,old-s,new-1,2025-01-01,2026-01-12\nl3,t,old-s,new-2,2025-01-01,2026-01-12\n';
+  const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,thermometer_id\n'
+    + 'rdg-1,old-a,2026-01-12T09:00:00Z,2026-01-12T00:00:00+00:00,12.0,15.0,typed,\n'
+    + 'rdg-2,old-s,2026-01-12T09:05:00Z,2026-01-12T00:00:00+00:00,10.0,14.0,typed,\n'
+    + 'rdg-3,old-s,2026-01-13T09:05:00Z,2026-01-13T00:00:00+00:00,11.0,13.0,typed,\n';
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard, null, rooms);
+  put('BLD-area_reading.csv', readings);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  guard.world.file('bld-links', 'BLD-area_link.csv', links, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('#rdate').fill('2026-01-12');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile', { hasText: '3B.1/2/3 (from 3B.1/2, 3B.3/4)' })).toContainText('10.0–15.0');
+  await expect(page.locator('#view-d .rtile', { hasText: '3B.4/5 (from 3B.3/4)' })).toContainText('10.0–14.0');
+  await expect(page.locator('#view-d .rtile', { hasText: /^3B\.1\/2\b/ }).first()).toBeVisible();
+  // after the link's to_date the old room's reading stays only on the old room
+  await page.locator('#rdate').fill('2026-01-13');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile', { hasText: '(from' })).toHaveCount(0);
 });

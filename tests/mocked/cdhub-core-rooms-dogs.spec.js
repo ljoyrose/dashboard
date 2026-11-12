@@ -233,6 +233,14 @@ test.describe('CD Hub core: rooms and dogs', () => {
       go('today', false);
     });
     await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults (Pretend source)');
+    // dated rows: each day is judged by the row in force that day; a to_date ends a row
+    const r = await page.evaluate(() => {
+      T['BLD-breeding_rule.csv'] = [
+        { id: 's1', rule_key: 'staffing.adults_per_full_time', value: '7', effective_from: '2020-01-01', to_date: '2020-12-31', source: 'Pretend old' },
+        { id: 's2', rule_key: 'staffing.adults_per_full_time', value: '9', effective_from: '2021-01-01', to_date: '2021-12-31', source: 'Pretend new' }];
+      return [staffRule('2020-06-01').ft, staffRule('2021-06-01').ft, staffRule('2022-06-01')];
+    });
+    expect(r).toEqual([7, 9, null]);
   });
 
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {

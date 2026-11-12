@@ -96,10 +96,11 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
-    function clearCode() { inMemoryCode = ''; put(session, CODE_KEY, ''); }
+    var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
+    function clearCode() { inMemoryCode = ''; lastRole = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
@@ -142,8 +143,8 @@
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving is on. What you send goes into the approvals queue until Lisa approves it; then it joins the records.' };
-      return { kind: 'on', canSave: true, text: 'Saving is on. What you send is added to the records straight away. It cannot be changed afterwards. If something is wrong, tell the owner.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. Lisa approves each entry.' };
+      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
     }
 
     /** Check the fields on the page. */
@@ -226,6 +227,7 @@
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
+      if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',
@@ -265,7 +267,7 @@
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
       })).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; return res; }
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
@@ -321,6 +323,7 @@
       TABLES: TABLES,
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
       setCode: setCode, getCode: getCode, clearCode: clearCode,
+      role: function () { return lastRole; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,

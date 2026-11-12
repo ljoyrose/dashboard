@@ -188,5 +188,5 @@
       }
     });
   }
-  StaffPage.register({ id: 'moves', title: 'Scan and move', desc: 'Room sign, then each dog card', icon: ctxIcons.scan, order: 10, open: open });
+  StaffPage.register({ id: 'moves', title: 'Scan', icon: ctxIcons.scan, order: 10, open: open });
 }());
