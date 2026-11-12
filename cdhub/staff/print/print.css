@@ -33,3 +33,13 @@
  .sheet.dogs.per2{grid-template-columns:1fr 1fr}.sheet.dogs.per2 .dcard{height:190mm}
  .sheet.dogs.per4{grid-template-columns:1fr 1fr}.sheet.dogs.per4 .dcard{height:136mm}
  .sheet.rooms{grid-template-columns:1fr 1fr}}
+.dcard .chipline{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--ljr-0-text)}
+.dcard .chipline b{font-size:20px;color:var(--ljr-8);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dcard .jobs{width:100%;display:flex;flex-wrap:wrap;gap:6px 14px}
+.dcard .job{display:flex;align-items:center;gap:6px;font-size:16px}
+.dcard .job:before{content:"";width:5px;height:20px;background:var(--c);border-radius:3px}
+.dcard .lst{width:100%;list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}.dcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
+.rcard .lst{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px;text-align:left}
+.rcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
+.rcard .lst span{color:var(--ljr-0-text)}
+@media print{.sheet.dogs.per1 .dcard .chipline b{font-size:36px}.sheet.dogs.per1 .dcard .job{font-size:22px}}

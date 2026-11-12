@@ -42,8 +42,19 @@ test('breeding rules: an unknown rule, a silly number or a missing date is refus
   assert.equal(rule(env, { rule_key: 'max_pups', value: '6', effective_from: '2020-01-01' }).code, 'INVALID');
   const big = rule(env, { rule_key: 'min_dam_age_months', value: '120', effective_from: '2020-01-01' });
   assert.equal(big.code, 'INVALID'); assert.match(big.fields.value, /6 to 48 months/);
+  assert.equal(big.fields.confirm_unusual, 'Save anyway?');
   assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '6' }).code, 'INVALID');
   assert.equal(recs(env).length, 0);
+});
+
+test('breeding rules: a value outside the usual range is a warning; "save anyway" keeps it (a council may allow it)', () => {
+  const env = env0();
+  const r = rule(env, { rule_key: 'min_months_between_litters', value: '40', effective_from: '2020-01-01', confirm_unusual: 'yes' });
+  assert.equal(r.ok, true);
+  assert.equal(recs(env).length, 1);
+  assert.equal(recs(env)[0].value, '40');
+  assert.equal('confirm_unusual' in recs(env)[0], false);          // not a column: nothing extra in the file
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01', confirm_unusual: 'maybe' }).code, 'INVALID');
 });
 
 test('breeding rules: a change is a new row from a later date; an earlier or same date is refused (history is never rewritten)', () => {

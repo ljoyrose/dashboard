@@ -15,7 +15,8 @@
 
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
-    var key = v.today + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length;
+    var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
+    var key = v.today + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
     var site = v.logs.map(function (l) { return l.how_recorded === 'site_tap' ? Object.assign({}, l, { subject_id: '' }) : l; });
     var rows = {}, perDog = {};
@@ -32,8 +33,9 @@
         });
       });
     }
-    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true }; }), v.logs);
+    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '' }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
+    add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
     add([{}], site);
     var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {
       return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '' });
@@ -49,13 +51,13 @@
     return Object.keys(m).sort().map(function (k) { return m[k]; });
   }
 
-  /** Records for one dog ({subject_id}) or one room ({area_id}), newest first. A corrected record gives way to its correction. */
+  /** Records for one dog ({subject_id}), one room ({area_id}) or one litter ({litter_id}), newest first. A corrected record gives way to its correction. */
   function history(v, target) {
     var byId = {}, replaced = {};
     v.types.forEach(function (t) { byId[t.id] = t; });
     v.logs.forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
     return v.logs.filter(function (l) {
-      return !replaced[l.id] && byId[l.check_type_id] && (target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
+      return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
     }).map(function (l) {
       return { at: l.happened_at || l.taken_at || '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '' };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
@@ -75,7 +77,7 @@
       var inner = n ? '<span class="pill ' + cls + '">' + n + '</span>' : '<span class="mut">0</span>';
       return '<td data-n="' + k + '">' + (href ? '<a href="' + e(href) + '" aria-label="' + n + ' ' + k + ', open ' + e(r.sop) + '">' + inner + '</a>' : inner) + '</td>';
     }
-    h += '<p class="mut">From saved records. Counts are dogs or rooms.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
+    h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
         var done = r.as_needed && !r.ok ? '<td data-n="done"><span class="mut">as needed</span></td>' : cell(r, r.ok, 'ok', 'done');
@@ -101,7 +103,7 @@
 
   function historyHtml(v, target, icon) {
     var e = v.esc, rows = history(v, target), shown = rows.slice(0, 30);
-    return '<details class="dcs" data-history="' + e(target.subject_id || target.area_id) + '"><summary>' + icon + '<span class="dcs-label">'
+    return '<details class="dcs" data-history="' + e(target.litter_id || target.subject_id || target.area_id) + '"><summary>' + icon + '<span class="dcs-label">'
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
