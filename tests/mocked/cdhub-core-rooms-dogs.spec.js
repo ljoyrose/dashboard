@@ -238,9 +238,12 @@ test.describe('CD Hub core: rooms and dogs', () => {
       T['BLD-breeding_rule.csv'] = [
         { id: 's1', rule_key: 'staffing.adults_per_full_time', value: '7', effective_from: '2020-01-01', to_date: '2020-12-31', source: 'Pretend old' },
         { id: 's2', rule_key: 'staffing.adults_per_full_time', value: '9', effective_from: '2021-01-01', to_date: '2021-12-31', source: 'Pretend new' }];
-      return [staffRule('2020-06-01').ft, staffRule('2021-06-01').ft, staffRule('2022-06-01')];
+      const a = [staffRule('2020-06-01').ft, staffRule('2021-06-01').ft, staffRule('2022-06-01')];
+      // an open older row takes over again when a newer, closed row has ended
+      T['BLD-breeding_rule.csv'][0].to_date = '';
+      return a.concat([staffRule('2021-06-01').ft, staffRule('2021-12-31').ft, staffRule('2022-06-01').ft]);
     });
-    expect(r).toEqual([7, 9, null]);
+    expect(r).toEqual([7, 9, null, 9, 9, 7]);
   });
 
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {
