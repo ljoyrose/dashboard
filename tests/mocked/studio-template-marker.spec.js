@@ -58,6 +58,8 @@ const details = async (page, id) => {
 const openFilters = async (page) => { await page.locator('#filtersBtn').click(); await expect(page.locator('#fpanel')).toBeVisible(); };
 // Old tab names are now pages under the five bottom tabs (Me, Decide, Do, Line, Kits): open them by address.
 
+const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
+
 test.describe('Studio: template marker', () => {
   test('older state (no reuse field): no chip, no candidates list, the toggle shows One-off', async ({ page, guard }) => {
     await open(page, guard, '#/assets');
