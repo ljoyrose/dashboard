@@ -45,6 +45,16 @@ test.describe('CD Hub: Compliance urgent warnings', () => {
     await expect(page.locator('#urgList > li[data-k="closed"]')).toContainText('Room A is closed but has a dog in it');
   });
 
+  // A move row leaves classification blank (it is the licence label, not a location): the dog keeps its label and stays on site.
+  test('a move row with no classification keeps the dog on site, in its new room', async ({ page, guard }) => {
+    rooms(guard.world, ['o1,t,sub-x1,ar-a,,2026-01-01,,Breeding Bitch,', 'o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,', 'o3,t,sub-x1,ar-iso,,2026-02-01,,,']);
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => { location.hash = '#/today'; });
+    await expect(page.locator('#onSiteCard a.big')).toHaveText('2');
+    await tab(page, 'compliance');
+    await expect(page.locator('#urgList > li[data-k="closed"]')).toContainText('Room A is closed but has a dog in it');
+  });
+
   test('nothing urgent: says so', async ({ page, guard }) => {
     rooms(guard.world, ['o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,']);
     await HUBS.cdhub.open(page, guard);

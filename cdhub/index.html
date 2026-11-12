@@ -778,7 +778,10 @@ async function load(){
 var CD={};
 function idx(rows,k){ var m={}; (rows||[]).forEach(function(r){ m[r[k]]=r; }); return m; }
 /* a dog's room = its occupancy row with the latest moved_in (Specs.gs occupancy; same rule as BLDOccupancy.latestRow), not the last row in the file */
-function occLatest(rows){ var m={}; (rows||[]).forEach(function(r){ if(!(r.subject_id in m)) m[r.subject_id]=BLDOccupancy.latestRow(rows,r.subject_id); }); return m; }
+function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(r.subject_id in m) return;
+ var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
+ /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
+ m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
   var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
