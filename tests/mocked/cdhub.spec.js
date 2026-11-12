@@ -4,7 +4,7 @@ const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
 
-const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -128,8 +128,6 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await tabClick(page, '#nav button[data-go="litters"]');
     await expect(page.locator('#main')).toContainText('Test Dog One'); // dam
     await expect(page.locator('#main')).toContainText('Test Dog Two'); // sire
-    await tabClick(page, '#nav button[data-go="vet"]');
-    await expect(page.locator('#main')).toContainText('3'); // three sample weighings
   });
 
   test('the Outstanding page reads BLD-WORK.csv', async ({ page }) => {
@@ -159,12 +157,12 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all twelve sections are in the bar: five tabs, then the other seven under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('all eleven sections are in the bar: five tabs, then the other six under More (Vet link removed, Lisa 12 Nov 2026); Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
@@ -289,7 +287,7 @@ test.describe('CD Hub: things that go wrong', () => {
 // House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026) and the Bloodline screens, by computed style.
 // Invented data only: the sample BLD tables, plus rows added inside a test (invented names, no real dogs or buyers).
 // ---------------------------------------------------------------------------------------------------------------
-const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 const iso = (days) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
 const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
