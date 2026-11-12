@@ -1179,7 +1179,7 @@ function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_p
 function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
-function breedRule(key,iso){ var v=null; breedRuleRows(key).forEach(function(r){ var to=/^\d{4}-\d{2}-\d{2}$/.test(r.to_date||'')?r.to_date:''; if(r.effective_from<=iso&&(!to||iso<=to)) v=r; }); return v; }   /* newest row in force that day: from <= day <= to (blank to = open); rows are sorted by from, then set_at */
+function breedRule(key,iso){ var on=BLDCapacity.inForce(breedRuleRows(key),iso,'effective_from'); return on.length?on[on.length-1]:null; }   /* newest row in force that day (shared rule: from <= day <= to, blank to = open) */
 function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.slice(8,10);
  y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
  return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+Math.min(d,last)).slice(-2); }
