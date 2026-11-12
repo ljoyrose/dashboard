@@ -32,7 +32,7 @@
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
     return Object.keys(best).map(function (k) { return best[k]; })
-      .filter(function (r) { return r.active !== 'false'; })
+      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter'; })   // litter jobs open from a litter card's code
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
   }
 
@@ -53,6 +53,7 @@
     if (type.target === 'area' && !entry.area_id) e.area_id = 'Choose the room.';
     if (type.target === 'dog' && !entry.subject_id) e.subject_id = 'Choose the dog.';
     if (type.target === 'either' && !entry.area_id && !entry.subject_id) e.area_id = 'Choose a room or a dog.';
+    if (type.target === 'litter' && !entry.litter_id) e.litter_id = 'Scan the litter card.';
     if (a.item && !entry.item) e.item = 'This is needed.';
     if (a.amount && !entry.amount) e.amount = 'This is needed.';
     if (!entry.outcome) e.outcome = 'Choose one.';
