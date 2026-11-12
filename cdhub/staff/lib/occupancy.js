@@ -29,6 +29,12 @@
    * room is hidden after its last day and still shows in History.
    */
   function inUse(a, day, reqRows) { return !!a && N.coversDay(reqRows, 'room.in_use', 'area', a.id, day || N.today()); }
+  /**
+   * Can dogs be placed in room `a` on `day`? A place such as a corridor is marked by a BLD-requirement row with need_type
+   * room.no_dogs (target_table area), dated like every need row (overseer 12 Nov 2026: a row, never a word in code).
+   * No such row = dogs can be placed. The place still shows for temperatures; only the dog pickers leave it out.
+   */
+  function takesDogs(a, day, reqRows) { return !!a && !N.coversDay(reqRows, 'room.no_dogs', 'area', a.id, day || N.today(), { absentIs: false }); }
   /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
@@ -61,7 +67,7 @@
     T = T || {};
     day = day || N.today();
     var areas = (T.area || []).filter(function (a) { return inUse(a, day, T.requirement); }).map(function (a) {
-      return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0 };
+      return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0, dogs: takesDogs(a, day, T.requirement) };
     });
     var areaById = {};
     areas.forEach(function (a) { areaById[a.id] = a; });
@@ -111,5 +117,5 @@
     });
   }
 
-  return { latestRow: latestRow, offSite: offSite, inUse: inUse, dailyList: dailyList, loadViaScript: loadViaScript };
+  return { latestRow: latestRow, offSite: offSite, inUse: inUse, takesDogs: takesDogs, dailyList: dailyList, loadViaScript: loadViaScript };
 }));

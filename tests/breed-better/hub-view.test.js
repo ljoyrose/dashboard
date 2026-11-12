@@ -98,3 +98,60 @@ test('within a verdict, animals rank by percent of what they could earn', () => 
   const c = View.compute({ T, today: '2026-06-05', esc });
   assert.deepEqual(c.results.map((r) => [r.name, r.points_earned, r.points_available]), [['Male', 10, 10], ['Female', 10, 20]]);
 });
+
+test('seven sort choices, verdict best to worst first; no date of birth sorts last', () => {
+  assert.deepStrictEqual(View.SORTS.map((s) => s[0]), ['verdict', 'high', 'low', 'name', 'oldest', 'youngest', 'attention']);
+  const R = (name, verdict, e, a, dob) => ({ name, verdict, points_earned: e, points_available: a, dob: dob || '' });
+  const rows = [R('Cara', 'fail', 0, 10, '2020-01-01'), R('Abe', 'pass', 8, 10, '2022-05-01'), R('Bo', 'pass', 9, 10), R('Dot', 'unverified', 2, 10, '2019-03-01')];
+  const names = (k) => View.sortRows(rows, k).map((r) => r.name);
+  assert.deepStrictEqual(names('verdict'), ['Bo', 'Abe', 'Dot', 'Cara']);
+  assert.deepStrictEqual(names('high'), ['Bo', 'Abe', 'Dot', 'Cara']);
+  assert.deepStrictEqual(names('low'), ['Cara', 'Dot', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('name'), ['Abe', 'Bo', 'Cara', 'Dot']);
+  assert.deepStrictEqual(names('oldest'), ['Dot', 'Cara', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('youngest'), ['Abe', 'Cara', 'Dot', 'Bo']);
+  assert.deepStrictEqual(names('attention'), ['Cara', 'Dot', 'Abe', 'Bo']);
+});
+
+test('the list page has a name search and the sort choice', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-search/);
+  assert.match(html, /<option value="verdict" selected>Verdict, Pass to Fail<\/option>/);
+  assert.match(html, /id="bbList"/);
+});
+
+test('every verdict filter shows its count, 0 included', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-filter="below_target"[^>]*>Below target <span class="cnt">0<\/span>/);
+});
+
+test('the Testing label explains itself: trial scores, not yet signed off', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing<\/span>/);
+});
+
+test('an enrolment with a to_date stops on the day after it', () => {
+  const T = tables({ 'BLD-score_enrolment.csv': [{ id: 'e1', scheme_id: 's1', subject_id: 'a1', to_date: '2026-06-10' }] });
+  assert.equal(View.compute({ T, today: '2026-06-10', esc }).results.length, 1);
+  assert.equal(View.compute({ T, today: '2026-06-11', esc }).results.length, 0);
+});
+
+test('a later version of the enrolled scheme takes over on its own date; old records say rules then', () => {
+  const T = tables({
+    'BLD-score_scheme.csv': [{ id: 's1', name: 'Trial', status: 'active', effective_from: '2026-01-01' },
+      { id: 's2', name: 'Trial', status: 'active', effective_from: '2026-07-01', version: '2' }],
+    'BLD-score_band.csv': [{ id: 'g', scheme_id: 's1', kind: 'gate' }, { id: 'g2', scheme_id: 's2', kind: 'gate' }],
+    'BLD-score_criterion.csv': [{ id: 'c', scheme_id: 's1', band_id: 'g', label: 'Check', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on' },
+      { id: 'c2', scheme_id: 's2', band_id: 'g2', label: 'Check', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on' }],
+    'BLD-score_point.csv': [{ id: 'p', criterion_id: 'c', answer_match: 'any', gate_outcome: 'pass' },
+      { id: 'p2', criterion_id: 'c2', answer_match: 'is:ok', gate_outcome: 'pass', to_date: '2026-06-30' },
+      { id: 'p3', criterion_id: 'c2', answer_match: 'is:ok', gate_outcome: 'fail', from_date: '2026-07-01' },
+      { id: 'p4', criterion_id: 'c2', answer_match: 'any', gate_outcome: 'fail' }]
+  });
+  assert.equal(View.compute({ T, today: '2026-06-20', esc }).byId.a1.scheme_id, 's1');
+  const later = View.compute({ T, today: '2026-07-20', esc });
+  assert.equal(later.byId.a1.scheme_id, 's2');
+  assert.equal(later.byId.a1.gate_result, 'pass');
+  assert.equal(later.byId.a1.lines[0].rules_then, true);
+  assert.match(View.lineHtml({ esc }, later.byId.a1.lines[0]), /rules then/);
+});

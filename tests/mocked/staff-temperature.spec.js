@@ -1,5 +1,5 @@
 // Temperature round on the staff page. Pretend rooms and thermometers; fake code and fake save address only.
-// Lisa, 11 Nov 2026: a thermometer that ended on 11 Nov is not in the 12 Nov round, but a missed reading for a
+// Lisa, 11 Nov 2026: a thermometer that ended on 11 Nov is not in the 12 Nov round, but an earlier reading for a
 // day it was needed (10 Nov) can still be typed on 12 Nov, and is saved for that day.
 const { test, expect } = require('../support/test');
 
@@ -7,6 +7,7 @@ test.use({ allowedConsole: [/404/] });
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
+const ROLE = { v: 'OWNER' };   // the role a read reply reports (STAFF PR 443)
 const TABLES = {
   area: [{ id: 'area-old', code: '3A.2/3', group_sort: '2' }, { id: 'area-new', code: '3A.1/2', group_sort: '2' }],
   subject: [], occupancy: [], subject_status: [], check_type: [], check_log: [], area_capacity: [], area_access: [], litter: [], capacity_setting: [], qr_tag: [],
@@ -31,7 +32,7 @@ async function setup(page) {
     const b = JSON.parse(route.request().postData());
     if (String(b.action).indexOf('read') === 0) {
       if (b.table && !TABLES[b.table]) return route.fulfill({ headers: CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'off' } });
-      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES } } });
+      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES, role: ROLE.v } } });
     }
     sent.push(b);
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length } } });
@@ -47,28 +48,28 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   const cards = page.locator('.cards .card .nm');
   await expect(cards).toHaveText(['3A.1/2']);
 
-  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-10');
   await page.getByLabel('Day').dispatchEvent('change');
   await expect(cards).toHaveText(['3A.2/3 (retired 11/11/26)']);
   await cards.first().click();
-  await expect(page.getByText('Missed reading · 10/11/26 Morning reading')).toBeVisible();
+  await expect(page.getByText('Earlier reading · 10/11/26 Morning')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);
   await page.getByLabel('MAX').fill('18.5');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: missed readings are from photos
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: earlier readings are from photos
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11/11/26)']);
 });
 
-test('a missed reading cannot be for now or later: that is the round', async ({ page }) => {
+test('an earlier reading cannot be for now or later: that is the round', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-12');
   await page.getByLabel('Day').dispatchEvent('change');
   await expect(page.getByText('That is now or later: use the round.')).toBeVisible();
@@ -91,11 +92,11 @@ test('Lisa 11 Nov: how a reading was taken is saved only; the year report never 
   } finally { TABLES.area_reading = []; }
 });
 
-test('Lisa 11 Nov: a missed reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
+test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
   const sent = await setup(page);
   await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));   // afternoon: this morning is now a missed slot
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-12');
   await page.getByLabel('Day').dispatchEvent('change');
   await page.locator('.cards .card').first().click();
@@ -180,4 +181,38 @@ test('year report: an empty room\'s outside reading is flagged "Room empty" but 
     await expect(rows.nth(1)).toContainText('Room empty');
     await expect(rows.nth(1)).not.toHaveClass(/tg-br/);
   } finally { TABLES.area_reading = []; }
+});
+
+// Links (Lisa 12 Nov 2026): the year report for a new room includes the old room linked into it, each such row
+// marked "From <old room>"; the old room's own report is unchanged.
+test('year report: a new room includes readings from the old room linked into it, marked "From"', async ({ page }) => {
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-old', period_start: '2026-11-10T00:00:00+00:00', min_c: '11.0', max_c: '15.0' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', min_c: '12.0', max_c: '16.0' }
+  ];
+  TABLES.area_link = [{ id: 'l1', from_area_id: 'area-old', to_area_id: 'area-new', from_date: '2025-01-01', to_date: '2026-11-11' }];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.addScriptTag({ path: 'cdhub/staff/lib/area-link.js' });   // the staff shell loads it once STAFF adds it to FILES
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const rows = page.locator('.tg-tab').nth(1).locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('From 3A.2/3');
+    await expect(rows.first()).toContainText('11.0');
+    await expect(rows.nth(1)).not.toContainText('From');
+  } finally { TABLES.area_reading = []; delete TABLES.area_link; }
+});
+
+test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
+  ROLE.v = 'STAFF';
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await expect(page.getByRole('button', { name: 'Add earlier reading' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
+  } finally { ROLE.v = 'OWNER'; }
 });

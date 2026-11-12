@@ -106,6 +106,11 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
 - All ten sections open (Live feed, Outstanding, Table map, Today, The round, Dogs, Areas, Litters, Vet link, Buyers).
 - Dogs, cabins, litters and weights from the sample files join up correctly.
+- Litter print cards look like kennel cards (band in the dam's size colour, Born DD/MM/YY, Sire, Pups, Room, one large code, 1, 2 or 4 per A4) and list only litters still on site. Kennel cards show Colour (coat lookup rows) and Microchip in threes; kennel cards, room signs and litter cards show the jobs in force from the job rows (kennel: by group; room and litter: job and how often). (`tests/mocked/cdhub-litter-print-card.spec.js`)
+- An Areas room card shows today's temperature in The round's words (one line per thermometer when a room has two or more), an out-of-range reading as a ring, the limit from the band rows, and a Temperature history link; a room with no thermometer has no line.
+- A dog card shows the weight change (↑ 0.3 · 12/01/26), the last medication date, DNA as clear / carrier / affected pills, and litters as dam with the last one; the litters line opens Litters for that dam. The card header shows DOB (DD/MM/YY) and Colour, the room icon stays small on a phone, and the status chips sit inside Filter so the first dog shows on a phone. Size comes from the latest weight using Lisa's `size_from_kg.medium` / `size_from_kg.large` rows (each needs a source; a future row is not in force); no rows or no weight means the record's size stands. The card gets a 3px line in the size colour and a badge on the photo, and the room check uses the same size. Vaccinations show the count, the last date and the next due date written on the card (marked when it has passed). (`tests/mocked/cdhub-dog-card-summary.spec.js`)
+- There is no Vet link page and no Animana patient id on screen (Lisa, 12 Nov 2026: not relevant); an old #/vet address falls back to the Map.
+- Dated limits: room limits and size cut-offs are read as at the day being checked (from_date / to_date, to_date included, blank = open), with the weight on or before that day, so a later rule never makes an old placement look wrong.
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.
 - Saving stays switched off.
@@ -150,6 +155,12 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
 - The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
 - This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
+
+**Food Hub card notes** (`tests/mocked/food.spec.js`, `tests/mocked/job34-food-states.spec.js`, invented rows)
+- A note typed on a card is written in column H when the card is marked done: answer, note, time, and whoever is signed in.
+- Save note with no answer appends one row on the Comments tab: at, key, title, text, by.
+- An empty note writes nothing. Save note stays off until there is text.
+- A missing Comments tab shows the usual missing-tab notice and the page stays up.
 
 **Hub data contracts (Food, Marketplace, Studio)**
 - `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.

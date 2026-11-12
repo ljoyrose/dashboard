@@ -240,7 +240,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round).not.toContainText(/\bactual/i);
     await expect(round).not.toContainText(/source/i);
     await page.getByRole('button', { name: 'Month cards' }).click();
-    await expect(page.locator('#view-c')).toContainText('outside limit');
+    await expect(page.locator('#view-c')).toContainText('outside');
     await expect(page.locator('#view-c')).toContainText('High');
     await expect(page.locator('#view-c')).toContainText('missed');
     await expect(page.locator('#view-c')).not.toContainText('cold days');
@@ -269,7 +269,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round).not.toContainText('Field 1');
   });
 
-  test('Lisa 11 Nov: a missed reading typed on a later day shows on its own day (period_start), even for an ended thermometer', async ({ page, guard }) => {
+  test('Lisa 11 Nov: an earlier reading typed on a later day shows on its own day (period_start), even for an ended thermometer', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;
