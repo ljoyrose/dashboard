@@ -54,6 +54,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
     put(w, 'BLD-subject_status.csv', STATUS);
     put(w, 'BLD-occupancy.csv', OCC);
     put(w, 'BLD-requirement.csv', REQ);
+    // Adult age is a dated row now (Lisa 12 Nov 2026); without it nobody is counted a puppy or an adult.
+    put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', ['a1,t,dog.adult_from_months,6,2010-01-01,Pretend law,,,']));
     w.file('bld-access-invented', 'BLD-area_access.csv', ACCESS, { parents: [IDS.bld], driveId: 'drv-alpha1' });
     await HUBS.cdhub.open(page, guard);
     const n = await page.evaluate(() => ({ here: counts().here.length, pups: counts().pups.length, areas: CD.areas.map((a) => a.code) }));

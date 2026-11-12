@@ -242,7 +242,7 @@
    *   dogs     [{id, label, areaId, areaLabel, known, away, out}]   from BLDOccupancy.dailyList
    *   areas    [{id, label, group}]                            the rooms to pick from
    *   skipped  number of dogs left out because nothing says they are on site
-   *   offSite  true adds an Off-site choice to the room picker (the page must have the occupancy_out table)
+   *   offSite  true adds an Off-site button beside Save move (the page must have the occupancy_out table)
    *   loader   optional function() -> Promise<{ok, message?}>   "Load the dogs" with the staff code (no Google sign-in)
    *   document (tests only)
    */
@@ -310,12 +310,13 @@
       var result = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
       var was = el(doc, 'div', { class: 'bs-dog-was', text: d.out ? 'Off-site' : d.known ? 'Last recorded: ' + d.areaLabel : 'Room not recorded yet. Pick where it is now.' });
       var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: d.out ? 'Back' : 'Moved' });
+      // the room code only (Lisa 12 Nov 2026: "just 4A"); Off-site is its own button, not a room
       var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': d.label + ' new room' }, [el(doc, 'option', { value: '', text: 'Pick the new room' })]
-        .concat(areas.filter(function (a) { return a.id !== d.areaId && a.dogs !== false; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label + (a.group ? '  ·  ' + a.group : '') }); }))
-        .concat(o.offSite && !d.out ? [el(doc, 'option', { value: OFF_SITE, text: 'Off-site' })] : []));
+        .concat(areas.filter(function (a) { return a.id !== d.areaId && a.dogs !== false; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label }); })));
       var err = el(doc, 'span', { class: 'bs-err' });
       var go = el(doc, 'button', { class: 'bs-btn bs-big', type: 'button', text: 'Save move' });
-      var movePane = el(doc, 'div', { class: 'bs-move' }, [sel, err, go]);
+      var offBtn = o.offSite && !d.out ? el(doc, 'button', { class: 'bs-btn', type: 'button', 'data-off-site': '1', text: 'Off-site' }) : null;
+      var movePane = el(doc, 'div', { class: 'bs-move' }, [sel, err, go].concat(offBtn ? [offBtn] : []));
       movePane.hidden = d.known || !!d.out;      // an unknown room goes straight to "pick a room"
       if (!d.known && !d.out) no.hidden = true;
       var card = el(doc, 'section', { class: 'bs-card bs-dog' + (d.out ? ' bs-away' : ''), 'data-dog': d.id }, [
@@ -330,16 +331,18 @@
       sel.addEventListener('input', function () { if (sel.value) go.setAttribute('data-moved', '1'); else go.removeAttribute('data-moved'); refreshButtons(); });
 
       var mrid = null;
-      go.addEventListener('click', function () {
+      go.addEventListener('click', function () { send(sel.value); });
+      if (offBtn) offBtn.addEventListener('click', function () { send(OFF_SITE); });
+      function send(to) {
         err.textContent = ''; result.textContent = '';
-        if (!sel.value) { err.textContent = 'Pick the new room first.'; return; }
-        go.disabled = true;
+        if (!to) { err.textContent = 'Pick the new room first.'; return; }
+        go.disabled = true; if (offBtn) offBtn.disabled = true;
         mrid = mrid || save.newRequestId();
-        var leaving = sel.value === OFF_SITE;   // off-site is a new occupancy row with no room
+        var leaving = to === OFF_SITE;   // off-site is a new occupancy row with no room
         (leaving ? save.submit('occupancy_out', { subject_id: d.id, off_site_kind: 'temporary' }, { requestId: mrid })
-          : save.submit('occupancy', { subject_id: d.id, area_id: sel.value }, { requestId: mrid })).then(function (r) {
+          : save.submit('occupancy', { subject_id: d.id, area_id: to }, { requestId: mrid })).then(function (r) {
           if (r.ok) {
-            var room = leaving ? 'Off-site' : (areas.filter(function (a) { return a.id === sel.value; })[0] || {}).label || sel.value;
+            var room = leaving ? 'Off-site' : (areas.filter(function (a) { return a.id === to; })[0] || {}).label || to;
             if (!d.out) moves.push(d.id);
             rec.done = true; rec2.done = true;
             card.className += ' bs-done';
@@ -348,12 +351,12 @@
             movePane.hidden = true;
             paintProgress(); refreshButtons();
           } else {
-            go.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
+            go.disabled = false; if (offBtn) offBtn.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
             if (r.fields) Object.keys(r.fields).forEach(function (k) { err.textContent += r.fields[k] + ' '; });
             if (r.code !== 'NETWORK') mrid = null;
           }
         });
-      });
+      }
     }
     dogs.forEach(dogCard);
 
