@@ -331,6 +331,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 6 Nov 2026 | Temperatures showed "Source:" and the reading kind, including the word actual, on history and on Outside today when the phrase was empty | "Outside today does not show the reading kind when the phrase is empty @regression" and "year chips run current first, and a day detail does not show Source or the reading kind @regression" |
 | 8 Nov 2026 | Food Reorder due listed customers who had already reordered (the page could not tell customers apart; Lisa) | "reorder due with engine v1.15.3 keys: a customer who ordered again…" |
 | 8 Nov 2026 | Dashboard Food tile showed "✓ XML" and nothing waiting while paid order #5400 waited for its Send tap (Lisa) | "Food tile: an order waiting for its Send tap…" |
+| 11 Nov 2026 | CD Hub: a medicine ask such as "identify the medicine given in February" opened Outstanding, and the same button opened Outstanding again. The round also stopped if a cabin already had its flap set | "Identify the medicine given in February opens that dog’s February record, and a second click does not return to Outstanding @regression" and "date, saving, flap, move, temperatures and history each finish or explain @regression" (tests/mocked/cdhub-round-paths.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
