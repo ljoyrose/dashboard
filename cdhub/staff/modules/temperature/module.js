@@ -71,7 +71,7 @@
     var am = p.hour < 12;
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: p.date, periodStart: londonIso(p.date, am ? '00' : '12') };
   }
-  /** A given day's morning or afternoon slot, for a missed reading entered later. */
+  /** A given day's morning or afternoon slot, for an earlier reading entered later. */
   function slotFor(dateIso, key) {
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
@@ -248,7 +248,7 @@
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
     host.textContent = '';
     host.appendChild(h('h2', { text: o.area.label }));
-    host.appendChild(h('p', { class: 'sub', text: (past ? 'Missed reading · ' + ddmmyy(slot.date) + ' ' : '') + slot.label + ' reading' + (lim.min != null ? ' · Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C' + (lim.label ? ' (' + lim.label + ')' : '') : '') }));
+    host.appendChild(h('p', { class: 'sub', text: (past ? 'Earlier reading · ' + ddmmyy(slot.date) + ' ' + slot.label : slot.label + ' reading') + (lim.min != null ? ' · Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C' + (lim.label ? ' (' + lim.label + ')' : '') : '') }));
     var banner = o.save.banner(table);
     var bannerEl = say(banner.canSave ? '' : banner.text, banner.canSave ? '' : 'warn');
     host.appendChild(bannerEl);
@@ -256,7 +256,7 @@
     var camBox = h('div'), camMsg = say('');
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
-    // A missed reading is typed from the paper sheet or a photo: the thermometer no longer shows that day's numbers.
+    // An earlier reading is typed from the paper sheet or a photo: the thermometer no longer shows that day's numbers.
     if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn, typeBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
     if (table === 'area_reading') {
@@ -319,7 +319,7 @@
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
       if (o.area.thermometerId && table === 'area_reading') f.thermometer_id = o.area.thermometerId;
-      // A missed reading is typed from a photo: saved as 'photo' (Lisa 11 Nov 2026), never shown.
+      // An earlier reading is typed from a photo: saved as 'photo' (Lisa 11 Nov 2026), never shown.
       if (!none) { f.max_c = mx; f.min_c = mn; f.read_method = cam ? 'camera' : past ? 'photo' : 'typed'; }
       if (empty) f.room_empty = 'yes';
       if (cam && !none) f.camera_value_changed = (cam.max !== mx || cam.min !== mn) ? 'true' : 'false';
@@ -349,8 +349,8 @@
     var L = window.BLDAreaLink;
     return L && links && links.length ? L.expand(rows || [], links) : (rows || []).slice();
   }
-  /* ------------------------------------------------------------------ missed reading (a past day) */
-  /* Lisa, 11 Nov 2026: entry is never closed. A missed reading can be typed later for any past slot, for every
+  /* ------------------------------------------------------------------ add earlier reading (a past day) */
+  /* Lisa, 11 Nov 2026: entry is never closed. An earlier reading can be typed later for any past slot, for every
      thermometer needed that day (BLDThermometer.neededList), retired ones included. The round itself only shows
      today's. Saved with that slot's period_start, so History and the year report put it on the right day. */
   function backfill(host, o) {
@@ -359,7 +359,7 @@
     var half = h('select', { class: 'inp', 'aria-label': 'Morning or afternoon' }, [h('option', { value: 'am', text: 'Morning' }), h('option', { value: 'pm', text: 'Afternoon' })]);
     var list = h('div'), msg = say('');
     host.textContent = '';
-    host.appendChild(h('h2', { text: 'Missed reading' }));
+    host.appendChild(h('h2', { text: 'Add earlier reading' }));
     host.appendChild(h('p', { class: 'sub', text: 'Type a reading from the paper sheet or a photo for a past morning or afternoon.' }));
     host.appendChild(h('div', { class: 'tg-row' }, [day, half]));
     host.appendChild(msg); host.appendChild(list);
@@ -549,7 +549,7 @@
       // One room, one year per read (the save script's filter), so a year of readings stays under the read limit.
       // An older script that refuses the filter gets the plain read; yearRows still picks the room and year.
       var pick = room.value.split('|'), areaId = pick[0], thermoId = pick[1] || '';
-      var f = { area_id: areaId, from: year.value + '-01-01', to: (parseInt(year.value, 10) + 1) + '-12-31' };   // to: a missed reading is saved (taken_at) after its day; yearRows keeps the year by period_start
+      var f = { area_id: areaId, from: year.value + '-01-01', to: (parseInt(year.value, 10) + 1) + '-12-31' };   // to: an earlier reading is saved (taken_at) after its day; yearRows keeps the year by period_start
       function readYear(key) {
         return c.save.read(key, f).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read(key); })
           .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
@@ -693,7 +693,7 @@
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Missed reading', onclick: function () { if (stop) stop(); stop = null; back();
+          h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
             backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
           h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }),
           h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } })
