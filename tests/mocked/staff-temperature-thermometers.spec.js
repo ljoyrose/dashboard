@@ -20,7 +20,7 @@ async function setup(page, tables, store) {
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }] } });
     const b = JSON.parse(route.request().postData());
-    if (String(b.action).indexOf('read') === 0) return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], tables } } });
+    if (String(b.action).indexOf('read') === 0) return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], tables, role: 'OWNER' } } });
     sent.push(b);
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length } } });
   });
