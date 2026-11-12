@@ -1,5 +1,5 @@
 // Temperature round on the staff page. Pretend rooms and thermometers; fake code and fake save address only.
-// Lisa, 11 Nov 2026: a thermometer that ended on 11 Nov is not in the 12 Nov round, but a missed reading for a
+// Lisa, 11 Nov 2026: a thermometer that ended on 11 Nov is not in the 12 Nov round, but an earlier reading for a
 // day it was needed (10 Nov) can still be typed on 12 Nov, and is saved for that day.
 const { test, expect } = require('../support/test');
 
@@ -47,28 +47,28 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   const cards = page.locator('.cards .card .nm');
   await expect(cards).toHaveText(['3A.1/2']);
 
-  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-10');
   await page.getByLabel('Day').dispatchEvent('change');
   await expect(cards).toHaveText(['3A.2/3 (retired 11/11/26)']);
   await cards.first().click();
-  await expect(page.getByText('Missed reading · 10/11/26 Morning reading')).toBeVisible();
+  await expect(page.getByText('Earlier reading · 10/11/26 Morning')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);
   await page.getByLabel('MAX').fill('18.5');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: missed readings are from photos
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: earlier readings are from photos
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11/11/26)']);
 });
 
-test('a missed reading cannot be for now or later: that is the round', async ({ page }) => {
+test('an earlier reading cannot be for now or later: that is the round', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-12');
   await page.getByLabel('Day').dispatchEvent('change');
   await expect(page.getByText('That is now or later: use the round.')).toBeVisible();
@@ -91,11 +91,11 @@ test('Lisa 11 Nov: how a reading was taken is saved only; the year report never 
   } finally { TABLES.area_reading = []; }
 });
 
-test('Lisa 11 Nov: a missed reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
+test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
   const sent = await setup(page);
   await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));   // afternoon: this morning is now a missed slot
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-12');
   await page.getByLabel('Day').dispatchEvent('change');
   await page.locator('.cards .card').first().click();
