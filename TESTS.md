@@ -112,6 +112,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - A dog card shows the picture in the subject `photo` cell when that cell holds a Drive file id or a Drive file URL, and the paw when the cell is empty or the picture will not load. Add photo / Change photo opens a file input that accepts images and the camera. A successful upload sends that dog's id to the save script and the card keeps the new file id. A failed upload says so on the card and leaves the card as it was. (`tests/mocked/cdhub-dog-photos.spec.js`)
 - There is no Vet link page and no Animana patient id on screen (Lisa, 12 Nov 2026: not relevant); an old #/vet address falls back to the Map.
 - Dated limits: room limits and size cut-offs are read as at the day being checked (from_date / to_date, to_date included, blank = open), with the weight on or before that day, so a later rule never makes an old placement look wrong.
+- Dog card layout A (Lisa, 12 Nov 2026): weight, medications and chip show on the card; health findings, vaccinations, DNA, litters, Moxiclear Rx and job history sit behind More, closed by default (`tests/mocked/cdhub-dog-card-summary.spec.js`).
 - A dog's room is its occupancy row with the latest moved_in, even when an older row comes later in the file. A move row with a blank classification keeps the dog's licence label from its latest labelled row, so the dog stays on site (`tests/mocked/cdhub-compliance-urgent.spec.js`).
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.

@@ -280,6 +280,15 @@ const siteEnv = () => { const env = env0(); return env; };
 const siteTap = (env, f, code) => save(env, req(env, { code: code || env.codes.staff, table: 'check_log', action: 'add_site', fields: f }));
 const allDogs = (env) => recs(env, 'BLD-subject.csv').map((r) => r.id).join('|');
 
+test('the save reply says who saved it, the same name as the row, so the tick on the item can show it', () => {
+  const env = siteEnv(); const id = addType(env, 'bowls2', { target: 'none', site_scope: 'one_line' });
+  const r = siteTap(env, { check_type_id: id, outcome: 'ok' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.ok(r.result.who);
+  assert.equal(r.result.who, rows[0].taken_by);
+});
+
 test('site tap: a job about a place stays one line, whoever is on site', () => {
   const env = siteEnv(); const id = addType(env, 'bowls', { target: 'none', site_scope: 'one_line' });
   const r = siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: allDogs(env) });
