@@ -14,8 +14,8 @@
 <script src="staff/lib/occupancy.js"></script>
 <script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/thermometer.js"></script>
-<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
@@ -866,8 +866,9 @@ function build(){
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
             min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
-            stated:!r.ruling_needed,basis:r.basis||'',note:r.note||''};
-  }).sort(function(a,b){return a.from-b.from;});
+            stated:!r.ruling_needed,basis:r.basis||'',note:r.note||'',
+            fromDate:String(r.from_date||'').slice(0,10),toDate:String(r.to_date||'').slice(0,10)};
+  }).sort(function(a,b){return a.from-b.from||b.fromDate.localeCompare(a.fromDate);});   /* two rows in force: the later from_date first */
   CD.assoc=T['BLD-association.csv']||[]; CD.prospects=T['BLD-prospect.csv']||[];
   CD.exportRoutes=T['BLD-export_route.csv']||[];
   CD.categories=T['BLD-breeder_category.csv']||[];
@@ -2378,7 +2379,7 @@ function keptReadings(date){
       +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
       +'</tbody></table>'
     :'<p class="mut">No readings for '+esc(dmy(date))+'.</p>')
-  +(function(){ var g=generalBand(); return g?'<p class="mut" style="margin-bottom:0" data-legend>Blue under '+g.min+' \u00b0C, green '+g.min+'\u2013'+g.max+' \u00b0C, red over '+g.max+' \u00b0C</p>':''; })()+'</section>'; }
+  +(function(){ var g=generalBand(date); return g?'<p class="mut" style="margin-bottom:0" data-legend>Blue under '+g.min+' \u00b0C, green '+g.min+'\u2013'+g.max+' \u00b0C, red over '+g.max+' \u00b0C</p>':''; })()+'</section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
 /* Room empty (Lisa, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
    and never counted as non-compliant. An empty mark with no reading counts as covered. */
@@ -2398,10 +2399,13 @@ function foldAreaReadings(rows){
 /* limits come from BLD-temperature_band; no readable row = 'unknown' */
 function ageYM(days){ var m=Math.floor((+days||0)/30.4375); return m<12?(m<1?(+days||0)+'d':m+'m'):Math.floor(m/12)+'y'+(m%12?' '+(m%12)+'m':''); }
 function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
-function generalBand(){ return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b); })[0]||null; }
+/* Lisa 12 Nov 2026: every limit is a dated row. A band row is in force on a day when from_date is blank or on/before it
+   and to_date is blank or on/after it; a reading is judged by the rows in force on its own day, never today's. */
+function bandInForce(b,day){ return BLDCapacity.inForce([{from_date:b.fromDate,to_date:b.toDate}],day).length===1; }   /* the shared rule (staff/lib/capacity.js) */
+function generalBand(day){ day=day||todayISO(); return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b)&&bandInForce(b,day); })[0]||null; }
 function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
  var ids=(r.subjects&&r.subjects.length)?r.subjects:(CD.dogs||[]).filter(function(d){ return d.area_id===areaId; }).map(function(d){ return d.id; });
- if(!ids.length) return generalBand();
+ if(!ids.length) return generalBand(date);
  var f=bandFor(ids,date); return f&&bandReadable(f.b)?f.b:null; }
 function tempState(min,max,band){ var lo=parseFloat(min), hi=parseFloat(max); if(arguments.length<3) band=generalBand();
  if(isNaN(lo)&&isNaN(hi)) return '';
@@ -2491,7 +2495,7 @@ function bandFor(subjectIds,onISO){
    if(young===null||a<young){ young=a; who=d; } });
  if(young===null) return null;
  for(var i=0;i<CD.tempBands.length;i++){ var b=CD.tempBands[i];
-   if(young>=b.from && young<=b.to) return {b:b,days:young,dog:who}; }
+   if(young>=b.from && young<=b.to && bandInForce(b,onISO)) return {b:b,days:young,dog:who}; }
  return null;
 }
 function actionFor(n){

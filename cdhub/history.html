@@ -12,6 +12,7 @@
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
+<script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/occupancy.js"></script>
 <script src="staff/lib/area-link.js"></script>
@@ -253,25 +254,33 @@ function readDriveFile(f){
     return gget(DRIVE_API+'/'+id+'/export?mimeType='+encodeURIComponent('text/csv')+'&supportsAllDrives=true');
   return gget(DRIVE_API+'/'+id+'?alt=media&supportsAllDrives=true');
 }
-/* Limits come from the open-ended (adult) row of BLD-temperature_band. No readable row = 'unknown'. */
-var BAND=null;
-function tempCls(min,max){
-  var lo=parseFloat(min),hi=parseFloat(max);
+/* Limits come from the open-ended (adult) rows of BLD-temperature_band. Lisa 12 Nov 2026: every limit is a dated
+   row, and a past reading is judged by the row in force on its own day (from_date blank or <= day, to_date blank or
+   >= day; two in force: the later from_date wins). No row in force = 'unknown'. BAND = today's row, for the key. */
+var BANDS=[], BAND=null;
+function bandOn(day){
+  var best=null;   /* in force: the shared rule (staff/lib/capacity.js) */
+  BLDCapacity.inForce(BANDS,String(day||'').slice(0,10)).forEach(function(b){ if(!best||b.from_date>best.from_date) best=b; });
+  return best;
+}
+function tempCls(min,max,day){
+  var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR);
   if(isNaN(lo)&&isNaN(hi))return'';
-  if(!BAND)return'unknown';
-  if(!isNaN(lo)&&lo<BAND.min)return'cold';
-  if(!isNaN(hi)&&hi>BAND.max)return'hot';
+  if(!B)return'unknown';
+  if(!isNaN(lo)&&lo<B.min)return'cold';
+  if(!isNaN(hi)&&hi>B.max)return'hot';
   return'ok';
 }
 async function loadBand(){
-  BAND=null;
+  BANDS=[]; BAND=null;
   try{
     var f=await findDriveFile('BLD-temperature_band.csv');
     if(!f)return;
     parseCSV(await readDriveFile(f)).forEach(function(r){
       var lo=parseFloat(r.min_temp),hi=parseFloat(r.max_temp);
-      if(!r.age_to_days&&!isNaN(lo)&&!isNaN(hi))BAND={min:lo,max:hi};
+      if(!r.age_to_days&&!isNaN(lo)&&!isNaN(hi))BANDS.push({min:lo,max:hi,from_date:String(r.from_date||'').slice(0,10),to_date:String(r.to_date||'').slice(0,10)});
     });
+    BAND=bandOn(TODAY_STR);
   }catch(e){console.warn('Temperature limits load failed:',e);}
 }
 async function optionalCsv(name){
@@ -403,9 +412,10 @@ function dayClass(isoDate){
   if(!r)return'nd';
   var t=parseFloat(r.max_temp);
   if(isNaN(t))return'nd';
-  if(!BAND)return'omild';
-  if(t<BAND.min)return'ocool';
-  if(t>BAND.max)return'owarm';
+  var B=bandOn(isoDate);
+  if(!B)return'omild';
+  if(t<B.min)return'ocool';
+  if(t>B.max)return'owarm';
   return'omild';
 }
 
@@ -491,7 +501,7 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
+    var cls=tempCls(t.min,t.max,day), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
     if(t.empty&&k==='out') k='eout';
     return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }
