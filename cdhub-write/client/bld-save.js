@@ -142,8 +142,8 @@
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving is on. What you send goes into the approvals queue until Lisa approves it; then it joins the records.' };
-      return { kind: 'on', canSave: true, text: 'Saving is on. What you send is added to the records straight away. It cannot be changed afterwards. If something is wrong, tell the owner.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. Lisa approves each entry.' };
+      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
     }
 
     /** Check the fields on the page. */
@@ -226,6 +226,7 @@
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
+      if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',

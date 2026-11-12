@@ -375,7 +375,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
   d.querySelector('#bw-on').click();
   await tick();
-  assert.match(d.querySelector('.bs-banner').textContent, /approvals queue until Lisa approves/);
+  assert.match(d.querySelector('.bs-banner').textContent, /Lisa approves each entry/);
   const card = d.querySelector('.bs-card[data-area="area-t1"]');
   assert.equal(card.querySelector('.bs-btn').disabled, false);
 
@@ -529,7 +529,7 @@ test('banners for the live occupancy list, the daily check log and the still-pro
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
-  assert.match(s.banner('occupancy').text, /approvals queue until Lisa approves/);
+  assert.match(s.banner('occupancy').text, /Lisa approves each entry/);
   assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
   assert.equal(s.banner('occupancy_check').kind, 'on');
   assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal
