@@ -7,6 +7,7 @@ test.use({ allowedConsole: [/404/] });
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
+const ROLE = { v: 'OWNER' };   // the role a read reply reports (STAFF PR 443)
 const TABLES = {
   area: [{ id: 'area-old', code: '3A.2/3', group_sort: '2' }, { id: 'area-new', code: '3A.1/2', group_sort: '2' }],
   subject: [], occupancy: [], subject_status: [], check_type: [], check_log: [], area_capacity: [], area_access: [], litter: [], capacity_setting: [], qr_tag: [],
@@ -31,7 +32,7 @@ async function setup(page) {
     const b = JSON.parse(route.request().postData());
     if (String(b.action).indexOf('read') === 0) {
       if (b.table && !TABLES[b.table]) return route.fulfill({ headers: CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'off' } });
-      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES } } });
+      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES, role: ROLE.v } } });
     }
     sent.push(b);
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length } } });
@@ -203,4 +204,15 @@ test('year report: a new room includes readings from the old room linked into it
     await expect(rows.first()).toContainText('11.0');
     await expect(rows.nth(1)).not.toContainText('From');
   } finally { TABLES.area_reading = []; delete TABLES.area_link; }
+});
+
+test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
+  ROLE.v = 'STAFF';
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await expect(page.getByRole('button', { name: 'Add earlier reading' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
+  } finally { ROLE.v = 'OWNER'; }
 });

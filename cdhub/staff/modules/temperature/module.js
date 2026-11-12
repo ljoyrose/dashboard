@@ -691,13 +691,16 @@
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
+      // Year report and Sensor CSV: owner codes only (Lisa). The role is the one the save script reported on the
+      // last read (save.role(), STAFF PR 443); '' or any other role hides them. The script still decides what is read.
+      var owner = !!(c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
             backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } })
-        ]);
+          owner ? h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }) : null,
+          owner ? h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
+        ].filter(Boolean));
       }
       var sub = h('div');
       function back() { host.textContent = ''; host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: start })); host.appendChild(sub); }
