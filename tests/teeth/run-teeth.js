@@ -33,7 +33,10 @@ BREAKS.filter((b) => !only || b.id === only).forEach((b, i) => {
   results.push({ ...b, outcome: run.status === 0 ? 'SURVIVED' : 'caught', note: run.status === 0 ? 'the tests did NOT notice this break' : `${failures || 'some'} test(s) failed, as they should` });
 });
 
-fs.rmSync(tmpRoot, { recursive: true, force: true });
+// Clean up the temp copy. A browser process can still be writing into it for a moment, which made rmSync fail with
+// ENOTEMPTY (10 Nov 2026) and turned a clean run red ("a deliberate break was not caught"). Retry, and never let a
+// cleanup error hide the real results below.
+try { fs.rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 6, retryDelay: 250 }); } catch (e) { console.warn('teeth: could not remove ' + tmpRoot + ' (' + e.code + '); the results below are unaffected'); }
 
 const lines = ['## Teeth check: can the tests still fail?', '', '| Result | Deliberate break | Detail |', '|---|---|---|'];
 results.forEach((r) => lines.push(`| ${r.outcome === 'caught' ? '✅ caught' : '❌ ' + r.outcome} | ${r.what} | ${r.note} |`));
