@@ -215,7 +215,7 @@
   /** The whole page. v = { T, today, esc } */
   function page(v) {
     last = v; css();
-    return '<h2>Breed Better <span class="bb-v bb-test">Testing</span></h2><div id="bbRoot">' + inner(v) + '</div>';
+    return '<h2>Breed Better <span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></h2><div id="bbRoot">' + inner(v) + '</div>';
   }
 
   /** The score on a dog card. Empty when that animal is not enrolled. */
@@ -223,7 +223,7 @@
     last = v; css();
     var r = compute(v).byId[id];
     if (!r) return '';
-    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test">Testing</span></button>';
+    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing: trial scores, not yet signed off">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></button>';
   }
 
   /* typing or a new sort redraws the rows only, so the search box keeps focus */

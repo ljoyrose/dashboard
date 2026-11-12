@@ -124,3 +124,8 @@ test('every verdict filter shows its count, 0 included', () => {
   const html = View.page({ T: tables(), today: '2026-06-01', esc });
   assert.match(html, /data-bb-filter="below_target"[^>]*>Below target <span class="cnt">0<\/span>/);
 });
+
+test('the Testing label explains itself: trial scores, not yet signed off', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing<\/span>/);
+});
