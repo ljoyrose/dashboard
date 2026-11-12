@@ -98,3 +98,29 @@ test('within a verdict, animals rank by percent of what they could earn', () => 
   const c = View.compute({ T, today: '2026-06-05', esc });
   assert.deepEqual(c.results.map((r) => [r.name, r.points_earned, r.points_available]), [['Male', 10, 10], ['Female', 10, 20]]);
 });
+
+test('seven sort choices, verdict best to worst first; no date of birth sorts last', () => {
+  assert.deepStrictEqual(View.SORTS.map((s) => s[0]), ['verdict', 'high', 'low', 'name', 'oldest', 'youngest', 'attention']);
+  const R = (name, verdict, e, a, dob) => ({ name, verdict, points_earned: e, points_available: a, dob: dob || '' });
+  const rows = [R('Cara', 'fail', 0, 10, '2020-01-01'), R('Abe', 'pass', 8, 10, '2022-05-01'), R('Bo', 'pass', 9, 10), R('Dot', 'unverified', 2, 10, '2019-03-01')];
+  const names = (k) => View.sortRows(rows, k).map((r) => r.name);
+  assert.deepStrictEqual(names('verdict'), ['Bo', 'Abe', 'Dot', 'Cara']);
+  assert.deepStrictEqual(names('high'), ['Bo', 'Abe', 'Dot', 'Cara']);
+  assert.deepStrictEqual(names('low'), ['Cara', 'Dot', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('name'), ['Abe', 'Bo', 'Cara', 'Dot']);
+  assert.deepStrictEqual(names('oldest'), ['Dot', 'Cara', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('youngest'), ['Abe', 'Cara', 'Dot', 'Bo']);
+  assert.deepStrictEqual(names('attention'), ['Cara', 'Dot', 'Abe', 'Bo']);
+});
+
+test('the list page has a name search and the sort choice', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-search/);
+  assert.match(html, /<option value="verdict" selected>Verdict, Pass to Fail<\/option>/);
+  assert.match(html, /id="bbList"/);
+});
+
+test('every verdict filter shows its count, 0 included', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-filter="below_target"[^>]*>Below target <span class="cnt">0<\/span>/);
+});
