@@ -23,6 +23,8 @@
  *   MOVES_QUEUE_UNTIL  last day (YYYY-MM-DD, London) on which a dog move goes to the approvals queue. After that
  *                    day moves go straight in. Run adminStartMovesQueue() on go-live day to set it to today + 14 days.
  *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
+ *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
+ *                    this address + # + the code. Not secret. Missing = the owner page shows the code only.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
  * are not recorded. Corrections go through the screen.
@@ -43,7 +45,8 @@ var BLD = {
     BACKUP_ON: 'BACKUP_ON',
     READ_ENABLED: 'READ_ENABLED',
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
-    MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL'
+    MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
+    INSPECT_PAGE_URL: 'INSPECT_PAGE_URL'
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
