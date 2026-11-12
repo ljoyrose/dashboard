@@ -1267,6 +1267,7 @@ function needsToday(){
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
  areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
+ closedAudit(date).forEach(function(x){ if(x.dogs) out.push({title:x.label+' is closed but in use',sub:x.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  /* foundation: work record (an open item waiting on the owner) */
  (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
   out.push({title:r.item||r.id,sub:'Outstanding'+(r.area?' · '+r.area:'')+(r.blocked_on?' · '+r.blocked_on:''),go:'work',tone:'',kind:'record'}); });
@@ -1911,6 +1912,23 @@ function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
   if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
 function roomAudit(date){ return BLDCapacity.audit(areasOn(date).map(function(a){ var ids=inCabin(a.id,date);
  return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids),reasons:roomReasons(ids)}; }),T['BLD-area_capacity.csv']||[]); }
+/* ROOM-TO-ROOM RULES (R4, Lisa 11 Nov 2026): "a room is closed while another room is in use" is a row, never code.
+   BLD-breeding_rule rule_key room.closed_when_in_use.<closed area id>, value = the area id whose use closes it, dated by
+   effective_from like every rule (a later row changes it; a later row with value "none" ends it). "In use" = a dog is in
+   that room on the date (the round, else BLD-occupancy). A closed room with a dog in it is a breach. */
+var CLOSED_PREFIX='room.closed_when_in_use.';
+function closedRules(iso){ var by={};
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var k=String(r.rule_key||'');
+  if(k.indexOf(CLOSED_PREFIX)!==0||!/^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'')||r.effective_from>iso) return;
+  var c=k.slice(CLOSED_PREFIX.length), p=by[c];
+  if(c&&(!p||r.effective_from>p.effective_from||(r.effective_from===p.effective_from&&(r.set_at||'')>=(p.set_at||'')))) by[c]=r; });
+ return Object.keys(by).map(function(c){ return {closed:c,when:String(by[c].value||'').trim(),src:by[c].source||'',from:by[c].effective_from}; })
+  .filter(function(x){ return x.when&&x.when.toLowerCase()!=='none'; }); }
+function closedAudit(iso){ var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
+ return closedRules(iso).map(function(x){ var on=inCabin(x.when,iso).length>0, n=on?inCabin(x.closed,iso).length:0;
+  return {areaId:x.closed,label:code[x.closed]||x.closed,whenId:x.when,whenLabel:code[x.when]||x.when,src:x.src,from:x.from,shut:on,dogs:n,
+   message:on?(n?code[x.closed]+' is closed while '+(code[x.when]||x.when)+' is in use, but has '+n+' dog'+(n===1?'':'s')+' in it':code[x.closed]+' is closed: '+(code[x.when]||x.when)+' is in use')
+    :code[x.closed]+' is open: '+(code[x.when]||x.when)+' is not in use'}; }); }
 function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null;
  var c=(a[access]||{})[band]; return (c && c.n!=='' && c.n!=null)?c.n:null; }
 async function accessSave(aid,mode,msgEl){
@@ -2731,10 +2749,11 @@ function pageCompliance(){
  pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
  h+=compFold('compProblems','problems','Needs a look'+cntPill(probs.length),pb);
- var rl=roomAudit(today);
- h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+ var rl=roomAudit(today), cl=closedAudit(today), clBad=cl.filter(function(x){ return x.dogs; });
+ h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length+clBad.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
   +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
+  +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src?' ('+esc(x.src)+')':'')+'</span></li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
  h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
