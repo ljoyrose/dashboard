@@ -297,7 +297,9 @@ async function loadAreaData(){
         var v={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
         var was=AREA_DAYS[date][u][slot];
         /* A merged room: two old rooms' readings in one slot. Never averaged: the lowest MIN and highest MAX, so a breach stays visible. */
-        if(was&&(was.from.length||v.from.length)&&window.BLDAreaLink){
+        /* A reading taken in the room itself wins over linked copies (same rule as Compliance, SOPS 12 Nov). */
+        if(was&&!was.from.length&&v.from.length) return;
+        if(was&&was.from.length&&v.from.length&&window.BLDAreaLink){
           var w=window.BLDAreaLink.widest(was,v);
           v={min:w.min===null?'':String(w.min),max:w.max===null?'':String(w.max),note:[was.note,v.note].filter(Boolean).join(' · '),empty:was.empty&&v.empty,from:was.from.concat(v.from.filter(function(f){ return was.from.indexOf(f)<0; }))};
         }
