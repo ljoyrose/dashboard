@@ -106,6 +106,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
 - All ten sections open (Live feed, Outstanding, Table map, Today, The round, Dogs, Areas, Litters, Vet link, Buyers).
 - Dogs, cabins, litters and weights from the sample files join up correctly.
+- Litter print cards look like kennel cards (band in the dam's size colour, Born DD/MM/YY, Sire, Pups, Room, one large code, 1, 2 or 4 per A4) and list only litters still on site. (`tests/mocked/cdhub-litter-print-card.spec.js`)
 - A dog card shows the weight change (↑ 0.3 · 12/01/26), the last medication date, DNA as clear / carrier / affected pills, and litters as dam with the last one; the litters line opens Litters for that dam. The card header shows DOB (DD/MM/YY) and Colour, the room icon stays small on a phone, and the status chips sit inside Filter so the first dog shows on a phone. (`tests/mocked/cdhub-dog-card-summary.spec.js`)
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.

@@ -81,6 +81,20 @@
         h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
         h('small', { class: 'tag', text: tag })])]);
   }
+  /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
+  function litterCard(tag, it) {
+    var l = it.l, dam = it.dam || {}, col = sizeColour(dam.size_band), rows = [], born = l.born_on || l.dob || '';
+    if (it.sire) rows.push(['Sire', it.sire]);
+    if (it.pups) rows.push(['Pups', String(it.pups)]);
+    if (it.room) rows.push(['Room', it.room]);
+    return h('article', { class: 'dcard lcard', 'data-litter': l.id, style: col ? '--c:' + col : '' }, [
+      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: it.label })]), born ? h('small', { 'data-k': 'born' }, ['Born', h('br'), dmy(born)]) : null]),
+      h('div', { class: 'dbody' }, [
+        h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
+          h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
+        h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }),
+        h('small', { class: 'tag', text: tag })])]);
+  }
   function limitsOf(areaId) {
     var acc = '', last = '';
     (T.area_access || []).forEach(function (r) { if (r.area_id === areaId && String(r.effective_from || '') >= last) { last = String(r.effective_from || ''); acc = r.access_type; } });
@@ -164,16 +178,23 @@
     opts.appendChild(btn('Whole-site code', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
     opts.appendChild(btn('Room signs', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).map(function (a) { return { id: a.id, label: a.code || a.id }; }), roomCard); }));
     opts.appendChild(btn('Dog kennel cards', function () { sheet.className = 'sheet dogs per' + per; make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
-    var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Kennel cards per A4' }, [1, 2, 4].map(function (n) {
+    var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
-        if (/\bdogs\b/.test(sheet.className)) sheet.className = 'sheet dogs per' + per; } });
+        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
-    opts.appendChild(btn('Litter cards', function () { sheet.className = 'sheet';
-      if (!(T.litter || []).length) { say('The litter list is not switched on yet.', 'warn'); return; }
-      var names = {}; T.subject.forEach(function (s) { names[s.id] = s.name; });
-      make('litter', T.litter.map(function (l) { return { id: l.id, label: 'Litter of ' + (names[l.dam_subject_id] || l.id) }; }));
+    opts.appendChild(btn('Litter cards', function () {
+      if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
+      var subj = {}, pups = {}, pupsHere = {};
+      T.subject.forEach(function (s) { subj[s.id] = s; if (s.birth_litter_id) { pups[s.birth_litter_id] = (pups[s.birth_litter_id] || 0) + 1; if (onSite[s.id]) pupsHere[s.birth_litter_id] = true; } });
+      /* litters still here: a pup on site, or the dam on site with no pups entered yet. No date cut-off. */
+      var list = T.litter.filter(function (l) { return pupsHere[l.id] || (!pups[l.id] && onSite[l.dam_subject_id]); })
+        .sort(function (a, b) { return String(b.born_on || b.dob || '').localeCompare(String(a.born_on || a.dob || '')); });
+      if (!list.length) { sheet.className = 'sheet'; sheet.textContent = ''; say('No litters on site.', 'warn'); return; }
+      sheet.className = 'sheet dogs litters per' + per;
+      make('litter', list.map(function (l) { var dam = subj[l.dam_subject_id] || {}, sire = subj[l.sire_subject_id] || {};
+        return { id: l.id, label: 'Litter of ' + (dam.name || l.id), l: l, dam: dam, sire: sire.name || '', pups: pups[l.id] || 0, room: roomOf[l.dam_subject_id] || '' }; }), litterCard);
     }));
     opts.appendChild(btn('Thermometer cards', thermoCards));
     opts.appendChild(btn('Add thermometer', addThermometer));
