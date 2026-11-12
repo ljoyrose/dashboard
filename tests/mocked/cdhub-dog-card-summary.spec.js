@@ -145,3 +145,16 @@ test.describe('CD Hub dog card summary', () => {
     expect(k).toEqual(['clear', 'clear', 'affected', 'carrier', '']);
   });
 });
+
+test('Areas: a room\'s size columns come from its own capacity rows, never fixed kg bands', async ({ page, guard }) => {
+  const w = guard.world;
+  const AREA = csv('id,tenant_id,code,grouping,group_sort,area_value,area_unit_id,m2_confirmed,m2_note,use,source', ['ar-a,t,Room A,A,1,10,u-m2,yes,,,', 'ar-b,t,Room B,A,1,8,u-m2,yes,,,']);
+  put(w, 'BLD-area.csv', AREA);
+  put(w, 'BLD-area_capacity.csv', csv('id,area_id,access_type,size_band,max_dogs,basis', [
+    'c1,ar-a,limited,Pretend medium band (medium),2,', 'c2,ar-a,limited,Pretend small band (small),3,', 'c3,ar-a,limited,small + pups,1,']));
+  await HUBS.cdhub.open(page, guard);
+  await page.evaluate(() => go('areas/ar-a'));
+  await expect(page.locator('[data-room="ar-a"] thead th')).toHaveText(['flap', 'Small', 'Medium', 'Small + pups']);
+  await page.evaluate(() => go('areas/ar-b'));
+  await expect(page.locator('[data-nolimits="ar-b"]')).toHaveText('no limits recorded');
+});

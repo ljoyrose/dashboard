@@ -1961,8 +1961,12 @@ var FAMNAME={};
 function famSort(g){ var r=CD.areas.filter(function(a){return a.grouping===g;})[0];
  return r?parseInt(r.group_sort,10):99; }
 function cabSort(x){ var n=(x.match(/\d+/g)||[]).map(Number); return n.length?n[n.length-1]:0; }
-var BANDS=['<10kg (small)','10-25kg (medium)','25kg+ (large)','small + pups','medium + pups','large + pups'];
-var PUPBAND={'small + pups':1,'medium + pups':1,'large + pups':1};
+/* the room's size columns come from its own BLD-area_capacity rows (no kg written here); small, medium, large, then + pups */
+function bandsFor(aid){ var a=CD.cap[aid]||{}, seen={}, out=[];
+ ['free','limited'].forEach(function(m){ Object.keys(a[m]||{}).forEach(function(b){ if(!seen[b]){ seen[b]=1; out.push(b); } }); });
+ var rank=function(b){ var k=BLDCapacity.band(b); return (['small','medium','large','small+pups','medium+pups','large+pups'].indexOf(k)+1)||9; };
+ return out.sort(function(x,y){ return rank(x)-rank(y); }); }
+function bandLabel(b){ var k=BLDCapacity.band(b); return k?capFirst(k.replace('+pups',' + pups')):b; }
 
 function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_type;
  var r=CD.accessCsv[aid]; return (r&&r.access_type)||''; }
@@ -2048,15 +2052,16 @@ function pageAreas(){
     +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>'+jobsHist({area_id:a.id});
 
    {
-    var modes = cur ? [cur] : ['free','limited'];
-    h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
+    var modes = cur ? [cur] : ['free','limited'], bands=bandsFor(a.id);
+    if(!bands.length) h+='<p data-nolimits="'+esc(a.id)+'"><span class="pill no">no limits recorded</span></p>';
+    else h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+bands.map(function(b){return '<th title="'+esc(b)+'">'+esc(bandLabel(b))+'</th>';}).join('')+'</tr></thead><tbody>'
      +modes.map(function(mo){
         return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
-         +BANDS.map(function(b){ var v=capFor(a.id,b,mo);
+         +bands.map(function(b){ var v=capFor(a.id,b,mo);
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
-     +'</tbody></table></div>'
-     +(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
+     +'</tbody></table></div>';
+    h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
      +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];
         return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.sizeWord||d.size)+esc(d.name||sid)+'</a>'
