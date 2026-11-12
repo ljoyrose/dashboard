@@ -857,6 +857,12 @@ var READABLE = {
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
   litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // 12 Nov 2026 (DOGCARD): the kennel print card shows Colour and Microchip. Read only as far as visibility rows
+  // allow; the planned rows are for aud-admin (the owner) only.
+  coat_colour:     { file: 'BLD-coat_colour.csv',     vis: 'coat_colour',     authorCol: '',            dateCol: '' },
+  coat_pattern:    { file: 'BLD-coat_pattern.csv',    vis: 'coat_pattern',    authorCol: '',            dateCol: '' },
+  nose_pigment:    { file: 'BLD-nose_pigment.csv',    vis: 'nose_pigment',    authorCol: '',            dateCol: '' },
+  microchip:       { file: 'BLD-microchip.csv',       vis: 'microchip',       authorCol: '',            dateCol: '' },
   // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
   temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
   sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
