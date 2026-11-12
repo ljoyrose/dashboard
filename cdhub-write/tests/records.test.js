@@ -8,8 +8,8 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const GUEST_HEADER = ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'];
-const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'];
-const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'];
+const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'];
+const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'];
 
 const env0 = () => {
   const env = standardEnv({ props: { TABLE_ON_guest_reading: 'true', TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', READ_ENABLED: 'true' } });
@@ -300,6 +300,20 @@ test('site tap: a job about dogs writes one line per dog, and isolation, off-sit
   assert.deepEqual(rows.map((x) => x.subject_id), ['sub-test-b']);
   assert.equal(rows[0].how_recorded, 'site_tap');
   assert.ok(rows[0].taken_by);
+});
+
+test('room tap: a room job about dogs writes one line per ticked dog in that room, as scanned', () => {
+  const env = siteEnv(); const id = addType(env, 'exercise', { target: 'area', site_scope: 'per_dog' });
+  const r = siteTap(env, { check_type_id: id, area_id: 'area-t1', outcome: 'ok', how_recorded: 'scanned', dog_ids: 'sub-test-a|sub-test-b' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.saved, 1);
+  assert.equal(r.result.left_out.no_room, 1);
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.deepEqual(rows.map((x) => x.subject_id), ['sub-test-b']);
+  assert.equal(rows[0].area_id, 'area-t1'); assert.equal(rows[0].how_recorded, 'scanned');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b' }).code, 'INVALID');
+  const clean = addType(env, 'cleaned', { target: 'area' });
+  assert.equal(siteTap(env, { check_type_id: clean, area_id: 'area-t1', outcome: 'ok', dog_ids: 'sub-test-b' }).code, 'INVALID');
 });
 
 test('site tap: a repeat tap saves nothing new; no one eligible is refused', () => {

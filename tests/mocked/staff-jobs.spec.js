@@ -14,6 +14,7 @@ const TYPES = [
   J('bowls', 'Bowls', 'none', { every_days: '1', site_scope: 'one_line' }),
   J('walk', 'Walk', 'none', { every_days: '1', site_scope: 'per_dog', not_in_areas: 'none' }),
   J('toys', 'Toys', 'none'),
+  J('exercise', 'Exercise', 'area', { every_days: '1', site_scope: 'per_dog' }),
   J('report', 'Report', 'optional', { note_label: 'What happened?' })
 ];
 const TABLES = {
@@ -127,4 +128,115 @@ test('jobs are listed A-Z, with a group where its name falls, whatever is late',
   await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Weigh']);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
+});
+
+test('a room job about dogs lists the room\'s dogs ticked and saves only those left ticked', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const card = page.locator('[data-job="exercise"]');
+  await expect(card.getByRole('checkbox')).toHaveCount(2);
+  await card.getByRole('checkbox', { name: 'Pretend B' }).uncheck();
+  await card.getByRole('button', { name: /^Done/ }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].action).toBe('add_site');
+  expect(sent[0].fields.dog_ids).toBe('dog-1');
+  expect(sent[0].fields.area_id).toBe('area-1');
+  expect(sent[0].fields.how_recorded).toBe('scanned');
+});
+
+test('a scanned room has a Temperature button that opens the temperature screen', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await page.getByRole('button', { name: 'Move dogs' }).click();
+  await page.getByRole('button', { name: 'Temperature' }).click();
+  await expect(page).toHaveURL(/#m\/temperature$/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bld.move.room')).areaId)).toBe('area-1');
+});
+
+test('a thermometer scan opens the temperature round at that thermometer, and saves nothing', async ({ page }) => {
+  const sent = await setup(page, { qr_tag: TABLES.qr_tag.concat([{ tag: 'THERMO23', kind: 'thermometer', ref_id: 'thm-1', active: 'true' }]) });
+  await page.goto('cdhub/staff/#s/THERMO23');
+  await expect(page).toHaveURL(/#m\/temperature$/);
+  const t = await page.evaluate(() => JSON.parse(localStorage.getItem('bld.temp.thermometer')));
+  expect(t.thermometerId).toBe('thm-1');
+  expect(Math.abs(Date.now() - t.at)).toBeLessThan(60000);
+  expect(sent).toHaveLength(0);
+});
+
+test('a litter code opens that litter\'s jobs and saves against the litter', async ({ page }) => {
+  const sent = await setup(page, {
+    check_type: TYPES.concat([J('socialise', 'Socialisation', 'litter', { every_days: '1' })]),
+    litter: [{ id: 'lit-1', dam_subject_id: 'dog-1' }],
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }])
+  });
+  await page.goto('cdhub/staff/#s/LITTAG22');
+  await expect(page.getByRole('heading', { name: 'Litter of Pretend A' })).toBeVisible();
+  await expect(page.locator('[data-job]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Done: Socialisation' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-socialise', litter_id: 'lit-1', outcome: 'ok', how_recorded: 'scanned' } });
+  expect(sent[0].fields.subject_id).toBeUndefined();
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await expect(page.locator('[data-job="socialise"]')).toHaveCount(0);
+});
+
+test('a litter code with no litter jobs goes on to Move dogs as before', async ({ page }) => {
+  await setup(page, { litter: [{ id: 'lit-1', dam_subject_id: 'dog-1' }], qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }]) });
+  await page.goto('cdhub/staff/#s/LITTAG22');
+  await expect(page.locator('[data-job]')).toHaveCount(0);
+  await expect(page.getByText('Scan a room sign first')).toBeVisible();
+});
+
+test('a whole-site clean ticks each room\'s daily clean, but never an isolation room', async ({ page }) => {
+  const types = TYPES.concat([J('site_clean', 'Whole site cleaned', 'none', { every_days: '1', site_scope: 'one_line', includes: 'clean', not_in_areas: 'area-iso' })]);
+  const today = new Date().toISOString().slice(0, 10);
+  const log = { id: 'clg-9', check_type_id: 'cty-site_clean', outcome: 'ok', how_recorded: 'site_tap', taken_at: today + 'T09:00:00Z' };
+  const over = {
+    check_type: types, check_log: [log], area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }],
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }])
+  };
+  await setup(page, over);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await expect(page.locator('[data-job="clean"] .ds')).toContainText('Whole site cleaned');
+  await expect(page.locator('[data-job="clean"] .ds')).toContainText('Next');
+  await page.goto('cdhub/staff/#s/ISOTAG22');
+  await expect(page.locator('[data-job="clean"] .ds')).toHaveText('Due');
+});
+
+test('a job with form questions opens its form, needs the required answers, and sends them with the record', async ({ page }) => {
+  const F = (field_key, label, kind, extra) => Object.assign({ id: 'cfd-' + field_key, type_key: 'weigh', field_key, label, kind, required: 'false', sort: '', active: 'true', effective_from: '2026-01-01' }, extra || {});
+  const sent = await setup(page, { check_field: [
+    F('stool', 'Stool', 'choice', { choices: 'Normal|Loose', required: 'true', sort: '1' }),
+    F('eating', 'Eating well', 'yesno', { sort: '2' }),
+    F('old', 'Old question', 'text', { active: 'false' }),
+    F('walk', 'Walk', 'text', { type_key: 'walk' })
+  ] });
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  const card = page.locator('[data-job="weigh"]');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect(card.locator('[data-field]')).toHaveCount(2);
+  await expect(card.locator('[data-field="old"]')).toHaveCount(0);
+  await card.getByLabel('Amount (kg)').fill('21.5');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect(card.getByText('This is needed: Stool.')).toBeVisible();
+  expect(sent).toHaveLength(0);
+  await card.getByLabel('Stool').selectOption('Loose');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].action).toBe('add');
+  expect(sent[0].values).toEqual({ stool: 'Loose' });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1].values).toBeUndefined();
+});
+
+test('a room job set for one room only shows on that room\'s scan', async ({ page }) => {
+  await setup(page, { check_type: TYPES.concat([J('iso_clean', 'Isolation clean', 'area', { every_days: '1', only_in_areas: 'area-iso' })]),
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }]), area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }] });
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await expect(page.locator('[data-job="clean"]')).toBeVisible();
+  await expect(page.locator('[data-job="iso_clean"]')).toHaveCount(0);
+  await page.goto('cdhub/staff/#s/ISOTAG22');
+  await expect(page.locator('[data-job="iso_clean"]')).toBeVisible();
 });

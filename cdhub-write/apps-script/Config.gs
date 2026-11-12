@@ -45,6 +45,7 @@ var BLD = {
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL'
   },
+  RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
     MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
     MAX_TEXT_CHARS: 500,
@@ -52,6 +53,9 @@ var BLD = {
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends
     DUP_WINDOW_MIN: 30,     // a second reading for the same room inside this window is refused
     PERIOD_MAX_AGE_HOURS: 168,
+    // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
+    // a section, the legal period, else this many years. Used only as that fallback.
+    RETENTION_DEFAULT_YEARS: 6,
     REQUEST_CACHE_SEC: 21600,
     LOCK_WAIT_MS: 20000,
     TEMP_MIN: -30,

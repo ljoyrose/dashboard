@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Approvals queue</title>
 <style>
-  :root{--bg:var(--ljr-cream,#FAF7F2);--card:#fff;--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#6B645C);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#217A2D);--bad:var(--ljr-2-text,#C32924);--warn:var(--ljr-3-text,#9E5802)}
-  @media (prefers-color-scheme:dark){:root{--bg:var(--ljr-cream,#FAF7F2);--card:var(--ljr-paper,#FFFEFB);--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#6B645C);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#217A2D);--bad:var(--ljr-2-text,#C32924);--warn:var(--ljr-3-text,#9E5802)}}
+  :root{--bg:var(--ljr-cream,#FAF7F2);--card:#fff;--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#615A53);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#1C6A27);--bad:var(--ljr-2-text,#AF2420);--warn:var(--ljr-3-text,#894C01)}
+  @media (prefers-color-scheme:dark){:root{--bg:var(--ljr-cream,#FAF7F2);--card:var(--ljr-paper,#FFFEFB);--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#615A53);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#1C6A27);--bad:var(--ljr-2-text,#AF2420);--warn:var(--ljr-3-text,#894C01)}}
   body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
   main{max-width:640px;margin:0 auto}
   h1{font-size:22px;margin:0 0 4px}
@@ -33,7 +33,7 @@
   <h1 style="margin-top:28px">Edit an entry (owner only)</h1>
   <p class="sub">Overwrites a wrong entry <b>in place</b>. <b>No record of the old value is kept</b> by this system. Staff cannot do this: they can only add rows, and they tell you about a wrong entry.</p>
   <div class="card">
-    <select id="ed-table" aria-label="Which list"><option value="area_reading">Room temperatures</option><option value="occupancy">Where the dogs are</option></select>
+    <select id="ed-table" aria-label="Which list"><option value="area_reading">Room temperatures</option><option value="occupancy">Where the dogs are</option><option value="thermometer">Thermometers</option><option value="requirement">Needs</option><option value="area_link">Room links</option></select>
     <button class="ok" id="ed-show" type="button">Show newest entries</button>
     <div class="msg" id="ed-msg"></div>
   </div>

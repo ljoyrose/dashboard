@@ -4,7 +4,8 @@
  *
  * Reads two check_type columns that are NOT on the sheet yet. Until they are, every job is simply "as needed":
  *   every_days  whole number of days between jobs; blank means as needed
- *   includes    type_keys this job also covers, separated by | (a full groom can restart nails and ears)
+ *   includes    type_keys this job also covers, separated by | (a full groom can restart nails and ears;
+ *               a whole-site clean can restart each room's daily clean, except rooms in its not_in_areas)
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -51,18 +52,32 @@
     return (logs || []).filter(function (r) { return !replaced[r.id]; });
   }
 
+  /* a room job about dogs: one room tap saves one line for each dog ticked */
+  function perDogRoom(job) { return job.target === 'area' && job.site_scope === 'per_dog'; }
+  /* only_in_areas: room ids by |, the only rooms a room job belongs to (isolation jobs); blank = every room */
+  function inRooms(job, areaId) { var only = listOf(job.only_in_areas); return !only.length || only.indexOf(areaId || '') >= 0; }
   function appliesTo(job, target) {
     var t = job.target;
-    if (target.subject_id) return t === 'dog' || t === 'either';
-    if (target.area_id) return t === 'area' || t === 'either';
+    if (target.litter_id) return t === 'litter';
+    if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea));
+    if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
   }
-  function sameTarget(row, target) {
+  function listOf(v) { return String(v || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
+  /* a whole-site job (target none) that includes room jobs restarts them in every room, except the rooms it never covers (isolation) */
+  function siteCoversRoom(version, target) {
+    return !!target.area_id && !target.subject_id && version.target === 'none' && includesOf(version).length > 0 &&
+      listOf(version.not_in_areas).indexOf(target.area_id) < 0;
+  }
+  function sameTarget(row, target, version) {
+    if (perDogRoom(version)) return target.subject_id ? row.subject_id === target.subject_id : (row.area_id || '') === (target.area_id || '');
+    if (version.target === 'litter') return (row.litter_id || '') === (target.litter_id || '');
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
   /**
-   * Every job for one dog ({subject_id}), one room ({area_id}) or the whole site ({}).
+   * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
+   * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */
@@ -73,9 +88,11 @@
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
-      if (!version || log.outcome === 'not_done' || !sameTarget(log, target)) return;
+      if (!version || log.outcome === 'not_done') return;
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
+      if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
+      if (!sameTarget(log, target, version)) return;
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
@@ -87,5 +104,5 @@
     });
   }
 
-  return { forTarget: forTarget, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, perDogRoom: perDogRoom, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

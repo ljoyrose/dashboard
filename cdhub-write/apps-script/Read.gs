@@ -94,6 +94,28 @@ function readPolicy_(tenant) {
   return f.records.filter(function (r) { return !r.tenant_id || r.tenant_id === tenant; });
 }
 
+/**
+ * An optional narrowing of a read: {area_id, from, to}. It can only ever show FEWER rows than the permissions allow.
+ * from/to are London days (YYYY-MM-DD, both included) on the list's date column. Anything not understood is refused.
+ */
+function readFilter_(f, rd, header) {
+  var out = { area_id: '', from: '', to: '' };
+  if (f === undefined || f === null) return out;
+  var bad = err_('BAD_FILTER', 'That filter was not understood.');
+  if (typeof f !== 'object' || Array.isArray(f)) throw bad;
+  for (var k in f) {
+    if (!Object.prototype.hasOwnProperty.call(f, k)) continue;
+    if (!Object.prototype.hasOwnProperty.call(out, k)) throw bad;
+    var v = f[k] === undefined || f[k] === null ? '' : String(f[k]).trim();
+    if (v === '') continue;
+    if (k === 'area_id') { if (!ID_RE_.test(v) || header.indexOf('area_id') < 0) throw bad; }
+    else if (!isRealDate_(v) || !rd.dateCol) throw bad;
+    out[k] = v;
+  }
+  if (out.from && out.to && out.from > out.to) throw bad;
+  return out;
+}
+
 /** Main entry for a read. Returns {table, fields, rows, ...} or throws err_. */
 function sinkRead_(req) {
   var now = new Date(), nowMs = now.getTime();
@@ -104,7 +126,7 @@ function sinkRead_(req) {
   if (!Object.prototype.hasOwnProperty.call(READABLE, key)) {
     throw err_('FILE_NOT_ALLOWED', 'That is not a list the system can show you.');
   }
-  if (who.role === ROLE_GUEST && key !== 'area') throw err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
+  if (who.role === ROLE_GUEST && key !== 'area' && key !== 'requirement') throw err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
   var rd = READABLE[key];
   var audiences = { role: audienceFor_(who.role), person: who.id ? 'person:' + who.id : '' };
   var denied = err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
@@ -121,6 +143,7 @@ function sinkRead_(req) {
   var fields = data.header.filter(function (c) { return access.fields[c] === true && c !== 'tenant_id'; });
   if (!fields.length) throw denied;
 
+  var flt = readFilter_(req.filter, rd, data.header);
   var sc = access.scope, cutoff = sc.days ? nowMs - sc.days * 86400000 : 0;
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0;
   var rows = [], truncated = false;
@@ -132,13 +155,18 @@ function sinkRead_(req) {
       var t = Date.parse(r[rd.dateCol]);
       if (isNaN(t) || t < cutoff) continue;
     }
+    if (flt.area_id && r.area_id !== flt.area_id) continue;
+    if (flt.from || flt.to) {
+      var day = String(r[rd.dateCol] || '').slice(0, 10);     // dates are saved in London time, so this is the London day
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || (flt.from && day < flt.from) || (flt.to && day > flt.to)) continue;
+    }
     if (rows.length >= BLD.LIMITS.READ_MAX_ROWS) { truncated = true; break; }
     var o = {};
     fields.forEach(function (c) { o[c] = r[c]; });
     rows.push(o);
   }
   return {
-    table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated,
+    table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated, role: who.role,   // the caller's own role, for showing buttons; never anyone else's
     scope: sc.kind === 'all' ? 'all rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
     as_of: londonIso_(now)
   };

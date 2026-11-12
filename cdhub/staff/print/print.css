@@ -4,3 +4,42 @@
 .qcard.big{grid-column:1/-1;max-width:320px;margin:0 auto}.qcard.big b{font-size:34px}
 .opts{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 @media print{.noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}.sheet{grid-template-columns:repeat(3,1fr)}}
+.qcard .room{display:block;font-size:14px;font-weight:600}
+/* Lisa's "Dog Card Print-outs" v4. Size colours come from rule rows; these only turn a colour word into the print shade. */
+:root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon)}
+.per{display:inline-flex;gap:6px}.per [aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+.sheet.dogs{display:grid;gap:10px;grid-template-columns:1fr}
+.sheet.dogs.per2{grid-template-columns:1fr 1fr}.sheet.dogs.per4{grid-template-columns:1fr 1fr}
+.dcard{--c:#57504A;background:#fff;color:var(--ljr-8);border:1px solid #C7C0B4;border-radius:10px;overflow:hidden;break-inside:avoid;display:flex;flex-direction:column;font-family:"Lexend",system-ui,sans-serif}
+.dcard .band{background:var(--c);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dcard .who{display:flex;align-items:center;gap:8px;min-width:0}.dcard .who b{font-size:30px;line-height:1.05;overflow-wrap:break-word;hyphens:manual}
+.dcard .band small{flex:none;font-size:16px;font-weight:600;text-align:right;white-space:nowrap}
+.dcard .sex svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
+.dcard .dbody{padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.dcard .cside{display:grid;grid-template-columns:40% 1fr;gap:12px;width:100%}
+.dcard .photo{min-height:110px;border:2px dashed var(--ljr-0-icon);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ljr-0-text)}
+.dcard dl{margin:0;display:grid;gap:8px;align-content:space-evenly}.dcard dt{color:var(--ljr-0-text);font-size:13px}.dcard dd{margin:0;font-weight:600;font-size:20px}
+.dcard .code svg,.rcard .code svg{width:100%;max-width:300px;height:auto;display:block;margin:0 auto}
+.dcard .tag,.rcard .tag{font-size:11px;color:var(--ljr-0-text)}
+.sheet.rooms{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.rcard{background:#fff;color:var(--ljr-8);border:1px solid #C7C0B4;border-radius:10px;padding:12px;text-align:center;break-inside:avoid}
+.rcard>b{display:block;font-size:28px}
+.rcard .limits{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}
+.sz{--c:#57504A;display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:2px solid var(--c);border-radius:12px;font-weight:600;font-size:13px;color:var(--c)}
+.sz i{width:12px;height:12px;border-radius:50%;background:var(--c)}
+@media print{@page{size:A4;margin:8mm}
+ .dcard,.rcard{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .sheet.dogs.per1 .dcard{height:277mm;page-break-after:always}.sheet.dogs.per1 .dcard .code svg{max-width:150mm}.sheet.dogs.per1 .dcard .who b{font-size:52px}
+ .sheet.dogs.per2{grid-template-columns:1fr 1fr}.sheet.dogs.per2 .dcard{height:190mm}
+ .sheet.dogs.per4{grid-template-columns:1fr 1fr}.sheet.dogs.per4 .dcard{height:136mm}
+ .sheet.rooms{grid-template-columns:1fr 1fr}}
+.dcard .chipline{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--ljr-0-text)}
+.dcard .chipline b{font-size:20px;color:var(--ljr-8);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dcard .jobs{width:100%;display:flex;flex-wrap:wrap;gap:6px 14px}
+.dcard .job{display:flex;align-items:center;gap:6px;font-size:16px}
+.dcard .job:before{content:"";width:5px;height:20px;background:var(--c);border-radius:3px}
+.dcard .lst{width:100%;list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}.dcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
+.rcard .lst{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px;text-align:left}
+.rcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
+.rcard .lst span{color:var(--ljr-0-text)}
+@media print{.sheet.dogs.per1 .dcard .chipline b{font-size:36px}.sheet.dogs.per1 .dcard .job{font-size:22px}}
