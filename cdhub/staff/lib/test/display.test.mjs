@@ -15,4 +15,3 @@ assert.equal(H(null), '');
   const out = H('Room use (' + p + ')');
   assert.equal(out.includes(p), false, p + ' remained in ' + out);
 });
-console.log('display.hideSource ok');

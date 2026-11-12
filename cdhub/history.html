@@ -102,7 +102,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.empty{background:transparent}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.unknown,.sd.unknown{background:var(--soft);border:1px dashed var(--line)}
-.d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 1px var(--ljr-5-text)}.d.warn{background:var(--ljr-3)}.d.nolimit{background:var(--soft);border:1px dashed var(--line)}
+.d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 1px var(--ljr-5-text)}.d.warn{background:var(--ljr-3)}.d.miss{background:var(--soft);border:2px solid var(--ljr-3)}.d.nolimit{background:var(--soft);border:1px dashed var(--line)}
 .d.ocool{background:var(--ljr-6-tint)}.d.omild{background:var(--card);border:1px solid var(--line)}.d.owarm{background:var(--ljr-4-tint)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
 
@@ -114,7 +114,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .sd{height:14px;min-width:3px;flex:1;border-radius:2px;cursor:default;background:var(--soft)}
 .sd:not(.future):not(.nd){cursor:pointer}
 @media(hover:hover){.sd:not(.future):not(.nd):hover{transform:scaleY(1.5);z-index:2}}
-.sd.allok{background:var(--ljr-5-tint)}.sd.warn{background:var(--ljr-3)}.sd.nolimit{background:var(--soft)}
+.sd.allok{background:var(--ljr-5-tint)}.sd.warn{background:var(--ljr-3)}.sd.miss{background:var(--soft);border:2px solid var(--ljr-3)}.sd.nolimit{background:var(--soft)}
 .sd.ocool{background:var(--ljr-6-tint)}.sd.omild{background:var(--card);border:1px solid var(--line)}.sd.owarm{background:var(--ljr-4-tint)}
 .sd.future{background:var(--paper);border:1px solid var(--line);opacity:.3;cursor:default}
 .smlbls{display:flex;gap:1px;padding-left:30px;margin-bottom:3px}
@@ -143,7 +143,7 @@ button.mitem{display:block;width:100%;text-align:left;font:inherit;color:inherit
 .dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
 .dr:last-child{border-bottom:none}
 .dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:14px 0 2px;letter-spacing:.04em}
-/* Calm by rule (Lisa 11 Nov): no red anywhere; orange (.warn) only for a reading outside its limit or a missed needed one. */
+/* Calm by rule (Lisa 11 Nov / 12 Nov): no red anywhere; solid orange (.warn) = reading outside its limit; orange outline (.miss) = a needed reading was missed. */
 .warn{color:var(--ljr-3-text);font-weight:600}
 .tick{color:var(--ljr-5-text)}
 .due{color:var(--muted)}
@@ -263,6 +263,19 @@ function readDriveFile(f){
    BAND = today's adult row, for the key. */
 var BANDS=[], BAND=null, SUBJ_DOB={}, OCC_BY_DOG={};
 function num(v){ if(v===''||v==null) return null; var n=parseFloat(v); return isNaN(n)?null:n; }
+/* ISO first; otherwise a D/M/Y date (Drive / sheet export). Used so a past day still matches its readings and limits. */
+function isoDay(v){
+  var s=String(v==null?'':v).trim(), m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(!m) return '';
+  var y=m[3].length===2?'20'+m[3]:m[3], mo=('0'+m[2]).slice(-2), d=('0'+m[1]).slice(-2);
+  return y+'-'+mo+'-'+d;
+}
+function readingWhen(at){
+  var s=String(at||'').trim(), day=isoDay(s), tm=s.match(/[T ](\d{1,2}):/), hr=tm?parseInt(tm[1],10):NaN;
+  return {day:day, slot:(isNaN(hr)||hr<12)?'am':'pm'};
+}
 function daysBetween(a,b){ var x=Date.parse(a+'T00:00:00Z'), y=Date.parse(b+'T00:00:00Z'); return isNaN(x)||isNaN(y)?null:Math.round((y-x)/86400000); }
 /* the room a dog was in on a day: its occupancy row with the latest moved_in on or before the day (rows are never
    edited; a move adds a row), unless that row's moved_out is before the day */
@@ -287,8 +300,12 @@ function youngestCalc(aid,day){
   return young;
 }
 function bandOn(day,aid){
-  day=String(day||'').slice(0,10);
+  day=isoDay(day)||String(day||'').slice(0,10);
   var on=BLDCapacity.inForce(BANDS,day);
+  if(!on.length){
+    /* No dated row covers this day: use standing (unended) rows so a from_date of the day the limit was typed does not leave earlier readings uncoloured (July 2026 heat map). */
+    on=BANDS.filter(function(b){ var t=isoDay(b.to_date); return !t||day<=t; });
+  }
   var own=aid?on.filter(function(b){ return b.area_id===aid; }):[];
   var rows=own.length?own:on.filter(function(b){ return !b.area_id; });
   if(!rows.length) return null;
@@ -320,7 +337,7 @@ async function loadBand(){
     parseCSV(await readDriveFile(f)).forEach(function(r){
       var lo=num(r.min_temp),hi=num(r.max_temp);
       if(lo!==null&&hi!==null)BANDS.push({min:lo,max:hi,age_from:num(r.age_from_days),age_to:num(r.age_to_days),area_id:r.area_id||'',
-        from_date:String(r.from_date||'').slice(0,10),to_date:String(r.to_date||'').slice(0,10)});
+        from_date:isoDay(r.from_date),to_date:isoDay(r.to_date)});
     });
     BAND=bandOn(TODAY_STR);
   }catch(e){console.warn('Temperature limits load failed:',e);}
@@ -348,8 +365,8 @@ async function loadAreaData(){
       if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
-        var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
-        var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
+        var at=String(r.period_start||r.taken_at||''), when=readingWhen(at); if(!r.area_id||!when.day)return;   /* period_start: a reading typed later belongs to its own slot */
+        var date=when.day,slot=when.slot;
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         var u=unitFor(r.area_id,r.thermometer_id);
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
@@ -581,7 +598,8 @@ function daySummary(day){
 function indoorDayClass(day){
   if(day>TODAY_STR) return 'future';
   var n=daySummary(day);
-  if(n.out||n.miss||n.swap) return 'warn';
+  if(n.out||n.swap) return 'warn';   /* a reading outside the limit (or min/max swapped) beats a miss on the same day */
+  if(n.miss) return 'miss';
   if(!n.read) return 'nd';
   if(n.nolimit) return 'nolimit';
   return 'allok';
@@ -601,8 +619,9 @@ function slotHtml(label,s){
 function roomLine(x,withNotes){
   var parts=[slotHtml('AM',x.am),slotHtml('PM',x.pm)].filter(Boolean);
   var notes='';
-  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if(p[1].k==='out') notes+='<span class="note warn">'+p[0]+' what was done: '+esc(p[1].note||'not recorded')+'</span>'; });
-  return '<div class="rl"><b>'+esc(x.name)+'</b> · '+parts.join(' · ')+notes+'</div>';
+  var name=withNotes?String(x.name||'').replace(/ \(from [^)]+\)$/,''):x.name;
+  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if(p[1].k==='out'&&p[1].note) notes+='<span class="note warn">'+p[0]+' what was done: '+esc(p[1].note)+'</span>'; });
+  return '<div class="rl"><b>'+esc(name)+'</b> · '+parts.join(' · ')+notes+'</div>';
 }
 function outsideLine(day){
   var r=DAYS[day]; if(!r) return '';
@@ -610,7 +629,7 @@ function outsideLine(day){
   return (hi||'–')+' / '+(lo||'–')+' °C'+(rain!==''?', rain '+rain+' mm':'');
 }
 function stateWord(cls){
-  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',allok:'In limit',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
+  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
 function monthCal(y, classOf, kind){
   var md=mdays(y);
@@ -741,7 +760,8 @@ function legend(){
   var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
   return '<div class="legend">'
     +'<div class="leg">'+sq('background:var(--ljr-5-tint);border:1px solid var(--ljr-5-text)')+'In limit</div>'
-    +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit or missed</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit</div>'
+    +'<div class="leg">'+sq('background:var(--soft);box-shadow:inset 0 0 0 2px var(--ljr-3)')+'Missed</div>'
     +'<div class="leg">'+sq('background:var(--soft);border:1px solid var(--line)')+'No readings</div>'
     +'<div class="leg">Outside: '+sq('background:var(--ljr-6-tint)')+(BAND?'below '+BAND.min:'cool')+' '+sq('background:var(--ljr-4-tint)')+(BAND?'above '+BAND.max:'warm')+'</div>'
     +'</div>';
