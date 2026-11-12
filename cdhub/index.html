@@ -14,8 +14,8 @@
 <script src="staff/lib/occupancy.js"></script>
 <script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/thermometer.js"></script>
-<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
@@ -2335,7 +2335,7 @@ function ageYM(days){ var m=Math.floor((+days||0)/30.4375); return m<12?(m<1?(+d
 function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
 /* Lisa 12 Nov 2026: every limit is a dated row. A band row is in force on a day when from_date is blank or on/before it
    and to_date is blank or on/after it; a reading is judged by the rows in force on its own day, never today's. */
-function bandInForce(b,day){ var d=String(day||'').slice(0,10); return !d||((!b.fromDate||b.fromDate<=d)&&(!b.toDate||b.toDate>=d)); }
+function bandInForce(b,day){ return BLDCapacity.inForce([{from_date:b.fromDate,to_date:b.toDate}],day).length===1; }   /* the shared rule (staff/lib/capacity.js) */
 function generalBand(day){ day=day||todayISO(); return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b)&&bandInForce(b,day); })[0]||null; }
 function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
  var ids=(r.subjects&&r.subjects.length)?r.subjects:(CD.dogs||[]).filter(function(d){ return d.area_id===areaId; }).map(function(d){ return d.id; });

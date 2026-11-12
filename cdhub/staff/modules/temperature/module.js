@@ -154,11 +154,8 @@
   /** Lisa 12 Nov 2026: every limit is a dated row. A row is in force on a day when from_date is blank or on/before it
    *  and to_date is blank or on/after it (YYYY-MM-DD, both ends count; a missing column is blank). The same reading
    *  as BLDCapacity.inForce and Sink.gs rowsInForce_. A past reading is judged by the rows in force on its own day. */
-  function bandInForce(b, day) {
-    var d = String(day || '').slice(0, 10), f = String(b.from_date || '').slice(0, 10), t = String(b.to_date || '').slice(0, 10);
-    return !d || ((!f || f <= d) && (!t || t >= d));
-  }
-  function bandsOn(bands, day) { return (bands || []).filter(function (b) { return bandInForce(b, day); }); }
+  function bandsOn(bands, day) { return window.BLDCapacity.inForce(bands || [], day); }   // the shared rule (capacity.js)
+  function bandInForce(b, day) { return bandsOn([b], day).length === 1; }
   function limitFor(areaId, bands, dogsInRoom, onIso) {
     if (!bands || !bands.length) return { reason: 'No room limits loaded.' };
     bands = bandsOn(bands, onIso);

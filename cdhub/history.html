@@ -12,6 +12,7 @@
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
+<script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/occupancy.js"></script>
 <script src="staff/lib/area-link.js"></script>
@@ -258,11 +259,8 @@ function readDriveFile(f){
    >= day; two in force: the later from_date wins). No row in force = 'unknown'. BAND = today's row, for the key. */
 var BANDS=[], BAND=null;
 function bandOn(day){
-  var d=String(day||'').slice(0,10), best=null;
-  BANDS.forEach(function(b){
-    if((b.from&&b.from>d)||(b.to&&b.to<d)) return;
-    if(!best||b.from>best.from) best=b;
-  });
+  var best=null;   /* in force: the shared rule (staff/lib/capacity.js) */
+  BLDCapacity.inForce(BANDS,String(day||'').slice(0,10)).forEach(function(b){ if(!best||b.from_date>best.from_date) best=b; });
   return best;
 }
 function tempCls(min,max,day){
@@ -280,7 +278,7 @@ async function loadBand(){
     if(!f)return;
     parseCSV(await readDriveFile(f)).forEach(function(r){
       var lo=parseFloat(r.min_temp),hi=parseFloat(r.max_temp);
-      if(!r.age_to_days&&!isNaN(lo)&&!isNaN(hi))BANDS.push({min:lo,max:hi,from:String(r.from_date||'').slice(0,10),to:String(r.to_date||'').slice(0,10)});
+      if(!r.age_to_days&&!isNaN(lo)&&!isNaN(hi))BANDS.push({min:lo,max:hi,from_date:String(r.from_date||'').slice(0,10),to_date:String(r.to_date||'').slice(0,10)});
     });
     BAND=bandOn(TODAY_STR);
   }catch(e){console.warn('Temperature limits load failed:',e);}

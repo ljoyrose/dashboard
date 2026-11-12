@@ -16,14 +16,14 @@
  *   limit is null with source 'by age'.
  * opts: { hour (0-23, London, default now), youngestDays, req (BLD-requirement rows, to keep only thermometers
  *   needed today via BLDThermometer.neededOn) }.
- * Pure functions; works in a browser (window.BLDAreaTempLine, after area-link.js and thermometer.js) and in Node.
+ * Pure functions; works in a browser (window.BLDAreaTempLine, after capacity.js, area-link.js and thermometer.js) and in Node.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     var opt = function (p) { try { return require(p); } catch (e) { return null; } };
-    module.exports = factory(opt('./area-link.js'), opt('./thermometer.js'));
-  } else root.BLDAreaTempLine = factory(root.BLDAreaLink, root.BLDThermometer);
-}(typeof self !== 'undefined' ? self : this, function (L, T) {
+    module.exports = factory(opt('./area-link.js'), opt('./thermometer.js'), require('./capacity.js'));
+  } else root.BLDAreaTempLine = factory(root.BLDAreaLink, root.BLDThermometer, root.BLDCapacity);
+}(typeof self !== 'undefined' ? self : this, function (L, T, C) {
   'use strict';
   function num(v) { if (v === '' || v == null) return null; var n = parseFloat(v); return isNaN(n) ? null : n; }
   function dp(n) { return n === null ? '–' : n.toFixed(1); }
@@ -31,11 +31,10 @@
   function slotOf(r) { var at = String(r.period_start || r.taken_at || ''), hr = parseInt(at.slice(11, 13), 10); return isNaN(hr) || hr < 12 ? 'am' : 'pm'; }
   function londonHour() { return parseInt(new Date().toLocaleString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false }), 10); }
 
-  function inForce(b, d) { var f = day(b.from_date), t = day(b.to_date); return !d || ((!f || f <= d) && (!t || t >= d)); }
   /** The limit in force on day d (YYYY-MM-DD; blank = every row): the room's own rows first, else the general rows;
    *  by the youngest dog's age when rows have ages; the later from_date first. */
   function limitFor(areaId, bands, youngestDays, d) {
-    var on = (bands || []).filter(function (b) { return inForce(b, day(d)); })
+    var on = C.inForce(bands || [], day(d)).slice()   // the shared rule (capacity.js)
       .sort(function (a, b) { return day(b.from_date).localeCompare(day(a.from_date)); });
     var own = on.filter(function (b) { return b.area_id === areaId; });
     var rows = own.length ? own : on.filter(function (b) { return !b.area_id; });
