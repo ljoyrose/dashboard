@@ -66,6 +66,59 @@ test('summarise: faults and softer notes', () => {
   assert.deepEqual(M.summarise({ spf: 'pass', dkim: 'not found', dmarc: 'reject' }), { faults: [], notes: [] });
 });
 
+test('SPF broken: unknown mechanism, missing all, more than 10 lookups', () => {
+  const unknown = M.spfWord(['v=spf1 include:_spf.example.net foo:bar -all']);
+  assert.equal(unknown.word, 'broken');
+  assert.deepEqual(unknown.problems, ['unknown mechanism foo']);
+  const noAll = M.spfWord(txt('"v=spf1 include:_spf.example.net"'));
+  assert.equal(noAll.word, 'broken');
+  assert.deepEqual(noAll.problems, ['missing all']);
+  const dotted = M.spfWord(['v=spf1 include:.. -all']);
+  assert.equal(dotted.word, 'broken');
+  assert.deepEqual(dotted.problems, ['include has no domain']);
+  const includes = Array.from({ length: 11 }, (_, i) => 'include:a' + i + '.example.net').join(' ');
+  const tooMany = M.spfWord(['v=spf1 ' + includes + ' ~all']);
+  assert.equal(tooMany.word, 'broken');
+  assert.equal(tooMany.lookups, 11);
+  assert.deepEqual(tooMany.problems, ['more than 10 lookups']);
+  const ten = Array.from({ length: 10 }, (_, i) => 'include:a' + i + '.example.net').join(' ');
+  assert.equal(M.spfWord(['v=spf1 ' + ten + ' ~all']).word, 'pass', '10 lookups is the limit, not over it');
+  assert.equal(M.spfWord(['v=spf1 redirect=_spf.example.net']).word, 'pass', 'redirect stands in for all');
+  assert.equal(M.spfWord(['v=spf1 -all']).word, 'pass');
+  const s = M.summarise({ spf: unknown, dmarc: 'reject' });
+  assert.deepEqual(s.faults, ['SPF broken']);
+  assert.deepEqual(E.emailProblems({ spf: 'broken' }), ['SPF broken']);
+});
+
+test('DKIM missing is flagged for Google Workspace MX when no allow-listed selector answers', () => {
+  const none = { google: NX, selector1: NX, selector2: NX, k1: NX, s1: NX, default: NX };
+  const miss = M.dkimWord(none, { word: 'Google Workspace' });
+  assert.equal(miss.word, 'missing');
+  assert.deepEqual(M.summarise({ spf: 'pass', dkim: miss, dmarc: 'reject', mx: { word: 'Google Workspace' } }).faults, ['DKIM missing']);
+  assert.deepEqual(E.emailProblems({ spf: 'pass', dkim: 'not found', dmarc: 'reject', mx: 'Google Workspace' }), ['DKIM missing']);
+  const other = M.dkimWord({ google: NX, selector1: txt('"v=DKIM1; p=QUJD"') }, 'Google Workspace');
+  assert.equal(other.word, 'found (selector1)');
+  assert.deepEqual(E.emailProblems({ spf: 'pass', dkim: other.word, dmarc: 'reject', mx: 'Google Workspace' }), []);
+  assert.equal(M.dkimWord(none, { word: 'Microsoft 365' }).word, 'not found');
+  assert.deepEqual(E.emailProblems({ spf: 'pass', dkim: 'not found', dmarc: 'reject', mx: 'Microsoft 365' }), []);
+  const tip = M.fixSuggestion('example.com', { spf: 'pass', dkim: miss, dmarc: 'reject', mx: { word: 'Google Workspace' } });
+  assert.match(tip, /google\._domainkey\.example\.com/);
+});
+
+test('DMARC weak: p=none with no rua is flagged; p=none with rua stays a note', () => {
+  const weak = M.dmarcWord(txt('"v=DMARC1; p=none"'));
+  assert.equal(weak.word, 'weak');
+  assert.equal(weak.policy, 'none');
+  assert.equal(weak.rua, false);
+  assert.deepEqual(M.summarise({ spf: 'pass', dmarc: weak }).faults, ['DMARC weak']);
+  const watched = M.dmarcWord(txt('"v=DMARC1; p=none; rua=mailto:r@example.com"'));
+  assert.equal(watched.word, 'none');
+  assert.equal(watched.rua, true);
+  assert.deepEqual(M.summarise({ spf: 'pass', dmarc: watched }), { faults: [], notes: ['DMARC p=none'] });
+  assert.deepEqual(E.emailProblems({ dmarc: 'weak' }), ['DMARC weak']);
+  assert.deepEqual(E.emailProblems({ dmarc: 'none' }), []);
+});
+
 test('MX: lowest preference wins, provider words', () => {
   const w = (...r) => M.mxHost(mx(...r)).word;
   assert.equal(w('20 alt1.aspmx.l.google.com.', '1 aspmx.l.google.com.'), 'Google Workspace');
@@ -79,9 +132,49 @@ test('MX: lowest preference wins, provider words', () => {
   assert.equal(w('10 mx.googlemail.com.'), 'Google Workspace');
   assert.equal(w('10 eforward1.registrar-servers.com.'), 'Namecheap email forwarding');
   assert.equal(w('10 mx10.mailspamprotection.com.'), 'SiteGround');
+  assert.equal(w('10 mx1.improvmx.com.'), 'ImprovMX');
+  assert.equal(w('10 mx1.forwardemail.net.'), 'ForwardEmail');
+  assert.equal(w('10 route1.mx.cloudflare.net.'), 'Cloudflare Email Routing');
   assert.equal(w('10 mail.mx.example.org.', '50 aspmx.l.google.com.'), 'example.org');
   assert.equal(M.mxHost(NX).word, 'none');
+  assert.equal(M.mxHost(NX).present, false);
   assert.equal(w('0 .'), 'none', 'null MX means no mail');
+  const google = M.mxHost(mx('1 aspmx.l.google.com.'));
+  assert.equal(google.present, true);
+  assert.equal(google.forwarding, false);
+  assert.equal(M.mxLabel(google), 'present · Google Workspace');
+  assert.equal(M.mxLabel('none'), 'none');
+  assert.equal(M.mxLabel(''), '');
+  const fwd = M.mxHost(mx('10 eforward1.registrar-servers.com.'));
+  assert.equal(fwd.forwarding, true);
+  assert.deepEqual(E.emailProblems({ mx: 'none' }), ['no MX']);
+  assert.deepEqual(E.emailProblems({ mx: 'Google Workspace' }), []);
+});
+
+test('forward chain: hop count, flag over one hop, unknown target, absent field', () => {
+  const two = M.forwardChain({ forward_chain: 'forward.example.net → box.example.org → gmail.com' });
+  assert.equal(two.hops, 2);
+  assert.equal(two.flag, true);
+  assert.equal(two.text, 'forward.example.net → box.example.org → gmail.com (2 hops)');
+  const one = M.forwardChain({ forward_chain: ['forward.example.net', 'gmail.com'] });
+  assert.equal(one.hops, 1);
+  assert.equal(one.flag, false);
+  assert.match(one.text, /1 hop\)$/);
+  assert.equal(M.forwardChain({ forward_chain: 'forward.example.net -> gmail.com' }).hops, 1);
+  assert.equal(M.forwardChain({ mx: 'Google Workspace' }), null);
+  assert.equal(M.forwardChain({}), null);
+  assert.equal(M.forwardChain({ forward_chain: '' }), null);
+  const unk = M.forwardChain({ mx: 'Namecheap email forwarding' });
+  assert.equal(unk.text, 'target unknown, needs registrar export');
+  assert.equal(unk.unknown, true);
+  assert.equal(unk.flag, true);
+  assert.deepEqual(E.emailProblems({ mx: 'Namecheap email forwarding' }), ['target unknown, needs registrar export']);
+  assert.deepEqual(E.emailProblems({ mx: M.mxHost(mx('10 eforward1.registrar-servers.com.')) }), ['target unknown, needs registrar export']);
+  assert.deepEqual(E.emailProblems({
+    mx: 'Namecheap email forwarding',
+    forward_chain: 'forward.example.net to box.example.org to gmail.com'
+  }), ['more than one forward hop']);
+  assert.deepEqual(E.emailProblems({ forward_chain: 'forward.example.net → gmail.com', mx: 'ImprovMX' }), []);
 });
 
 test('verification: TXT google-site-verification and HTML meta names only', () => {
@@ -104,6 +197,7 @@ test('fix suggestions: plain text, placeholder address, never a real value', () 
   assert.match(t1, /_dmarc\.example\.com: "v=DMARC1; p=none; rua=mailto:dmarc-reports@<your-domain>"/);
   const t2 = M.fixSuggestion('example.org', { spf: M.spfWord(NX), dmarc: M.dmarcWord(txt('"v=DMARC1; p=none"')), mx: { word: 'Google Workspace' } });
   assert.match(t2, /include:_spf\.google\.com/);
-  assert.match(t2, /p=quarantine and add rua=/);
+  assert.match(t2, /no rua/);
+  assert.match(t2, /p=quarantine/);
   assert.equal(M.fixSuggestion('example.net', { spf: 'pass', dmarc: 'reject' }), 'No DNS change needed for example.net.');
 });
