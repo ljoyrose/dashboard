@@ -75,6 +75,7 @@
       function drawRoom(areaId) {
         var a = area(areaId);
         if (!a) { host.appendChild(say('That room is not in the room list.', 'bad')); return; }
+        if (a.dogs === false) { host.appendChild(say(a.label + ': dogs are not placed here.', 'bad')); return; }   // a room.no_dogs row (e.g. a corridor)
         var prev = getRoom(), added = prev && prev.areaId === areaId ? prev.added || [] : [];
         setRoom({ areaId: areaId, label: a.label, at: Date.now(), added: added });
         var ids = inRoom(areaId, added), r = checkRoom(areaId, ids);
