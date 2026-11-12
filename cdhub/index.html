@@ -205,6 +205,7 @@ tr:last-child td{border-bottom:none}
 #sopcard .sopgrp .mrow{margin-left:12px}
 .compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
 .compfold>summary h3{margin:0;flex:1}.compfold>summary::after{content:"\25BE";color:var(--muted);margin-left:8px}.compfold:not([open])>summary::after{content:"\25B8"}
+.urg{display:inline-flex;align-items:center;gap:6px;font-weight:600}.urg-ring{box-sizing:border-box;width:20px;height:20px;border:2px solid var(--house-late);border-radius:50%;display:inline-grid;place-items:center;flex:none}.urg-ring>i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0))}.urg>svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}ul.urgl{list-style:none;margin:8px 0;padding:0}ul.urgl>li{margin:0 0 10px}
 ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ctemps .ctl{margin:4px 0 0;padding-left:20px;font-size:var(--fs-small)}
 #compJobs td[data-n] a{text-decoration:none;display:inline-flex;min-height:32px;align-items:center}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
@@ -446,9 +447,9 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+var OPTIONAL_FILES={'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
@@ -2783,6 +2784,7 @@ function pageCompliance(){
  da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+x.on+(x.est?' (estimated from the litter, no mating row)':'')+', born '+x.dob+'. Your rule: '+x.months+' months.'}); });
  lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+litDob(x.litter)+'). Your rule: '+x.max+'.'}); });
  var h='<h2>Compliance</h2><p class="sub">Breeding rules. You set them; every litter and mating is checked against the version in force on its own date.</p>';
+ h+=compUrgentHtml(today);
  var pb='';
  if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
  pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
@@ -2809,9 +2811,54 @@ function pageCompliance(){
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
   +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p>');
- h+=compRehearsalHtml()+compAccessHtml();
+ h+=compFindingsHtml(todayISO())+compRehearsalHtml()+compAccessHtml();
  return h;
 }
+/* URGENT WARNINGS (mock-up 7 Nov, H-06): four signals each - the SOP's colour inside a red ring, an icon and the word
+   "Urgent" - so colour is never the only signal. A warning NEVER stops anyone working. Today's sources: a closed room
+   with a dog in it, a room over its limit, a temperature out of range today. Overdue crucial requirements join when
+   BLD-credential exists. The SOP colour comes from sop-index.json by the SOP name a row carries; none = grey. */
+function sopSlot(name){ var r=(SOP.rows||[]).filter(function(x){ return x.short_name===name; })[0]; var i=r?SOP_COLOURS.indexOf(r.colour):-1; return i<0?0:i+1; }
+function compUrgent(iso){ var out=[];
+ closedAudit(iso).forEach(function(x){ if(x.dogs) out.push({k:'closed',icon:'i-building-cottage',title:x.label+' is closed but has a dog in it',sub:x.message,area:x.areaId,sop:''}); });
+ roomAudit(iso).over.forEach(function(x){ out.push({k:'over',icon:'i-building-cottage',title:x.label+' is over its limit',sub:x.message,area:x.areaId,sop:''}); });
+ if(iso===todayISO()) compTemps().bad.filter(function(x){ return x.day===iso; }).forEach(function(x){
+  out.push({k:'temp',icon:'i-thermometer',title:x.label+' is outside its temperature band',sub:(x.slot==='pm'?'Evening':'Morning')+' reading '+(x.min||'?')+'–'+(x.max||'?')+' °C',area:x.area,sop:''}); });
+ (typeof compCredentials==='function'?compCredentials(iso).items:[]).forEach(function(x){ if(x.crucial&&x.state==='late')
+  out.push({k:'cred',icon:'i-clipboard',title:x.label+' is overdue',sub:'Ran out '+dmyShort(x.to),area:x.area,sop:x.sop}); });
+ return out; }
+function compUrgentHtml(iso){ var u=compUrgent(iso); if(!SOP.rows&&!SOP.err) sopStart();
+ return compFold('compUrgent','urgent','Urgent'+cntPill(u.length,u.length?'need':''),u.length
+  ?'<ul class="urgl" id="urgList">'+u.map(function(x){ return '<li data-k="'+x.k+'"><span class="urg"><span class="urg-ring" aria-hidden="true"><i style="--c:var(--ljr-'+sopSlot(x.sop)+')"></i></span><svg aria-hidden="true"><use href="#'+x.icon+'"/></svg>Urgent</span> <b>'+(x.area?roomLink(x.area,x.title):esc(x.title))+'</b><br><span class="mut">'+esc(x.sub)+(x.sop?' · '+esc(x.sop):'')+'</span></li>'; }).join('')+'</ul><p class="mut">A warning never stops anyone working.</p>'
+  :'<p class="mut">Nothing urgent.</p>'); }
+/* FINDINGS (mock-up 7 Nov): BLD-finding rows as at a date. Open = raised on or before it and not closed by it.
+   Recurrence = every finding on the same requirement (outcome_id) raised by that date: "failed N times", with its trail.
+   A finding from a PRIVATE internal inspection (BLD-inspection, when that table exists) stays off this list (H-03, H-05);
+   level words are the issuer's own (finding_kind), never mapped to a grade here. */
+function findingIsPrivate(f){ var i=(T['BLD-inspection.csv']||[]).filter(function(x){ return x.id===f.inspection_id; })[0];
+ return !!i&&String(i.kind||'').toLowerCase()==='internal'&&String(i.visibility||'private').toLowerCase()!=='disclosable'; }
+function compFindings(iso){
+ var oc={}; (T['BLD-outcome.csv']||[]).forEach(function(o){ oc[o.id]=o.text||o.code||o.id; });
+ var all=(T['BLD-finding.csv']||[]).filter(function(f){ var r=isoDay(f.raised_on); return r&&r<=iso&&!findingIsPrivate(f); });
+ var by={}; all.forEach(function(f){ var k=f.outcome_id||('f:'+f.id); (by[k]=by[k]||[]).push(isoDay(f.raised_on)); });
+ Object.keys(by).forEach(function(k){ by[k].sort(); });
+ var open=all.filter(function(f){ var c=isoDay(f.closed_on); return !c||c>iso; }).map(function(f){ var k=f.outcome_id||('f:'+f.id), due=isoDay(f.due_on);
+  return {id:f.id,label:oc[f.outcome_id]||f.wording_as_given||'Finding',words:f.wording_as_given||'',by:f.authority||'',raised:isoDay(f.raised_on),
+   level:f.finding_kind||'',done:f.action_agreed||f.tenant_response||'',due:due,late:!!due&&due<iso,times:by[k].length,trail:by[k]}; });
+ open.sort(function(a,b){ return (a.late-b.late)||(a.times-b.times)||(a.raised<b.raised?-1:1); });   /* best to worst */
+ return {open:open,closed:all.length-open.length,on:!!T['BLD-finding.csv']};
+}
+function compFindingsHtml(iso){ var c=compFindings(iso);
+ return compFold('compFindings','findings','Findings'+cntPill(c.open.length),
+  (c.open.length?'<ul class="ctl" id="findList">'+c.open.map(function(x){
+    return '<li data-finding="'+esc(x.id)+'" data-times="'+x.times+'"><b>'+esc(x.label)+'</b>'+(x.level?' <span class="pill w">'+esc(x.level)+'</span>':'')
+     +'<br><span class="mut">'+(x.by?esc(x.by)+', ':'')+'found <span class="dpill">'+esc(dmyShort(x.raised))+'</span>'
+     +(x.due?' · due <span class="dpill'+(x.late?' late':'')+'">'+esc(dmyShort(x.due))+(x.late?' (late)':'')+'</span>':'')+'</span>'
+     +(x.words&&x.words!==x.label?'<br><span class="mut">'+esc(x.words)+'</span>':'')
+     +(x.done?'<br><span class="mut">Done about it: '+esc(x.done)+'</span>':'')
+     +'<br><span class="mut" data-k="recur">'+(x.times>1?'<b>Found '+x.times+' times</b>: '+x.trail.map(dmyShort).join(', '):'First time')+'</span></li>'; }).join('')+'</ul>'
+   :'<p class="mut">No open findings'+(c.on?'':' (no finding rows yet)')+'.</p>')
+  +(c.closed?'<p class="mut">'+c.closed+' closed.</p>':'')); }
 /* REHEARSAL (mock-up 7 Nov, H-04): a practice inspection that leaves NO trace. Notes live only in this variable while it
    runs; nothing is saved, stored in the browser, counted or scored. End (or leaving Compliance) throws it all away. */
 var REHEARSAL=null;
