@@ -343,6 +343,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .key{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:var(--fs-small);color:var(--muted);margin:0 0 12px}
 .key>span{display:inline-flex;align-items:center;gap:6px}
 .stf{gap:8px}
+.fgrp .key{margin:0}
 
 
 .tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,160px)) minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
@@ -390,6 +391,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 
 .dc .dc-top{display:flex;gap:10px;align-items:flex-start;padding:10px 12px 8px}
 .dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dc .dc-info .ricon{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* room icon: small, never the browser's default 300x150 (quality review 12 Nov 2026) */
 .dc-sects{border-top:1px solid var(--line)}
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
@@ -1695,15 +1697,10 @@ function pageDogs(){
    groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
     ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
     ['Age',fsel('fa','Age','<option value="p">under 6m</option><option value="j">6m to 12m</option><option value="a">1 to 7y</option><option value="o">7y+</option><option value="__none">no DOB</option>')],
-    ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')]]})
- /* kit: animal (sex key and status chips) */
- +'<div class="key"><span><i class="sexdot me"></i>entire male</span>'
- +'<span><i class="sexdot mn"></i>neutered male</span>'
- +'<span><i class="sexdot fe"></i>entire female</span>'
- +'<span><i class="sexdot fn"></i>neutered female</span>'
- +'<span><i class="sexdot u"></i>sex missing</span></div>'
- +'<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
- +'<span class="info" tabindex="0" title="The dot by each name is the sex: blue male, pink female, a ring when neutered, dashed when not recorded. A dog that has been done also says spayed or neutered. The buttons are the status: tap one to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
+    ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
+    /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
+    ['Status','<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
+     +'<span class="info" tabindex="0" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  /* foundation: record media and named people, not held yet */
  +'<div class="arrow">'+arrives('media')+arrives('person')+'</div>'
@@ -1839,10 +1836,11 @@ function drawDogs(){
       +'<div class="nm">'+esc(d.name||'—')+'</div>'
       +'<div class="meta">'
         +'<span class="age">'+age+'</span>'
+        +(d.dob?'<span class="mut" data-k="dob">· DOB '+esc(dmyShort(d.dob))+'</span>':'')
         +(d.size?'<span class="mut">· '+esc(d.size)+'</span>':'')
         +((d.breed&&d.breed!=='Australian Cobberdog')?'<span class="mut">· <b>'+esc(d.breed)+'</b></span>':'')
       +'</div>'
-      +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
+      +'<div class="coat" data-k="colour"><span class="mut">Colour</span>'+swatch(d)+'<span>'+esc(d.colour?colourLabel(d):'\u2014')+'</span></div>'
       +'<div class="meta">'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
         +(d.room&&!away?'<a href="#/areas/'+esc(d.room)+'" data-room-link="'+esc(d.room)+'">'+esc(d.where)+'</a>'
