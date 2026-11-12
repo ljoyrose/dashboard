@@ -202,3 +202,31 @@ test('a whole-site clean ticks each room\'s daily clean, but never an isolation 
   await page.goto('cdhub/staff/#s/ISOTAG22');
   await expect(page.locator('[data-job="clean"] .ds')).toHaveText('Due');
 });
+
+test('a job with form questions opens its form, needs the required answers, and sends them with the record', async ({ page }) => {
+  const F = (field_key, label, kind, extra) => Object.assign({ id: 'cfd-' + field_key, type_key: 'weigh', field_key, label, kind, required: 'false', sort: '', active: 'true', effective_from: '2026-01-01' }, extra || {});
+  const sent = await setup(page, { check_field: [
+    F('stool', 'Stool', 'choice', { choices: 'Normal|Loose', required: 'true', sort: '1' }),
+    F('eating', 'Eating well', 'yesno', { sort: '2' }),
+    F('old', 'Old question', 'text', { active: 'false' }),
+    F('walk', 'Walk', 'text', { type_key: 'walk' })
+  ] });
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  const card = page.locator('[data-job="weigh"]');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect(card.locator('[data-field]')).toHaveCount(2);
+  await expect(card.locator('[data-field="old"]')).toHaveCount(0);
+  await card.getByLabel('Amount (kg)').fill('21.5');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect(card.getByText('This is needed: Stool.')).toBeVisible();
+  expect(sent).toHaveLength(0);
+  await card.getByLabel('Stool').selectOption('Loose');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].action).toBe('add');
+  expect(sent[0].values).toEqual({ stool: 'Loose' });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1].values).toBeUndefined();
+});
