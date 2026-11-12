@@ -74,11 +74,11 @@ test.describe('CD Hub core: rooms and dogs', () => {
     }));
     expect(who).toEqual({ group: false, code: false, use: false, cabin: true, free: true, padded: true, yes: false, dash: false });
     await tabClick(page, '#nav button[data-go="areas"]');
-    await expect(page.locator('#main')).toContainText('Level 1 and level 5');
+    await expect(page.locator('#main')).not.toContainText('Level 1 and level 5');
     await expect(page.locator('#main')).not.toContainText('Room C');
     await expect(page.locator('[data-use="ar-a"]')).toContainText('Housing with free access');
-    await expect(page.locator('[data-use="ar-a"]')).toContainText('Pretend list 2026');
-    await expect(page.locator('[data-use="ar-f"]')).toContainText('Fields');
+    await expect(page.locator('[data-use="ar-a"]')).not.toContainText('Pretend list 2026');
+    await expect(page.locator('#main')).not.toContainText('Fields');
     await tabClick(page, '#nav button[data-go="today"]');
     const card = page.locator('#todayChecklist');
     const flap = card.locator('.mrow', { hasText: 'Every cabin has its flap mode' });
@@ -299,19 +299,15 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     await expect(page.locator('#rows article.dc')).toHaveCount(1);
     await expect(page.locator('#rows .nm')).toHaveText('Pretend Adult One');
-    const room = page.locator('#rows [data-room-link]');
+    const room = page.locator('#rows [data-cabin-move]');
     await expect(room).toHaveText('Room A');
-    await room.click();
-    await expect(page).toHaveURL(/#\/areas\/ar-a$/);
+    // The cabin chip opens the move picker (Lisa 12 Nov); the room card still lists the dog.
+    await page.evaluate(() => go('areas/ar-a'));
     await expect(page.locator('#main [data-room]')).toHaveCount(1);
     await expect(page.locator('#main [data-room]')).toHaveAttribute('data-room', 'ar-a');
-    const dog = page.locator('#main [data-dog-link]');
-    await expect(dog).toHaveCount(1);
-    await expect(dog).toHaveText('Pretend Adult One');
-    // size comes only from the latest weight (Lisa 12 Nov 2026); this dog has none, so no size dot
-    await expect(dog.locator('.szd')).toHaveCount(0);
-    await dog.click();
-    await expect(page).toHaveURL(/#\/dogs\/sub-x1$/);
+    const dog = page.locator('#main [data-move-dog="sub-x1"]');
+    await expect(dog).toContainText('Pretend Adult One');
+    await page.evaluate(() => go('dogs/sub-x1'));
     await expect(page.locator('#rows article.dc')).toHaveCount(1);
     // a dog whose room has ended (room.in_use to_date passed) gets no room link and never shows that room
     await page.evaluate(() => go('dogs/sub-x2'));

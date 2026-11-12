@@ -261,7 +261,7 @@ test('an unusual temperature is the script\'s warning: the screen shows it with 
   await expect(page.getByText('Now press CLR')).toBeVisible();
 });
 
-const SHOTS = process.env.MINMAX_SHOTS_DIR || '/workspace/minmax-test';
+const SHOTS = process.env.MINMAX_SHOTS_DIR || require('path').join(process.cwd(), 'test-results', 'minmax');
 function staffShot(name) {
   const fs = require('fs');
   const path = require('path');

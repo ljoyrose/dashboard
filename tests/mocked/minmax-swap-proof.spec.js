@@ -5,7 +5,7 @@ const { tabClick } = require('../support/tabs');
 const fs = require('fs');
 const path = require('path');
 
-const SHOTS = process.env.MINMAX_SHOTS_DIR || '/workspace/minmax-test';
+const SHOTS = process.env.MINMAX_SHOTS_DIR || require('path').join(process.cwd(), 'test-results', 'minmax');
 const SCRIPT = 'https://script.google.com/macros/s/AKfyTEST_only_minmax/exec';
 
 const tab = async (page, id) => {

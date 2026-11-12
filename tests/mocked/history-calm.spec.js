@@ -394,7 +394,7 @@ test('audit: a reading with max lower than min is flagged, even when both figure
   await expect(r1.locator('.warn').first()).toHaveText('AM 22.0–18.0 · max lower than min');
   await expect(r1).toContainText('PM 12.5–16.0 ✓');
   await expect(r1).not.toContainText('AM 22.0–18.0 ✓');
-  const dir = process.env.MINMAX_SHOTS_DIR || '/workspace/minmax-test';
+  const dir = process.env.MINMAX_SHOTS_DIR || test.info().outputDir;
   fs.mkdirSync(dir, { recursive: true });
   await page.locator('#drill').screenshot({ path: path.join(dir, 'history-swapped.png') });
   await page.locator('#drill .dclose').click();

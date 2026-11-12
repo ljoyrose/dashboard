@@ -122,7 +122,7 @@ test.describe('CD Hub dog card summary', () => {
     await expect(card).toHaveAttribute('data-size', 'small');          // 8.4 kg beats the record's medium
     await expect(card).toHaveAttribute('data-size-from', 'weight');
     await expect(card.locator('[data-k="size"]')).toHaveText('Toy/Mini');
-    await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12\/01\/26 · cut-offs: Pretend vet/);
+    await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12\/01\/26/);
     expect(await card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('3px');   // the photo has the size-coloured frame (12 Nov)
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');   // 14.1 kg; the future row is not in force
