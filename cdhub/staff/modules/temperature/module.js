@@ -714,6 +714,6 @@
 
   window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, areaRows: areaRows, backfill: function (host, o) { css(); return backfill(host, o); }, slotFor: slotFor, slotNow: slotNow, londonIso: londonIso };
   if (window.StaffPage) {
-    window.StaffPage.register({ id: 'temperature', title: 'Room temperatures', desc: 'Camera reads the min/max', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
+    window.StaffPage.register({ id: 'temperature', title: 'Temps', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }
 }());
