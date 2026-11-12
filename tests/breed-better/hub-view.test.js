@@ -37,3 +37,95 @@ test('a draft scheme scores nothing and says so', () => {
   const v = { T: tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'draft', effective_from: '2026-01-01' }] }), today: '2026-06-04', esc };
   assert.match(View.page(v), /No active scheme/);
 });
+
+test('dates read like 2 Mar 2026', () => {
+  assert.equal(View.day('2026-03-02'), '2 Mar 2026');
+  assert.equal(View.day(''), '');
+});
+
+test('a scheme row can rename any verdict word', () => {
+  const w = View.wordsFor({ verdict_words: 'unverified=To prove; below target=Under 65' });
+  assert.equal(w.unverified, 'To prove');
+  assert.equal(w.below_target, 'Under 65');
+  assert.equal(w.pass, 'Pass');
+});
+
+test('filters run best to worst and the page shows target, dates and Due', () => {
+  const T = tables({
+    'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', verdict_words: 'unverified=To prove' }],
+    'BLD-score_criterion.csv': [{ id: 'c', scheme_id: 's1', band_id: 'g', label: 'Check', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on', valid_months: '12', lapsed_affects_verdict: 'FALSE' }]
+  });
+  const v = { T, today: '2027-02-01', esc };
+  const html = View.page(v);
+  assert.match(html, /All[\s\S]*Pass[\s\S]*Below target[\s\S]*To prove[\s\S]*Fail/);
+  assert.doesNotMatch(html, /Unverified/);
+  const c = View.compute(v);
+  assert.equal(c.byId.a1.verdict, 'pass');
+  assert.equal(c.byId.a1.lines[0].due, 'overdue');
+  assert.match(View.page(v), /1 due/);
+});
+
+test('staff never see Breed Better: no staff, guest or print page loads it', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+  const hits = walk(path.join(__dirname, '../../cdhub/staff')).filter((f) => /\.(html|js)$/.test(f) && /breed-better|BBHubView/.test(fs.readFileSync(f, 'utf8')));
+  assert.deepEqual(hits, []);
+});
+
+test('Fit to Breed is read from BLD-fit_to_breed, which the hub loads as an optional file', () => {
+  assert.ok(View.FILES.includes('BLD-fit_to_breed.csv'));
+  const T = tables({
+    'BLD-score_criterion.csv': [{ id: 'c', scheme_id: 's1', band_id: 'g', label: 'Fit to Breed', evidence_source: 'BLD-fit_to_breed', answer_field: 'outcome', date_field: 'assessed_on' }],
+    'BLD-score_point.csv': [{ id: 'p', criterion_id: 'c', answer_match: 'is:fit', gate_outcome: 'pass' }, { id: 'q', criterion_id: 'c', answer_match: 'any', gate_outcome: 'fail' }],
+    'BLD-fit_to_breed.csv': [{ id: 'f1', subject_id: 'a1', outcome: 'fit', assessed_on: '2026-10-03' }]
+  });
+  const c = View.compute({ T, today: '2026-11-11', esc });
+  assert.equal(c.byId.a1.verdict, 'pass');
+  assert.equal(c.byId.a1.lines[0].date_then, '2026-10-03');
+});
+
+test('within a verdict, animals rank by percent of what they could earn', () => {
+  const T = tables({
+    'BLD-score_band.csv': [{ id: 'p', scheme_id: 's1', kind: 'points', label: 'Pts', sort_order: '1' }],
+    'BLD-score_criterion.csv': [
+      { id: 'c', scheme_id: 's1', band_id: 'p', label: 'A', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on' },
+      { id: 'd', scheme_id: 's1', band_id: 'p', label: 'B', evidence_source: 'BLD-exam', answer_field: 'q', date_field: 'on', applies_to: 'sex=female' }],
+    'BLD-score_point.csv': [{ id: 'p1', criterion_id: 'c', answer_match: 'is:ok', points: '10' }, { id: 'p2', criterion_id: 'c', answer_match: 'any', points: '0' },
+      { id: 'p3', criterion_id: 'd', answer_match: 'is:ok', points: '10' }, { id: 'p4', criterion_id: 'd', answer_match: 'any', points: '0' }],
+    'BLD-subject.csv': [{ id: 'a1', name: 'Female', sex: 'female' }, { id: 'a2', name: 'Male', sex: 'male' }],
+    'BLD-exam.csv': [{ id: 'x', subject_id: 'a1', r: 'ok', q: 'no', on: '2026-01-02' }, { id: 'y', subject_id: 'a2', r: 'ok', on: '2026-01-02' }]
+  });
+  const c = View.compute({ T, today: '2026-06-05', esc });
+  assert.deepEqual(c.results.map((r) => [r.name, r.points_earned, r.points_available]), [['Male', 10, 10], ['Female', 10, 20]]);
+});
+
+test('seven sort choices, verdict best to worst first; no date of birth sorts last', () => {
+  assert.deepStrictEqual(View.SORTS.map((s) => s[0]), ['verdict', 'high', 'low', 'name', 'oldest', 'youngest', 'attention']);
+  const R = (name, verdict, e, a, dob) => ({ name, verdict, points_earned: e, points_available: a, dob: dob || '' });
+  const rows = [R('Cara', 'fail', 0, 10, '2020-01-01'), R('Abe', 'pass', 8, 10, '2022-05-01'), R('Bo', 'pass', 9, 10), R('Dot', 'unverified', 2, 10, '2019-03-01')];
+  const names = (k) => View.sortRows(rows, k).map((r) => r.name);
+  assert.deepStrictEqual(names('verdict'), ['Bo', 'Abe', 'Dot', 'Cara']);
+  assert.deepStrictEqual(names('high'), ['Bo', 'Abe', 'Dot', 'Cara']);
+  assert.deepStrictEqual(names('low'), ['Cara', 'Dot', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('name'), ['Abe', 'Bo', 'Cara', 'Dot']);
+  assert.deepStrictEqual(names('oldest'), ['Dot', 'Cara', 'Abe', 'Bo']);
+  assert.deepStrictEqual(names('youngest'), ['Abe', 'Cara', 'Dot', 'Bo']);
+  assert.deepStrictEqual(names('attention'), ['Cara', 'Dot', 'Abe', 'Bo']);
+});
+
+test('the list page has a name search and the sort choice', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-search/);
+  assert.match(html, /<option value="verdict" selected>Verdict, Pass to Fail<\/option>/);
+  assert.match(html, /id="bbList"/);
+});
+
+test('every verdict filter shows its count, 0 included', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-filter="below_target"[^>]*>Below target <span class="cnt">0<\/span>/);
+});
+
+test('the Testing label explains itself: trial scores, not yet signed off', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing<\/span>/);
+});

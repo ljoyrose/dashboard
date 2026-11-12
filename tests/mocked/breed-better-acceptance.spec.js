@@ -3,12 +3,9 @@
 // The full spec is the Drive file RR_Breed-Better_CD-Hub_spec-and-acceptance.md in the Breed Better folder. Each test names the
 // spec line it proves (S1, S2 ...). Invented animals only: the hub's own sample dogs plus tests/fixtures/breed-better/.
 //
-// Two kinds of test:
-//  - Fixture and calculator checks run now. They prove the invented rows give the answers the hub tests below expect.
-//  - Hub page checks are test.fixme until the Breed Better page and dog-card chip are live on main (another AI is
-//    putting them on the hub now). When that lands: remove the fixme on each test, run it, and fix the PAGE, not the test,
-//    unless Lisa has changed the spec. Selectors follow PR 362 and breed-better/hub-view.js (#/breed, data-bb-*, .bb-chip);
-//    if the live build uses other hooks, change the selector only, never the assertion.
+// Fixture, calculator, owner page, dog-card chip, missing-data and staff checks all run. Only the inspector view (S10)
+// is test.fixme: it needs a time-limited read-only link, which is not built yet. If a test fails, fix the PAGE, no
+// the test, unless Lisa has changed the spec. Selectors: #/breed, data-bb-*, .bb-chip (breed-better/hub-view.js).
 const fs = require('fs');
 const path = require('path');
 const { test: base, expect } = require('../support/test');
@@ -19,9 +16,6 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const BB = path.join(ROOT, 'tests', 'fixtures', 'breed-better');
 const BB_FILES = fs.readdirSync(BB).filter((f) => f.endsWith('.csv'));
 const SCORE_FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv'];
-const PENDING = 'Breed Better page and dog-card chip are not on main yet (Grok is building them). Remove fixme once they land.';
-const PENDING_TARGET = 'Below target is in the spec but not built: score.js has no target_points yet.';
-const PENDING_LABEL = 'Spec wants the Testing label on the dog-card chip too; hub-view.js shows it on the page heading only.';
 const PENDING_INSPECTOR = 'Inspector view (spec S10, Lisa 11 Nov 2026) is not built. The route and data-bb-inspector hook are proposed; change selectors only.';
 const MONTHS = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
 
@@ -111,10 +105,9 @@ base.describe('Breed Better acceptance: fixtures (run now)', () => {
   });
 });
 
-// ---------------------------------------------------------------- hub page, owner (pending)
+// ---------------------------------------------------------------- hub page, owner
 
 asOwner.describe('Breed Better acceptance: owner page', () => {
-  asOwner.fixme(true, PENDING);
 
   asOwner('S4.1 Breed Better sits under More, not as a bottom tab', async ({ page }) => {
     await page.goto('cdhub/');
@@ -141,7 +134,6 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
   });
 
   asOwner('S4.4 filters run All, Pass, Below target, Unverified, Fail, with All chosen first', async ({ page }) => {
-    asOwner.fixme(true, PENDING_TARGET);
     await openBreed(page);
     const f = page.locator('#bbRoot [data-bb-filter]');
     await expect(f).toHaveCount(FILTERS.length);
@@ -158,6 +150,21 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(dogRows(page).first()).toContainText('Test Dog Two');
     await page.locator('#bbRoot [data-bb-filter=""]').click();
     await expect(dogRows(page)).toHaveCount(EXPECT.length);
+  });
+
+  asOwner('S4.5b find a dog by name keeps focus; sort Name A to Z and Fail to Pass reorder the list', async ({ page }) => {
+    await openBreed(page);
+    const box = page.locator('#bbSearch');
+    await box.fill('two');
+    await expect(dogRows(page)).toHaveCount(1);
+    await expect(dogRows(page).first()).toContainText('Test Dog Two');
+    await expect(box).toBeFocused();
+    await box.fill('');
+    await expect(dogRows(page)).toHaveCount(EXPECT.length);
+    await page.locator('#bbSort').selectOption('name');
+    await expect(dogRows(page).locator('.bb-name')).toHaveText(['Test Dog One', 'Test Dog Two', 'Test Pup One']);
+    await page.locator('#bbSort').selectOption('attention');
+    await expect(dogRows(page).first()).toContainText('Test Dog Two');
   });
 
   asOwner('S4.6 one animal: sections in order, each foldable with a count, each line says why', async ({ page }) => {
@@ -231,7 +238,6 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
 });
 
 asOwner.describe('Breed Better acceptance: dog card chip', () => {
-  asOwner.fixme(true, PENDING);
 
   asOwner('S5.1 each enrolled dog card shows its verdict and points', async ({ page }) => {
     await openDogs(page);
@@ -244,7 +250,6 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
   });
 
   asOwner('S5.2 the chip carries the Testing label until Lisa signs off', async ({ page }) => {
-    asOwner.fixme(true, PENDING_LABEL);
     await openDogs(page);
     await expect(card(page, 'Test Dog One').locator('.bb-chip')).toContainText('Testing');
   });
@@ -258,10 +263,9 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
   });
 });
 
-// ---------------------------------------------------------------- missing data (pending)
+// ---------------------------------------------------------------- missing data
 
 notEnrolled.describe('Breed Better acceptance: animal not enrolled', () => {
-  notEnrolled.fixme(true, PENDING);
   notEnrolled('S6.1 a dog that is not enrolled has no chip and is not listed', async ({ page }) => {
     await openDogs(page);
     await expect(card(page, 'Test Pup One').locator('.bb-chip')).toHaveCount(0);
@@ -272,7 +276,6 @@ notEnrolled.describe('Breed Better acceptance: animal not enrolled', () => {
 });
 
 noEnrolment.describe('Breed Better acceptance: nothing enrolled', () => {
-  noEnrolment.fixme(true, PENDING);
   noEnrolment('S6.2 with no enrolment rows the page says Not set up yet, never a low score', async ({ page }) => {
     await openBreed(page);
     await expect(page.locator('#bbRoot')).toContainText('Not set up yet');
@@ -281,7 +284,6 @@ noEnrolment.describe('Breed Better acceptance: nothing enrolled', () => {
 });
 
 draftScheme.describe('Breed Better acceptance: no active scheme', () => {
-  draftScheme.fixme(true, PENDING);
   draftScheme('S6.3 a draft scheme scores nothing and says which table to check', async ({ page }) => {
     await openBreed(page);
     await expect(page.locator('#bbRoot')).toContainText('No active scheme');
@@ -289,10 +291,9 @@ draftScheme.describe('Breed Better acceptance: no active scheme', () => {
   });
 });
 
-// ---------------------------------------------------------------- staff (pending)
+// ---------------------------------------------------------------- staff
 
 asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)', () => {
-  asStaff.fixme(true, PENDING);
 
   asStaff('S2 staff (who cannot read the score files) see no Breed Better entry under More', async ({ page }) => {
     await page.goto('cdhub/');

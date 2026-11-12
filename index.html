@@ -365,7 +365,7 @@
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
   .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: var(--fs-small); }
-  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); font-weight: 600; border-color: var(--s7); }
+  .subnav a[aria-current="page"] { background: var(--sel-fill); outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); font-weight: 600; border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
   .stat .num { font-size: var(--fs-figure); font-weight: 600; }
@@ -465,11 +465,11 @@
   .hubtile a.xml.need { border: 1px solid var(--house-late); border-radius: 999px; padding: 0 8px; }
   .hubtile a.xml { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); font-size: var(--fs-small); font-weight: 600; padding: 0 4px; pointer-events: auto; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
-  /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 1px ink line inside. */
+  /* Hover and press: the pale grey fill, no line (Lisa, 12 Nov 2026); nothing moves. Keyboard focus: the 1px ink line inside. */
   .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
   .hubtile a:focus:not(:focus-visible) { outline: none; }
-  @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; } }
-  .hubtile a:active { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; }
+  @media (hover: hover) { .hubtile a:hover { background:var(--hov); } }
+  .hubtile a:active { background:var(--hov); }
   .hubtile a:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
   ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -591,10 +591,10 @@
   .btn, .subnav a, .picker select, input.find { border-color: var(--ctl); }
   .subnav a { display: inline-flex; align-items: center; }
   @media (max-width: 600px) { .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 44px; } }
-  /* Hover = selected = the same 1px edge turns ink. An outline laid over the edge: never thicker, never moves. */
-  .subnav a[aria-current="page"] { outline: 1px solid var(--ink); outline-offset: -1px; background: transparent; border-color: var(--ctl); }
+  /* Hover: the pale grey fill, no line. Selected: the same fill plus the 1px quiet grey line inside (Lisa, 12 Nov 2026). Never moves. */
+  .subnav a[aria-current="page"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); border-color: var(--ctl); }
   @media (hover: hover) {
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { background:var(--hov); }
     .btn:hover, .subnav a:hover, a.keytile:hover, a.ment:hover { border-color: var(--ctl); }
     a.ment.bad:hover { border-color: var(--ljr-2); }
     a.card[class]:hover { border-color: var(--ctl); }
@@ -617,8 +617,8 @@
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
   .needs a.needsmore { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
-  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
-    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); } }
+  @media (hover: hover) { .hsplit a.cnt:hover { background:var(--hov); }
+    .hsplit a.cnt.k-risk:hover { background:var(--hov); } }
   .hsplit a.cnt:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
@@ -630,30 +630,29 @@
   /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
   header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }
-  @media (hover: hover) { header .btn:hover { outline-color: var(--frame-ink); border-color: var(--ctl); } }
+  @media (hover: hover) { header .btn:hover { background:var(--frame-hov); border-color: var(--ctl); } }
   /* Signed out the sign-in gate hides the header box (and its dark frame), so the one Sign in button sits on the page: page colours. */
   html.dash-locked header .btn, html.dash-locked header .btn.vision { color: var(--ink); background: var(--surface); }
-  @media (hover: hover) { html.dash-locked header .btn:hover { outline-color: var(--ink); } }
+  @media (hover: hover) { html.dash-locked header .btn:hover { background:var(--hov); } }
   html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
   html body header :focus-visible { outline-color: var(--frame-ink) !important; }
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
   html body nav.house-tabs .ht:focus-visible { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
-  /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
-     (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
-     of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 1px ink line inside. */
+  /* House hover rule (Lisa, 12 Nov 2026, replaces 28 Oct): hover and tap = the pale grey fill, no line, for every control, meaning
+     colours too. Selected = the same fill plus the 1px quiet grey line inside (--sel-bd). Focus stays the 1px ink line inside. */
   .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); --hmc: var(--ljr-2); }
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+  .subnav a[aria-current="page"] { background: var(--sel-fill); outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
   @media (hover: hover) {
     .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
-      outline: 1px solid var(--ink); outline-offset: -1px; }
+      background:var(--hov); }
     .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover {
-      outline: 1px solid var(--hl); outline-offset: -1px; }
-    header .btn:hover { outline-color: var(--frame-ink); }
-    html.dash-locked header .btn:hover { outline-color: var(--frame-ink); }
+      background:var(--hov); }
+    header .btn:hover { background:var(--frame-hov); }
+    html.dash-locked header .btn:hover { background:var(--hov); }
   }
 </style>
 </head>

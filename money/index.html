@@ -62,7 +62,7 @@
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }
   details[open] > summary::after { content: "\25B4"; }
   details[open] > summary { margin-bottom: 12px; }
-  @media (hover: hover) { a.ent:hover, details > summary:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) { a.ent:hover, details > summary:hover { background:var(--hov); } }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   @media (max-width: 600px) { html { scroll-padding-bottom: 120px; } }
