@@ -37,6 +37,14 @@ test.describe('CD Hub: Compliance urgent warnings', () => {
     await expect(page.locator('#compUrgent')).toContainText('never stops anyone working');
   });
 
+  // A dog's room is its row with the latest moved_in, not the last row in the file (Specs.gs occupancy rule, 12 Nov 2026).
+  test('a dog is in the room of its latest move, even when an older row comes later in the file', async ({ page, guard }) => {
+    rooms(guard.world, ['o1,t,sub-x1,ar-iso,,2026-02-01,,Breeding Bitch,', 'o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,', 'o0,t,sub-x1,ar-a,,2026-01-01,,Breeding Bitch,']);
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'compliance');
+    await expect(page.locator('#urgList > li[data-k="closed"]')).toContainText('Room A is closed but has a dog in it');
+  });
+
   test('nothing urgent: says so', async ({ page, guard }) => {
     rooms(guard.world, ['o2,t,sub-x2,ar-a,,2026-01-01,,Breeding Bitch,']);
     await HUBS.cdhub.open(page, guard);

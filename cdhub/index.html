@@ -777,9 +777,11 @@ async function load(){
 }
 var CD={};
 function idx(rows,k){ var m={}; (rows||[]).forEach(function(r){ m[r[k]]=r; }); return m; }
+/* a dog's room = its occupancy row with the latest moved_in (Specs.gs occupancy; same rule as BLDOccupancy.latestRow), not the last row in the file */
+function occLatest(rows){ var m={}; (rows||[]).forEach(function(r){ if(!(r.subject_id in m)) m[r.subject_id]=BLDOccupancy.latestRow(rows,r.subject_id); }); return m; }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
-  var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=idx(T['BLD-occupancy.csv'],'subject_id'),
+  var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
       MC=idx(T['BLD-microchip.csv'],'subject_id');
   var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||'',src:r.source||''}); });
   Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
