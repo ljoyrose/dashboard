@@ -27,3 +27,11 @@ test('an isolation-only room job is counted for the isolation room and its dogs,
   const row = V.summary(v)[0];
   assert.equal(row.due, 1);
 });
+
+test('a whole-site job about dogs counts as done only once every dog has a line', () => {
+  const types = [Object.assign(T('health', 'none', '1'), { site_scope: 'per_dog', sop: 'Health Check' })];
+  const line = (dog) => ({ id: 'h-' + dog, check_type_id: 'cty-health', subject_id: dog, outcome: 'ok', how_recorded: 'site_tap', taken_at: '2026-03-02T09:00:00Z' });
+  const v = (logs) => ({ today: '2026-03-02', logs, litters: [], types, dogs: [{ id: 'd1', area_id: 'r1' }, { id: 'd2', area_id: 'r1' }], areas: [{ id: 'r1' }] });
+  assert.equal(V.summary(v([line('d1')]))[0].due, 1);
+  assert.equal(V.summary(v([line('d1'), line('d2')]))[0].ok, 1);
+});

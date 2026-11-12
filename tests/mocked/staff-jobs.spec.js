@@ -92,7 +92,7 @@ test('no job rows yet: a scan goes to Move dogs as before', async ({ page }) => 
   await expect(page.getByText('Now scan each dog card')).toBeVisible();
 });
 
-test('site code: only what is due, bowls one line, a dog job sends every dog on site', async ({ page }) => {
+test('site code: only what is due, bowls one line, a dog job lists every dog ticked and sends them', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('[data-job="toys"]')).toHaveCount(0);
@@ -100,6 +100,9 @@ test('site code: only what is due, bowls one line, a dog job sends every dog on 
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].action).toBe('add_site');
   expect(sent[0].fields.dog_ids).toBeUndefined();
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(page.locator('[data-job="walk"]').getByRole('checkbox', { checked: true })).toHaveCount(2);
+  expect(sent).toHaveLength(1);
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
   await expect(page.getByText('Saved: 2 dogs. Left out: 1.')).toBeVisible();
   expect(sent[1].fields.dog_ids).toBe('dog-1|dog-2');
@@ -125,7 +128,7 @@ test('jobs are listed A-Z, with a group where its name falls, whatever is late',
   await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.locator('[data-group="Grooming"]')).toBeVisible();
-  await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Weigh']);
+  await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Walk', 'Weigh']);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
 });
@@ -227,6 +230,8 @@ test('a job with form questions opens its form, needs the required answers, and 
   expect(sent[0].values).toEqual({ stool: 'Loose' });
   await page.goto('cdhub/staff/#s/SITETAG2');
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(page.locator('[data-job="walk"] [data-field]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
   await expect.poll(() => sent.length).toBe(2);
   expect(sent[1].values).toBeUndefined();
 });
@@ -239,4 +244,41 @@ test('a room job set for one room only shows on that room\'s scan', async ({ pag
   await expect(page.locator('[data-job="iso_clean"]')).toHaveCount(0);
   await page.goto('cdhub/staff/#s/ISOTAG22');
   await expect(page.locator('[data-job="iso_clean"]')).toBeVisible();
+});
+
+test('a whole-site dog job: one dog not right is flagged on its own from the site list', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Problem: Walk' }).click();
+  await card.getByRole('checkbox', { name: 'Pretend A' }).uncheck();
+  await card.getByLabel('Note').fill('Pretend note');
+  await card.getByRole('button', { name: 'Concern' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add_site', fields: { dog_ids: 'dog-2', outcome: 'concern', note: 'Pretend note' } });
+});
+
+test('a whole-site dog job can be done dog by dog: on a dog scan and on a room scan', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.getByRole('button', { name: 'Done: Walk' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-walk', dog_ids: 'dog-1' } });
+  await expect(page.locator('[data-job="walk"] .ds')).toContainText('Next');
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const card = page.locator('[data-job="walk"]');
+  await expect(card.getByRole('checkbox')).toHaveCount(2);
+  await card.getByRole('button', { name: 'Done: Walk' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]).toMatchObject({ action: 'add_site', fields: { dog_ids: 'dog-1|dog-2' } });
+});
+
+test('a whole-site dog job: a dog already done today starts unticked', async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  await setup(page, { check_log: [{ id: 'clg-1', check_type_id: 'cty-walk', subject_id: 'dog-1', outcome: 'ok', how_recorded: 'site_tap', taken_at: today + 'T09:00:00Z' }] });
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const card = page.locator('[data-job="walk"]');
+  await expect(card.getByRole('checkbox', { name: /Pretend A/ })).not.toBeChecked();
+  await expect(card.getByRole('checkbox', { name: 'Pretend B' })).toBeChecked();
+  await expect(card).toContainText('Pretend A · done');
 });

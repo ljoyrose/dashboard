@@ -46,11 +46,23 @@
         }
         if (row.kind === 'area') { target.area_id = row.ref_id; title = ((d.areas.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Room'; }
       }
-      ctx0.reportFor = target.litter_id ? {} : target;
+      ctx0.reportFor = target.litter_id ? {} : { subject_id: target.subject_id, area_id: target.area_id };
       var roomDogs = target.area_id ? d.dogs.filter(function (x) { return x.areaId === target.area_id && !x.away; }) : [];
+      /* the dogs here, for a whole-site job about dogs (health check): each dog as they go, or all at once */
+      var labelOf = {};
+      if (!target.litter_id) {
+        target.dogs = d.dogs.filter(function (x) { return !x.away && x.areaId && (site || x.areaId === target.area_id || x.id === target.subject_id); })
+          .map(function (x) { labelOf[x.id] = x.label; return { id: x.id, area_id: x.areaId }; });
+      }
 
-      var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {};
+      var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
+      types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+      function doneToday(key) {
+        var m = {};
+        logs.forEach(function (l) { if (keyOf[l.check_type_id] === key && l.subject_id && l.outcome !== 'not_done' && BLDDue.londonDate(l.happened_at || l.taken_at) === today) m[l.subject_id] = true; });
+        return m;
+      }
       /* a job's form: the owner's check_field rows in force today, in their sort order */
       var formOf = {}, latestField = {};
       (v[5].rows || []).forEach(function (r) {
@@ -60,9 +72,7 @@
       });
       Object.keys(latestField).forEach(function (k) { var r = latestField[k]; if (isOn(r)) (formOf[r.type_key] = formOf[r.type_key] || []).push(r); });
       Object.keys(formOf).forEach(function (k) { formOf[k].sort(function (a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.label).localeCompare(String(b.label)); }); });
-      /* a whole-site tap about dogs saves one line per dog; for the site's own due date those lines count as the site */
-      function view() { return site ? logs.map(function (l) { return l.how_recorded === 'site_tap' ? Object.assign({}, l, { subject_id: '' }) : l; }) : logs; }
-      if (tag && !BLDDue.forTarget(types, view(), target, today).length) { moves(); return; }
+      if (tag && !BLDDue.forTarget(types, logs, target, today).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
@@ -97,8 +107,8 @@
           var ticked = state.ticks.filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
           if (!ticked.length) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'Tick a dog.'; return; }
           opts.action = 'add_site'; entry.dog_ids = ticked.join('|');
-        }
-        if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; if (t.site_scope === 'per_dog') entry.dog_ids = d.dogs.filter(function (x) { return !x.away; }).map(function (x) { return x.id; }).join('|'); }
+        } else if (BLDDue.perDogSite(t) && target.subject_id) { opts.action = 'add_site'; entry.dog_ids = target.subject_id; }
+        if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; }
         panelMsg.className = 'msg'; panelMsg.textContent = 'Saving...';
         c.save.submit('check_log', entry, opts).then(function (r) {
           if (!r.ok) {
@@ -107,7 +117,9 @@
             if (r.code !== 'NETWORK') state.rid = null; return;
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
-          logs = logs.concat([Object.assign({}, entry, { id: r.id, taken_at: new Date().toISOString() })]);
+          var at = new Date().toISOString();
+          logs = logs.concat(entry.dog_ids ? entry.dog_ids.split('|').map(function (dog, i) { return Object.assign({}, entry, { id: r.id + '-' + i, subject_id: dog, taken_at: at }); })
+            : [Object.assign({}, entry, { id: r.id, taken_at: at })]);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
           say(r.status === 'queued' ? r.message : (r.saved ? 'Saved: ' + r.saved + ' dogs.' + (left ? ' Left out: ' + left + '.' : '') : 'Saved.'), 'good');
           draw();
@@ -129,8 +141,8 @@
       }
 
       function jobCard(job) {
-        var t = byKey[job.type_key], a = BLDChecks.askedFields(t), many = site || BLDDue.perDogRoom(t), form = many ? [] : (formOf[t.type_key] || []);
-        var needs = a.item || a.amount || a.noteRequired || form.length > 0;   // a whole-site or per-dog tap has no form: the save script refuses one
+        var t = byKey[job.type_key], a = BLDChecks.askedFields(t), dogJob = BLDDue.perDogSite(t), many = site || dogJob || BLDDue.perDogRoom(t), form = many ? [] : (formOf[t.type_key] || []);
+        var needs = a.item || a.amount || a.noteRequired || form.length > 0 || (dogJob && site);   // a whole-site or per-dog tap has no form: the save script refuses one
         var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null };
         state.form = form.map(function (f) { var q = { field: f, input: question(f, function () { state.rid = null; }) }; panel.appendChild(q.input); return q; });
         function input(key, label) { inputs[key] = h('input', { class: 'inp', 'aria-label': label, placeholder: label, oninput: function () { state.rid = null; } }); panel.appendChild(inputs[key]); }
@@ -141,6 +153,12 @@
         if (BLDDue.perDogRoom(t) && target.area_id) {   // all ticked: untick only a dog that missed out
           state.ticks = roomDogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: true, onchange: function () { state.rid = null; } }); });
           roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return h('label', { class: 'job-dog' }, [state.ticks[i], h('span', { text: x.label })]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
+        }
+        if (dogJob && !target.subject_id) {   // dogs not done today start ticked; for a dog not right, tick only that dog, then Problem
+          var did = doneToday(t.type_key), dogs = BLDDue.dogsFor(t, target).slice().sort(function (x, y) { return String(labelOf[x.id]).localeCompare(String(labelOf[y.id])); });
+          state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: !did[x.id], onchange: function () { state.rid = null; } }); });
+          roomList = h('div', { class: 'job-dogs' }, dogs.map(function (x, i) { return h('label', { class: 'job-dog' }, [state.ticks[i], h('span', { text: (labelOf[x.id] || '') + (did[x.id] ? ' · done' : '') })]); }));
+          if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
         }
         var problems = h('div', { class: 'job-btns', hidden: true }, [
           h('button', { class: 'btn quiet', type: 'button', text: 'Concern', onclick: function () { send(job, t, 'concern', inputs, panelMsg, state); } }),
@@ -169,7 +187,7 @@
       }
 
       function draw() {
-        var jobs = BLDDue.forTarget(types, view(), target, today).sort(aToZ);
+        var jobs = BLDDue.forTarget(types, logs, target, today).sort(aToZ);
         list.textContent = '';
         if (group) {
           list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { group = ''; say(''); draw(); } }));
