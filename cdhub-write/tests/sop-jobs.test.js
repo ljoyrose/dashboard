@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
-const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'];
+const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'];
 const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'];
 const VALUE_H = ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'];
@@ -162,4 +162,19 @@ test('forms: in pending mode a check with questions is refused rather than queue
   const r = log(env, { check_type_id: id, subject_id: 'sub-test-a' }, { weight: '12' });
   assert.equal(r.code, 'INVALID'); assert.match(r.fields.values, /straight in/);
   assert.equal(log(env, { check_type_id: id, subject_id: 'sub-test-a' }).ok, true);   // no answers, nothing required: queues as before
+});
+
+// ---- only_in_areas (12 Nov 2026): a room job for some rooms only, e.g. the isolation jobs
+test('only_in_areas: a room job for some rooms only; it is the last column; never saved for another room', () => {
+  const env = env0();
+  assert.deepEqual(Array.from(env.ctx.TABLES.check_type.columns).slice(-2), ['not_in_areas', 'only_in_areas']);
+  assert.match(type(env, 'iso_dog', { target: 'dog', only_in_areas: 'area-t2' }).fields.only_in_areas, /room job/);
+  assert.match(type(env, 'iso_bad', { target: 'area', only_in_areas: 'area t2|' }).fields.only_in_areas, /room ids/);
+  const iso = typeId(env, 'iso_clean', { target: 'area', only_in_areas: ' area-t2 | ' });
+  assert.equal(recs(env, 'BLD-check_type.csv').find((r) => r.type_key === 'iso_clean').only_in_areas, 'area-t2');
+  const bad = log(env, { check_type_id: iso, area_id: 'area-t1' });
+  assert.equal(bad.code, 'INVALID'); assert.match(bad.fields.area_id, /not for this room/);
+  assert.equal(log(env, { check_type_id: iso, area_id: 'area-t2' }).ok, true);
+  const any = typeId(env, 'room_clean', { target: 'area' });   // blank = every room
+  assert.equal(log(env, { check_type_id: any, area_id: 'area-t1' }).ok, true);
 });
