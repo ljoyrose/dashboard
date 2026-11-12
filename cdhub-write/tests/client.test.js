@@ -375,7 +375,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
   d.querySelector('#bw-on').click();
   await tick();
-  assert.match(d.querySelector('.bs-banner').textContent, /approvals queue until Lisa approves/);
+  assert.match(d.querySelector('.bs-banner').textContent, /Lisa approves each entry/);
   const card = d.querySelector('.bs-card[data-area="area-t1"]');
   assert.equal(card.querySelector('.bs-btn').disabled, false);
 
@@ -529,7 +529,7 @@ test('banners for the live occupancy list, the daily check log and the still-pro
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
-  assert.match(s.banner('occupancy').text, /approvals queue until Lisa approves/);
+  assert.match(s.banner('occupancy').text, /Lisa approves each entry/);
   assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
   assert.equal(s.banner('occupancy_check').kind, 'on');
   assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal
@@ -802,7 +802,7 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
   load.click();
   await tick(60);
   const reads = srv.posts().filter((p) => p.action === 'read');
-  assert.deepEqual(reads.map((p) => p.table), ['area', 'subject', 'occupancy', 'subject_status']);
+  assert.deepEqual(reads.map((p) => p.table), ['area', 'subject', 'occupancy', 'subject_status', 'requirement']);
   reads.forEach((p) => assert.equal(p.code, 'STAFFCODE12'));
   srv.calls.forEach((c) => assert.ok(!c.url.includes('STAFFCODE12')));
   assert.equal(d.querySelectorAll('.bs-dog').length, 2);
@@ -850,4 +850,24 @@ test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check`
     assert.equal((after.match(/<script src="/g) || []).length, 7);           // bld-schema.js (context) + the six added
     assert.match(after, /BLDWire\.mount\(CUR\)/);
   } finally { fsx.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('role(): the role the script reported on the last read, for showing owner-only buttons; cleared with the code (TEMPS, 12 Nov 2026)', async () => {
+  const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'OWNER' } } } });
+  const s = mkSave(srv); await s.checkStatus();
+  assert.equal(s.role(), '');
+  s.setCode('SECRETCODE1');
+  assert.equal(s.role(), '');
+  await s.read('area');
+  assert.equal(s.role(), 'OWNER');
+  srv.st.reads.area = { ok: false, code: 'BAD_CODE', message: 'no' };
+  await s.read('area');
+  assert.equal(s.role(), 'OWNER');   // a refusal does not change it; a new code does
+  s.setCode('OTHER');
+  assert.equal(s.role(), '');
+  srv.st.reads.area = { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'STAFF' } };
+  await s.read('area');
+  assert.equal(s.role(), 'STAFF');
+  s.clearCode();
+  assert.equal(s.role(), '');
 });

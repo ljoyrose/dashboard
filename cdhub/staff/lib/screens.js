@@ -138,7 +138,7 @@
       btn.addEventListener('click', function () {
         showErrors(errs, null);
         result.textContent = ''; result.className = 'bs-result';
-        var fields = { area_id: a.id, min_c: minIn.value, max_c: maxIn.value };
+        var fields = { area_id: a.id, min_c: minIn.value, max_c: maxIn.value, read_method: 'typed' };
         if (spotIn.value.trim()) fields.spot_c = spotIn.value;
         if (!noteRow.hidden) {
           if (!noteIn.value.trim()) { errs.mitigation_note.textContent = 'Say what was done about it.'; return; }
@@ -253,7 +253,7 @@
     clear(host);
     host.classList.add('bs'); host.classList.add('bs-board');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Where is everyone?' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Each dog shows the room it was last recorded in. Only tap Moved for a dog that has moved, and pick its new room. Then press All the rest unmoved once. A move is added as a new entry; nothing is overwritten.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Tap Moved for any dog that moved. Then All the rest unmoved.' }));
     var header = mountHeader(doc, host, save, 'occupancy', refreshButtons);
 
     var all = o.dogs || [], areas = o.areas || [];
@@ -309,9 +309,9 @@
     function dogCard(d) {
       var result = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
       var was = el(doc, 'div', { class: 'bs-dog-was', text: d.out ? 'Off-site' : d.known ? 'Last recorded: ' + d.areaLabel : 'Room not recorded yet. Pick where it is now.' });
-      var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: d.out ? 'Back' : 'Moved ✕' });
+      var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: d.out ? 'Back' : 'Moved' });
       var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': d.label + ' new room' }, [el(doc, 'option', { value: '', text: 'Pick the new room' })]
-        .concat(areas.filter(function (a) { return a.id !== d.areaId; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label + (a.group ? '  ·  ' + a.group : '') }); }))
+        .concat(areas.filter(function (a) { return a.id !== d.areaId && a.dogs !== false; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label + (a.group ? '  ·  ' + a.group : '') }); }))
         .concat(o.offSite && !d.out ? [el(doc, 'option', { value: OFF_SITE, text: 'Off-site' })] : []));
       var err = el(doc, 'span', { class: 'bs-err' });
       var go = el(doc, 'button', { class: 'bs-btn bs-big', type: 'button', text: 'Save move' });

@@ -8,7 +8,7 @@
      C  Shape and spacing ..... --house-radius  --house-line  --house-bar  --house-marker-w  --house-marker-h  --house-gap  --house-head-gap
                                --house-pad  --house-gutter  --house-btn  --house-btn-phone  --house-icon  --house-icon-stroke  --house-pill
                                --house-count-w  --house-count-h  --house-count-r  --house-count-lh  --house-count-pad  --house-logo  --house-menu-w
-     D  States ................ --house-state-line  --house-state-fill  --house-focus  --house-tint
+     D  States ................ --house-state-line  --house-state-fill  --house-focus  --house-tint  --house-hov-mix
      E  Type .................. --house-font  --fs-head  --fs-figure  --fs-body  --fs-small  --fs-input  --house-min  --house-press-size
      F  Top bar and look swap . --house-head  --house-head-space  --house-head-name  --house-read-size  --house-look-btn  --house-look-line
                                --house-look-hover  --house-look-on
@@ -20,6 +20,12 @@
      J  Looks (colours) ....... --house-paper  --house-canvas  --house-card  --house-ink  --house-muted  --house-soft-line  --house-soft
                                --house-press  --house-ring  --house-frame  --house-foot  --house-frame-ink  --house-frame-line  --house-shadow
                                --house-late(-tint)  --house-soon(-tint)  --house-ok(-tint)  --house-risk(-tint)
+     K  Counts (Lisa, 3 Nov 2026) ONE rule for every page, toolkit.js DashKit.count (why / kind / cls / say):
+                               grey ring (--house-ring) = waiting, to-do, the Bin;  rose ring (.need, --house-late) = LATE (late, overdue);
+                               black badge (.broken) = BROKEN (site down, domain expired, project stuck, check failed, engine error):
+                               --house-broken-fill  --house-broken-ink  (near-black + white; inverted in the dark looks: light ink + near-black).
+                               The ONE deliberate exception to "no fills, no black". Same box as the ring, so nothing shifts; on a phone tab
+                               the dot is black (light ink in dark). Late and broken together: broken wins. Words: "2 late", "1 down", "3 stuck", "4 failed".
    Looks: "Warm clear" (default) and "Cool clear" (html.look-cool), each light and dark (device dark mode, or [data-theme="dark"]). ===== */
 
 /* A  LJR7 slots. */
@@ -137,6 +143,8 @@
   --house-state-line: var(--house-line);   /* the one line a state draws */
   --house-state-fill: transparent;         /* the fill a state adds: none */
   --house-tint: 14%;               /* the pale tint for a badge's own colour (brand initials); never a state */
+  --house-hov-mix: 14%;            /* how much muted goes into the card for the pale grey hover / selected fill (house.css --hov).
+                                      Warm dark uses 10% so the control line (--house-press) stays 3:1 on it (Lisa, 12 Nov 2026). */
   /* E  Typing boxes (input, textarea, select, contenteditable): 16px on every page, so a phone (iPhone Safari) never zooms in when one is
      tapped. The only size above 15px that is not a heading or figure. */
   --fs-input: 16px;
@@ -154,7 +162,9 @@
   --house-frame: #3A3632; --house-foot: #46413B; --house-frame-ink: #F6F1E8; --house-frame-line: #9C9285;
   --house-shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
   /* Meaning lines (3:1 or better on a card): date pills, yes / no, needs-you. Tints are the slot tints. */
-  --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);
+  --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);   /* rose ring: late only (DashKit.count in toolkit.js) */
+  /* K  Broken counts (Lisa, 3 Nov 2026): the black badge, the one fill a count may have. */
+  --house-broken-fill: #1E1C1A; --house-broken-ink: #FFFFFF;
   --house-soon: var(--ljr-3-text); --house-soon-tint: var(--ljr-3-tint);
   --house-ok: var(--ljr-5-text); --house-ok-tint: var(--ljr-5-tint);
   --house-risk: var(--ljr-2-text); --house-risk-tint: var(--ljr-2-tint);
@@ -168,24 +178,26 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --house-broken-fill: #EFECE6; --house-broken-ink: #1E1C1A;   /* K  broken, inverted */
     --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
-    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E; --house-hov-mix: 10%;
     --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
   }
   :root.look-cool:not([data-theme="light"]) {
     --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
-    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691; --house-hov-mix: 14%;
     --house-frame: #24323F; --house-foot: #2D3D4C;
   }
 }
 :root[data-theme="dark"] {
+  --house-broken-fill: #EFECE6; --house-broken-ink: #1E1C1A;   /* K  broken, inverted */
   --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
-  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E; --house-hov-mix: 10%;
   --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
 }
 :root.look-cool[data-theme="dark"] {
   --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
-  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691; --house-hov-mix: 14%;
   --house-frame: #24323F; --house-foot: #2D3D4C;
 }
 

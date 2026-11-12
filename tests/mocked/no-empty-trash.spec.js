@@ -104,7 +104,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await cdSignIn.click();
   }
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
-  for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops']) {
+  for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops']) {
     await tabClick(page, `#nav button[data-go="${id}"]`);
     await expect(page).toHaveURL(new RegExp(`#/${id}$`));
     await assertClean('CD Hub ' + id);

@@ -181,3 +181,180 @@ test('a recorded answer that cannot be scored is unverified, never 0', () => {
   assert.equal(r.lines[0].unknown_reason, 'recorded_unverified');
 });
 
+
+/* Due level (document Stage 3, three axes): Due sits beside the verdict and changes it only when the row says so. */
+const dueSet = (flag, soon) => Object.assign({}, DOG, { criteria: [crit('hip', 'g', { valid_months: '12', lapsed_affects_verdict: flag, due_soon_days: soon || '' }), crit('eye', 'p')] });
+const dueInput = (flag, asOf, soon) => Object.assign({}, dueSet(flag, soon), { subject: { id: 'a1' }, asOf,
+  evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', '2025-03-02'), exam('e2', 'a1', 'eye', 'clear', '2025-03-02')] } });
+
+test('due: a lapsed check with the flag FALSE keeps its pass and shows overdue', () => {
+  const r = score(dueInput('FALSE', '2026-06-01'));
+  assert.equal(r.verdict, 'pass');
+  assert.equal(r.lines[0].gate_outcome, 'pass');
+  assert.equal(r.lines[0].due, 'overdue');
+  assert.equal(r.lines[0].due_date, '2026-03-02');
+});
+
+test('due: a lapsed check with the flag TRUE, or blank, is unverified, never fail', () => {
+  for (const flag of ['TRUE', '']) {
+    const r = score(dueInput(flag, '2026-06-01'));
+    assert.equal(r.verdict, 'unverified');
+    assert.equal(r.lines[0].gate_outcome, 'unverified');
+    assert.equal(r.lines[0].unknown_reason, 'expired');
+    assert.equal(r.lines[0].due, 'overdue');
+  }
+});
+
+test('due: due soon comes from the row window, and changes nothing', () => {
+  assert.equal(score(dueInput('TRUE', '2026-01-15', '30')).lines[0].due, '');
+  const r = score(dueInput('TRUE', '2026-02-15', '30'));
+  assert.equal(r.lines[0].due, 'due_soon');
+  assert.equal(r.verdict, 'pass');
+  assert.equal(score(dueInput('TRUE', '2026-02-15')).lines[0].due, '');
+});
+
+test('due: bad row values are refused', () => {
+  const bad = Object.assign({}, DOG, { criteria: [crit('hip', 'g', { valid_months: '12', lapsed_affects_verdict: 'maybe', due_soon_days: 'soon' }), crit('eye', 'p', { due_soon_days: '5' })] });
+  const errs = validateScheme(bad).join('\n');
+  assert.match(errs, /lapsed_affects_verdict must be TRUE or FALSE/);
+  assert.match(errs, /due_soon_days must be a whole number/);
+  assert.match(errs, /eye: due_soon_days needs valid_months/);
+});
+
+/* Target: a number, or a percent of the points this animal could earn. */
+const tInput = (target_points, target_is, eyeWord, rows) => Object.assign({}, DOG, { scheme: { id: 's', target_points, target_is }, subject: { id: 'a1' }, asOf: '2026-06-01',
+  evidence: { exam: rows || [exam('e1', 'a1', 'hip', 'sound', '2026-01-01'), exam('e2', 'a1', 'eye', eyeWord, '2026-01-01')] } });
+
+test('target: percent of available, rounded up; under it is Below target', () => {
+  const r = score(tInput('65', 'percent', 'cloudy'));
+  assert.equal(r.target, 7);
+  assert.equal(r.points_earned, 3);
+  assert.equal(r.verdict, 'below_target');
+  assert.equal(r.gate_result, 'pass');
+  assert.equal(score(tInput('65', 'percent', 'clear')).verdict, 'pass');
+  assert.equal(score(tInput('65', 'percent of points available', 'cloudy')).target, 7);
+});
+
+test('target: a fixed number works too, and no target means gates alone decide', () => {
+  assert.equal(score(tInput('3', 'points', 'cloudy')).verdict, 'pass');
+  assert.equal(score(tInput('4', '', 'cloudy')).verdict, 'below_target');
+  assert.equal(score(tInput('', '', 'cloudy')).verdict, 'pass');
+});
+
+test('target: points still unknown that could reach it keep the dog Unverified; a fail stays Fail', () => {
+  const r = score(tInput('65', 'percent', '', [exam('e1', 'a1', 'hip', 'sound', '2026-01-01')]));
+  assert.equal(r.verdict, 'unverified');
+  assert.equal(score(tInput('65', 'percent', 'clear', [exam('e1', 'a1', 'hip', 'poor', '2026-01-01'), exam('e2', 'a1', 'eye', 'clear', '2026-01-01')])).verdict, 'fail');
+  assert.match(validateScheme(Object.assign({}, DOG, { scheme: { id: 's', target_is: 'half' } })).join(), /target_is must be points or percent/);
+});
+
+test('skip: with no record the line leaves the total (a maiden has no last litter), but a record still scores', () => {
+  const set = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { when_missing: 'skip' })] });
+  const none = score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', '2026-01-01')] } }));
+  assert.equal(none.points_available, 0);
+  assert.equal(none.lines.length, 1);
+  assert.equal(none.verdict, 'pass');
+  const some = score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', '2026-01-01'), exam('e2', 'a1', 'eye', 'cloudy', '2026-01-01')] } }));
+  assert.equal(some.points_available, 10);
+  assert.equal(some.points_earned, 3);
+});
+
+/* Age weighting is the breeder's own row (Lisa: an X-ray before 12 months counts half; 12 months on is final). */
+const awSet = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { age_weight: '0-11:0.5' })] });
+const awInput = (on) => Object.assign({}, awSet, { subject: { id: 'a1', dob: '2025-03-02' }, asOf: '2026-11-01',
+  evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on), exam('e2', 'a1', 'eye', 'clear', on)] } });
+
+test('age weight: a record before 12 months scores half; at 12 months it is full', () => {
+  const young = score(awInput('2026-03-01'));
+  assert.equal(young.lines[1].age_months, 11);
+  assert.equal(young.lines[1].points, 5);
+  assert.equal(young.points_available, 10);
+  const final = score(awInput('2026-03-02'));
+  assert.equal(final.lines[1].age_months, 12);
+  assert.equal(final.lines[1].points, 10);
+});
+
+test('age weight: bad rows are refused; no birth date means no weighting', () => {
+  const bad = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { age_weight: 'under a year' })] });
+  assert.match(validateScheme(bad).join(), /age_weight must look like/);
+  const r = score(Object.assign(awInput('2026-03-01'), { subject: { id: 'a1' } }));
+  assert.equal(r.lines[1].points, 10);
+});
+
+/* Dated rules (Lisa, 12 Nov 2026): a record is graded by the rows in force on its own date. */
+test('dated rules: an old record keeps the points of the rule in force on its date', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [crit('hip', 'g'), crit('eye', 'p')],
+    points: [pt('1', 'hip', 'any', '', 'pass'),
+      Object.assign(pt('3', 'eye', 'is:clear', 10), { to_date: '2026-03-01' }),
+      Object.assign(pt('4', 'eye', 'is:clear', 6), { from_date: '2026-03-02' })]
+  });
+  const run = (on) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01',
+    evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on), exam('e2', 'a1', 'eye', 'clear', on)] } }));
+  const old = run('2026-03-01');
+  assert.equal(old.points_earned, 10);
+  assert.equal(old.points_available, 10);
+  assert.equal(old.lines[1].rules_then, true);
+  const recent = run('2026-03-02');
+  assert.equal(recent.points_earned, 6);
+  assert.equal(recent.lines[1].rules_then, false);
+});
+
+test('dated rules: a gate made stricter later never fails an old pass', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [crit('hip', 'g'), crit('eye', 'p')],
+    points: [Object.assign(pt('1', 'hip', 'in:sound|fair', '', 'pass'), { to_date: '2026-01-31' }),
+      Object.assign(pt('2', 'hip', 'is:sound', '', 'pass'), { from_date: '2026-02-01' }),
+      Object.assign(pt('5', 'hip', 'any', '', 'fail'), { from_date: '2026-02-01' }),
+      pt('3', 'eye', 'any', 1)]
+  });
+  const run = (on) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01',
+    evidence: { exam: [exam('e1', 'a1', 'hip', 'fair', on), exam('e2', 'a1', 'eye', 'x', on)] } }));
+  assert.equal(run('2026-01-15').gate_result, 'pass');
+  assert.equal(run('2026-02-15').gate_result, 'fail');
+});
+
+test('dated rules: versions of one check share a key; the record date picks how long it lasts', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [Object.assign(crit('hip-v1', 'g', { key: 'hip', evidence_match: 'kind=hip', valid_months: '24' }), { to_date: '2026-01-31' }),
+      Object.assign(crit('hip-v2', 'g', { key: 'hip', evidence_match: 'kind=hip', valid_months: '6' }), { from_date: '2026-02-01' })],
+    points: [pt('1', 'hip-v1', 'any', '', 'pass'), pt('2', 'hip-v2', 'any', '', 'pass')]
+  });
+  const run = (on) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-12-01',
+    evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on)] } }));
+  const old = run('2025-12-01');
+  assert.equal(old.gate_result, 'pass');
+  assert.equal(old.lines.length, 1);
+  assert.equal(old.lines[0].criterion_id, 'hip-v1');
+  assert.equal(old.lines[0].due_date, '2027-12-01');
+  const newer = run('2026-03-01');
+  assert.equal(newer.gate_result, 'unverified');
+  assert.equal(newer.lines[0].unknown_reason, 'expired');
+});
+
+test('dated rules: a check ended before the scoring date is not scored', () => {
+  const set = Object.assign({}, DOG, {
+    criteria: [crit('hip', 'g'), Object.assign(crit('eye', 'p'), { to_date: '2026-01-01' })]
+  });
+  const r = score(dogInput([exam('e1', 'a1', 'hip', 'sound', '2026-02-01')]));
+  const r2 = score(Object.assign({}, dogInput([exam('e1', 'a1', 'hip', 'sound', '2026-02-01')]), set));
+  assert.equal(r.lines.length, 2);
+  assert.equal(r2.lines.length, 1);
+});
+
+test('dated rules: overlapping versions and bad dates are refused', () => {
+  const bad = Object.assign({}, DOG, {
+    criteria: [crit('a', 'g', { key: 'hip', from_date: '2026-01-01' }), crit('b', 'g', { key: 'hip', from_date: '2026-03-01' }), crit('eye', 'p')],
+    points: DOG.points.concat(pt('a1', 'a', 'any', '', 'pass'), pt('b1', 'b', 'any', '', 'pass'), Object.assign(pt('x', 'eye', 'any', 1), { from_date: '2 Mar 2026' }))
+  });
+  const errs = validateScheme(bad).join(' ');
+  assert.match(errs, /overlap/);
+  assert.match(errs, /from_date must be a date/);
+  assert.match(validateScheme(Object.assign({}, DOG, { criteria: [crit('hip', 'g', { from_date: '2026-03-01', to_date: '2026-02-01' }), crit('eye', 'p')] })).join(' '), /to_date is before from_date/);
+});
+
+test('dated rules: a scheme with a to_date stops being picked after it', () => {
+  const s = [{ id: 'x', status: 'active', species_id: 'dog', effective_from: '2026-01-01', to_date: '2026-05-31' }];
+  assert.equal(pickScheme(s, 'dog', '', '2026-05-31').id, 'x');
+  assert.equal(pickScheme(s, 'dog', '', '2026-06-01'), null);
+});

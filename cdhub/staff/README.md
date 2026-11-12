@@ -20,6 +20,8 @@ Any phone camera works: the room being filled is remembered on the phone for 30 
 
 A scan opens `modules/jobs/`: the `BLD-check_type` rows for that dog or room, with **Move dogs** underneath. A `site` tag, or **Today** on Home, shows whole-site jobs that are due. While a room is being filled, scans stay on Move dogs. If job rows, reads or saving are not on, a scan goes to Move dogs as before. **Report** needs a `check_type` row with `type_key` `report` and `target` `optional`.
 
+`site_scope` says what one tap writes. `one_line` writes one line for the place (bowls). `per_dog` writes one line per dog: on a `target` `area` row, the dogs ticked in that room; on a `target` `none` row, every dog on site except those in `not_in_areas`. The column rules live in `cdhub-write/apps-script/Specs.gs`.
+
 ## Adding a screen (module)
 
 Put it in `modules/<name>/module.js` and add the path to `FILES` in `shell.js`. `modules/temperature/module.js` is already in the list, and the page copes if it is missing.

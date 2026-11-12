@@ -32,7 +32,7 @@
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
     return Object.keys(best).map(function (k) { return best[k]; })
-      .filter(function (r) { return r.active !== 'false'; })
+      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter'; })   // litter jobs open from a litter card's code
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
   }
 
@@ -53,6 +53,7 @@
     if (type.target === 'area' && !entry.area_id) e.area_id = 'Choose the room.';
     if (type.target === 'dog' && !entry.subject_id) e.subject_id = 'Choose the dog.';
     if (type.target === 'either' && !entry.area_id && !entry.subject_id) e.area_id = 'Choose a room or a dog.';
+    if (type.target === 'litter' && !entry.litter_id) e.litter_id = 'Scan the litter card.';
     if (a.item && !entry.item) e.item = 'This is needed.';
     if (a.amount && !entry.amount) e.amount = 'This is needed.';
     if (!entry.outcome) e.outcome = 'Choose one.';
@@ -95,11 +96,11 @@
       var b = save.banner('check_log');
       msg.textContent = b.text;
       if (!b.canSave) return { ok: false, reason: 'off' };
-      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status'], ['subject', 'occupancy', 'subject_status']).then(function (all) {
+      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status', 'requirement'], ['subject', 'occupancy', 'subject_status', 'requirement']).then(function (all) {
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
         if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
-        draw(host, save, types, all.tables.area, onSite(all.tables), opts.type, msg);
+        draw(host, save, types, (all.tables.area || []).filter(function (a) { return typeof BLDOccupancy === 'undefined' || BLDOccupancy.inUse(a, londonToday(opts.now), all.tables.requirement); }), onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });

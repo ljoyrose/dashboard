@@ -26,8 +26,8 @@ const PLAN = {
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Compliance', 'Table map', 'The round', 'Areas', 'Litters', 'Vet link', 'Assocs'] },
-  food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
+  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Compliance', 'Table map', 'The round', 'Areas', 'Litters', 'Assocs'] },
+  food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov)
 };
 // phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
@@ -56,7 +56,7 @@ function measureBar() {
         bg: cs(t).backgroundColor, hicBg: cs(hic).backgroundColor, ring: cs(hic).borderTopColor, ringW: cs(hic).borderTopWidth,
         icon: cs(hic).color, barW: bar.getBoundingClientRect().width, barBg: cs(bar).backgroundImage !== 'none' ? 'gradient' : cs(bar).backgroundColor,
         selected: t.getAttribute('aria-current') === 'page' || !!(t.closest('.ht-more') && t.closest('.ht-more').querySelector('.house-more [aria-current="page"]')),
-        count: n && n.textContent.trim() ? { bg: cs(n).backgroundColor, ring: cs(n).borderTopColor, ringW: cs(n).borderTopWidth, need: n.classList.contains('need'), right: r.right - n.getBoundingClientRect().right, top: n.getBoundingClientRect().top - r.top,
+        count: n && n.textContent.trim() ? { bg: cs(n).backgroundColor, ring: cs(n).borderTopColor, ringW: cs(n).borderTopWidth, need: n.classList.contains('need'), broken: n.classList.contains('broken'), ink: cs(n).color, right: r.right - n.getBoundingClientRect().right, top: n.getBoundingClientRect().top - r.top,
           w: n.getBoundingClientRect().width, left: n.getBoundingClientRect().left - r.left, iconRight: ir.right - r.left, overLabel: (() => { const b = n.getBoundingClientRect(); return !(b.right <= lr.left || b.left >= lr.right || b.bottom <= lr.top || b.top >= lr.bottom); })() } : null,
       };
     }),
@@ -105,14 +105,16 @@ for (const [hub, H] of Object.entries(ALL)) {
           expect(t.barW, `${t.word}: selected = the long line`).toBeCloseTo(40, 0);
         }
         if (t.count && W > 600) {
-          expect(t.count.bg, `${t.word}: the count has no fill`).toMatch(TRANSPARENT);
+          // Broken (down, expired, stuck, failed: Lisa, 3 Nov 2026) is the one filled count: the black badge with a white number.
+          if (t.count.broken) expect([t.count.bg, t.count.ring, t.count.ink], `${t.word}: broken = the black badge`).toEqual(['rgb(30, 28, 26)', 'rgb(30, 28, 26)', 'rgb(255, 255, 255)']);
+          else expect(t.count.bg, `${t.word}: the count has no fill`).toMatch(TRANSPARENT);
           expect(t.count.right, `${t.word}: the count sits in the top-right corner`).toBeLessThan(5);
           expect(t.count.top, `${t.word}: the count sits in the top-right corner`).toBeLessThan(5);
           expect(t.count.overLabel, `${t.word}: the count never covers the word`).toBe(false);
-          expect(t.count.ring, `${t.word}: rose ring = late or due today, grey ring = waiting`).toBe(t.count.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
+          if (!t.count.broken) expect(t.count.ring, `${t.word}: rose ring = late or due today, grey ring = waiting`).toBe(t.count.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
         } else if (t.count) {
           // On a phone the count is a dot (Lisa's pick b, 2 Nov): a rose or grey fill, no ring, beside the icon's top-right corner.
-          expect(t.count.bg, `${t.word}: rose dot = late or due today, grey dot = waiting`).toBe(t.count.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
+          expect(t.count.bg, `${t.word}: rose dot = late or due today, black dot = broken, grey dot = waiting`).toBe(t.count.need ? 'rgb(230, 68, 61)' : t.count.broken ? 'rgb(30, 28, 26)' : 'rgb(138, 127, 112)');
           expect(t.count.ringW, `${t.word}: a dot, no ring`).toBe('0px');
           expect(t.count.w, `${t.word}: an 8px dot`).toBe(8);
           expect(t.count.left, `${t.word}: the dot sits off the icon's right edge`).toBeGreaterThanOrEqual(t.count.iconRight);

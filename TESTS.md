@@ -106,6 +106,12 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
 - All ten sections open (Live feed, Outstanding, Table map, Today, The round, Dogs, Areas, Litters, Vet link, Buyers).
 - Dogs, cabins, litters and weights from the sample files join up correctly.
+- Litter print cards look like kennel cards (band in the dam's size colour, Born DD/MM/YY, Sire, Pups, Room, one large code, 1, 2 or 4 per A4) and list only litters still on site. Kennel cards show Colour (coat lookup rows) and Microchip in threes; kennel cards, room signs and litter cards show the jobs in force from the job rows (kennel: by group; room and litter: job and how often). (`tests/mocked/cdhub-litter-print-card.spec.js`)
+- An Areas room card shows today's temperature in The round's words (one line per thermometer when a room has two or more), an out-of-range reading as a ring, the limit from the band rows, and a Temperature history link; a room with no thermometer has no line.
+- A dog card shows the weight change (↑ 0.3 · 12/01/26), the last medication date, DNA as clear / carrier / affected pills, and litters as dam with the last one; the litters line opens Litters for that dam. The card header shows DOB (DD/MM/YY) and Colour, the room icon stays small on a phone, and the status chips sit inside Filter so the first dog shows on a phone. Size comes from the latest weight using Lisa's `size_from_kg.medium` / `size_from_kg.large` rows (each needs a source; a future row is not in force); no rows or no weight means the record's size stands. The card gets a 3px line in the size colour and a badge on the photo, and the room check uses the same size. Vaccinations show the count, the last date and the next due date written on the card (marked when it has passed). (`tests/mocked/cdhub-dog-card-summary.spec.js`)
+- There is no Vet link page and no Animana patient id on screen (Lisa, 12 Nov 2026: not relevant); an old #/vet address falls back to the Map.
+- Dated limits: room limits and size cut-offs are read as at the day being checked (from_date / to_date, to_date included, blank = open), with the weight on or before that day, so a later rule never makes an old placement look wrong.
+- A dog's room is its occupancy row with the latest moved_in, even when an older row comes later in the file. A move row with a blank classification keeps the dog's licence label from its latest labelled row, so the dog stays on site (`tests/mocked/cdhub-compliance-urgent.spec.js`).
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.
 - Saving stays switched off.
@@ -150,6 +156,12 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
 - The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
 - This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
+
+**Food Hub card notes** (`tests/mocked/food.spec.js`, `tests/mocked/job34-food-states.spec.js`, invented rows)
+- A note typed on a card is written in column H when the card is marked done: answer, note, time, and whoever is signed in.
+- Save note with no answer appends one row on the Comments tab: at, key, title, text, by.
+- An empty note writes nothing. Save note stays off until there is text.
+- A missing Comments tab shows the usual missing-tab notice and the page stays up.
 
 **Hub data contracts (Food, Marketplace, Studio)**
 - `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.
@@ -306,13 +318,14 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
 | 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
-| 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected view under More has one clean edge and no fill (the tab picks have no fills); the "You are here" title has no box" (renamed 2 Nov 2026: Lisa's tab picks drop the fill) |
+| 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected view under More has one clean edge and the pale grey selected fill (Lisa, 12 Nov 2026); the "You are here" title has no box" (renamed 2 Nov 2026: Lisa's tab picks drop the fill) |
 | 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
 | 29 Oct 2026 | Marketplace: the public pages (hub and privacy policy) showed a personal email address (sign-in hint, Gmail link, contact) | "public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression" |
 | 29 Oct 2026 | Marketplace: the same check on what the page actually shows (text and links), signed out, on every tab and on the privacy page | "signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression" |
 | 30 Oct 2026 | Phone install: Factory, Food and Marketplace were not on the service worker list, so they did not open offline | "@regression every published hub page is on the service worker list" (tests/mocked/pwa-and-keys.spec.js) |
 | 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
 | 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
+| 3 Nov 2026 | Search dialog (390px screenshot, Dashboard): "Type at least 2 letters." still showed after typing "invoice" (it changed only when the search ran), and Close wore the browser's own button style | "the hint follows every key: shown under 2 letters, gone from the 2nd letter on…" and "${scheme}: Close is a house button: 1px line…" (tests/mocked/house-rose-broken.spec.js) |
 | 5 Nov 2026 | Home Apps tile header opened Factory Rooms (`factory/`) instead of Main, and the Food ✓ XML tick opened unfiltered orders | "Apps tile header opens Factory Main, and" |
 | 5 Nov 2026 | Main hub tiles: only the name was a link, so a tap on the rest of the square did nothing | "the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression" |
 | 5 Nov 2026 | CD Hub boot said it was reading tables from Drive and waited on each file in turn | "boot stays friendly and present files are read together @regression" |
@@ -320,6 +333,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 6 Nov 2026 | Temperatures showed "Source:" and the reading kind, including the word actual, on history and on Outside today when the phrase was empty | "Outside today does not show the reading kind when the phrase is empty @regression" and "year chips run current first, and a day detail does not show Source or the reading kind @regression" |
 | 8 Nov 2026 | Food Reorder due listed customers who had already reordered (the page could not tell customers apart; Lisa) | "reorder due with engine v1.15.3 keys: a customer who ordered again…" |
 | 8 Nov 2026 | Dashboard Food tile showed "✓ XML" and nothing waiting while paid order #5400 waited for its Send tap (Lisa) | "Food tile: an order waiting for its Send tap…" |
+| 11 Nov 2026 | CD Hub: a medicine ask such as "identify the medicine given in February" opened Outstanding, and the same button opened Outstanding again. The round also stopped if a cabin already had its flap set | "Identify the medicine given in February opens that dog’s February record, and a second click does not return to Outstanding @regression" and "date, saving, flap, move, temperatures and history each finish or explain @regression" (tests/mocked/cdhub-round-paths.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

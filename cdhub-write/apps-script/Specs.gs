@@ -16,7 +16,7 @@ var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
 var ROLE_GUEST = 'GUEST';
 
 /** The default allow-list: the temperature log (plus the approvals queue, see Config.gs PENDING_FILE). */
-var READ_METHODS_ = ['camera', 'typed'];
+var READ_METHODS_ = ['camera', 'typed', 'photo'];   // photo (11 Nov 2026): typed later from a photo. Saved, never shown (Lisa 11 Nov)
 
 var TABLES = {
 
@@ -35,41 +35,66 @@ var TABLES = {
       'applied_limit_id', 'in_range', 'compliant', 'mitigation_required',
       'corrects_id',        // PROPOSED: pointer to the row this one corrects
       'mitigation_note',    // PROPOSED: what was done when a reading is out of band
-      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'
-      'camera_value_changed' // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
+      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'; 'photo' (11 Nov) = typed later from a photo
+      'camera_value_changed', // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
+      'room_empty',         // PROPOSED 11 Nov 2026 (Lisa): 'yes' = no dog in the room for this slot; blank = not said
+      'thermometer_id'      // PROPOSED 11 Nov 2026 (Lisa): which named thermometer, so a room with 2 has 2 readings a slot
     ],
-    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed'],
+    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty', 'thermometer_id'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
-    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    // thermometer: id -> its area_id (valCol), so a reading can only name a thermometer in its own room
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }, { name: 'thermometer', file: 'BLD-thermometer.csv', idCol: 'id', valCol: 'area_id' }],
     // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
     // the owner, who fixes it with the owner edit (or an OWNER code sends a correction row).
     perms: { add: ROLE_ALL, correct: ['OWNER'] },
     ownerEditable: true,
     alwaysPending: false,
     defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
+    // Lisa 11 Nov 2026 ("remove 7 day limit on readings"): any role may send a period_start older than 7 days, back as
+    // far as temperature records are kept (BLD-retention_setting row for section temperature, else the default in
+    // Config.gs). Never a future time. taken_at/taken_by still show when it was typed.
+    ageCap: { retentionSection: 'temperature', field: 'period_start' },
     // fields the browser may send (everything else is set by the server)
     input: {
       area_id:             { type: 'ref', lookup: 'area', required: true },
       reading_type:        { type: 'enum', values: ['temperature'], dflt: 'temperature' },
-      min_c:               { type: 'temp', required: true },
-      max_c:               { type: 'temp', required: true },
+      min_c:               { type: 'temp' },   // needed unless room_empty = yes (checkRow)
+      max_c:               { type: 'temp' },
       spot_c:              { type: 'temp' },
       period_start:        { type: 'datetime' },
       reset_after_reading: { type: 'bool' },
       mitigation_note:     { type: 'text' },
-      read_method:         { type: 'enum', values: READ_METHODS_ },
-      camera_value_changed: { type: 'bool' }
+      read_method:         { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
+      camera_value_changed: { type: 'bool' },
+      // Lisa 11 Nov 2026: a room with no dog in it. The slot counts as covered and is shown flagged "Room empty", never
+      // as non-compliant. A reading is optional then (staff may still read it: a dog may move in later), but both
+      // min and max or neither. in_range / compliant stay blank: the save never judges a reading.
+      room_empty:          { type: 'enum', values: ['yes'] },
+      // Lisa 11 Nov 2026: "room H5/6 has 2 named thermometers". Optional: blank = one reading per room per slot, as before.
+      thermometer_id:      { type: 'ref', lookup: 'thermometer' }
     },
-    // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
-    // DUP_WINDOW_MIN of taken_at. Without period_start this is the old rule: same room inside the window.
-    dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
+    // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
+    // slot sent by the hub) within DUP_WINDOW_MIN of taken_at. Without period_start: same room inside the window.
+    dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
       if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);
       row.taken_at = ctx.nowIso;
       row.taken_by = ctx.who;
     },
-    checkRow: function (row, errors) {
+    checkRow: function (row, errors, lookups) {
+      if (row.thermometer_id && !errors.thermometer_id && !errors.area_id && lookups && lookups.thermometer &&
+          lookups.thermometer[row.thermometer_id] !== row.area_id) {
+        errors.thermometer_id = 'That thermometer is in another room.';
+      }
+      if (!errors.min_c && !errors.max_c && !errors.room_empty) {
+        if (row.room_empty !== 'yes') {
+          if (row.min_c === '') errors.min_c = 'This is needed.';
+          if (row.max_c === '') errors.max_c = 'This is needed.';
+        } else if ((row.min_c === '') !== (row.max_c === '')) {
+          errors[row.min_c === '' ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
+        }
+      }
       if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
           parseFloat(row.min_c) > parseFloat(row.max_c)) {
         errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
@@ -97,13 +122,14 @@ var TABLES = {
     noCorrect: true,
     alwaysPending: false,
     defaultMode: 'direct',
+    ageCap: { retentionSection: 'temperature', field: 'period_start' },   // as area_reading (Lisa 11 Nov 2026)
     input: {
       area_id:              { type: 'ref', lookup: 'area', required: true },
       min_c:                { type: 'temp', required: true },
       max_c:                { type: 'temp', required: true },
       spot_c:               { type: 'temp' },
       period_start:         { type: 'datetime' },
-      read_method:          { type: 'enum', values: READ_METHODS_ },
+      read_method:          { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' },
       mitigation_note:      { type: 'text' },
       note:                 { type: 'text' }
@@ -119,6 +145,142 @@ var TABLES = {
     }
   },
 
+  // ---------------------------------------------------------------- sensor_reading
+  // One room's daily low and high from a plug-in sensor (Govee export), added by the OWNER from the year report
+  // page (NEW: TEMPS, 11 Nov 2026). A separate file: a sensor day never counts as, or overwrites, a staff reading.
+  // samples = how many sensor readings made that day's low and high. Lisa creates the file (header row only);
+  // own switch TABLE_ON_sensor_reading, OFF by default. The same room, day and source twice is a repeat, not a new day.
+  sensor_reading: {
+    key: 'sensor_reading',
+    file: 'BLD-sensor_reading.csv',
+    idPrefix: 'snr',
+    columns: ['id', 'tenant_id', 'area_id', 'day', 'min_c', 'max_c', 'samples', 'source', 'device_label', 'taken_at', 'taken_by'],
+    proposedColumns: ['id', 'tenant_id', 'area_id', 'day', 'min_c', 'max_c', 'samples', 'source', 'device_label', 'taken_at', 'taken_by'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      area_id:      { type: 'ref', lookup: 'area', required: true },
+      day:          { type: 'date', required: true },
+      min_c:        { type: 'temp', required: true },
+      max_c:        { type: 'temp', required: true },
+      samples:      { type: 'text', required: true },   // checked below: a whole number (a day of minute readings is 1440)
+      source:       { type: 'text', required: true },   // e.g. govee
+      device_label: { type: 'text' }
+    },
+    dupKey: ['area_id', 'day', 'source'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.samples && row.samples !== '' && !/^\d{1,6}$/.test(row.samples)) errors.samples = 'Use a whole number.';
+      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
+          parseFloat(row.min_c) > parseFloat(row.max_c)) {
+        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- thermometer
+  // One thermometer per place (a room or a corridor, never a field), so the round lists the thermometers, not the
+  // rooms (NEW: TEMPS, 11 Nov 2026). How many there are is rows, never code. The OWNER adds one; its QR card is made on
+  // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. A thing carries no
+  // dates (Lisa 11 Nov 2026, "A standard"): when it is needed is BLD-requirement rows (need_type reading.temperature).
+  // To fix a row the owner edits it in place (name, area_id). Own switch, OFF by default.
+  thermometer: {
+    key: 'thermometer',
+    file: 'BLD-thermometer.csv',
+    idPrefix: 'thm',
+    columns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
+    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      name:      { type: 'text', required: true },
+      area_id:   { type: 'ref', lookup: 'area', required: true }
+    },
+    dupKey: ['name'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.name && row.name !== '' && row.name.length > 40) errors.name = 'Use 40 characters or fewer.';
+    }
+  },
+
+  // ---------------------------------------------------------------- requirement
+  // Need rows (Lisa 11 Nov 2026, "A standard"): when a thing is needed or in use. need_type is a row value
+  // (reading.temperature on a thermometer, room.in_use on an area; more later as rows, never columns). A target with no
+  // rows of a need_type is always needed; with rows, only on days a row covers (from_date..to_date, both inclusive,
+  // blank to_date = no end). To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
+  requirement: {
+    key: 'requirement',
+    file: 'BLD-requirement.csv',
+    idPrefix: 'req',
+    columns: ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      need_type:    { type: 'text', required: true },   // e.g. reading.temperature, room.in_use
+      target_table: { type: 'text', required: true },   // e.g. thermometer, area
+      target_id:    { type: 'text', required: true },
+      from_date:    { type: 'date', required: true },
+      to_date:      { type: 'date' },                   // blank = no end
+      source:       { type: 'text' }                    // why: a licence condition, a document, Lisa's decision
+    },
+    dupKey: ['need_type', 'target_table', 'target_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      ['need_type', 'target_table', 'target_id'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[a-z0-9_.\-]{1,60}$/i.test(row[k])) errors[k] = 'Letters, numbers, dots, dashes or _ only.';
+      });
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+    }
+  },
+
+  // ---------------------------------------------------------------- area_link
+  // Room links (Lisa 12 Nov 2026, option B via NEW: TEMPS): for from_date..to_date (both inclusive, blank to_date =
+  // no end) a reading taken in from_area_id also counts for to_area_id, e.g. while one thermometer covers two rooms.
+  // A link row, never dates on the room ("A standard"); readings are never copied or changed, the pages count them
+  // through BLDAreaLink.expand. To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
+  area_link: {
+    key: 'area_link',
+    file: 'BLD-area_link.csv',
+    idPrefix: 'alk',
+    columns: ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      from_area_id: { type: 'ref', lookup: 'area', required: true },   // the room the reading is taken in
+      to_area_id:   { type: 'ref', lookup: 'area', required: true },   // the room it also counts for
+      from_date:    { type: 'date', required: true },
+      to_date:      { type: 'date' },                                  // blank = no end
+      source:       { type: 'text' }                                   // why: Lisa's decision, an inspector's note
+    },
+    dupKey: ['from_area_id', 'to_area_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.to_area_id && row.from_area_id && row.from_area_id === row.to_area_id) errors.to_area_id = 'Choose a different room.';
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+    }
+  },
+
   // ---------------------------------------------------------------- check_type
   // The kennel's own list of staff checks (feeding, medicine, cleaning...): entered by the OWNER as rows, never
   // hard-coded, because they differ by kennel. NEW table, own switch, OFF by default. A change is a new row with a
@@ -130,9 +292,9 @@ var TABLES = {
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
     columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
     proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -142,7 +304,7 @@ var TABLES = {
     input: {
       type_key:       { type: 'text', required: true },
       label:          { type: 'text', required: true },
-      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none'], required: true },
+      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none', 'litter'], required: true },   // litter (12 Nov 2026): a litter's jobs, opened from its tag
       asks_item:      { type: 'bool', dflt: 'false' },
       asks_amount:    { type: 'bool', dflt: 'false' },
       item_label:     { type: 'text' },
@@ -161,7 +323,8 @@ var TABLES = {
       sop:            { type: 'text' },                                             // the SOP's short name
       evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
       site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none or area: what one tap writes
-      not_in_areas:   { type: 'text' }                                              // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
+      not_in_areas:   { type: 'text' },                                             // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
+      only_in_areas:  { type: 'text' }                                              // a room job for these rooms only (e.g. isolation), by |; blank = every room
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -181,6 +344,12 @@ var TABLES = {
       if (!errors.not_in_areas && row.target === 'none' && row.site_scope === 'per_dog' && row.not_in_areas === '') {
         errors.not_in_areas = 'List the isolation rooms this tap must never cover, separated by |, or type none.';
       }
+      if (!errors.only_in_areas && row.only_in_areas !== '') {
+        var rooms = row.only_in_areas.split('|').map(function (a) { return a.trim(); }).filter(String);
+        if (row.target !== 'area') errors.only_in_areas = 'Only for a room job.';
+        else if (!rooms.length || rooms.some(function (a) { return !ID_RE_.test(a); })) errors.only_in_areas = 'List room ids separated by |, e.g. area-h2-iso.';
+        else row.only_in_areas = rooms.join('|');
+      }
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.effective_from) return;
@@ -191,7 +360,93 @@ var TABLES = {
           return;
         }
       }
+      // SOP jobs, 12 Nov 2026: a whole-site job whose includes names a room job restarts that job in every room, so it
+      // must say which rooms it never covers (isolation), as a per_dog tap must. A room job = its latest row has target area.
+      if (clean.target === 'none' && clean.includes && !clean.not_in_areas && !errors.includes && !errors.not_in_areas) {
+        var latest = {};
+        records.forEach(function (r) { if (!latest[r.type_key] || (r.effective_from || '') > (latest[r.type_key].effective_from || '')) latest[r.type_key] = r; });
+        if (clean.includes.split('|').some(function (k) { return latest[k] && latest[k].target === 'area'; })) {
+          errors.not_in_areas = 'This covers room jobs. List the isolation rooms it must never cover, separated by |, or type none.';
+        }
+      }
     }
+  },
+
+  // ---------------------------------------------------------------- check_field
+  // A check's form (SOP jobs, 12 Nov 2026): one row per question, so a form is rows, never code. Versioned like
+  // check_type: a change is a NEW row with a later effective_from; the row in force on a day is the latest one with
+  // effective_from on or before it, and active=false drops the question from that date. kind says what is typed;
+  // choice lists its answers in choices, separated by |. The answers go to check_value, sent with the check_log row.
+  // OWNER only, own switch, OFF by default.
+  check_field: {
+    key: 'check_field',
+    file: 'BLD-check_field.csv',
+    idPrefix: 'cfd',
+    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    computedColumns: [],
+    lookups: [{ name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'type_key' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      type_key:       { type: 'text', required: true },                              // the check (check_type.type_key) this question belongs to
+      field_key:      { type: 'text', required: true },                              // the question's short name, e.g. stool
+      label:          { type: 'text', required: true },                              // what staff read
+      kind:           { type: 'enum', values: ['text', 'number', 'date', 'yesno', 'choice'], required: true },
+      choices:        { type: 'text' },                                              // choice only: answers separated by |
+      required:       { type: 'bool', dflt: 'false' },
+      sort:           { type: 'count' },                                             // order on the screen
+      active:         { type: 'bool', dflt: 'true' },
+      effective_from: { type: 'date', required: true }
+    },
+    dupKey: ['type_key', 'field_key', 'effective_from'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors, lookups) {
+      ['type_key', 'field_key'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row[k])) errors[k] = 'Use lower-case letters, numbers and underscores, e.g. stool.';
+      });
+      if (!errors.type_key && row.type_key && lookups && lookups.check_type_key && !lookups.check_type_key[row.type_key]) errors.type_key = 'No check with that name.';
+      if (!errors.choices && !errors.kind) {
+        var list = String(row.choices || '').split('|').map(function (c) { return c.trim(); }).filter(String);
+        if (row.kind === 'choice' && list.length < 2) errors.choices = 'List at least two answers, separated by |.';
+        else if (row.kind !== 'choice' && list.length) errors.choices = 'Only a choice question has answers to pick from.';
+        else if (list.length > 30) errors.choices = 'Keep it to 30 answers or fewer.';
+        else row.choices = list.join('|');
+      }
+    },
+    checkAgainst: function (clean, records, errors) {
+      if (errors.type_key || errors.field_key || errors.effective_from) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.type_key === clean.type_key && r.field_key === clean.field_key && (r.effective_from || '') >= clean.effective_from) {
+          errors.effective_from = 'This question already has a version from ' + r.effective_from + '. A change must start after that date.';
+          return;
+        }
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- check_value
+  // The answers to a check's form: one row per answer, pointing at the check_log row and the exact check_field
+  // version asked. Never sent on its own: the save writes these with the check_log row (Sink.gs formRows_), all or
+  // none. Own switch, OFF by default; while it is off, a check_log save with answers is refused.
+  check_value: {
+    key: 'check_value',
+    file: 'BLD-check_value.csv',
+    idPrefix: 'cvl',
+    columns: ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'],
+    proposedColumns: ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: [], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {},
+    dupKey: [], dupTimeCol: null,
+    stamp: function () {}
   },
 
   // ---------------------------------------------------------------- check_log
@@ -203,14 +458,16 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
+      { name: 'check_type_only', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'only_in_areas' },
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
-      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
+      { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' }
     ],
     perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER'] },
     alwaysPending: false,
@@ -225,13 +482,19 @@ var TABLES = {
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
-      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] }       // scanned = opened from a tag: it says which screen, not that anyone was there
+      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] },      // scanned = opened from a tag: it says which screen, not that anyone was there
+      litter_id:     { type: 'ref', lookup: 'litter' }                              // 12 Nov 2026: a litter job (check_type target litter)
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'item'], dupTimeCol: 'taken_at',
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
-    checkRow: function (row, errors) {
+    checkRow: function (row, errors, lookups) {
       if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
         errors.note = 'Say briefly what the concern is or why it was not done.';
+      }
+      // a room job for some rooms only (check_type.only_in_areas): never saved for another room
+      var only = lookups && lookups.check_type_only ? lookups.check_type_only[row.check_type_id] : true;
+      if (!errors.area_id && row.area_id && typeof only === 'string' && only.split('|').indexOf(row.area_id) < 0) {
+        errors.area_id = 'This job is not for this room.';
       }
     }
   },
@@ -362,7 +625,7 @@ var TABLES = {
     defaultMode: 'direct',
     input: {
       tag:    { type: 'text', required: true },
-      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site'], required: true },   // site = the one premises code
+      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true },   // site = the one premises code
       ref_id: { type: 'text', required: true }
     },
     dupKey: ['tag'], dupTimeCol: null,
@@ -418,20 +681,32 @@ var TABLES = {
     alwaysPending: false,
     defaultMode: 'direct',
     input: {
-      rule_key:       { type: 'enum', values: ['min_dam_age_months', 'max_litters_per_dam', 'min_months_between_litters'], required: true },
-      value:          { type: 'count', required: true },
+      // any key (overseer 12 Nov 2026 sweep): size_from_kg.*, size_colour.*, compliance.*, staffing.*, room.* are rows too.
+      // Only the keys in BREEDING_RULE_LIMITS_ are checked as whole numbers with a usual range.
+      rule_key:       { type: 'text', required: true },
+      value:          { type: 'text', required: true },
       effective_from: { type: 'date', required: true },
       source:         { type: 'text' },
-      note:           { type: 'text' }
+      note:           { type: 'text' },
+      // not a column: "yes" keeps a value outside the usual range (overseer 12 Nov 2026: a council may allow it)
+      confirm_unusual: { type: 'enum', values: ['yes'] }
     },
     // the same rule given twice from the same date is a repeat tap
     dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
+      if (row.rule_key && !/^[a-z][a-z0-9_.\-]{1,99}$/.test(row.rule_key)) errors.rule_key = 'Use lower-case letters, numbers, dots, dashes and underscores, e.g. size_from_kg.medium.';
       var lim = BREEDING_RULE_LIMITS_[row.rule_key];
+      if (lim && row.value !== '' && !errors.value) {
+        if (!/^\d{1,3}$/.test(row.value)) errors.value = 'Use a whole number from 0 to 999.';
+        else row.value = String(parseInt(row.value, 10));
+      }
       if (lim && !errors.value && row.value !== '') {
         var n = parseInt(row.value, 10);
-        if (n < lim[0] || n > lim[1]) errors.value = 'Use a number from ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '.';
+        if ((n < lim[0] || n > lim[1]) && row.confirm_unusual !== 'yes') {
+          errors.value = 'Unusual value: the usual range is ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '. Check the number, or save anyway.';
+          errors.confirm_unusual = 'Save anyway?';   // the page shows a "Save anyway" button and sends confirm_unusual = yes
+        }
       }
     },
     // a new version must start after the latest one already saved for that rule (history is never rewritten)
@@ -455,7 +730,8 @@ function checkReadMethod_(row, errors) {
   }
 }
 
-/** Sensible bounds for each breeding rule, so a typo (e.g. 120 months) is refused: [lowest, highest, unit]. */
+/** Usual bounds for each breeding rule, so a typo (e.g. 120 months) is caught: [lowest, highest, unit]. Outside them
+ *  is a warning, not a stop: confirm_unusual = yes saves it (a council may allow other values). */
 var BREEDING_RULE_LIMITS_ = {
   min_dam_age_months:          [6, 48, 'months'],
   max_litters_per_dam:         [1, 20, 'litters'],
@@ -580,7 +856,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE];
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_());   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
@@ -601,10 +877,27 @@ var READABLE = {
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
   check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
   check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' },
+  check_field:     { file: 'BLD-check_field.csv',     vis: 'check_field',     authorCol: 'set_by',      dateCol: 'set_at' },
+  check_value:     { file: 'BLD-check_value.csv',     vis: 'check_value',     authorCol: '',            dateCol: '' },
   qr_tag:          { file: 'BLD-qr_tag.csv',          vis: 'qr_tag',          authorCol: '',            dateCol: '' },
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
   litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // health results (12 Nov 2026, for inspector links; staff and owner still need visibility rows, none planned)
+  health_screen:   { file: 'BLD-health_screen.csv',   vis: 'health_screen',   authorCol: '',            dateCol: '' },
+  fit_to_breed:    { file: 'BLD-fit_to_breed.csv',    vis: 'fit_to_breed',    authorCol: '',            dateCol: '' },
+  // 12 Nov 2026 (DOGCARD): the kennel print card shows Colour and Microchip. Read only as far as visibility rows
+  // allow; the planned rows are for aud-admin (the owner) only.
+  coat_colour:     { file: 'BLD-coat_colour.csv',     vis: 'coat_colour',     authorCol: '',            dateCol: '' },
+  coat_pattern:    { file: 'BLD-coat_pattern.csv',    vis: 'coat_pattern',    authorCol: '',            dateCol: '' },
+  nose_pigment:    { file: 'BLD-nose_pigment.csv',    vis: 'nose_pigment',    authorCol: '',            dateCol: '' },
+  microchip:       { file: 'BLD-microchip.csv',       vis: 'microchip',       authorCol: '',            dateCol: '' },
+  // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
+  temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
+  sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
+  thermometer:     { file: 'BLD-thermometer.csv',     vis: 'thermometer',     authorCol: 'made_by',     dateCol: 'made_at' },
+  requirement:     { file: 'BLD-requirement.csv',     vis: 'requirement',     authorCol: 'set_by',      dateCol: 'set_on' },
+  area_link:       { file: 'BLD-area_link.csv',       vis: 'area_link',       authorCol: 'set_by',      dateCol: 'set_on' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };

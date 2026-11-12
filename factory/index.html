@@ -88,14 +88,14 @@
   .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
-  /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
-  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; }
+  /* Hover and tap: the pale grey fill, no line, meaning colours too. Selected: the same fill plus the 1px quiet grey line inside (Lisa, 12 Nov 2026). Nothing moves. */
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
-    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { background:var(--hov); }
     .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
-      outline: 1px solid var(--mc); outline-offset: -1px; }
-    header .btn:hover { outline-color: var(--frame-ink); }
+      background:var(--hov); }
+    header .btn:hover { background:var(--frame-hov); }
     .ico:hover { color: var(--hc, var(--ink)); }
     .mark:hover svg { filter: none; opacity: 1; }
     .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }
@@ -499,7 +499,8 @@
     var html = findBar('rooms', all, APP, [], { side: sw, extra: '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
       '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> Apps ' + cnt(A.length) + '</a>' +
-      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, false) + '</a>' +
+      // A stuck app is broken: the black badge, read out as "N stuck" (DashKit.count).
+      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck" aria-label="Stuck: ' + DashKit.count.say(A.filter(stuck).length, 'stuck') + '"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, 'stuck') + '</a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
       people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + cnt(queue(w).length) + '</a>'; }).join('') +
       enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
@@ -1058,7 +1059,8 @@
   }
   // A count sits in a faint circle, so it reads as "how many", never as part of the words (Lisa, 20 Oct).
   // One fixed box (30 x 22); 3+ characters grow. A count of 0 (or nothing) shows no pill at all; need = rose ring + tint.
-  function cnt(n, need) { return !n ? '' : '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + (need ? ' need' : '') + '">' + n + '</span>'; }
+  // why: true / 'late' = rose ring, 'stuck' / 'failed'... = black badge, anything else a grey ring (DashKit.count).
+  function cnt(n, why) { return !n ? '' : '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + DashKit.count.cls(n, why) + '">' + n + '</span>'; }
   function tabN(id, n) { var e = $(id); e.textContent = n ? n : ''; e.classList.toggle('wide', String(n).length > 2); }
   // Words on screen start with a capital, after any code number: "8 Operate", "To do", "0 No data stored" (Lisa, 20 Oct).
   function cap(t) { return String(t == null ? '' : t).replace(/^(\S*\d\S*\s+|[?]\s+)?([a-z])/, function (m, d, c) { return (d || '') + c.toUpperCase(); }); }
@@ -1464,7 +1466,8 @@
       return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
     }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
     if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
-    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, false) + '</a>' :
+    // An engine fault is broken: the black badge, read out as "N failed" (DashKit.count).
+    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '" aria-label="Engine: ' + DashKit.count.say(bad.length, 'failed') + '. ' + esc(bad.join(', ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, 'failed') + '</a>' :
       '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i> Engine</a>';
   }
   var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };

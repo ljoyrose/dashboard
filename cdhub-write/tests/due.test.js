@@ -108,3 +108,57 @@ test('until the columns exist every job is as needed, and bad numbers do not gue
   ['', '0', '-3', '2.5', 'weekly', null].forEach((v) => assert.equal(D.everyDays(v), null));
   assert.equal(D.everyDays(' 12 '), 12);
 });
+
+test('a litter job belongs to one litter only, and never shows for a dog, room or the site', () => {
+  const types = [T('socialise', 'litter', '1'), T('nails', 'dog', '28')];
+  const logs = [L('socialise', '2026-03-02', { subject_id: '', litter_id: 'lit1' })];
+  assert.equal(one(D.forTarget(types, logs, { litter_id: 'lit1' }, '2026-03-02'), 'socialise').status, 'ok');
+  assert.equal(one(D.forTarget(types, logs, { litter_id: 'lit2' }, '2026-03-02'), 'socialise').status, 'never');
+  assert.equal(D.forTarget(types, logs, { litter_id: 'lit1' }, '2026-03-02').length, 1);
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1' }, '2026-03-02').filter((j) => j.type_key === 'socialise').length, 0);
+  assert.equal(D.forTarget(types, logs, { area_id: 'r1' }, '2026-03-02').length, 0);
+  assert.equal(D.forTarget(types, logs, {}, '2026-03-02').length, 0);
+});
+
+test('a whole-site job that includes a room job restarts it in every room except the ones it never covers', () => {
+  const types = [T('site_clean', 'none', '1', { includes: 'daily_clean', not_in_areas: 'iso' }), T('daily_clean', 'area', '1'), T('bowls', 'none', '1')];
+  const logs = [L('site_clean', '2026-03-02', { subject_id: '', how_recorded: 'site_tap' })];
+  const room = D.forTarget(types, logs, { area_id: 'r1' }, '2026-03-02');
+  assert.equal(one(room, 'daily_clean').status, 'ok');
+  assert.equal(one(room, 'daily_clean').reset_by, 'site_clean');
+  assert.equal(one(D.forTarget(types, logs, { area_id: 'iso' }, '2026-03-02'), 'daily_clean').status, 'never');
+  assert.equal(one(D.forTarget(types, logs, {}, '2026-03-02'), 'site_clean').status, 'ok');
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1' }, '2026-03-02').length, 0);
+  const plain = [T('site_clean', 'none', '1', { not_in_areas: 'iso' }), T('daily_clean', 'area', '1')];
+  assert.equal(one(D.forTarget(plain, logs.map((l) => Object.assign({}, l, { check_type_id: 'cty-site_clean-1' })), { area_id: 'r1' }, '2026-03-02'), 'daily_clean').status, 'never');
+});
+
+test('a room job with only_in_areas shows only in those rooms, and counts only the dogs in them', () => {
+  const types = [T('iso_checks', 'area', '1', { only_in_areas: 'iso', site_scope: 'per_dog' }), T('daily_clean', 'area', '1')];
+  const day = '2026-03-02';
+  assert.deepEqual(D.forTarget(types, [], { area_id: 'iso' }, day).map((j) => j.type_key).sort(), ['daily_clean', 'iso_checks']);
+  assert.deepEqual(D.forTarget(types, [], { area_id: 'r1' }, day).map((j) => j.type_key), ['daily_clean']);
+  assert.equal(D.forTarget(types, [], { subject_id: 'd1', everyDog: true, dogArea: 'iso' }, day).length, 1);
+  assert.equal(D.forTarget(types, [], { subject_id: 'd2', everyDog: true, dogArea: 'r1' }, day).length, 0);
+  assert.equal(D.forTarget(types, [], { subject_id: 'd2', everyDog: true }, day).length, 0);
+});
+
+test('a whole-site job about dogs: shown on each dog and room it covers, done once every dog has a line', () => {
+  const types = [T('health', 'none', '1', { site_scope: 'per_dog', not_in_areas: 'iso' })];
+  const dogs = [{ id: 'd1', area_id: 'r1' }, { id: 'd2', area_id: 'r2' }, { id: 'd3', area_id: 'iso' }];
+  const line = (dog) => ({ id: 'l-' + dog, check_type_id: 'cty-health-1', subject_id: dog, outcome: 'ok', how_recorded: 'site_tap', taken_at: '2026-03-02T09:00:00Z' });
+  const one = (target, logs) => D.forTarget(types, logs, target, '2026-03-02')[0];
+  // one dog done as they go: that dog and its room are done; the site waits for the other dog (the isolation dog is never counted)
+  assert.equal(one({ subject_id: 'd1', dogs: [dogs[0]] }, [line('d1')]).status, 'ok');
+  assert.equal(one({ area_id: 'r1', dogs: [dogs[0]] }, [line('d1')]).status, 'ok');
+  assert.equal(one({ area_id: 'r2', dogs: [dogs[1]] }, [line('d1')]).status, 'never');
+  assert.equal(one({ dogs }, [line('d1')]).status, 'never');
+  assert.equal(one({ dogs }, [line('d1'), line('d2')]).status, 'ok');
+  // not on the isolation room or its dog, and not on a dog or room screen unless the dogs are given
+  assert.equal(one({ area_id: 'iso', dogs: [dogs[2]] }, []), undefined);
+  assert.equal(one({ subject_id: 'd3', dogs: [dogs[2]] }, []), undefined);
+  assert.equal(one({ subject_id: 'd1' }, []), undefined);
+  // an older dog line makes the site late by that dog
+  const old = Object.assign(line('d2'), { taken_at: '2026-02-27T09:00:00Z' });
+  assert.equal(one({ dogs }, [line('d1'), old]).days_late, 2);
+});

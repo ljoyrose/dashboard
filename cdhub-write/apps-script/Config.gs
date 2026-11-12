@@ -23,6 +23,9 @@
  *   MOVES_QUEUE_UNTIL  last day (YYYY-MM-DD, London) on which a dog move goes to the approvals queue. After that
  *                    day moves go straight in. Run adminStartMovesQueue() on go-live day to set it to today + 14 days.
  *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
+ *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
+ *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
+ *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
  * are not recorded. Corrections go through the screen.
@@ -43,8 +46,11 @@ var BLD = {
     BACKUP_ON: 'BACKUP_ON',
     READ_ENABLED: 'READ_ENABLED',
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
-    MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL'
+    MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
+    INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
+    INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
   },
+  RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
     MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
     MAX_TEXT_CHARS: 500,
@@ -52,6 +58,9 @@ var BLD = {
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends
     DUP_WINDOW_MIN: 30,     // a second reading for the same room inside this window is refused
     PERIOD_MAX_AGE_HOURS: 168,
+    // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
+    // a section, the legal period, else this many years. Used only as that fallback.
+    RETENTION_DEFAULT_YEARS: 6,
     REQUEST_CACHE_SEC: 21600,
     LOCK_WAIT_MS: 20000,
     TEMP_MIN: -30,

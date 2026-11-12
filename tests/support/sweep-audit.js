@@ -1,9 +1,11 @@
 // The style sweep (Lisa, 3 Nov 2026): one set of in-page checks, read back from the drawn page and its style sheets.
-//  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable).
+//  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable) and the ONE
+//    pale grey state fill (Lisa, 12 Nov 2026: hover, tap and selected = --hov / --sel-fill; on the dark frame --frame-hov).
 //  2 Numbers side by side in one group are the same size (and weight).
 //  3 No explainer lines or sub-lines that restate a label.
 //  4 Nothing moves on hover or focus.
-//  5 A rose count means late: every rose ring sits with something late, overdue, down or expired.
+//  5 A rose count means late: every rose ring sits with something late, overdue, down or expired. A black count (.broken, Lisa
+//    3 Nov 2026) means broken: it sits with something down, expired, stuck or failed, and its link (if it has a label) says the word.
 // Each check returns a list of plain-words problems, so a red run says what to fix.
 
 // Runs in the page: every style rule (inline <style> and the site's own sheets) that styles a state, and what it changes.
@@ -14,7 +16,8 @@ function stateRules() {
   // Typing boxes may change their background; so may an on/off switch (a form control: its track shows on or off).
   const TYPING = /(^|[\s>+~(,])(input|textarea|select)\b|\[contenteditable|::placeholder|::-webkit|::selection|\.fin\b|\.sw\b/;
   const noNot = (x) => { let y = x, z; while ((z = y.replace(/:not\([^()]*\)/g, '')) !== y) y = z; return y; };   // :not(:hover) is the resting state
-  const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|rgba\(0, 0, 0, 0\))$/;
+  // The one pale grey state fill (Lisa, 12 Nov 2026) is the house rule, not a fill to find.
+  const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|var\(--(hov|sel-fill|frame-hov)\)|rgba\(0, 0, 0, 0\))$/;
   const out = [];
   const walk = (rules, sheet) => {
     for (const r of rules) {
@@ -49,7 +52,7 @@ function stateRules() {
   return out.filter((f) => { const k = f.kind + f.sel + f.prop + f.value; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-// Runs in the page: the drawn view. Returns { selected, groups, explainers, rose } problem lists.
+// Runs in the page: the drawn view. Returns { selected, groups, explainers, rose, broken } problem lists.
 function drawn() {
   const seen = (e) => { if (!e.getClientRects().length) return false; const s = getComputedStyle(e); if (s.visibility === 'hidden' || +s.opacity === 0) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const name = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + ([...e.classList].slice(0, 3).map((c) => '.' + c).join('')) + ' "' + (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) + '"';
@@ -57,9 +60,12 @@ function drawn() {
   const bgOf = (e) => { for (let x = e; x && x.nodeType === 1; x = x.parentElement) { const c = getComputedStyle(x).backgroundColor; if (alpha(c) > 0.05) return c; } return 'rgb(255, 255, 255)'; };
   // Typing boxes, and on/off switches (.sw: a form control whose track shows on or off), may change their background.
   const typing = (e) => e.matches('input, textarea, select, [contenteditable="true"], [contenteditable=""], .sw, [role="switch"]');
-  const out = { selected: [], groups: [], explainers: [], rose: [] };
+  const out = { selected: [], groups: [], explainers: [], rose: [], broken: [] };
 
-  // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on.
+  // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on, or the one pale
+  //   grey selected fill (--sel-fill, Lisa 12 Nov 2026).
+  const pr = document.createElement('span'); pr.style.background = 'var(--sel-fill, transparent)'; document.body.appendChild(pr);
+  const selFill = getComputedStyle(pr).backgroundColor; pr.remove();
   const SEL = '[aria-pressed="true"], [aria-current="page"], [aria-current="true"], [aria-selected="true"], .on, .sel, .selected';
   for (const e of document.querySelectorAll(SEL)) {
     if (!seen(e) || typing(e) || e.closest('svg') || e.matches('html, body, main, #view, section, .card, li, tr, td, dialog')) continue;
@@ -67,7 +73,7 @@ function drawn() {
     const sib = [...(e.parentElement ? e.parentElement.children : [])].find((x) => x !== e && x.tagName === e.tagName && !x.matches(SEL) && seen(x));
     const want = sib ? getComputedStyle(sib).backgroundColor : (e.parentElement ? bgOf(e.parentElement) : 'rgb(255, 255, 255)');
     const got = s.backgroundColor;
-    const same = got === want || (alpha(got) < 0.05 && !sib);
+    const same = got === want || got === selFill || (alpha(got) < 0.05 && !sib);
     if (!same || (s.backgroundImage !== 'none' && !/url\(/.test(s.backgroundImage))) out.selected.push(name(e) + ': selected fill ' + got + (s.backgroundImage !== 'none' ? ' ' + s.backgroundImage.slice(0, 40) : '') + ' (beside ' + want + ')');
   }
 
@@ -129,22 +135,37 @@ function drawn() {
     if (hit) continue;
     out.rose.push(name(e) + ': rose ring with nothing late in ' + (c ? name(c) : 'its place'));
   }
+
+  // 5b Black counts (broken): with something down, expired, stuck or failed in its card, row or link label; never also rose.
+  const BROKEWORD = /(?<![a-z])(down|expired|stuck|fail(s|ed|ing)?|engine)(?![a-z])/i;
+  for (const e of document.querySelectorAll('.cnt.broken, .hm-v.broken, .hk b.broken, .v.broken')) {
+    if (!seen(e) || e.closest('nav.house-tabs') || !(e.textContent || '').trim()) continue;
+    if (e.classList.contains('need')) out.broken.push(name(e) + ': both rose and black');
+    const c = e.closest('[data-open-row], li, .hk, .hm-n, .tile, .pill, .card, section') || e.parentElement;
+    const a = e.closest('a'), al = a && a.getAttribute('aria-label');
+    const label = (al || (a && a.textContent) || '') + ' ' + (c ? c.textContent : '');
+    if (!BROKEWORD.test(label)) out.broken.push(name(e) + ': black count with nothing broken in ' + (c ? name(c) : 'its place'));
+    if (al && !BROKEWORD.test(al)) out.broken.push(name(e) + ': its label "' + al.slice(0, 40) + '" does not say what is broken');
+  }
   return out;
 }
 
-// Runs in the page: the bottom tab counts that are rose (".need" = read out as "N late"). Returns [{ href, word, n }].
+// Runs in the page: the bottom tab counts that are rose (".need" = read out as "N late") or black (".broken" = "N down" ...).
+// Returns [{ href, word, n, broken, label }].
 function roseTabs() {
   return [...document.querySelectorAll('nav.house-tabs .ht, nav.house-tabs .house-more > a')].map((t) => {
-    const n = t.querySelector(':scope > .n, :scope > .cnt'); if (!n || !n.classList.contains('need') || !n.textContent.trim()) return null;
-    const w = t.querySelector('.htl'); return { href: t.getAttribute('href') || '', nav: t.getAttribute('data-nav') || '', word: (w ? w.textContent : t.textContent).trim(), n: n.textContent.trim() };
+    const n = t.querySelector(':scope > .n, :scope > .cnt'); if (!n || !(n.classList.contains('need') || n.classList.contains('broken')) || !n.textContent.trim()) return null;
+    const w = t.querySelector('.htl'); return { href: t.getAttribute('href') || '', nav: t.getAttribute('data-nav') || '', word: (w ? w.textContent : t.textContent).trim(), n: n.textContent.trim(),
+      broken: n.classList.contains('broken'), label: t.getAttribute('aria-label') || '' };
   }).filter(Boolean);
 }
 
-// Runs in the page: is anything late shown on the view (rows, pills, words)?
-function lateShown() {
+// Runs in the page: is anything late shown on the view (rows, pills, words)? brokenToo: down / expired / stuck / failed count too.
+function lateShown(brokenToo) {
   const seen = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const v = document.querySelector('#view, main') || document.body;
   if ([...v.querySelectorAll('.dpill.late, .date.late, .late, [data-kind="late"], .over, .overdue, .n-risk, .st-bad')].some(seen)) return true;
+  if (brokenToo && /(?<![a-z])(stuck|fail(s|ed|ing)?|down|expired)(?![a-z])/i.test(v.innerText || '')) return true;
   return /(?<![a-z])(late|overdue|down|expired|past (its|their) due)(?![a-z])/i.test(v.innerText || '');
 }
 

@@ -146,13 +146,14 @@ test('the heading row folds; the heading link still opens Do; a row still opens 
   }
 });
 
-test('the chevron: grey outline icon in a house control (1px line), no fill and nothing moves on hover, focus and press; still with reduced motion', async ({ page, guard }) => {
+test('the chevron: grey outline icon in a house control (1px line); hover = the pale grey fill, no line; nothing moves; no fill on focus; still with reduced motion', async ({ page, guard }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await HUBS.money.open(page, guard);
   await page.goto('money/#/now');
   const b = page.locator('[data-hm="needs"] button.house-fold');
   const read = () => b.evaluate((e) => { const s = getComputedStyle(e), r = e.getBoundingClientRect(), i = e.querySelector('svg'), is = getComputedStyle(i);
-    return { bg: s.backgroundColor, box: [r.x, r.y, r.width, r.height].map(Math.round).join(','), border: s.borderTopStyle === 'none' ? 0 : parseFloat(s.borderTopWidth), shadow: s.boxShadow, iw: i.getBoundingClientRect().width, fill: is.fill, stroke: is.stroke, ink: getComputedStyle(document.body).color, motion: is.transitionDuration, ow: s.outlineWidth, os: s.outlineStyle }; });
+    const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+    return { hov, bg: s.backgroundColor, box: [r.x, r.y, r.width, r.height].map(Math.round).join(','), border: s.borderTopStyle === 'none' ? 0 : parseFloat(s.borderTopWidth), shadow: s.boxShadow, iw: i.getBoundingClientRect().width, fill: is.fill, stroke: is.stroke, ink: getComputedStyle(document.body).color, motion: is.transitionDuration, ow: s.outlineWidth, os: s.outlineStyle }; });
   const rest = await read();
   expect(rest.bg).toBe('rgba(0, 0, 0, 0)');
   expect(rest.border, 'rests on the one 1px control line').toBe(1);
@@ -163,8 +164,9 @@ test('the chevron: grey outline icon in a house control (1px line), no fill and 
   expect(rest.motion).toBe('0s');
   await b.hover();
   const hov = await read();
-  expect(hov.bg, 'no fill on hover').toBe(rest.bg); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
-  expect(hov.os + ' ' + hov.ow, 'hover is the 1px line').toBe('solid 1px');
+  expect(hov.bg, 'the pale grey fill on hover (Lisa, 12 Nov 2026)').toBe(hov.hov); expect(hov.box, 'nothing moves on hover').toBe(rest.box);
+  expect(hov.os, 'no line on hover').toBe('none');
+  await page.mouse.move(0, 0);
   await b.focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
   const foc = await read();
   expect(foc.bg, 'no fill on focus').toBe(rest.bg); expect(foc.box, 'nothing moves on focus').toBe(rest.box);

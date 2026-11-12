@@ -23,6 +23,43 @@
   }
   function band(s) { var w = word(s); return w ? w + (/pups/i.test(String(s)) ? '+pups' : '') : ''; }
 
+  /**
+   * The rows in force on a date (the dated-limits rule, Lisa 12 Nov 2026; same wording as SOPS's breedRule and the save script):
+   * a row is in force when from <= date <= to_date. Dates compare on their first 10 characters (YYYY-MM-DD), so a datetime
+   * such as taken_at works; to_date is inclusive; a blank or unreadable from or to counts as open. No date: every row, as before.
+   * fromKey is the row's start column ('from_date' for area_capacity, 'effective_from' for breeding_rule). Never throws.
+   */
+  function ymd(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
+  function inForce(rows, iso, fromKey) {
+    var d = ymd(iso); rows = rows || [];
+    if (!d) return rows.slice();
+    fromKey = fromKey || 'from_date';
+    return rows.filter(function (r) { var f = ymd(r && r[fromKey]), t = ymd(r && r.to_date); return (!f || f <= d) && (!t || d <= t); });
+  }
+  /**
+   * Size from weight (Lisa's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
+   * never fixed here: size_from_kg.medium = the weight (kg) at which a dog counts as medium, size_from_kg.large = the
+   * weight at which it counts as large. A row needs a value and a source; the newest row in force on `today` wins.
+   * Returns null unless both are set and medium < large, so a half-set pair never sorts a dog.
+   */
+  function sizeCutoffs(rules, today) {
+    var got = {};
+    (rules || []).forEach(function (r) {
+      var m = /^size_from_kg\.(medium|large)$/.exec(String(r.rule_key || '').trim()); if (!m) return;
+      var kg = parseFloat(r.value), from = String(r.effective_from || '');
+      if (isNaN(kg) || kg <= 0 || !String(r.source || '').trim()) return;
+      if (today && !inForce([r], today, 'effective_from').length) return;   // not yet started, or ended (to_date)
+      var cur = got[m[1]]; if (!cur || from >= cur.from) got[m[1]] = { kg: kg, from: from, source: String(r.source).trim() };
+    });
+    if (!got.medium || !got.large || !(got.medium.kg < got.large.kg)) return null;
+    return { medium: got.medium.kg, large: got.large.kg, source: got.medium.source === got.large.source ? got.medium.source : got.medium.source + '; ' + got.large.source };
+  }
+  /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. */
+  function sizeFromKg(kg, cut) {
+    kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
+    return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+  }
+
   /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
   function accessOf(rows, areaId) {
     var a = '';
@@ -45,12 +82,20 @@
     return out.join(' or ');
   }
 
+  /** On a date, several rows can cover the same room, flap setting and size: the latest from_date wins (a new row replaces
+   *  the old one even if the old one was not closed). Rows with the same from_date all stay, and the stricter figure counts. */
+  function latestPerBand(rows) {
+    var top = {};
+    rows.forEach(function (r) { var k = String(r.access_type).toLowerCase() + '|' + band(r.size_band), f = ymd(r.from_date); if (!(k in top) || f > top[k]) top[k] = f; });
+    return rows.filter(function (r) { return ymd(r.from_date) === top[String(r.access_type).toLowerCase() + '|' + band(r.size_band)]; });
+  }
   /**
    * dogs = everyone who would be in the room: [{id, size, damId}]
    * Returns {status: 'ok'|'over'|'unknown', count, limit, access, alternatives, mix, message, notes}
    */
   function check(o) {
     var rows = (o.capacity || []).filter(function (r) { return r.area_id === o.areaId; });
+    if (o.date) rows = latestPerBand(inForce(rows, o.date, 'from_date'));
     var ids = {}; o.dogs.forEach(function (d) { ids[d.id] = true; });
     var dams = {}; o.dogs.forEach(function (d) { if (d.damId && ids[d.damId]) dams[d.damId] = true; });
     var counted = o.dogs.filter(function (d) { return !(d.damId && ids[d.damId]); });
@@ -88,15 +133,15 @@
     return res;
   }
 
-  /** Every room at once, for the compliance audit. rooms = [{areaId, label, access, dogs, reasons}] */
+  /** Every room at once, for the compliance audit. rooms = [{areaId, label, access, dogs, reasons, date}]; date (optional) judges each room by the rows in force that day. */
   function audit(rooms, capacity) {
     var out = { over: [], unknown: [], ok: 0 };
     rooms.forEach(function (r) {
-      var c = check({ areaId: r.areaId, access: r.access, capacity: capacity, dogs: r.dogs });
+      var c = check({ areaId: r.areaId, access: r.access, capacity: capacity, dogs: r.dogs, date: r.date });
       c.areaId = r.areaId; c.label = r.label; c.reasons = r.reasons || [];
       if (c.status === 'over') out.over.push(c); else if (c.status === 'unknown') out.unknown.push(c); else out.ok++;
     });
     return out;
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word };
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce };
 }));

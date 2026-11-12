@@ -792,10 +792,10 @@ test.describe('Studio page', () => {
     const box0 = await other.boundingBox();
     await other.hover();
     expect(await other.boundingBox()).toEqual(box0);
-    await expect(other).toHaveCSS('outline-style', 'solid');
+    expect(await other.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; }), 'hover = the pale grey fill, no line (Lisa, 12 Nov 2026)').toEqual({ s: 'none', grey: true });
     const lab = await page.locator('.col[data-stage="5"] .col-head .lab').evaluate((e) => getComputedStyle(e).color);
     expect(lab).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
-    // Keyboard focus is an ink ring like hover, never the browser blue.
+    // Keyboard focus is a 1px ink line inside, never the browser blue.
     await page.locator('[data-vmode="list"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
     const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); return { o: c.outlineColor, w: c.outlineWidth, off: c.outlineOffset, ink: getComputedStyle(document.body).color }; });
@@ -957,7 +957,7 @@ test.describe('Studio page', () => {
     await noSidewaysScroll(page, 'Filter panel on the phone');
   });
 
-  test('one line rule: every control type hovers with its 1px edge turning ink, and nothing moves', async ({ page, guard }) => {
+  test('hover rule (Lisa, 12 Nov 2026): every control type hovers with the pale grey fill and no line, and nothing moves', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     await openFilters(page);
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
@@ -971,32 +971,36 @@ test.describe('Studio page', () => {
       await el.scrollIntoViewIfNeeded();
       const b0 = await el.boundingBox();
       await el.hover();
-      const st = await el.evaluate((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, o: c.outlineOffset, c: c.outlineColor, s: c.outlineStyle }; });
-      expect(st, `${k} hover`).toEqual({ w: '1px', o: '-1px', c: ink, s: 'solid' });
+      const st = await el.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { s: c.outlineStyle, grey: c.backgroundColor === hov }; });
+      expect(st, `${k} hover`).toEqual({ s: 'none', grey: true });
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
       if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
     }
-    // Never a fill on hover (Lisa's sweep, 3 Nov 2026); meaning-coloured buttons keep their own colour line, never ink.
+    // Meaning-coloured buttons rest on their own colour line and keep it; hover is the same pale grey fill, no coloured line.
     await page.locator('#filtersBtn').hover();
-    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
+    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
     await go(page, 'review');
     const yes = page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]'), no = page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]');
     const y0 = await yes.boundingBox();
     const yRest = await yes.evaluate((e) => getComputedStyle(e).backgroundColor);
     await yes.hover();
-    const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
-    expect(ys.o).toBe(ys.b); // rests on its green line and keeps it on hover (Lisa's approved picture), never ink
-    expect(ys.o).not.toBe(ink);
-    expect(ys.w).toBe('1px');
-    expect(ys.bg, 'no fill on hover').toBe(yRest);
+    const yb0 = await yes.evaluate((e) => getComputedStyle(e).borderTopColor);
+    const ys = await yes.evaluate((e) => { const c = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+      return { s: c.outlineStyle, b: c.borderTopColor, bg: c.backgroundColor, hov }; });
+    expect(ys.s, 'no coloured line on hover').toBe('none');
+    expect(ys.b).not.toBe(ink); // rests on its green line and keeps it on hover
+    expect(ys.bg, 'the pale grey fill on hover').toBe(ys.hov);
+    expect(ys.bg).not.toBe(yRest);
     expect(await yes.boundingBox()).toEqual(y0);
     await no.hover();
-    const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor }; });
-    expect(ns.o).toBe(ns.b); // rose line kept
+    const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { s: c.outlineStyle, b: c.borderTopColor }; });
+    expect(ns.s, 'no coloured line on hover').toBe('none'); expect(ns.b).not.toBe(ink); // rose resting line kept
     await go(page, 'line');
-    // Selected is the same line.
-    const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineWidth);
-    expect(sel).toBe('1px');
+    // Selected: the pale grey fill plus a 1px line in the quiet control grey, never ink.
+    await page.mouse.move(0, 0);
+    const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => { const c = getComputedStyle(e), p = document.createElement('span'); p.style.color = 'var(--house-press)'; p.style.background = 'var(--hov)'; e.parentElement.appendChild(p);
+      const ps = getComputedStyle(p), r = [c.outlineWidth, c.outlineColor === ps.color, c.backgroundColor === ps.backgroundColor]; p.remove(); return r; });
+    expect(sel).toEqual(['1px', true, true]);
   });
 
   test('numbers: every standalone count wears the same 1px ink ring; a tab count is rose only when one is late (sweep, 3 Nov); steps keep their stage circle', async ({ page, guard }) => {
@@ -1302,8 +1306,9 @@ test.describe('Studio page', () => {
       await el.hover();
       await expect(el, sel + ' is read-only').toHaveCSS('outline-style', 'none');
     }
-    const b = page.locator('#filtersBtn'); await b.hover();
-    await expect(b).toHaveCSS('outline-color', ink);
+    const b = page.locator('#filtersBtn'); const bRest = await b.evaluate((e) => getComputedStyle(e).backgroundColor); await b.hover();
+    await expect(b).toHaveCSS('outline-style', 'none');
+    expect(await b.evaluate((e) => getComputedStyle(e).backgroundColor), 'pressables hover with the pale grey fill').not.toBe(bRest);
   });
 
   test('brand website: a small "↗ host" link on the brand card and in item details, new tab; hidden when missing', async ({ page, guard }) => {

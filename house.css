@@ -1,8 +1,8 @@
 /* House look: the shared parts every hub uses (Lisa, 28 Oct 2026). ONE file; the numbers and colours come from tokens.css.
    Load order on every hub: tokens.css, then this file, then the page's own <style> (layout and anything only that page has).
    Rules: one 12px radius (dots and rings round); 1px lines, 3px left colour bars; Lexend 400/500/600 at 14 / 15 / 18px only, no coloured
-   words, sentence case; one control line; buttons 36px (44px on a phone); hover = selected = a 1px line drawn inside plus a pale
-   tint (a meaning colour keeps its own colour, neutral = ink line + muted tint), nothing ever moves, focus = a 1px ink line inside;
+   words, sentence case; one control line; buttons 36px (44px on a phone); hover and tap = a pale grey fill, no line; selected = the
+   same pale grey fill plus a 1px quiet grey line inside (never purple, never ink); nothing ever moves, focus = a 1px ink line inside;
    read-only pills never hover; bottom tabs only widen their colour bar; no solid fills (small status dots and switch knobs only);
    counts one fixed 30 x 24 pill (14px); date pills always ringed; 12px between cards, 16px under a section header, 12px inside a card;
    deep dark frame top and bottom with light tab buttons. No colour is written here: every colour is a token from tokens.css. */
@@ -16,11 +16,13 @@
   --press: var(--house-press); --ctl: var(--house-press);
   --frame: var(--house-frame); --frame-foot: var(--house-foot); --frame-ink: var(--house-frame-ink); --frame-line: var(--house-frame-line);
   --shadow: var(--house-shadow);
-  --sel-bd: var(--house-ink);
-  --hov: color-mix(in srgb, var(--house-muted) var(--house-tint), var(--house-card));
+  --sel-bd: var(--house-press);   /* the selected line: the quiet control grey, never ink, never purple (Lisa, 12 Nov 2026) */
+  --hov: color-mix(in srgb, var(--house-muted) var(--house-hov-mix, var(--house-tint)), var(--house-card));   /* the pale grey fill for hover, tap and selected */
   --sel-fill: var(--hov);
+  --frame-hov: color-mix(in srgb, var(--house-frame-ink) var(--house-tint), var(--house-frame));   /* the same quiet fill on the dark frame */
 }
-:root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
+/* The "soft" look choice is grey too now (Lisa, 12 Nov 2026): purple on hover or selected is gone everywhere. */
+:root.sel-soft { --sel-bd: var(--house-press); --sel-fill: var(--hov); }
 /* A control's meaning colour (green yes, rose no / delete, purple AI...). Set on the control itself, never inherited. */
 @property --hmc { syntax: '*'; inherits: false; }
 
@@ -36,7 +38,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 code, kbd, samp, pre { font-family: var(--house-font); }
 a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
-/* 3 The frame: deep dark top bar; its buttons wear the frame's own light line. */
+/* 3 The frame: deep dark top bar; its buttons wear the frame's own light line. Hover and tap: a quiet frame fill (--frame-hov), no line. */
 header { background: var(--frame); color: var(--frame-ink); }
 header .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
 /* 3a The top bar (Lisa's pick A, 2 Nov 2026): ONE row, --house-head high on every page, desktop and phone; it never wraps or grows.
@@ -69,7 +71,7 @@ header.house-head { height: var(--house-head); min-height: var(--house-head); ma
 .house-menu .house-mread { margin: 0; font-size: var(--house-read-size); color: var(--muted); }
 header .btn.house-mitem { color: var(--ink); background: var(--card); border-color: var(--press); justify-content: flex-start; gap: 8px; }
 header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-icon); flex: none; }
-@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); } }
+@media (hover: hover) { header .btn.house-mitem:hover { background: var(--hov); outline: none; } }
 header [role="dialog"] :focus-visible { outline-color: var(--ink); }
 .house-phone { display: none !important; }
 /* The name's place (Lisa's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
@@ -103,24 +105,28 @@ header.house-head > .house-row, .house-page.house-page { box-sizing: border-box;
   .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button { min-height: var(--house-btn-phone); }
 }
 /* Meaning buttons (Lisa's approved picture, 28 Oct): they REST on their own colour line with their icon in that colour
-   (yes / approve / done green; no / redo / delete rose) and keep that line on hover, adding the pale tint. Neutral ones rest
-   on the one control line. --hmc is the meaning colour, set on the button itself. */
+   (yes / approve / done green; no / redo / delete rose). Hover is the same pale grey fill as every other control, with no coloured
+   line (12 Nov 2026). Neutral ones rest on the one control line. --hmc is the meaning colour, set on the button itself. */
 .btn.yes { --hmc: var(--house-ok); } .btn.no, .btn.danger { --hmc: var(--house-risk); }
 .btn.yes, .btn.no, .btn.danger { border-color: var(--hmc); }
 .btn.yes > :is(.ti, svg, .icon) { color: var(--ljr-5-text); } .btn.no > :is(.ti, svg, .icon), .btn.danger > :is(.ti, svg, .icon) { color: var(--ljr-2-text); }
 
-/* 5 The hover rule (Lisa, 3 Nov 2026 sweep): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) and
-   NEVER a fill; nothing moves. Neutral: the ink line. Meaning colour (--hmc): its own line, never ink. Only typing boxes (input,
-   textarea, select) may change their background. Keyboard focus draws the 1px ink line inside (below). */
+/* 5 The hover rule (Lisa, 12 Nov 2026; replaces the 3 Nov line rule). Her words: "purple outline on hover/click is a lot".
+   Hover and tap (press): a PALE GREY FILL (--hov) and NO line. Selected (on, pressed, aria-current): the same pale grey fill
+   (--sel-fill) plus ONE 1px line inside in the quiet control grey (--sel-bd = --house-press), never purple, never ink. Meaning
+   colours (--hmc) keep their resting line but hover is the same grey fill, no coloured line. No purple words on hover or selected,
+   no solid or tinted colour fills at rest, nothing moves. Keyboard focus keeps the 1px ink line inside (below). On the dark frame
+   the fill is the frame's own quiet fill (--frame-hov). */
 .btn[aria-pressed="true"], button.pill.on, a.pill.on, button.chip[aria-pressed="true"], button.chip.on, .ch.on, .fbtn.on, .achip.on, .subnav a[aria-current="page"], .seg button[aria-pressed="true"], .vsw button[aria-pressed="true"] {
-  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+  background: var(--sel-fill); outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
 @media (hover: hover) {
   .btn:hover, button.pill:hover, a.pill:hover, button.chip:hover, a.chip:hover, .ch:hover, .fbtn:hover, .achip:hover, .more:hover, .undo:hover, .lk:hover, .ico:hover, .copy:hover, .flagb:hover, .subnav a:hover, .seg button:hover, .vsw button:hover, a.card:hover {
-    outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
-  header .btn:hover { outline-color: var(--frame-ink); }
+    background: var(--hov); }
+  header .btn:hover { background: var(--frame-hov); }
 }
 .btn:active, button.pill:active, a.pill:active, button.chip:active, a.chip:active, .ch:active, .fbtn:active, .achip:active, .more:active, .undo:active, .lk:active, .ico:active, .copy:active, .flagb:active, .subnav a:active, .seg button:active, .vsw button:active, a.card:active {
-  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); transform: none; }
+  background: var(--hov); transform: none; }
+header .btn:active { background: var(--frame-hov); }
 /* Read-only pills (counts, dates, tags, stamps) never hover. */
 .cnt:hover, .dpill:hover, .datep:hover, span.date:hover, span.pill:hover, span.tag:hover, .stamp:hover { outline: none; }
 /* Keyboard focus (Lisa, 3 Nov 2026): ONE 1px ink line inside the box (offset -1px; frame ink on the frame), never a ring outside, a 2px
@@ -186,10 +192,11 @@ nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { position: absolute; top: 3p
   font-size: var(--fs-small); font-weight: 600; line-height: var(--house-tab-count-lh); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: visible; }
 nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide { width: auto; padding: 0 4px; }
 nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
+nav.house-tabs .ht > .n.broken, nav.house-tabs .ht > .cnt.broken { border-color: var(--house-broken-fill); background: var(--house-broken-fill); color: var(--house-broken-ink); }
 nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
 /* Tabs are one size (Lisa's pick b, 2 Nov 2026); a tab never widens for its count. Phone (under 768px): close to square (at most the
    bar's inner height, or the longest word's room, --house-tab-fit from toolkit.js, for every tab) and the count is a dot by the
-   icon's top-right corner: rose = late, grey = waiting, none at 0 (the tab's name says the number). */
+   icon's top-right corner: rose = late, black = broken, grey = waiting, none at 0 (the tab's name says the number). */
 @media (max-width: 767.98px) {
   nav.house-tabs > .ht, nav.house-tabs > .ht-more { max-width: max(calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)), var(--house-tab-fit, 0px)); }
   nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt, nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide {
@@ -197,6 +204,7 @@ nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !
     width: var(--house-tab-dot); min-width: var(--house-tab-dot); height: var(--house-tab-dot); min-height: var(--house-tab-dot);
     padding: 0; border: 0; border-radius: 50%; background: var(--house-ring); color: transparent; font-size: 0; line-height: 0; overflow: hidden; }
   nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { background: var(--house-late); }
+  nav.house-tabs .ht > .n.broken, nav.house-tabs .ht > .cnt.broken { background: var(--house-broken-fill); color: transparent; }   /* broken: a black dot (light ink in dark) */
   nav.house-tabs .ht > .htl > .htl-long { display: none; }
   nav.house-tabs .ht > .htl > .htl-short { display: inline; }
 }
@@ -214,10 +222,10 @@ nav.house-tabs .house-more > :is(a, button) { position: relative; box-sizing: bo
   text-decoration: none; text-align: left; white-space: nowrap; cursor: pointer; }
 nav.house-tabs .house-more > :is(a, button) > :is(svg, .ti, i):first-child { flex: none; width: 20px; height: 20px; font-size: 20px; line-height: 1; color: var(--ljr-0-icon);
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-nav.house-tabs .house-more > [aria-current="page"] { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
+nav.house-tabs .house-more > [aria-current="page"] { background: var(--sel-fill); outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
 nav.house-tabs .house-more > [aria-current="page"] > :is(svg, .ti, i):first-child { color: var(--c); }
 @media (hover: hover) {
-  nav.house-tabs .house-more > :is(a, button):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); background: transparent; }
+  nav.house-tabs .house-more > :is(a, button):hover { background: var(--hov); }
   nav.house-tabs .house-more > :is(a, button):hover > :is(svg, .ti, i):first-child { color: var(--c); }
 }
 nav.house-tabs .house-more > :focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: -1px; }
@@ -239,7 +247,7 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 }
 
 /* 7 Counts: ONE exact box, so 1 and 2 digits match in any font: 30 x 24, 14px words, line 22px, radius 12px, padding 0 3px.
-   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). Ring only, no fill: grey = waiting, rose = late / needs you. */
+   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). Ring only, no fill: grey = waiting, rose = late; broken = the black badge (below). */
 /* (The bottom tabs' counts are drawn in section 6.) */
 .cnt { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
   width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h);
@@ -248,6 +256,9 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
 .cnt:empty, .n:empty { display: none !important; }
 .cnt.need { border-color: var(--house-late); background: transparent; }
+/* Broken (Lisa, 3 Nov 2026; tokens.css K): the black badge, white number (inverted in the dark looks). The same box as the ring, so
+   nothing shifts: only the line, fill and words change colour. The one fill a count may have. Pages: DashKit.count in toolkit.js. */
+:is(.cnt, .hm-v, .hk b, .tile .v).broken:not(#hb-a) { border-color: var(--house-broken-fill); background: var(--house-broken-fill); color: var(--house-broken-ink); }
 
 /* 8 Date pills: always ringed. Grey ring + muted words; late = rose ring + tint, soon = amber ring + tint (ink words). */
 .dpill, .datep, span.date { display: inline-flex; align-items: center; height: var(--house-pill); padding: 0 8px; font-size: var(--fs-small); white-space: nowrap;
@@ -286,10 +297,10 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 
 /* 13 Clickable info (Lisa, 2 Nov 2026): every number, card, chip and row that gives info opens what it counts. a.house-go = a number,
    summary card or heading that is itself a link. [data-open-row] = a row or card whose one .house-open control opens it; a click
-   anywhere on it presses that control (toolkit.js). No fills: the pointer, the 1px hover line and the 1px keyboard line (both inside) only. */
+   anywhere on it presses that control (toolkit.js). Hover: the pale grey fill, no line (12 Nov 2026); keyboard: the 1px ink line inside. */
 a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 [data-open-row] { cursor: pointer; }
-@media (hover: hover) { a.house-go:hover, [data-open-row]:hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
+@media (hover: hover) { a.house-go:hover, [data-open-row]:hover { background: var(--hov); } }
 [data-open-row]:has(.house-open:focus-visible) { outline: var(--house-focus) solid var(--ink); outline-offset: -1px; }
 /* When the icon font cannot load, an icon-only button shows its name as a word (toolkit.js adds .house-iw). */
 .house-noicons button > i.ti:empty, .house-noicons a > i.ti:empty { display: none; }
@@ -316,7 +327,7 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
 .hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); border-radius: var(--radius); }
 /* The row shell is rounded like a house card (Lisa, 5 Nov). The left colour bar stays a straight 3px line, not a "(" bracket.
-   This supersedes 2 Nov "rows are square" for the row shell only. Nothing moves on hover, focus or press (the hover line is an outline). */
+   This supersedes 2 Nov "rows are square" for the row shell only. Nothing moves on hover, focus or press (hover is a fill). */
 .hm-row.house-lbar::before { border-radius: 0; }
 .hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
 .hm-row[data-kind="late"] { --sc: var(--house-late); }
@@ -331,14 +342,14 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .hm-nums > :not(.hm-n) { grid-column: 1 / -1; }
 a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: var(--house-pad); color: var(--ink); text-decoration: none; min-width: 0; }
 /* One group, one size (Lisa, 2 Nov): all three numbers 18px / 600 on one baseline, each in the same box; a late one (above 0) wears a
-   rose ring sized to that number, the others no ring. Hover and press: a 1px ring only (the hub's colour where it has one); no fill. */
+   rose ring sized to that number, the others no ring. Hover and press: the pale grey fill, no line (12 Nov 2026). */
 .hm-v { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent;
   border-radius: var(--radius); font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
 .hm-v.need { border-color: var(--house-late); }
 .hm a.hm-n[class], .hm a.hm-n[class]:hover, .hm a.hm-n[class]:focus, .hm a.hm-n[class]:active { background: var(--card); box-shadow: none; transform: none; }
 .hm a.hm-n[class]:focus:not(:focus-visible) { outline: none; }
-@media (hover: hover) { .hm a.hm-n[class]:hover { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); } }
-.hm a.hm-n[class]:active { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+@media (hover: hover) { .hm a.hm-n[class]:hover { background: var(--hov); } }
+.hm a.hm-n[class]:active { background: var(--hov); }
 .hm-l { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
 @media (max-width: 600px) {
   .hm-row { flex-wrap: wrap; }
@@ -353,7 +364,7 @@ a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; 
 
 /* 15 Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row (toolkit.js DashKit.fold adds the
    button after every redraw). The chevron is a grey 16px outline icon (Tabler chevron-down) in a house control (36px, 44px on a phone, the
-   one 1px control line, no fill) at rest; hover and press draw the 1px line inside, focus the 1px ink line inside; nothing moves and nothing fills. Folded, it turns a
+   one 1px control line, no fill) at rest; hover and press show the pale grey fill (no line), focus the 1px ink line inside; nothing moves. Folded, it turns a
    quarter (not with reduced motion). In a flex heading row it is the row's last part; otherwise it sits over the row's right end
    (.house-fold-abs, its place set by toolkit.js) and the row keeps that room free (.house-fold-pad). The heading row's count ring and
    links stay in view when folded. On a phone a list of more than 5 rows shows 3 and a "+N more" button.
@@ -364,8 +375,8 @@ button.house-fold:not(#hf-a):not(#hf-b) { box-sizing: border-box; flex: none; di
 @media (max-width: 767.98px) { button.house-fold:not(#hf-a):not(#hf-b) { width: var(--house-btn-phone); height: var(--house-btn-phone); min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); } }
 button.house-fold:not(#hf-a):not(#hf-b):hover, button.house-fold:not(#hf-a):not(#hf-b):focus, button.house-fold:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; color: var(--muted); }
 button.house-fold:not(#hf-a):not(#hf-b):focus:not(:focus-visible) { outline: none; }
-@media (hover: hover) { button.house-fold:not(#hf-a):not(#hf-b):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
-button.house-fold:not(#hf-a):not(#hf-b):active { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
+@media (hover: hover) { button.house-fold:not(#hf-a):not(#hf-b):hover { background: var(--hov); } }
+button.house-fold:not(#hf-a):not(#hf-b):active { background: var(--hov); }
 button.house-fold:not(#hf-a):not(#hf-b):focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: -1px; }
 button.house-fold > svg { display: block; width: var(--house-fold-icon); height: var(--house-fold-icon); flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease-out; }
 button.house-fold[aria-expanded="false"] > svg { transform: rotate(var(--house-fold-turn)); }
@@ -385,3 +396,12 @@ button.house-fold-more:not(#hf-a):not(#hf-b):hover, button.house-fold-more:not(#
    buttons are not typing boxes. The :not(#ti-a):not(#ti-b) only lifts this above a page's own input rules; no element has those ids. */
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]),
   textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]):not(#ti-a):not(#ti-b) { font-size: var(--fs-input); }
+/* 17 The shared dialogs (toolkit.js: Search, Keyboard keys): Close is a house button, never the browser's own. 1px control line,
+   12px corners, Lexend 14px / 600, 36px (44px on a phone), no fill in any state; hover draws the 1px line inside, keyboard focus the ring. */
+dialog button.house-close { box-sizing: border-box; display: inline-flex; align-items: center; min-height: var(--house-btn); padding: 0 14px; margin: 0;
+  border: var(--house-line) solid var(--press); border-radius: var(--house-radius); background: transparent; color: inherit;
+  font-family: var(--house-font); font-size: var(--house-press-size); font-weight: 600; line-height: 1.2; cursor: pointer; }
+@media (max-width: 600px) { dialog button.house-close { min-height: var(--house-btn-phone); } }
+@media (hover: hover) { dialog button.house-close:hover { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); } }
+dialog button.house-close:active { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); }
+dialog button.house-close:focus-visible { outline: var(--house-focus) solid currentColor; outline-offset: 2px; }

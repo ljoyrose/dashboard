@@ -39,11 +39,23 @@ test('breeding rules: a staff code cannot set them', () => {
 
 test('breeding rules: an unknown rule, a silly number or a missing date is refused', () => {
   const env = env0();
-  assert.equal(rule(env, { rule_key: 'max_pups', value: '6', effective_from: '2020-01-01' }).code, 'INVALID');
+  assert.equal(rule(env, { rule_key: 'Bad Key!', value: '6', effective_from: '2020-01-01' }).code, 'INVALID');
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: 'six', effective_from: '2020-01-01' }).code, 'INVALID');
   const big = rule(env, { rule_key: 'min_dam_age_months', value: '120', effective_from: '2020-01-01' });
   assert.equal(big.code, 'INVALID'); assert.match(big.fields.value, /6 to 48 months/);
+  assert.equal(big.fields.confirm_unusual, 'Save anyway?');
   assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '6' }).code, 'INVALID');
   assert.equal(recs(env).length, 0);
+});
+
+test('breeding rules: a value outside the usual range is a warning; "save anyway" keeps it (a council may allow it)', () => {
+  const env = env0();
+  const r = rule(env, { rule_key: 'min_months_between_litters', value: '40', effective_from: '2020-01-01', confirm_unusual: 'yes' });
+  assert.equal(r.ok, true);
+  assert.equal(recs(env).length, 1);
+  assert.equal(recs(env)[0].value, '40');
+  assert.equal('confirm_unusual' in recs(env)[0], false);          // not a column: nothing extra in the file
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01', confirm_unusual: 'maybe' }).code, 'INVALID');
 });
 
 test('breeding rules: a change is a new row from a later date; an earlier or same date is refused (history is never rewritten)', () => {
@@ -61,4 +73,29 @@ test('breeding rules: the table has its own switch and is off by default', () =>
   const r = rule(env, { rule_key: 'max_litters_per_dam', value: '6', effective_from: '2020-01-01' });
   assert.equal(r.ok, false);
   assert.equal(recs(env).length, 0);
+});
+
+test('breeding rules: any key is a row (sweep 12 Nov 2026): size cut-offs, colours, compliance and staffing keys save', () => {
+  const env = env0();
+  for (const [k, v] of [['size_from_kg.medium', '10'], ['size_colour.small', 'swatch-red'], ['compliance.max_hours_alone', '4'],
+    ['staffing.dogs_per_person', '20'], ['room.closed_when_in_use.area-h1', 'area-h2-iso']]) {
+    const r = rule(env, { rule_key: k, value: v, effective_from: '2026-11-12', source: 'test' });
+    assert.equal(r.ok, true, k + ' ' + JSON.stringify(r.fields || r.message));
+  }
+  assert.equal(recs(env).length, 5);
+});
+
+test('save anyway: an unusual temperature or a time over 7 days ago warns; confirm_unusual = yes keeps it; retention still stops', () => {
+  const env = env0(), V = env.ctx.validateInput_, now = Date.UTC(2026, 10, 12, 10, 0, 0);
+  const spec = { input: { t: { type: 'temp' }, at: { type: 'datetime' } } };
+  let r = V(spec, { t: '75.0' }, {}, now);
+  assert.match(r.errors.t, /save anyway/); assert.equal(r.errors.confirm_unusual, 'Save anyway?');
+  r = V(spec, { t: '75.0', confirm_unusual: 'yes' }, {}, now);
+  assert.equal(Object.keys(r.errors).length, 0); assert.equal(r.clean.t, '75.0'); assert.equal('confirm_unusual' in r.clean, false);
+  r = V(spec, { at: '2026-11-01T10:00:00Z' }, {}, now);
+  assert.match(r.errors.at, /more than 7 days ago/); assert.equal(r.errors.confirm_unusual, 'Save anyway?');
+  assert.equal(Object.keys(V(spec, { at: '2026-11-01T10:00:00Z', confirm_unusual: 'yes' }, {}, now).errors).length, 0);
+  assert.equal(V(spec, { t: '20.0', confirm_unusual: 'maybe' }, {}, now).errors.confirm_unusual, 'Not one of: yes.');
+  r = V(spec, { at: '2019-11-01T10:00:00Z', confirm_unusual: 'yes' }, {}, now, { oldestMs: Date.UTC(2020, 10, 12), keepYears: 6 });
+  assert.match(r.errors.at, /older than these records are kept/);
 });

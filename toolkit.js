@@ -8,6 +8,23 @@
   var JITTER_MS = 250;
   var BUSY_TEXT = 'Google is busy. Wait a minute, then try again.';
 
+  // ---- Count colours (Lisa, 3 Nov 2026): the ONE rule, used by every page (tokens.css index: Counts).
+  //   grey ring ............ waiting, to-do, the Bin (the default)
+  //   rose ring (.need) .... LATE: late, overdue (--house-late)
+  //   black badge (.broken)  BROKEN: a site down, a domain expired, a project stuck, a check failed, an engine error
+  //                          (--house-broken-fill / --house-broken-ink; light ink in the dark looks). The one fill a count may have.
+  // A count holding both late and broken things is broken (broken wins): pass the broken word. The screen reader hears the word:
+  // "2 late", "1 down", "3 stuck", "4 failed"; a grey count is "N waiting" (or the page's own calm word).
+  // why: true (= 'late') | 'late' | 'overdue' | 'down' | 'expired' | 'stuck' | 'failed'; anything else, or a count of 0 or "–", is grey.
+  function isWhy(w) { return typeof w === 'string' && /^(late|overdue|down|expired|stuck|failed)$/.test(w); }
+  /** The word for a count ('late', 'down'...), or '' when it stays grey. */
+  function countWhy(n, why) { var w = why === true ? 'late' : isWhy(why) ? why : ''; return w && n != null && n !== '' && n !== '–' && String(n) !== '0' && n !== false ? w : ''; }
+  /** 'late', 'broken' or '' (grey). */
+  function countKind(n, why) { var w = countWhy(n, why); return !w ? '' : /^(late|overdue)$/.test(w) ? 'late' : 'broken'; }
+  /** The class to add to a count: ' need' (rose ring), ' broken' (black badge) or ''. */
+  function countCls(n, why) { var k = countKind(n, why); return k === 'late' ? ' need' : k === 'broken' ? ' broken' : ''; }
+  /** What a screen reader hears for a count: "2 stuck" when late or broken, otherwise "2 <calm>" ("2 waiting" by default). */
+  function countSay(n, why, calm) { return n + ' ' + (countWhy(n, why) || calm || 'waiting'); }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   // 429, any 5xx, and a 403 whose reason is a rate limit. Other 403s (no access, API off) are final.
@@ -83,6 +100,13 @@
     't-room': '<path d="M4 20v-10l8-6l8 6v10z"/>',
     't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
     't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
+    // Status icons for badges (quality review, 12 Nov 2026: house icons, not emoji). Tabler shapes, the same stroke.
+    's-check': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/>',
+    's-x': '<circle cx="12" cy="12" r="9"/><path d="M10 10l4 4m0-4l-4 4"/>',
+    's-alert': '<path d="M12 9v4"/><path d="M10.4 3.6l-8.1 13.5a1.9 1.9 0 0 0 1.6 2.9h16.2a1.9 1.9 0 0 0 1.6-2.9l-8.1-13.5a1.9 1.9 0 0 0-3.2 0z"/><path d="M12 16h.01"/>',
+    's-clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+    's-repeat': '<path d="M4 12v-3a3 3 0 0 1 3-3h13m-3-3l3 3l-3 3"/><path d="M20 12v3a3 3 0 0 1-3 3h-13m3 3l-3-3l3-3"/>',
+    's-send': '<path d="M10 14l11-11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1-1 0l-3.5-7l-7-3.5a.55 .55 0 0 1 0-1l18-6.5"/>',
     // The fold chevron on every section heading (Lisa, 2 Nov): Tabler chevron-down, grey; it turns a quarter when the section is folded.
     chev: '<path d="M6 9l6 6l6-6"/>'
   };
@@ -222,10 +246,10 @@
   function shutMores(except, back) {
     Array.prototype.forEach.call(root.document.querySelectorAll('[data-house-more][aria-expanded="true"]'), function (b) { if (b !== except) showMore(b, false, back); });
   }
-  /** The HTML of one bottom tab: { href | go, nav, slot (0-8), icon (t-NAME), label, n (count id), need (rose ring) }. */
+  /** The HTML of one bottom tab: { href | go, nav, slot (0-8), icon (t-NAME), label, n (count id), need (true = late, rose ring; or the word, e.g. 'down' = broken, black badge: see countWhy) }. */
   function tabHtml(t) {
     var inner = '<span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true">' + icon(t.icon) + '</span><span class="htl">' + escHtml(t.label) + '</span>' +
-      (t.count != null ? '<span class="n' + (t.need ? ' need' : '') + '"' + (t.n ? ' id="' + t.n + '"' : '') + '>' + escHtml(t.count || '') + '</span>' : '');
+      (t.count != null ? '<span class="n' + countCls(t.count, t.need) + '"' + (t.n ? ' id="' + t.n + '"' : '') + (isWhy(t.need) ? ' data-why="' + t.need + '"' : '') + '>' + escHtml(t.count || '') + '</span>' : '');
     return t.href ? '<a class="ht" data-slot="' + t.slot + '" href="' + t.href + '"' + (t.nav ? ' data-nav="' + t.nav + '"' : '') + '>' + inner + '</a>'
       : '<button type="button" class="ht" data-slot="' + t.slot + '"' + (t.go ? ' data-go="' + t.go + '"' : '') + '>' + inner + '</button>';
   }
@@ -251,14 +275,14 @@
     if (root.addEventListener) root.addEventListener('hashchange', function () { shutMores(null); });
   }
 
-  // ---- Tab names say the count ("Do, 3 waiting" / "Do, 1 late"; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
+  // ---- Tab names say the count ("Do, 3 waiting" / "Do, 1 late" / "Do, 1 down": the count's data-why, see DashKit.count; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
   function nameTabs(nav) {
     var fit = 0;
     Array.prototype.forEach.call(nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht'), function (t) {
       var w = t.querySelector(':scope > .htl'), n = t.querySelector(':scope > .n, :scope > .cnt'), s; if (!w) return;
       s = root.getComputedStyle(w); fit = Math.max(fit, Math.ceil(w.scrollWidth + parseFloat(s.marginLeft) * 2));
       if (!n) return;
-      var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') ? ' late' : ' waiting') : '');
+      var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') || n.classList.contains('broken') ? ' ' + (isWhy(n.getAttribute('data-why')) ? n.getAttribute('data-why') : n.classList.contains('broken') ? 'broken' : 'late') : ' waiting') : '');
       if (t.getAttribute('aria-label') !== name) t.setAttribute('aria-label', name);
     });
     if (nav.style.getPropertyValue('--house-tab-fit') !== (fit ? fit + 'px' : '')) nav.style.setProperty('--house-tab-fit', fit ? fit + 'px' : '');
@@ -559,7 +583,7 @@
       d = doc.createElement('dialog'); d.id = 'dashKeys'; d.setAttribute('aria-labelledby', 'dashKeysTitle');
       d.innerHTML = '<h2 id="dashKeysTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Keyboard keys</h2><table style="border-collapse:collapse">' +
         KEYS.map(function (k) { return '<tr><td style="padding:3px 14px 3px 0"><kbd>' + k[0].replace(' ', '</kbd> then <kbd>') + '</kbd></td><td>' + k[1] + '</td></tr>'; }).join('') +
-        '</table><p style="margin:10px 0 0">Keys do nothing while you are typing in a box. Esc closes this.</p><form method="dialog" style="margin-top:10px"><button type="submit">Close</button></form>';
+        '</table><p style="margin:10px 0 0">Keys do nothing while you are typing in a box. Esc closes this.</p><form method="dialog" style="margin-top:10px"><button type="submit" class="house-close">Close</button></form>';
       d.style.cssText = 'max-width:420px;border:1px solid currentColor;border-radius:12px;padding:16px 18px;background:Canvas;color:CanvasText;font:inherit';
       doc.body.appendChild(d);
     }
@@ -593,12 +617,13 @@
     d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:1px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
     d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Search</h2>' +
       '<label for="dashSearchBox" style="display:block;font-size:var(--fs-small)">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
-      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font-family:inherit;font-size:var(--fs-input,16px);padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
-      '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:var(--fs-small)">Type at least 2 letters.</p>' +
-      '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit">Close</button></form>';
+      '<input id="dashSearchBox" type="search" autocomplete="off" aria-describedby="dashSearchHint" style="width:100%;font-family:inherit;font-size:var(--fs-input,16px);padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
+      '<p id="dashSearchHint" style="margin:4px 0;font-size:var(--fs-small)">Type at least 2 letters.</p><p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:var(--fs-small)"></p>' +
+      '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit" class="house-close">Close</button></form>';
     doc.body.appendChild(d);
     var box = d.querySelector('#dashSearchBox');
-    box.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { runSearch(box.value); }, 300); });
+    // The hint follows every key at once (the search itself waits 300ms): shown under 2 letters, gone from the 2nd letter on.
+    box.addEventListener('input', function () { searchHint(d, box.value); clearTimeout(searchTimer); searchTimer = setTimeout(function () { runSearch(box.value); }, 300); });
     d.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-search-act]');
       if (b && b._act) { e.preventDefault(); d.close(); b._act(); }
@@ -606,13 +631,20 @@
     });
     return d;
   }
+  /** "Type at least 2 letters." shows under 2 letters and hides from the 2nd letter on. True when q is long enough to search. */
+  function searchHint(d, q) {
+    var ok = String(q || '').trim().length >= 2;
+    d.querySelector('#dashSearchHint').hidden = ok;
+    if (!ok) d.querySelector('#dashSearchStatus').textContent = '';
+    return ok;
+  }
   var SLOT = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return 'var(--ljr-' + (n === 1 ? '1-edge' : n) + ')'; }); // slot colours from tokens.css
   /** Runs every registered provider for q and draws the grouped results. Returns a Promise of all results ([] under 2 letters or when a newer search started). */
   function runSearch(q) {
     var d = searchDialog(), st = d.querySelector('#dashSearchStatus'), out = d.querySelector('#dashSearchResults');
     q = String(q || '').trim();
     var gen = ++searchGen;
-    if (q.length < 2) { st.textContent = 'Type at least 2 letters.'; out.innerHTML = ''; return Promise.resolve([]); }
+    if (!searchHint(d, q)) { out.innerHTML = ''; return Promise.resolve([]); }
     st.textContent = 'Searching…';
     return Promise.all(PROVIDERS.map(function (p) { return Promise.resolve().then(function () { return p(q); }).then(function (r) { return r || []; }, function () { return [{ group: 'Could not search', slot: 2, title: 'One source could not be searched. Try again.', sub: '' }]; }); }))
       .then(function (lists) {
@@ -640,8 +672,8 @@
   // late first (rose), then due today, then waiting; "+N more" opens Do. Every row carries its action.
   // 3 The hub's 3 numbers (the same ones its Dashboard tile shows), each a link to its filtered list; "–" when it cannot be read.
   // Nothing needs you: Next and Needs you fold into ONE "Nothing needs you"; the numbers stay. A failed read says so instead.
-  // spec: { hub, rows: [{ kind: 'late'|'today'|'wait', text, href, act?, actHref?, sub?, pill?, ext?, sort? }],
-  //         nums: [{ label, value (null = "–"), href, late?, aria? }] x3, doHref, extra? (html after the numbers), error? (text) }
+  // spec: { hub, rows: [{ kind: 'late'|'today'|'wait', text, href, act?, actHref?, sub?, pill?, ext?, sort?, why? ('down', 'stuck'...: broken) }],
+  //         nums: [{ label, value (null = "–"), href, late? (true = late, or the word, e.g. 'down' = broken: see countWhy), aria? }] x3, doHref, extra? (html after the numbers), error? (text) }
   var HM_RANK = { late: 0, today: 1, wait: 2 };
   function hmSort(rows) {
     return (rows || []).map(function (r, i) { return { r: r, i: i }; }).sort(function (a, b) {
@@ -672,21 +704,22 @@
       h += '<section class="card hm-next" data-open-row data-hm="next" data-kind="' + kind(x) + '" aria-labelledby="hmNextT"><div class="hm-head"><h3 id="hmNextT">Next</h3>' + hmPill(x) + '</div>' +
         '<p class="hm-what"><a class="house-open" href="' + escHtml(x.href) + '"' + hmTarget(x, x.ext) + ' aria-label="' + escHtml(x.text) + '">' + escHtml(x.text) + '</a></p>' + (x.sub ? '<p class="hm-sub">' + escHtml(x.sub) + '</p>' : '') +
         '<div class="hm-go">' + hmAct(x, 'hm-a') + '</div></section>';
-      var late = rows.some(function (r) { return kind(r) === 'late'; });
+      // The count: black when a row is broken (broken wins), rose when one is late, else grey (DashKit.count).
+      var late = rows.some(function (r) { return kind(r) === 'late'; }), bw = rows.filter(function (r) { return countKind(1, r.why) === 'broken'; })[0];
       h += '<section class="card hm-needs" data-hm="needs" aria-labelledby="hmNeedsT"><div class="hm-head"><h3 id="hmNeedsT"><a class="house-go" href="' + doHref + '" aria-label="Needs you: ' + rows.length + '. Open Do">Needs you</a></h3>' +
-        '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you' + (late ? ', some late' : '') + '. Open Do"><span class="cnt' + (late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
+        '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you' + (bw ? ', some ' + bw.why : late ? ', some late' : '') + '. Open Do"><span class="cnt' + (bw ? ' broken' : late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
         '<ol class="hm-rows">' + shown.map(function (r) {
           return '<li class="hm-row house-lbar" data-open-row data-kind="' + kind(r) + '"><span class="hm-t"><a class="house-open" href="' + escHtml(r.href) + '"' + hmTarget(r, r.ext) + ' aria-label="' + escHtml(r.text) + '">' + escHtml(r.text) + '</a>' +
             (r.sub ? '<small>' + escHtml(r.sub) + '</small>' : '') + '</span>' + hmPill(r) + hmAct(r, 'hm-a') + '</li>';
         }).join('') + '</ol>' + (more > 0 ? '<a class="hm-more" data-hm-more href="' + doHref + '">+' + more + ' more</a>' : '') + '</section>';
     }
     h += '<section class="hm-nums" data-hm="nums" aria-label="Numbers">' + (spec.nums || []).map(function (n) {
-      var v = n.value == null || n.value === '' ? '–' : String(n.value), late = !!n.late && n.value != null;
+      var v = n.value == null || n.value === '' ? '–' : String(n.value), w = countWhy(v, n.late);   // late: true (late) or the broken word
       return '<a class="card hm-n house-go" data-k="' + escHtml(n.label) + '" href="' + escHtml(n.href) + '"' + (n.ext ? ' target="_blank" rel="noopener"' : '') +
-        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : v) + (late && v !== '0' ? ', some late' : '') + '. Open the list')) + '"><span class="hm-v' + (late && v !== '0' ? ' need' : '') + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
+        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : w ? v + ' ' + w : v) + '. Open the list')) + '"><span class="hm-v' + countCls(v, n.late) + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
     }).join('') + (spec.extra || '') + '</section>';
     return '<div class="hm" data-hub-main="' + escHtml(spec.hub || '') + '">' + h + '</div>';
   }
 
-  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help, hubMain: hubMain, hubMainSort: hmSort, fold: { run: foldAll, key: FOLD_KEY } };
+  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, count: { why: countWhy, kind: countKind, cls: countCls, say: countSay }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help, hubMain: hubMain, hubMainSort: hmSort, fold: { run: foldAll, key: FOLD_KEY } };
 })(typeof window !== 'undefined' ? window : this);
