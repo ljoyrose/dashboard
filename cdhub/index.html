@@ -12,7 +12,9 @@
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/thermometer.js"></script>
+<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
@@ -297,6 +299,9 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .sexdot{display:none}
 .dc .chips{display:flex;flex-wrap:wrap;gap:4px}
 .cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
+/* size from weight: a full-height 3px line in the size colour (Lisa's size_colour.* rows) and a badge on the photo */
+.dc.sz{border-left-color:var(--sz,var(--press))}.dc.sz::before{content:"";position:absolute;left:-1px;top:-1px;bottom:-1px;border-left:3px solid var(--sz,var(--press));border-radius:var(--radius) 0 0 var(--radius);pointer-events:none}
+.ph .szb{position:absolute;top:3px;left:3px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-small);line-height:18px;padding:0 4px;border-radius:var(--radius);border:1px solid var(--sz,var(--press));background:var(--card);color:var(--ink);font-weight:600}
 .whor{position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:var(--fs-small);color:var(--muted)}
 .whor .ti{width:15px;height:15px}
 
@@ -411,6 +416,9 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs-link .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs-link::after{content:'\203A';margin-left:auto;flex:0 0 auto}
 @media (hover:hover){.dcs-link:hover{background:var(--hov);}}
+.lims{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+.pill.lim{border-width:2px}
+details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-small);margin:0 0 6px}
 .pill.dna.d-clear{border-color:var(--ljr-5-text);background:var(--ljr-5-tint)}
 .pill.dna.d-carrier{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill.dna.d-affected{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
@@ -787,6 +795,10 @@ function build(){
     (DNA[r.subject_id]=DNA[r.subject_id]||[]).push({code:r.marker_code,genotype:r.genotype,
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
+  var VAC={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id) return;
+    (VAC[r.subject_id]=VAC[r.subject_id]||[]).push({on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
+      covers:r.diseases_covered||'',titre:r.titre_result||'',protective:r.titre_protective||'',due:r.next_due_on_card||'',dueSrc:r.next_due_source||''}); });
+  Object.keys(VAC).forEach(function(k){ VAC[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); });
   CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
     min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source,
     rain:r.rain_value,wind:r.wind_kmh}; });
@@ -812,7 +824,7 @@ function build(){
       neuter:r.neuter_status,state:s.state||'',classification:o.classification||'',area_id:o.area_id||'',birthLitter:r.birth_litter_id||'',
 
       where:'',off:o.off_site_kind||'',
-      treats:DSP[r.id]||[], dna:DNA[r.id]||[],
+      treats:DSP[r.id]||[], dna:DNA[r.id]||[], vacc:VAC[r.id]||[],
       chip:m.chip_number||'',source:r.source,
       rxExpiry:r.rx_moxi_expiry||'',rxUrl:r.rx_moxi_file_url||'',
       species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
@@ -844,6 +856,13 @@ function build(){
   /* size colours: Lisa's rule rows (size_colour.small etc.), never fixed in code */
   CD.sizeColour={}; (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var m=/^size_colour\.(\w+)$/.exec(r.rule_key||'');
    if(m && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value||'')) CD.sizeColour[m[1].toLowerCase()]=r.value; });
+  /* size from the latest weight (dog card mock-up, 7 Nov 2026): cut-offs are Lisa's size_from_kg.* rows with a source.
+     No rows, or no weight: the size on the dog's record stands. The room check reads the same size. */
+  CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
+  CD.dogs.forEach(function(d){ var lw=d.weights.length?d.weights[d.weights.length-1]:null;
+   var bw=lw?BLDCapacity.sizeFromKg(lw.kg,CD.sizeCut):'';
+   d.sizeWord=bw||sizeKey(d.size); d.sizeFrom=bw?'weight':(d.sizeWord?'record':'');
+   d.sizeWhy=bw?(lw.kg+' kg on '+dmyShort(lw.on)+' \u00b7 cut-offs: '+CD.sizeCut.source):(d.sizeWord?'size on the record':''); });
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
             min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
@@ -1781,6 +1800,20 @@ function dnaRow(d){ var x=d.dna||[]; if(!x.length) return '';
   +x.map(function(r){ var m=(CD.markers||{})[r.code]||{};
     return '<div class="dcs-row">'+dnaPill(r)+'<span class="mut">'+esc([m.name||'',r.genotype||'',r.lab||'',r.on?dmyShort(r.on):''].filter(Boolean).join(' · '))+'</span></div>'; }).join('')
   +'</div></details>'; }
+/* vaccinations (licence check item): count, the last one, and the next due date written on the card */
+function vaccRow(d){ var x=d.vacc||[]; if(!x.length) return '';
+ var last='', due='', dueSrc=''; x.forEach(function(v){ if(v.on&&v.on>=last){ last=v.on; } if(v.due&&v.due>due){ due=v.due; dueSrc=v.dueSrc; } });
+ var late=due&&due<BLDNeeds.today();
+ return '<details class="dcs vacc"><summary>'
+  +'<svg class="ricon" aria-hidden="true"><use href="#i-check"/></svg>'
+  +'<span class="dcs-label" data-k="vacc"><b>'+x.length+'</b> vaccination'+(x.length!==1?'s':'')+(last?' <span class="mut">\u00b7 last '+esc(dmyShort(last))+'</span>':'')
+  +(due?' <span class="'+(late?'pill w':'mut')+'" data-due="'+(late?'late':'ok')+'"'+(dueSrc?' title="'+esc(dueSrc)+'"':'')+'>due '+esc(dmyShort(due))+'</span>':' <span class="mut" data-due="none">\u00b7 next due not entered</span>')+'</span>'
+  +'</summary><div class="dcs-bd">'
+  +x.slice().reverse().map(function(v){ return '<div class="dcs-row"><span class="mut">'+esc(dmyShort(v.on))+'</span><b>'+esc(v.product||v.kind||'\u2014')+'</b>'
+    +(v.covers?'<span class="mut">'+esc(v.covers)+'</span>':'')
+    +(v.titre?'<span class="pill">titre '+esc(v.titre)+'</span>':'')
+    +(v.due?'<span class="mut">due '+esc(dmyShort(v.due))+'</span>':'')+'</div>'; }).join('')
+  +'</div></details>'; }
 /* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
 function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
  var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
@@ -1822,12 +1855,14 @@ function drawDogs(){
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
-   h+='<article class="dc '+cls+'">'
+   var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+   h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+'>'
 
   +'<div class="dc-top">'
-    +'<div class="ph" aria-hidden="true">'
+    +'<div class="ph">'
       +'<svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>'
-      +'<span class="gicon '+gSex+'" title="'+esc(gTitle)+'"><svg><use href="'+gSym+'"/></svg></span>'
+      +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
+      +(d.sizeWord?'<span class="szb" data-k="size" title="'+esc(d.sizeWhy)+'">'+esc(capFirst(d.sizeWord))+'</span>':'')
     +'</div>'
     +'<div class="dc-info">'
       +'<div class="nl">'
@@ -1838,7 +1873,6 @@ function drawDogs(){
       +'<div class="meta">'
         +'<span class="age">'+age+'</span>'
         +(d.dob?'<span class="mut" data-k="dob">· DOB '+esc(dmyShort(d.dob))+'</span>':'')
-        +(d.size?'<span class="mut">· '+esc(d.size)+'</span>':'')
         +((d.breed&&d.breed!=='Australian Cobberdog')?'<span class="mut">· <b>'+esc(d.breed)+'</b></span>':'')
       +'</div>'
       +'<div class="coat" data-k="colour"><span class="mut">Colour</span>'+swatch(d)+'<span>'+esc(d.colour?colourLabel(d):'\u2014')+'</span></div>'
@@ -1856,7 +1890,8 @@ function drawDogs(){
 
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
-      +'<span class="dcs-label" data-k="weight">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+wtChange(w.delta)+esc(dmyShort(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
+      +'<span class="dcs-label" data-k="weight">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+wtChange(w.delta)+esc(dmyShort(w.on))+'</span>':'<span class="mut">no weight</span>')
+        +(lastB?' <span class="pill '+(lastB.bcs==='5'?'':(parseInt(lastB.bcs,10)>5?'w':'no'))+'" data-k="bcs" title="'+esc('BCS '+lastB.bcs+(lastB.scale?'/'+lastB.scale:'')+' on '+dmyShort(lastB.on))+'">BCS '+esc(lastB.bcs)+'</span>':'')+'</span>'
     +'</summary><div class="dcs-bd">'
       +(d.weights.length?d.weights.slice().reverse().map(function(ww){
         return '<div class="dcs-row"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
@@ -1901,6 +1936,7 @@ function drawDogs(){
       +'</div></details>'
     :'')
 
+    +vaccRow(d)
     +dnaRow(d)
     +litterRow(d)
 
@@ -1934,8 +1970,17 @@ var FAMNAME={};
 function famSort(g){ var r=CD.areas.filter(function(a){return a.grouping===g;})[0];
  return r?parseInt(r.group_sort,10):99; }
 function cabSort(x){ var n=(x.match(/\d+/g)||[]).map(Number); return n.length?n[n.length-1]:0; }
-var BANDS=['<10kg (small)','10-25kg (medium)','25kg+ (large)','small + pups','medium + pups','large + pups'];
-var PUPBAND={'small + pups':1,'medium + pups':1,'large + pups':1};
+/* the room's size columns come from its own BLD-area_capacity rows (no kg written here); small, medium, large, then + pups */
+function bandsFor(aid){ var a=CD.cap[aid]||{}, seen={}, out=[];
+ ['free','limited'].forEach(function(m){ Object.keys(a[m]||{}).forEach(function(b){ if(!seen[b]){ seen[b]=1; out.push(b); } }); });
+ var rank=function(b){ var k=BLDCapacity.band(b); return (['small','medium','large','small+pups','medium+pups','large+pups'].indexOf(k)+1)||9; };
+ return out.sort(function(x,y){ return rank(x)-rank(y); }); }
+/* limits as the door sign shows them: the current flap mode's alternatives, in size colour, small first; 0 and + pups left out */
+function limitChips(aid,mode){ if(!mode) return ''; var a=(CD.cap[aid]||{})[mode]||{}, out=[];
+ bandsFor(aid).forEach(function(b){ var k=BLDCapacity.band(b), c=a[b], n=c?parseInt(c.n,10):0; if(!k||/pups/.test(k)||!(n>0)) return;
+  var col=CD.sizeColour&&CD.sizeColour[k]; out.push('<span class="pill lim" data-size="'+esc(k)+'"'+(col?' style="border-color:'+esc(col)+'"':'')+'>'+(out.length?'or ':'')+n+' '+k+'</span>'); });
+ return out.length?'<div class="lims" data-k="limits">'+out.join(' ')+'</div>':''; }
+function bandLabel(b){ var k=BLDCapacity.band(b); return k?capFirst(k.replace('+pups',' + pups')):b; }
 
 function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_type;
  var r=CD.accessCsv[aid]; return (r&&r.access_type)||''; }
@@ -1944,7 +1989,7 @@ function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set 
 function modesOf(a){ return ['free','limited']; }
 /* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium"; every dog counts as the largest size in the room). One calculation, shared with the staff page. */
 function roomDogs(ids){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
- return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:d.size,damId:dam[d.birthLitter]||''}; }); }
+ return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:d.sizeWord||d.size,damId:dam[d.birthLitter]||''}; }); }
 function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids)}); }
 function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
  ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
@@ -1982,6 +2027,18 @@ async function accessSave(aid,mode,msgEl){
 function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]&&ROUND[k].subjects) return ROUND[k].subjects;
  return (CD.dogs||[]).filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;}); }
 
+/* Room card: today's temperature (TEMPS helper BLDAreaTempLine; same words as The round; colour as a ring, never a fill).
+   Limit from BLD-temperature_band rows via the youngest dog in the room. No thermometer in the room: no line. */
+function roomTempLine(aid,who,date){ if(!window.BLDAreaTempLine) return '';
+ var young=null; (who||[]).forEach(function(sid){ var d=CD._byId[sid], n=d?ageDays(d.dob,date):null; if(n!==null&&(young===null||n<young)) young=n; });
+ var r=BLDAreaTempLine.lineFor(aid,T['BLD-area_reading.csv']||[],T['BLD-thermometer.csv']||[],T['BLD-area_link.csv']||[],T['BLD-temperature_band.csv']||[],date,{youngestDays:young,req:CD.req||[]});
+ if(!r.lines.length) return '';
+ function part(x){ var c=x.state==='out'?'pill no':x.state==='missed'?'pill w':''; return '<span'+(c?' class="'+c+'"':'')+' data-tstate="'+x.state+'">'+esc(x.text)+'</span>'; }
+ var lim=r.limit&&r.limit.lo!==null?'Limit '+r.limit.lo.toFixed(1)+'\u2013'+r.limit.hi.toFixed(1)+' \u00b0C':(r.limit&&r.limit.source==='by age'?'Limit by age':'');
+ return '<div class="tline" data-temp="'+esc(aid)+'" style="margin-top:6px"><b>Temperature</b>'
+  +r.lines.map(function(l){ return '<div>'+(l.label?esc(l.label)+' ':'')+part(l.am)+' \u00b7 '+part(l.pm)+'</div>'; }).join('')
+  +(lim?'<div class="mut" data-temp-limit>'+lim+'</div>':'')
+  +'<a href="./history.html">Temperature history</a></div>'; }
 function pageAreas(){
  var date=CD._roundDate||todayISO();
  var shown=AREAFOCUS?CD.areas.filter(function(a){return a.id===AREAFOCUS;}):CD.areas;   /* opened from a dog card: just that room */
@@ -2013,21 +2070,23 @@ function pageAreas(){
         return '<option value="'+m+'"'+(cur===m?' selected':'')+'>'
           +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
     +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
-    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>'+jobsHist({area_id:a.id});
+    +'<span class="mut">'+esc(accessReason(a.id))+'</span>'
+    +'<a class="cb" href="staff/print/" target="_blank" rel="noopener" data-print-sign="'+esc(a.id)+'">Print sign</a></div>'+jobsHist({area_id:a.id});
 
    {
-    var modes = cur ? [cur] : ['free','limited'];
-    h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
+    var modes = cur ? [cur] : ['free','limited'], bands=bandsFor(a.id);
+    if(!bands.length) h+='<p data-nolimits="'+esc(a.id)+'"><span class="pill no">no limits recorded</span></p>';
+    else h+=limitChips(a.id,cur)+'<details class="allfig"><summary>All figures</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+bands.map(function(b){return '<th title="'+esc(b)+'">'+esc(bandLabel(b))+'</th>';}).join('')+'</tr></thead><tbody>'
      +modes.map(function(mo){
         return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
-         +BANDS.map(function(b){ var v=capFor(a.id,b,mo);
+         +bands.map(function(b){ var v=capFor(a.id,b,mo);
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
-     +'</tbody></table></div>'
-     +(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
-     +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
+     +'</tbody></table></div></details>';
+    h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')+roomTempLine(a.id,who,date)
+     +'<div class="mut" style="margin-top:6px">in here on '+esc(dmyShort(date))+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];
-        return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.size)+esc(d.name||sid)+'</a>'
+        return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.sizeWord||d.size)+esc(d.name||sid)+'</a>'
           :'<span class="pill i">'+esc(sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
      +(function(){ var r=roomCheck(a.id,who,cur);
@@ -2298,7 +2357,6 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
-  var cap=capFor(aid,'10-25kg (medium)',acc);
   var roomR=roomCheck(aid,sel,acc), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">'+c.step+'.</span> '+esc(c.cabin)
@@ -2339,7 +2397,7 @@ function pageRound(){
        +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.max||'')+'">'
        +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?'saved':'')+(tempSwapped(t.min,t.max)?' <span class="pill no">max lower than min \u2014 tell Lisa</span>':flag(vmin,t.min)+flag(vmax,t.max))+'</span>'; }).join('')
    +'</div>'
-   +'<div class="mut">'+(acc?('permitted in '+acc+' mode, 10\u201325 kg: '+(cap==null?'not recorded':cap)+' \u00b7 in here: '+sel.length)
+   +'<div class="mut">'+(acc?('permitted in '+acc+' mode: '+(roomR.alternatives||'not recorded')+' \u00b7 in here: '+sel.length)
                             :'choose how it is being run and the capacity check can run')
    +(over?' <span class="pill no">OVER</span>':'')+'</div>'
    +'</div>';
