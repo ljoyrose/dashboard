@@ -227,6 +227,7 @@ test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day,
     await expect(rows.nth(0)).toHaveClass(/tg-br/);       // 11/11: 21.0 is over 20.0, the row in force that day
     await expect(rows.nth(1)).not.toHaveClass(/tg-br/);   // 12/11: 22.0 is inside 26.0, the row in force that day
   } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
+});
 
 test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
   ROLE.v = 'STAFF';
