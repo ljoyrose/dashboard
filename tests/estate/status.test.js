@@ -114,6 +114,49 @@ test('domainExpiry: finds the registrable row, reads ISO and UK dates', () => {
   assert.equal(S.domainExpiry([{ domain: 'example.com', expiry: '1/2/2027' }], 'example.com'), '2027-02-01');
 });
 
+test('RDAP: nameservers and registrar from a mocked response, including a nested name', () => {
+  const doc = {
+    ldhName: 'example.com',
+    nameservers: [
+      { ldhName: 'ns2.example.net.' },
+      { ldhName: 'ns1.example.net' },
+      { ldhName: 'ns1.example.net' }
+    ],
+    entities: [{
+      roles: ['registrar'],
+      vcardArray: ['vcard', [['version', {}, 'text', '4.0'], ['fn', {}, 'text', 'Example Registrar']]]
+    }]
+  };
+  const id = S.rdapIdentity(doc);
+  assert.deepEqual(id.nameservers, ['ns2.example.net', 'ns1.example.net']);
+  assert.equal(id.registrar, 'Example Registrar');
+  const nested = S.rdapIdentity({
+    nameservers: [{ unicodeName: 'ns1.example.co.uk' }],
+    entities: [{ roles: ['registrar'], entities: [{ vcardArray: ['vcard', [['fn', {}, 'text', 'Example Registrar UK']]] }] }]
+  });
+  assert.deepEqual(nested.nameservers, ['ns1.example.co.uk']);
+  assert.equal(nested.registrar, 'Example Registrar UK');
+  assert.deepEqual(S.rdapIdentity(null), { nameservers: [], registrar: '' });
+  assert.deepEqual(S.rdapIdentity({}), { nameservers: [], registrar: '' });
+  const Core = require('../../estate/core.js');
+  assert.equal(Core.classifyDnsHost(id.nameservers), 'other (example.net)');
+});
+
+test('nameserverChange flags only when a previous set is known and different', () => {
+  assert.equal(S.nameserverChange('ns1.example.net', ''), null);
+  assert.equal(S.nameserverChange('ns1.example.net', null), null);
+  assert.equal(S.nameserverChange('ns1.example.net', '   '), null);
+  const same = S.nameserverChange('ns1.example.net, ns2.example.net', 'ns2.example.net ns1.example.net.');
+  assert.equal(same.changed, false);
+  const c = S.nameserverChange(['ns1.example.net'], 'ns1.other.test');
+  assert.equal(c.changed, true);
+  assert.deepEqual(c.previous, ['ns1.other.test']);
+  assert.deepEqual(c.current, ['ns1.example.net']);
+  const gone = S.nameserverChange('', 'ns1.example.net');
+  assert.equal(gone.changed, true);
+  assert.deepEqual(gone.current, []);
+});
+
 test('every word the scanner writes is read back by the page as the same status', () => {
   const Core = require('../../estate/core.js');
   const S = require('../../estate/status.js');
