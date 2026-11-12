@@ -58,10 +58,33 @@
       var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
       types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+      /* today's lines for a job, newest first; a corrected line gives way to its correction */
+      function todays(key) {
+        var replaced = {};
+        logs.forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
+        return logs.filter(function (l) { return !replaced[l.id] && keyOf[l.check_type_id] === key && BLDDue.londonDate(l.happened_at || l.taken_at) === today; })
+          .sort(function (a, b) { return String(b.taken_at).localeCompare(String(a.taken_at)); });
+      }
+      /* each dog's newest line today (not "not done"): the dog starts unticked and shows a tick */
       function doneToday(key) {
         var m = {};
-        logs.forEach(function (l) { if (keyOf[l.check_type_id] === key && l.subject_id && l.outcome !== 'not_done' && BLDDue.londonDate(l.happened_at || l.taken_at) === today) m[l.subject_id] = true; });
+        todays(key).forEach(function (l) { if (l.subject_id && l.outcome !== 'not_done' && !m[l.subject_id]) m[l.subject_id] = l; });
         return m;
+      }
+      var kept = {};
+      function here(l) {
+        if (target.litter_id) return l.litter_id === target.litter_id;
+        if (target.subject_id) return l.subject_id === target.subject_id;
+        if (target.area_id) return l.area_id === target.area_id;
+        return !l.subject_id && !l.area_id && !l.litter_id;
+      }
+      /* the card's tick: from today's lines, so it shows after a save and when the screen opens again */
+      function showDone(card, key, dogIds) {
+        var lines = todays(key).filter(function (l) { return dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l); }), l = lines[0];
+        if (!l) return;
+        if (l._queued) { BLDDone.wait(card, l._queued); return; }
+        var n = dogIds ? Object.keys(doneToday(key)).filter(function (x) { return dogIds.indexOf(x) >= 0; }).length : 0;
+        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
       }
       /* a job's form: the owner's check_field rows in force today, in their sort order */
       var formOf = {}, latestField = {};
@@ -114,14 +137,16 @@
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
             panelMsg.className = 'msg bad'; panelMsg.textContent = fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : r.message;
+            BLDDone.fail(state.card, 'Not saved.' + (fe ? '' : ' ' + (r.message || '')));
             if (r.code !== 'NETWORK') state.rid = null; return;
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
-          var at = new Date().toISOString();
-          logs = logs.concat(entry.dog_ids ? entry.dog_ids.split('|').map(function (dog, i) { return Object.assign({}, entry, { id: r.id + '-' + i, subject_id: dog, taken_at: at }); })
-            : [Object.assign({}, entry, { id: r.id, taken_at: at })]);
+          var at = r.at || new Date().toISOString(), mine = { taken_at: at, taken_by: r.who || '', _queued: r.status === 'queued' ? (r.message || 'Waiting for signal') : '' };
+          logs = logs.concat(entry.dog_ids ? entry.dog_ids.split('|').map(function (dog, i) { return Object.assign({}, entry, mine, { id: r.id + '-' + i, subject_id: dog }); })
+            : [Object.assign({}, entry, mine, { id: r.id })]);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
-          say(r.status === 'queued' ? r.message : (r.saved ? 'Saved: ' + r.saved + ' dogs.' + (left ? ' Left out: ' + left + '.' : '') : 'Saved.'), 'good');
+          kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
+          say(left ? 'Left out: ' + left + '.' : '', 'warn');
           draw();
         });
       }
@@ -151,13 +176,19 @@
         input('note', t.note_label || 'Note');
         var done = a.outcome ? 'ok' : 'recorded', roomList = null;
         if (BLDDue.perDogRoom(t) && target.area_id) {   // all ticked: untick only a dog that missed out
-          state.ticks = roomDogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: true, onchange: function () { state.rid = null; } }); });
-          roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return h('label', { class: 'job-dog' }, [state.ticks[i], h('span', { text: x.label })]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
+          var roomDid = doneToday(t.type_key);
+          state.ticks = roomDogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: !roomDid[x.id], onchange: function () { state.rid = null; } }); });
+          roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return dogRow(state.ticks[i], x.label, roomDid[x.id]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
+          state.dogIds = roomDogs.map(function (x) { return x.id; });
         }
-        if (dogJob && !target.subject_id) {   // dogs not done today start ticked; for a dog not right, tick only that dog, then Problem
+        if (dogJob && !target.subject_id) {   // Lisa 12 Nov: every dog starts unticked; tick dogs one by one, or Select all and untick a dog that needs a comment
           var did = doneToday(t.type_key), dogs = BLDDue.dogsFor(t, target).slice().sort(function (x, y) { return String(labelOf[x.id]).localeCompare(String(labelOf[y.id])); });
-          state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: !did[x.id], onchange: function () { state.rid = null; } }); });
-          roomList = h('div', { class: 'job-dogs' }, dogs.map(function (x, i) { return h('label', { class: 'job-dog' }, [state.ticks[i], h('span', { text: (labelOf[x.id] || '') + (did[x.id] ? ' · done' : '') })]); }));
+          state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, onchange: function () { state.rid = null; } }); });
+          var all = h('button', { class: 'btn quiet job-all', type: 'button', text: 'Select all', onclick: function () {
+            state.ticks.forEach(function (b, i) { if (!did[dogs[i].id]) b.checked = true; }); state.rid = null;
+          } });
+          roomList = h('div', { class: 'job-dogs' }, (dogs.length > 1 ? [all] : []).concat(dogs.map(function (x, i) { return dogRow(state.ticks[i], labelOf[x.id], did[x.id]); })));
+          state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
         }
         var problems = h('div', { class: 'job-btns', hidden: true }, [
@@ -167,7 +198,7 @@
         panel.appendChild(problems); panel.appendChild(panelMsg);
         var head = h('div', { class: 'job-head' }, [
           h('div', { class: 'job-txt' }, [h('div', { class: 'nm', text: job.label }), h('div', { class: 'ds', text: dueLine(job) + byLine(job) })]),
-          h('button', { class: 'btn', type: 'button', text: site ? 'Yes' : 'Done', 'aria-label': (site ? 'Yes, done: ' : 'Done: ') + job.label, onclick: function () {
+          h('button', { class: 'btn', type: 'button', 'data-done-btn': '1', text: site ? 'Yes' : 'Done', 'aria-label': (site ? 'Yes, done: ' : 'Done: ') + job.label, onclick: function () {
             if (needs && panel.hidden) { panel.hidden = false; return; }
             if (roomList) panel.hidden = false;
             send(job, t, done, inputs, panelMsg, state);
@@ -176,7 +207,15 @@
         var kids = roomList ? [head, roomList] : [head];
         if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
         kids.push(panel);
-        return h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);
+        var card = state.card = h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);
+        showDone(card, t.type_key, state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null));
+        return card;
+      }
+      /* one dog in a tick list: a dog with a line today shows a tick and the time */
+      function dogRow(box, label, line) {
+        var kids = [box, h('span', { text: label || '' })];
+        if (line) kids.push(h('span', { class: 'dog-done', html: line._queued ? '' : BLDDone.TICK }), h('span', { class: 'dog-at', text: line._queued ? 'Waiting' : BLDDone.hhmm(line.taken_at) }));
+        return h('label', { class: 'job-dog' }, kids);
       }
 
       function groupCard(name, jobs) {
@@ -195,7 +234,7 @@
           jobs.filter(function (j) { return j.group === group; }).forEach(function (j) { list.appendChild(jobCard(j)); });
           return;
         }
-        var shown = site && !more ? jobs.filter(isDue) : jobs, rest = jobs.length - shown.length, seen = {};
+        var shown = site && !more ? jobs.filter(function (j) { return isDue(j) || kept[j.type_key]; }) : jobs, rest = jobs.length - shown.length, seen = {};
         shown.forEach(function (j) {
           if (!j.group) { list.appendChild(jobCard(j)); return; }
           if (seen[j.group]) return;
