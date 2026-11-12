@@ -23,7 +23,7 @@
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access']); }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -69,8 +69,25 @@
     if (!f && !m) return null;
     return h('span', { class: 'sex', role: 'img', 'aria-label': f ? 'Female' : 'Male', html: '<svg viewBox="0 0 24 24" aria-hidden="true">' + (f ? '<circle cx="12" cy="9" r="6"/><path d="M12 15v7M8.5 19h7"/>' : '<circle cx="10" cy="14" r="6"/><path d="M19 5l-5 5M19 5h-5M19 5v5"/>') + '</svg>' });
   }
+  function byId(list) { var o = {}; (T[list] || []).forEach(function (r) { if (r.id) o[r.id] = r; }); return o; }
+  /* Colour: the coat colour name, then the pattern (not Solid), then the nose pigment, from the owner's lookup rows */
+  function colourOf(s) {
+    var c = byId('coat_colour')[s.coat_colour_id], p = byId('coat_pattern')[s.coat_pattern_id], g = byId('nose_pigment')[s.nose_pigment_id];
+    if (!c || !c.name) return '';
+    return [c.name, p && p.name && !/^solid$/i.test(p.name) ? p.name.toLowerCase() : '', g && g.name ? g.name : ''].filter(Boolean).join(' ');
+  }
+  function chipOf(s) { var n = ''; (T.microchip || []).forEach(function (r) { if (r.subject_id === s.id && r.chip_number) n = String(r.chip_number); });
+    return n.replace(/\s+/g, '').replace(/(\d{3})(?=\d)/g, '$1 '); }
+  /* job strip: the jobs in force for this kind of card (Lisa's job rows); a group shows once, a job with no group by its label */
+  function jobsFor(kinds) { return (typeof BLDDue !== 'undefined' ? BLDDue.jobsInForce(T.check_type || [], BLDNeeds.today()) : []).filter(function (j) { return kinds.indexOf(j.target) >= 0; }); }
+  function jobStrip(kinds) { var seen = {}, out = [];
+    jobsFor(kinds).forEach(function (j) { var n = j.group || j.label || j.type_key; if (n && !seen[n]) { seen[n] = 1; out.push(n); } });
+    out.sort(function (a, b) { return a.localeCompare(b); });
+    return out.length ? h('div', { class: 'jobs', 'data-k': 'jobs' }, out.map(function (n) { return h('span', { class: 'job', text: n }); })) : null; }
+  function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
   function dogCard(tag, it) {
-    var s = it.s, col = sizeColour(s.size_band), rows = [];
+    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s);
+    if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
@@ -79,6 +96,8 @@
         h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
+        chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,
+        jobStrip(['dog', 'either']),
         h('small', { class: 'tag', text: tag })])]);
   }
   /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
@@ -93,8 +112,11 @@
         h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }),
+        jobList(['litter']),
         h('small', { class: 'tag', text: tag })])]);
   }
+  function jobList(kinds) { var js = jobsFor(kinds); return js.length ? h('ul', { class: 'lst', 'data-k': 'jobs' }, js.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); })
+    .map(function (j) { return h('li', {}, [j.label || j.type_key, h('span', { text: howOften(j) })]); })) : null; }
   function limitsOf(areaId) {
     var acc = '', last = '';
     (T.area_access || []).forEach(function (r) { if (r.area_id === areaId && String(r.effective_from || '') >= last) { last = String(r.effective_from || ''); acc = r.access_type; } });
@@ -111,7 +133,9 @@
     return h('article', { class: 'rcard', 'data-room': it.id }, [h('b', { text: it.label }),
       lim.length ? h('div', { class: 'limits' }, lim.map(function (l, i) { var c = sizeColour(l.band);
         return h('span', { class: 'sz', 'data-size': sizeKey(l.band), style: c ? '--c:' + c : '' }, [h('i'), (i ? 'or ' : '') + l.n + ' ' + sizeKey(l.band)]); })) : null,
-      h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }), h('small', { class: 'tag', text: tag })]);
+      h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }),
+      jobList(['area', 'either']),
+      h('small', { class: 'tag', text: tag })]);
   }
   function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: fn }); }
   /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
