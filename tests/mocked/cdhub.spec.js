@@ -776,8 +776,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'round');
-    await expect(page.locator('.card[data-area] .step').first()).toHaveText('Step 1:');
-    await expect(page.locator('.card[data-area]').first()).toContainText('Step 1: Test Cabin A');
+    await expect(page.locator('.card[data-area] .step').first()).toHaveText('1.');
+    await expect(page.locator('.card[data-area]').first()).toContainText('1. Test Cabin A');
   });
 
   test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 72px thumbnail and who-has-it ring', async ({ page }) => {
@@ -938,24 +938,17 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
   expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
-test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
-  const WANT = [
-    ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
-    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'],
-    ['litters', 'stage', 'Litter stage', 'litter stage', 'birth_group_stage']];
-  test('each empty state names its Bloodline table, in words, on its own tab', async ({ page }) => {
+test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are DD/MM/YY', () => {
+  test('Dogs, Litters and Do carry no "Arrives with Bloodline" boxes; Litters says its title once', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    for (const [tab, k, title, words, table] of WANT) {
+    for (const tab of ['dogs', 'work', 'litters']) {
       await openTab(page, tab);
-      const card = page.locator(`#arrive-${k}`);
-      await expect(card).toBeVisible();
-      await expect(card.locator('h3')).toHaveText(title);
-      await expect(card.locator('.arrives')).toHaveText(`Arrives with Bloodline: ${words}`);
-      await expect(card).toHaveAttribute('data-arrives', table);
-      const smallest = await card.evaluate((e) => Math.min(...[e, ...e.querySelectorAll('*')].map((x) => parseFloat(getComputedStyle(x).fontSize))));
-      expect(smallest).toBeGreaterThanOrEqual(13);
+      await expect(page.locator('#main .arrives, #main [data-arrives]')).toHaveCount(0);
+      await expect(page.locator('#main')).not.toContainText('BLD-WORK.csv');
     }
+    await expect(page.locator('#main h3', { hasText: /^Litters/ })).toHaveCount(0);
+    expect(await page.evaluate(() => [dmy('2026-11-12'), plural(1, 'row'), plural(2, 'row')])).toEqual(['12/11/26', '1 row', '2 rows']);
   });
 });
 

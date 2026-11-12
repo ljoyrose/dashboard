@@ -672,7 +672,9 @@ var TABLES = {
       value:          { type: 'count', required: true },
       effective_from: { type: 'date', required: true },
       source:         { type: 'text' },
-      note:           { type: 'text' }
+      note:           { type: 'text' },
+      // not a column: "yes" keeps a value outside the usual range (overseer 12 Nov 2026: a council may allow it)
+      confirm_unusual: { type: 'enum', values: ['yes'] }
     },
     // the same rule given twice from the same date is a repeat tap
     dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
@@ -681,7 +683,10 @@ var TABLES = {
       var lim = BREEDING_RULE_LIMITS_[row.rule_key];
       if (lim && !errors.value && row.value !== '') {
         var n = parseInt(row.value, 10);
-        if (n < lim[0] || n > lim[1]) errors.value = 'Use a number from ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '.';
+        if ((n < lim[0] || n > lim[1]) && row.confirm_unusual !== 'yes') {
+          errors.value = 'Unusual value: the usual range is ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '. Check the number, or save anyway.';
+          errors.confirm_unusual = 'Save anyway?';   // the page shows a "Save anyway" button and sends confirm_unusual = yes
+        }
       }
     },
     // a new version must start after the latest one already saved for that rule (history is never rewritten)
@@ -705,7 +710,8 @@ function checkReadMethod_(row, errors) {
   }
 }
 
-/** Sensible bounds for each breeding rule, so a typo (e.g. 120 months) is refused: [lowest, highest, unit]. */
+/** Usual bounds for each breeding rule, so a typo (e.g. 120 months) is caught: [lowest, highest, unit]. Outside them
+ *  is a warning, not a stop: confirm_unusual = yes saves it (a council may allow other values). */
 var BREEDING_RULE_LIMITS_ = {
   min_dam_age_months:          [6, 48, 'months'],
   max_litters_per_dam:         [1, 20, 'litters'],
