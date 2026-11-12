@@ -12,7 +12,9 @@
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/thermometer.js"></script>
+<script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
@@ -1312,7 +1314,7 @@ function needsToday(){
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
    tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
- areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
+ areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id),date);
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  closedAudit(date).forEach(function(x){ if(x.dogs) out.push({title:x.label+' is closed but in use',sub:x.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  /* foundation: work record (an open item waiting on the owner) */
@@ -1552,7 +1554,7 @@ function todayChecklist(date,unplacedN){
  var A=liveCabins(), N=A.length;
  var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
  var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return flapChosen(r.access||accessOf(a.id)); }).length;
- var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc).status==='over'; }).length;
+ var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc,date).status==='over'; }).length;
  var c=counts();
  var L=[
   [!unplacedN,'Every dog on site is in a cabin',unplacedN?unplacedN+' not yet placed':'all placed'],
@@ -1992,14 +1994,21 @@ function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set 
  var r=CD.accessCsv[aid]; return (r&&r.reason)||''; }
 function modesOf(a){ return ['free','limited']; }
 /* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium"; every dog counts as the largest size in the room). One calculation, shared with the staff page. */
-function roomDogs(ids){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
- return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:d.sizeWord||d.size,damId:dam[d.birthLitter]||''}; }); }
-function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids)}); }
+/* Size on a date (dated limits, Lisa 12 Nov 2026): a past day uses the cut-off rows in force that day and the latest weight on
+   or before it, so a later rule or weight never makes an old placement look wrong. Today (or no date): the card's size.
+   No weight on or before that day, or no cut-offs then: the size on the dog's record (never today's weight). */
+function sizeOn(d,date){ if(!date||date>=todayISO()) return d.sizeWord||d.size;
+ var cut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],date), lw=null;
+ (d.weights||[]).forEach(function(w){ if(String(w.on||'').slice(0,10)<=date) lw=w; });
+ return (lw&&BLDCapacity.sizeFromKg(lw.kg,cut))||sizeKey(d.size)||d.size; }
+function roomDogs(ids,date){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
+ return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:sizeOn(d,date),damId:dam[d.birthLitter]||''}; }); }
+function roomCheck(aid,ids,acc,date){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids,date),date:date||todayISO()}); }
 function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
  ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
   if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
 function roomAudit(date){ return BLDCapacity.audit(areasOn(date).map(function(a){ var ids=inCabin(a.id,date);
- return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids),reasons:roomReasons(ids)}; }),T['BLD-area_capacity.csv']||[]); }
+ return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids,date),reasons:roomReasons(ids),date:date||todayISO()}; }),T['BLD-area_capacity.csv']||[]); }
 /* ROOM-TO-ROOM RULES (R4, Lisa 11 Nov 2026): "a room is closed while another room is in use" is a row, never code.
    BLD-breeding_rule rule_key room.closed_when_in_use.<closed area id>, value = the area id whose use closes it, dated by
    effective_from like every rule (a later row changes it; a later row with value "none" ends it). "In use" = a dog is in
@@ -2007,7 +2016,7 @@ function roomAudit(date){ return BLDCapacity.audit(areasOn(date).map(function(a)
 var CLOSED_PREFIX='room.closed_when_in_use.';
 function closedRules(iso){ var by={};
  (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var k=String(r.rule_key||'');
-  if(k.indexOf(CLOSED_PREFIX)!==0||!/^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'')||r.effective_from>iso) return;
+  if(k.indexOf(CLOSED_PREFIX)!==0||!/^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'')||!BLDCapacity.inForce([r],iso,'effective_from').length) return;   // to_date ends a row (dated limits)
   var c=k.slice(CLOSED_PREFIX.length), p=by[c];
   if(c&&(!p||r.effective_from>p.effective_from||(r.effective_from===p.effective_from&&(r.set_at||'')>=(p.set_at||'')))) by[c]=r; });
  return Object.keys(by).map(function(c){ return {closed:c,when:String(by[c].value||'').trim(),src:by[c].source||'',from:by[c].effective_from}; })
@@ -2031,6 +2040,18 @@ async function accessSave(aid,mode,msgEl){
 function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]&&ROUND[k].subjects) return ROUND[k].subjects;
  return (CD.dogs||[]).filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;}); }
 
+/* Room card: today's temperature (TEMPS helper BLDAreaTempLine; same words as The round; colour as a ring, never a fill).
+   Limit from BLD-temperature_band rows via the youngest dog in the room. No thermometer in the room: no line. */
+function roomTempLine(aid,who,date){ if(!window.BLDAreaTempLine) return '';
+ var young=null; (who||[]).forEach(function(sid){ var d=CD._byId[sid], n=d?ageDays(d.dob,date):null; if(n!==null&&(young===null||n<young)) young=n; });
+ var r=BLDAreaTempLine.lineFor(aid,T['BLD-area_reading.csv']||[],T['BLD-thermometer.csv']||[],T['BLD-area_link.csv']||[],T['BLD-temperature_band.csv']||[],date,{youngestDays:young,req:CD.req||[]});
+ if(!r.lines.length) return '';
+ function part(x){ var c=x.state==='out'?'pill no':x.state==='missed'?'pill w':''; return '<span'+(c?' class="'+c+'"':'')+' data-tstate="'+x.state+'">'+esc(x.text)+'</span>'; }
+ var lim=r.limit&&r.limit.lo!==null?'Limit '+r.limit.lo.toFixed(1)+'\u2013'+r.limit.hi.toFixed(1)+' \u00b0C':(r.limit&&r.limit.source==='by age'?'Limit by age':'');
+ return '<div class="tline" data-temp="'+esc(aid)+'" style="margin-top:6px"><b>Temperature</b>'
+  +r.lines.map(function(l){ return '<div>'+(l.label?esc(l.label)+' ':'')+part(l.am)+' \u00b7 '+part(l.pm)+'</div>'; }).join('')
+  +(lim?'<div class="mut" data-temp-limit>'+lim+'</div>':'')
+  +'<a href="./history.html">Temperature history</a></div>'; }
 function pageAreas(){
  var date=CD._roundDate||todayISO();
  var shown=AREAFOCUS?CD.areas.filter(function(a){return a.id===AREAFOCUS;}):CD.areas;   /* opened from a dog card: just that room */
@@ -2075,13 +2096,13 @@ function pageAreas(){
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
      +'</tbody></table></div></details>';
-    h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
+    h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')+roomTempLine(a.id,who,date)
      +'<div class="mut" style="margin-top:6px">in here on '+esc(dmyShort(date))+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];
         return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.sizeWord||d.size)+esc(d.name||sid)+'</a>'
           :'<span class="pill i">'+esc(sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
-     +(function(){ var r=roomCheck(a.id,who,cur);
+     +(function(){ var r=roomCheck(a.id,who,cur,date);
         return r.status==='over'?' <span class="pill no" title="'+esc(r.message)+'">over its limit</span>':''; })()
      +'</div>';
    }
@@ -2348,7 +2369,7 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
-  var roomR=roomCheck(aid,sel,acc), over=roomR.status==='over';
+  var roomR=roomCheck(aid,sel,acc,date), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
    +' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
