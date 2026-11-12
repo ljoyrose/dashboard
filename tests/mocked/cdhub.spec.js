@@ -312,6 +312,10 @@ const setRx = (world, byId) => {
 };
 const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes\n'
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
+// Gestation timings are dated rows now (Lisa 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
+const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
+  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84']
+    .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
 const openTab = async (page, id) => {
   await tabClick(page, `#nav button[data-go="${id}"]`);
   await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
@@ -354,7 +358,7 @@ test.describe('CD Hub house look', () => {
   for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
     test(`${look} ${scheme}: every tab: nothing under 13px, weights 400/600, one 12px radius, 1px lines, no uppercase, no coloured words, text 4.5:1, rings 3:1`, async ({ page, guard }) => {
       test.setTimeout(90_000);
-      setFile(guard.world, 'BLD-mating.csv', MATINGS());   // late and soon date pills on screen too
+      setFile(guard.world, 'BLD-mating.csv', MATINGS()); GEST(guard.world);   // late and soon date pills on screen too
       await page.addInitScript((bg) => localStorage.setItem('dash-look', JSON.stringify({ bg })), look);
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto('cdhub/');
@@ -503,7 +507,7 @@ test.describe('CD Hub house look', () => {
   });
 
   test('no solid colour fills: counts, pills, date pills, checklist marks, summary numbers, tabs and chosen chips are rings or light tints', async ({ page, guard }) => {
-    setFile(guard.world, 'BLD-mating.csv', MATINGS());
+    setFile(guard.world, 'BLD-mating.csv', MATINGS()); GEST(guard.world);
     await page.goto('cdhub/');
     await signIn(page);
     const fills = () => page.evaluate(() => [...document.querySelectorAll('.cnt, .pill, .dpill, .mk, .sum .big, .st, .sfb, .achip, .whor, .ic, nav#nav button, .btn, .tile, .mcard, .card, .live')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
@@ -580,7 +584,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
   });
 
   test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {
-    setFile(guard.world, 'BLD-mating.csv', MATINGS());
+    setFile(guard.world, 'BLD-mating.csv', MATINGS()); GEST(guard.world);
     await page.goto('cdhub/');
     await signIn(page);
     const main = page.locator('[data-hm="needs"] .hm-row');
@@ -885,6 +889,7 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
   test('an open mating added to the fixture file is found, from the parsed rows and from raw rows alike', async ({ page, guard }) => {
     const fixture = fs.readFileSync(path.join(FIX, 'bld', 'BLD-mating.csv'), 'utf8').trimEnd();
     setFile(guard.world, 'BLD-mating.csv', fixture + `\nmat-test-2,sub-test-dog-1,sub-test-dog-2,${iso(-40)},1,natural,yes,,,,invented open mating\n`);
+    GEST(guard.world);
     await page.goto('cdhub/');
     await signIn(page);
     const r = await page.evaluate(() => {
@@ -901,6 +906,35 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
     await expect(page.locator('#main')).toContainText('In whelp');
     await expect(page.locator('#main')).toContainText('day 40');
   });
+});
+
+test('CD Hub: gestation and adult age come from dated rows; no row = not set, judged on the mating date', async ({ page, guard }) => {
+  setFile(guard.world, 'BLD-mating.csv', MATINGS());
+  await page.goto('cdhub/');
+  await signIn(page);
+  // No gestation rows: no due date is invented, Today says not set.
+  await openTab(page, 'today');
+  await expect(page.locator('#main')).toContainText('gestation timings');
+  await expect(page.locator('#main')).not.toContainText('working due (+63)');
+  const r = await page.evaluate(() => {
+    const unset = inWhelp().map((x) => !!x.unset);
+    // A rule that starts AFTER the mating does not apply to it; one in force on the mating date does.
+    const m = inWhelp()[0].on;
+    T['BLD-breeding_rule.csv'] = [
+      { id: 'a', rule_key: 'gestation.due_days', value: '60', effective_from: '2010-01-01', source: 'Old pretend' },
+      { id: 'b', rule_key: 'gestation.window_from_days', value: '55', effective_from: '2010-01-01', source: 'Old pretend' },
+      { id: 'c', rule_key: 'gestation.window_to_days', value: '70', effective_from: '2010-01-01', source: 'Old pretend' },
+      { id: 'd', rule_key: 'gestation.due_days', value: '65', effective_from: addDays(m, 1), source: 'New pretend' },
+    ];
+    const g = inWhelp()[0];
+    const adultNone = adultMonths();
+    T['BLD-breeding_rule.csv'].push({ id: 'e', rule_key: 'dog.adult_from_months', value: '6', effective_from: '2010-01-01', source: 'Pretend' });
+    return { unset, due: g.due, want: addDays(m, 60), adultNone, adult: adultMonths(), pup: isPupM(3), grown: isAdultM(7) };
+  });
+  expect(r.unset.every(Boolean)).toBe(true);
+  expect(r.due).toBe(r.want);
+  expect(r.adultNone).toBeNull();
+  expect([r.adult, r.pup, r.grown]).toEqual([6, true, true]);
 });
 
 test('CD Hub: The round shows a Kept readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {

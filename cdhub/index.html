@@ -955,7 +955,7 @@ function statusOf(d){
  var kl=keeperStatus(d); if(kl) return kl;
 
  var m=months(d.dob);
- if(d.kind==='Pup' || (m!==null && m<6)) return {code:'PU',label:'Puppy',cls:'st-pu'};
+ if(d.kind==='Pup' || isPupM(m)) return {code:'PU',label:'Puppy',cls:'st-pu'};
 
 
  if(/breeding|brood|bitch/i.test(d.kind||'') || /Breeding Bitch/i.test(d.classification||'') || hasWhelped(d.id))
@@ -993,12 +993,12 @@ function tile(c,n,k,s){ return '<div class="tile '+c+'"><div class="n">'+n+'</di
 function counts(){
  if(CD._cnt) return CD._cnt;
  var here=CD.dogs.filter(onPrem);
- var adults=here.filter(function(d){var m=months(d.dob);return m!==null&&m>=6;});
+ var adults=here.filter(function(d){return isAdultM(months(d.dob));});
  CD._cnt={here:here,adults:adults,
   bitches:adults.filter(function(d){return d.sex==='Female'&&isEntire(d);}),
   active:here.filter(function(d){return statusOf(d).code==='BI';}),
   studs:here.filter(function(d){return statusOf(d).code==='ST';}),
-  pups:here.filter(function(d){var m=months(d.dob);return m!==null&&m<6;}),
+  pups:here.filter(function(d){return isPupM(months(d.dob));}),
   nodob:here.filter(function(d){return months(d.dob)===null;}),
   nochip:here.filter(function(d){return !d.chip;}),
   noarea:here.filter(function(d){return !d.area_id;}),
@@ -1144,10 +1144,12 @@ function inWhelp(onISO){
   if(!first||!first.on){
     out.push({dog:d,dam:dam,matings:open.length,on:'',due:'',from:'',to:'',day:null,unknown:true});
     return; }
-  var day=daysBetween(first.on,today);
-  if(day===null||day<0||day>72) return;
-  out.push({dog:d,dam:dam,matings:open.length,on:first.on,
-    due:addDays(first.on,63),from:addDays(first.on,57),to:addDays(first.on,72),day:day,
+  var day=daysBetween(first.on,today), g=gestOn(first.on);
+  if(day===null||day<0) return;
+  if(!g){ out.push({dog:d,dam:dam,matings:open.length,on:first.on,due:'',from:'',to:'',day:day,unset:true}); return; }
+  if(day>g.to) return;
+  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,
+    due:addDays(first.on,g.due),from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
     sires:open.map(function(m){var x=CD._byId[m.sire];return x?x.name:(m.sire||'?');}),
     methods:open.map(function(m){return m.method||'not recorded';})});
  });
@@ -1163,7 +1165,10 @@ var BREED_RULES=[
 /* settings kept in the same rule list (one rule list, Lisa 9 Nov), not breeding checks: not in the "3 rules not set" count */
 var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days'],['compliance.due_soon_days','Days ahead that count as due soon','days'],
  ['staffing.adults_per_full_time','Adult dogs per full-time carer','dogs'],['staffing.adults_per_part_time','Adult dogs per part-time carer','dogs'],
- ['dog.adult_from_months','Age a dog counts as an adult','months']];
+ ['dog.adult_from_months','Age a dog counts as an adult','months'],
+ ['gestation.due_days','Days from first mating to working due date','days'],['gestation.window_from_days','Whelping window opens (days from mating)','days'],
+ ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days'],
+ ['litters.recent_days','Days the Litters card looks back','days']];
 /* Today's staffing tile: only from the owner's dated rows (Lisa 12 Nov: every limit is a dated row; no assumed ratio).
    The row in force on the day shown is used. Not set: no tile. */
 function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_per_full_time',iso), p=breedRule('staffing.adults_per_part_time',iso);
@@ -1172,6 +1177,15 @@ function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_p
 function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
+/* A whole-number rule in force on a date, or null (not set). Lisa 12 Nov 2026: every limit is a dated row; no row = not set. */
+function ruleNum(key,iso){ var r=breedRule(key,iso), n=r?parseInt(r.value,10):NaN; return isNaN(n)?null:n; }
+/* Gestation timings in force on the MATING date: days to due, window from/to, alert day. null unless due and window are all set. */
+function gestOn(iso){ var g={due:ruleNum('gestation.due_days',iso),from:ruleNum('gestation.window_from_days',iso),to:ruleNum('gestation.window_to_days',iso),alert:ruleNum('gestation.alert_from_day',iso)};
+ return (g.due!==null&&g.from!==null&&g.to!==null)?g:null; }
+/* The age (months) a dog counts as an adult, from dog.adult_from_months in force on the day; null = not set. */
+function adultMonths(iso){ return ruleNum('dog.adult_from_months',iso||todayISO()); }
+function isAdultM(m,iso){ var a=adultMonths(iso); return m!==null&&a!==null&&m>=a; }
+function isPupM(m,iso){ var a=adultMonths(iso); return m!==null&&a!==null&&m<a; }
 function breedRule(key,iso){ var on=BLDCapacity.inForce(breedRuleRows(key),iso,'effective_from'); return on.length?on[on.length-1]:null; }   /* newest row in force that day (shared rule: from <= day <= to, blank to = open) */
 function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.slice(8,10);
  y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
@@ -1350,9 +1364,10 @@ function needsToday(){
  /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
-  if(x.day<50) return;
+  if(x.unset){ out.push({title:x.dog.name+': gestation timings not set',sub:'Add the gestation rows in Compliance',go:'compliance',tone:'',kind:'kit'}); return; }
+  if(x.g.alert===null||x.day<x.g.alert) return;   /* no alert-day row: no alert */
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
-   tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
+   tone:x.day>x.g.due?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
  areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id),date);
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
@@ -1401,20 +1416,21 @@ function onSiteCard(){
  var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+': '+v+'. Open the list"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></a>'; };
  return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><a class="big house-go" href="#/today" data-golist="here" aria-label="On site: '+c.here.length+'. Open the list">'+c.here.length+'</a></div>'
-  +row('Adults',c.adults.length,'','adults')+row('Under 6 months',c.pups.length,'','pups')
-  +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over','bitches')+row('Stud males',c.studs.length,'','studs')
+  +row('Adults',c.adults.length,'','adults')+row(adultMonths()===null?'Puppies (adult age not set)':'Under '+adultMonths()+' months',c.pups.length,'','pups')
+  +row('Breeding bitches in law',c.bitches.length,adultMonths()===null?'adult age not set':'female, entire, '+adultMonths()+' months and over','bitches')+row('Stud males',c.studs.length,'','studs')
   +row('Off site',c.offsite.length,'','offsite')
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
 /* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
 function littersCard(title){
- var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown;});
- var recent=(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=84; })
+ var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown&&!x.unset;}), rd=ruleNum('litters.recent_days',date);
+ var recent=rd===null?[]:(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=rd; })
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
  var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'+(title||'Litters')+cntPill(n)+'</h3>';
- h+=w.map(function(x){ var tone=x.day>63?'late':(x.day>=57?'soon':'');
-   return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of 57–72 · working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
+ h+=w.map(function(x){ var tone=x.day>x.g.due?'late':(x.day>=x.g.from?'soon':'');
+   return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of '+x.g.from+'\u2013'+x.g.to+' \u00b7 working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
+ if(rd===null) h+='<p class="mut" data-unset="litters.recent_days"><span class="pill w">not set</span> Days the Litters card looks back</p>';
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
@@ -1557,21 +1573,22 @@ function pageToday(){
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
    /* kit: animal */
    return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
-    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due (+63)</th><th>window 57\u201372</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
+    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due</th><th>window</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
     +w.map(function(x){
       if(x.unknown) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill no">mating date not recorded</span> '+esc(x.matings)+' mating row(s), no date \u2014 no due date can be computed</td></tr>';
-      var late=x.day>72, close=x.day>=57;
+      if(x.unset) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill w">not set</span> gestation timings \u2014 add them in Compliance</td></tr>';
+      var close=x.day>=x.g.from;
       return '<tr><td><b>'+esc(x.dog.name)+'</b></td>'
        +'<td><span class="pill '+(close?'w':'i')+'">day '+x.day+'</span></td>'
        +'<td>'+esc(dmy(x.on))+'</td><td><b>'+esc(dmy(x.due))+'</b></td>'
-       +'<td class="mut">'+esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to))+'</td>'
+       +'<td class="mut">'+esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to))+' <small>(days '+x.g.from+'\u2013'+x.g.to+')</small></td>'
        +'<td class="mut">'+esc((x.sires||[]).join(', '))+' \u00b7 '+esc((x.methods||[]).join(', '))+'</td></tr>'; }).join('')
     +'</tbody></table></div>'
-    +'<ul class="notes" style="margin-bottom:0"><li>From the mating rows, never a stored flag.</li><li>Working due: first mating + 63 days (Lisa).</li><li>Window 57\u201372 from first mating (FI18, poor confidence). Both shown.</li></ul></div>'; })()
+    +'</div>'; })()
  +'<div id="tpanel"></div>'
  +'<h3>The licence counts</h3><div class="tiles">'
- +tileC('b2',c.adults.length,'adult dogs here','6 months or over','adults')
- +tileC('b2',c.bitches.length,'breeding bitches in law','female + entire + 6mths+ + here','bitches')
+ +tileC('b2',c.adults.length,'adult dogs here',adultMonths()===null?'adult age not set':adultMonths()+' months or over','adults')
+ +tileC('b2',c.bitches.length,'breeding bitches in law',(adultMonths()===null?'adult age not set':'female + entire + '+adultMonths()+'mths+ + here'),'bitches')
  +tileC('b6',c.active.length,'your working list','classified Breeding Bitch','active')
  +tileC('b5',c.studs.length,'stud males','','studs')+'</div>';
  var gap=c.bitches.length-c.active.length;
@@ -1639,7 +1656,7 @@ function listFor(key){
  return c[key]||[];
 }
 var LISTNAME={unplaced:'dogs not yet placed',here:'dogs here',adults:'adult dogs here',bitches:'breeding bitches in law',active:'your working list',
- studs:'stud males',nodob:'no date of birth',nochip:'no microchip recorded',noarea:'not in a cabin',pups:'under 6 months',offsite:'off site'};
+ studs:'stud males',nodob:'no date of birth',nochip:'no microchip recorded',noarea:'not in a cabin',pups:'puppies',offsite:'off site'};
 function showList(key){
  var el=document.getElementById('tpanel'); if(!el) return;
  if(!key){ el.innerHTML=''; return; }
@@ -1814,7 +1831,7 @@ function pageDogs(){
  /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
-function ageBand(m){ if(m===null) return '__none'; if(m<6) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
+function ageBand(m){ if(m===null) return '__none'; if(isPupM(m)) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
 function showWeights(id){
  var d=CD._byId[id]; if(!d) return;
  var el=document.getElementById('wpanel'); if(!el) return;
