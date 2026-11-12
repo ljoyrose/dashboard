@@ -308,7 +308,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const dog = page.locator('#main [data-dog-link]');
     await expect(dog).toHaveCount(1);
     await expect(dog).toHaveText('Pretend Adult One');
-    await expect(dog.locator('.szd')).toHaveAttribute('data-size', 'medium');
+    // size comes only from the latest weight (Lisa 12 Nov 2026); this dog has none, so no size dot
+    await expect(dog.locator('.szd')).toHaveCount(0);
     await dog.click();
     await expect(page).toHaveURL(/#\/dogs\/sub-x1$/);
     await expect(page.locator('#rows article.dc')).toHaveCount(1);

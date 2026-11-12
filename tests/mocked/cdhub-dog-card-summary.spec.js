@@ -60,7 +60,7 @@ test.describe('CD Hub dog card summary', () => {
     // layout A (Lisa 12 Nov 2026): weight, medications and chip show; DNA, litters and the rest sit behind More
     await expect(card.locator('[data-k="weight"]')).toBeVisible();
     await expect(card.locator('[data-k="meds"]')).toBeVisible();
-    await expect(card.locator('.dc-sects > details.dcs').filter({ has: page.locator('use[href="#i-chip"]') })).toBeVisible();
+    await expect(card.locator('.dc-sects > [data-k="chip"]')).toBeVisible();   // a plain line now, not a fold (12 Nov)
     await expect(card.locator('[data-k="more"]')).not.toHaveAttribute('open', '');
     await expect(card.locator('[data-k="dna"]')).toBeHidden();
     await expect(card.locator('[data-k="litters"]')).toBeHidden();
@@ -88,7 +88,7 @@ test.describe('CD Hub dog card summary', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
     await expect(card.locator('[data-k="dob"]')).toHaveText('\u00b7 DOB 01/01/21');
-    await expect(card.locator('[data-k="colour"]')).toContainText('Colour');
+    await expect(card.locator('[data-k="colour"]')).not.toContainText('Colour');   // the word itself is gone (12 Nov)
     const box = await card.locator('.dc-info .ricon').boundingBox();
     expect(box.width).toBeLessThanOrEqual(16);
     expect(box.height).toBeLessThanOrEqual(16);
@@ -121,14 +121,14 @@ test.describe('CD Hub dog card summary', () => {
     const card = page.locator('#rows article.dc');
     await expect(card).toHaveAttribute('data-size', 'small');          // 8.4 kg beats the record's medium
     await expect(card).toHaveAttribute('data-size-from', 'weight');
-    await expect(card.locator('[data-k="size"]')).toHaveText('Small');
+    await expect(card.locator('[data-k="size"]')).toHaveText('Toy/Mini');
     await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12\/01\/26 · cut-offs: Pretend vet/);
-    expect(await card.evaluate((e) => getComputedStyle(e, '::before').borderLeftWidth)).toBe('3px');   // a full-height line, drawn inside the 1px frame
+    expect(await card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('3px');   // the photo has the size-coloured frame (12 Nov)
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');   // 14.1 kg; the future row is not in force
     await page.evaluate(() => go('dogs/sub-x3'));
-    await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size-from', 'record');  // no weight: the record stands
-    await expect(page.locator('#rows [data-k="size"]')).toHaveText('Large');
+    await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);  // no weight: no size (never the record, 12 Nov)
+    await expect(page.locator('#rows [data-k="size"]')).toHaveCount(0);
     expect(await page.evaluate(() => roomDogs(['sub-x1', 'sub-x2']).map((d) => d.size))).toEqual(['small', 'medium']);
   });
 

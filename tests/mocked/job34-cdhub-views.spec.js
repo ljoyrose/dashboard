@@ -49,16 +49,23 @@ test.describe('CD Hub: Dogs search, Clear filters and the weighings panel', () =
 });
 
 test.describe('CD Hub: Today lists', () => {
-  test('a list tile opens its table; flag says saving is off (never pretends to save); close shuts it', async ({ page, guard }) => {
+  test('a list tile opens its table; Place asks for a cabin, then says saving is off (never pretends to save); close shuts it', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'today');
     const tile = page.locator('#main .tl[data-list]').first();
     await tile.click();
     const panel = page.locator('#tpanel');
     await expect(panel.locator('table')).toBeVisible();
-    const flag = panel.locator('.flagb').first();
-    await flag.click();
-    await expect(flag).toHaveText('saving off');
+    await expect(panel.locator('thead')).not.toContainText('classification');
+    await expect(panel.locator('.flagb')).toHaveCount(0);
+    const place = panel.locator('.placeb').first();
+    const msg = panel.locator('.placemsg').first();
+    await place.click();
+    await expect(msg).toHaveText('Pick a cabin first.');
+    await panel.locator('.placesel').first().selectOption({ index: 1 });
+    page.once('dialog', (d) => d.accept());
+    await place.click();
+    await expect(msg).toHaveText('Saving is off on this device: set it up on The round.');
     await panel.locator('#tclose').click();
     await expect(panel).toBeEmpty();
   });
@@ -147,7 +154,7 @@ test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so
     await expect(box).toHaveClass(/\bbad\b/);
     await box.fill('12.5');
     await box.blur();
-    await expect(msg).toHaveText('saving off — set it up at the top of this page');
+    await expect(msg).toHaveText('NOT saved: saving is off on this device — set it up at the top of this page');
     await expect(box).not.toHaveClass(/\bbad\b/);
   });
 
@@ -158,7 +165,7 @@ test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so
     const ra = await racc.getAttribute('data-area');
     const rv = await racc.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean));
     await racc.selectOption(rv[rv.length - 1]);
-    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('saving off — set it up at the top of this page');
+    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('NOT saved: saving is off on this device — set it up at the top of this page');
     await tab(page, 'areas');
     const aacc = page.locator('.aacc').first();
     const aa = await aacc.getAttribute('data-area');

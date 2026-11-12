@@ -811,7 +811,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.locator('#dsort').selectOption('name');
     expect(await page.locator('.dc .nm').allInnerTexts()).toEqual(['Test Dog One', 'Test Dog Two', 'Test Pup One']);
     const card = page.locator('.dc').first();
-    await expect(card.locator('.nl')).toContainText('Bitch');
+    await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
     expect([ph.width, ph.height]).toEqual([72, 72]);
     await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');

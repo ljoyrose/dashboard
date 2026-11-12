@@ -116,7 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
-    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sensor_reading.csv', 'BLD-thermometer.csv']);
+    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sensor_reading.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
 });
 
 test('the exact file name is accepted as an alias for the table key', () => {

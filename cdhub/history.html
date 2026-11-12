@@ -487,8 +487,11 @@ var YEAR=2026;
    after its end day, shown as "3A.1 (retired 11/11/26)", and its past readings still show. */
 function areaEnd(aid){ var N=window.BLDNeeds; return N?N.endDay(REQ,'room.in_use','area',aid):''; }
 function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
-function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
-function areaName(aid){ return areaCode(aid)+(isRetired(aid)?' (retired '+ddmmyy(areaEnd(aid))+')':''); }
+/* Lisa 12 Nov 2026: a retired room shows its own name without the ZZ_ filing mark, and the room it became (BLD-area_link). */
+function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')).replace(/^ZZ_/,''); }
+function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_area_id===aid&&l.to_area_id&&l.to_area_id!==aid) to=l.to_area_id; }); return to; }
+function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
+  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+ddmmyy(areaEnd(aid))+')'; }
 function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
 function thermoNeeded(aid,day){
   var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;

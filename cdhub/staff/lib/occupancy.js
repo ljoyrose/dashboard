@@ -63,6 +63,12 @@
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
    * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
    */
+  /** One room name everywhere (Lisa 12 Nov 2026): the code, without a retired room's ZZ_ mark, and "Isolation" after the
+   *  isolation room (its use starts with "Isolation", e.g. H2). Matching is by id, never by this text. */
+  function roomName(a) {
+    var c = String((a && (a.code || a.id)) || '').replace(/^ZZ_/, '');
+    return /^\s*isolation\b/i.test(String((a && a.use) || '')) && !/isolation|\biso\b/i.test(c) ? c + ' Isolation' : c;
+  }
   /** Room order (Lisa 12 Nov 2026): the area's own group_sort first, then its code in natural order (3B.4/5 before 3B.9/10).
    *  No list in code: a new group or room sorts by its row. A room with no group_sort goes last. */
   function byPlace(a, b) {
@@ -74,7 +80,7 @@
     T = T || {};
     day = day || N.today();
     var areas = (T.area || []).filter(function (a) { return inUse(a, day, T.requirement); }).map(function (a) {
-      return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0, dogs: takesDogs(a, day, T.requirement) };
+      return { id: a.id, label: roomName(a), group: a.grouping || '', sort: parseFloat(a.group_sort) || 0, dogs: takesDogs(a, day, T.requirement) };
     }).sort(byPlace);
     var areaById = {};
     areas.forEach(function (a) { areaById[a.id] = a; });
@@ -124,5 +130,5 @@
     });
   }
 
-  return { latestRow: latestRow, offSite: offSite, inUse: inUse, takesDogs: takesDogs, dailyList: dailyList, loadViaScript: loadViaScript };
+  return { roomName: roomName, latestRow: latestRow, offSite: offSite, inUse: inUse, takesDogs: takesDogs, dailyList: dailyList, loadViaScript: loadViaScript };
 }));
