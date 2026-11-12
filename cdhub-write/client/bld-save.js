@@ -156,7 +156,7 @@
         if (v === '') { if (def.required) errors[name] = 'This is needed.'; return; }
         if (def.type === 'temp') {
           if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 1 decimal, e.g. 21.4.';
-          else if (parseFloat(v) < -30 || parseFloat(v) > 60) errors[name] = 'That is outside -30 to 60 C. Check the number.';
+          // an unusual temperature is a warning the script gives (confirm_unusual "Save anyway?"), not a stop here
         } else if (def.type === 'text') {
           if (v.length > 500) errors[name] = 'Too long (500 characters at most).';
           else if (/^[=+\-@\t]/.test(v)) errors[name] = 'Please do not start with = + - or @.';

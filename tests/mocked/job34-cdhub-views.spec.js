@@ -105,13 +105,13 @@ test.describe('CD Hub: addresses and the browser buttons', () => {
   test('browser Back and Forward move between sections and put focus on the heading', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'dogs');
-    await tab(page, 'vet');
+    await tab(page, 'litters');
     await page.goBack();
     await expect(page).toHaveURL(/#\/dogs$/);
     await expect(page.locator('#nav button[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#main h2')).toBeFocused();
     await page.goForward();
-    await expect(page.locator('#nav button[data-go="vet"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#nav button[data-go="litters"]')).toHaveAttribute('aria-current', 'page');
   });
 
   test('an unknown section address falls back to the Map', async ({ page, guard }) => {
@@ -239,7 +239,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await expect(page.locator('#checksCard')).toContainText('not checked: set the shortest time between litters on Compliance');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('3 of 3 rules not set');
-    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(5);   // 3 breeding rules + the Compliance look-back and due-soon settings
+    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(7);   // 3 breeding rules + look-back + due-soon + 2 staffing ratios
     await expect(page.locator('#compRules')).toContainText('not set');
   });
 
@@ -441,7 +441,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);   // Vet link gone (Lisa, 12 Nov 2026)
   });
 
   test('after a failed read, Try again reads the folder again and the tables load', async ({ page, guard, allowedConsole }) => {
@@ -454,7 +454,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     guard.world.failWith = null;
     await page.locator('#main button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);   // Vet link gone (Lisa, 12 Nov 2026)
   });
 });
 
