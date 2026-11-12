@@ -418,6 +418,9 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs-link .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs-link::after{content:'\203A';margin-left:auto;flex:0 0 auto}
 @media (hover:hover){.dcs-link:hover{background:var(--hov);}}
+.lims{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+.pill.lim{border-width:2px}
+details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-small);margin:0 0 6px}
 .pill.dna.d-clear{border-color:var(--ljr-5-text);background:var(--ljr-5-tint)}
 .pill.dna.d-carrier{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill.dna.d-affected{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
@@ -1986,6 +1989,11 @@ function bandsFor(aid){ var a=CD.cap[aid]||{}, seen={}, out=[];
  ['free','limited'].forEach(function(m){ Object.keys(a[m]||{}).forEach(function(b){ if(!seen[b]){ seen[b]=1; out.push(b); } }); });
  var rank=function(b){ var k=BLDCapacity.band(b); return (['small','medium','large','small+pups','medium+pups','large+pups'].indexOf(k)+1)||9; };
  return out.sort(function(x,y){ return rank(x)-rank(y); }); }
+/* limits as the door sign shows them: the current flap mode's alternatives, in size colour, small first; 0 and + pups left out */
+function limitChips(aid,mode){ if(!mode) return ''; var a=(CD.cap[aid]||{})[mode]||{}, out=[];
+ bandsFor(aid).forEach(function(b){ var k=BLDCapacity.band(b), c=a[b], n=c?parseInt(c.n,10):0; if(!k||/pups/.test(k)||!(n>0)) return;
+  var col=CD.sizeColour&&CD.sizeColour[k]; out.push('<span class="pill lim" data-size="'+esc(k)+'"'+(col?' style="border-color:'+esc(col)+'"':'')+'>'+(out.length?'or ':'')+n+' '+k+'</span>'); });
+ return out.length?'<div class="lims" data-k="limits">'+out.join(' ')+'</div>':''; }
 function bandLabel(b){ var k=BLDCapacity.band(b); return k?capFirst(k.replace('+pups',' + pups')):b; }
 
 function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_type;
@@ -2069,18 +2077,19 @@ function pageAreas(){
         return '<option value="'+m+'"'+(cur===m?' selected':'')+'>'
           +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
     +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
-    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>'+jobsHist({area_id:a.id});
+    +'<span class="mut">'+esc(accessReason(a.id))+'</span>'
+    +'<a class="cb" href="staff/print/" target="_blank" rel="noopener" data-print-sign="'+esc(a.id)+'">Print sign</a></div>'+jobsHist({area_id:a.id});
 
    {
     var modes = cur ? [cur] : ['free','limited'], bands=bandsFor(a.id);
     if(!bands.length) h+='<p data-nolimits="'+esc(a.id)+'"><span class="pill no">no limits recorded</span></p>';
-    else h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+bands.map(function(b){return '<th title="'+esc(b)+'">'+esc(bandLabel(b))+'</th>';}).join('')+'</tr></thead><tbody>'
+    else h+=limitChips(a.id,cur)+'<details class="allfig"><summary>All figures</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+bands.map(function(b){return '<th title="'+esc(b)+'">'+esc(bandLabel(b))+'</th>';}).join('')+'</tr></thead><tbody>'
      +modes.map(function(mo){
         return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
          +bands.map(function(b){ var v=capFor(a.id,b,mo);
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
-     +'</tbody></table></div>';
+     +'</tbody></table></div></details>';
     h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
      +'<div class="mut" style="margin-top:6px">in here on '+esc(dmyShort(date))+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];

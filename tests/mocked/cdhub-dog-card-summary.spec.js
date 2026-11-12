@@ -181,3 +181,21 @@ test('Areas: a room\'s size columns come from its own capacity rows, never fixed
   await page.evaluate(() => go('areas/ar-b'));
   await expect(page.locator('[data-nolimits="ar-b"]')).toHaveText('no limits recorded');
 });
+
+test('Areas room card: limits as door-sign chips for the current flap mode, the table folded, a Print sign link', async ({ page, guard }) => {
+  const w = guard.world;
+  put(w, 'BLD-area.csv', csv('id,tenant_id,code,grouping,group_sort,area_value,area_unit_id,m2_confirmed,m2_note,use,source', ['ar-a,t,Room A,A,1,10,u-m2,yes,,,']));
+  put(w, 'BLD-area_access.csv', csv('id,area_id,access_type,reason', ['aa-a,ar-a,limited,invented']));
+  put(w, 'BLD-area_capacity.csv', csv('id,area_id,access_type,size_band,max_dogs,basis', [
+    'c1,ar-a,limited,Pretend (medium),2,', 'c2,ar-a,limited,Pretend (small),3,', 'c3,ar-a,limited,Pretend (large),0,', 'c4,ar-a,limited,small + pups,1,', 'c5,ar-a,free,Pretend (small),9,']));
+  put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', ['r2,t,size_colour.medium,green,2026-11-11,Pretend poster,,,']));
+  await HUBS.cdhub.open(page, guard);
+  await page.evaluate(() => go('areas/ar-a'));
+  const room = page.locator('[data-room="ar-a"]');
+  await expect(room.locator('[data-k="limits"] .lim')).toHaveText(['3 small', 'or 2 medium']);
+  await expect(room.locator('.lim[data-size="medium"]')).toHaveAttribute('style', /green/);
+  await expect(room.locator('table')).toBeHidden();
+  await room.locator('details.allfig summary').click();
+  await expect(room.locator('table')).toBeVisible();
+  await expect(room.locator('[data-print-sign="ar-a"]')).toHaveAttribute('href', 'staff/print/');
+});
