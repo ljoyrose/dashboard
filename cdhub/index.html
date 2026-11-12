@@ -794,6 +794,10 @@ function build(){
     (DNA[r.subject_id]=DNA[r.subject_id]||[]).push({code:r.marker_code,genotype:r.genotype,
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
+  var VAC={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id) return;
+    (VAC[r.subject_id]=VAC[r.subject_id]||[]).push({on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
+      covers:r.diseases_covered||'',titre:r.titre_result||'',protective:r.titre_protective||'',due:r.next_due_on_card||'',dueSrc:r.next_due_source||''}); });
+  Object.keys(VAC).forEach(function(k){ VAC[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); });
   CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
     min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source,
     rain:r.rain_value,wind:r.wind_kmh}; });
@@ -819,7 +823,7 @@ function build(){
       neuter:r.neuter_status,state:s.state||'',classification:o.classification||'',area_id:o.area_id||'',birthLitter:r.birth_litter_id||'',
 
       where:'',off:o.off_site_kind||'',
-      treats:DSP[r.id]||[], dna:DNA[r.id]||[],
+      treats:DSP[r.id]||[], dna:DNA[r.id]||[], vacc:VAC[r.id]||[],
       chip:m.chip_number||'',source:r.source,
       rxExpiry:r.rx_moxi_expiry||'',rxUrl:r.rx_moxi_file_url||'',
       species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
@@ -1807,6 +1811,20 @@ function dnaRow(d){ var x=d.dna||[]; if(!x.length) return '';
   +x.map(function(r){ var m=(CD.markers||{})[r.code]||{};
     return '<div class="dcs-row">'+dnaPill(r)+'<span class="mut">'+esc([m.name||'',r.genotype||'',r.lab||'',r.on?dmyShort(r.on):''].filter(Boolean).join(' · '))+'</span></div>'; }).join('')
   +'</div></details>'; }
+/* vaccinations (licence check item): count, the last one, and the next due date written on the card */
+function vaccRow(d){ var x=d.vacc||[]; if(!x.length) return '';
+ var last='', due='', dueSrc=''; x.forEach(function(v){ if(v.on&&v.on>=last){ last=v.on; } if(v.due&&v.due>due){ due=v.due; dueSrc=v.dueSrc; } });
+ var late=due&&due<BLDNeeds.today();
+ return '<details class="dcs vacc"><summary>'
+  +'<svg class="ricon" aria-hidden="true"><use href="#i-check"/></svg>'
+  +'<span class="dcs-label" data-k="vacc"><b>'+x.length+'</b> vaccination'+(x.length!==1?'s':'')+(last?' <span class="mut">\u00b7 last '+esc(dmyShort(last))+'</span>':'')
+  +(due?' <span class="'+(late?'pill w':'mut')+'" data-due="'+(late?'late':'ok')+'"'+(dueSrc?' title="'+esc(dueSrc)+'"':'')+'>due '+esc(dmyShort(due))+'</span>':'')+'</span>'
+  +'</summary><div class="dcs-bd">'
+  +x.slice().reverse().map(function(v){ return '<div class="dcs-row"><span class="mut">'+esc(dmyShort(v.on))+'</span><b>'+esc(v.product||v.kind||'\u2014')+'</b>'
+    +(v.covers?'<span class="mut">'+esc(v.covers)+'</span>':'')
+    +(v.titre?'<span class="pill">titre '+esc(v.titre)+'</span>':'')
+    +(v.due?'<span class="mut">due '+esc(dmyShort(v.due))+'</span>':'')+'</div>'; }).join('')
+  +'</div></details>'; }
 /* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
 function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
  var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
@@ -1928,6 +1946,7 @@ function drawDogs(){
       +'</div></details>'
     :'')
 
+    +vaccRow(d)
     +dnaRow(d)
     +litterRow(d)
 
