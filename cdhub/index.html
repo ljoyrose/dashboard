@@ -1214,18 +1214,23 @@ function litterGaps(){
   }});
  return out;
 }
-/* A bitch mated younger than the rule allows. Uses the mating date; a born litter with no mating row uses DOB - 63 days (marked estimated). */
+/* A bitch mated younger than the rule allows. Uses the mating date; a born litter with no mating row estimates it as DOB minus gestation.due_days
+   (marked estimated). Lisa 12 Nov 2026: no row = not set, so with no due-days row those litters are counted as not checked (out.unest), never guessed. */
 function damAgeBreaches(){
  var dob={}; (T['BLD-subject.csv']||[]).forEach(function(r){ if(isoDay(r.dob)) dob[r.id]=isoDay(r.dob); });
- var out=[], hadMating={};
+ var out=[], hadMating={}; out.unest=0;
  (T['BLD-mating.csv']||[]).forEach(function(m){ var on=isoDay(m.mated_on), d=m.dam_subject_id; if(m.litter_id) hadMating[m.litter_id]=1;
   if(!on||!dob[d]) return; var r=breedRule('min_dam_age_months',on); if(!r) return;
   if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:false,what:'mating '+(m.id||'')}); });
  (CD.litters||[]).forEach(function(l){ var b=litDob(l), d=l.dam_subject_id; if(!b||!dob[d]||hadMating[l.id]) return;
-  var on=addDays(b,-63), r=breedRule('min_dam_age_months',on); if(!r) return;
+  var on=estMated(b); if(!on){ out.unest++; return; } var r=breedRule('min_dam_age_months',on); if(!r) return;
   if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:true,what:l.pairing||l.id}); });
  return out;
 }
+/* Estimated mating date for a born litter: DOB minus the due-days row. The row is read on the birth date, then again on the estimated mating date
+   (the rule in force when she was mated); null when no row is set. */
+function estMated(b){ var n=ruleNum('gestation.due_days',b); if(n===null) return null; var on=addDays(b,-n), n2=ruleNum('gestation.due_days',on);
+ return (n2!==null&&n2!==n)?addDays(b,-n2):on; }
 /* The litter that takes a bitch past the most litters allowed (counted on the date that litter was born). */
 function litterCountBreaches(){
  var by=littersByDam(), out=[];
@@ -1264,10 +1269,11 @@ function checks(){
      :'every dam’s litters meet your rule on time between litters'});
  var da=damAgeBreaches();
  out.push({k:'dam age',ok:!da.length,
-   msg:!breedRuleRows('min_dam_age_months').length?'not checked: set the youngest age a bitch can be mated on Compliance'
+   msg:(!breedRuleRows('min_dam_age_months').length?'not checked: set the youngest age a bitch can be mated on Compliance'
      :da.length? da.length+' mating'+(da.length===1?' was':'s were')+' younger than your rule allows: '
      +da.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' mated '+x.on+(x.est?' (estimated)':'')+', born '+x.dob+' (rule '+x.months+' months)'; }).join(', ')+(da.length>5?' …':'')
-     :'every mating meets your rule on the youngest age'});
+     :'every mating meets your rule on the youngest age')
+   +(breedRuleRows('min_dam_age_months').length&&da.unest?' · '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked: days from mating to due date not set':'')});
  var lc=litterCountBreaches();
  out.push({k:'litter count',ok:!lc.length,
    msg:!breedRuleRows('max_litters_per_dam').length?'not checked: set the most litters per bitch on Compliance'
@@ -3106,6 +3112,7 @@ function pageCompliance(){
  h+=compUrgentHtml(today)+compStateHtml(asAt)+compFindingsHtml(asAt)+compInspectionsHtml(asAt);
  h+=checksCard();
  var pb='';
+ if(da.unest&&breedRuleRows('min_dam_age_months').length) pb+='<p id="damAgeUnest"><span class="pill w">not set</span> Days from mating to due date \u00b7 '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked for the youngest age.</p>';
  if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
  pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
