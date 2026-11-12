@@ -3297,7 +3297,7 @@ var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],today:['cal
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
 var MORE_VIEWS=['compliance','round','areas'];
-function bbV(){return {T:T,today:todayISO(),esc:esc};}
+function bbV(){return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos};}
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
 if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','areas']; TABMETA.breed=['check','Breed Better',5]; MORE_VIEWS.push('breed'); }
@@ -3392,7 +3392,9 @@ function go(id,push){
  else if(id==='dogs') CD._medGo=null;
  cdIn(true);
  document.getElementById('nav').innerHTML=navHtml();
+ if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
  main.innerHTML=PAGES[id]();
+ if(id==='breed') loadDogPhotos();
  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
  labelControls(main);
  levelHeadings(main);
