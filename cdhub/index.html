@@ -306,7 +306,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .st{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);height:24px;padding:0 8px;white-space:nowrap}
 .st b{font-weight:600}
 .st::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--sc,var(--ljr-0));flex:none}
-.st-bi{--sc:#DB7FA2}.st-st{--sc:#1F6F96}.st-tr{--sc:var(--ljr-3)}.st-gr{--sc:var(--ljr-5)}.st-ce{--sc:#7FB8C9}.st-ln{--sc:var(--ljr-4)}.st-pu{--sc:#C9B2DB}
+.st-bi{--sc:#DB7FA2}.st-st{--sc:#1F6F96}.st-tr{--sc:var(--ljr-3)}.st-k1{--sc:#7FB8C9}.st-k2{--sc:var(--ljr-5)}.st-k3{--sc:#9FB88A}.st-k4{--sc:#C9A27F}.st-ln{--sc:var(--ljr-4)}.st-pu{--sc:#C9B2DB}
 .st-de{--sc:transparent}.st-de::before,.st-cl::before,.st-un::before{background:transparent;border:1px solid var(--muted)}
 .st-un::before{border-color:var(--ljr-2)}
 .sfb.st{height:auto;min-height:36px;border-color:var(--press);font-size:var(--fs-small)}
@@ -435,9 +435,9 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-status_label.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+var OPTIONAL_FILES={'BLD-status_label.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
@@ -889,11 +889,28 @@ function onPrem(d){
 
  return d.kind==='Pup' && !d.off && /^(active|in training)$/i.test(d.state||''); }
 var STATUS=[['BI','Bitch','st-bi',null],['ST','Stud','st-st',null],
- ['TR','Training','st-tr',null],['CE','Cerys','st-ce',null],['GR','Grace','st-gr',null],
+ ['TR','Training','st-tr',null],
  ['LN','Litter no mum','st-ln',null],['PU','Puppy','st-pu',null],['DE','Deceased','st-de',null],['CL','Collected','st-cl',null]];
 
 
 
+/* Dogs living with a named keeper off site: the code and label are user rows (BLD-status_label, optional), never names in
+   this public file (Lisa: no people's names in the repo). Row: code,label,match,source. match = '|'-separated starts of
+   the dog's off-site kind or occupancy classification. No rows: an owned_by_family dog shows the plain label "Family". */
+var KEEPER_CLS=['st-k1','st-k2','st-k3','st-k4'];
+function keeperRows(){ var seen={}, out=[];
+ (T['BLD-status_label.csv']||[]).forEach(function(r){ var c=String(r.code||'').trim().toUpperCase(); if(!/^[A-Z]{2}$/.test(c)||!r.label) return;
+  if(!(c in seen)){ seen[c]=out.length; out.push({code:c,label:String(r.label).trim(),cls:KEEPER_CLS[out.length%KEEPER_CLS.length],match:[]}); }
+  String(r.match||'').split('|').forEach(function(m){ m=m.trim().toLowerCase(); if(m) out[seen[c]].match.push(m); }); });
+ return out; }
+function keeperStatus(d){ var off=String(d.off||'').toLowerCase(), cl=String(d.classification||'').toLowerCase(), ks=keeperRows();
+ for(var i=0;i<ks.length;i++){ if(ks[i].match.some(function(m){ return off.indexOf(m)===0||cl.indexOf(m)===0; })) return {code:ks[i].code,label:ks[i].label,cls:ks[i].cls}; }
+ if(off==='owned_by_family'||/^owned by /.test(cl)) return {code:'FA',label:'Family',cls:'st-k2'};
+ return null; }
+function statusList(){ var ks=keeperRows(), out=STATUS.slice(0,3);
+ ks.forEach(function(k){ out.push([k.code,k.label,k.cls,null]); });
+ if(!ks.length) out.push(['FA','Family','st-k2',null]);
+ return out.concat(STATUS.slice(3)); }
 var _SIRE=null,_DAM=null;
 function _breeders(){
  if(_SIRE) return;
@@ -915,9 +932,7 @@ function statusOf(d){
  if(w==='Collected' || (!here && (/otherowner/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')))
    return {code:'CL',label:'Collected',cls:'st-cl'};
 
- if(/^cerys/i.test(d.off||'') || /^Cerys/i.test(w)) return {code:'CE',label:'Cerys',cls:'st-ce'};
- if(/owned_by_family/i.test(d.off||'') || /Owned by (GC|CC)/i.test(w))
-   return {code:'GR',label:'Grace',cls:'st-gr'};
+ var kl=keeperStatus(d); if(kl) return kl;
 
  var m=months(d.dob);
  if(d.kind==='Pup' || (m!==null && m<6)) return {code:'PU',label:'Puppy',cls:'st-pu'};
@@ -1670,7 +1685,7 @@ function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
  var on=ids.map(function(i){ var e=document.getElementById(i); if(!e||!e.value) return null;
    var t=e.tagName==='SELECT'?(e.options[e.selectedIndex]||{}).textContent:(e.dataset.ftext?e.dataset.ftext(e.value):e.value);
-   if(i==='fst'){ var s=STATUS.filter(function(x){return x[0]===e.value;})[0]; t=s?s[1]:e.value; }
+   if(i==='fst'){ var s=statusList().filter(function(x){return x[0]===e.value;})[0]; t=s?s[1]:e.value; }
    return [i,(e.dataset.fname||'Filter')+': '+t]; }).filter(Boolean);
  box.innerHTML=on.map(function(x){ return '<button type="button" class="achip" data-fclear="'+x[0]+'" aria-label="Remove filter '+esc(x[1])+'">'+esc(x[1])+' <span aria-hidden="true">×</span></button>'; }).join('');
  var b=document.querySelector('[data-fpanel="fp-'+id+'"] .fcount'); if(b) b.innerHTML=on.length?' '+cntPill(on.length):'';
@@ -1693,7 +1708,7 @@ function pageDogs(){
  +'<span><i class="sexdot fe"></i>entire female</span>'
  +'<span><i class="sexdot fn"></i>neutered female</span>'
  +'<span><i class="sexdot u"></i>sex missing</span></div>'
- +'<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
+ +'<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
  +'<span class="info" tabindex="0" title="The dot by each name is the sex: blue male, pink female, a ring when neutered, dashed when not recorded. A dog that has been done also says spayed or neutered. The buttons are the status: tap one to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  /* foundation: record media and named people, not held yet */
@@ -2886,7 +2901,7 @@ function go(id,push){
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');
-  STATUS.forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
+  statusList().forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
   var cs={}; CD.dogs.forEach(function(d){ if(d.colour) cs[colourLabel(d)]=d; });
   var fc=document.getElementById('fc');
   Object.keys(cs).sort(function(a,b){ var ka=colourKey(cs[a]),kb=colourKey(cs[b]);
