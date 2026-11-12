@@ -1,0 +1,377 @@
+{
+ "_about": "Admin jobs Nov 2026 - Nov 2029, most frequent first. Research 12 Nov 2026 (read-only); laws marked check need confirming. A list of jobs to build, not rules: no limit or date here is used by the hub.",
+ "jobs": [
+  {
+   "job": "Approve pending saves",
+   "often": "daily",
+   "exists": "yes",
+   "law": ""
+  },
+  {
+   "job": "Check backup ran",
+   "often": "daily",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Fix wrong record",
+   "often": "on event (weekly)",
+   "exists": "yes",
+   "law": "UK GDPR Art 16 (right to rectification)"
+  },
+  {
+   "job": "Write-failure / sync alerts",
+   "often": "daily-weekly",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Guest code issue/expire",
+   "often": "weekly / on event",
+   "exists": "yes",
+   "law": ""
+  },
+  {
+   "job": "Visitor log review",
+   "often": "weekly",
+   "exists": "no",
+   "law": "check (licence conditions, biosecurity)"
+  },
+  {
+   "job": "Audit log review",
+   "often": "weekly-monthly",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Missed-checks review",
+   "often": "weekly",
+   "exists": "part",
+   "law": "2014 Regs (records) - check"
+  },
+  {
+   "job": "Staff rota / cover gaps",
+   "often": "weekly",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "Accountant export (VAT)",
+   "often": "quarterly",
+   "exists": "no",
+   "law": "MTD for VAT (HMRC)"
+  },
+  {
+   "job": "Restore test",
+   "often": "quarterly",
+   "exists": "no",
+   "law": "UK GDPR Art 32(1)(c) (restore availability)"
+  },
+  {
+   "job": "Google account security",
+   "often": "quarterly",
+   "exists": "no",
+   "law": "UK GDPR Art 32"
+  },
+  {
+   "job": "Who-has-access review",
+   "often": "quarterly",
+   "exists": "part",
+   "law": "UK GDPR Art 32"
+  },
+  {
+   "job": "Field visibility review",
+   "often": "quarterly",
+   "exists": "part",
+   "law": "UK GDPR Art 5(1)(c) (minimisation)"
+  },
+  {
+   "job": "Device / thermometer calibration",
+   "often": "quarterly-yearly",
+   "exists": "no",
+   "law": "check (licence conditions)"
+  },
+  {
+   "job": "Script/version update",
+   "often": "monthly-quarterly",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Staff starter setup",
+   "often": "on event",
+   "exists": "yes",
+   "law": "Right to work: Immigration, Asylum and Nationality Act 2006"
+  },
+  {
+   "job": "Staff leaver offboarding",
+   "often": "on event",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Role change",
+   "often": "on event",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "Lost/stolen phone",
+   "often": "on event",
+   "exists": "part",
+   "law": "UK GDPR Art 33 if personal data exposed (72 hours to ICO)"
+  },
+  {
+   "job": "Staff code reset",
+   "often": "on event",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Inspector link create/stop",
+   "often": "on event (1-2/yr)",
+   "exists": "yes",
+   "law": ""
+  },
+  {
+   "job": "Vet record export",
+   "often": "on event",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Microchip database update",
+   "often": "on event (each litter/sale)",
+   "exists": "no",
+   "law": "Microchipping of Dogs (Wales) Regulations 2015"
+  },
+  {
+   "job": "KC / registry admin",
+   "often": "on event",
+   "exists": "no",
+   "law": "- (KC rules, not law)"
+  },
+  {
+   "job": "Puppy sale paperwork",
+   "often": "on event",
+   "exists": "no",
+   "law": "check (licence conditions; consumer law)"
+  },
+  {
+   "job": "Mating approval vs rules",
+   "often": "on event",
+   "exists": "part",
+   "law": "2014 Regs (litter limits) - check numbers"
+  },
+  {
+   "job": "Incident / near-miss record",
+   "often": "on event",
+   "exists": "no",
+   "law": "check (licence conditions); RIDDOR if staff injured"
+  },
+  {
+   "job": "Data breach handling",
+   "often": "on event",
+   "exists": "no",
+   "law": "UK GDPR Art 33/34"
+  },
+  {
+   "job": "Subject access request",
+   "often": "on event",
+   "exists": "no",
+   "law": "UK GDPR Art 15 (one month); ICO \"Right of access\" guidance"
+  },
+  {
+   "job": "Erasure request",
+   "often": "on event",
+   "exists": "no",
+   "law": "UK GDPR Art 17; ICO \"Right to erasure\" guidance"
+  },
+  {
+   "job": "Data complaint handling",
+   "often": "on event",
+   "exists": "no",
+   "law": "Data (Use and Access) Act 2025 complaints duty - check start date"
+  },
+  {
+   "job": "New room/area",
+   "often": "on event",
+   "exists": "part",
+   "law": "licence may need council told - check"
+  },
+  {
+   "job": "QR / label reprint",
+   "often": "on event",
+   "exists": "yes",
+   "law": ""
+  },
+  {
+   "job": "Thermometer/device replace",
+   "often": "on event",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "New dog in / dog out",
+   "often": "on event",
+   "exists": "part",
+   "law": "2014 Regs (records) - check"
+  },
+  {
+   "job": "Holiday cover handover",
+   "often": "on event (1-3/yr)",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "Retention clear-out",
+   "often": "yearly",
+   "exists": "part",
+   "law": "UK GDPR Art 5(1)(e)"
+  },
+  {
+   "job": "Licence renewal application",
+   "often": "yearly",
+   "exists": "no",
+   "law": "Animal Welfare (Breeding of Dogs) (Wales) Regulations 2014 - check renewal timing with council"
+  },
+  {
+   "job": "Inspection prep pack",
+   "often": "yearly",
+   "exists": "part",
+   "law": "2014 Regs; inspector-evidence-first skill"
+  },
+  {
+   "job": "Act on inspection report",
+   "often": "yearly",
+   "exists": "no",
+   "law": "check (licence conditions)"
+  },
+  {
+   "job": "Boarding licence renewal",
+   "often": "yearly",
+   "exists": "no",
+   "law": "Animal Boarding Establishments Act 1963 (still applies in Wales) - check"
+  },
+  {
+   "job": "ICO fee renewal",
+   "often": "yearly",
+   "exists": "no",
+   "law": "Data Protection (Charges and Information) Regulations 2018"
+  },
+  {
+   "job": "Insurance renewal",
+   "often": "yearly",
+   "exists": "no",
+   "law": "Employers' Liability (Compulsory Insurance) Act 1969 if staff; public liability check"
+  },
+  {
+   "job": "Policy/SOP annual review",
+   "often": "yearly",
+   "exists": "part",
+   "law": "check (licence conditions)"
+  },
+  {
+   "job": "Staff training records",
+   "often": "yearly + on event",
+   "exists": "no",
+   "law": "check (licence conditions)"
+  },
+  {
+   "job": "Staff DBS / checks refresh",
+   "often": "yearly-rare",
+   "exists": "no",
+   "law": "check (not legally required for this work)"
+  },
+  {
+   "job": "Privacy notice review",
+   "often": "yearly",
+   "exists": "no",
+   "law": "UK GDPR Art 13/14"
+  },
+  {
+   "job": "Dated rule rows review",
+   "often": "yearly",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Emergency/fire plan review",
+   "often": "yearly",
+   "exists": "no",
+   "law": "Regulatory Reform (Fire Safety) Order 2005; licence conditions - check"
+  },
+  {
+   "job": "Vet contract / cover check",
+   "often": "yearly",
+   "exists": "no",
+   "law": "check (licence conditions)"
+  },
+  {
+   "job": "Domain / hosting renewal",
+   "often": "yearly",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "Companies House filings",
+   "often": "yearly",
+   "exists": "no",
+   "law": "Companies Act 2006"
+  },
+  {
+   "job": "Director ID verification",
+   "often": "rare (once)",
+   "exists": "no",
+   "law": "Economic Crime and Corporate Transparency Act 2023 - check dates"
+  },
+  {
+   "job": "Pension re-enrolment",
+   "often": "every 3 yrs",
+   "exists": "no",
+   "law": "Pensions Act 2008"
+  },
+  {
+   "job": "Welsh rule changes",
+   "often": "yearly scan",
+   "exists": "no",
+   "law": "check gov.wales (breeding, boarding, licensing reviews)"
+  },
+  {
+   "job": "Owner incapacity plan",
+   "often": "rare (set yearly)",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "Site address change",
+   "often": "rare",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "New species kit",
+   "often": "rare",
+   "exists": "part",
+   "law": "check (other species need other licences)"
+  },
+  {
+   "job": "New app module",
+   "often": "rare",
+   "exists": "part",
+   "law": ""
+  },
+  {
+   "job": "Google/Apps Script quota change",
+   "often": "rare",
+   "exists": "no",
+   "law": ""
+  },
+  {
+   "job": "Business close / sale",
+   "often": "rare",
+   "exists": "no",
+   "law": "check (record keep periods)"
+  }
+ ]
+}
