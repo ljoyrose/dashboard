@@ -181,3 +181,26 @@ test('year report: an empty room\'s outside reading is flagged "Room empty" but 
     await expect(rows.nth(1)).not.toHaveClass(/tg-br/);
   } finally { TABLES.area_reading = []; }
 });
+
+// Links (Lisa 12 Nov 2026): the year report for a new room includes the old room linked into it, each such row
+// marked "From <old room>"; the old room's own report is unchanged.
+test('year report: a new room includes readings from the old room linked into it, marked "From"', async ({ page }) => {
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-old', period_start: '2026-11-10T00:00:00+00:00', min_c: '11.0', max_c: '15.0' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', min_c: '12.0', max_c: '16.0' }
+  ];
+  TABLES.area_link = [{ id: 'l1', from_area_id: 'area-old', to_area_id: 'area-new', from_date: '2025-01-01', to_date: '2026-11-11' }];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.addScriptTag({ path: 'cdhub/staff/lib/area-link.js' });   // the staff shell loads it once STAFF adds it to FILES
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const rows = page.locator('.tg-tab').nth(1).locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('From 3A.2/3');
+    await expect(rows.first()).toContainText('11.0');
+    await expect(rows.nth(1)).not.toContainText('From');
+  } finally { TABLES.area_reading = []; delete TABLES.area_link; }
+});
