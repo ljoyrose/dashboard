@@ -42,7 +42,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await expect(answer).toContainText('Medicine in Feb 2026');
     await expect(answer).toContainText('Test Dog One');
     await expect(answer).toContainText('Not named');
-    await expect(answer).toContainText('03/02/2026');
+    await expect(answer).toContainText('03/02/26');
     await expect(answer).toContainText('1 tablet');
     await expect(answer).not.toContainText('not on the current list');
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
@@ -102,7 +102,7 @@ test.describe('CD Hub: The round controls', () => {
     await open(page, 'round');
     expect(errors, errors.join('\n')).toEqual([]);
     await expect(page.locator('h2').first()).toHaveText('The round');
-    await expect(page.locator('.card[data-area="area-1"]')).toContainText('Step 1:');
+    await expect(page.locator('.card[data-area="area-1"]')).toContainText('1. Test Cabin A');
     await expect(page.locator('.card[data-area="area-1"]')).toContainText('here');
     await expect(page.getByRole('link', { name: 'Temperature history' })).toHaveAttribute('href', './history.html');
 
