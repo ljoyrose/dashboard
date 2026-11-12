@@ -63,12 +63,19 @@
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
    * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
    */
+  /** Room order (Lisa 12 Nov 2026): the area's own group_sort first, then its code in natural order (3B.4/5 before 3B.9/10).
+   *  No list in code: a new group or room sorts by its row. A room with no group_sort goes last. */
+  function byPlace(a, b) {
+    var x = a.sort || Infinity, y = b.sort || Infinity;
+    if (x !== y) return x < y ? -1 : 1;
+    return String(a.label).localeCompare(String(b.label), 'en', { numeric: true, sensitivity: 'base' });
+  }
   function dailyList(T, day) {
     T = T || {};
     day = day || N.today();
     var areas = (T.area || []).filter(function (a) { return inUse(a, day, T.requirement); }).map(function (a) {
       return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0, dogs: takesDogs(a, day, T.requirement) };
-    });
+    }).sort(byPlace);
     var areaById = {};
     areas.forEach(function (a) { areaById[a.id] = a; });
     var state = {};
