@@ -25,7 +25,7 @@ textarea.inp{padding:10px 14px}
 .btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:44px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
 .btn[disabled]{cursor:not-allowed;opacity:.6}
 .btn.quiet{color:var(--muted)}
-@media (hover:hover){.btn:hover,button.card:hover,a.card:hover,.tabs button:hover,.back:hover,.job-prob:hover{outline:1px solid var(--sel-bd);outline-offset:-1px}}
+@media (hover:hover){.btn:hover,button.card:hover,a.card:hover,.tabs button:hover,.back:hover,.job-prob:hover{background:var(--hov);}}
 .msg{font-size:var(--fs-small);margin:10px 0;min-height:1.2em}
 .msg.bad{color:var(--bad)}.msg.good{color:var(--good)}.msg.warn{color:var(--warn)}
 .back{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:var(--fs-small);padding:0;margin-bottom:6px;min-height:44px}

@@ -8,7 +8,7 @@
      C  Shape and spacing ..... --house-radius  --house-line  --house-bar  --house-marker-w  --house-marker-h  --house-gap  --house-head-gap
                                --house-pad  --house-gutter  --house-btn  --house-btn-phone  --house-icon  --house-icon-stroke  --house-pill
                                --house-count-w  --house-count-h  --house-count-r  --house-count-lh  --house-count-pad  --house-logo  --house-menu-w
-     D  States ................ --house-state-line  --house-state-fill  --house-focus  --house-tint
+     D  States ................ --house-state-line  --house-state-fill  --house-focus  --house-tint  --house-hov-mix
      E  Type .................. --house-font  --fs-head  --fs-figure  --fs-body  --fs-small  --fs-input  --house-min  --house-press-size
      F  Top bar and look swap . --house-head  --house-head-space  --house-head-name  --house-read-size  --house-look-btn  --house-look-line
                                --house-look-hover  --house-look-on
@@ -137,6 +137,8 @@
   --house-state-line: var(--house-line);   /* the one line a state draws */
   --house-state-fill: transparent;         /* the fill a state adds: none */
   --house-tint: 14%;               /* the pale tint for a badge's own colour (brand initials); never a state */
+  --house-hov-mix: 14%;            /* how much muted goes into the card for the pale grey hover / selected fill (house.css --hov).
+                                      Warm dark uses 10% so the control line (--house-press) stays 3:1 on it (Lisa, 12 Nov 2026). */
   /* E  Typing boxes (input, textarea, select, contenteditable): 16px on every page, so a phone (iPhone Safari) never zooms in when one is
      tapped. The only size above 15px that is not a heading or figure. */
   --fs-input: 16px;
@@ -169,23 +171,23 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
-    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E; --house-hov-mix: 10%;
     --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
   }
   :root.look-cool:not([data-theme="light"]) {
     --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
-    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691; --house-hov-mix: 14%;
     --house-frame: #24323F; --house-foot: #2D3D4C;
   }
 }
 :root[data-theme="dark"] {
   --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
-  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E; --house-hov-mix: 10%;
   --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
 }
 :root.look-cool[data-theme="dark"] {
   --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
-  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691; --house-hov-mix: 14%;
   --house-frame: #24323F; --house-foot: #2D3D4C;
 }
 

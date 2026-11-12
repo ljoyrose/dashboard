@@ -1,5 +1,5 @@
 // Money Hub house look (LINKS-COMFORT-BRIEF v3 + Lisa's 28 Oct rules), checked by computed style on every view.
-// 1 everything you press: the same clear 1px line (never ink at rest), 12px corners, 36px high, 14px 600; hover = 1px ink outline, nothing moves
+// 1 everything you press: the same clear 1px line (never ink at rest), 12px corners, 36px high, 14px 600; hover = the pale grey fill, no line (12 Nov 2026), nothing moves
 // 2 every date pill: a plain 1px ring; late = rose ring + tint, soon = amber ring + tint
 // 3 no text under 13px, weights 400 and 600 only, no coloured words
 // 4 one radius (12px); circles only for status dots; count pills one fixed size (30 x 24, radius 12px, a 14px number)
@@ -132,8 +132,8 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
 });
 
 test.describe('Money Hub look: house hover rule (hover = selected; nothing ever moves)', () => {
-  // Neutral controls: 1px ink line inside + muted tint. Header buttons sit on the dark frame: its ink + its tint.
-  // (Meaning-coloured controls would keep their own colour + tint; this page has none today.)
+  // Lisa (12 Nov 2026): hover = the pale grey fill (--hov) and no line. Header buttons sit on the dark frame: its quiet fill
+  // (--frame-hov), no line. Selected = the same fill + a 1px quiet grey line (--sel-bd).
   // The bottom tabs are EXEMPT (Lisa's tab rule): no ring, no outline, no fill; only the colour bar above the label widens.
   const CASES = [
     ['light', 'now', 'main .btn', 'neutral'], ['light', 'todo', 'main details > summary', 'neutral'], ['light', 'money', 'a.ent', 'neutral'],
@@ -149,6 +149,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         const el = page.locator(sel).first();
         await el.scrollIntoViewIfNeeded();
         const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
+        await page.mouse.move(0, 0);
         const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
         await settle(el);
@@ -159,8 +160,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           const want = kind === 'tab'
             ? { line: null, fill: probe('backgroundColor', 'var(--card)') }
             : kind === 'frame'
-              ? { line: probe('color', 'var(--frame-ink)') }
-              : { line: probe('color', 'var(--ink)') };
+              ? { fill: probe('backgroundColor', 'var(--frame-hov)', e.parentElement) }
+              : { fill: probe('backgroundColor', 'var(--hov)', e.parentElement) };
           return { box: [r.x, r.y, r.width, r.height], ow: cs.outlineWidth, os: cs.outlineStyle, oo: cs.outlineOffset, oc: cs.outlineColor, bg: cs.backgroundColor, want, ink: probe('color', 'var(--ink)') };
         }, kind);
         const where = `${sel} (${scheme})`;
@@ -171,14 +172,14 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           expect(await el.locator('.bar').evaluate((e) => getComputedStyle(e).width), where).toBe('40px'); // only the colour bar widens
           continue;
         }
-        expect([got.os, got.ow, got.oo], `${where} hover line`).toEqual(['solid', '1px', '-1px']);
-        expect(got.oc, `${where} hover line colour`).toBe(got.want.line);
-        expect(got.bg, `${where} hover adds no fill (Lisa's sweep, 3 Nov 2026)`).toBe(restBg);
+        expect(got.os, `${where} draws no line on hover`).toBe('none');
+        expect(got.bg, `${where} hover is the pale grey fill (Lisa, 12 Nov 2026)`).toBe(got.want.fill);
+        expect(restBg, `${where} rests without that fill`).not.toBe(got.want.fill);
       }
     });
   }
 
-  test('selected: sub-tab looks like hover (ink line, no fill: the same fill as the sub-tabs beside it); the selected bottom tab only widens its colour bar', async ({ page }) => {
+  test('selected: sub-tab = the pale grey fill + a 1px quiet grey line (never ink); the selected bottom tab only widens its colour bar', async ({ page }) => {
     await open(page, 'light');
     await go(page, 'todo');
     const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
@@ -192,8 +193,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     });
     const want = await page.evaluate(() => {
       const p = (prop, val) => { const d = document.createElement('i'); d.style[prop] = val; document.body.appendChild(d); const o = getComputedStyle(d)[prop]; d.remove(); return o; };
-      const other = document.querySelector('.subnav a:not([aria-current="page"])');
-      return [p('color', 'var(--ink)'), getComputedStyle(other).backgroundColor];
+      return [p('color', 'var(--house-press)'), p('backgroundColor', 'var(--hov)')];
     });
     expect(sub).toEqual(['solid', '1px', '-1px', ...want]);
     expect(tab.os).toBe('none');

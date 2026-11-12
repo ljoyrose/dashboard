@@ -248,6 +248,39 @@ var TABLES = {
     }
   },
 
+  // ---------------------------------------------------------------- area_link
+  // Room links (Lisa 12 Nov 2026, option B via NEW: TEMPS): for from_date..to_date (both inclusive, blank to_date =
+  // no end) a reading taken in from_area_id also counts for to_area_id, e.g. while one thermometer covers two rooms.
+  // A link row, never dates on the room ("A standard"); readings are never copied or changed, the pages count them
+  // through BLDAreaLink.expand. To end one, the owner fills in to_date; rows are never deleted. Own switch, OFF by default.
+  area_link: {
+    key: 'area_link',
+    file: 'BLD-area_link.csv',
+    idPrefix: 'alk',
+    columns: ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'from_area_id', 'to_area_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      from_area_id: { type: 'ref', lookup: 'area', required: true },   // the room the reading is taken in
+      to_area_id:   { type: 'ref', lookup: 'area', required: true },   // the room it also counts for
+      from_date:    { type: 'date', required: true },
+      to_date:      { type: 'date' },                                  // blank = no end
+      source:       { type: 'text' }                                   // why: Lisa's decision, an inspector's note
+    },
+    dupKey: ['from_area_id', 'to_area_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.to_area_id && row.from_area_id && row.from_area_id === row.to_area_id) errors.to_area_id = 'Choose a different room.';
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+    }
+  },
+
   // ---------------------------------------------------------------- check_type
   // The kennel's own list of staff checks (feeding, medicine, cleaning...): entered by the OWNER as rows, never
   // hard-coded, because they differ by kennel. NEW table, own switch, OFF by default. A change is a new row with a
@@ -739,6 +772,7 @@ var READABLE = {
   sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },
   thermometer:     { file: 'BLD-thermometer.csv',     vis: 'thermometer',     authorCol: 'made_by',     dateCol: 'made_at' },
   requirement:     { file: 'BLD-requirement.csv',     vis: 'requirement',     authorCol: 'set_by',      dateCol: 'set_on' },
+  area_link:       { file: 'BLD-area_link.csv',       vis: 'area_link',       authorCol: 'set_by',      dateCol: 'set_on' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };

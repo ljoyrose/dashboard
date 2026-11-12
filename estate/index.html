@@ -53,10 +53,10 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
+  @media (hover: hover) { .top .btn:hover { background:var(--frame-hov); } }
 
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) { a.tile:hover { background:var(--hov); } }
   input:focus, select:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }

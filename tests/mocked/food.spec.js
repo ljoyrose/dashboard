@@ -705,7 +705,7 @@ test.describe('GA Hub house look', () => {
     expect(blue(cool[0])).toBeGreaterThan(0); expect(blue(cool[1])).toBeGreaterThan(0);  // cool: blue over red
   });
 
-  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = 1px line inside (ink when neutral), never a fill, and nothing moves', async ({ page }) => {
+  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = the pale grey fill and no line (Lisa, 12 Nov 2026), and nothing moves', async ({ page }) => {
     await sheets(page, book());
     await open(page);
     for (const tab of ['home', 'orders', 'products', 'ga']) {
@@ -727,11 +727,12 @@ test.describe('GA Hub house look', () => {
         await page.mouse.move(0, 0);
         const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
-        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
-        expect({ ow: hv.ow, os: hv.os, oo: hv.oo, bw: hv.bw }).toEqual({ ow: '1px', os: 'solid', oo: '-1px', bw: '1px' });
-        if (hv.coloured) { expect(hv.oc).not.toBe(ink); expect(hv.oc, 'keeps its resting colour line').toBe(st.c); } else expect(hv.oc).toBe(ink);
-        // Lisa's sweep (3 Nov 2026): every control hovers with the line only, never a fill.
-        expect(hv.bg, `${tab}: no fill on hover`).toBe(restBg);
+        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { os: s.outlineStyle, bw: s.borderTopWidth, bc: s.borderTopColor, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, hov }; });
+        // Lisa (12 Nov 2026): every control hovers with the pale grey fill and no line (a selected one keeps its quiet grey line).
+        expect(hv.bw).toBe('1px');
+        if (!st.pressed) expect(hv.os, `${tab}: no line on hover`).toBe('none');
+        if (hv.coloured) expect(hv.bc, 'keeps its resting colour line').toBe(st.c);
+        expect(hv.bg, `${tab}: the pale grey fill on hover`).toBe(hv.hov);
         const after = await el.boundingBox();
         expect(after).toEqual(before);
       }
@@ -763,19 +764,20 @@ test.describe('GA Hub house look', () => {
   });
 
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: meaning-coloured controls (Apply, Not now) keep their OWN colour on hover: own-colour 1px line inside, never ink, never a fill (tabs are exempt)`, async ({ page }) => {
+    test(`${scheme}: meaning-coloured controls (Apply, Not now) hover with the same pale grey fill, no coloured line, and keep their resting colour line (tabs are exempt)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await sheets(page, book());
       await open(page, '#/do');
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
       const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--hmc').trim(); // the house meaning colour (house.css)
         const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
-        return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, own: oc, bg: s.backgroundColor }; });
+        const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+        return { os: s.outlineStyle, own: oc, bc: s.borderTopColor, bg: s.backgroundColor, hov }; });
       const check = (l, what) => {
-        expect({ ow: l.ow, os: l.os, oo: l.oo }, what).toEqual({ ow: '1px', os: 'solid', oo: '-1px' });
-        expect(l.oc, what + ': line is not ink').not.toBe(ink);
-        expect(l.oc, what + ': line is its own colour').toBe(l.own);
-        expect(l.bg, what + ': no fill on hover (Lisa\'s sweep, 3 Nov 2026)').toBe(l.rest);
+        expect(l.os, what + ': no coloured line on hover').toBe('none');
+        expect(l.bc, what + ': keeps its resting line in its own colour').toBe(l.own);
+        expect(l.bc, what + ': resting line is not ink').not.toBe(ink);
+        expect(l.bg, what + ': the pale grey fill on hover (Lisa, 12 Nov 2026)').toBe(l.hov);
       };
       for (const v of ['Apply', 'Not now']) {
         const b = page.locator(`#view .card[data-key^="PRICE-"] button[data-v="${v}"]`);

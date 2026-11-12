@@ -1,5 +1,6 @@
 // The style sweep (Lisa, 3 Nov 2026): one set of in-page checks, read back from the drawn page and its style sheets.
-//  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable).
+//  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable) and the ONE
+//    pale grey state fill (Lisa, 12 Nov 2026: hover, tap and selected = --hov / --sel-fill; on the dark frame --frame-hov).
 //  2 Numbers side by side in one group are the same size (and weight).
 //  3 No explainer lines or sub-lines that restate a label.
 //  4 Nothing moves on hover or focus.
@@ -14,7 +15,8 @@ function stateRules() {
   // Typing boxes may change their background; so may an on/off switch (a form control: its track shows on or off).
   const TYPING = /(^|[\s>+~(,])(input|textarea|select)\b|\[contenteditable|::placeholder|::-webkit|::selection|\.fin\b|\.sw\b/;
   const noNot = (x) => { let y = x, z; while ((z = y.replace(/:not\([^()]*\)/g, '')) !== y) y = z; return y; };   // :not(:hover) is the resting state
-  const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|rgba\(0, 0, 0, 0\))$/;
+  // The one pale grey state fill (Lisa, 12 Nov 2026) is the house rule, not a fill to find.
+  const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|var\(--(hov|sel-fill|frame-hov)\)|rgba\(0, 0, 0, 0\))$/;
   const out = [];
   const walk = (rules, sheet) => {
     for (const r of rules) {
@@ -59,7 +61,10 @@ function drawn() {
   const typing = (e) => e.matches('input, textarea, select, [contenteditable="true"], [contenteditable=""], .sw, [role="switch"]');
   const out = { selected: [], groups: [], explainers: [], rose: [] };
 
-  // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on.
+  // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on, or the one pale
+  //   grey selected fill (--sel-fill, Lisa 12 Nov 2026).
+  const pr = document.createElement('span'); pr.style.background = 'var(--sel-fill, transparent)'; document.body.appendChild(pr);
+  const selFill = getComputedStyle(pr).backgroundColor; pr.remove();
   const SEL = '[aria-pressed="true"], [aria-current="page"], [aria-current="true"], [aria-selected="true"], .on, .sel, .selected';
   for (const e of document.querySelectorAll(SEL)) {
     if (!seen(e) || typing(e) || e.closest('svg') || e.matches('html, body, main, #view, section, .card, li, tr, td, dialog')) continue;
@@ -67,7 +72,7 @@ function drawn() {
     const sib = [...(e.parentElement ? e.parentElement.children : [])].find((x) => x !== e && x.tagName === e.tagName && !x.matches(SEL) && seen(x));
     const want = sib ? getComputedStyle(sib).backgroundColor : (e.parentElement ? bgOf(e.parentElement) : 'rgb(255, 255, 255)');
     const got = s.backgroundColor;
-    const same = got === want || (alpha(got) < 0.05 && !sib);
+    const same = got === want || got === selFill || (alpha(got) < 0.05 && !sib);
     if (!same || (s.backgroundImage !== 'none' && !/url\(/.test(s.backgroundImage))) out.selected.push(name(e) + ': selected fill ' + got + (s.backgroundImage !== 'none' ? ' ' + s.backgroundImage.slice(0, 40) : '') + ' (beside ' + want + ')');
   }
 
