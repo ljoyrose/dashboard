@@ -91,6 +91,76 @@
   function pill(r) { return vpill(verdictOf(r), r.words); }
   function unv(r) { return r.points_unverified ? ', ' + r.points_unverified + ' ' + r.words.unverified.toLowerCase() : ''; }
 
+  /* Drawing only (mock-up and Style, 12 Nov 2026): verdict icons, the must-pass star and the band colours. No rule lives here. */
+  var ICON = {
+    pass: 'M5 12l5 5l10 -10', below_target: 'M6 9l6 6l6 -6', fail: 'M18 6l-12 12 M6 6l12 12',
+    unverified: 'M8 8a3.5 3 0 0 1 3.5 -3h1a3.5 3 0 0 1 3.5 3a3 3 0 0 1 -2 3a3 4 0 0 0 -2 4 M12 19l0 .01',
+    star: 'M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z',
+    info: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0 M12 9h.01 M11 12h1v4h1'
+  };
+  var VTEXT = { pass: '--ljr-5-text', below_target: '--ljr-3-text', unverified: '--ljr-6-text', fail: '--ljr-2-text' };
+  var BANDVAR = { red: '--ljr-2', orange: '--ljr-3', yellow: '--ljr-4', green: '--ljr-5', blue: '--ljr-6', purple: '--ljr-7', white: '--line', black: '--ink' };
+  function ic(d, size, colour) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="stroke:' + (colour || 'currentColor') + ';flex-shrink:0"><path d="' + d + '"/></svg>';
+  }
+  function star() {
+    return '<svg class="bb-star" role="img" aria-label="Must pass" width="15" height="15" viewBox="0 0 24 24"><path d="' + ICON.star + '"/></svg>';
+  }
+  function vword(r) {
+    var k = verdictOf(r);
+    return '<span class="bb-vw">' + ic(ICON[k], 16, 'var(' + VTEXT[k] + ')') + r.words[k] + '</span>';
+  }
+  function bandColour(b) { var k = BANDVAR[t(b.colour).toLowerCase()]; return k ? 'var(' + k + ')' : 'var(--line)'; }
+  /** Points bands in their own order, each with what it can give, what was earned and what is still to prove. */
+  function bandStats(r) {
+    return r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); })
+      .filter(function (b) { return t(b.kind) === 'points'; }).map(function (b) {
+        var o = { band: b, max: 0, earned: 0, unv: 0 };
+        r.lines.forEach(function (l) {
+          if (l.band_id !== b.id || l.points_max === '') return;
+          o.max += Number(l.points_max) || 0;
+          if (l.points === '') o.unv += Number(l.points_max) || 0; else o.earned += Number(l.points) || 0;
+        });
+        return o;
+      }).filter(function (o) { return o.max > 0; });
+  }
+  function arc(c, rad, a, b) {
+    function pt(x) { x = x * Math.PI / 180; return (c + rad * Math.sin(x)).toFixed(2) + ' ' + (c - rad * Math.cos(x)).toFixed(2); }
+    return 'M' + pt(a) + 'A' + rad + ' ' + rad + ' 0 ' + (b - a > 180 ? 1 : 0) + ' 1 ' + pt(b);
+  }
+  /** The score ring round the photo: each points band owns an arc sized by its points, filled as far as earned. */
+  function ring(r) {
+    var st = bandStats(r), all = st.reduce(function (s, o) { return s + o.max; }, 0), a = 0, out = '';
+    if (!all) return '';
+    st.forEach(function (o) {
+      var span = 360 * o.max / all, from = a + 1, to = a + span - 1;
+      out += '<path d="' + arc(42, 38, from, to) + '" fill="none" stroke-width="6" style="stroke:var(--hov)"/>';
+      var got = Math.max(0, Math.min(1, o.earned / o.max));
+      if (got > 0) out += '<path d="' + arc(42, 38, from, from + (to - from) * got) + '" fill="none" stroke-width="6" style="stroke:' + bandColour(o.band) + '"/>';
+      a += span;
+    });
+    return '<svg class="bb-ring" width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">' + out + '</svg>';
+  }
+  function hubDog(v, id) { return (v.dogs && v.dogs[id]) || null; }
+  /** The animal's photo in a circle, or a plain circle when there is none. The hub loads the picture. */
+  function photo(v, r) {
+    var d = hubDog(v, r.subject_id), pic = d && v.photoId ? v.photoId(d.photo) : '';
+    return '<span class="bb-ph">' + ring(r) + '<span class="bb-pic">' + (pic ? '<img class="dogphoto off" alt="" data-photo-id="' + v.esc(pic) + '" referrerpolicy="no-referrer">' : '') + '</span></span>';
+  }
+  /** "3 yrs 7 mths" on the given day. */
+  function age(dob, today) {
+    var a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(dob)), b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(today));
+    if (!a || !b) return '';
+    var m = (b[1] - a[1]) * 12 + (b[2] - a[2]) - (Number(b[3]) < Number(a[3]) ? 1 : 0);
+    if (m < 0) return '';
+    var y = Math.floor(m / 12), mm = m % 12;
+    return [y ? y + (y === 1 ? ' yr' : ' yrs') : '', mm || !y ? mm + (mm === 1 ? ' mth' : ' mths') : ''].filter(Boolean).join(' ');
+  }
+  function subLine(v, r) {
+    var d = hubDog(v, r.subject_id);
+    return [d && t(d.sex), age(r.dob, v.today)].filter(Boolean).join(', ');
+  }
+
   /* Sort choices, as on the mock-up (11 Nov 2026). Verdict best to worst is the default; "Fail to Pass" is the one opt-in reverse. */
   var SORTS = [
     ['verdict', 'Verdict, Pass to Fail'], ['high', 'Score, highest %'], ['low', 'Score, lowest %'], ['name', 'Name, A to Z'],
@@ -117,8 +187,11 @@
   function rowsHtml(v, c) {
     var esc = v.esc, shown = shownRows(c);
     return shown.length ? shown.map(function (r) {
-      return '<button type="button" class="bb-dog" data-bb-open="' + esc(r.subject_id) + '"><span class="bb-name">' + esc(r.name) + '</span>' + pill(r)
-        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></button>';
+      var k = verdictOf(r);
+      return '<button type="button" class="bb-dog" data-bb-open="' + esc(r.subject_id) + '" style="--v:var(' + VTEXT[k] + ')">' + photo(v, r)
+        + '<span class="bb-info"><span class="bb-l1"><span class="bb-name">' + esc(r.name) + '</span><span class="bb-big" aria-hidden="true">' + r.points_earned + '</span></span>'
+        + '<span class="bb-l2"><span>' + esc(subLine(v, r)) + '</span>' + vword(r) + '</span>'
+        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></span></button>';
     }).join('') : '<p class="mut">None.</p>';
   }
 
@@ -137,11 +210,54 @@
     return tools + h + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
   }
 
+  /** The animal's details from the hub, folded, as on the mock-up. Only what the hub holds is shown. */
+  function infoHtml(v, r) {
+    var esc = v.esc, d = hubDog(v, r.subject_id) || {}, pic = v.photoId ? v.photoId(d.photo) : '';
+    var chips = [t(d.sex), age(r.dob, v.today), r.dob ? 'Born ' + day(r.dob) : '', d.colour && t(d.colour.name), t(d.pat),
+      t(d.chip) ? 'Chip ...' + t(d.chip).slice(-4) : '', d.littersAsDam && d.littersAsDam.length ? d.littersAsDam.length + (d.littersAsDam.length === 1 ? ' litter' : ' litters') : '',
+      t(d.state)].filter(Boolean);
+    return '<details class="card bb-infobox" data-bb-band="__info"' + (state.open.__info ? ' open' : '') + '><summary>' + ic(ICON.info, 18, 'var(--muted)')
+      + '<span class="bb-strong">Information</span><span class="bb-pts">' + esc([t(d.sex), age(r.dob, v.today)].filter(Boolean).join(', ')) + '</span></summary>'
+      + '<div class="bb-infobd"><span class="bb-pic bb-pic88">' + (pic ? '<img class="dogphoto off" alt="" data-photo-id="' + esc(pic) + '" referrerpolicy="no-referrer">' : '') + '</span>'
+      + '<span><span class="bb-strong">' + esc(r.name) + '</span><br><span class="bb-pts">' + esc(t(d.breed)) + '</span></span></div>'
+      + '<div class="bb-chips">' + chips.map(function (x) { return '<span class="bb-tag">' + esc(x) + '</span>'; }).join('') + '</div></details>';
+  }
+
+  /** Why this verdict, in plain words, from the lines themselves. */
+  function whyHtml(r) {
+    var k = verdictOf(r), w = r.words;
+    var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
+    if (k === 'fail') return 'Must pass not met: ' + gates.filter(function (l) { return l.gate_outcome === 'fail'; }).map(function (l) { return l.label_then; }).join(', ') + '.';
+    if (r.gate_result === 'unverified') return 'Must pass still to prove: ' + gates.filter(function (l) { return l.gate_outcome === 'unverified'; }).map(function (l) { return l.label_then; }).join(', ') + '.';
+    if (k === 'unverified') return r.points_unverified + ' points still to prove could reach the target.';
+    if (k === 'below_target') return 'All must pass met. ' + (r.target - r.points_earned) + ' points under the target.';
+    return (gates.length ? 'All must pass met' : 'Scored') + (r.target !== '' && r.target !== undefined ? ', target reached.' : '.') + (w ? '' : '');
+  }
+
+  /** The verdict box: word, points, target, a bar split by section with the target marked, and why. */
+  function verdictHtml(r) {
+    var k = verdictOf(r), all = r.points_available || 0, st = bandStats(r);
+    var lost = Math.max(0, all - r.points_earned - r.points_unverified);
+    var hasT = r.target !== '' && r.target !== undefined;
+    var bar = all ? st.map(function (o) {
+      return (o.earned ? '<span style="width:' + (100 * o.earned / all) + '%;background:' + bandColour(o.band) + '" title="' + o.band.label + ': ' + o.earned + ' of ' + o.max + '"></span>' : '')
+        + (o.unv ? '<span class="bb-tp" style="width:' + (100 * o.unv / all) + '%;--c:' + bandColour(o.band) + '" title="' + o.band.label + ': ' + o.unv + ' to prove"></span>' : '');
+    }).join('') : '';
+    return '<div class="card bb-vbox" style="--v:var(' + VTEXT[k] + ')"><div class="bb-vtop"><span class="bb-vl">' + ic(ICON[k], 28, 'var(' + VTEXT[k] + ')')
+      + '<span><span class="bb-pts">Breed Better verdict</span><br><span class="bb-vword">' + r.words[k] + '</span></span></span>'
+      + '<span class="bb-vr"><span class="bb-huge">' + r.points_earned + '</span><br><span class="bb-pts">of ' + all + ' points</span>'
+      + (hasT ? '<br><span class="bb-pts">Target ' + r.target + '</span>' : '') + '</span></div>'
+      + (all ? '<div class="bb-barw"><div class="bb-bar">' + bar + '</div>' + (hasT ? '<span class="bb-tmark" style="left:' + Math.min(100, 100 * r.target / all) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>' : '')
+      + '<div class="bb-three"><span>' + r.points_earned + ' earned</span><span>' + r.points_unverified + ' to prove</span><span>' + lost + ' lost</span></div>'
+      + '<p class="bb-why">' + whyHtml(r) + '</p></div>';
+  }
+
   function dogHtml(v, r) {
     var esc = v.esc;
     var bands = r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
     return '<button type="button" class="bb-f" data-bb-back="1">Back</button>'
       + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></div>'
+      + infoHtml(v, r) + verdictHtml(r)
       + bands.map(function (b) {
         var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
         if (!lines.length) return '';
@@ -175,7 +291,7 @@
     if (l.due_date && !l.due) why += ' \u00b7 due ' + esc(day(l.due_date));
     res += dueHtml(l);
     var go = GO[l.evidence_table];
-    return '<div class="bb-line"><span class="bb-l">' + esc(l.label_then) + '</span>' + res
+    return '<div class="bb-line"><span class="bb-l">' + (l.kind === 'gate' ? star() : '') + esc(l.label_then) + '</span>' + res
       + '<span class="bb-why">' + why + (go ? ' <button type="button" class="bb-src" data-go="' + go + '">Open</button>' : '') + '</span></div>';
   }
 
@@ -212,7 +328,31 @@
       '.bb-c-red{--bb:var(--ljr-2)}.bb-c-orange{--bb:var(--ljr-3)}.bb-c-yellow{--bb:var(--ljr-4)}.bb-c-green{--bb:var(--ljr-5)}.bb-c-blue{--bb:var(--ljr-6)}.bb-c-purple{--bb:var(--ljr-7)}.bb-c-white{--bb:var(--line)}.bb-c-black{--bb:var(--ink)}',
       '.bb-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:8px 0}.bb-l{flex:1 1 60%}.bb-why{flex:1 1 100%}',
       '.bb-src{min-height:24px;padding:0 8px;font-size:var(--fs-small);color:var(--ink)}',
-      '.bb-chip{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;margin-top:4px}'
+      '.bb-chip{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;margin-top:4px}',
+      /* list row and dog page (mock-up and Style, 12 Nov 2026): colour sits in lines and icons, never a fill at rest */
+      '.bb-dog{position:relative;flex-wrap:nowrap;gap:12px;padding:12px 12px 12px 15px;overflow:hidden}',
+      '.bb-dog::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--v,var(--line))}',
+      '.bb-ph{width:84px;height:84px;flex-shrink:0;position:relative}.bb-ring{position:absolute;inset:0}',
+      '.bb-pic{position:absolute;inset:9px;border-radius:50%;background:var(--hov);overflow:hidden;display:block}',
+      '.bb-pic img{width:100%;height:100%;object-fit:cover;display:block}.bb-pic img.off{display:none}',
+      '.bb-pic88{position:relative;inset:auto;width:88px;height:88px;flex-shrink:0;border-radius:var(--radius)}',
+      '.bb-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}',
+      '.bb-l1,.bb-l2{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.bb-l2{font-size:var(--fs-small);color:var(--muted)}',
+      '.bb-l1 .bb-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.bb-big{font-weight:600;font-size:18px;white-space:nowrap;font-variant-numeric:tabular-nums}',
+      '.bb-vw{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:500;white-space:nowrap}',
+      '.bb-star{flex-shrink:0;fill:var(--ljr-2);stroke:var(--ljr-2);stroke-width:1.5;stroke-linejoin:round;vertical-align:-2px;margin-right:4px}',
+      '.bb-infobox summary{cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px}.bb-strong{font-weight:500}',
+      '.bb-infobd{display:flex;gap:12px;align-items:center;margin:8px 0}',
+      '.bb-chips{display:flex;flex-wrap:wrap;gap:6px}.bb-tag{border:1px solid var(--line);border-radius:var(--radius);padding:2px 10px;font-size:var(--fs-small)}',
+      '.bb-vbox{position:relative;display:flex;flex-direction:column;gap:10px;border-left:3px solid var(--v,var(--line))}',
+      '.bb-vtop{display:flex;justify-content:space-between;align-items:center;gap:12px}.bb-vl{display:flex;align-items:center;gap:10px}',
+      '.bb-vword{font-size:18px;font-weight:600}.bb-vr{text-align:right}.bb-huge{font-size:28px;font-weight:600;line-height:1}',
+      '.bb-barw{position:relative;height:10px}.bb-bar{display:flex;height:10px;border:1px solid var(--line);box-sizing:border-box;background:var(--hov);border-radius:var(--radius);overflow:hidden}',
+      '.bb-tp{background:repeating-linear-gradient(45deg,var(--c) 0 2px,transparent 2px 6px);opacity:.6}',
+      '.bb-tmark{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink)}',
+      '.bb-three{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-small);color:var(--muted)}',
+      '.bb-vbox .bb-why{margin:0;color:var(--ink)}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -232,8 +372,10 @@
   }
 
   /* typing or a new sort redraws the rows only, so the search box keeps focus */
-  function redrawRows() { var el = document.getElementById('bbList'); if (el && last && memo) el.innerHTML = rowsHtml(last, memo); }
-  function redraw() { var el = document.getElementById('bbRoot'); if (el && last) el.innerHTML = inner(last); }
+  /* the hub loads the photos after each draw */
+  function after() { if (last && typeof last.after === 'function') last.after(); }
+  function redrawRows() { var el = document.getElementById('bbList'); if (el && last && memo) { el.innerHTML = rowsHtml(last, memo); after(); } }
+  function redraw() { var el = document.getElementById('bbRoot'); if (el && last) { el.innerHTML = inner(last); after(); } }
 
   if (typeof document !== 'undefined') {
     /* remember which sections are open, so a redraw keeps them */
@@ -259,5 +401,8 @@
     }, true);
   }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  /** Open one animal's page next time the page is drawn: the hub's #/breed/<id> address. */
+  function open(id) { state.dog = t(id); }
+
+  return { FILES: FILES, compute: compute, page: page, chip: chip, open: open, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
