@@ -68,9 +68,9 @@ test('mail flags: weak DMARC, broken SPF, missing Google DKIM, no MX, forward ho
     { key: 'broken.example', spf: 'broken', dmarc: 'reject' },
     { key: 'dkim.example', spf: 'pass', dkim: 'not found', dmarc: 'reject', mx: 'Google Workspace' },
     { key: 'nomx.example', mx: 'none', spf: 'pass', dmarc: 'reject' },
-    { key: 'fwd.example', mx: 'ImprovMX', forward_chain: 'forward.example.net → box.example.org → gmail.com', spf: 'pass', dmarc: 'reject' },
+    { key: 'fwd.example', mx: 'ImprovMX', forward_chain: 'forward.example.net → box.example.org → inbox.example.com', spf: 'pass', dmarc: 'reject' },
     { key: 'unk.example', mx: 'Namecheap email forwarding', spf: 'pass', dmarc: 'reject' },
-    { key: 'one.example', mx: 'ForwardEmail', forward_chain: 'forward.example.net → gmail.com', spf: 'pass', dmarc: 'reject' },
+    { key: 'one.example', mx: 'ForwardEmail', forward_chain: 'forward.example.net → inbox.example.com', spf: 'pass', dmarc: 'reject' },
     { key: 'ms.example', mx: 'Microsoft 365', dkim: 'not found', spf: 'pass', dmarc: 'reject' },
   ], TODAY);
   const text = (key) => list.filter((a) => a.key === key).map((a) => a.text).join(' | ');

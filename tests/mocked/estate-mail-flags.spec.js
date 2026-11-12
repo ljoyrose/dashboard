@@ -13,9 +13,9 @@ const ROWS = [
   { key: 'red.example', kind: 'site', company: 'Sample Co', url_or_domain: 'https://red.example', live_status: 'live', ssl_expires: day(5), spf: 'pass', dkim: 'found', dmarc: 'reject', mx: 'Google Workspace', registrar: 'Example Registrar', nameservers: 'ns1.example.net', nameservers_previous: 'ns1.other.test' },
   { key: 'amber.example', kind: 'site', company: 'Sample Co', url_or_domain: 'https://amber.example', live_status: 'live', ssl_expires: day(20), spf: 'broken', dkim: 'not found', dmarc: 'weak', mx: 'Google Workspace' },
   { key: 'nomx.example', kind: 'email-domain', company: 'Sample Co', url_or_domain: 'nomx.example', mx: 'none', spf: 'pass', dmarc: 'reject' },
-  { key: 'fwd.example', kind: 'email-domain', company: 'Sample Co', url_or_domain: 'fwd.example', mx: 'Namecheap email forwarding', forward_chain: 'forward.example.net → box.example.org → gmail.com', spf: 'pass', dmarc: 'reject' },
+  { key: 'fwd.example', kind: 'email-domain', company: 'Sample Co', url_or_domain: 'fwd.example', mx: 'Namecheap email forwarding', forward_chain: 'forward.example.net → box.example.org → inbox.example.com', spf: 'pass', dmarc: 'reject' },
   { key: 'unk.example', kind: 'email-domain', company: 'Sample Co', url_or_domain: 'unk.example', mx: 'Namecheap email forwarding', spf: 'pass', dmarc: 'reject' },
-  { key: 'okmx.example', kind: 'email-domain', company: 'Sample Co', url_or_domain: 'okmx.example', mx: 'Microsoft 365', spf: 'pass', dkim: 'not found', dmarc: 'none', forward_chain: 'forward.example.net → gmail.com' },
+  { key: 'okmx.example', kind: 'email-domain', company: 'Sample Co', url_or_domain: 'okmx.example', mx: 'Microsoft 365', spf: 'pass', dkim: 'not found', dmarc: 'none', forward_chain: 'forward.example.net → inbox.example.com' },
 ];
 
 const chip = (row, name) => row.locator('.badge', { hasText: new RegExp('^' + name) });

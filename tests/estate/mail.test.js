@@ -152,15 +152,15 @@ test('MX: lowest preference wins, provider words', () => {
 });
 
 test('forward chain: hop count, flag over one hop, unknown target, absent field', () => {
-  const two = M.forwardChain({ forward_chain: 'forward.example.net → box.example.org → gmail.com' });
+  const two = M.forwardChain({ forward_chain: 'forward.example.net → box.example.org → inbox.example.com' });
   assert.equal(two.hops, 2);
   assert.equal(two.flag, true);
-  assert.equal(two.text, 'forward.example.net → box.example.org → gmail.com (2 hops)');
-  const one = M.forwardChain({ forward_chain: ['forward.example.net', 'gmail.com'] });
+  assert.equal(two.text, 'forward.example.net → box.example.org → inbox.example.com (2 hops)');
+  const one = M.forwardChain({ forward_chain: ['forward.example.net', 'inbox.example.com'] });
   assert.equal(one.hops, 1);
   assert.equal(one.flag, false);
   assert.match(one.text, /1 hop\)$/);
-  assert.equal(M.forwardChain({ forward_chain: 'forward.example.net -> gmail.com' }).hops, 1);
+  assert.equal(M.forwardChain({ forward_chain: 'forward.example.net -> inbox.example.com' }).hops, 1);
   assert.equal(M.forwardChain({ mx: 'Google Workspace' }), null);
   assert.equal(M.forwardChain({}), null);
   assert.equal(M.forwardChain({ forward_chain: '' }), null);
@@ -172,9 +172,9 @@ test('forward chain: hop count, flag over one hop, unknown target, absent field'
   assert.deepEqual(E.emailProblems({ mx: M.mxHost(mx('10 eforward1.registrar-servers.com.')) }), ['target unknown, needs registrar export']);
   assert.deepEqual(E.emailProblems({
     mx: 'Namecheap email forwarding',
-    forward_chain: 'forward.example.net to box.example.org to gmail.com'
+    forward_chain: 'forward.example.net to box.example.org to inbox.example.com'
   }), ['more than one forward hop']);
-  assert.deepEqual(E.emailProblems({ forward_chain: 'forward.example.net → gmail.com', mx: 'ImprovMX' }), []);
+  assert.deepEqual(E.emailProblems({ forward_chain: 'forward.example.net → inbox.example.com', mx: 'ImprovMX' }), []);
 });
 
 test('verification: TXT google-site-verification and HTML meta names only', () => {
