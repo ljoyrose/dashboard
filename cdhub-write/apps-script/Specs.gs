@@ -304,7 +304,7 @@ var TABLES = {
     input: {
       type_key:       { type: 'text', required: true },
       label:          { type: 'text', required: true },
-      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none'], required: true },
+      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none', 'litter'], required: true },   // litter (12 Nov 2026): a litter's jobs, opened from its tag
       asks_item:      { type: 'bool', dflt: 'false' },
       asks_amount:    { type: 'bool', dflt: 'false' },
       item_label:     { type: 'text' },
@@ -353,7 +353,93 @@ var TABLES = {
           return;
         }
       }
+      // SOP jobs, 12 Nov 2026: a whole-site job whose includes names a room job restarts that job in every room, so it
+      // must say which rooms it never covers (isolation), as a per_dog tap must. A room job = its latest row has target area.
+      if (clean.target === 'none' && clean.includes && !clean.not_in_areas && !errors.includes && !errors.not_in_areas) {
+        var latest = {};
+        records.forEach(function (r) { if (!latest[r.type_key] || (r.effective_from || '') > (latest[r.type_key].effective_from || '')) latest[r.type_key] = r; });
+        if (clean.includes.split('|').some(function (k) { return latest[k] && latest[k].target === 'area'; })) {
+          errors.not_in_areas = 'This covers room jobs. List the isolation rooms it must never cover, separated by |, or type none.';
+        }
+      }
     }
+  },
+
+  // ---------------------------------------------------------------- check_field
+  // A check's form (SOP jobs, 12 Nov 2026): one row per question, so a form is rows, never code. Versioned like
+  // check_type: a change is a NEW row with a later effective_from; the row in force on a day is the latest one with
+  // effective_from on or before it, and active=false drops the question from that date. kind says what is typed;
+  // choice lists its answers in choices, separated by |. The answers go to check_value, sent with the check_log row.
+  // OWNER only, own switch, OFF by default.
+  check_field: {
+    key: 'check_field',
+    file: 'BLD-check_field.csv',
+    idPrefix: 'cfd',
+    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    computedColumns: [],
+    lookups: [{ name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'type_key' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      type_key:       { type: 'text', required: true },                              // the check (check_type.type_key) this question belongs to
+      field_key:      { type: 'text', required: true },                              // the question's short name, e.g. stool
+      label:          { type: 'text', required: true },                              // what staff read
+      kind:           { type: 'enum', values: ['text', 'number', 'date', 'yesno', 'choice'], required: true },
+      choices:        { type: 'text' },                                              // choice only: answers separated by |
+      required:       { type: 'bool', dflt: 'false' },
+      sort:           { type: 'count' },                                             // order on the screen
+      active:         { type: 'bool', dflt: 'true' },
+      effective_from: { type: 'date', required: true }
+    },
+    dupKey: ['type_key', 'field_key', 'effective_from'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors, lookups) {
+      ['type_key', 'field_key'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row[k])) errors[k] = 'Use lower-case letters, numbers and underscores, e.g. stool.';
+      });
+      if (!errors.type_key && row.type_key && lookups && lookups.check_type_key && !lookups.check_type_key[row.type_key]) errors.type_key = 'No check with that name.';
+      if (!errors.choices && !errors.kind) {
+        var list = String(row.choices || '').split('|').map(function (c) { return c.trim(); }).filter(String);
+        if (row.kind === 'choice' && list.length < 2) errors.choices = 'List at least two answers, separated by |.';
+        else if (row.kind !== 'choice' && list.length) errors.choices = 'Only a choice question has answers to pick from.';
+        else if (list.length > 30) errors.choices = 'Keep it to 30 answers or fewer.';
+        else row.choices = list.join('|');
+      }
+    },
+    checkAgainst: function (clean, records, errors) {
+      if (errors.type_key || errors.field_key || errors.effective_from) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.type_key === clean.type_key && r.field_key === clean.field_key && (r.effective_from || '') >= clean.effective_from) {
+          errors.effective_from = 'This question already has a version from ' + r.effective_from + '. A change must start after that date.';
+          return;
+        }
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- check_value
+  // The answers to a check's form: one row per answer, pointing at the check_log row and the exact check_field
+  // version asked. Never sent on its own: the save writes these with the check_log row (Sink.gs formRows_), all or
+  // none. Own switch, OFF by default; while it is off, a check_log save with answers is refused.
+  check_value: {
+    key: 'check_value',
+    file: 'BLD-check_value.csv',
+    idPrefix: 'cvl',
+    columns: ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'],
+    proposedColumns: ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: [], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {},
+    dupKey: [], dupTimeCol: null,
+    stamp: function () {}
   },
 
   // ---------------------------------------------------------------- check_log
@@ -365,14 +451,15 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
-      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
+      { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' }
     ],
     perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER'] },
     alwaysPending: false,
@@ -387,9 +474,10 @@ var TABLES = {
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
-      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] }       // scanned = opened from a tag: it says which screen, not that anyone was there
+      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] },      // scanned = opened from a tag: it says which screen, not that anyone was there
+      litter_id:     { type: 'ref', lookup: 'litter' }                              // 12 Nov 2026: a litter job (check_type target litter)
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'item'], dupTimeCol: 'taken_at',
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors) {
       if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
@@ -763,6 +851,8 @@ var READABLE = {
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
   check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
   check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' },
+  check_field:     { file: 'BLD-check_field.csv',     vis: 'check_field',     authorCol: 'set_by',      dateCol: 'set_at' },
+  check_value:     { file: 'BLD-check_value.csv',     vis: 'check_value',     authorCol: '',            dateCol: '' },
   qr_tag:          { file: 'BLD-qr_tag.csv',          vis: 'qr_tag',          authorCol: '',            dateCol: '' },
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
