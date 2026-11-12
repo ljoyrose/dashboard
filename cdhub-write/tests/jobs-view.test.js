@@ -20,3 +20,10 @@ test('a litter\'s history lists only its own records', () => {
   const v = Object.assign({}, base, { logs: logs.concat([{ id: 'l2', check_type_id: 'cty-socialise', litter_id: 'lit2', outcome: 'ok', taken_at: '2026-03-01T09:00:00Z' }]) });
   assert.deepEqual(V.history(v, { litter_id: 'lit1' }).map((r) => r.at), ['2026-03-02T09:00:00Z']);
 });
+
+test('an isolation-only room job is counted for the isolation room and its dogs, not every room and dog', () => {
+  const v = { today: '2026-03-02', logs: [], litters: [], types: [Object.assign(T('iso_checks', 'area', '1'), { only_in_areas: 'iso', site_scope: 'per_dog', sop: 'Isolation' })],
+    dogs: [{ id: 'd1', area_id: 'iso' }, { id: 'd2', area_id: 'r1' }], areas: [{ id: 'iso' }, { id: 'r1' }] };
+  const row = V.summary(v)[0];
+  assert.equal(row.due, 1);
+});

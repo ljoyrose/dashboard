@@ -132,3 +132,13 @@ test('a whole-site job that includes a room job restarts it in every room except
   const plain = [T('site_clean', 'none', '1', { not_in_areas: 'iso' }), T('daily_clean', 'area', '1')];
   assert.equal(one(D.forTarget(plain, logs.map((l) => Object.assign({}, l, { check_type_id: 'cty-site_clean-1' })), { area_id: 'r1' }, '2026-03-02'), 'daily_clean').status, 'never');
 });
+
+test('a room job with only_in_areas shows only in those rooms, and counts only the dogs in them', () => {
+  const types = [T('iso_checks', 'area', '1', { only_in_areas: 'iso', site_scope: 'per_dog' }), T('daily_clean', 'area', '1')];
+  const day = '2026-03-02';
+  assert.deepEqual(D.forTarget(types, [], { area_id: 'iso' }, day).map((j) => j.type_key).sort(), ['daily_clean', 'iso_checks']);
+  assert.deepEqual(D.forTarget(types, [], { area_id: 'r1' }, day).map((j) => j.type_key), ['daily_clean']);
+  assert.equal(D.forTarget(types, [], { subject_id: 'd1', everyDog: true, dogArea: 'iso' }, day).length, 1);
+  assert.equal(D.forTarget(types, [], { subject_id: 'd2', everyDog: true, dogArea: 'r1' }, day).length, 0);
+  assert.equal(D.forTarget(types, [], { subject_id: 'd2', everyDog: true }, day).length, 0);
+});
