@@ -269,7 +269,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round).not.toContainText('Field 1');
   });
 
-  test('Lisa 11 Nov: a missed reading typed on a later day shows on its own day (period_start), even for an ended thermometer', async ({ page, guard }) => {
+  test('Lisa 11 Nov: an earlier reading typed on a later day shows on its own day (period_start), even for an ended thermometer', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;

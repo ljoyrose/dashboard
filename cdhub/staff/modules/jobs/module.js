@@ -56,6 +56,8 @@
       host.appendChild(status); host.appendChild(list);
       if (tag && !site) host.appendChild(h('button', { class: 'btn quiet job-move', type: 'button', text: 'Move dogs', onclick: moves }));
 
+      /* a room job restarted by a bigger job, such as the whole-site clean, says which */
+      function byLine(job) { var b = job.reset_by && byKey[job.reset_by]; return b && job.status === 'ok' ? ' · ' + b.label : ''; }
       function say(text, kind) { status.className = 'msg ' + (kind || ''); status.textContent = text; }
 
       function send(job, t, outcome, inputs, panelMsg, state) {
@@ -104,7 +106,7 @@
         ]);
         panel.appendChild(problems); panel.appendChild(panelMsg);
         var head = h('div', { class: 'job-head' }, [
-          h('div', { class: 'job-txt' }, [h('div', { class: 'nm', text: job.label }), h('div', { class: 'ds', text: dueLine(job) })]),
+          h('div', { class: 'job-txt' }, [h('div', { class: 'nm', text: job.label }), h('div', { class: 'ds', text: dueLine(job) + byLine(job) })]),
           h('button', { class: 'btn', type: 'button', text: site ? 'Yes' : 'Done', 'aria-label': (site ? 'Yes, done: ' : 'Done: ') + job.label, onclick: function () {
             if (needs && panel.hidden) { panel.hidden = false; return; }
             if (roomList) panel.hidden = false;

@@ -302,3 +302,32 @@ test('audit: a room with two thermometers has a line per thermometer; a blank th
   await expect(page.locator('#view-d .rtile', { hasText: 'H5/6 · H6' }).locator('.warn')).toHaveText(['AM missed']);
   await expect(page.locator('#view-d .rtile', { hasText: 'S1' }).locator('.warn')).toHaveCount(0);
 });
+
+// Links (Lisa 12 Nov 2026, "I need the temps to show continuously"): BLD-area_link rows make an old room's readings
+// show for the room it became. A split room shows in both new rooms; a merged room shows the widest of its old
+// readings (lowest MIN, highest MAX), never an average. The old rooms keep their own lines; nothing is rewritten.
+test('audit: area links show old rooms\' readings in the new rooms, widest for a merged slot', async ({ page, guard }) => {
+  const rooms = 'id,code,group_sort\nold-a,3B.1/2,1\nold-s,3B.3/4,2\nnew-1,3B.1/2/3,3\nnew-2,3B.4/5,4\n';
+  const links = 'id,tenant_id,from_area_id,to_area_id,from_date,to_date\n'
+    + 'l1,t,old-a,new-1,2025-01-01,2026-01-12\nl2,t,old-s,new-1,2025-01-01,2026-01-12\nl3,t,old-s,new-2,2025-01-01,2026-01-12\n';
+  const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,thermometer_id\n'
+    + 'rdg-1,old-a,2026-01-12T09:00:00Z,2026-01-12T00:00:00+00:00,12.0,15.0,typed,\n'
+    + 'rdg-2,old-s,2026-01-12T09:05:00Z,2026-01-12T00:00:00+00:00,10.0,14.0,typed,\n'
+    + 'rdg-3,old-s,2026-01-13T09:05:00Z,2026-01-13T00:00:00+00:00,11.0,13.0,typed,\n';
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard, null, rooms);
+  put('BLD-area_reading.csv', readings);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  guard.world.file('bld-links', 'BLD-area_link.csv', links, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await page.locator('#rdate').fill('2026-01-12');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile', { hasText: '3B.1/2/3 (from 3B.1/2, 3B.3/4)' })).toContainText('10.0–15.0');
+  await expect(page.locator('#view-d .rtile', { hasText: '3B.4/5 (from 3B.3/4)' })).toContainText('10.0–14.0');
+  await expect(page.locator('#view-d .rtile', { hasText: /^3B\.1\/2\b/ }).first()).toBeVisible();
+  // after the link's to_date the old room's reading stays only on the old room
+  await page.locator('#rdate').fill('2026-01-13');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile', { hasText: '(from' })).toHaveCount(0);
+});

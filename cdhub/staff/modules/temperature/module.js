@@ -71,7 +71,7 @@
     var am = p.hour < 12;
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: p.date, periodStart: londonIso(p.date, am ? '00' : '12') };
   }
-  /** A given day's morning or afternoon slot, for a missed reading entered later. */
+  /** A given day's morning or afternoon slot, for an earlier reading entered later. */
   function slotFor(dateIso, key) {
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
@@ -248,7 +248,7 @@
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
     host.textContent = '';
     host.appendChild(h('h2', { text: o.area.label }));
-    host.appendChild(h('p', { class: 'sub', text: (past ? 'Missed reading · ' + ddmmyy(slot.date) + ' ' : '') + slot.label + ' reading' + (lim.min != null ? ' · Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C' + (lim.label ? ' (' + lim.label + ')' : '') : '') }));
+    host.appendChild(h('p', { class: 'sub', text: (past ? 'Earlier reading · ' + ddmmyy(slot.date) + ' ' + slot.label : slot.label + ' reading') + (lim.min != null ? ' · Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C' + (lim.label ? ' (' + lim.label + ')' : '') : '') }));
     var banner = o.save.banner(table);
     var bannerEl = say(banner.canSave ? '' : banner.text, banner.canSave ? '' : 'warn');
     host.appendChild(bannerEl);
@@ -256,7 +256,7 @@
     var camBox = h('div'), camMsg = say('');
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
-    // A missed reading is typed from the paper sheet or a photo: the thermometer no longer shows that day's numbers.
+    // An earlier reading is typed from the paper sheet or a photo: the thermometer no longer shows that day's numbers.
     if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn, typeBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
     if (table === 'area_reading') {
@@ -319,7 +319,7 @@
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
       if (o.area.thermometerId && table === 'area_reading') f.thermometer_id = o.area.thermometerId;
-      // A missed reading is typed from a photo: saved as 'photo' (Lisa 11 Nov 2026), never shown.
+      // An earlier reading is typed from a photo: saved as 'photo' (Lisa 11 Nov 2026), never shown.
       if (!none) { f.max_c = mx; f.min_c = mn; f.read_method = cam ? 'camera' : past ? 'photo' : 'typed'; }
       if (empty) f.room_empty = 'yes';
       if (cam && !none) f.camera_value_changed = (cam.max !== mx || cam.min !== mn) ? 'true' : 'false';
@@ -344,8 +344,13 @@
     return stopNow;
   }
 
-  /* ------------------------------------------------------------------ missed reading (a past day) */
-  /* Lisa, 11 Nov 2026: entry is never closed. A missed reading can be typed later for any past slot, for every
+  /** Readings plus a copy for each room an old room became (BLD-area_link via BLDAreaLink); none when either is missing. */
+  function linked(rows, links) {
+    var L = window.BLDAreaLink;
+    return L && links && links.length ? L.expand(rows || [], links) : (rows || []).slice();
+  }
+  /* ------------------------------------------------------------------ add earlier reading (a past day) */
+  /* Lisa, 11 Nov 2026: entry is never closed. An earlier reading can be typed later for any past slot, for every
      thermometer needed that day (BLDThermometer.neededList), retired ones included. The round itself only shows
      today's. Saved with that slot's period_start, so History and the year report put it on the right day. */
   function backfill(host, o) {
@@ -354,7 +359,7 @@
     var half = h('select', { class: 'inp', 'aria-label': 'Morning or afternoon' }, [h('option', { value: 'am', text: 'Morning' }), h('option', { value: 'pm', text: 'Afternoon' })]);
     var list = h('div'), msg = say('');
     host.textContent = '';
-    host.appendChild(h('h2', { text: 'Missed reading' }));
+    host.appendChild(h('h2', { text: 'Add earlier reading' }));
     host.appendChild(h('p', { class: 'sub', text: 'Type a reading from the paper sheet or a photo for a past morning or afternoon.' }));
     host.appendChild(h('div', { class: 'tg-row' }, [day, half]));
     host.appendChild(msg); host.appendChild(list);
@@ -526,7 +531,7 @@
     });
     return out;
   }
-  function report(host, c, areas, bands, thermos) {
+  function report(host, c, areas, bands, thermos, links) {
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Year report' }));
     host.appendChild(h('p', { class: 'sub', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
@@ -544,16 +549,27 @@
       // One room, one year per read (the save script's filter), so a year of readings stays under the read limit.
       // An older script that refuses the filter gets the plain read; yearRows still picks the room and year.
       var pick = room.value.split('|'), areaId = pick[0], thermoId = pick[1] || '';
-      var f = { area_id: areaId, from: year.value + '-01-01', to: (parseInt(year.value, 10) + 1) + '-12-31' };   // to: a missed reading is saved (taken_at) after its day; yearRows keeps the year by period_start
+      var f = { area_id: areaId, from: year.value + '-01-01', to: (parseInt(year.value, 10) + 1) + '-12-31' };   // to: an earlier reading is saved (taken_at) after its day; yearRows keeps the year by period_start
       function readYear(key) {
         return c.save.read(key, f).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read(key); })
           .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
       }
-      Promise.all([readYear('area_reading'), readYear('guest_reading'), readYear('sensor_reading')]).then(function (v) {
+      // A new room's year includes the old rooms linked into it (BLD-area_link): read each, keep the copies for this room.
+      var L = window.BLDAreaLink, from = L && links && links.length ? L.sourcesOf(links, areaId) : [];
+      function readArea(id) { var g = {}; Object.keys(f).forEach(function (k) { g[k] = f[k]; }); g.area_id = id;
+        return c.save.read('area_reading', g).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
+          .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; }); }
+      Promise.all([readYear('area_reading'), readYear('guest_reading'), readYear('sensor_reading')].concat(from.map(readArea))).then(function (v) {
+        if (from.length) {
+          var own = v[0].ok ? v[0].rows : [];
+          var old = []; v.slice(3).forEach(function (x) { if (x.ok) old = old.concat(x.rows.filter(function (r) { return from.indexOf(r.area_id) >= 0; })); });
+          v[0] = { ok: v[0].ok, truncated: v[0].truncated || v.slice(3).some(function (x) { return x.truncated; }), message: v[0].message,
+            rows: own.concat(linked(old, links).filter(function (r) { return r.linked_from && r.area_id === areaId; })) };
+        }
         if (!v[0].ok) { setMsg(msg, 'Readings cannot be read with this code: ' + (v[0].message || ''), 'bad'); return; }
         setMsg(msg, (v[0].truncated ? 'Only the first ' + v[0].rows.length + ' readings came back: the list is longer than one read allows. ' : '') + (v[1].ok ? '' : 'Guest readings not shown. ') + (v[2].ok ? '' : 'Sensor back-up not shown.'), v[0].truncated ? 'warn' : '');
         draw(yearRows(thermoId ? v[0].rows.filter(function (r) { return String(r.thermometer_id || '') === thermoId; }) : v[0].rows,
-          thermoId ? [] : (v[1].ok ? v[1].rows : []), thermoId ? [] : (v[2].ok ? v[2].rows : []), areaId, year.value), areaId);
+          thermoId ? [] : (v[1].ok ? v[1].rows : []), thermoId ? [] : (v[2].ok ? v[2].rows : []), areaId, year.value, function (id) { var a = (areas || []).filter(function (x) { return x.id === id; })[0]; return a ? a.code || a.label : id; }), areaId);
       });
     }
     function draw(rows, areaId) {
@@ -606,7 +622,8 @@
     }
   }
   /** Rows of one room and year from the three lists, oldest first. Guest and sensor rows are labelled, never merged. */
-  function yearRows(staff, guest, sensor, areaId, year) {
+  function yearRows(staff, guest, sensor, areaId, year, codeOf) {
+    codeOf = codeOf || function (id) { return id; };
     var out = [];
     function slotOf(iso) { var hr = parseInt(String(iso).slice(11, 13), 10); return isNaN(hr) ? '' : (hr < 12 ? 'AM' : 'PM'); }
     staff.forEach(function (r) {
@@ -615,7 +632,7 @@
       // Lisa, 11 Nov 2026: how a reading was taken (read_method, camera_value_changed) is saved only, never shown.
       var empty = String(r.room_empty || '').toLowerCase() === 'yes';
       out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', empty: empty,
-        note: [empty ? 'Room empty' : '', r.mitigation_note || ''].filter(Boolean).join(' · ') });
+        note: [empty ? 'Room empty' : '', r.linked_from ? 'From ' + codeOf(r.linked_from) : '', r.mitigation_note || ''].filter(Boolean).join(' · ') });
     });
     guest.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
@@ -660,7 +677,7 @@
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link')]).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
@@ -671,13 +688,14 @@
       var areas = d.raw && d.raw.area && d.raw.area.length ? areaRows(d.raw.area, req, slotNow().date)
         : d.areas.map(function (a) { return { id: a.id, code: a.label, label: a.label, sort: a.sort }; });
       var bands = v[1].ok ? v[1].rows : [];
+      var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Missed reading', onclick: function () { if (stop) stop(); stop = null; back();
-            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: v[2].ok ? v[2].rows.slice() : [], setStop: function (f) { stop = f; } }); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : []); } }),
+          h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
+            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
+          h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }),
           h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } })
         ]);
       }
