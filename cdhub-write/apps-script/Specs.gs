@@ -668,8 +668,10 @@ var TABLES = {
     alwaysPending: false,
     defaultMode: 'direct',
     input: {
-      rule_key:       { type: 'enum', values: ['min_dam_age_months', 'max_litters_per_dam', 'min_months_between_litters'], required: true },
-      value:          { type: 'count', required: true },
+      // any key (overseer 12 Nov 2026 sweep): size_from_kg.*, size_colour.*, compliance.*, staffing.*, room.* are rows too.
+      // Only the keys in BREEDING_RULE_LIMITS_ are checked as whole numbers with a usual range.
+      rule_key:       { type: 'text', required: true },
+      value:          { type: 'text', required: true },
       effective_from: { type: 'date', required: true },
       source:         { type: 'text' },
       note:           { type: 'text' },
@@ -680,7 +682,12 @@ var TABLES = {
     dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
+      if (row.rule_key && !/^[a-z][a-z0-9_.\-]{1,99}$/.test(row.rule_key)) errors.rule_key = 'Use lower-case letters, numbers, dots, dashes and underscores, e.g. size_from_kg.medium.';
       var lim = BREEDING_RULE_LIMITS_[row.rule_key];
+      if (lim && row.value !== '' && !errors.value) {
+        if (!/^\d{1,3}$/.test(row.value)) errors.value = 'Use a whole number from 0 to 999.';
+        else row.value = String(parseInt(row.value, 10));
+      }
       if (lim && !errors.value && row.value !== '') {
         var n = parseInt(row.value, 10);
         if ((n < lim[0] || n > lim[1]) && row.confirm_unusual !== 'yes') {
