@@ -11,7 +11,7 @@
 })(this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   // ---- page bodies ----
   var CHALLENGE = [
@@ -171,11 +171,75 @@
     return '';
   }
 
+  // ---- RDAP (caller fetches the JSON; nothing here contacts a registry) ----
+  function vcardFn(entity) {
+    var v = entity && entity.vcardArray;
+    var rows = v && Array.isArray(v[1]) ? v[1] : [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] && String(rows[i][0]).toLowerCase() === 'fn' && rows[i][3]) return String(rows[i][3]).trim();
+    }
+    return '';
+  }
+  function firstFn(entity) {
+    var name = vcardFn(entity);
+    if (name) return name;
+    var kids = (entity && entity.entities) || [];
+    for (var i = 0; i < kids.length; i++) {
+      name = firstFn(kids[i]);
+      if (name) return name;
+    }
+    return '';
+  }
+
+  // RDAP domain document -> { nameservers, registrar }. Missing pieces are empty. Never throws.
+  function rdapIdentity(doc) {
+    var ns = [], registrar = '';
+    var list = (doc && Array.isArray(doc.nameservers)) ? doc.nameservers : [];
+    list.forEach(function (n) {
+      var h = String((n && (n.ldhName || n.unicodeName)) || '').trim().toLowerCase().replace(/\.$/, '');
+      if (h && ns.indexOf(h) === -1) ns.push(h);
+    });
+    function walk(ents) {
+      (ents || []).forEach(function (e) {
+        if (!e) return;
+        var roles = (e.roles || []).map(function (r) { return String(r).toLowerCase(); });
+        if (!registrar && roles.indexOf('registrar') !== -1) registrar = firstFn(e);
+        if (Array.isArray(e.entities)) walk(e.entities);
+      });
+    }
+    walk(doc && doc.entities);
+    return { nameservers: ns, registrar: registrar };
+  }
+
+  // A nameserver value from a row or a previous scan: hosts, lower case, no trailing dot, order kept, blanks dropped.
+  function nameserverList(v) {
+    var raw = Array.isArray(v) ? v : String(v == null ? '' : v).split(/[\s,;]+/);
+    var out = [];
+    raw.forEach(function (n) {
+      var h = String(n == null ? '' : n).trim().toLowerCase().replace(/\.$/, '');
+      if (h && out.indexOf(h) === -1) out.push(h);
+    });
+    return out;
+  }
+
+  // null when no previous set is known, so a first scan is never a change. Otherwise { changed, previous, current }.
+  function nameserverChange(current, previous) {
+    var prev = nameserverList(previous);
+    if (!prev.length) return null;
+    var cur = nameserverList(current);
+    var a = prev.slice().sort(), b = cur.slice().sort();
+    var changed = a.length !== b.length || a.some(function (n, i) { return n !== b[i]; });
+    return { changed: changed, previous: prev, current: cur };
+  }
+
   return {
     VERSION: VERSION,
     classifyResponse: classifyResponse,
     certExpiryFromCt: certExpiryFromCt,
     domainExpiry: domainExpiry,
-    registrable: registrable
+    registrable: registrable,
+    rdapIdentity: rdapIdentity,
+    nameserverList: nameserverList,
+    nameserverChange: nameserverChange
   };
 });
