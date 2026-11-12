@@ -221,3 +221,21 @@ test('Areas room card: today\'s temperature line in the round\'s words, the limi
   await page.evaluate(() => go('areas/ar-b'));
   await expect(page.locator('[data-temp="ar-b"]')).toHaveCount(0);                    // no thermometer here: no line
 });
+
+test('dated limits: a past day uses the cut-offs in force then and the weight on or before it; room rows are read as at that day', async ({ page, guard }) => {
+  const w = guard.world;
+  put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date', [
+    'r1,t,size_from_kg.medium,10,2026-01-01,Pretend poster,,,,', 'r2,t,size_from_kg.large,25,2026-01-01,Pretend poster,,,,2026-06-30',
+    'r3,t,size_from_kg.large,20,2026-07-01,Pretend council,,,,']));
+  await HUBS.cdhub.open(page, guard);
+  const r = await page.evaluate(() => {
+    const d = { weights: [{ on: '2026-03-01', kg: 22 }, { on: '2026-11-01', kg: 9 }], size: '' };
+    const cap = [{ area_id: 'z', access_type: 'free', size_band: 'small', max_dogs: '4', to_date: '2026-11-11' },
+      { area_id: 'z', access_type: 'free', size_band: 'small', max_dogs: '3', from_date: '2026-11-12' }];
+    const four = [1, 2, 3, 4].map((i) => ({ id: 'q' + i, size: 'small' }));
+    return { march: sizeOn(d, '2026-03-15'), august: sizeOn(d, '2026-08-01'), nov: sizeOn(d, '2026-11-05'),
+      on11: BLDCapacity.check({ areaId: 'z', access: 'free', capacity: cap, dogs: four, date: '2026-11-11' }).status,
+      on12: BLDCapacity.check({ areaId: 'z', access: 'free', capacity: cap, dogs: four, date: '2026-11-12' }).status };
+  });
+  expect(r).toEqual({ march: 'medium', august: 'large', nov: 'small', on11: 'ok', on12: 'over' });   // 22 kg: medium under the 25 kg row, large under the 20 kg row
+});
