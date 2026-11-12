@@ -206,6 +206,29 @@ test('year report: a new room includes readings from the old room linked into it
   } finally { TABLES.area_reading = []; delete TABLES.area_link; }
 });
 
+test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day, never today\'s', async ({ page }) => {
+  const keep = { b: TABLES.temperature_band, r: TABLES.area_reading };
+  TABLES.temperature_band = [
+    { id: 'tb-old', band: 'Rest', min_temp: '10', max_temp: '20', from_date: '', to_date: '2026-11-11' },
+    { id: 'tb-new', band: 'Rest', min_temp: '10', max_temp: '26', from_date: '2026-11-12', to_date: '' }
+  ];
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-new', period_start: '2026-11-11T00:00:00+00:00', taken_at: '2026-11-11T08:00:00Z', min_c: '12.0', max_c: '21.0' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', taken_at: '2026-11-12T08:00:00Z', min_c: '12.0', max_c: '22.0' }
+  ];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const rows = page.locator('.tg-tab').last().locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toHaveClass(/tg-br/);       // 11/11: 21.0 is over 20.0, the row in force that day
+    await expect(rows.nth(1)).not.toHaveClass(/tg-br/);   // 12/11: 22.0 is inside 26.0, the row in force that day
+  } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
+});
+
 test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
   ROLE.v = 'STAFF';
   try {

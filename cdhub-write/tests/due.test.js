@@ -142,3 +142,23 @@ test('a room job with only_in_areas shows only in those rooms, and counts only t
   assert.equal(D.forTarget(types, [], { subject_id: 'd2', everyDog: true, dogArea: 'r1' }, day).length, 0);
   assert.equal(D.forTarget(types, [], { subject_id: 'd2', everyDog: true }, day).length, 0);
 });
+
+test('a whole-site job about dogs: shown on each dog and room it covers, done once every dog has a line', () => {
+  const types = [T('health', 'none', '1', { site_scope: 'per_dog', not_in_areas: 'iso' })];
+  const dogs = [{ id: 'd1', area_id: 'r1' }, { id: 'd2', area_id: 'r2' }, { id: 'd3', area_id: 'iso' }];
+  const line = (dog) => ({ id: 'l-' + dog, check_type_id: 'cty-health-1', subject_id: dog, outcome: 'ok', how_recorded: 'site_tap', taken_at: '2026-03-02T09:00:00Z' });
+  const one = (target, logs) => D.forTarget(types, logs, target, '2026-03-02')[0];
+  // one dog done as they go: that dog and its room are done; the site waits for the other dog (the isolation dog is never counted)
+  assert.equal(one({ subject_id: 'd1', dogs: [dogs[0]] }, [line('d1')]).status, 'ok');
+  assert.equal(one({ area_id: 'r1', dogs: [dogs[0]] }, [line('d1')]).status, 'ok');
+  assert.equal(one({ area_id: 'r2', dogs: [dogs[1]] }, [line('d1')]).status, 'never');
+  assert.equal(one({ dogs }, [line('d1')]).status, 'never');
+  assert.equal(one({ dogs }, [line('d1'), line('d2')]).status, 'ok');
+  // not on the isolation room or its dog, and not on a dog or room screen unless the dogs are given
+  assert.equal(one({ area_id: 'iso', dogs: [dogs[2]] }, []), undefined);
+  assert.equal(one({ subject_id: 'd3', dogs: [dogs[2]] }, []), undefined);
+  assert.equal(one({ subject_id: 'd1' }, []), undefined);
+  // an older dog line makes the site late by that dog
+  const old = Object.assign(line('d2'), { taken_at: '2026-02-27T09:00:00Z' });
+  assert.equal(one({ dogs }, [line('d1'), old]).days_late, 2);
+});

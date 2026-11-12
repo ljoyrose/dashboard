@@ -89,6 +89,24 @@ function ui_revokeCode(codeId) {
   catch (ex) { return errorBody_(ex); }
 }
 
+/** Inspector links (Inspect.gs). Owner-only. Make returns the code ONCE for the page to show; it is never logged. */
+function ui_inspectChoices() {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectChoices_() }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_inspectMake(spec) {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectMake_(spec, adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_inspectLinks() {
+  try { requireAdmin_(); return { ok: true, result: { links: sinkInspectLinks_() } }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_inspectStop(linkId) {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectStop_(String(linkId), adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
 /** Called from the approval page. Owner-only: lists the newest entries of one table so one can be picked. */
 function ui_editList(table) {
   try { requireAdmin_(); return { ok: true, result: sinkOwnerEditList_(String(table)) }; }

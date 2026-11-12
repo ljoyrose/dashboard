@@ -25,6 +25,9 @@
  *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
  *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
  *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
+ *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
+ *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
+ *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
  * are not recorded. Corrections go through the screen.
@@ -46,7 +49,9 @@ var BLD = {
     READ_ENABLED: 'READ_ENABLED',
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
-    DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID'
+    DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID',
+    INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
+    INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
