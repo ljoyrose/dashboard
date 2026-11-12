@@ -55,17 +55,20 @@
   function perDogRoom(job) { return job.target === 'area' && job.site_scope === 'per_dog'; }
   function appliesTo(job, target) {
     var t = job.target;
+    if (target.litter_id) return t === 'litter';
     if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job));
     if (target.area_id) return t === 'area' || t === 'either';
     return t === 'none';
   }
   function sameTarget(row, target, version) {
     if (perDogRoom(version)) return target.subject_id ? row.subject_id === target.subject_id : (row.area_id || '') === (target.area_id || '');
+    if (version.target === 'litter') return (row.litter_id || '') === (target.litter_id || '');
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
   /**
-   * Every job for one dog ({subject_id}; add everyDog: true to count that dog on room jobs saved per dog), one room ({area_id}) or the whole site ({}).
+   * Every job for one dog ({subject_id}; add everyDog: true to count that dog on room jobs saved per dog), one room ({area_id}),
+   * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */

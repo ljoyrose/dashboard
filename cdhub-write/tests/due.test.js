@@ -108,3 +108,14 @@ test('until the columns exist every job is as needed, and bad numbers do not gue
   ['', '0', '-3', '2.5', 'weekly', null].forEach((v) => assert.equal(D.everyDays(v), null));
   assert.equal(D.everyDays(' 12 '), 12);
 });
+
+test('a litter job belongs to one litter only, and never shows for a dog, room or the site', () => {
+  const types = [T('socialise', 'litter', '1'), T('nails', 'dog', '28')];
+  const logs = [L('socialise', '2026-03-02', { subject_id: '', litter_id: 'lit1' })];
+  assert.equal(one(D.forTarget(types, logs, { litter_id: 'lit1' }, '2026-03-02'), 'socialise').status, 'ok');
+  assert.equal(one(D.forTarget(types, logs, { litter_id: 'lit2' }, '2026-03-02'), 'socialise').status, 'never');
+  assert.equal(D.forTarget(types, logs, { litter_id: 'lit1' }, '2026-03-02').length, 1);
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1' }, '2026-03-02').filter((j) => j.type_key === 'socialise').length, 0);
+  assert.equal(D.forTarget(types, logs, { area_id: 'r1' }, '2026-03-02').length, 0);
+  assert.equal(D.forTarget(types, logs, {}, '2026-03-02').length, 0);
+});

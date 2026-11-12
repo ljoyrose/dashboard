@@ -27,7 +27,7 @@
     function moves() { c.go('mv/' + tag); }
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }]).then(function (v) {
       var d = v[0], typesRead = v[1], logs = v[2].rows || [], tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
       host.textContent = '';
@@ -37,12 +37,16 @@
       var target = {}, title = 'Today', site = true;
       if (tag) {
         var row = (tags.rows || []).filter(function (t) { return t.tag === tag && isOn(t); })[0];
-        if (!row || (row.kind !== 'subject' && row.kind !== 'area' && row.kind !== 'site')) { moves(); return; }
+        if (!row || ['subject', 'area', 'site', 'litter'].indexOf(row.kind) < 0) { moves(); return; }
         site = row.kind === 'site';
         if (row.kind === 'subject') { target.subject_id = row.ref_id; title = ((d.subjects.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Dog'; }
+        if (row.kind === 'litter') {
+          var lit = (v[4].rows || []).filter(function (x) { return x.id === row.ref_id; })[0] || {}, dam = d.subjects.filter(function (x) { return x.id === lit.dam_subject_id; })[0];
+          target.litter_id = row.ref_id; title = dam ? 'Litter of ' + dam.label : 'Litter';
+        }
         if (row.kind === 'area') { target.area_id = row.ref_id; title = ((d.areas.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Room'; }
       }
-      ctx0.reportFor = target;
+      ctx0.reportFor = target.litter_id ? {} : target;
       var roomDogs = target.area_id ? d.dogs.filter(function (x) { return x.areaId === target.area_id && !x.away; }) : [];
 
       var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {};
@@ -62,6 +66,7 @@
         var entry = { check_type_id: t.id, outcome: outcome, how_recorded: how };
         if (target.subject_id) entry.subject_id = target.subject_id;
         if (target.area_id) entry.area_id = target.area_id;
+        if (target.litter_id) entry.litter_id = target.litter_id;
         if (inputs.item) entry.item = inputs.item.value.trim();
         if (inputs.amount) entry.amount = inputs.amount.value.trim();
         if (inputs.note) entry.note = inputs.note.value.trim();

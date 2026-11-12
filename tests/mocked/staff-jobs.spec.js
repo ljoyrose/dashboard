@@ -162,3 +162,27 @@ test('a thermometer scan opens the temperature round at that thermometer, and sa
   expect(Math.abs(Date.now() - t.at)).toBeLessThan(60000);
   expect(sent).toHaveLength(0);
 });
+
+test('a litter code opens that litter\'s jobs and saves against the litter', async ({ page }) => {
+  const sent = await setup(page, {
+    check_type: TYPES.concat([J('socialise', 'Socialisation', 'litter', { every_days: '1' })]),
+    litter: [{ id: 'lit-1', dam_subject_id: 'dog-1' }],
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }])
+  });
+  await page.goto('cdhub/staff/#s/LITTAG22');
+  await expect(page.getByRole('heading', { name: 'Litter of Pretend A' })).toBeVisible();
+  await expect(page.locator('[data-job]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Done: Socialisation' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-socialise', litter_id: 'lit-1', outcome: 'ok', how_recorded: 'scanned' } });
+  expect(sent[0].fields.subject_id).toBeUndefined();
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await expect(page.locator('[data-job="socialise"]')).toHaveCount(0);
+});
+
+test('a litter code with no litter jobs goes on to Move dogs as before', async ({ page }) => {
+  await setup(page, { litter: [{ id: 'lit-1', dam_subject_id: 'dog-1' }], qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }]) });
+  await page.goto('cdhub/staff/#s/LITTAG22');
+  await expect(page.locator('[data-job]')).toHaveCount(0);
+  await expect(page.getByText('Scan a room sign first')).toBeVisible();
+});
