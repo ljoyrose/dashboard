@@ -1138,7 +1138,12 @@ var BREED_RULES=[
  ['max_litters_per_dam','Most litters per bitch','litters'],
  ['min_months_between_litters','Shortest time between litters','months']];
 /* settings kept in the same rule list (one rule list, Lisa 9 Nov), not breeding checks: not in the "3 rules not set" count */
-var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days']];
+var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days'],
+ ['staffing.adults_per_full_time','Adult dogs per full-time carer','dogs'],['staffing.adults_per_part_time','Adult dogs per part-time carer','dogs']];
+/* Today's staffing tile: only from the owner's rows (no assumed ratio). Not set: no tile. */
+function staffRule(){ var t=todayISO(), f=breedRule('staffing.adults_per_full_time',t), p=breedRule('staffing.adults_per_part_time',t);
+ var nf=f?parseInt(f.value,10):0, np=p?parseInt(p.value,10):0; if(!(nf>0)) return null;
+ return {ft:nf,pt:np>0?np:0,src:[f.source,p&&p.source].filter(Boolean).join('; ')}; }
 function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
@@ -1454,7 +1459,7 @@ function pageToday(){
  var temps=cabinRows.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; });
  var cabins=cabinRows.length;
  var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
- var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
+ var sr=staffRule();
  var h='<h2>Today: '+esc(dmy(date))+'</h2>'
  +todayChecklist(date,unplaced.length)
  +'<div class="mecards">'+onSiteCard()+tempsCard()+'</div>'
@@ -1462,7 +1467,7 @@ function pageToday(){
  +tileGo('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','enter on The round','round')
  +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,'dogs not yet placed','','unplaced')
  +tileC('b6',c.here.length,'dogs here','tap for the list','here')
- +tileC('b4',ft+' FT',(pt+' PT')+' \u2014 staffing','1 per 20 adults, or 1 per 10','adults')+'</div>'
+ +(sr?tileC('b4',Math.ceil(c.adults.length/sr.ft)+' FT',(sr.pt?Math.ceil(c.adults.length/sr.pt)+' PT':'')+' staffing',esc('1 per '+sr.ft+(sr.pt?', or 1 per '+sr.pt:'')+' adults'+(sr.src?' ('+sr.src+')':'')),'adults'):'')+'</div>'
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
    /* kit: animal */
    return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
