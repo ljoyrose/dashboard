@@ -284,6 +284,12 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
 .ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
+.ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph .off{display:none !important}
+.dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.dogphoto-btn{justify-content:center;padding:0 8px}
+.dogphoto-msg{margin:0 12px 8px}
+.dogphoto-msg:empty{display:none}
 .ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center}
 .ph .gicon svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
 .ph .gicon.f{background:var(--female)}
@@ -451,9 +457,9 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+var OPTIONAL_FILES={'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
@@ -832,6 +838,7 @@ function build(){
       treats:DSP[r.id]||[], dna:DNA[r.id]||[], vacc:VAC[r.id]||[],
       chip:m.chip_number||'',source:r.source,
       rxExpiry:r.rx_moxi_expiry||'',rxUrl:r.rx_moxi_file_url||'',
+      photo:r.photo||'',
       species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
       colour:c?{name:c.name,family:c.base_family,hex:c.swatch_hex,noseApplies:c.nose_pigment_applies==='true'}:null,
       pat:p?p.name:'',pig:g?{name:g.name,code:g.code,hex:g.swatch_hex}:null,
@@ -1909,6 +1916,118 @@ function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
   +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
   +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
   +'</a></div>'; }
+/* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
+   (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
+function dogPhotoId(v){
+ v=String(v==null?'':v).trim();
+ if(!v) return '';
+ var m=/\/file\/d\/([A-Za-z0-9_-]+)/.exec(v)||/[?&]id=([A-Za-z0-9_-]+)/.exec(v);
+ if(m) return m[1];
+ if(/^https?:/i.test(v)) return '';
+ return /^[A-Za-z0-9_-]{8,}$/.test(v)?v:'';
+}
+var DOGPHOTO_URLS=[];
+function showDogPhoto(img){
+ if(!img||img.getAttribute('data-fallback')==='1') return;
+ img.classList.remove('off');
+ var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
+ if(paw) paw.classList.add('off');
+}
+function pawDogPhoto(img){
+ if(!img) return;
+ img.setAttribute('data-fallback','1');
+ img.classList.add('off');
+ if(img.getAttribute('src')) img.removeAttribute('src');
+ var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
+ if(paw) paw.classList.remove('off');
+}
+function dogPhotoBytes(img,id){
+ img.setAttribute('data-tried','bytes');
+ if(!TOKEN){ pawDogPhoto(img); return; }
+ DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+  if(!res.ok){ pawDogPhoto(img); return; }
+  return res.blob().then(function(b){
+   if(!b||!/^image\//.test(b.type||'')){ pawDogPhoto(img); return; }
+   var url=URL.createObjectURL(b); DOGPHOTO_URLS.push(url); img.src=url;
+  });
+ }).catch(function(){ pawDogPhoto(img); });
+}
+function loadDogPhotos(){
+ Array.prototype.forEach.call(document.querySelectorAll('img.dogphoto[data-photo-id]'), function(img){
+  var id=img.getAttribute('data-photo-id');
+  if(!id||!TOKEN){ pawDogPhoto(img); return; }
+  img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
+  img.addEventListener('error', function(){
+   if(img.getAttribute('data-tried')==='bytes'){ pawDogPhoto(img); return; }
+   dogPhotoBytes(img,id);
+  });
+  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+   var link=meta&&meta.thumbnailLink;
+   if(link&&/^https:\/\//i.test(link)){ img.src=link; return; }
+   dogPhotoBytes(img,id);
+  }).catch(function(){ dogPhotoBytes(img,id); });
+ });
+}
+function photoMsg(inp,text){
+ var card=inp&&inp.closest?inp.closest('article'):null;
+ var m=card&&card.querySelector('[data-photo-msg]');
+ if(m) m.textContent=text||'';
+}
+function fileToPhotoPayload(file){
+ return new Promise(function(resolve,reject){
+  if(!file||!/^image\//.test(file.type||'')){ reject(new Error('Choose a picture.')); return; }
+  var reader=new FileReader();
+  reader.onerror=function(){ reject(new Error('That picture could not be read.')); };
+  reader.onload=function(){
+   var dataUrl=String(reader.result||''), comma=dataUrl.indexOf(','), b64=comma>=0?dataUrl.slice(comma+1):'';
+   if(!b64){ reject(new Error('That picture could not be read.')); return; }
+   if(b64.length<=1400000){ resolve({mime:file.type||'image/jpeg',b64:b64}); return; }
+   var im=new Image();
+   im.onload=function(){
+    var max=1600, w=im.width||1, h=im.height||1, s=Math.min(1,max/Math.max(w,h));
+    var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s));
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    var q=0.82, out='', b='';
+    for(var i=0;i<4;i++){ out=c.toDataURL('image/jpeg',q); b=out.slice(out.indexOf(',')+1); if(b.length<=1600000) break; q-=0.18; }
+    if(!b||b.length>1800000){ reject(new Error('That picture is too large.')); return; }
+    resolve({mime:'image/jpeg',b64:b});
+   };
+   im.onerror=function(){ reject(new Error('That picture could not be read.')); };
+   im.src=dataUrl;
+  };
+  reader.readAsDataURL(file);
+ });
+}
+/* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
+   Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
+   holds the folder id and never changes who can see the file. */
+async function uploadDogPhoto(inp){
+ var id=inp.getAttribute('data-dog-photo')||'';
+ var file=inp.files&&inp.files[0];
+ inp.value='';
+ if(!file) return;
+ if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
+ if(!sinkOn()){ photoMsg(inp,'Saving is not set up on this device.'); return; }
+ photoMsg(inp,'Saving the photo\u2026');
+ inp.disabled=true;
+ try{
+  var pic=await fileToPhotoPayload(file);
+  var res=await fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+   body:JSON.stringify({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
+  var j;
+  try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
+  if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
+  var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
+  drawDogs();
+ }catch(e){ inp.disabled=false; photoMsg(inp,(e&&e.message)||'The photo was not saved.'); }
+}
+function bindDogPhotos(){
+ while(DOGPHOTO_URLS.length){ try{ URL.revokeObjectURL(DOGPHOTO_URLS.pop()); }catch(e){} }
+ loadDogPhotos();
+ Array.prototype.forEach.call(document.querySelectorAll('[data-dog-photo]'), function(inp){
+  inp.addEventListener('change', function(){ uploadDogPhoto(inp); });
+ });
+}
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
@@ -1944,13 +2063,20 @@ function drawDogs(){
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
    var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
+   var pic=dogPhotoId(d.photo);
    h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
 
   +'<div class="dc-top">'
+    +'<div class="dogphoto-col">'
     +'<div class="ph">'
-      +'<svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>'
+      +'<svg class="ti'+(pic?' off':'')+'" data-paw aria-hidden="true"><use href="#i-paw"/></svg>'
+      +(pic?'<img class="dogphoto off" alt="" data-photo-id="'+esc(pic)+'" referrerpolicy="no-referrer">':'')
       +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
       +(d.sizeWord?'<span class="szb" data-k="size" title="'+esc(d.sizeWhy)+'">'+esc(capFirst(d.sizeWord))+'</span>':'')
+    +'</div>'
+    +'<label class="btn dogphoto-btn">'+(pic?'Change photo':'Add photo')
+      +'<input type="file" accept="image/*" capture class="sr" data-dog-photo="'+esc(d.id)+'">'
+    +'</label>'
     +'</div>'
     +'<div class="dc-info">'
       +'<div class="nl">'
@@ -1971,6 +2097,7 @@ function drawDogs(){
       +'</div>'
     +'</div>'
   +'</div>'
+  +'<p class="mut dogphoto-msg" data-photo-msg role="status"></p>'
 
   +'<div class="dc-sects">'
 
@@ -2051,6 +2178,7 @@ function drawDogs(){
   +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
  if(DOGFOCUS) h='<p class="filt" data-focus="dog">'+(list.length?'One dog.':'Dog not found.')+' <a href="#/dogs">All dogs</a></p>'+h;
  document.getElementById('rows').innerHTML=h;
+ bindDogPhotos();
  document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(dogN<list.length?' · Showing '+dogN+' of '+list.length:'');
  fchips('dogs',['fs','fn','fa','fst','fc','ft']);
  focusMedDog();
@@ -2893,25 +3021,37 @@ function drawSops(){
    out of range, missing. Missing = BLDThermometer.missingOn: a thermometer is only flagged on days its need rows cover.
    N is a user row (no assumed timings): BLD-breeding_rule compliance.look_back_days, the version in force today. No row =
    not set: the look-back is not run and the page says so (Lisa 12 Nov: no quiet defaults).
-   A reading with a thermometer_id is its own line (a room may have more than one named thermometer). */
+   A reading with a thermometer_id is its own line (a room may have more than one named thermometer).
+   Linked rooms (BLD-area_link, Lisa 12 Nov 2026 "I need the temps to show continously so they are links"): a reading in an
+   old room inside a link's dates also counts for the new room (BLDAreaLink.expand). The room's own reading wins; two linked
+   readings in one slot are never averaged: the lowest MIN and highest MAX are kept, and the line says which rooms. */
+function compReadings(){ var rd=T['BLD-area_reading.csv']||[], ln=T['BLD-area_link.csv']||[];
+ return (typeof BLDAreaLink!=='undefined'&&ln.length)?BLDAreaLink.expand(rd,ln):rd; }
 var COMP_DAYS_KEY='compliance.look_back_days';
 function compDays(){ var r=breedRule(COMP_DAYS_KEY,todayISO()), n=r?parseInt(r.value,10):NaN; return n>0&&n<=366?{n:n,set:true,src:r.source||''}:{n:0,set:false,src:''}; }
 function dayMinus(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
 function compTemps(win){   /* win: {n,set}; Urgent passes one day (today) so it never depends on the look-back row */
- var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=T['BLD-area_reading.csv']||[], days=[], i; win=win||compDays();
+ var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=compReadings(), days=[], i; win=win||compDays();
  var tname={}; (th||[]).forEach(function(t){ tname[t.id]=t.name||t.id; });
  for(i=0;i<win.n;i++) days.push(dayMinus(today,i));
  var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
  var slot={};   /* one reading per room, day and slot: a later row wins (corrections), as on The round */
  rd.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
   var at=String(r.period_start||r.taken_at||''), d=at.slice(0,10); if(!r.area_id||days.indexOf(d)<0) return;
-  var hr=parseInt(at.slice(11,13),10); slot[d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')+'__'+(r.thermometer_id||'')]=r; });
+  var hr=parseInt(at.slice(11,13),10), k=d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')+'__'+(r.thermometer_id||''), o=slot[k];
+  if(!r.linked_from){ slot[k]=r; return; }
+  if(o&&!o.linked_from) return;   /* the room's own reading wins over a linked one */
+  if(!o){ var c={}; Object.keys(r).forEach(function(f){ c[f]=r[f]; }); c.from=[r.linked_from]; slot[k]=c; return; }
+  var w=BLDAreaLink.widest({min:o.min_c,max:o.max_c},{min:r.min_c,max:r.max_c});
+  o.min_c=w.min===null?'':String(w.min); o.max_c=w.max===null?'':String(w.max);
+  if(!(roomEmpty(o)&&roomEmpty(r))) o.room_empty='';   /* one room in use: the breach counts */
+  if(o.from.indexOf(r.linked_from)<0) o.from.push(r.linked_from); });
  var out={ok:0,empty:[],bad:[],miss:[]};
  Object.keys(slot).sort().reverse().forEach(function(k){ var r=slot[k], p=k.split('__');
   if(r.min_c===''&&r.max_c===''||r.min_c==null&&r.max_c==null){ out.ok++; return; }   /* Room empty with no reading: covered */
   var st=tempState(r.min_c,r.max_c,roomBand(r.area_id,p[0]));
   if(st==='ok'||st==='unknown'){ out.ok++; return; }
-  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',min:r.min_c,max:r.max_c,st:st};
+  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',from:(r.from||[]).map(function(a){ return code[a]||a; }),min:r.min_c,max:r.max_c,st:st};
   (roomEmpty(r)?out.empty:out.bad).push(x); });
  if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
  out.on=!!th; out.win=win; return out;
@@ -2919,7 +3059,7 @@ function compTemps(win){   /* win: {n,set}; Urgent passes one day (today) so it 
 function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
  var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
- var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
+ var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(x.from&&x.from.length?'<span class="mut" data-from> \u2014 from '+esc(x.from.join(', '))+'</span>':'')+(extra||'')+'</li>'; };
  if(!c.win.set) return compFold('compTemps','temps','Room temperatures','<p class="mut" data-window="unset" id="tempsUnset"><span class="pill w">not set</span> Days Compliance looks back \u00b7 <a href="#/compliance" data-change-window>set it</a>. Readings are not checked here until it is set.</p>'
   +'<p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
  return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set&&c.win.src?' ('+esc(c.win.src)+')':'')+' \u00b7 <a href="#/compliance" data-change-window>change</a>. A reading in a room marked empty is flagged but never counted.</p>'

@@ -247,6 +247,44 @@ test.describe('CD Hub core: rooms and dogs', () => {
     expect(r).toEqual([7, 9, null, 9, 9, 7]);
   });
 
+  test('Compliance temperatures: a reading in a linked old room counts for the new room; widest kept, own reading wins', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA);
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
+    await HUBS.cdhub.open(page, guard);
+    const c = await page.evaluate(() => {
+      const t = todayISO(), y = dayMinus(t, 1);
+      T['BLD-breeding_rule.csv'] = [{ id: 'b1', rule_key: 'compliance.look_back_days', value: '7', effective_from: '2020-01-01', source: 'Pretend setting' }];
+      T['BLD-thermometer.csv'] = [{ id: 'th-c', name: 'Pretend C', area_id: 'ar-c' }];
+      T['BLD-area_reading.csv'] = [
+        { id: 'r1', area_id: 'ar-a', min_c: '2.0', max_c: '3.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' },
+        { id: 'r2', area_id: 'ar-b', min_c: '30.0', max_c: '31.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' }
+      ];
+      // A and B both became C (a merge), links open-ended from yesterday
+      T['BLD-area_link.csv'] = [
+        { id: 'l1', from_area_id: 'ar-a', to_area_id: 'ar-c', from_date: y, to_date: '' },
+        { id: 'l2', from_area_id: 'ar-b', to_area_id: 'ar-c', from_date: y, to_date: '' }
+      ];
+      const code = {}; (CD.allAreas || CD.areas).forEach((a) => { code[a.id] = a.code || a.id; });
+      const x = compTemps();
+      const linked = x.bad.filter((b) => b.area === 'ar-c');
+      const missToday = x.miss.filter((m) => m.day === t).length;
+      // the room's own reading wins over the linked ones
+      T['BLD-area_reading.csv'].push({ id: 'r3', area_id: 'ar-c', min_c: '18.0', max_c: '20.0', period_start: t + 'T09:00:00Z', taken_at: t + 'T09:00:00Z', room_empty: '' });
+      const own = compTemps().bad.filter((b) => b.area === 'ar-c').length;
+      T['BLD-area_reading.csv'].pop();
+      go('compliance', false);
+      return { linked: linked.map((b) => ({ min: b.min, max: b.max, from: b.from })), want: [code['ar-a'], code['ar-b']], missToday, own };
+    });
+    expect(c.linked).toEqual([{ min: '2', max: '31', from: c.want }]);   // never averaged: lowest MIN, highest MAX
+    expect(c.missToday).toBe(0);   // the linked readings cover C's thermometer today
+    expect(c.own).toBe(0);
+    await expect(page.locator('#compTemps [data-k="bad"] [data-from]').first()).toContainText('from ' + c.want.join(', '));
+  });
+
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-area.csv', AREA);
