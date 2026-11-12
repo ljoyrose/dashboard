@@ -187,6 +187,6 @@
     });
   }
 
-  StaffPage.register({ id: 'jobs', title: 'Today', desc: 'Whole-site jobs due', icon: ctx0.icons.dogs, order: 5, open: open });
+  StaffPage.register({ id: 'jobs', title: 'Jobs', icon: ctx0.icons.dogs, order: 5, open: open });
   StaffPage.register({ id: 'report', title: 'Report', hidden: true, open: openReport });
 }());

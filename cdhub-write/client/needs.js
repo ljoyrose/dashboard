@@ -17,10 +17,14 @@
       return r && r.need_type === needType && r.target_table === targetTable && String(r.target_id) === String(targetId);
     });
   }
-  /** True when the target is needed / in use on `on` (YYYY-MM-DD London day). */
-  function coversDay(reqRows, needType, targetTable, targetId, on) {
+  /**
+   * True when the target is needed / in use on `on` (YYYY-MM-DD London day). opts.absentIs (default true) is the
+   * answer for a target with NO rows of that need_type: true = open (rooms, thermometers); false = only what a row
+   * names is covered (e.g. litter.jobs, so old litters with no row are never current).
+   */
+  function coversDay(reqRows, needType, targetTable, targetId, on, opts) {
     var rows = rowsFor(reqRows, needType, targetTable, targetId);
-    if (!rows.length) return true;
+    if (!rows.length) return !(opts && opts.absentIs === false);
     var d = day(on);
     if (!d) return false;
     return rows.some(function (r) { var f = day(r.from_date), t = day(r.to_date); return (!f || f <= d) && (!t || d <= t); });
