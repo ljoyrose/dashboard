@@ -180,6 +180,7 @@
     <div class="house-more" id="houseMore" hidden>
       <a href="#/do" data-nav="do" data-slot="4"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span class="htl">Do</span></a>
       <a href="#/review" data-nav="review" data-slot="6"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span class="htl">Review</span></a>
+      <a href="#/brands" data-nav="brands" data-slot="5"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span class="htl">Brands</span></a>
       <a href="#/ga" data-nav="ga" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span class="htl">GA</span></a>
     </div>
   </div>
@@ -204,7 +205,7 @@
     pack: { name: 'Pack at home', yes: 'Packed', what: 'Fish Treats you send yourself: Parcel2Go for 1-2 units, InPost for 3-4.' },
     alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
   };
-  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }, view = 'home', filter = 'sale', q = '', showAll = false, loaded = false, failed = '', focusKey = '';
+  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [], pricelists: [] }, view = 'home', filter = 'sale', q = '', showAll = false, loaded = false, failed = '', focusKey = '';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -255,6 +256,8 @@
       data.dds = table(vr[6]).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
       loaded = true; failed = ''; $('banner').className = 'banner hidden'; render();
     }).catch(function (e) { failed = e.message; banner('Could not load: ' + e.message); render(); });
+    // Brands view: GA price lists the engine saved (PriceLists tab). Read on its own so a missing tab never stops the page.
+    api(base() + '/' + encodeURIComponent('PriceLists!A1:F')).then(function (j) { data.pricelists = table(j.values || []); if (view === 'brands') render(); }).catch(function () { data.pricelists = []; });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
   // Write the 4 answer cells of the card with this key; check the key before and after, put the old values back if it moved.
@@ -487,6 +490,44 @@
     h += doChips(w); var shown = w.filter(dMatch);
     return h + (shown.length ? shown.map(function (r) { return cardHtml(r); }).join('') : '<div class="card">' + empty('Nothing for this one', 'Tap All to see every card.') + '</div>');
   }
+  // Brands (roadmap 3, 10 Nov 2026): one card per brand (Codes tab, plus any brand on an order) so Lisa sees which brand pays.
+  // Orders, sales (inc VAT) and profit (ex VAT, after all costs) for the last 30 days and all time; low-profit orders against the
+  // brand's own minimum (MIN_PROFIT_<BRAND>, then MIN_PROFIT, then £8; the order's own min_profit from engine v1.16 wins);
+  // the recipes sold under the brand with how many have a GA data sheet linked; the newest GA price list (GA's list covers every brand).
+  function brandMin(b) { var v = setting('MIN_PROFIT_' + String(b || '').toUpperCase()); return v !== '' && !isNaN(Number(v)) && num(v) > 0 ? num(v) : minProfit(); }
+  function orderMin(o) { return o.min_profit !== undefined && o.min_profit !== '' && !isNaN(Number(o.min_profit)) ? num(o.min_profit) : brandMin(o.brand); }
+  function brandStats(b, list) {
+    var since = Date.now() - 30 * 864e5, recent = list.filter(function (o) { var t = Date.parse(o.placed_at || o.shipped_date || o.invoice_date); return !isNaN(t) && t >= since; });
+    var sum = function (l, f) { return Math.round(l.reduce(function (a, o) { return a + num(o[f]); }, 0) * 100) / 100; };
+    var recipes = {};
+    list.forEach(function (o) { var l; try { l = JSON.parse(o.shop_lines || '[]'); } catch (e) { l = []; }
+      l.forEach(function (x) { if (/^TT/.test(x.code)) return; var p = productOf(x.code), k = p ? (p.ddf_name || p.recipe) : x.code;
+        if (!recipes[k]) recipes[k] = { name: k, sheet: p && /^https:\/\//.test(p.data_sheet_url || '') ? p.data_sheet_url : '' }; }); });
+    var r = Object.keys(recipes).sort().map(function (k) { return recipes[k]; });
+    return { n: list.length, n30: recent.length, sales: sum(list, 'sale_inc_vat'), sales30: sum(recent, 'sale_inc_vat'), profit: sum(list, 'profit_est'), profit30: sum(recent, 'profit_est'),
+      low: list.filter(function (o) { return o.profit_est !== '' && o.profit_est !== undefined && num(o.profit_est) < orderMin(o); }).length, min: brandMin(b), recipes: r, sheets: r.filter(function (x) { return x.sheet; }).length };
+  }
+  function pageBrands() {
+    var by = {}, keys = [];
+    data.codes.filter(function (c) { return c.kind === 'brand'; }).forEach(function (c) { var k = String(c.code).toUpperCase(); if (!by[k]) { by[k] = []; keys.push(k); } });
+    data.orders.forEach(function (o) { if (o.status === 'Cancelled') return; var k = String(o.brand || '').toUpperCase(); if (!by[k]) { by[k] = []; keys.push(k); } by[k].push(o); });
+    var pl = data.pricelists.slice().sort(function (a, b) { return String(b.received).localeCompare(String(a.received)); })[0];
+    var plLine = pl ? 'GA price list: ' + ukDate(String(pl.received).slice(0, 10)) + (pl.subject ? ' · ' + pl.subject : '') : 'GA price list: none saved yet';
+    var plBtn = pl && pl.file_ids ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(String(pl.file_ids).split(/\s+/)[0]) + '/view" target="_blank" rel="noopener">📄 Price list</a>' : '';
+    var h = '<p class="needs">Brands</p>';
+    if (!keys.length) return h + '<div class="card">' + empty('No brands yet', 'Brands come from the Codes tab and from orders.') + '</div>';
+    keys.sort(function (a, b) { return by[b].length - by[a].length || a.localeCompare(b); }).forEach(function (k) {
+      var s = brandStats(k, by[k]), name = k ? brandName(k) : 'No brand on the order';
+      h += '<p class="grp">' + esc(name) + (k && name !== k ? ' (' + esc(k) + ')' : '') + '</p><div class="tiles" data-brand="' + esc(k) + '">' +
+        '<a class="tile" href="#/orders"><span class="k">Orders</span><span class="v">' + s.n30 + '</span><span class="m">last 30 days · ' + s.n + ' in all</span></a>' +
+        '<a class="tile" href="#/orders"><span class="k">Sales (inc VAT)</span><span class="v">' + money(s.sales30) + '</span><span class="m">last 30 days · ' + money(s.sales) + ' in all</span></a>' +
+        '<a class="tile" href="#/orders"><span class="k">Profit (ex VAT)</span><span class="v">' + money(s.profit30) + '</span><span class="m">last 30 days · ' + money(s.profit) + ' in all</span></a>' +
+        '<a class="tile" href="#/orders?low"><span class="k">Under £' + s.min + ' profit</span><span class="v">' + s.low + '</span><span class="m">minimum ' + (setting('MIN_PROFIT_' + k) ? 'MIN_PROFIT_' + esc(k) : 'MIN_PROFIT') + '</span></a></div>' +
+        '<div class="card"><div class="row"><div class="txt"><b>' + s.recipes.length + ' recipe' + (s.recipes.length === 1 ? '' : 's') + ' sold</b> · data sheet linked for ' + s.sheets + (s.recipes.length ? '<div class="m">' + esc(s.recipes.map(function (x) { return x.name + (x.sheet ? '' : ' (no data sheet)'); }).join(' · ')) + '</div>' : '') +
+        '<div class="m">' + esc(plLine) + '</div>' + (plBtn ? '<div class="links">' + plBtn + '</div>' : '') + '</div></div></div>';
+    });
+    return h + '<p class="hint">Sales and profit come from the Orders tab; profit is an estimate until GA\'s invoice. One GA price list covers every brand.</p>';
+  }
   // Review (More): order growth (trend, repeat, subscriptions, reorder due) and the low-profit orders, for the weekly or monthly look.
   function pageReview() {
     var min = minProfit(), low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
@@ -645,7 +686,7 @@
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the GA Hub</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     if (!loaded && !failed) { $('view').innerHTML = '<div class="card"><p class="what">Reading the GA workbook…</p></div>'; return; }
-    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : view === 'do' ? pageDo() : view === 'review' ? pageReview() : pageHome();
+    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : view === 'do' ? pageDo() : view === 'review' ? pageReview() : view === 'brands' ? pageBrands() : pageHome();
     var f = focusKey && view === 'do' && document.querySelector('#view .card.focus'); if (f && f.scrollIntoView) f.scrollIntoView({ block: 'start' });
   }
 
@@ -655,7 +696,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(OWNER ? { login_hint: OWNER } : {}); }
-    if (a === 'signout') { token = null; loaded = false; failed = ''; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
+    if (a === 'signout') { token = null; loaded = false; failed = ''; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [], pricelists: [] }; return render(); }
     if (a === 'refresh') return load();
     if (a === 'reorder') { var ro = $('reorder'); if (ro) ro.scrollIntoView({ block: 'start' }); return; }
     if (a === 'all') { showAll = !showAll; return render(); }
@@ -678,7 +719,7 @@
     view = parts[0] || 'home'; focusKey = view === 'do' && parts[1] ? decodeURIComponent(parts[1]) : '';
     if (view === 'orders') { if (oq === 'check') ofilter = 'ga'; else if (oq && OFILTERS.some(function (f) { return f[0] === oq; })) ofilter = oq; }
     if (view === 'invoices' && oq === 'unpaid') ifilter = 'unpaid';
-    if (['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review'].indexOf(view) < 0) view = 'home';
+    if (['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review', 'brands'].indexOf(view) < 0) view = 'home';
     showAll = false; render();
   }
   window.addEventListener('hashchange', route);

@@ -43,6 +43,7 @@ async function sheets(page, b, opts = {}) {
     }
     if (/:batchGet/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
       { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }, { values: b.dds || [['date', 'amount']] }, { values: b.codes || [['kind', 'code', 'name']] }] }) });
+    if (/PriceLists!/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: b.pricelists || [['message_id', 'received', 'from', 'subject', 'file_ids', 'status']] }) });
     const n = Number(/Cards!A(\d+)/.exec(url)[1]), row = (b.cards[n - 2] || []).slice();
     if (opts.moved) row[0] = 'SOMETHING-ELSE';
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [row] }) });
@@ -843,5 +844,39 @@ test.describe('GA Hub house look', () => {
     expect(Math.abs(c.top)).toBeLessThanOrEqual(2);
     expect(c.inside).toBe(true);
     expect(c.iconMid, 'the icon stays centred').toBeLessThan(1);
+  });
+  // Roadmap 3 (Lisa, 10 Nov 2026): a Brands view in More. Per brand: orders, sales, profit, low-profit orders against the brand's
+  // own minimum (MIN_PROFIT_<BRAND>), the recipes sold and their data sheets, and the newest GA price list. Every row is invented.
+  test('Brands: one block per brand with orders, sales, profit, low-profit count against MIN_PROFIT_<BRAND>, recipes and price list date', async ({ page }) => {
+    const b = book(), h = b.orders[0].concat(['placed_at', 'shop_lines', 'sale_inc_vat', 'profit_est'].filter((c) => !b.orders[0].includes(c)));
+    const recent = new Date(Date.now() - 2 * 864e5).toISOString(), old = '2026-01-05T09:00:00Z';
+    const row = (no, brand, inc, profit, at, code) => { const r = h.map(() => ''); const set = (c, v) => { r[h.indexOf(c)] = v; };
+      set('order_no', no); set('source', 'Shopify'); set('brand', brand); set('status', 'Invoiced'); set('sale_inc_vat', inc); set('profit_est', profit); set('placed_at', at);
+      set('shop_lines', JSON.stringify([{ code, qty: 1 }])); return r; };
+    b.orders = [h, row('9401', 'DDF', '65.00', '20.00', recent, 'AAA0012KZPSXZZZ'), row('9402', 'DDF', '40.00', '9.00', old, 'AAA0012KZPSXZZZ'),
+      row('9403', 'SMP', '50.00', '9.00', recent, 'ZZZ0006KZPSXZZZ')];
+    b.codes = [['kind', 'code', 'name', 'discount_codes', 'notes', 'active'], ['brand', 'DDF', 'Designer Dog Foods', '', '', 'Y'], ['brand', 'SMP', 'Sample Brand FAKE', '', '', 'Y']];
+    b.settings = b.settings.concat([['MIN_PROFIT_SMP', '5', '']]);
+    b.pricelists = [['message_id', 'received', 'from', 'subject', 'file_ids', 'status'], ['m1', '2026-09-01T08:00:00Z', 'x', 'Old SAMPLE list', 'FILEOLD0000000000000000001', 'waiting'],
+      ['m2', '2026-10-28T08:00:00Z', 'x', 'SAMPLE price list', 'FILEPL00000000000000000001', 'waiting']];
+    b.products[0] = b.products[0].concat(['data_sheet_url']); b.products[1] = b.products[1].concat(['https://example.test/sheet-FAKE.pdf']);
+    await sheets(page, b);
+    await open(page, '#/brands');
+    await expect(page.locator('#view .needs')).toHaveText('Brands');
+    const ddf = page.locator('#view .tiles[data-brand="DDF"]'), smp = page.locator('#view .tiles[data-brand="SMP"]');
+    await expect(ddf.locator('.tile').nth(0)).toContainText('1last 30 days · 2 in all');
+    await expect(ddf.locator('.tile').nth(1)).toContainText('£65.00');
+    await expect(ddf.locator('.tile').nth(1)).toContainText('£105.00 in all');
+    await expect(ddf.locator('.tile').nth(2)).toContainText('£29.00 in all');
+    await expect(ddf.locator('.tile').nth(3)).toContainText('Under £15 profit1');   // MIN_PROFIT 15: the £9 order
+    await expect(smp.locator('.tile').nth(3)).toContainText('Under £5 profit0');     // MIN_PROFIT_SMP 5 wins: £9 is fine
+    await expect(smp.locator('.tile').nth(3)).toContainText('MIN_PROFIT_SMP');
+    await expect(page.locator('#view')).toContainText('Sample Brand FAKE (SMP)');
+    const card = page.locator('#view .card').first();
+    await expect(card).toContainText('1 recipe sold · data sheet linked for 1');
+    await expect(card).toContainText('Sample Doodle');
+    await expect(card).toContainText('GA price list: 28/10/2026 · SAMPLE price list');
+    await expect(card.locator('a', { hasText: 'Price list' })).toHaveAttribute('href', /FILEPL00000000000000000001/);
+    await expect(page.locator('#view .card').nth(1)).toContainText('ZZZ0006KZPSXZZZ (no data sheet)');
   });
 });
