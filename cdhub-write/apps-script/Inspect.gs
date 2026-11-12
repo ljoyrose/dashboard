@@ -43,6 +43,13 @@ function inspectPageUrl_() {
   return /^https:\/\/[^\s#?]+$/.test(u) ? u : '';
 }
 
+/** The Save deployment's id (Script Property INSPECT_SCRIPT_ID, the part between /macros/s/ and /exec). Not secret.
+ *  An inspector's phone has no saved Script URL, so the link carries it: <page>#s=<id>&c=<code>. */
+function inspectScriptId_() {
+  var s = String(prop_(BLD.PROP.INSPECT_SCRIPT_ID) || '').trim();
+  return /^[A-Za-z0-9_-]{10,}$/.test(s) ? s : '';
+}
+
 function inspectFiles_() { return [INSPECT.LINK_FILE, INSPECT.SUBJECT_FILE, INSPECT.FIELD_FILE, INSPECT.ACCESS_FILE]; }
 
 /** The header a link file must have, or null if the title is not one of them. */
@@ -178,7 +185,7 @@ function sinkInspectChoices_() {
   });
   return {
     dogs: dogs, lists: lists, keys: INSPECT.LISTS, default_days: INSPECT.DEFAULT_DAYS, max_days: INSPECT.MAX_DAYS, today: today,
-    page_url: inspectPageUrl_()
+    page_url: inspectPageUrl_(), script_id: inspectScriptId_()
   };
 }
 

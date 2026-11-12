@@ -222,9 +222,9 @@
           box.textContent=''; var done=el('div','card');
           done.appendChild(el('div','k','Shown once'));
           done.appendChild(el('p',null,'Copy it now and send it to the inspector. It cannot be shown again. It works until '+r.result.ends.slice(0,10)+'.'));
-          var link=ch.page_url ? ch.page_url+'#'+r.result.code : r.result.code;
+          var link=(ch.page_url && ch.script_id) ? ch.page_url+'#s='+ch.script_id+'&c='+r.result.code : r.result.code;
           var out=el('div','once',link); done.appendChild(out);
-          if(!ch.page_url) done.appendChild(el('p','sub','This is the code only: the inspector page address (INSPECT_PAGE_URL) is not set yet.'));
+          if(!(ch.page_url && ch.script_id)) done.appendChild(el('p','sub','This is the code only: INSPECT_PAGE_URL or INSPECT_SCRIPT_ID is not set yet.'));
           var cp=el('button','ok','Copy'); cp.type='button'; var cm=el('div','msg'); cm.setAttribute('role','status');
           cp.onclick=function(){ navigator.clipboard.writeText(link).then(function(){ cm.textContent='Copied.'; },function(){ cm.textContent='Could not copy. Select the text and copy it.'; }); };
           done.appendChild(cp); done.appendChild(cm); box.appendChild(done);

@@ -174,6 +174,8 @@ test('owner page: only the signed-in owner can make, list or stop a link', () =>
   assert.equal(env.ctx.ui_inspectChoices().result.page_url, 'https://example.test/cdhub/staff/inspect/');
   env.props.INSPECT_PAGE_URL = 'http://example.test/x';
   assert.equal(env.ctx.ui_inspectChoices().result.page_url, '');
+  env.props.INSPECT_SCRIPT_ID = 'bad id';
+  assert.equal(env.ctx.ui_inspectChoices().result.script_id, '');
   const m = env.ctx.ui_inspectMake({ label: 'Vet visit', subjects: ['sub-test-a'], fields: { subject: ['name'] } });
   assert.equal(m.ok, true);
   assert.equal(env.ctx.ui_inspectLinks().result.links[0].state, 'active');
@@ -186,7 +188,7 @@ test('owner page: only the signed-in owner can make, list or stop a link', () =>
 test('owner page: Make a link ticks the suggested set, shows the link once with Copy, and Show links lists it with Stop', async () => {
   const { JSDOM } = require('jsdom');
   const fs = require('node:fs'), path = require('node:path');
-  const env = setup({ props: { INSPECT_PAGE_URL: 'https://example.test/cdhub/staff/inspect/' } });
+  const env = setup({ props: { INSPECT_PAGE_URL: 'https://example.test/cdhub/staff/inspect/', INSPECT_SCRIPT_ID: 'AKfyTEST_id-123456' } });
   const html = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'ApprovePage.html'), 'utf8');
   const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'https://script.example.test/' });
   const w = dom.window;
@@ -216,8 +218,8 @@ test('owner page: Make a link ticks the suggested set, shows the link once with 
   [...form.querySelectorAll('label.tick')].find((l) => l.textContent === 'Test A').querySelector('input').checked = true;
   [...form.querySelectorAll('button')].find((b) => b.textContent === 'Make link').click(); await tick(); await tick();
   const once = $('#in-form .once').textContent;
-  assert.match(once, /^https:\/\/example\.test\/cdhub\/staff\/inspect\/#[A-Z2-9]{16}$/);
-  const code = once.split('#')[1];
+  assert.match(once, /^https:\/\/example\.test\/cdhub\/staff\/inspect\/#s=AKfyTEST_id-123456&c=[A-Z2-9]{16}$/);
+  const code = once.split('&c=')[1];
   assert.equal(read(env, code, 'subject').result.rows[0].name, 'Test A');
   assert.equal(read(env, code, 'subject').result.fields.includes('chip_number'), false);
 

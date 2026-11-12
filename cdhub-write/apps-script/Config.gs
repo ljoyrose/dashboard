@@ -24,7 +24,8 @@
  *                    day moves go straight in. Run adminStartMovesQueue() on go-live day to set it to today + 14 days.
  *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
- *                    this address + # + the code. Not secret. Missing = the owner page shows the code only.
+ *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
+ *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
  * are not recorded. Corrections go through the screen.
@@ -46,7 +47,8 @@ var BLD = {
     READ_ENABLED: 'READ_ENABLED',
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
-    INSPECT_PAGE_URL: 'INSPECT_PAGE_URL'
+    INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
+    INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
