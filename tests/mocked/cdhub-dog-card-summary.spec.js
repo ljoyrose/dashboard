@@ -113,7 +113,7 @@ test.describe('CD Hub dog card summary', () => {
     await expect(card).toHaveAttribute('data-size-from', 'weight');
     await expect(card.locator('[data-k="size"]')).toHaveText('Small');
     await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12\/01\/26 · cut-offs: Pretend vet/);
-    expect(await card.evaluate((e) => getComputedStyle(e).borderLeftWidth)).toBe('3px');
+    expect(await card.evaluate((e) => getComputedStyle(e, '::before').width)).toBe('3px');   // a full-height line, drawn inside the 1px frame
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');   // 14.1 kg; the future row is not in force
     await page.evaluate(() => go('dogs/sub-x3'));

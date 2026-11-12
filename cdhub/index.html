@@ -302,7 +302,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc .chips{display:flex;flex-wrap:wrap;gap:4px}
 .cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
 /* size from weight: a full-height 3px line in the size colour (Lisa's size_colour.* rows) and a badge on the photo */
-.dc.sz{border-left:3px solid var(--sz,var(--press))}
+.dc.sz::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--sz,var(--press));pointer-events:none}
 .ph .szb{position:absolute;top:3px;left:3px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-small);line-height:18px;padding:0 4px;border-radius:var(--radius);border:1px solid var(--sz,var(--press));background:var(--card);color:var(--ink);font-weight:600}
 .whor{position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:var(--fs-small);color:var(--muted)}
 .whor .ti{width:15px;height:15px}
