@@ -239,7 +239,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await expect(page.locator('#checksCard')).toContainText('not checked: set the shortest time between litters on Compliance');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('3 of 3 rules not set');
-    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(5);   // 3 breeding rules + the Compliance look-back and due-soon settings
+    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(7);   // 3 breeding rules + look-back + due-soon + 2 staffing ratios
     await expect(page.locator('#compRules')).toContainText('not set');
   });
 
