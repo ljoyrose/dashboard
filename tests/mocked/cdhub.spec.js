@@ -4,7 +4,7 @@ const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
 
-const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -289,7 +289,7 @@ test.describe('CD Hub: things that go wrong', () => {
 // House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026) and the Bloodline screens, by computed style.
 // Invented data only: the sample BLD tables, plus rows added inside a test (invented names, no real dogs or buyers).
 // ---------------------------------------------------------------------------------------------------------------
-const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 const iso = (days) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
 const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
