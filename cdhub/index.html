@@ -1501,9 +1501,10 @@ function tempsCard(){
   +'<a class="btn" id="addThermo" href="./staff/print/?add=thermometer">+ Thermometer</a></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
+// A failed data check is broken: its count is the black badge (../toolkit.js DashKit.count), read out as "N failed".
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'':'ok')+'</h3>'
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?DashKit.count.cls(bad,'failed').trim():'ok')+(bad?'<span class="sr"> failed</span>':'')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
