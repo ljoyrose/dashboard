@@ -304,7 +304,7 @@ forAll('property: verdict_words changes the words on screen, never the verdict, 
 });
 
 /* the view must not hand back a stale answer when a row changes but the row counts do not */
-test('the hub view re-scores when a row value changes but the number of rows stays the same', () => {
+test('@regression the hub view re-scores when a row value changes but the number of rows stays the same', () => {
   const base = {
     'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01' }],
     'BLD-score_band.csv': [{ id: 'g', scheme_id: 's1', kind: 'gate' }],
@@ -378,7 +378,7 @@ forAll('property: a rule row with a broken value is refused, never scored', (r) 
 });
 
 /* pinned regressions for the fixes made in this job */
-test('regression: an unmatched gate answer with when_missing fail is Unverified, not Fail', () => {
+test('@regression an unmatched gate answer with when_missing fail is Unverified, not Fail', () => {
   const set = makeScheme(rng(1), { gates: 1, lines: 1, gateMissing: 'fail' });
   const out = run(set, [exam('e', 'g0', 'Grade Q', '2025-01-01'), exam('l', 'p0', 'top', '2025-01-01')]);
   assert.equal(out.lines[0].gate_outcome, 'unverified');
@@ -387,7 +387,7 @@ test('regression: an unmatched gate answer with when_missing fail is Unverified,
   assert.equal(run(set, [exam('l', 'p0', 'top', '2025-01-01')]).verdict, 'fail');
 });
 
-test('regression: an unmatched points answer with when_missing zero is held, a missing record is 0', () => {
+test('@regression an unmatched points answer with when_missing zero is held, a missing record is 0', () => {
   const set = makeScheme(rng(2), { gates: 1, lines: 1, lineMissing: 'zero' });
   const odd = run(set, [exam('e', 'g0', 'ok', '2025-01-01'), exam('l', 'p0', 'Grade Q', '2025-01-01')]);
   assert.equal(odd.lines[1].points, '');
@@ -396,7 +396,7 @@ test('regression: an unmatched points answer with when_missing zero is held, a m
   assert.equal(none.lines[1].points, 0);
 });
 
-test('regression: tenths add up to tidy totals (0.1 + 0.2 + 0.3 = 0.6) and 100% of 0.6 is 0.6', () => {
+test('@regression tenths add up to tidy totals (0.1 + 0.2 + 0.3 = 0.6) and 100% of 0.6 is 0.6', () => {
   const crits = [0, 1, 2].map((i) => ({ id: 'p' + i, band_id: 'P', evidence_source: 'exam', evidence_match: 'kind=p' + i, answer_field: 'result', date_field: 'on' }));
   const pts = [0, 1, 2].map((i) => ({ id: 'x' + i, criterion_id: 'p' + i, answer_match: 'any', points: ['0.1', '0.2', '0.3'][i] }));
   const out = run({ scheme: { id: 's1', target_points: '100', target_is: 'percent' }, bands: [{ id: 'P', kind: 'points' }], criteria: crits, points: pts },
