@@ -48,3 +48,4 @@ textarea.inp{padding:10px 14px}
 .done-ic,.dog-done{display:inline-grid;place-items:center;width:20px;height:20px;flex:none}.done-ic svg,.dog-done svg{width:18px;height:18px}
 .dog-done{color:var(--good)}.dog-at{color:var(--muted);font-size:var(--fs-small);margin-left:auto}
 .btn.is-done{background:var(--paper);color:var(--muted);border-color:var(--line)}
+.job-all{margin-bottom:4px}
