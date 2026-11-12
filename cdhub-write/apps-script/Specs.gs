@@ -659,8 +659,9 @@ var TABLES = {
     key: 'breeding_rule',
     file: 'BLD-breeding_rule.csv',
     idPrefix: 'brl',
-    columns: ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
-    proposedColumns: ['rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+    // to_date (Lisa 12 Nov 2026: every limit is a dated row): blank = no end; the last day the rule applies, inclusive.
+    columns: ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'],
+    proposedColumns: ['rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -671,6 +672,7 @@ var TABLES = {
       rule_key:       { type: 'enum', values: ['min_dam_age_months', 'max_litters_per_dam', 'min_months_between_litters'], required: true },
       value:          { type: 'count', required: true },
       effective_from: { type: 'date', required: true },
+      to_date:        { type: 'date' },
       source:         { type: 'text' },
       note:           { type: 'text' },
       // not a column: "yes" keeps a value outside the usual range (overseer 12 Nov 2026: a council may allow it)
@@ -680,6 +682,9 @@ var TABLES = {
     dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
+      if (row.to_date && row.effective_from && !errors.to_date && !errors.effective_from && row.to_date < row.effective_from) {
+        errors.to_date = 'The end date cannot be before the start date.';
+      }
       var lim = BREEDING_RULE_LIMITS_[row.rule_key];
       if (lim && !errors.value && row.value !== '') {
         var n = parseInt(row.value, 10);

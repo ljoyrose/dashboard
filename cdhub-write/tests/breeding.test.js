@@ -73,3 +73,20 @@ test('breeding rules: the table has its own switch and is off by default', () =>
   assert.equal(r.ok, false);
   assert.equal(recs(env).length, 0);
 });
+
+test('breeding rules: to_date is the last day a rule applies; blank = no end; an end before the start is refused', () => {
+  const env = env0();
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01', to_date: '2019-12-31' }).code, 'INVALID');
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01', to_date: '2025-12-31' }).ok, true);
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '6', effective_from: '2026-01-01' }).ok, true);
+  const rows = recs(env);
+  assert.deepEqual(rows.map(r => r.to_date), ['2025-12-31', '']);
+  assert.equal(env.ctx.latestInForce_(rows, '2024-06-01', 'effective_from').value, '4');
+  assert.equal(env.ctx.latestInForce_(rows, '2026-06-01', 'effective_from').value, '6');
+});
+
+test('breeding rules: a file without the to_date column is refused with nothing saved (header must change in the same sitting)', () => {
+  const env = standardEnv({ props: { TABLE_ON_breeding_rule: 'true' } });
+  env.addFile('BLD-breeding_rule.csv', fx.headerOnly(fx.BREEDING_RULE_HEADER.slice(0, -1)));
+  assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01' }).code, 'HEADER_MISMATCH');
+});
