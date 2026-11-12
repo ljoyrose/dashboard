@@ -23,7 +23,7 @@
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access']); }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -69,8 +69,25 @@
     if (!f && !m) return null;
     return h('span', { class: 'sex', role: 'img', 'aria-label': f ? 'Female' : 'Male', html: '<svg viewBox="0 0 24 24" aria-hidden="true">' + (f ? '<circle cx="12" cy="9" r="6"/><path d="M12 15v7M8.5 19h7"/>' : '<circle cx="10" cy="14" r="6"/><path d="M19 5l-5 5M19 5h-5M19 5v5"/>') + '</svg>' });
   }
+  function byId(list) { var o = {}; (T[list] || []).forEach(function (r) { if (r.id) o[r.id] = r; }); return o; }
+  /* Colour: the coat colour name, then the pattern (not Solid), then the nose pigment, from the owner's lookup rows */
+  function colourOf(s) {
+    var c = byId('coat_colour')[s.coat_colour_id], p = byId('coat_pattern')[s.coat_pattern_id], g = byId('nose_pigment')[s.nose_pigment_id];
+    if (!c || !c.name) return '';
+    return [c.name, p && p.name && !/^solid$/i.test(p.name) ? p.name.toLowerCase() : '', g && g.name ? g.name : ''].filter(Boolean).join(' ');
+  }
+  function chipOf(s) { var n = ''; (T.microchip || []).forEach(function (r) { if (r.subject_id === s.id && r.chip_number) n = String(r.chip_number); });
+    return n.replace(/\s+/g, '').replace(/(\d{3})(?=\d)/g, '$1 '); }
+  /* job strip: the jobs in force for this kind of card (Lisa's job rows); a group shows once, a job with no group by its label */
+  function jobsFor(kinds) { return (typeof BLDDue !== 'undefined' ? BLDDue.jobsInForce(T.check_type || [], BLDNeeds.today()) : []).filter(function (j) { return kinds.indexOf(j.target) >= 0; }); }
+  function jobStrip(kinds) { var seen = {}, out = [];
+    jobsFor(kinds).forEach(function (j) { var n = j.group || j.label || j.type_key; if (n && !seen[n]) { seen[n] = 1; out.push(n); } });
+    out.sort(function (a, b) { return a.localeCompare(b); });
+    return out.length ? h('div', { class: 'jobs', 'data-k': 'jobs' }, out.map(function (n) { return h('span', { class: 'job', text: n }); })) : null; }
+  function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
   function dogCard(tag, it) {
-    var s = it.s, col = sizeColour(s.size_band), rows = [];
+    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s);
+    if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
@@ -79,8 +96,27 @@
         h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
+        chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,
+        jobStrip(['dog', 'either']),
         h('small', { class: 'tag', text: tag })])]);
   }
+  /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
+  function litterCard(tag, it) {
+    var l = it.l, dam = it.dam || {}, col = sizeColour(dam.size_band), rows = [], born = l.born_on || l.dob || '';
+    if (it.sire) rows.push(['Sire', it.sire]);
+    if (it.pups) rows.push(['Pups', String(it.pups)]);
+    if (it.room) rows.push(['Room', it.room]);
+    return h('article', { class: 'dcard lcard', 'data-litter': l.id, style: col ? '--c:' + col : '' }, [
+      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: it.label })]), born ? h('small', { 'data-k': 'born' }, ['Born', h('br'), dmy(born)]) : null]),
+      h('div', { class: 'dbody' }, [
+        h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
+          h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
+        h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }),
+        jobList(['litter']),
+        h('small', { class: 'tag', text: tag })])]);
+  }
+  function jobList(kinds) { var js = jobsFor(kinds); return js.length ? h('ul', { class: 'lst', 'data-k': 'jobs' }, js.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); })
+    .map(function (j) { return h('li', {}, [j.label || j.type_key, h('span', { text: howOften(j) })]); })) : null; }
   function limitsOf(areaId) {
     var acc = '', last = '';
     (T.area_access || []).forEach(function (r) { if (r.area_id === areaId && String(r.effective_from || '') >= last) { last = String(r.effective_from || ''); acc = r.access_type; } });
@@ -97,7 +133,9 @@
     return h('article', { class: 'rcard', 'data-room': it.id }, [h('b', { text: it.label }),
       lim.length ? h('div', { class: 'limits' }, lim.map(function (l, i) { var c = sizeColour(l.band);
         return h('span', { class: 'sz', 'data-size': sizeKey(l.band), style: c ? '--c:' + c : '' }, [h('i'), (i ? 'or ' : '') + l.n + ' ' + sizeKey(l.band)]); })) : null,
-      h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }), h('small', { class: 'tag', text: tag })]);
+      h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }),
+      jobList(['area', 'either']),
+      h('small', { class: 'tag', text: tag })]);
   }
   function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: fn }); }
   /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
@@ -164,16 +202,23 @@
     opts.appendChild(btn('Whole-site code', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
     opts.appendChild(btn('Room signs', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).map(function (a) { return { id: a.id, label: a.code || a.id }; }), roomCard); }));
     opts.appendChild(btn('Dog kennel cards', function () { sheet.className = 'sheet dogs per' + per; make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
-    var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Kennel cards per A4' }, [1, 2, 4].map(function (n) {
+    var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
-        if (/\bdogs\b/.test(sheet.className)) sheet.className = 'sheet dogs per' + per; } });
+        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
-    opts.appendChild(btn('Litter cards', function () { sheet.className = 'sheet';
-      if (!(T.litter || []).length) { say('The litter list is not switched on yet.', 'warn'); return; }
-      var names = {}; T.subject.forEach(function (s) { names[s.id] = s.name; });
-      make('litter', T.litter.map(function (l) { return { id: l.id, label: 'Litter of ' + (names[l.dam_subject_id] || l.id) }; }));
+    opts.appendChild(btn('Litter cards', function () {
+      if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
+      var subj = {}, pups = {}, pupsHere = {};
+      T.subject.forEach(function (s) { subj[s.id] = s; if (s.birth_litter_id) { pups[s.birth_litter_id] = (pups[s.birth_litter_id] || 0) + 1; if (onSite[s.id]) pupsHere[s.birth_litter_id] = true; } });
+      /* litters still here: a pup on site, or the dam on site with no pups entered yet. No date cut-off. */
+      var list = T.litter.filter(function (l) { return pupsHere[l.id] || (!pups[l.id] && onSite[l.dam_subject_id]); })
+        .sort(function (a, b) { return String(b.born_on || b.dob || '').localeCompare(String(a.born_on || a.dob || '')); });
+      if (!list.length) { sheet.className = 'sheet'; sheet.textContent = ''; say('No litters on site.', 'warn'); return; }
+      sheet.className = 'sheet dogs litters per' + per;
+      make('litter', list.map(function (l) { var dam = subj[l.dam_subject_id] || {}, sire = subj[l.sire_subject_id] || {};
+        return { id: l.id, label: 'Litter of ' + (dam.name || l.id), l: l, dam: dam, sire: sire.name || '', pups: pups[l.id] || 0, room: roomOf[l.dam_subject_id] || '' }; }), litterCard);
     }));
     opts.appendChild(btn('Thermometer cards', thermoCards));
     opts.appendChild(btn('Add thermometer', addThermometer));
