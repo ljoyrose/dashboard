@@ -2062,7 +2062,7 @@ function pageAreas(){
          +'</tr>'; }).join('')
      +'</tbody></table></div>';
     h+=(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
-     +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
+     +'<div class="mut" style="margin-top:6px">in here on '+esc(dmyShort(date))+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];
         return d?'<a class="pill i" href="#/dogs/'+esc(sid)+'" data-dog-link="'+esc(sid)+'">'+sizeDot(d.sizeWord||d.size)+esc(d.name||sid)+'</a>'
           :'<span class="pill i">'+esc(sid)+'</span>';}).join(' ')
