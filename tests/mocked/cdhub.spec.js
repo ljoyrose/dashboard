@@ -826,6 +826,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await signIn(page);
     await openTab(page, 'dogs');
     const card = (name) => page.locator('.dc', { has: page.locator('.nm', { hasText: name }) });
+    // Rx sits behind More (layout A, Lisa 12 Nov 2026)
+    for (const n of ['Test Dog One', 'Test Dog Two', 'Test Pup One']) await card(n).locator('details.more > summary').click();
     const one = card('Test Dog One');
     await expect(one.locator('.wt', { hasText: 'Moxiclear' })).toContainText('6 Nov 2026');
     const rx = one.getByRole('link', { name: 'Rx' });
