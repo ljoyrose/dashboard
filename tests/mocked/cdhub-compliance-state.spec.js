@@ -80,7 +80,7 @@ test.describe('CD Hub: Compliance requirements, inspections, as at', () => {
     await expect(page.locator('#compState li[data-cred="c1"]')).toHaveAttribute('data-state', 'ok');
     await page.locator('#compAsAt').fill('2020-06-30');
     await page.locator('#compAsAt').dispatchEvent('change');
-    await expect(page.locator('#asAtNote')).toContainText('30/06/2020');
+    await expect(page.locator('#asAtNote')).toContainText('30/06/20');
     await expect(page.locator('#compState li[data-cred="c1"]')).toHaveAttribute('data-state', 'ok');
     await expect(page.locator('#compState li[data-cred="c1"]')).toContainText('31/12/20');
     await page.locator('#compAsAt').fill('2020-12-31');
