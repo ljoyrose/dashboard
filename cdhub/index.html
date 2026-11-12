@@ -453,7 +453,7 @@ var OPTIONAL_FILES={'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credentia
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
-var COMP={shut:{}};
+var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
@@ -1138,7 +1138,7 @@ var BREED_RULES=[
  ['max_litters_per_dam','Most litters per bitch','litters'],
  ['min_months_between_litters','Shortest time between litters','months']];
 /* settings kept in the same rule list (one rule list, Lisa 9 Nov), not breeding checks: not in the "3 rules not set" count */
-var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days']];
+var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days'],['compliance.due_soon_days','Days ahead that count as due soon','days']];
 function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
@@ -2784,7 +2784,11 @@ function pageCompliance(){
  da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+x.on+(x.est?' (estimated from the litter, no mating row)':'')+', born '+x.dob+'. Your rule: '+x.months+' months.'}); });
  lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+litDob(x.litter)+'). Your rule: '+x.max+'.'}); });
  var h='<h2>Compliance</h2><p class="sub">Breeding rules. You set them; every litter and mating is checked against the version in force on its own date.</p>';
- h+=compUrgentHtml(today);
+ var asAt=/^\d{4}-\d{2}-\d{2}$/.test(COMP.asAt)&&COMP.asAt<=today?COMP.asAt:today, past=asAt!==today;
+ h+='<div class="frow" id="asAtRow"><label for="compAsAt">What was true on</label> <input id="compAsAt" type="date" max="'+today+'" value="'+asAt+'">'
+  +(past?' <button type="button" class="btn" id="compAsAtToday">Back to today</button>':'')+'</div>'
+  +(past?'<p class="mut" id="asAtNote">Showing '+esc(dmy(asAt))+'. Worked out from dated rows as they are now; no verdicts are stored yet, so a row corrected later changes this answer.</p>':'');
+ h+=compUrgentHtml(today)+compStateHtml(asAt)+compFindingsHtml(asAt)+compInspectionsHtml(asAt);
  var pb='';
  if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
  pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
@@ -2811,7 +2815,7 @@ function pageCompliance(){
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
   +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p>');
- h+=compFindingsHtml(todayISO())+compRehearsalHtml()+compAccessHtml();
+ h+=compRehearsalHtml()+compAccessHtml();
  return h;
 }
 /* URGENT WARNINGS (mock-up 7 Nov, H-06): four signals each - the SOP's colour inside a red ring, an icon and the word
@@ -2825,12 +2829,61 @@ function compUrgent(iso){ var out=[];
  if(iso===todayISO()) compTemps().bad.filter(function(x){ return x.day===iso; }).forEach(function(x){
   out.push({k:'temp',icon:'i-thermometer',title:x.label+' is outside its temperature band',sub:(x.slot==='pm'?'Evening':'Morning')+' reading '+(x.min||'?')+'–'+(x.max||'?')+' °C',area:x.area,sop:''}); });
  (typeof compCredentials==='function'?compCredentials(iso).items:[]).forEach(function(x){ if(x.crucial&&x.state==='late')
-  out.push({k:'cred',icon:'i-clipboard',title:x.label+' is overdue',sub:'Ran out '+dmyShort(x.to),area:x.area,sop:x.sop}); });
+  out.push({k:'cred',icon:'i-clipboard',title:x.label+' is overdue',sub:x.missing?'No record':'Ran out '+dmyShort(x.to),area:x.area,sop:x.sop}); });
  return out; }
 function compUrgentHtml(iso){ var u=compUrgent(iso); if(!SOP.rows&&!SOP.err) sopStart();
  return compFold('compUrgent','urgent','Urgent'+cntPill(u.length,u.length?'need':''),u.length
   ?'<ul class="urgl" id="urgList">'+u.map(function(x){ return '<li data-k="'+x.k+'"><span class="urg"><span class="urg-ring" aria-hidden="true"><i style="--c:var(--ljr-'+sopSlot(x.sop)+')"></i></span><svg aria-hidden="true"><use href="#'+x.icon+'"/></svg>Urgent</span> <b>'+(x.area?roomLink(x.area,x.title):esc(x.title))+'</b><br><span class="mut">'+esc(x.sub)+(x.sop?' · '+esc(x.sop):'')+'</span></li>'; }).join('')+'</ul><p class="mut">A warning never stops anyone working.</p>'
   :'<p class="mut">Nothing urgent.</p>'); }
+/* EXTERNAL REQUIREMENTS STATE (mock-up 7 Nov, H-07): BLD-credential is the thing (label, area_id, sop, crucial, issuer,
+   source); BLD-credential_version is a dated link row (credential_id, from_date, to_date, source). As at a date the version
+   in force is the latest from_date on or before it. Blank to_date = "Expiry not stated", never a guessed date. Due soon =
+   to_date within compliance.due_soon_days (a rule row; 30 until set, and the page says so). No version = No record. */
+/* an optional table is "set up" when its file is in the folder (an absent one still reads as no rows) */
+function hasTable(name){ return !!(window._driveIds&&window._driveIds[name]); }
+var DUE_SOON_KEY='compliance.due_soon_days', DUE_SOON_DEFAULT=30;
+function dueSoonDays(iso){ var r=breedRule(DUE_SOON_KEY,iso), n=r?parseInt(r.value,10):NaN; return n>0&&n<=366?{n:n,set:true}:{n:DUE_SOON_DEFAULT,set:false}; }
+function dayPlus(iso,n){ return dayMinus(iso,-n); }
+var CRED_ORDER={ok:0,soon:1,none:2,late:3,missing:3};   /* best to worst */
+function compCredentials(iso){
+ var on=hasTable('BLD-credential.csv'), win=dueSoonDays(iso), edge=dayPlus(iso,win.n), vs=T['BLD-credential_version.csv']||[];
+ var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
+ var items=(T['BLD-credential.csv']||[]).filter(function(c){ return c.id&&c.label; }).map(function(c){
+  var v=null; vs.forEach(function(r){ var f=isoDay(r.from_date); if(r.credential_id!==c.id||!f||f>iso) return;
+   if(!v||f>isoDay(v.from_date)||(f===isoDay(v.from_date)&&(r.set_on||'')>=(v.set_on||''))) v=r; });
+  var to=v?isoDay(v.to_date):'', st=!v?'missing':(!to?'none':(to<iso?'late':(to<=edge?'soon':'ok')));
+  return {id:c.id,label:c.label,area:c.area_id||'',areaLabel:c.area_id?(code[c.area_id]||c.area_id):'Whole site',sop:c.sop||'',
+   crucial:/^(y|yes|true|1)$/i.test(String(c.crucial||'')),issuer:c.issuer||'',state:st==='missing'?'late':st,missing:st==='missing',to:to,src:(v&&v.source)||c.source||''}; });
+ return {on:on,win:win,items:items};
+}
+function compStateHtml(iso){ var c=compCredentials(iso), n={ok:0,soon:0,late:0,none:0};
+ c.items.forEach(function(x){ n[x.state]++; });
+ var word={ok:'In date',soon:'Due soon',late:'Overdue',none:'Expiry not stated'}, pc={ok:'ok',soon:'w',late:'no',none:''};
+ var by={}; c.items.forEach(function(x){ (by[x.areaLabel]=by[x.areaLabel]||[]).push(x); });
+ var body=!c.on?'<p class="mut" id="stateOff">Not set up yet. External requirements (services, certificates, licence) will show here once their list exists.</p>'
+  :'<ul class="ctemps" id="stateSum"><li data-k="ok"><span class="pill ok">'+n.ok+'</span> in date</li>'
+   +'<li data-k="soon"><span class="pill w">'+n.soon+'</span> due within '+c.win.n+' days'+(c.win.set?'':' <span class="mut">(not set yet, so 30)</span>')+'</li>'
+   +'<li data-k="none"><span class="pill">'+n.none+'</span> expiry not stated</li>'
+   +'<li data-k="late"><span class="pill no">'+n.late+'</span> overdue</li></ul>'
+   +(c.items.length?'<p class="mut">'+n.ok+' of '+c.items.length+' in date ('+Math.round(100*n.ok/c.items.length)+'%). External requirements only; internal checks never count.</p>':'<p class="mut">No requirements listed yet.</p>')
+   +Object.keys(by).sort().map(function(a){ return '<h4>'+esc(a)+'</h4><ul class="ctl">'+by[a].slice().sort(function(p,q){ return CRED_ORDER[p.state]-CRED_ORDER[q.state]||(p.label<q.label?-1:1); }).map(function(x){
+    return '<li data-cred="'+esc(x.id)+'" data-state="'+x.state+'"><b>'+esc(x.label)+'</b> <span class="pill '+pc[x.state]+'">'+(x.missing?'No record':word[x.state])+'</span>'
+     +(x.to?' <span class="dpill'+(x.state==='late'?' late':(x.state==='soon'?' soon':''))+'">'+esc(dmyShort(x.to))+'</span>':'')
+     +(x.sop?'<br><span class="mut">'+esc(x.sop)+'</span>':'')+(x.src?'<br><span class="mut">Source: '+esc(x.src)+'</span>':'')+'</li>'; }).join('')+'</ul>'; }).join('');
+ return compFold('compState','state','Requirements'+cntPill(n.late,n.late?'need':''),body); }
+/* INSPECTIONS (mock-up 7 Nov, H-03/H-05): BLD-inspection rows (kind external or internal, authority, inspection_date,
+   outcome_summary, visibility private or disclosable, source). External and internal are listed apart; an internal one is
+   Private unless its row says disclosable, and is never counted in any figure on this page. */
+function compInspectionsHtml(iso){ var on=hasTable('BLD-inspection.csv');
+ var rows=(T['BLD-inspection.csv']||[]).filter(function(r){ var d=isoDay(r.inspection_date); return d&&d<=iso; }).sort(function(a,b){ return a.inspection_date<b.inspection_date?1:-1; });
+ var nf=function(id){ return (T['BLD-finding.csv']||[]).filter(function(f){ return f.inspection_id===id&&isoDay(f.raised_on)<=iso; }).length; };
+ var li=function(r,priv){ var n=nf(r.id); return '<li data-insp="'+esc(r.id)+'"><b>'+esc(r.authority||(priv?'Self-check':'Inspection'))+'</b> <span class="dpill">'+esc(dmyShort(r.inspection_date))+'</span>'
+  +(priv?' <span class="pill">Private</span>':'')+'<br><span class="mut">'+(r.outcome_summary?esc(r.outcome_summary)+' · ':'')+n+' finding'+(n===1?'':'s')+'</span></li>'; };
+ var ext=rows.filter(function(r){ return String(r.kind||'').toLowerCase()!=='internal'; }), int=rows.filter(function(r){ return String(r.kind||'').toLowerCase()==='internal'; });
+ return compFold('compInspections','inspections','Inspections',!on?'<p class="mut" id="inspOff">Not set up yet. Inspections will show here once their list exists.</p>'
+  :'<h4>External</h4>'+(ext.length?'<ul class="ctl" id="inspExt">'+ext.map(function(r){ return li(r,false); }).join('')+'</ul>':'<p class="mut">None yet.</p>')
+  +'<h4>Internal</h4>'+(int.length?'<ul class="ctl" id="inspInt">'+int.map(function(r){ return li(r,String(r.visibility||'private').toLowerCase()!=='disclosable'); }).join('')+'</ul>':'<p class="mut">None yet.</p>')
+  +'<p class="mut">Internal checks are never counted in any figure here.</p>'); }
 /* FINDINGS (mock-up 7 Nov): BLD-finding rows as at a date. Open = raised on or before it and not closed by it.
    Recurrence = every finding on the same requirement (outcome_id) raised by that date: "failed N times", with its trail.
    A finding from a PRIVATE internal inspection (BLD-inspection, when that table exists) stays off this list (H-03, H-05);
@@ -2846,7 +2899,7 @@ function compFindings(iso){
   return {id:f.id,label:oc[f.outcome_id]||f.wording_as_given||'Finding',words:f.wording_as_given||'',by:f.authority||'',raised:isoDay(f.raised_on),
    level:f.finding_kind||'',done:f.action_agreed||f.tenant_response||'',due:due,late:!!due&&due<iso,times:by[k].length,trail:by[k]}; });
  open.sort(function(a,b){ return (a.late-b.late)||(a.times-b.times)||(a.raised<b.raised?-1:1); });   /* best to worst */
- return {open:open,closed:all.length-open.length,on:!!T['BLD-finding.csv']};
+ return {open:open,closed:all.length-open.length,on:(T['BLD-finding.csv']||[]).length>0};
 }
 function compFindingsHtml(iso){ var c=compFindings(iso);
  return compFold('compFindings','findings','Findings'+cntPill(c.open.length),
@@ -2885,6 +2938,9 @@ function bindRehearsal(){
 function bindCompliance(){
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  bindRehearsal();
+ var aa=document.getElementById('compAsAt'), at=document.getElementById('compAsAtToday');
+ if(aa) aa.addEventListener('change',function(){ var v=aa.value; COMP.asAt=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:''; go('compliance',false); });
+ if(at) at.addEventListener('click',function(){ COMP.asAt=''; go('compliance',false); });
  var b=document.getElementById('brSave'); if(!b) return;
  b.addEventListener('click',async function(){
   var key=document.getElementById('brKey').value, val=String(document.getElementById('brVal').value||'').trim(),
