@@ -157,6 +157,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
       ];
       T['BLD-thermometer.csv'] = [{ id: 'th-a', name: 'Pretend A', area_id: 'ar-a' }, { id: 'th-b', name: 'Pretend B', area_id: 'ar-b' }, { id: 'th-c', name: 'Pretend C', area_id: 'ar-c' }];
       CD.req = CD.req.concat([{ need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'th-a', from_date: t, to_date: '' }]);
+      T['BLD-breeding_rule.csv'] = [{ id: 'b0', rule_key: 'compliance.look_back_days', value: '7', effective_from: '2020-01-01', source: 'Pretend week' }];   // the look-back is a row; no row = not set
       go('compliance', false);
       const x = compTemps();
       return { t, y, ok: x.ok, empty: x.empty.map((r) => r.area), bad: x.bad.map((r) => r.area), miss: x.miss.map((m) => m.name + '@' + (m.day === t ? 'today' : m.day === y ? 'yesterday' : 'earlier')) };

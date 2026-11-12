@@ -1,5 +1,6 @@
 // Factory house look (Lisa's rules, 28 Oct 2026), checked by computed style on every view, light and dark.
-// 1 no solid colour fills (tint inside a 1px line; the new-comment dot and the switch knob are the two allowed solids)
+// 1 no solid colour fills (tint inside a 1px line; the new-comment dot and the switch knob are the two allowed solids, and a broken
+//   count is the black badge: --house-broken-fill with a --house-broken-ink number, Lisa 3 Nov 2026)
 // 2 no coloured words   3 1px lines; every pressable rests on one clear control line (3:1)   4 one 12px radius
 // 5 dark frame top and bottom; light tabs with no ring, a colour bar that widens   6 counts are a fixed 30 x 24 pill (14px number)
 // 7 Lexend 400/600, nothing under 13px   9 date pills always ringed   10 hover: the pale grey fill, no line (12 Nov 2026)
@@ -24,6 +25,7 @@ async function open(page, guard, hash, { scheme, change } = {}) {
   const st = build(Date.now());
   st.lists.decisions[0].cm = [{ by: 'Claude', at: Date.now(), text: 'A sample note' }];
   st.lists.work[1].due = Date.now() + 864e5;
+  st.lists.apps[1].updated = Date.now() - 20 * 864e5;   // one stuck app, so the black (broken) Stuck count is on screen
   if (change) change(st);
   guard.world.folder(LOGS, 'AF logs (sample)');
   guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(st), { parents: [LOGS], mimeType: 'application/json' });
@@ -81,7 +83,8 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const cs = getComputedStyle(e);
             if (![14, 15, 18].includes(parseFloat(cs.fontSize))) out.push('size ' + cs.fontSize + ': ' + F.what(e));
             if (!['400', '500', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + F.what(e));
-            if (![ink, muted, frameInk].includes(cs.color)) out.push('coloured words ' + cs.color + ': ' + F.what(e));
+            const badge = e.matches('.cnt.broken') && cs.color === F.tok('--house-broken-ink');   // the black badge's number (light ink's opposite)
+            if (![ink, muted, frameInk].includes(cs.color) && !badge) out.push('coloured words ' + cs.color + ': ' + F.what(e));
             if (cs.textTransform === 'uppercase') out.push('uppercase: ' + F.what(e));
           });
           // 4: one radius. 12px (count pills too, 24px high so their ends are round); round only on dots and rings; the thin colour bars 2px.
@@ -113,7 +116,13 @@ test.describe('Factory look: rules by computed style on every view', () => {
             if (!t) out.push('empty count ring: ' + F.what(e.parentElement));
             if (Math.round(r.height) !== H || (W && t.length <= 2 && Math.round(r.width * 100) / 100 !== W)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
             if (cs.boxSizing !== 'border-box' || cs.lineHeight !== LH || cs.borderTopWidth !== '1px') out.push('count box ' + cs.boxSizing + ' ' + cs.lineHeight + ': ' + F.what(e));
+            // Broken (stuck, an engine fault: Lisa, 3 Nov 2026) is the black badge in the same box; every other count has no fill.
+            if (e.classList.contains('broken')) {
+              if (cs.backgroundColor !== F.tok('--house-broken-fill') || cs.borderTopColor !== F.tok('--house-broken-fill') || cs.color !== F.tok('--house-broken-ink')) out.push('broken count not the black badge: ' + cs.backgroundColor + ' / ' + cs.color + ': ' + F.what(e));
+              if (e.classList.contains('need')) out.push('count both rose and black: ' + F.what(e));
+            } else if (cs.backgroundColor !== 'rgba(0, 0, 0, 0)') out.push('count has a fill ' + cs.backgroundColor + ': ' + F.what(e));
           });
+          if (location.hash === '#/rooms' && !document.querySelector('a.pill[href="#/stuck"] .cnt.broken')) out.push('the stuck app is not a black Stuck count');
           document.querySelectorAll('nav.tabs .n').forEach((e) => {
             if (!F.seen(e)) return;
             const cs = getComputedStyle(e), want = e.classList.contains('need') ? F.tok('--house-late') : F.tok('--house-ring');
@@ -153,6 +162,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
         document.querySelectorAll('.cnt, nav.tabs .n, span.pill, .gate, .codes .cd, .age, .strip i, .stage .n, .room, label.date, .card, .sw, .banner, .empty').forEach((e) => {
           const bg = getComputedStyle(e).backgroundColor;
           if (/, 0\)$/.test(bg) || bg === 'transparent') return;
+          if (e.matches('.cnt.broken') && bg === F.tok('--house-broken-fill')) return;   // broken: the one count that is a solid badge
           if (fills.includes(bg) || F.L(bg) < 0.6) out.push(e.className + ' "' + e.textContent.trim().slice(0, 20) + '" ' + bg);
         });
         return out;

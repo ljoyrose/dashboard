@@ -32,7 +32,12 @@ test.describe('Home: Projects tile numbers', () => {
     const nums = tile.locator('a.hk');
     await expect(nums).toHaveText(['3Stuck', '2Waiting', '2Running']);
     for (const a of await nums.all()) { await expect(a).toHaveAttribute('href', IDS.projectsHub); await expect(a).toHaveAttribute('target', '_blank'); }
-    await expect(nums.locator('b.need')).toHaveCount(0); // grey: stuck is not late, and a rose number means late (Lisa's sweep, 3 Nov 2026)
+    // Stuck above 0 is broken: the black badge, read out as "3 stuck"; Waiting and Running stay grey; nothing is rose (rose = late).
+    // (Lisa, 3 Nov 2026; tests/mocked/house-rose-broken.spec.js pins the colours in the light and dark looks.)
+    await expect(nums.locator('b.need')).toHaveCount(0);
+    await expect(nums.nth(0).locator('b')).toHaveClass('broken');
+    await expect(nums.nth(0)).toHaveAttribute('aria-label', 'Projects, Stuck: 3 stuck');
+    await expect(tile.locator('b.broken')).toHaveCount(1);
     // Only GET reads, each with the sign-in token; the Projects Hub Sheet is read only at its INDEX tab.
     expect(PH_SHEET).toBeTruthy();
     const ph = calls.filter((c) => c.url.includes('/spreadsheets/' + PH_SHEET + '/'));
@@ -54,7 +59,7 @@ test.describe('Home: Projects tile numbers', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
-  test('Stuck is not rose at 0', async ({ page }) => {
+  test('Stuck is neither rose nor black at 0', async ({ page }) => {
     await page.route(INDEX, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [
       ['number', 'kind', 'owner_tag', 'status_u45', 'project_status'],
       ['0300', 'project', 'Yell', 'LIVE', 'Running'],
@@ -63,6 +68,8 @@ test.describe('Home: Projects tile numbers', () => {
     const tile = page.locator(TILE);
     await expect(tile.locator('a.hk')).toHaveText(['0Stuck', '0Waiting', '1Running']);
     await expect(tile.locator('b.need')).toHaveCount(0);
+    await expect(tile.locator('b.broken')).toHaveCount(0);
+    await expect(tile.locator('a.hk').first()).not.toHaveAttribute('aria-label', /stuck/);
   });
 
   test('read fails: the tile still shows, still opens the hub, numbers show a dash', async ({ page, allowedConsole }) => {

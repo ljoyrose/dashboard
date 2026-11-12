@@ -113,6 +113,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - There is no Vet link page and no Animana patient id on screen; an old #/vet address falls back to Main, the same as #/buyers, #/shape and #/litters.
 - This hide was checked with the full mocked Playwright suite (and the phone project, which CI runs with it): 2011 passed, 15 skipped, 1 failed. The failure was Money’s keyboard More test (`tab-bar.spec.js`), unrelated to this hide; it passed on an immediate re-run (2 of 2). House lint (`npm run lint`) passed (0 new findings). The page-size budget tests in that suite passed.
 - Dated limits: room limits and size cut-offs are read as at the day being checked (from_date / to_date, to_date included, blank = open), with the weight on or before that day, so a later rule never makes an old placement look wrong.
+- A dog's room is its occupancy row with the latest moved_in, even when an older row comes later in the file. A move row with a blank classification keeps the dog's licence label from its latest labelled row, so the dog stays on site (`tests/mocked/cdhub-compliance-urgent.spec.js`).
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.
 - Saving stays switched off.
@@ -326,6 +327,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 30 Oct 2026 | Phone install: Factory, Food and Marketplace were not on the service worker list, so they did not open offline | "@regression every published hub page is on the service worker list" (tests/mocked/pwa-and-keys.spec.js) |
 | 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
 | 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
+| 3 Nov 2026 | Search dialog (390px screenshot, Dashboard): "Type at least 2 letters." still showed after typing "invoice" (it changed only when the search ran), and Close wore the browser's own button style | "the hint follows every key: shown under 2 letters, gone from the 2nd letter on…" and "${scheme}: Close is a house button: 1px line…" (tests/mocked/house-rose-broken.spec.js) |
 | 5 Nov 2026 | Home Apps tile header opened Factory Rooms (`factory/`) instead of Main, and the Food ✓ XML tick opened unfiltered orders | "Apps tile header opens Factory Main, and" |
 | 5 Nov 2026 | Main hub tiles: only the name was a link, so a tap on the rest of the square did nothing | "the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression" |
 | 5 Nov 2026 | CD Hub boot said it was reading tables from Drive and waited on each file in turn | "boot stays friendly and present files are read together @regression" |
