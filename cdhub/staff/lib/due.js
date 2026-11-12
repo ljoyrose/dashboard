@@ -4,7 +4,8 @@
  *
  * Reads two check_type columns that are NOT on the sheet yet. Until they are, every job is simply "as needed":
  *   every_days  whole number of days between jobs; blank means as needed
- *   includes    type_keys this job also covers, separated by | (a full groom can restart nails and ears)
+ *   includes    type_keys this job also covers, separated by | (a full groom can restart nails and ears;
+ *               a whole-site clean can restart each room's daily clean, except rooms in its not_in_areas)
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -59,6 +60,12 @@
     if (target.area_id) return t === 'area' || t === 'either';
     return t === 'none';
   }
+  function listOf(v) { return String(v || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
+  /* a whole-site job (target none) that includes room jobs restarts them in every room, except the rooms it never covers (isolation) */
+  function siteCoversRoom(version, target) {
+    return !!target.area_id && !target.subject_id && version.target === 'none' && includesOf(version).length > 0 &&
+      listOf(version.not_in_areas).indexOf(target.area_id) < 0;
+  }
   function sameTarget(row, target, version) {
     if (perDogRoom(version)) return target.subject_id ? row.subject_id === target.subject_id : (row.area_id || '') === (target.area_id || '');
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
@@ -76,9 +83,11 @@
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
-      if (!version || log.outcome === 'not_done' || !sameTarget(log, target, version)) return;
+      if (!version || log.outcome === 'not_done') return;
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
+      if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
+      if (!sameTarget(log, target, version)) return;
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
