@@ -152,6 +152,21 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(dogRows(page)).toHaveCount(EXPECT.length);
   });
 
+  asOwner('S4.5b find a dog by name keeps focus; sort Name A to Z and Fail to Pass reorder the list', async ({ page }) => {
+    await openBreed(page);
+    const box = page.locator('#bbSearch');
+    await box.fill('two');
+    await expect(dogRows(page)).toHaveCount(1);
+    await expect(dogRows(page).first()).toContainText('Test Dog Two');
+    await expect(box).toBeFocused();
+    await box.fill('');
+    await expect(dogRows(page)).toHaveCount(EXPECT.length);
+    await page.locator('#bbSort').selectOption('name');
+    await expect(dogRows(page).locator('.bb-name')).toHaveText(['Test Dog One', 'Test Dog Two', 'Test Pup One']);
+    await page.locator('#bbSort').selectOption('attention');
+    await expect(dogRows(page).first()).toContainText('Test Dog Two');
+  });
+
   asOwner('S4.6 one animal: sections in order, each foldable with a count, each line says why', async ({ page }) => {
     await openBreed(page);
     await dogRows(page).filter({ hasText: 'Test Pup One' }).click();

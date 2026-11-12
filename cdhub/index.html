@@ -343,6 +343,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .key{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:var(--fs-small);color:var(--muted);margin:0 0 12px}
 .key>span{display:inline-flex;align-items:center;gap:6px}
 .stf{gap:8px}
+.fgrp .key{margin:0}
 
 
 .tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,160px)) minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
@@ -390,6 +391,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 
 .dc .dc-top{display:flex;gap:10px;align-items:flex-start;padding:10px 12px 8px}
 .dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dc .dc-info .ricon{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* room icon: small, never the browser's default 300x150 (quality review 12 Nov 2026) */
 .dc-sects{border-top:1px solid var(--line)}
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
@@ -407,6 +409,15 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs-form .dcs-row{gap:6px;align-items:flex-end}
 .dcs-form button{background:var(--ljr-6);color:var(--ljr-6-on);border:none;border-radius:var(--radius);padding:0 12px;font-size:var(--fs-small);cursor:pointer;align-self:flex-end;margin-top:2px;height:var(--house-btn);box-sizing:border-box}
 .dcs-form button:disabled{opacity:.5}
+.dcs-link{display:flex;align-items:center;gap:7px;padding:0 12px;font-size:var(--fs-small);color:var(--muted);text-decoration:none;min-width:0;height:var(--house-btn);border-top:1px solid var(--press);box-sizing:border-box}
+.dcs-link svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dcs-link .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcs-link::after{content:'\203A';margin-left:auto;flex:0 0 auto}
+@media (hover:hover){.dcs-link:hover{background:var(--hov);}}
+.pill.dna.d-clear{border-color:var(--ljr-5-text);background:var(--ljr-5-tint)}
+.pill.dna.d-carrier{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
+.pill.dna.d-affected{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+@media(max-width:767px){.dcs-link{height:var(--house-btn-phone)}}
 @media(max-width:767px){.dcs>summary,.dcs-form input,.dcs-form select,.dcs-form button{height:var(--house-btn-phone)}}
 </style>
 </head><body>
@@ -1687,15 +1698,10 @@ function pageDogs(){
    groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
     ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
     ['Age',fsel('fa','Age','<option value="p">under 6m</option><option value="j">6m to 12m</option><option value="a">1 to 7y</option><option value="o">7y+</option><option value="__none">no DOB</option>')],
-    ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')]]})
- /* kit: animal (sex key and status chips) */
- +'<div class="key"><span><i class="sexdot me"></i>entire male</span>'
- +'<span><i class="sexdot mn"></i>neutered male</span>'
- +'<span><i class="sexdot fe"></i>entire female</span>'
- +'<span><i class="sexdot fn"></i>neutered female</span>'
- +'<span><i class="sexdot u"></i>sex missing</span></div>'
- +'<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
- +'<span class="info" tabindex="0" title="The dot by each name is the sex: blue male, pink female, a ring when neutered, dashed when not recorded. A dog that has been done also says spayed or neutered. The buttons are the status: tap one to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
+    ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
+    /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
+    ['Status','<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
+     +'<span class="info" tabindex="0" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  /* foundation: record media and named people, not held yet */
  +'<div class="arrow">'+arrives('media')+arrives('person')+'</div>'
@@ -1753,6 +1759,35 @@ function moxiLine(d){
   +(url?'<a class="cb" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
   +'</div>';
 }
+/* card summary lines (Lisa's dog card mock-up, 7 Nov 2026): dates DD/MM/YY, fewest words */
+function wtChange(dl){ if(dl===null||dl===undefined||isNaN(dl)) return '';
+ var r=Math.round(dl*10)/10; return (r>0?'↑ ':(r<0?'↓ ':'= '))+Math.abs(r).toFixed(1)+' · '; }
+function lastOn(rows){ var last=''; (rows||[]).forEach(function(r){ if(r.on&&r.on>last) last=r.on; });
+ return last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':''; }
+/* DNA: clear / carrier / affected from the lab's words, else the copy count. Anything else stays a plain pill. */
+function dnaKind(r){ var t=String(r.interp||'')+' '+String(r.genotype||'');
+ if(/\b(not|non)[- ]?(affected|carrier)/i.test(t)||/clear|normal|negative/i.test(t)) return 'clear';
+ if(/affected|at[- ]?risk/i.test(t)) return 'affected';
+ if(/carrier/i.test(t)) return 'carrier';
+ var c=String(r.copies==null?'':r.copies).trim(); return c==='0'?'clear':(c==='1'?'carrier':(c==='2'?'affected':'')); }
+function dnaPill(r){ var k=dnaKind(r), m=(CD.markers||{})[r.code]||{};
+ var tip=[m.name||'',r.genotype||'',r.lab||'',r.on?dmyShort(r.on):''].filter(Boolean).join(' · ');
+ return '<span class="pill dna'+(k?' d-'+k:'')+'" data-dna="'+esc(k||'other')+'" title="'+esc(tip)+'">'+esc(r.code||'?')+' '+esc(k||r.genotype||r.interp||'')+'</span>'; }
+function dnaRow(d){ var x=d.dna||[]; if(!x.length) return '';
+ return '<details class="dcs dnac"><summary>'
+  +'<svg class="ricon" aria-hidden="true"><use href="#i-activity"/></svg>'
+  +'<span class="dcs-label" data-k="dna">'+x.map(dnaPill).join(' ')+'</span>'
+  +'</summary><div class="dcs-bd">'
+  +x.map(function(r){ var m=(CD.markers||{})[r.code]||{};
+    return '<div class="dcs-row">'+dnaPill(r)+'<span class="mut">'+esc([m.name||'',r.genotype||'',r.lab||'',r.on?dmyShort(r.on):''].filter(Boolean).join(' · '))+'</span></div>'; }).join('')
+  +'</div></details>'; }
+/* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
+function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
+ var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
+ return '<div class="dcs litc"><a class="dcs-link" href="#/litters/'+esc(d.id)+'" data-dam-link="'+esc(d.id)+'">'
+  +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
+  +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
+  +'</a></div>'; }
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
@@ -1802,10 +1837,11 @@ function drawDogs(){
       +'<div class="nm">'+esc(d.name||'—')+'</div>'
       +'<div class="meta">'
         +'<span class="age">'+age+'</span>'
+        +(d.dob?'<span class="mut" data-k="dob">· DOB '+esc(dmyShort(d.dob))+'</span>':'')
         +(d.size?'<span class="mut">· '+esc(d.size)+'</span>':'')
         +((d.breed&&d.breed!=='Australian Cobberdog')?'<span class="mut">· <b>'+esc(d.breed)+'</b></span>':'')
       +'</div>'
-      +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
+      +'<div class="coat" data-k="colour"><span class="mut">Colour</span>'+swatch(d)+'<span>'+esc(d.colour?colourLabel(d):'\u2014')+'</span></div>'
       +'<div class="meta">'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
         +(d.room&&!away?'<a href="#/areas/'+esc(d.room)+'" data-room-link="'+esc(d.room)+'">'+esc(d.where)+'</a>'
@@ -1820,7 +1856,7 @@ function drawDogs(){
 
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
-      +'<span class="dcs-label">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+esc(dmy(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
+      +'<span class="dcs-label" data-k="weight">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+wtChange(w.delta)+esc(dmyShort(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
     +'</summary><div class="dcs-bd">'
       +(d.weights.length?d.weights.slice().reverse().map(function(ww){
         return '<div class="dcs-row"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
@@ -1831,7 +1867,7 @@ function drawDogs(){
 
     +'<details class="dcs"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-pill"/></svg>'
-      +'<span class="dcs-label">'+(d.treats.length?'<b>'+d.treats.length+'</b> medication'+(d.treats.length!==1?'s':''):'<span class="mut">no medications</span>')+'</span>'
+      +'<span class="dcs-label" data-k="meds">'+(d.treats.length?'<b>'+d.treats.length+'</b> medication'+(d.treats.length!==1?'s':'')+lastOn(d.treats):'<span class="mut">no medications</span>')+'</span>'
     +'</summary><div class="dcs-bd">'
       +d.treats.map(function(t){
         return '<div class="dcs-row"><span class="mut">'+esc(dmy(t.on))+'</span><b>'+esc(t.product||'unnamed')+'</b>'
@@ -1864,6 +1900,9 @@ function drawDogs(){
         }).join('')
       +'</div></details>'
     :'')
+
+    +dnaRow(d)
+    +litterRow(d)
 
     +'<details class="dcs"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-chip"/></svg>'
@@ -2770,10 +2809,35 @@ function pageCompliance(){
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
   +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p>');
+ h+=compRehearsalHtml()+compAccessHtml();
  return h;
+}
+/* REHEARSAL (mock-up 7 Nov, H-04): a practice inspection that leaves NO trace. Notes live only in this variable while it
+   runs; nothing is saved, stored in the browser, counted or scored. End (or leaving Compliance) throws it all away. */
+var REHEARSAL=null;
+function compRehearsalHtml(){ var r=REHEARSAL;
+ return compFold('compRehearsal','rehearsal','Rehearsal',r
+  ?'<div id="rhOn"><p><span class="pill w">Rehearsal</span> Nothing is saved. Ending it discards everything: no count, no score, nowhere.</p>'
+   +(r.notes.length?'<ul class="ctl" id="rhList">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>':'')
+   +'<div class="frow"><input id="rhNote" type="text" placeholder="practice finding" aria-label="practice finding" style="min-width:14em"> <button type="button" id="rhAdd">Add</button></div>'
+   +'<p><button type="button" class="btn" id="rhEnd">End and discard</button></p></div>'
+  :'<p class="mut">A practice inspection. Nothing is saved or counted.</p><p><button type="button" class="btn" id="rhStart">Start a rehearsal</button></p>'); }
+/* ACCESS (mock-up 7 Nov): who holds a staff or guest code, and Revoke, live on the save script's owner page (signed in
+   to the owner's Google account). The hub only links to it, from the save address this browser holds. */
+function compAccessHtml(){ var u=sinkGet(SINK_URL_KEY), ok=/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u);
+ return compFold('compAccess','access','Who has access',
+  '<p class="mut">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'
+  +(ok?'<p><a class="btn" id="accOpen" href="'+esc(u+'?page=approve')+'" target="_blank" rel="noopener">Open owner page</a></p>'
+     :'<p class="mut" id="accOff">Saving is not set up in this browser yet. Set it up at the top of <a href="#/round">The round</a>.</p>')); }
+function bindRehearsal(){
+ var st=document.getElementById('rhStart'), en=document.getElementById('rhEnd'), ad=document.getElementById('rhAdd'), re=function(){ go('compliance',false); };
+ if(st) st.addEventListener('click',function(){ REHEARSAL={notes:[]}; re(); });
+ if(en) en.addEventListener('click',function(){ REHEARSAL=null; re(); });
+ if(ad) ad.addEventListener('click',function(){ var i=document.getElementById('rhNote'), v=String(i&&i.value||'').trim(); if(!v||!REHEARSAL) return; REHEARSAL.notes.push(v); re(); });
 }
 function bindCompliance(){
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
+ bindRehearsal();
  var b=document.getElementById('brSave'); if(!b) return;
  b.addEventListener('click',async function(){
   var key=document.getElementById('brKey').value, val=String(document.getElementById('brVal').value||'').trim(),
@@ -2874,6 +2938,7 @@ function go(id,push){
  pill();
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
+ if(id!=='compliance') REHEARSAL=null;   /* leaving Compliance ends a rehearsal: nothing kept (H-04) */
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
@@ -2939,6 +3004,7 @@ function go(id,push){
   add('ls',Object.keys(ss).sort());
   add('lm',Object.keys(dm).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
   add('lp',Object.keys(sr).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
+  if(sub&&dm[sub]){ var lmE=document.getElementById('lm'); if(lmE) lmE.value=sub; }   /* opened from a dog card: that dam's litters */
   ['lq','ld','ly','ls','lm','lp','lk','lsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawLitters); if(i!=='lq') e.addEventListener('change',drawLitters); });
   document.getElementById('lclr').addEventListener('click',function(){ ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';}); drawLitters(); });
   drawLitters();
