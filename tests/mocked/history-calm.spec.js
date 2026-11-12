@@ -373,3 +373,36 @@ test('audit: a room holding a puppy under 4 weeks is judged by the puppy band th
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
   await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
 });
+
+test('audit: a reading with max lower than min is flagged, even when both figures are inside the limit', async ({ page, guard }) => {
+  const rows = R.map((r, i) => {
+    if (r[0] === 'area-r1' && r[1] === '2026-01-05' && r[2] === 'am') return ['area-r1', '2026-01-05', 'am', '22.0', '18.0', ''];
+    return r;
+  });
+  const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camera_value_changed,taken_by,mitigation_note\n'
+    + rows.map((r, i) => ['rdg-' + i, r[0], r[1] + 'T' + (r[2] === 'am' ? '09' : '16') + ':00:00Z', r[1] + 'T' + (r[2] === 'am' ? '00' : '12') + ':00:00+00:00', r[3], r[4], 'camera', 'true', 'stf-1', '"' + r[5] + '"'].join(',')).join('\n') + '\n';
+  await open(page, guard);
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  put('BLD-area_reading.csv', readings);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('warn');
+  await openDay(page, '2026-01-05');
+  const r1 = page.locator('#drill .rl', { hasText: 'R1' });
+  await expect(r1.locator('.warn').first()).toHaveText('AM 22.0–18.0 · max lower than min');
+  await expect(r1).toContainText('PM 12.5–16.0 ✓');
+  await expect(r1).not.toContainText('AM 22.0–18.0 ✓');
+  const dir = process.env.MINMAX_SHOTS_DIR || '/workspace/minmax-test';
+  fs.mkdirSync(dir, { recursive: true });
+  await page.locator('#drill').screenshot({ path: path.join(dir, 'history-swapped.png') });
+  await page.locator('#drill .dclose').click();
+  await page.getByRole('button', { name: 'The round' }).click();
+  await page.locator('#rdate').fill('2026-01-05');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile', { hasText: 'R1' }).locator('.warn')).toContainText('AM 22.0–18.0 · max lower than min');
+  await page.screenshot({ path: path.join(dir, 'history-round-swapped.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Month cards' }).click();
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-swap', '1');
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toContainText('1 max lower than min');
+});

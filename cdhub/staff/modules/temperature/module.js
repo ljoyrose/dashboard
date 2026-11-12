@@ -311,9 +311,11 @@
     function check() {
       requestId = null;
       var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx));
+      var sw = !!(mx && mn && parseFloat(mn) > parseFloat(mx));
       noteRow.hidden = !b;
+      [minIn, maxIn].forEach(function (i) { i.classList.toggle('swap', sw); });
       if ((maxIn.value && !mx) || (minIn.value && !mn)) setMsg(checkMsg, 'One decimal place, e.g. 18.5', 'bad');
-      else if (mx && mn && parseFloat(mn) > parseFloat(mx)) setMsg(checkMsg, 'MIN is higher than MAX. Wrong way round?', 'bad');
+      else if (sw) setMsg(checkMsg, 'MIN is higher than MAX. Wrong way round?', 'bad');
       else if (b) setMsg(checkMsg, (b === 'low' ? 'Below' : 'Above') + ' the limit.', 'bad');
       else setMsg(checkMsg, '');
     }
@@ -658,11 +660,14 @@
       out.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
     }
     function rowBreach(r, lo, hi) {
+      var swapped = r.min !== null && r.max !== null && r.min > r.max;
+      var hadNote = !!r.note;
+      if (swapped) { r.flag = true; r.note = [r.note, 'max lower than min'].filter(Boolean).join(' · '); }
       if (r.kind !== 'staff') return;
       var outside = (lo !== null && r.min !== null && r.min < lo) || (hi !== null && r.max !== null && r.max > hi);
       // Room empty (Lisa 11 Nov 2026): an outside reading is flagged with the caveat, never counted as outside the limit.
-      if (r.empty) { r.flag = outside; r.breach = false; return; }
-      r.breach = !!r.note || outside;
+      if (r.empty) { r.flag = !!(r.flag || outside); r.breach = false; return; }
+      r.breach = hadNote || outside;
     }
   }
   /** Rows of one room and year from the three lists, oldest first. Guest and sensor rows are labelled, never merged. */
@@ -702,7 +707,7 @@
       '.tg-guide{position:absolute;left:6%;right:6%;top:50%;transform:translateY(-50%);aspect-ratio:2.2/1;border:3px solid var(--accent);border-radius:10px;box-shadow:0 0 0 999px color-mix(in srgb,var(--ljr-ink) 35%,transparent)}' +
       '.tg-guide span{position:absolute;right:4px;font:700 11px var(--body);color:var(--ljr-paper);background:var(--accent);padding:0 4px;border-radius:4px}.tg-max{top:2px}.tg-min{bottom:2px}' +
       '.tg-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tg-f{display:grid;font-size:13px;font-weight:700;color:var(--mut)}.tg-f[hidden]{display:none}' +
-      '.tg-pair .inp{font-size:24px;text-align:center}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
+      '.tg-pair .inp{font-size:24px;text-align:center}.tg-pair .inp.swap{outline:2px solid var(--ljr-3);background:var(--ljr-3-tint,var(--soft))}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
       '.tg-empty{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:700;margin:8px 0}.tg-empty input{width:24px;height:24px}' +
       '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}.tg-out{border-left-color:var(--ljr-3)}.tg-warn{color:var(--ljr-3-text);font-weight:700}' +
       '.tg-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 14px}.tg-tab th,.tg-tab td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}' +

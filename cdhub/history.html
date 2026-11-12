@@ -302,9 +302,11 @@ function bandOn(day,aid){
   fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
   return fits[0]||null;
 }
+function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
 function tempCls(min,max,day,aid){
   var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR,aid);
   if(isNaN(lo)&&isNaN(hi))return'';
+  if(tempSwapped(min,max))return'swap';   /* max lower than min: typed the wrong way round, checked before hot/cold */
   if(!B)return'unknown';
   if(!isNaN(lo)&&lo<B.min)return'cold';
   if(!isNaN(hi)&&hi>B.max)return'hot';
@@ -547,10 +549,10 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* Room empty (Lisa 11 Nov 2026) = no dog present, a flag on the slot's reading. With no reading the slot is covered
    ('empty', never missed). Outside the limit while empty is flagged with "Room empty" but never counted as outside
    ('eout'). */
-function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'; }
+function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
+    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':cls==='swap'?'swap':'out';
     if(t.empty&&k==='out') k='eout';
     return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }
@@ -572,14 +574,14 @@ function dayRooms(day){
   });
 }
 function daySummary(day){
-  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0};
+  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0,swap:0};
   dayRooms(day).forEach(function(x){ [x.am,x.pm].forEach(function(s){ if(s.k in n) n[s.k]++; if(isRead(s.k)) n.read++; }); });
   return n;
 }
 function indoorDayClass(day){
   if(day>TODAY_STR) return 'future';
   var n=daySummary(day);
-  if(n.out||n.miss) return 'warn';
+  if(n.out||n.miss||n.swap) return 'warn';
   if(!n.read) return 'nd';
   if(n.nolimit) return 'nolimit';
   return 'allok';
@@ -590,6 +592,7 @@ function slotHtml(label,s){
   if(s.k==='due') return '<span class="due">'+label+' due</span>';
   if(s.k==='empty') return '<span class="due">'+label+' empty</span>';
   var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
+  if(s.k==='swap') return '<span class="warn">'+esc(txt)+' · max lower than min</span>';
   if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
@@ -662,7 +665,7 @@ function buildMonthCards(y){
   var cards=[];
   MONTHS.forEach(function(mn,mi){
     if(ds(y,mi,1)>TODAY_STR) return;
-    var t={in:0,out:0,nolimit:0,miss:0,read:0}, hi=null, lo=null;
+    var t={in:0,out:0,nolimit:0,miss:0,read:0,swap:0}, hi=null, lo=null;
     for(var d=1;d<=mdn[mi];d++){
       var date=ds(y,mi,d);
       if(date>TODAY_STR) continue;
@@ -675,12 +678,13 @@ function buildMonthCards(y){
         if(!isNaN(mn2)&&(lo==null||mn2<lo.v)) lo={v:mn2,name:x.name};
       }); });
     }
-    var h='<button type="button" class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'" onclick="openMonth('+(mi+1)+')"><span class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span>'
-      +(t.in+t.out?'<span class="mitem-pct">'+Math.round(100*t.in/(t.in+t.out+t.miss))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
+    var h='<button type="button" class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'" data-swap="'+t.swap+'" onclick="openMonth('+(mi+1)+')"><span class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span>'
+      +(t.in+t.out+t.swap?'<span class="mitem-pct">'+Math.round(100*t.in/(t.in+t.out+t.miss+t.swap))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
     if(!t.read&&!t.miss) h+='<span>No readings</span>';
     else{
       h+='<span>'+t.in+' in limit</span>';
       h+='<span'+(t.out?' class="warn"':'')+'>'+t.out+' outside</span>';
+      if(t.swap) h+='<span class="warn">'+t.swap+' max lower than min</span>';
       h+='<span'+(t.miss?' class="warn"':'')+'>'+t.miss+' missed</span>';
       if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';
       if(lo) h+='<span>Low '+dpIndoor(lo.v)+' '+esc(lo.name)+'</span>';
@@ -695,7 +699,7 @@ function buildRound(dateStr){
   var tiles='<div class="rtiles">'+rooms.map(function(x){
     return '<div class="rtile"><div class="rn">'+esc(x.name)+'</div><div class="rs">'+slotHtml('AM',x.am)+'</div><div class="rs">'+slotHtml('PM',x.pm)+'</div></div>';
   }).join('')+'</div>';
-  var cell=function(s,v){ return '<td'+(s.k==='out'||s.k==='eout'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
+  var cell=function(s,v){ return '<td'+(s.k==='out'||s.k==='eout'||s.k==='swap'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
   var rows=rooms.map(function(x){ return '<tr><td class="nm">'+esc(x.name)+'</td>'+cell(x.am,x.am.lo)+cell(x.am,x.am.hi)+cell(x.pm,x.pm.lo)+cell(x.pm,x.pm.hi)+'</tr>'; }).join('');
   var table=rooms.length
     ?'<div class="rscroll" tabindex="0" role="region" aria-label="Indoor temperatures in degrees C"><table class="rtable"><thead><tr><th>Room</th><th>AM min</th><th>AM max</th><th>PM min</th><th>PM max</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
