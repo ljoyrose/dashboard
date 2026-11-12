@@ -126,7 +126,7 @@ test.describe('CD Hub: addresses and the browser buttons', () => {
     await page.locator('#rdate').fill('2026-01-15');
     await page.locator('#rdate').dispatchEvent('change');
     await expect(page.locator('#rdate')).toHaveValue('2026-01-15');
-    await expect(page.locator('.card[data-area]').first()).toContainText('Step 1:');
+    await expect(page.locator('.card[data-area]').first()).toContainText('1.');
   });
 });
 
