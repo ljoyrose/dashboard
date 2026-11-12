@@ -9,7 +9,8 @@ Status today: **shipped in dry run**. The loader finds and checks the file and c
 
 1. `config.js` runs first, as before. With dry run off, values checked on an earlier visit are put in before any page
    code reads a setting.
-2. After sign-in the loader looks in Drive for one file named `DASH_CONFIG.json` (at most one look every 15 minutes).
+2. After sign-in the loader looks in Drive for one file named `DASH_CONFIG.json`: one look per page load, and once
+   private values are in use, at most one look every 15 minutes.
 3. Trusted file only:
    - a My Drive file owned by the signed-in person, or
    - a file in a shared drive that Google limits to its own domain (`domainUsersOnly`).
@@ -66,7 +67,7 @@ It answers with counts and setting names only:
 | `ambiguous` | more than one trusted file |
 | `unreadable` | not JSON, not a settings object, too big (64 KB) or a Drive error |
 | `slow` | Drive did not answer in time |
-| `signed-out`, `checked-recently`, `off` | nothing was looked for |
+| `signed-out`, `off` | nothing was looked for |
 
 ## Switches (in `config.js`, `privateConfig`)
 

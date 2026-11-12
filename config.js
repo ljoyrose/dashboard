@@ -201,6 +201,7 @@
 //    change the sign-in id, the permissions asked for, the Google API addresses, or any live / dryRun switch.
 //  - Never-read drives can be added, never removed. An empty value never replaces a filled one.
 //  - privateConfig.dryRun true = find and check the file, change nothing (DashConfigLoader.status() says what it found).
+//    In dry run, and whenever there is no usable file, nothing at all is kept in this browser.
 //  - Nothing is written to the console and no value is ever shown: status() gives counts and setting names only.
 // With dryRun false the checked values are kept in this browser (cleared on sign-out) so the next page load starts with
 // them, and the page reloads once when they differ from what it started with (never while someone is typing or tapping).
@@ -329,8 +330,12 @@
   function readCache() {
     try { var c = JSON.parse((local && local.getItem(CACHE_KEY)) || 'null'); return isObj(c) && typeof c.at === 'number' ? c : null; } catch (e) { return null; }
   }
+  // Only checked values are ever kept. No file (or dry run) = nothing kept, so the sign-in stays the one thing in this browser.
   function writeCache(at, values) {
-    try { if (local) local.setItem(CACHE_KEY, JSON.stringify(values ? { at: at, values: values } : { at: at })); } catch (e) {}
+    try {
+      if (!local) return;
+      if (values) local.setItem(CACHE_KEY, JSON.stringify({ at: at, values: values })); else local.removeItem(CACHE_KEY);
+    } catch (e) {}
   }
   function forget() {
     try { if (local) local.removeItem(CACHE_KEY); } catch (e) {}
@@ -416,13 +421,14 @@
     root.location.reload();
   }
 
-  /** Looks for the private settings file now (force true skips the 15-minute wait). Resolves with status(). Never rejects. */
+  /** Looks for the private settings file now. One look per page load, and not again within 15 minutes of values being
+   *  kept (force true looks anyway). Resolves with status(). Never rejects. */
   function refresh(force) {
     if (busy) return busy;
     var tok = token();
     if (!tok) { if (st.state !== 'in-use') st.state = 'signed-out'; return Promise.resolve(status()); }
     var c = readCache();
-    if (!force && c && Date.now() - c.at < TTL_MS) { if (st.state === 'signed-out') st.state = 'checked-recently'; return Promise.resolve(status()); }
+    if (!force && (st.checkedAt || (c && Date.now() - c.at < TTL_MS))) return Promise.resolve(status());
     var ctl = new AbortController(), slow = false;
     var timeoutMs = typeof SET.timeoutMs === 'number' && SET.timeoutMs > 0 ? SET.timeoutMs : TIMEOUT_MS;
     var timer = setTimeout(function () { slow = true; ctl.abort(); }, timeoutMs);
@@ -430,10 +436,10 @@
     touched = false;
     st.state = 'checking';
     function failed(state) {
-      // Whatever was in use stays in use. Try again in a minute, not on every page load.
+      // Whatever was in use stays in use, and is checked again in a minute rather than on every page load.
       st.state = before === 'in-use' ? 'in-use' : state;
       var old = readCache();
-      writeCache(Date.now() - TTL_MS + RETRY_MS, old && old.values);
+      if (old && old.values) writeCache(Date.now() - TTL_MS + RETRY_MS, old.values);
     }
     busy = find(tok, ctl.signal).then(function (res) {
       if (res.state !== 'found') {

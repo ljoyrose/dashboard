@@ -51,11 +51,16 @@ test.describe('Private settings file: found or not, the page stays safe', () => 
     expect(st).toMatchObject({ found: 0, values: 0, wouldChange: 0, inUse: 0, pendingReload: false });
     expect(lookups(guard.world)).toBe(1);
     expect(await settings(page)).toBe(before);
-    // The next page load inside 15 minutes does not look again.
+    // Nothing is kept in the browser for it: the sign-in is still the only thing stored.
+    expect(await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length }))).toEqual({ local: ['ljr-dash-auth'], session: 0 });
+    // One look per page load, however many times the sign-in is refreshed on the page.
+    await page.evaluate(() => { const a = window.DashAuth.valid(); window.DashAuth.save(a.access_token, a.expires_at, a.scope); });
+    await page.evaluate(() => window.DashConfigLoader.refresh());
+    expect(lookups(guard.world)).toBe(1);
     await page.reload();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-    expect((await page.evaluate(() => window.DashConfigLoader.ready)).state).toBe('checked-recently');
-    expect(lookups(guard.world)).toBe(1);
+    expect((await settled(page, 'absent')).found).toBe(0);
+    expect(lookups(guard.world)).toBe(2);
   });
 
   test('file found, dry run (as shipped): it is checked and counted, and nothing changes', async ({ page, guard }) => {
@@ -70,8 +75,9 @@ test.describe('Private settings file: found or not, the page stays safe', () => 
     expect(JSON.stringify(st)).not.toContain(RUNLOG); // counts and setting names only, never a value
     expect(await settings(page)).toBe(before);
     expect(reads(guard.world, 'cfg-1')).toBe(1);
-    // Nothing private is kept in the browser in dry run: only the time of the last look.
-    expect(Object.keys(JSON.parse(await page.evaluate((k) => localStorage.getItem(k), KEPT)))).toEqual(['at']);
+    // Nothing is kept in the browser in dry run.
+    expect(await page.evaluate((k) => localStorage.getItem(k), KEPT)).toBeNull();
+    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
     expect(n.loads).toBe(1); // no reload
   });
 
