@@ -169,12 +169,12 @@ test.describe('CD Hub core: rooms and dogs', () => {
     expect(c.miss.filter((m) => m.startsWith('Pretend B'))).toHaveLength(5);
     expect(c.miss.filter((m) => m.startsWith('Pretend C'))).toHaveLength(7);
     await expect(page.locator('#compTemps h3 .cnt')).toHaveText(String(1 + 5 + 7));
-    await expect(page.locator('#compTemps [data-k="empty"]')).toContainText('Room empty (not counted)');
+    await expect(page.locator('#compTemps [data-k="empty"]')).toContainText('in an empty room, not counted');
     await expect(page.locator('#compTemps [data-k="empty"] a[data-room-link]')).toHaveAttribute('href', '#/areas/ar-a');
     const order = await page.locator('#compTemps > details > ul > li').evaluateAll((ls) => ls.map((l) => l.dataset.k));
     expect(order).toEqual(['ok', 'empty', 'bad', 'miss']);
     await expect(page.locator('#compTemps [data-window]')).toHaveAttribute('data-window', '7');
-    await expect(page.locator('#compTemps [data-window]')).toContainText('not set yet');
+    await expect(page.locator('#compTemps [data-window]')).toContainText('change');
     // the window is a user row; a reading with a thermometer_id is its own line, by name
     const d = await page.evaluate(() => {
       const t = todayISO();
@@ -187,7 +187,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     expect(d.n).toBe(3);
     expect(d.c).toBe(3);
     expect(d.bad.sort()).toEqual(['', 'Pretend B']);
-    await expect(page.locator('#compTemps [data-window]')).toContainText('Last 3 days (your setting: Pretend setting)');
+    await expect(page.locator('#compTemps [data-window]')).toContainText('Last 3 days (Pretend setting)');
     await expect(page.locator('#compTemps [data-k="bad"]')).toContainText('Pretend B');
   });
 
@@ -216,6 +216,34 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const fs = require('fs'), path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '../../cdhub/index.html'), 'utf8');
     expect(src).not.toMatch(/'(CE|GR)'/);   // the old keeper codes carried first names
+  });
+
+  test('Today staffing tile shows only from the owner\'s ratio rows, with their source', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA);
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => { T['BLD-breeding_rule.csv'] = []; go('today', false); });
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).toHaveCount(0);   // not set: no assumed ratio
+    await page.evaluate(() => {
+      T['BLD-breeding_rule.csv'] = [{ id: 's1', rule_key: 'staffing.adults_per_full_time', value: '7', effective_from: '2020-01-01', source: 'Pretend source' }];
+      go('today', false);
+    });
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults (Pretend source)');
+    // dated rows: each day is judged by the row in force that day; a to_date ends a row
+    const r = await page.evaluate(() => {
+      T['BLD-breeding_rule.csv'] = [
+        { id: 's1', rule_key: 'staffing.adults_per_full_time', value: '7', effective_from: '2020-01-01', to_date: '2020-12-31', source: 'Pretend old' },
+        { id: 's2', rule_key: 'staffing.adults_per_full_time', value: '9', effective_from: '2021-01-01', to_date: '2021-12-31', source: 'Pretend new' }];
+      const a = [staffRule('2020-06-01').ft, staffRule('2021-06-01').ft, staffRule('2022-06-01')];
+      // an open older row takes over again when a newer, closed row has ended
+      T['BLD-breeding_rule.csv'][0].to_date = '';
+      return a.concat([staffRule('2021-06-01').ft, staffRule('2021-12-31').ft, staffRule('2022-06-01').ft]);
+    });
+    expect(r).toEqual([7, 9, null, 9, 9, 7]);
   });
 
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {

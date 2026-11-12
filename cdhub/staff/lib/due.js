@@ -54,11 +54,13 @@
 
   /* a room job about dogs: one room tap saves one line for each dog ticked */
   function perDogRoom(job) { return job.target === 'area' && job.site_scope === 'per_dog'; }
+  /* only_in_areas: room ids by |, the only rooms a room job belongs to (isolation jobs); blank = every room */
+  function inRooms(job, areaId) { var only = listOf(job.only_in_areas); return !only.length || only.indexOf(areaId || '') >= 0; }
   function appliesTo(job, target) {
     var t = job.target;
     if (target.litter_id) return t === 'litter';
-    if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job));
-    if (target.area_id) return t === 'area' || t === 'either';
+    if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea));
+    if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
   }
   function listOf(v) { return String(v || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
@@ -74,7 +76,7 @@
   }
 
   /**
-   * Every job for one dog ({subject_id}; add everyDog: true to count that dog on room jobs saved per dog), one room ({area_id}),
+   * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
    * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.

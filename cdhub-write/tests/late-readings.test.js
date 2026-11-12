@@ -94,3 +94,26 @@ test('the cap edge: back to exactly the kept years saves, a minute more is refus
   const r = send(env, env.codes.owner, { read_method: 'photo', period_start: iso(Date.UTC(2024, 10, 12, 9, 59, 0)) });
   assert.equal(r.code, 'INVALID'); assert.match(r.fields.period_start, /kept \(2 years\)/);
 });
+
+test('retention rows are dated: the row in force on the reading\'s own date sets the kept years (Lisa 12 Nov 2026)', () => {
+  const env = env0();
+  // 2 years until 2023-12-31, then 6 years from 2024-01-01 (no end). A 2019 reading is under the 2-year row.
+  env.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,basis,set_by,set_on,from_date,to_date',
+    `ret-1,${fx.TENANT},temperature,2,old,o,2020-01-01,2020-01-01,2023-12-31`,
+    `ret-2,${fx.TENANT},temperature,6,new,o,2024-01-01,2024-01-01,`].join('\r\n') + '\r\n');
+  const old = send(env, env.codes.owner, { read_method: 'photo', period_start: iso(Date.UTC(2021, 5, 1, 10, 0, 0)) });
+  assert.equal(old.code, 'INVALID'); assert.match(old.fields.period_start, /kept \(2 years\)/);
+  assert.equal(send(env, env.codes.owner, { read_method: 'photo', period_start: iso(Date.UTC(2024, 5, 1, 10, 0, 0)) }).ok, true);
+});
+
+test('rowsInForce_: blank start = always, blank end = no end, both ends count, a missing column is blank', () => {
+  const env = env0(), f = env.ctx.rowsInForce_, l = env.ctx.latestInForce_;
+  const rows = [{ id: 'a' }, { id: 'b', from_date: '2026-01-01', to_date: '2026-06-30' }, { id: 'c', from_date: '2026-07-01', to_date: '' },
+    { id: 'd', effective_from: '2026-03-01' }];
+  assert.deepEqual(f(rows, '2025-12-31').map(r => r.id), ['a', 'd']);
+  assert.deepEqual(f(rows, '2026-06-30').map(r => r.id), ['a', 'b', 'd']);
+  assert.deepEqual(f(rows, '2026-07-01T09:00:00+01:00').map(r => r.id), ['a', 'c', 'd']);
+  assert.equal(l(rows, '2026-05-01').id, 'b');
+  assert.deepEqual(f(rows, '2026-02-01', 'effective_from').map(r => r.id), ['a', 'b', 'c']);
+  assert.equal(l(rows, '2026-04-01', 'effective_from').id, 'd');
+});

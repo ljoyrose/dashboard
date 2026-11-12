@@ -292,9 +292,9 @@ var TABLES = {
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
     columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
     proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -323,7 +323,8 @@ var TABLES = {
       sop:            { type: 'text' },                                             // the SOP's short name
       evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
       site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none or area: what one tap writes
-      not_in_areas:   { type: 'text' }                                              // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
+      not_in_areas:   { type: 'text' },                                             // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
+      only_in_areas:  { type: 'text' }                                              // a room job for these rooms only (e.g. isolation), by |; blank = every room
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -342,6 +343,12 @@ var TABLES = {
       if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none' && row.target !== 'area') errors.site_scope = 'Only for a whole-site or room check.';
       if (!errors.not_in_areas && row.target === 'none' && row.site_scope === 'per_dog' && row.not_in_areas === '') {
         errors.not_in_areas = 'List the isolation rooms this tap must never cover, separated by |, or type none.';
+      }
+      if (!errors.only_in_areas && row.only_in_areas !== '') {
+        var rooms = row.only_in_areas.split('|').map(function (a) { return a.trim(); }).filter(String);
+        if (row.target !== 'area') errors.only_in_areas = 'Only for a room job.';
+        else if (!rooms.length || rooms.some(function (a) { return !ID_RE_.test(a); })) errors.only_in_areas = 'List room ids separated by |, e.g. area-h2-iso.';
+        else row.only_in_areas = rooms.join('|');
       }
     },
     checkAgainst: function (clean, records, errors) {
@@ -457,6 +464,7 @@ var TABLES = {
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
+      { name: 'check_type_only', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'only_in_areas' },
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
       { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
       { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' }
@@ -479,9 +487,14 @@ var TABLES = {
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
-    checkRow: function (row, errors) {
+    checkRow: function (row, errors, lookups) {
       if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
         errors.note = 'Say briefly what the concern is or why it was not done.';
+      }
+      // a room job for some rooms only (check_type.only_in_areas): never saved for another room
+      var only = lookups && lookups.check_type_only ? lookups.check_type_only[row.check_type_id] : true;
+      if (!errors.area_id && row.area_id && typeof only === 'string' && only.split('|').indexOf(row.area_id) < 0) {
+        errors.area_id = 'This job is not for this room.';
       }
     }
   },
@@ -668,20 +681,32 @@ var TABLES = {
     alwaysPending: false,
     defaultMode: 'direct',
     input: {
-      rule_key:       { type: 'enum', values: ['min_dam_age_months', 'max_litters_per_dam', 'min_months_between_litters'], required: true },
-      value:          { type: 'count', required: true },
+      // any key (overseer 12 Nov 2026 sweep): size_from_kg.*, size_colour.*, compliance.*, staffing.*, room.* are rows too.
+      // Only the keys in BREEDING_RULE_LIMITS_ are checked as whole numbers with a usual range.
+      rule_key:       { type: 'text', required: true },
+      value:          { type: 'text', required: true },
       effective_from: { type: 'date', required: true },
       source:         { type: 'text' },
-      note:           { type: 'text' }
+      note:           { type: 'text' },
+      // not a column: "yes" keeps a value outside the usual range (overseer 12 Nov 2026: a council may allow it)
+      confirm_unusual: { type: 'enum', values: ['yes'] }
     },
     // the same rule given twice from the same date is a repeat tap
     dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
+      if (row.rule_key && !/^[a-z][a-z0-9_.\-]{1,99}$/.test(row.rule_key)) errors.rule_key = 'Use lower-case letters, numbers, dots, dashes and underscores, e.g. size_from_kg.medium.';
       var lim = BREEDING_RULE_LIMITS_[row.rule_key];
+      if (lim && row.value !== '' && !errors.value) {
+        if (!/^\d{1,3}$/.test(row.value)) errors.value = 'Use a whole number from 0 to 999.';
+        else row.value = String(parseInt(row.value, 10));
+      }
       if (lim && !errors.value && row.value !== '') {
         var n = parseInt(row.value, 10);
-        if (n < lim[0] || n > lim[1]) errors.value = 'Use a number from ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '.';
+        if ((n < lim[0] || n > lim[1]) && row.confirm_unusual !== 'yes') {
+          errors.value = 'Unusual value: the usual range is ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '. Check the number, or save anyway.';
+          errors.confirm_unusual = 'Save anyway?';   // the page shows a "Save anyway" button and sends confirm_unusual = yes
+        }
       }
     },
     // a new version must start after the latest one already saved for that rule (history is never rewritten)
@@ -705,7 +730,8 @@ function checkReadMethod_(row, errors) {
   }
 }
 
-/** Sensible bounds for each breeding rule, so a typo (e.g. 120 months) is refused: [lowest, highest, unit]. */
+/** Usual bounds for each breeding rule, so a typo (e.g. 120 months) is caught: [lowest, highest, unit]. Outside them
+ *  is a warning, not a stop: confirm_unusual = yes saves it (a council may allow other values). */
 var BREEDING_RULE_LIMITS_ = {
   min_dam_age_months:          [6, 48, 'months'],
   max_litters_per_dam:         [1, 20, 'litters'],
@@ -860,6 +886,12 @@ var READABLE = {
   // health results (12 Nov 2026, for inspector links; staff and owner still need visibility rows, none planned)
   health_screen:   { file: 'BLD-health_screen.csv',   vis: 'health_screen',   authorCol: '',            dateCol: '' },
   fit_to_breed:    { file: 'BLD-fit_to_breed.csv',    vis: 'fit_to_breed',    authorCol: '',            dateCol: '' },
+  // 12 Nov 2026 (DOGCARD): the kennel print card shows Colour and Microchip. Read only as far as visibility rows
+  // allow; the planned rows are for aud-admin (the owner) only.
+  coat_colour:     { file: 'BLD-coat_colour.csv',     vis: 'coat_colour',     authorCol: '',            dateCol: '' },
+  coat_pattern:    { file: 'BLD-coat_pattern.csv',    vis: 'coat_pattern',    authorCol: '',            dateCol: '' },
+  nose_pigment:    { file: 'BLD-nose_pigment.csv',    vis: 'nose_pigment',    authorCol: '',            dateCol: '' },
+  microchip:       { file: 'BLD-microchip.csv',       vis: 'microchip',       authorCol: '',            dateCol: '' },
   // temperature limits by age (and, if area_id is filled, for one room): rows Lisa enters, read by the staff page
   temperature_band: { file: 'BLD-temperature_band.csv', vis: 'temperature_band', authorCol: '',          dateCol: '' },
   sensor_reading:  { file: 'BLD-sensor_reading.csv',  vis: 'sensor_reading',  authorCol: 'taken_by',    dateCol: 'taken_at' },

@@ -230,3 +230,13 @@ test('a job with form questions opens its form, needs the required answers, and 
   await expect.poll(() => sent.length).toBe(2);
   expect(sent[1].values).toBeUndefined();
 });
+
+test('a room job set for one room only shows on that room\'s scan', async ({ page }) => {
+  await setup(page, { check_type: TYPES.concat([J('iso_clean', 'Isolation clean', 'area', { every_days: '1', only_in_areas: 'area-iso' })]),
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }]), area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }] });
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await expect(page.locator('[data-job="clean"]')).toBeVisible();
+  await expect(page.locator('[data-job="iso_clean"]')).toHaveCount(0);
+  await page.goto('cdhub/staff/#s/ISOTAG22');
+  await expect(page.locator('[data-job="iso_clean"]')).toBeVisible();
+});

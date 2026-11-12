@@ -33,7 +33,7 @@
         });
       });
     }
-    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true }; }), v.logs);
+    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '' }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
     add([{}], site);

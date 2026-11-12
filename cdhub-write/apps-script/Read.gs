@@ -167,7 +167,7 @@ function sinkRead_(req) {
     rows.push(o);
   }
   return {
-    table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated,
+    table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated, role: who.role,   // the caller's own role, for showing buttons; never anyone else's
     scope: sc.kind === 'all' ? 'all rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
     as_of: londonIso_(now)
   };

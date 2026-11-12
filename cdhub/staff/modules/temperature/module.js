@@ -99,7 +99,7 @@
   }
   function doneFor(rows, items, periodStart) {
     var done = {};
-    (rows || []).forEach(function (r) { if (String(r.period_start || '') === periodStart) done[readingKey(r, items)] = true; });
+    (rows || []).forEach(function (r) { if (String(r.period_start || '') === periodStart) done[readingKey(r, items)] = r; });   // the row itself: the card shows its numbers
     return done;
   }
   /* The round is the thermometer rows (BLD-thermometer: name, area_id), never a coded list: a room with no
@@ -338,7 +338,7 @@
           h('div', { class: 'nm', text: r.status === 'queued' ? 'Sent' : 'Saved' }),
           past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' })
         ]));
-        host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(); } }));
+        host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(f); } }));
       });
     }
     return stopNow;
@@ -405,7 +405,17 @@
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
       stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
-        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onDone: function () { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = true; list(); } });
+        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onDone: function (f) { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = f || true; list(); } });
+    }
+    /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
+    function cardState(a, d) {
+      if (!d) return { text: 'Due' };
+      if (d === true) return { text: 'Done' };
+      var mn = num(d.min_c), mx = num(d.max_c), empty = String(d.room_empty || '').toLowerCase() === 'yes';
+      if (mn === null && mx === null) return { text: empty ? 'Room empty' : 'Done' };
+      var range = (mn === null ? '–' : mn.toFixed(1)) + '–' + (mx === null ? '–' : mx.toFixed(1));
+      var out = !!breach(limit(a.id), mn, mx);
+      return { text: (out ? 'Outside ' : '') + range + (empty ? ' · Room empty' : ''), out: out && !empty };
     }
     function list() {
       if (stop) { stop(); stop = null; }
@@ -418,10 +428,10 @@
       function isHere(a) { return !!here && (here.key ? itemKey(a) === here.key : a.id === here.areaId); }
       if (here) sorted.sort(function (a, b) { return isHere(b) - isHere(a); });
       sorted.forEach(function (a) {
-        var done = o.done && o.done[itemKey(a)], scanned = isHere(a);
-        cards.appendChild(h('button', { class: 'card go' + (done ? ' tg-done' : ''), type: 'button', onclick: function () { open(a); } }, [
+        var done = o.done && o.done[itemKey(a)], scanned = isHere(a), st = o.guest ? null : cardState(a, done);
+        cards.appendChild(h('button', { class: 'card go' + (done ? ' tg-done' : '') + (st && st.out ? ' tg-out' : ''), type: 'button', onclick: function () { open(a); } }, [
           h('div', { class: 'nm', text: (done ? '✓ ' : '') + a.label }),
-          scanned ? h('div', { class: 'ds', text: 'You scanned this' }) : (done ? h('div', { class: 'ds', text: 'Done' }) : null)
+          scanned || st ? h('div', { class: 'ds' + (st && st.out ? ' tg-warn' : ''), text: [scanned ? 'You scanned this' : '', st ? st.text : ''].filter(Boolean).join(' · ') }) : null
         ]));
       });
       host.appendChild(cards);
@@ -660,7 +670,7 @@
       '.tg-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tg-f{display:grid;font-size:13px;font-weight:700;color:var(--mut)}.tg-f[hidden]{display:none}' +
       '.tg-pair .inp{font-size:24px;text-align:center}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
       '.tg-empty{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:700;margin:8px 0}.tg-empty input{width:24px;height:24px}' +
-      '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}' +
+      '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}.tg-out{border-left-color:var(--ljr-3)}.tg-warn{color:var(--ljr-3-text);font-weight:700}' +
       '.tg-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 14px}.tg-tab th,.tg-tab td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}' +
       '.tg-br td{color:var(--ljr-3-text);font-weight:600}' +
       '@media print{.tabs,.back,.btn,select,.msg{display:none!important}.tg-tab{font-size:11px}}';
@@ -691,13 +701,16 @@
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
+      // Year report and Sensor CSV: owner codes only (Lisa). The role is the one the save script reported on the
+      // last read (save.role(), STAFF PR 443); '' or any other role hides them. The script still decides what is read.
+      var owner = !!(c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
             backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } })
-        ]);
+          owner ? h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }) : null,
+          owner ? h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
+        ].filter(Boolean));
       }
       var sub = h('div');
       function back() { host.textContent = ''; host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: start })); host.appendChild(sub); }

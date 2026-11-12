@@ -28,8 +28,20 @@ test('print: litter cards look like kennel cards and list only litters still on 
       { subject_id: 'p1', area_id: 'ar-a', moved_in: '2026-09-30' },
       { subject_id: 'p2', area_id: 'ar-a', moved_in: '2026-09-30' }
     ],
-    qr_tag: [tag('lit-new', 'LLLLLLLL'), tag('lit-old', 'MMMMMMMM')]
+    qr_tag: [tag('lit-new', 'LLLLLLLL'), tag('lit-old', 'MMMMMMMM'), tag('dam1', 'DDDDDDDD', 'subject'), tag('ar-a', 'RRRRRRRR', 'area')],
+    coat_colour: [{ id: 'cc-1', name: 'Pretend Gold' }], coat_pattern: [{ id: 'cp-1', name: 'Parti' }], nose_pigment: [],
+    microchip: [{ id: 'm1', subject_id: 'dam1', chip_number: '123456789012345' }],
+    check_type: [
+      { type_key: 'nails', label: 'Nails', target: 'dog', group: 'Grooming', every_days: '28', effective_from: '2026-01-01', active: 'true' },
+      { type_key: 'ears', label: 'Ears', target: 'dog', group: 'Grooming', every_days: '28', effective_from: '2026-01-01', active: 'true' },
+      { type_key: 'weigh', label: 'Weigh', target: 'dog', effective_from: '2026-01-01', active: 'true' },
+      { type_key: 'old', label: 'Retired job', target: 'dog', effective_from: '2026-01-01', active: 'false' },
+      { type_key: 'clean', label: 'Daily clean', target: 'area', every_days: '1', effective_from: '2026-01-01', active: 'true' },
+      { type_key: 'deep', label: 'Deep clean', target: 'area', every_days: '7', effective_from: '2026-01-01', active: 'true' },
+      { type_key: 'social', label: 'Socialisation', target: 'litter', frequency: 'daily', effective_from: '2026-01-01', active: 'true' }
+    ]
   };
+  tables.subject[0].coat_colour_id = 'cc-1'; tables.subject[0].coat_pattern_id = 'cp-1';
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
@@ -50,4 +62,15 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await expect(page.locator('.sheet')).toHaveClass(/\bper1\b/);
   await page.getByRole('button', { name: '2 per A4' }).click();
   await expect(page.locator('.sheet')).toHaveClass(/\blitters\b.*\bper2\b|\bper2\b.*\blitters\b/);
+  await expect(card.locator('[data-k="jobs"] li')).toHaveText(['Socialisationdaily']);
+  // kennel card: Colour from the lookup rows, Microchip in threes, the job strip by group (retired job left out)
+  await page.getByRole('button', { name: 'Dog kennel cards' }).click();
+  const dam = page.locator('.dcard[data-dog="dam1"]');
+  await expect(dam.locator('[data-k="Colour"] dd')).toHaveText('Pretend Gold parti');
+  await expect(dam.locator('[data-k="chip"] b')).toHaveText('123 456 789 012 345');
+  await expect(dam.locator('[data-k="jobs"] .job')).toHaveText(['Grooming', 'Weigh']);
+  await expect(page.locator('.dcard[data-dog="sire1"] [data-k="chip"]')).toHaveCount(0);
+  // room sign: room jobs and how often
+  await page.getByRole('button', { name: 'Room signs' }).click();
+  await expect(page.locator('.rcard [data-k="jobs"] li')).toHaveText(['Daily cleandaily', 'Deep cleanweekly']);
 });

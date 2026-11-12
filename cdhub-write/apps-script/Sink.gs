@@ -110,22 +110,52 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
 /**
  * Readings (Lisa 11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
  * its section's records are kept. Returns { oldestMs, keepYears, field } for those tables, else null (the 7-day rule).
+ * The kept years are the retention row in force on the record's own date (Lisa 12 Nov 2026), else today's.
  */
-function ageCap_(spec, tenant, nowMs) {
+function ageCap_(spec, tenant, nowMs, fields) {
   var cap = spec.ageCap;
   if (!cap) return null;
-  var years = retentionYears_(cap.retentionSection, tenant), oldest = new Date(nowMs);
+  var own = String((fields && fields[cap.field]) || '').slice(0, 10);
+  var day = /^\d{4}-\d{2}-\d{2}$/.test(own) ? own : Utilities.formatDate(new Date(nowMs), BLD.TZ, 'yyyy-MM-dd');
+  var years = retentionYears_(cap.retentionSection, tenant, day), oldest = new Date(nowMs);
   oldest.setUTCFullYear(oldest.getUTCFullYear() - years);   // the same date and time, that many years ago
   return { oldestMs: oldest.getTime(), keepYears: years, field: cap.field };
 }
 
-/** Years a section's records are kept: its BLD-retention_setting row (the last one), else the Config.gs default. */
-function retentionYears_(section, tenant) {
-  var r = store_read_(BLD.RETENTION_FILE, false), years = 0;
-  if (r) r.records.forEach(function (x) {
-    if ((!x.tenant_id || x.tenant_id === tenant) && String(x.section || '').trim() === section && /^\d{1,2}$/.test(String(x.keep_years || '').trim()) && parseInt(x.keep_years, 10) > 0) years = parseInt(x.keep_years, 10);
+/**
+ * Rows in force on a day (Lisa 12 Nov 2026: every limit is a dated, editable row; a past record is judged by the row
+ * in force on its own date). The start is fromKey (default from_date); a blank or missing start = in force from
+ * always, a blank or missing to_date = no end. Both ends count (inclusive), compared as YYYY-MM-DD, so a missing
+ * column is safe before the header has it. The same reading as BLDCapacity.inForce in cdhub/staff/lib/capacity.js.
+ */
+function rowsInForce_(rows, ymd, fromKey) {
+  var day = String(ymd || '').slice(0, 10), fk = fromKey || 'from_date';
+  function d(v) { v = String(v || '').trim().slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; }
+  return (rows || []).filter(function (r) {
+    var f = d(r[fk]), t = d(r.to_date);
+    return (!f || f <= day) && (!t || day <= t);
   });
-  return years || BLD.LIMITS.RETENTION_DEFAULT_YEARS;
+}
+
+/** Of the rows in force, the one that started last (a row with no start ranks lowest; a tie goes to the later row). */
+function latestInForce_(rows, ymd, fromKey) {
+  var fk = fromKey || 'from_date', best = null;
+  rowsInForce_(rows, ymd, fk).forEach(function (r) {
+    if (!best || String(r[fk] || '').slice(0, 10) >= String(best[fk] || '').slice(0, 10)) best = r;
+  });
+  return best;
+}
+
+/** Years a section's records are kept: its BLD-retention_setting row in force on the day, else the Config.gs default. */
+function retentionYears_(section, tenant, ymd) {
+  var r = store_read_(BLD.RETENTION_FILE, false);
+  if (!r) return BLD.LIMITS.RETENTION_DEFAULT_YEARS;
+  var ok = r.records.filter(function (x) {
+    return (!x.tenant_id || x.tenant_id === tenant) && String(x.section || '').trim() === section &&
+      /^\d{1,2}$/.test(String(x.keep_years || '').trim()) && parseInt(x.keep_years, 10) > 0;
+  });
+  var row = latestInForce_(ok, ymd || Utilities.formatDate(new Date(), BLD.TZ, 'yyyy-MM-dd'));
+  return row ? parseInt(row.keep_years, 10) : BLD.LIMITS.RETENTION_DEFAULT_YEARS;
 }
 
 /** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
@@ -243,7 +273,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var lookups = store_lookups_(spec, tenant);
-  var late = ageCap_(spec, tenant, nowMs);
+  var late = ageCap_(spec, tenant, nowMs, req.fields);
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -530,7 +560,7 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       changedDefs[name] = defs[name]; changedVals[name] = want;
     }
     var editLookups = store_lookups_({ lookups: spec.lookups }, tenant);
-    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, editLookups, nowMs, ageCap_(spec, tenant, nowMs));
+    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, editLookups, nowMs, ageCap_(spec, tenant, nowMs, Object.prototype.hasOwnProperty.call(changedVals, (spec.ageCap || {}).field) ? changedVals : cur));
     for (name in v.errors) if (Object.prototype.hasOwnProperty.call(v.errors, name)) errors[name] = v.errors[name];
     var next = {}, c;
     for (c in cur) if (Object.prototype.hasOwnProperty.call(cur, c)) next[c] = cur[c];
