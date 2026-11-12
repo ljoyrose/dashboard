@@ -187,6 +187,7 @@ test.describe('CD Hub: The round controls', () => {
 
     await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export\?/, (route) =>
       route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date,reading_kind,max_temp,min_temp\n2026-01-15,sample,12.0,4.0\n' }));
+    await page.clock.resume();   // the history page waits on timers; a paused clock leaves it on 'Getting temperatures'
     await page.getByRole('link', { name: 'Temperature history' }).click();
     await expect(page).toHaveURL(/history\.html/);
     await expect(page.getByRole('link', { name: 'Back to the round' })).toBeVisible();
