@@ -13,6 +13,7 @@
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
 <script src="staff/lib/thermometer.js"></script>
+<script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
@@ -435,9 +436,9 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+var OPTIONAL_FILES={'BLD-area_link.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
@@ -2683,25 +2684,37 @@ function drawSops(){
 /* Compliance: room temperatures for the last N days, best to worst: in range, Room empty (flagged, never counted),
    out of range, missing. Missing = BLDThermometer.missingOn: a thermometer is only flagged on days its need rows cover.
    N is a user row (no assumed timings): BLD-breeding_rule compliance.look_back_days, the version in force today; 7 until set.
-   A reading with a thermometer_id is its own line (a room may have more than one named thermometer). */
+   A reading with a thermometer_id is its own line (a room may have more than one named thermometer).
+   Linked rooms (BLD-area_link, Lisa 12 Nov 2026 "I need the temps to show continously so they are links"): a reading in an
+   old room inside a link's dates also counts for the new room (BLDAreaLink.expand). The room's own reading wins; two linked
+   readings in one slot are never averaged: the lowest MIN and highest MAX are kept, and the line says which rooms. */
+function compReadings(){ var rd=T['BLD-area_reading.csv']||[], ln=T['BLD-area_link.csv']||[];
+ return (typeof BLDAreaLink!=='undefined'&&ln.length)?BLDAreaLink.expand(rd,ln):rd; }
 var COMP_DAYS_KEY='compliance.look_back_days', COMP_DAYS_DEFAULT=7;
 function compDays(){ var r=breedRule(COMP_DAYS_KEY,todayISO()), n=r?parseInt(r.value,10):NaN; return n>0&&n<=366?{n:n,set:true,src:r.source||''}:{n:COMP_DAYS_DEFAULT,set:false,src:''}; }
 function dayMinus(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
 function compTemps(){
- var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=T['BLD-area_reading.csv']||[], days=[], i, win=compDays();
+ var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=compReadings(), days=[], i, win=compDays();
  var tname={}; (th||[]).forEach(function(t){ tname[t.id]=t.name||t.id; });
  for(i=0;i<win.n;i++) days.push(dayMinus(today,i));
  var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
  var slot={};   /* one reading per room, day and slot: a later row wins (corrections), as on The round */
  rd.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
   var at=String(r.period_start||r.taken_at||''), d=at.slice(0,10); if(!r.area_id||days.indexOf(d)<0) return;
-  var hr=parseInt(at.slice(11,13),10); slot[d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')+'__'+(r.thermometer_id||'')]=r; });
+  var hr=parseInt(at.slice(11,13),10), k=d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')+'__'+(r.thermometer_id||''), o=slot[k];
+  if(!r.linked_from){ slot[k]=r; return; }
+  if(o&&!o.linked_from) return;   /* the room's own reading wins over a linked one */
+  if(!o){ var c={}; Object.keys(r).forEach(function(f){ c[f]=r[f]; }); c.from=[r.linked_from]; slot[k]=c; return; }
+  var w=BLDAreaLink.widest({min:o.min_c,max:o.max_c},{min:r.min_c,max:r.max_c});
+  o.min_c=w.min===null?'':String(w.min); o.max_c=w.max===null?'':String(w.max);
+  if(!(roomEmpty(o)&&roomEmpty(r))) o.room_empty='';   /* one room in use: the breach counts */
+  if(o.from.indexOf(r.linked_from)<0) o.from.push(r.linked_from); });
  var out={ok:0,empty:[],bad:[],miss:[]};
  Object.keys(slot).sort().reverse().forEach(function(k){ var r=slot[k], p=k.split('__');
   if(r.min_c===''&&r.max_c===''||r.min_c==null&&r.max_c==null){ out.ok++; return; }   /* Room empty with no reading: covered */
   var st=tempState(r.min_c,r.max_c,roomBand(r.area_id,p[0]));
   if(st==='ok'||st==='unknown'){ out.ok++; return; }
-  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',min:r.min_c,max:r.max_c,st:st};
+  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',from:(r.from||[]).map(function(a){ return code[a]||a; }),min:r.min_c,max:r.max_c,st:st};
   (roomEmpty(r)?out.empty:out.bad).push(x); });
  if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
  out.on=!!th; out.win=win; return out;
@@ -2709,7 +2722,7 @@ function compTemps(){
 function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
  var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
- var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
+ var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(x.from&&x.from.length?'<span class="mut" data-from> \u2014 from '+esc(x.from.join(', '))+'</span>':'')+(extra||'')+'</li>'; };
  return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set?(c.win.src?' (your setting: '+esc(c.win.src)+')':' (your setting)'):' (not set yet, so 7: set \u201cDays Compliance looks back\u201d below)')+', from BLD-area_reading. A reading in a room marked empty is flagged but never counted.</p>'
   +'<ul class="ctemps">'
   +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'

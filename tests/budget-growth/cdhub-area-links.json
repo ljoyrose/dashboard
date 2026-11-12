@@ -1,0 +1,1 @@
+{"cdhub": 5000, "why": "Compliance: linked rooms (BLD-area_link) count an old room's reading for the new room, widest kept, own reading wins; loads the shared staff/lib/area-link.js"}
