@@ -40,6 +40,7 @@ test.describe('CD Hub: Compliance requirements, inspections, as at', () => {
       'v3,t,c-none,2020-01-01,,,,',
       'v4,t,c-late,2020-01-01,2020-12-31,,,'
     ]));
+    put(guard.world, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', ['b1,t,compliance.due_soon_days,30,2020-01-01,Pretend setting,,,']));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
     const st = (id) => page.locator(`#compState li[data-cred="${id}"]`);
@@ -52,7 +53,7 @@ test.describe('CD Hub: Compliance requirements, inspections, as at', () => {
     await expect(st('c-miss')).toContainText('No record');
     await expect(page.locator('#stateSum li[data-k="late"] .pill')).toHaveText('2');
     await expect(page.locator('#compState')).toContainText('1 of 5 in date (20%)');
-    await expect(page.locator('#compState')).toContainText('not set yet, so 30');
+    await expect(page.locator('#compState')).toContainText('due within 30 days');
     // best to worst inside a place
     const order = await page.locator('#compState li[data-cred]').evaluateAll((ls) => ls.map((l) => l.dataset.state));
     expect(order).toEqual(['ok', 'soon', 'none', 'late', 'late']);
@@ -75,12 +76,13 @@ test.describe('CD Hub: Compliance requirements, inspections, as at', () => {
   test('What was true on: an earlier date shows the version in force then', async ({ page, guard }) => {
     put(guard.world, 'BLD-credential.csv', csv(CRED_H, ['c1,t,Pretend service,,,no,,']));
     put(guard.world, 'BLD-credential_version.csv', csv(VER_H, ['v1,t,c1,2020-01-01,2020-12-31,Pretend old,,', `v2,t,c1,2021-01-01,${day(400)},Pretend new,,`]));
+    put(guard.world, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', ['b1,t,compliance.due_soon_days,30,2020-01-01,Pretend setting,,,']));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
     await expect(page.locator('#compState li[data-cred="c1"]')).toHaveAttribute('data-state', 'ok');
     await page.locator('#compAsAt').fill('2020-06-30');
     await page.locator('#compAsAt').dispatchEvent('change');
-    await expect(page.locator('#asAtNote')).toContainText('30/06/2020');
+    await expect(page.locator('#asAtNote')).toContainText('30/06/20');
     await expect(page.locator('#compState li[data-cred="c1"]')).toHaveAttribute('data-state', 'ok');
     await expect(page.locator('#compState li[data-cred="c1"]')).toContainText('31/12/20');
     await page.locator('#compAsAt').fill('2020-12-31');

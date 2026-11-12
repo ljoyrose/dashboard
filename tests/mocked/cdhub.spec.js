@@ -4,7 +4,7 @@ const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
 
-const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -128,8 +128,6 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await tabClick(page, '#nav button[data-go="litters"]');
     await expect(page.locator('#main')).toContainText('Test Dog One'); // dam
     await expect(page.locator('#main')).toContainText('Test Dog Two'); // sire
-    await tabClick(page, '#nav button[data-go="vet"]');
-    await expect(page.locator('#main')).toContainText('3'); // three sample weighings
   });
 
   test('the Outstanding page reads BLD-WORK.csv', async ({ page }) => {
@@ -159,12 +157,12 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all twelve sections are in the bar: five tabs, then the other seven under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('all eleven sections are in the bar: five tabs, then the other six under More (Vet link removed, Lisa 12 Nov 2026); Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
@@ -289,7 +287,7 @@ test.describe('CD Hub: things that go wrong', () => {
 // House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026) and the Bloodline screens, by computed style.
 // Invented data only: the sample BLD tables, plus rows added inside a test (invented names, no real dogs or buyers).
 // ---------------------------------------------------------------------------------------------------------------
-const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
 const iso = (days) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
 const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
@@ -575,6 +573,10 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await openTab(page, 'shape');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('6');
     await expect(page.locator('#checksCard .mk.bad')).toHaveCount(6);
+    // Failed checks are broken: the black badge, never rose, read out as "6 failed" (Lisa, 3 Nov 2026).
+    await expect(page.locator('#checksCard h3 .cnt')).toHaveClass(/\bbroken\b/);
+    await expect(page.locator('#checksCard h3 .cnt')).not.toHaveClass(/\bneed\b/);
+    await expect(page.locator('#checksCard h3')).toContainText('6 failed');
   });
 
   test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {
@@ -778,8 +780,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'round');
-    await expect(page.locator('.card[data-area] .step').first()).toHaveText('Step 1:');
-    await expect(page.locator('.card[data-area]').first()).toContainText('Step 1: Test Cabin A');
+    await expect(page.locator('.card[data-area] .step').first()).toHaveText('1.');
+    await expect(page.locator('.card[data-area]').first()).toContainText('1. Test Cabin A');
   });
 
   test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 72px thumbnail and who-has-it ring', async ({ page }) => {
@@ -940,24 +942,17 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
   expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
-test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
-  const WANT = [
-    ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
-    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'],
-    ['litters', 'stage', 'Litter stage', 'litter stage', 'birth_group_stage']];
-  test('each empty state names its Bloodline table, in words, on its own tab', async ({ page }) => {
+test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are DD/MM/YY', () => {
+  test('Dogs, Litters and Do carry no "Arrives with Bloodline" boxes; Litters says its title once', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    for (const [tab, k, title, words, table] of WANT) {
+    for (const tab of ['dogs', 'work', 'litters']) {
       await openTab(page, tab);
-      const card = page.locator(`#arrive-${k}`);
-      await expect(card).toBeVisible();
-      await expect(card.locator('h3')).toHaveText(title);
-      await expect(card.locator('.arrives')).toHaveText(`Arrives with Bloodline: ${words}`);
-      await expect(card).toHaveAttribute('data-arrives', table);
-      const smallest = await card.evaluate((e) => Math.min(...[e, ...e.querySelectorAll('*')].map((x) => parseFloat(getComputedStyle(x).fontSize))));
-      expect(smallest).toBeGreaterThanOrEqual(13);
+      await expect(page.locator('#main .arrives, #main [data-arrives]')).toHaveCount(0);
+      await expect(page.locator('#main')).not.toContainText('BLD-WORK.csv');
     }
+    await expect(page.locator('#main h3', { hasText: /^Litters/ })).toHaveCount(0);
+    expect(await page.evaluate(() => [dmy('2026-11-12'), plural(1, 'row'), plural(2, 'row')])).toEqual(['12/11/26', '1 row', '2 rows']);
   });
 });
 

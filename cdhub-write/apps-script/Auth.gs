@@ -66,6 +66,11 @@ function authStaff_(code) {
     authNoteFailure_();
     throw err_('BAD_CODE', 'That staff code was not recognised.');
   }
+  if (entry.role === ROLE_INSPECTOR) {
+    // an inspector link (Inspect.gs): read-only, ends by itself; reads only what its own link rows allow
+    if (guestExpired_(entry)) throw err_('BAD_CODE', 'This link has ended.');
+    return { who: entry.who, role: entry.role, id: String(entry.id || ''), ends: entry.expires_at || '', link_id: String(entry.link_id || '') };
+  }
   if (entry.role === ROLE_GUEST) {
     if (guestExpired_(entry)) throw err_('BAD_CODE', 'This visitor code has ended. Ask Lisa for a new one.');
     // id stays empty so no person:<id> permission row can ever open a list to a guest; the label carries the id instead
@@ -122,7 +127,7 @@ function newCodeId_() {
 function sinkStaffList_() {
   var reg = registry_(), out = [];
   Object.keys(reg).forEach(function (h) {
-    var e = reg[h], guest = e.role === ROLE_GUEST, ended = guest && guestExpired_(e), off = e.active === false || !!e.revoked_at;
+    var e = reg[h], guest = e.role === ROLE_GUEST || e.role === ROLE_INSPECTOR, ended = guest && guestExpired_(e), off = e.active === false || !!e.revoked_at;
     out.push({
       id: String(e.id || ''), who: guest ? e.who + ' (ends ' + (e.expires_at || 'unknown') + ')' : e.who, role: e.role, added: e.added || '',
       active: !off && !ended, revoked_at: e.revoked_at || (ended ? 'ended ' + (e.expires_at || '') : ''), revoked_by: e.revoked_by || ''

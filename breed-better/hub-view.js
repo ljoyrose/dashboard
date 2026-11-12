@@ -53,12 +53,16 @@
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var evidence = new Proxy({}, { get: function (o, name) { return T[name + '.csv']; } });
     (T['BLD-score_enrolment.csv'] || []).forEach(function (e) {
-      if (/^false$/i.test(t(e.is_active)) || (t(e.valid_from) && e.valid_from > v.today)) return;
+      /* enrolled from valid_from (live name) to to_date, both inclusive */
+      if (/^false$/i.test(t(e.is_active)) || (t(e.valid_from) && e.valid_from > v.today) || (t(e.to_date) && e.to_date < v.today)) return;
       var subject = subjects[e.subject_id];
       if (!subject) { out.error = 'An enrolled animal is not in the animal list: check BLD-score_enrolment.'; return; }
-      var scheme = (T['BLD-score_scheme.csv'] || []).filter(function (s) {
-        return s.id === e.scheme_id && /^active$/i.test(t(s.status)) && t(s.effective_from) && s.effective_from <= v.today;
-      })[0];
+      /* the enrolment names one scheme; a later version of it (same name, species and breed) takes over on its own date */
+      var schemes = T['BLD-score_scheme.csv'] || [];
+      var named = schemes.filter(function (s) { return s.id === e.scheme_id; })[0];
+      var scheme = named && Score.pickScheme(schemes.filter(function (s) {
+        return t(s.name).toLowerCase() === t(named.name).toLowerCase() && t(s.breed).toLowerCase() === t(named.breed).toLowerCase();
+      }), named.species_id, t(named.breed), v.today);
       if (!scheme) { out.error = 'No active scheme for an enrolled animal: check BLD-score_scheme.'; return; }
       var inScheme = function (r) { return r.scheme_id === scheme.id; };
       var bands = (T['BLD-score_band.csv'] || []).filter(function (b) { return inScheme(b) && t(b.kind); });
@@ -165,6 +169,7 @@
     else if (l.kind === 'status') res = '<span class="bb-pts">' + esc(l.answer_then) + '</span>';
     else res = l.points === '' ? vpill('unverified', w) : '<span class="bb-pts">' + l.points + ' of ' + l.points_max + '</span>';
     var when = l.date_then ? ' \u00b7 ' + esc(day(l.date_then)) : '';
+    if (l.rules_then) when += ' \u00b7 rules then';
     if (l.weight !== undefined && l.weight < 1) when += ' \u00b7 at ' + l.age_months + ' months, ' + (l.weight === 0.5 ? 'half' : Math.round(l.weight * 100) + '%') + ' points';
     var why = l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
     if (l.due_date && !l.due) why += ' \u00b7 due ' + esc(day(l.due_date));
@@ -254,5 +259,5 @@
     }, true);
   }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip, day: day, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { FILES: FILES, compute: compute, page: page, chip: chip, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));

@@ -7,6 +7,7 @@ test.use({ allowedConsole: [/404/] });
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
+const ROLE = { v: 'OWNER' };   // the role a read reply reports (STAFF PR 443)
 const TABLES = {
   area: [{ id: 'area-old', code: '3A.2/3', group_sort: '2' }, { id: 'area-new', code: '3A.1/2', group_sort: '2' }],
   subject: [], occupancy: [], subject_status: [], check_type: [], check_log: [], area_capacity: [], area_access: [], litter: [], capacity_setting: [], qr_tag: [],
@@ -31,9 +32,13 @@ async function setup(page) {
     const b = JSON.parse(route.request().postData());
     if (String(b.action).indexOf('read') === 0) {
       if (b.table && !TABLES[b.table]) return route.fulfill({ headers: CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'off' } });
-      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES } } });
+      return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES, role: ROLE.v } } });
     }
     sent.push(b);
+    // STAFF PR 458: an unusual temperature is a warning the script gives; confirm_unusual = yes saves it
+    if (b.fields && parseFloat(b.fields.max_c) > 60 && b.fields.confirm_unusual !== 'yes') {
+      return route.fulfill({ headers: CORS, json: { ok: false, code: 'INVALID', message: 'Check the entry.', fields: { max_c: 'That is very high for a room.', confirm_unusual: 'Save anyway?' } } });
+    }
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length } } });
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-CODE-1', SCRIPT]);
@@ -203,4 +208,55 @@ test('year report: a new room includes readings from the old room linked into it
     await expect(rows.first()).toContainText('11.0');
     await expect(rows.nth(1)).not.toContainText('From');
   } finally { TABLES.area_reading = []; delete TABLES.area_link; }
+});
+
+test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day, never today\'s', async ({ page }) => {
+  const keep = { b: TABLES.temperature_band, r: TABLES.area_reading };
+  TABLES.temperature_band = [
+    { id: 'tb-old', band: 'Rest', min_temp: '10', max_temp: '20', from_date: '', to_date: '2026-11-11' },
+    { id: 'tb-new', band: 'Rest', min_temp: '10', max_temp: '26', from_date: '2026-11-12', to_date: '' }
+  ];
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-new', period_start: '2026-11-11T00:00:00+00:00', taken_at: '2026-11-11T08:00:00Z', min_c: '12.0', max_c: '21.0' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', taken_at: '2026-11-12T08:00:00Z', min_c: '12.0', max_c: '22.0' }
+  ];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const rows = page.locator('.tg-tab').last().locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toHaveClass(/tg-br/);       // 11/11: 21.0 is over 20.0, the row in force that day
+    await expect(rows.nth(1)).not.toHaveClass(/tg-br/);   // 12/11: 22.0 is inside 26.0, the row in force that day
+  } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
+});
+
+test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
+  ROLE.v = 'STAFF';
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await expect(page.getByRole('button', { name: 'Add earlier reading' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
+  } finally { ROLE.v = 'OWNER'; }
+});
+
+test('an unusual temperature is the script\'s warning: the screen shows it with "Save anyway", which resends with confirm_unusual yes', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MAX').fill('65.0');
+  await page.getByLabel('MIN').fill('12.0');
+  await page.getByLabel('What was done').fill('Thermometer checked');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('That is very high for a room. Save anyway?')).toBeVisible();
+  expect(sent[0].fields.confirm_unusual).toBeUndefined();
+  await page.getByRole('button', { name: 'Save anyway' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1].fields).toMatchObject({ max_c: '65.0', min_c: '12.0', confirm_unusual: 'yes' });
+  await expect(page.getByText('Now press CLR')).toBeVisible();
 });
