@@ -176,6 +176,7 @@ function sinkHandle_(req) {
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
   var who = authStaff_(req.code);
+  if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
 
   var asked = String(req.table || req.file || '');
   var spec = specFor_(asked);

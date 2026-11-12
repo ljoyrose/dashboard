@@ -81,7 +81,7 @@ function adminCreateEmptyTables() {
     return;
   }
   TO_CREATE.forEach(function (title) {
-    var header = title === BLD.PENDING_FILE ? BLD.PENDING_COLUMNS : (specFor_(title) || {}).columns;
+    var header = title === BLD.PENDING_FILE ? BLD.PENDING_COLUMNS : ((specFor_(title) || {}).columns || inspectHeader_(title));
     if (!header) { Logger.log('Skipped ' + title + ': not on the allow-list.'); return; }
     try { store_createEmpty_(title, header); Logger.log('Created ' + title + ' (header only).'); }
     catch (e) { Logger.log('Not created ' + title + ': ' + (e.userMessage || e)); }
@@ -101,7 +101,7 @@ function adminCheckSetup() {
     try {
       var r = store_read_(title, false);
       if (!r) { Logger.log('--   ' + title + ' does not exist yet (fine until you switch that table on)'); return; }
-      var spec = specFor_(title), want = spec ? spec.columns : BLD.PENDING_COLUMNS;
+      var spec = specFor_(title), want = spec ? spec.columns : (inspectHeader_(title) || BLD.PENDING_COLUMNS);
       say(sameHeader_(r.header, want), title + ' exists with ' + r.records.length + ' row(s); header ' + (sameHeader_(r.header, want) ? 'matches' : 'DOES NOT MATCH'));
     } catch (e) { say(false, title + ': ' + (e.userMessage || e)); }
   });
