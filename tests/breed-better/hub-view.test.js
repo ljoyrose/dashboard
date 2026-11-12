@@ -119,3 +119,8 @@ test('the list page has a name search and the sort choice', () => {
   assert.match(html, /<option value="verdict" selected>Verdict, Pass to Fail<\/option>/);
   assert.match(html, /id="bbList"/);
 });
+
+test('every verdict filter shows its count, 0 included', () => {
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  assert.match(html, /data-bb-filter="below_target"[^>]*>Below target <span class="cnt">0<\/span>/);
+});
