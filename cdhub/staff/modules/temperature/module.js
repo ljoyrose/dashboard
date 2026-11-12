@@ -52,7 +52,7 @@
   function oneDp(v) {
     v = String(v == null ? '' : v).trim();
     if (!/^-?\d{1,2}(\.\d)?$/.test(v)) return null;
-    var n = parseFloat(v); return n < -30 || n > 60 ? null : n.toFixed(1);
+    return parseFloat(v).toFixed(1);   // an unusual value is the save script's warning ("Save anyway?", STAFF PR 458), never a stop here
   }
   function londonParts(d) {
     var p = {}; new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
@@ -292,7 +292,7 @@
     host.appendChild(form);
     if (past) form.hidden = false;
     [maxIn, minIn].forEach(function (i) { i.addEventListener('input', check); });
-    var requestId = null;
+    var requestId = null, anyway = null, none = false;   // none: Room empty with no temperatures (set by send)
 
     function stopNow() { if (stopCam) { stopCam(); stopCam = null; } }
     function startCam() {
@@ -319,7 +319,7 @@
     }
     function send() {
       var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), sp = spotIn.value.trim() ? oneDp(spotIn.value) : '';
-      var empty = emptyIn.checked, none = empty && !maxIn.value.trim() && !minIn.value.trim();
+      var empty = emptyIn.checked; none = empty && !maxIn.value.trim() && !minIn.value.trim();
       if (!none && (!mx || !mn)) { setMsg(msg, empty ? 'Type MAX and MIN, or leave both blank.' : 'Type MAX and MIN, one decimal place.', 'bad'); return; }
       if (sp === null) { setMsg(msg, 'Bed spot: one decimal place, or leave it empty.', 'bad'); return; }
       if (!none && parseFloat(mn) > parseFloat(mx)) { setMsg(msg, 'MIN is higher than MAX. Check the screen.', 'bad'); return; }
@@ -334,9 +334,26 @@
       if (sp) f.spot_c = sp;
       if (noteIn.value.trim()) f.mitigation_note = noteIn.value.trim();
       requestId = requestId || o.save.newRequestId();
+      go(f);
+    }
+    // One save. The script may answer an unusual value (a temperature outside its range, a day long ago) with
+    // fields.confirm_unusual = 'Save anyway?' and the reason in another field: show both and a "Save anyway" button,
+    // which sends the same entry again with confirm_unusual: 'yes' (never stored; STAFF PR 458, 12 Nov 2026).
+    function go(f) {
+      if (anyway) { anyway.remove(); anyway = null; }
       saveBtn.disabled = true; setMsg(msg, 'Saving...');
       o.save.submit(table, f, { requestId: requestId }).then(function (r) {
         saveBtn.disabled = false;
+        if (!r.ok && r.fields && r.fields.confirm_unusual && f.confirm_unusual !== 'yes') {
+          var why = Object.keys(r.fields).filter(function (k) { return k !== 'confirm_unusual'; }).map(function (k) { return r.fields[k]; }).join(' ');
+          setMsg(msg, (why ? why + ' ' : '') + r.fields.confirm_unusual, 'warn');
+          anyway = h('button', { class: 'btn', type: 'button', text: 'Save anyway', onclick: function () {
+            var g = {}; Object.keys(f).forEach(function (k) { g[k] = f[k]; }); g.confirm_unusual = 'yes';
+            requestId = o.save.newRequestId(); go(g);
+          } });
+          msg.parentNode.insertBefore(anyway, msg.nextSibling);
+          return;
+        }
         if (!r.ok) {
           var extra = r.fields ? ' ' + Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' ') : '';
           setMsg(msg, (r.code === 'DUPLICATE' ? 'Already saved for this ' + slot.label.toLowerCase() + '.' : r.message) + extra, 'bad'); return;
