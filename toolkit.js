@@ -83,6 +83,13 @@
     't-room': '<path d="M4 20v-10l8-6l8 6v10z"/>',
     't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
     't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
+    // Status icons for badges (quality review, 12 Nov 2026: house icons, not emoji). Tabler shapes, the same stroke.
+    's-check': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/>',
+    's-x': '<circle cx="12" cy="12" r="9"/><path d="M10 10l4 4m0-4l-4 4"/>',
+    's-alert': '<path d="M12 9v4"/><path d="M10.4 3.6l-8.1 13.5a1.9 1.9 0 0 0 1.6 2.9h16.2a1.9 1.9 0 0 0 1.6-2.9l-8.1-13.5a1.9 1.9 0 0 0-3.2 0z"/><path d="M12 16h.01"/>',
+    's-clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+    's-repeat': '<path d="M4 12v-3a3 3 0 0 1 3-3h13m-3-3l3 3l-3 3"/><path d="M20 12v3a3 3 0 0 1-3 3h-13m3 3l-3-3l3-3"/>',
+    's-send': '<path d="M10 14l11-11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1-1 0l-3.5-7l-7-3.5a.55 .55 0 0 1 0-1l18-6.5"/>',
     // The fold chevron on every section heading (Lisa, 2 Nov): Tabler chevron-down, grey; it turns a quarter when the section is folded.
     chev: '<path d="M6 9l6 6l6-6"/>'
   };
