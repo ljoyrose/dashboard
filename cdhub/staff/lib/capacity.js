@@ -23,6 +23,30 @@
   }
   function band(s) { var w = word(s); return w ? w + (/pups/i.test(String(s)) ? '+pups' : '') : ''; }
 
+  /**
+   * Size from weight (Lisa's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
+   * never fixed here: size_from_kg.medium = the weight (kg) at which a dog counts as medium, size_from_kg.large = the
+   * weight at which it counts as large. A row needs a value and a source; the newest row in force on `today` wins.
+   * Returns null unless both are set and medium < large, so a half-set pair never sorts a dog.
+   */
+  function sizeCutoffs(rules, today) {
+    var got = {};
+    (rules || []).forEach(function (r) {
+      var m = /^size_from_kg\.(medium|large)$/.exec(String(r.rule_key || '').trim()); if (!m) return;
+      var kg = parseFloat(r.value), from = String(r.effective_from || '');
+      if (isNaN(kg) || kg <= 0 || !String(r.source || '').trim()) return;
+      if (today && from && from > today) return;
+      var cur = got[m[1]]; if (!cur || from >= cur.from) got[m[1]] = { kg: kg, from: from, source: String(r.source).trim() };
+    });
+    if (!got.medium || !got.large || !(got.medium.kg < got.large.kg)) return null;
+    return { medium: got.medium.kg, large: got.large.kg, source: got.medium.source === got.large.source ? got.medium.source : got.medium.source + '; ' + got.large.source };
+  }
+  /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. */
+  function sizeFromKg(kg, cut) {
+    kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
+    return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+  }
+
   /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
   function accessOf(rows, areaId) {
     var a = '';
@@ -98,5 +122,5 @@
     });
     return out;
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word };
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg };
 }));
