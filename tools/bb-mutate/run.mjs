@@ -19,6 +19,7 @@ const MUTANTS = [
   ['records dated after the scoring date are read', "(!dateField || !isDate(r[dateField]) || r[dateField] <= asOf);", "true;"],
   ['lapsed_affects_verdict FALSE is read the wrong way round', "if (!/^false$/i.test(text(g.lapsed_affects_verdict)))", "if (/^false$/i.test(text(g.lapsed_affects_verdict)))"],
   ['an unmatched points answer is scored 0 under when_missing zero', "} else if (ev.reason && (when === 'zero' || when === 'fail')) {", "} else if (when === 'zero' || when === 'fail') {"],
+  ['a must-pass check may be skipped again', "if (when === 'skip' && band.kind === 'gate') errors.push", "if (false) errors.push"],
   ['a record is graded by today\'s rules, not the rules then', "var g = recDate ? (versionOn(versions[k], recDate) || c) : c;", "var g = c;"]
 ];
 

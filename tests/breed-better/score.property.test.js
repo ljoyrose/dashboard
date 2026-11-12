@@ -368,7 +368,8 @@ forAll('property: a rule row with a broken value is refused, never scored', (r) 
     (s) => { s.points.find((p) => p.criterion_id === 'p0').points = 'ten'; },
     (s) => { s.points[0].answer_match = 'like:ok'; },
     (s) => { s.criteria[0].band_id = 'nowhere'; },
-    (s) => { s.scheme.target_is = 'stars'; }
+    (s) => { s.scheme.target_is = 'stars'; },
+    (s) => { s.criteria[0].when_missing = 'skip'; }
   ];
   const broken = JSON.parse(JSON.stringify(set));
   r.pick(breakers)(broken);
@@ -406,4 +407,11 @@ test('@regression tenths add up to tidy totals (0.1 + 0.2 + 0.3 = 0.6) and 100% 
   assert.equal(out.verdict, 'pass');
   assert.equal(targetFor({ target_points: '150', target_is: 'percent' }, 10), 15, 'over 100% is kept as written');
   assert.equal(targetFor({ target_points: '70', target_is: 'percent' }, 7), 5, 'whole points still round up');
+});
+
+test('@regression a must-pass check set to skip is refused, so a missing record can never let an animal Pass', () => {
+  const set = makeScheme(rng(3), { gates: 1, lines: 1 });
+  set.criteria[0].when_missing = 'skip';
+  assert.match(validateScheme(set).join(';'), /must-pass check cannot be skipped/);
+  assert.throws(() => run(set, [exam('l', 'p0', 'top', '2025-01-01')]), /The rules have problems/);
 });
