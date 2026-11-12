@@ -109,6 +109,17 @@ test('until the columns exist every job is as needed, and bad numbers do not gue
   assert.equal(D.everyDays(' 12 '), 12);
 });
 
+test('a litter job belongs to one litter only, and never shows for a dog, room or the site', () => {
+  const types = [T('socialise', 'litter', '1'), T('nails', 'dog', '28')];
+  const logs = [L('socialise', '2026-03-02', { subject_id: '', litter_id: 'lit1' })];
+  assert.equal(one(D.forTarget(types, logs, { litter_id: 'lit1' }, '2026-03-02'), 'socialise').status, 'ok');
+  assert.equal(one(D.forTarget(types, logs, { litter_id: 'lit2' }, '2026-03-02'), 'socialise').status, 'never');
+  assert.equal(D.forTarget(types, logs, { litter_id: 'lit1' }, '2026-03-02').length, 1);
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1' }, '2026-03-02').filter((j) => j.type_key === 'socialise').length, 0);
+  assert.equal(D.forTarget(types, logs, { area_id: 'r1' }, '2026-03-02').length, 0);
+  assert.equal(D.forTarget(types, logs, {}, '2026-03-02').length, 0);
+});
+
 test('a whole-site job that includes a room job restarts it in every room except the ones it never covers', () => {
   const types = [T('site_clean', 'none', '1', { includes: 'daily_clean', not_in_areas: 'iso' }), T('daily_clean', 'area', '1'), T('bowls', 'none', '1')];
   const logs = [L('site_clean', '2026-03-02', { subject_id: '', how_recorded: 'site_tap' })];

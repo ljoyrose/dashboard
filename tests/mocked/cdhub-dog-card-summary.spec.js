@@ -69,6 +69,25 @@ test.describe('CD Hub dog card summary', () => {
     await expect(stud.locator('[data-k="litters"]')).toHaveCount(0);
   });
 
+  test('header: DOB and Colour labels, a small room icon on a phone, status chips folded into Filter', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    await page.setViewportSize({ width: 390, height: 800 });
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => go('dogs/sub-x1'));
+    const card = page.locator('#rows article.dc');
+    await expect(card.locator('[data-k="dob"]')).toHaveText('\u00b7 DOB 01/01/21');
+    await expect(card.locator('[data-k="colour"]')).toContainText('Colour');
+    const box = await card.locator('.dc-info .ricon').boundingBox();
+    expect(box.width).toBeLessThanOrEqual(16);
+    expect(box.height).toBeLessThanOrEqual(16);
+    await page.evaluate(() => go('dogs'));
+    await expect(page.locator('.sfb').first()).toBeHidden();
+    await page.locator('[data-fpanel="fp-dogs"]').click();
+    await expect(page.locator('.sfb').first()).toBeVisible();
+  });
+
   test('DNA kind reads the lab words first, then the copy count', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     const k = await page.evaluate(() => [
