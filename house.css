@@ -192,10 +192,11 @@ nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { position: absolute; top: 3p
   font-size: var(--fs-small); font-weight: 600; line-height: var(--house-tab-count-lh); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: visible; }
 nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide { width: auto; padding: 0 4px; }
 nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
+nav.house-tabs .ht > .n.broken, nav.house-tabs .ht > .cnt.broken { border-color: var(--house-broken-fill); background: var(--house-broken-fill); color: var(--house-broken-ink); }
 nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
 /* Tabs are one size (Lisa's pick b, 2 Nov 2026); a tab never widens for its count. Phone (under 768px): close to square (at most the
    bar's inner height, or the longest word's room, --house-tab-fit from toolkit.js, for every tab) and the count is a dot by the
-   icon's top-right corner: rose = late, grey = waiting, none at 0 (the tab's name says the number). */
+   icon's top-right corner: rose = late, black = broken, grey = waiting, none at 0 (the tab's name says the number). */
 @media (max-width: 767.98px) {
   nav.house-tabs > .ht, nav.house-tabs > .ht-more { max-width: max(calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)), var(--house-tab-fit, 0px)); }
   nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt, nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide {
@@ -203,6 +204,7 @@ nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !
     width: var(--house-tab-dot); min-width: var(--house-tab-dot); height: var(--house-tab-dot); min-height: var(--house-tab-dot);
     padding: 0; border: 0; border-radius: 50%; background: var(--house-ring); color: transparent; font-size: 0; line-height: 0; overflow: hidden; }
   nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { background: var(--house-late); }
+  nav.house-tabs .ht > .n.broken, nav.house-tabs .ht > .cnt.broken { background: var(--house-broken-fill); color: transparent; }   /* broken: a black dot (light ink in dark) */
   nav.house-tabs .ht > .htl > .htl-long { display: none; }
   nav.house-tabs .ht > .htl > .htl-short { display: inline; }
 }
@@ -245,7 +247,7 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 }
 
 /* 7 Counts: ONE exact box, so 1 and 2 digits match in any font: 30 x 24, 14px words, line 22px, radius 12px, padding 0 3px.
-   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). Ring only, no fill: grey = waiting, rose = late / needs you. */
+   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). Ring only, no fill: grey = waiting, rose = late; broken = the black badge (below). */
 /* (The bottom tabs' counts are drawn in section 6.) */
 .cnt { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
   width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h);
@@ -254,6 +256,9 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
 .cnt:empty, .n:empty { display: none !important; }
 .cnt.need { border-color: var(--house-late); background: transparent; }
+/* Broken (Lisa, 3 Nov 2026; tokens.css K): the black badge, white number (inverted in the dark looks). The same box as the ring, so
+   nothing shifts: only the line, fill and words change colour. The one fill a count may have. Pages: DashKit.count in toolkit.js. */
+:is(.cnt, .hm-v, .hk b, .tile .v).broken:not(#hb-a) { border-color: var(--house-broken-fill); background: var(--house-broken-fill); color: var(--house-broken-ink); }
 
 /* 8 Date pills: always ringed. Grey ring + muted words; late = rose ring + tint, soon = amber ring + tint (ink words). */
 .dpill, .datep, span.date { display: inline-flex; align-items: center; height: var(--house-pill); padding: 0 8px; font-size: var(--fs-small); white-space: nowrap;
@@ -391,3 +396,12 @@ button.house-fold-more:not(#hf-a):not(#hf-b):hover, button.house-fold-more:not(#
    buttons are not typing boxes. The :not(#ti-a):not(#ti-b) only lifts this above a page's own input rules; no element has those ids. */
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]),
   textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]):not(#ti-a):not(#ti-b) { font-size: var(--fs-input); }
+/* 17 The shared dialogs (toolkit.js: Search, Keyboard keys): Close is a house button, never the browser's own. 1px control line,
+   12px corners, Lexend 14px / 600, 36px (44px on a phone), no fill in any state; hover draws the 1px line inside, keyboard focus the ring. */
+dialog button.house-close { box-sizing: border-box; display: inline-flex; align-items: center; min-height: var(--house-btn); padding: 0 14px; margin: 0;
+  border: var(--house-line) solid var(--press); border-radius: var(--house-radius); background: transparent; color: inherit;
+  font-family: var(--house-font); font-size: var(--house-press-size); font-weight: 600; line-height: 1.2; cursor: pointer; }
+@media (max-width: 600px) { dialog button.house-close { min-height: var(--house-btn-phone); } }
+@media (hover: hover) { dialog button.house-close:hover { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); } }
+dialog button.house-close:active { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); }
+dialog button.house-close:focus-visible { outline: var(--house-focus) solid currentColor; outline-offset: 2px; }

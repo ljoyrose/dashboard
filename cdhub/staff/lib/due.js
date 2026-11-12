@@ -56,9 +56,17 @@
   function perDogRoom(job) { return job.target === 'area' && job.site_scope === 'per_dog'; }
   /* only_in_areas: room ids by |, the only rooms a room job belongs to (isolation jobs); blank = every room */
   function inRooms(job, areaId) { var only = listOf(job.only_in_areas); return !only.length || only.indexOf(areaId || '') >= 0; }
+  /* a whole-site job about dogs (health check): each dog as they go, or all at once; one line per dog either way */
+  function perDogSite(job) { return job.target === 'none' && job.site_scope === 'per_dog'; }
+  /* the dogs such a job covers here: target.dogs ([{id, area_id}]) less those in rooms it never covers (isolation) */
+  function dogsFor(job, target) {
+    var never = listOf(job.not_in_areas);
+    return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0; });
+  }
   function appliesTo(job, target) {
     var t = job.target;
     if (target.litter_id) return t === 'litter';
+    if (perDogSite(job) && target.dogs) return dogsFor(job, target).length > 0;
     if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea));
     if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
@@ -77,6 +85,7 @@
 
   /**
    * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
+   * Add dogs: [{id, area_id}] (the dogs on site here) to show a whole-site job about dogs on a dog or room too, done once each of those dogs has a line.
    * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
@@ -85,6 +94,7 @@
     var byId = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
+    var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
@@ -92,17 +102,28 @@
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
       if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
+      if (perDogSite(version) && target.dogs) {
+        var m = dogDone[version.type_key] = dogDone[version.type_key] || {};
+        if (log.subject_id && (!m[log.subject_id] || date > m[log.subject_id])) m[log.subject_id] = date;
+        return;
+      }
       if (!sameTarget(log, target, version)) return;
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
+    /* done once every dog it covers here has a line: the date is the oldest dog's last line */
+    function allDogs(j) {
+      var m = dogDone[j.type_key] || {}, dogs = dogsFor(j, target), date = '';
+      for (var i = 0; i < dogs.length; i++) { var x = m[dogs[i].id]; if (!x) return undefined; if (!date || x < date) date = x; }
+      return date ? { date: date, by: '' } : undefined;
+    }
     return jobsInForce(types, today).filter(function (j) { return appliesTo(j, target); }).map(function (j) {
-      var every = everyDays(j.every_days), d = done[j.type_key], next = d && every ? addDays(d.date, every) : '';
+      var every = everyDays(j.every_days), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
       return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: every, last_done: d ? d.date : '',
         next_due: next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '' };
     });
   }
 
-  return { forTarget: forTarget, perDogRoom: perDogRoom, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

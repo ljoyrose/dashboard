@@ -49,3 +49,14 @@ test('limit: by the youngest dog when rows have ages; unknown age says "by age";
   assert.deepEqual(limitFor('s', BANDS.concat([{ id: 'own', area_id: 's', min_c: '15', max_c: '20' }])), { lo: 15, hi: 20, source: 'own' });
   assert.equal(limitFor('s', []), null);
 });
+
+test('limit: only rows in force on the day count; the later from_date wins (Lisa 12 Nov: every limit is a dated row)', () => {
+  const dated = [{ id: 'old', min_temp: '10', max_temp: '20', to_date: '2026-11-11' }, { id: 'new', min_temp: '10', max_temp: '26', from_date: '2026-11-12' },
+    { id: 'open', min_temp: '5', max_temp: '30' }];
+  assert.equal(limitFor('s', dated, null, '2026-11-11').source, 'old');
+  assert.equal(limitFor('s', dated, null, '2026-11-12').source, 'new');
+  assert.equal(limitFor('s', dated.slice(0, 2), null, '2027-01-01').source, 'new');
+  assert.equal(limitFor('s', [{ id: 'x', min_temp: '10', max_temp: '20', from_date: '2026-12-01' }], null, '2026-11-12'), null);
+  const r = lineFor('s', [{ area_id: 's', period_start: at('am'), min_c: '12.0', max_c: '22.0' }], T, [], dated.slice(0, 2), '2026-11-12', { hour: 9 });
+  assert.equal(r.lines[0].am.state, 'in');   // 22.0 is inside 10-26 in force on 12 Nov, though outside the old 10-20
+});

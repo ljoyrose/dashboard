@@ -121,6 +121,7 @@ function sinkRead_(req) {
   var now = new Date(), nowMs = now.getTime();
   if (!readEnabled_()) throw err_('READ_OFF', 'Reading from the records is switched off.');
   var who = authStaff_(req.code);                       // a bad code stops here and gets nothing
+  if (who.role === ROLE_INSPECTOR) return inspectSinkRead_(req, who, now);   // Inspect.gs: only its own link rows, never this file's rules
 
   var key = typeof req.table === 'string' ? req.table : '';
   if (!Object.prototype.hasOwnProperty.call(READABLE, key)) {

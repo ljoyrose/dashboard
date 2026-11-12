@@ -292,9 +292,9 @@ var TABLES = {
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
     columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
     proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -323,7 +323,8 @@ var TABLES = {
       sop:            { type: 'text' },                                             // the SOP's short name
       evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
       site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none or area: what one tap writes
-      not_in_areas:   { type: 'text' }                                              // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
+      not_in_areas:   { type: 'text' },                                             // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
+      only_in_areas:  { type: 'text' }                                              // a room job for these rooms only (e.g. isolation), by |; blank = every room
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -342,6 +343,12 @@ var TABLES = {
       if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none' && row.target !== 'area') errors.site_scope = 'Only for a whole-site or room check.';
       if (!errors.not_in_areas && row.target === 'none' && row.site_scope === 'per_dog' && row.not_in_areas === '') {
         errors.not_in_areas = 'List the isolation rooms this tap must never cover, separated by |, or type none.';
+      }
+      if (!errors.only_in_areas && row.only_in_areas !== '') {
+        var rooms = row.only_in_areas.split('|').map(function (a) { return a.trim(); }).filter(String);
+        if (row.target !== 'area') errors.only_in_areas = 'Only for a room job.';
+        else if (!rooms.length || rooms.some(function (a) { return !ID_RE_.test(a); })) errors.only_in_areas = 'List room ids separated by |, e.g. area-h2-iso.';
+        else row.only_in_areas = rooms.join('|');
       }
     },
     checkAgainst: function (clean, records, errors) {
@@ -457,6 +464,7 @@ var TABLES = {
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
+      { name: 'check_type_only', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'only_in_areas' },
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
       { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
       { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' }
@@ -479,9 +487,14 @@ var TABLES = {
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
-    checkRow: function (row, errors) {
+    checkRow: function (row, errors, lookups) {
       if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
         errors.note = 'Say briefly what the concern is or why it was not done.';
+      }
+      // a room job for some rooms only (check_type.only_in_areas): never saved for another room
+      var only = lookups && lookups.check_type_only ? lookups.check_type_only[row.check_type_id] : true;
+      if (!errors.area_id && row.area_id && typeof only === 'string' && only.split('|').indexOf(row.area_id) < 0) {
+        errors.area_id = 'This job is not for this room.';
       }
     }
   },
@@ -843,7 +856,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE];
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_());   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
@@ -870,6 +883,9 @@ var READABLE = {
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
   litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // health results (12 Nov 2026, for inspector links; staff and owner still need visibility rows, none planned)
+  health_screen:   { file: 'BLD-health_screen.csv',   vis: 'health_screen',   authorCol: '',            dateCol: '' },
+  fit_to_breed:    { file: 'BLD-fit_to_breed.csv',    vis: 'fit_to_breed',    authorCol: '',            dateCol: '' },
   // 12 Nov 2026 (DOGCARD): the kennel print card shows Colour and Microchip. Read only as far as visibility rows
   // allow; the planned rows are for aud-admin (the owner) only.
   coat_colour:     { file: 'BLD-coat_colour.csv',     vis: 'coat_colour',     authorCol: '',            dateCol: '' },
