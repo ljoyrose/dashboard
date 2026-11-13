@@ -28,8 +28,8 @@
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
     Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field')]).then(function (v) {
-      /* a visitor's records (visit_id) count here only when stamped counts_due true: this screen does not read the visit's grant */
-      var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !l.visit_id || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
+      /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
+      var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
       host.textContent = '';
       if (!d.ok) { host.appendChild(h('p', { class: 'msg bad', text: d.message })); return; }

@@ -173,6 +173,13 @@ test("a visitor's record is kept separate unless that visit counts the job", () 
   assert.equal(one([rec('vl1')], [{ id: 'vl1', record_counts: 'feed|clean' }]), 'ok');              // the visit counts this job
   assert.equal(one([rec('vl2')], [{ id: 'vl1', record_counts: 'clean' }]), 'never');                // another visit's grant does not carry over
   assert.equal(one([Object.assign(rec(''), { visit_id: '' })]), 'ok');                              // a staff record is unchanged
+  // today's shape: no visit_id column, the visit is in taken_by
+  const byVisit = (link) => ({ id: 'v-t', check_type_id: 'cty-clean-1', area_id: 'r1', outcome: 'ok', taken_by: 'visit:' + link, taken_at: '2026-03-02T09:00:00Z' });
+  assert.equal(one([byVisit('vl1')]), 'never');
+  assert.equal(one([byVisit('vl1')], [{ id: 'vl1', record_counts: 'clean' }]), 'ok');
+  assert.equal(one([Object.assign(byVisit('vl1'), { counts_due: 'true' })]), 'ok');
+  assert.equal(one([Object.assign(byVisit('vl1'), { taken_by: 'p-staff1' })]), 'ok');
+  assert.equal(D.visitOf({ taken_by: 'visit:vl9' }), 'vl9');
   // the stamp saved on the row wins over the link (the link may be edited later)
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'true' })]), 'ok');
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'TRUE' })]), 'ok');

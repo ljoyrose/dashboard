@@ -83,18 +83,24 @@
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
-  /* a visitor's record (visit_id) is kept separate: it counts only when its counts_due stamp says true or, with no stamp,
+  /* a visitor's record (taken_by visit:<link id>) is kept separate: it counts only when its counts_due stamp says true or, with no stamp,
      when that visit's BLD-inspect_link row lists the job in record_counts */
   function visitCounts(visits) {
     var m = {};
     (visits || []).forEach(function (v) { if (v && v.id) m[v.id] = listOf(v.record_counts); });
     return m;
   }
+  /** The visit a record was saved under: taken_by 'visit:<link id>' (or a visit_id column, if one is ever added); '' for staff. */
+  function visitOf(log) {
+    var by = String(log.taken_by || '');
+    return log.visit_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');
+  }
   function counts(log, version, vm) {
-    if (!log.visit_id) return true;
+    var visit = visitOf(log);
+    if (!visit) return true;
     var stamp = String(log.counts_due || '').toLowerCase();   // stamped on the row when it was saved: what the visit granted then
     if (stamp === 'true' || stamp === 'false') return stamp === 'true';
-    var keys = vm[log.visit_id];
+    var keys = vm[visit];
     return !!keys && keys.indexOf(version.type_key) >= 0;
   }
   /**
@@ -102,7 +108,7 @@
    * Add dogs: [{id, area_id}] (the dogs on site here) to show a whole-site job about dogs on a dog or room too, done once each of those dogs has a line.
    * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
-   * visits: BLD-inspect_link rows (optional). A record with a visit_id counts only if its visit lists the job in record_counts;
+   * visits: BLD-inspect_link rows (optional). A visitor's record counts only if stamped counts_due true or, unstamped, if its visit lists the job in record_counts;
    * with no visits given, every visitor record is left out.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */
@@ -141,5 +147,5 @@
     });
   }
 
-  return { forTarget: forTarget, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));
