@@ -60,14 +60,15 @@
  .dcard .code svg{width:auto;height:100%;max-width:100%;max-height:100%;margin:0}
  .dcard .cside{flex:none}
  .dcard .jobs,.dcard .lst,.dcard .chipline,.dcard .tag{flex:none}
- .sheet.dogs.per1 .dcard .band{padding:5mm 7mm}.sheet.dogs.per1 .dcard .who b{font-size:52px}.sheet.dogs.per1 .dcard .band small{font-size:24px}
+ .sheet.dogs.per1 .dcard .band{padding:5mm 7mm}.sheet.dogs.per1 .dcard .who b{font-size:44px}.sheet.dogs.per1 .dcard .band small{font-size:24px}
  .sheet.dogs.per1 .dcard .sex svg{width:44px;height:44px}
  .sheet.dogs.per1 .dcard .dbody{padding:6mm 7mm;gap:5mm}
- .sheet.dogs.per1 .dcard .photo{min-height:70mm;font-size:20px}.sheet.dogs.per1 .dcard dt{font-size:18px}.sheet.dogs.per1 .dcard dd{font-size:30px}
+ .sheet.dogs.per1 .dcard .photo{min-height:52mm;font-size:20px}.sheet.dogs.per1 .dcard dt{font-size:18px}.sheet.dogs.per1 .dcard dd{font-size:28px}
  .sheet.dogs.per1 .dcard .chipline{font-size:20px}.sheet.dogs.per1 .dcard .chipline b{font-size:36px}
  .sheet.dogs.per1 .dcard .job{font-size:22px}.sheet.dogs.per1 .dcard .lst{font-size:20px}.sheet.dogs.per1 .dcard .tag{font-size:14px}
- .sheet.dogs.per2 .dcard .who b{font-size:34px}.sheet.dogs.per2 .dcard .photo{min-height:42mm}
- .sheet.dogs.per4 .dcard .band{padding:2mm 3.5mm}.sheet.dogs.per4 .dcard .who b{font-size:22px}.sheet.dogs.per4 .dcard .band small{font-size:12px}
+ .sheet.dogs.per2 .dcard .who b{font-size:28px}.sheet.dogs.per2 .dcard .photo{min-height:34mm}
+ .sheet.dogs.per2 .dcard .band{padding:3mm 5mm}.sheet.dogs.per2 .dcard .dbody{gap:2mm}
+ .sheet.dogs.per4 .dcard .band{padding:2mm 3.5mm}.sheet.dogs.per4 .dcard .who b{font-size:20px}.sheet.dogs.per4 .dcard .band small{font-size:12px}
  .sheet.dogs.per4 .dcard .sex svg{width:20px;height:20px}
  .sheet.dogs.per4 .dcard .dbody{padding:2mm 3.5mm;gap:1.5mm}
  .sheet.dogs.per4 .dcard .cside{gap:3mm}.sheet.dogs.per4 .dcard .photo{min-height:24mm;font-size:11px}

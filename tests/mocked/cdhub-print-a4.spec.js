@@ -45,6 +45,8 @@ test.describe('CD Hub print on A4', () => {
   for (const per of [1, 2, 4]) {
     test('kennel cards print whole, nothing clipped, status line off the paper: ' + P.PER_LABEL[per] + ' @regression', async ({ page }) => {
       await P.openCards(page);
+      // the worst case: a wide fallback font (as on a printer with no web font), so the long name wraps most
+      await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif!important}' });
       await page.getByRole('button', { name: P.PER_LABEL[per] }).click();
       await expect(page.locator('.sheet')).toHaveClass(new RegExp('\\bper' + per + '\\b'));
       // paper width: portrait, or the landscape sheet that holds two A5 cards
@@ -52,7 +54,7 @@ test.describe('CD Hub print on A4', () => {
       const fit = await P.cardsFit(page);
       fit.forEach((c) => {
         expect(c.out, c.id + ': nothing past the card edge').toEqual([]);
-        expect(c.qr, c.id + ': QR big enough to scan').toBeGreaterThanOrEqual(per === 4 ? 150 : 250);
+        expect(c.qr, c.id + ': QR big enough to scan across a kennel (mm)').toBeGreaterThanOrEqual(Math.round({ 1: 66, 2: 60, 4: 40 }[per] * P.MM));   // Full A4 66 mm, A5 60 mm, A6 40 mm
       });
       expect(fit[0].status, 'the "cards ready" line does not print').toBe('none');
       const pdf = await P.printPdf(page, 'cdhub-kennel-cards-' + per + '-per-A4');
