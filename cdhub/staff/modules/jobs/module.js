@@ -155,7 +155,8 @@
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
           var at = r.at || new Date().toISOString(), mine = { taken_at: at, taken_by: r.who || '', _queued: r.status === 'queued' ? (r.message || 'Waiting for signal') : '' };
-          logs = logs.concat(entry.dog_ids ? entry.dog_ids.split('|').map(function (dog, i) { return Object.assign({}, entry, mine, { id: r.id + '-' + i, subject_id: dog }); })
+          var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [], real = r.ids && r.ids.length === dogs.length;   // a row id we can point a note at only when the reply gives one per dog
+          logs = logs.concat(dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, entry, mine, { id: real ? r.ids[i] : r.id + '-' + i, _noId: !real, subject_id: dog }); })
             : [Object.assign({}, entry, mine, { id: r.id })]);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
           kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
@@ -207,7 +208,7 @@
         /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
            On a job already done today it waits for the save script's note record (outcome note + note_for_id). */
         var dogIds = state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null);
-        var doneLine = (dogIds && dogIds.length > 1) ? null : todays(t.type_key).filter(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && !l._queued && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); })[0];
+        var doneLine = (dogIds && dogIds.length > 1) ? null : todays(t.type_key).filter(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && !l._queued && !l._noId && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); })[0];
         var problems = h('div', { class: 'job-btns', hidden: true }, [
           h('button', { class: 'btn quiet', type: 'button', text: 'Note', onclick: function () {
             if (!inputs.note.value.trim()) { BLDDone.fail(state.card, 'Write the note.'); return; }
