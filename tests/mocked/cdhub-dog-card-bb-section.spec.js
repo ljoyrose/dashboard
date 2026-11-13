@@ -61,6 +61,30 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
   });
 
+  test('dog card, Breed Better, Open on Fit to Breed lands on add/edit, and Back returns to that dog @regression', async ({ page }) => {
+    await openDogs(page);
+    await card(page, 'Test Dog Two').locator('section.bb-sec .bb-chip').click();
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
+    const band = page.locator('details.bb-band', { hasText: 'Fit to Breed' });
+    await band.locator('summary').click();
+    await band.locator('.bb-line', { hasText: 'Fit to Breed' }).getByRole('button', { name: 'Open' }).click();
+    const screen = page.locator('[data-bb-edit-screen]');
+    await expect(screen).toBeVisible();
+    await expect(screen.locator('h3')).toHaveText('Fit to Breed');
+    await expect(screen).toContainText('Add result');
+    await expect(screen.locator('input[name="answer"]')).toBeVisible();
+    await expect(screen.locator('input[name="on"]')).toHaveAttribute('type', 'date');
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await expect(page).toHaveURL(/#\/breed$/);
+    await expect(page.locator('#rows')).toHaveCount(0);
+    await screen.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('[data-bb-edit-screen]')).toHaveCount(0);
+    await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await expect(page).toHaveURL(/#\/breed$/);
+  });
+
   test('phone: the section fits a 390px screen and the tap target is at least 44px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openDogs(page);

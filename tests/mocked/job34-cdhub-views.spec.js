@@ -49,7 +49,7 @@ test.describe('CD Hub: Dogs search, Clear filters and the weighings panel', () =
 });
 
 test.describe('CD Hub: Today lists', () => {
-  test('a list tile opens its table; Place asks for a cabin, then says saving is off (never pretends to save); close shuts it', async ({ page, guard }) => {
+  test('a list tile opens its table; Place asks for a cabin, then says the save script could not be reached (never pretends to save); close shuts it', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'today');
     const tile = page.locator('#main .tl[data-list]').first();
@@ -65,7 +65,7 @@ test.describe('CD Hub: Today lists', () => {
     await panel.locator('.placesel').first().selectOption({ index: 1 });
     page.once('dialog', (d) => d.accept());
     await place.click();
-    await expect(msg).toHaveText('Saving is off on this device: set it up on The round.');
+    await expect(msg).toHaveText('NOT saved — Could not reach the save script. Nothing is known to be saved.');
     await panel.locator('#tclose').click();
     await expect(panel).toBeEmpty();
   });
@@ -141,7 +141,7 @@ test.describe('CD Hub: addresses and the browser buttons', () => {
 });
 
 test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so nothing may claim it saved)', () => {
-  test('a temperature with 2 decimals is refused (1 decimal place only); a 1-decimal one says saving off', async ({ page, guard }) => {
+  test('a temperature with 2 decimals is refused (1 decimal place only); one number asks for the other and does not save', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'round');
     await expect(page.locator('#sinkcard')).toContainText('Saving on this device: off');
@@ -154,24 +154,24 @@ test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so
     await expect(box).toHaveClass(/\bbad\b/);
     await box.fill('12.5');
     await box.blur();
-    await expect(msg).toHaveText('NOT saved: saving is off on this device — set it up at the top of this page');
+    await expect(msg).toHaveText('type max too, then it saves');
     await expect(box).not.toHaveClass(/\bbad\b/);
   });
 
-  test('changing how a cabin is run (The round) says saving is off; an area\'s access (Areas) says saving off', async ({ page, guard }) => {
+  test('changing how a cabin is run, or an area\'s access, says the save script could not be reached', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'round');
     const racc = page.locator('.racc').first();
     const ra = await racc.getAttribute('data-area');
     const rv = await racc.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean));
     await racc.selectOption(rv[rv.length - 1]);
-    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('NOT saved: saving is off on this device — set it up at the top of this page');
+    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('NOT saved — Could not reach the save script. Nothing is known to be saved.');
     await tab(page, 'areas');
     const aacc = page.locator('.aacc').first();
     const aa = await aacc.getAttribute('data-area');
     const av = await aacc.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean));
     await aacc.selectOption(av[av.length - 1]);
-    await expect(page.locator(`.asave[data-area="${aa}"]`)).toContainText('saving is off');
+    await expect(page.locator(`.asave[data-area="${aa}"]`)).toContainText('Could not reach the save script');
   });
 });
 
