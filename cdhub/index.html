@@ -1967,6 +1967,7 @@ function openMedDog(id){
  if(card.scrollIntoView) card.scrollIntoView({block:'start'});
  if(sum) sum.focus({preventScroll:true});
 }
+document.addEventListener('click',function(e){ var m=e.target.closest&&e.target.closest('[data-med-open]'); if(m) openMedDog(m.getAttribute('data-med-open')); });
 function focusMedDog(){
  var ask=medFocusAsk(); if(!ask) return;
  var ids={};
@@ -4108,7 +4109,6 @@ document.addEventListener('click',function(e){
  var row=document.getElementById(j.dataset.jump);
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
-document.addEventListener('click',function(e){ var m=e.target.closest&&e.target.closest('[data-med-open]'); if(m) openMedDog(m.getAttribute('data-med-open')); });
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
