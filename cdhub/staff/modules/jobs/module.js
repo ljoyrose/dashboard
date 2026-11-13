@@ -68,7 +68,7 @@
       /* each dog's newest line today (not "not done"): the dog starts unticked and shows a tick */
       function doneToday(key) {
         var m = {};
-        todays(key).forEach(function (l) { if (l.subject_id && l.outcome !== 'not_done' && !m[l.subject_id]) m[l.subject_id] = l; });
+        todays(key).forEach(function (l) { if (l.subject_id && l.outcome !== 'not_done' && l.outcome !== 'note' && l.outcome !== 'part_done' && !m[l.subject_id]) m[l.subject_id] = l; });
         return m;
       }
       var kept = {};
@@ -80,11 +80,13 @@
       }
       /* the card's tick: from today's lines, so it shows after a save and when the screen opens again */
       function showDone(card, key, dogIds) {
-        var lines = todays(key).filter(function (l) { return dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l); }), l = lines[0];
+        var all = todays(key).filter(function (x) { return dogIds ? dogIds.indexOf(x.subject_id) >= 0 : here(x); });
+        var l = all.filter(function (x) { return x.outcome !== 'note'; })[0];
         if (!l) return;
         if (l._queued) { BLDDone.wait(card, l._queued); return; }
         var n = dogIds ? Object.keys(doneToday(key)).filter(function (x) { return dogIds.indexOf(x) >= 0; }).length : 0;
-        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, note: l.note, extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
+        var notes = [l.note].concat(all.filter(function (x) { return x.outcome === 'note' && x.note_for_id === l.id; }).reverse().map(function (x) { return x.note; }));
+        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, note: notes.filter(Boolean).join('\n'), extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
       }
       /* a job's form: the owner's check_field rows in force today, in their sort order */
       var formOf = {}, latestField = {};
@@ -109,11 +111,11 @@
       function say(text, kind) { status.className = 'msg ' + (kind || ''); status.textContent = text; }
 
       /* every tap shows something on the card: Saving..., then a tick or a plain red line (Lisa, 13 Nov) */
-      function send(job, t, outcome, inputs, panelMsg, state) {
-        try { sendNow(job, t, outcome, inputs, panelMsg, state); }
+      function send(job, t, outcome, inputs, panelMsg, state, noteFor) {
+        try { sendNow(job, t, outcome, inputs, panelMsg, state, noteFor); }
         catch (e) { BLDDone.fail(state.card, 'Not saved. Something went wrong on this screen; try again.'); if (window.console) console.error(e); }
       }
-      function sendNow(job, t, outcome, inputs, panelMsg, state) {
+      function sendNow(job, t, outcome, inputs, panelMsg, state, noteFor) {
         function stop(text) { panelMsg.textContent = ''; BLDDone.fail(state.card, text); }   // on the card, so it shows even with the panel shut
         var entry = { check_type_id: t.id, outcome: outcome, how_recorded: how };
         if (target.subject_id) entry.subject_id = target.subject_id;
@@ -122,6 +124,10 @@
         if (inputs.item) entry.item = inputs.item.value.trim();
         if (inputs.amount) entry.amount = inputs.amount.value.trim();
         if (inputs.note) entry.note = inputs.note.value.trim();
+        if (noteFor) {   // a note added to a job already done: its own row, same room, dog or litter as the done row, pointing at it
+          ['subject_id', 'area_id', 'litter_id'].forEach(function (k) { if (noteFor[k]) entry[k] = noteFor[k]; else delete entry[k]; });
+          entry.note_for_id = noteFor.id;
+        }
         var check = Object.assign({}, entry);
         if (t.target === 'none') delete check.area_id;
         var bad = BLDChecks.checkEntry(t, check), first = Object.keys(bad)[0];
@@ -134,12 +140,13 @@
         if (missing) { stop('This is needed: ' + missing + '.'); return; }
         var opts = { requestId: state.rid = state.rid || c.save.newRequestId() };
         if (Object.keys(values).length) opts.values = values;
-        if (state.ticks) {
+        if (noteFor) { /* one plain row: never a whole-site tap, never a second done */ }
+        else if (state.ticks) {
           var ticked = state.ticks.filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
           if (!ticked.length) { stop('Tick a dog.'); return; }
           opts.action = 'add_site'; entry.dog_ids = ticked.join('|');
         } else if (BLDDue.perDogSite(t) && target.subject_id) { opts.action = 'add_site'; entry.dog_ids = target.subject_id; }
-        if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; }
+        if (site && !noteFor) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; }
         panelMsg.className = 'msg'; panelMsg.textContent = ''; BLDDone.saving(state.card);
         c.save.submit('check_log', entry, opts).then(function (r) {
           if (!r.ok) {
@@ -151,7 +158,8 @@
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
           var at = r.at || new Date().toISOString(), mine = { taken_at: at, taken_by: r.who || '', _queued: r.status === 'queued' ? (r.message || 'Waiting for signal') : '' };
-          logs = logs.concat(entry.dog_ids ? entry.dog_ids.split('|').map(function (dog, i) { return Object.assign({}, entry, mine, { id: r.id + '-' + i, subject_id: dog }); })
+          var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [], real = r.ids && r.ids.length === dogs.length;   // a row id we can point a note at only when the reply gives one per dog
+          logs = logs.concat(dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, entry, mine, { id: real ? r.ids[i] : r.id + '-' + i, _noId: !real, subject_id: dog }); })
             : [Object.assign({}, entry, mine, { id: r.id })]);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
           kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
@@ -203,15 +211,17 @@
         /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
            On a job already done today it waits for the save script's note record (outcome note + note_for_id). */
         var dogIds = state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null);
-        var doneHere = todays(t.type_key).some(function (l) { return l.outcome !== 'not_done' && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); });
-        var problems = h('div', { class: 'job-btns', hidden: true }, (doneHere ? [] : [
+        var doneLine = (dogIds && dogIds.length > 1) ? null : todays(t.type_key).filter(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && !l._queued && !l._noId && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); })[0];
+        var problems = h('div', { class: 'job-btns', hidden: true }, [
           h('button', { class: 'btn quiet', type: 'button', text: 'Note', onclick: function () {
             if (!inputs.note.value.trim()) { BLDDone.fail(state.card, 'Write the note.'); return; }
-            send(job, t, done, inputs, panelMsg, state);
+            if (doneLine) send(job, t, 'note', inputs, panelMsg, state, doneLine);   // already done today: add the note, not a second done
+            else send(job, t, done, inputs, panelMsg, state);
           } })
-        ]).concat([
+        ].concat([
           h('button', { class: 'btn quiet', type: 'button', text: 'Concern', onclick: function () { send(job, t, 'concern', inputs, panelMsg, state); } }),
-          h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } })
+          h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } }),
+          h('button', { class: 'btn quiet', type: 'button', text: 'Part done', onclick: function () { send(job, t, 'part_done', inputs, panelMsg, state); } })   // needs a note; not counted as done
         ]));
         panel.appendChild(problems); panel.appendChild(panelMsg);
         var head = h('div', { class: 'job-head' }, [
