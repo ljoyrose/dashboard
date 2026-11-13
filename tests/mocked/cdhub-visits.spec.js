@@ -117,7 +117,7 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('.vis-row[data-vis-link="il-new"] .adm-ok')).toBeVisible();
     const b = bodies[0];
     expect(b.action).toBe('visit_give');
-    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: 'voluntary', identity_assurance: 'none', rights: ['view', 'raise_finding'], lists: ['subject', 'microchip'], subject_ids: [] });
+    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: '', identity_assurance: '', rights: ['view', 'raise_finding'], lists: ['subject', 'microchip'], subject_ids: [] });
   });
 
   test('Give a visit by link, scheduled: DD/MM/YY HH:MM, email code from the type; the link shows once', async ({ page }) => {

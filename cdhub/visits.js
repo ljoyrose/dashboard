@@ -171,7 +171,7 @@ var VisitView = (function () {
   /* a choice from status_label rows of one group (values are rows, never fixed); no rows = the default only */
   function pick(v, group, label, val) {
     var R = (v.T['BLD-status_label.csv'] || []).filter(function (r) { return r.group === group && r.code; });
-    if (!R.length) return '<input type="hidden" name="' + group + '" value="' + v.esc(val) + '">';
+    if (!R.length) return '<input type="hidden" name="' + group + '" value="">';   /* no rows: send blank, the server applies its default */
     return '<label>' + label + '<select name="' + group + '">' + R.map(function (r) { return '<option value="' + v.esc(r.code) + '"' + (r.code === val ? ' selected' : '') + '>' + v.esc(r.label || r.code) + '</option>'; }).join('') + '</select></label>';
   }
   /* how long the grant and its read log are kept: the owner's retention row for inspect_link, else blank (never a fixed number) */
@@ -428,7 +428,7 @@ var VisitView = (function () {
   async function give(v, form) {
     keep(form);
     var f = S.f, t = byId(types(v.T, v.today), f.type) || types(v.T, v.today)[0], g = f.g || t, F = { visit_type_id: t.id, visitor_name: (f.name || '').trim(), organisation: (f.org || '').trim(), purpose_text: (f.purpose || '').trim(),
-      grant_basis: f.basis || t.grant_basis || 'voluntary', identity_assurance: f.assure || 'none' };
+      grant_basis: f.basis || t.grant_basis || '', identity_assurance: f.assure || '' };
     if (!F.visitor_name) return 'Type their name.';
     if (!F.purpose_text) return 'Type the purpose.';
     if (f.how === 'card') { if (!f.card) return 'Pick a card.'; F.card_tag_id = f.card; }
