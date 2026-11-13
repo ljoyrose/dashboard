@@ -22,7 +22,8 @@ test.describe('CD Hub: loads', () => {
     await expect(page.locator('#nav button')).toHaveCount(0);
   });
 
-  test('holds no table data; only the shared sign-in is kept, one key in this browser', async ({ page, context }) => {
+  // Tables are kept only as the owner's device copy (IndexedDB, owner speed 13 Nov 2026), wiped on Sign out: cdhub-speed.spec.js
+  test('nothing but the shared sign-in in local storage, one key in this browser; Sign out clears it and the device copy', async ({ page, context }) => {
     await page.goto('cdhub/');
     await expect(page.locator('#main')).toContainText('Read-only. One sign-in for the whole site.');
     await expect(page.locator('#main')).not.toContainText(/from Drive|live from/i);
@@ -34,6 +35,7 @@ test.describe('CD Hub: loads', () => {
     expect(await context.cookies()).toEqual([]);
     await page.locator('header button[data-signout]').click();
     expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
+    await expect.poll(() => page.evaluate(async () => !!(await copyGet()))).toBe(false);
   });
 });
 
@@ -49,6 +51,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
   test('lists the BLD-app-tables folder and reads each sample BLD-*.csv', async ({ page, guard }) => {
     await page.goto('cdhub/');
     await signIn(page);
+    await page.waitForFunction(() => LOAD.later === 'ok');   // the tables the first screen does not need are read straight after it
     // folder listing used the right folder
     const listing = guard.world.calls.find((c) => c.path === '/files' && c.query.includes(IDS.bld));
     expect(listing, 'folder listing call').toBeTruthy();
