@@ -50,6 +50,8 @@ async function open(page, how = 'menu') {
 async function shot(page, name) {
   if (!SHOTS) return;
   fs.mkdirSync(SHOTS, { recursive: true });
+  await page.addStyleTag({ content: 'header, nav.main { position: static !important; }' }); // screenshots only: keep the bars off the tiles
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.screenshot({ path: path.join(SHOTS, name + '.png'), fullPage: true });
 }
 const tile = (sec, key) => sec.locator('.ttile[data-tool="' + key + '"]');
