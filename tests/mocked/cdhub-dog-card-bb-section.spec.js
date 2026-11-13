@@ -1,6 +1,7 @@
-// Breed Better on the dog card (Lisa, 12 Nov 2026): a proper section headed by the Breed Better logo, not a small grey strip.
-// Verdict and Testing badges, the score as a bar against the target, the must-pass checks one per line (Passed, Missing or
-// Failed), and a tap through to the dog's Breed Better page. Invented animals and rows only (tests/fixtures/breed-better).
+// Breed Better on the dog card (owner's design, 13 Nov 2026): ONE line, folded by default: logo, verdict, Testing, "x of y"
+// points and a chevron. It unfolds in place to the checks grouped by section, must pass first ("n of m met"), each points
+// section as "x of y"; things to do first. Each line opens that dog's Score tab at that section.
+// Invented animals and rows only (tests/fixtures/breed-better).
 // DOGCARD_SHOTS=<folder> also saves desktop and 390px pictures of the section.
 const fs = require('fs');
 const path = require('path');
@@ -37,33 +38,44 @@ async function openDogs(page) {
 }
 
 test.describe('CD Hub dog card: Breed Better section', () => {
-  test('logo heading, verdict and Testing, score bar with the target, must-pass lines, and the tap through', async ({ page }) => {
+  test('one folded line: logo, verdict, Testing, x of y and a chevron; unfolds to must-pass and points groups; a line opens the Score tab', async ({ page }) => {
     await openDogs(page);
     const sec = card(page, 'Test Dog Two').locator('section.bb-sec');
     await expect(sec).toHaveCount(1);
     await expect(sec.locator('img.bb-logo')).toHaveAttribute('alt', 'Breed Better logo');
     await expect.poll(() => sec.locator('img.bb-logo').evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
     await expect(sec.locator('.bb-sect')).toHaveText('Breed Better');
-    await expect(sec.locator('.bb-chip')).toContainText('Fail');
-    await expect(sec.locator('.bb-chip')).toContainText('Testing');
-    await expect(sec.locator('.bb-bar')).toHaveAttribute('aria-label', /^\d+ of \d+ points/);
-    const gates = sec.locator('.bb-gates li');
+    const head = sec.locator('.bb-chip');
+    await expect(head).toContainText('Fail');
+    await expect(head).toContainText('Testing');
+    await expect(head.locator('.bb-secpts')).toHaveText(/^\d+(\.\d)? of \d+$/);
+    // folded: the checks are hidden until unfolded (there could be 40)
+    await expect(sec.locator('details.bb-secd')).not.toHaveAttribute('open', '');
+    await expect(sec.locator('.bb-gates').first()).toBeHidden();
+    await expect(sec.locator('.bb-bar')).toHaveCount(0);
+    await head.click();
+    await expect(sec.locator('details.bb-secd')).toHaveAttribute('open', '');
+    const groups = sec.locator('[data-bb-group]');
+    await expect(groups.first()).toContainText(/Gates \d+ of 4 met/);
+    const gates = groups.first().locator('.bb-gates li');
     await expect(gates).toHaveCount(4);
     await expect(gates.locator('.bb-gl')).toHaveText(['Hips pass', 'Elbows X-ray', 'Patella check', 'Fit to Breed']);
-    await expect(sec.locator('.bb-gates li[data-gate="unverified"] .bb-gw').first()).toHaveText('Missing');
+    await expect(groups.first().locator('li[data-gate="unverified"] .bb-gw').first()).toHaveText('Missing');
     for (const w of await gates.locator('.bb-gw').allTextContents()) expect(['Passed', 'Missing', 'Failed']).toContain(w);
-    // no grey strip: the old one-line chip text is gone
-    await expect(card(page, 'Test Dog Two')).not.toContainText(/Unverified · 0 of/);
+    await expect(groups.nth(1)).toContainText(/Health \d+ of \d+/);
     const shots = process.env.DOGCARD_SHOTS;
     if (shots) { fs.mkdirSync(shots, { recursive: true }); await page.addStyleTag({ content: '#nav{display:none!important}' }); await card(page, 'Test Dog Two').screenshot({ path: path.join(shots, 'after-desktop.png') }); }
-    await sec.locator('.bb-chip').click();
+    await gates.filter({ hasText: 'Fit to Breed' }).getByRole('button').click();
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
+    await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-2$/);
+    await expect(page.locator('#bbRoot details.bb-band', { hasText: 'Gates' })).toHaveAttribute('open', '');
   });
 
   test('dog card, Breed Better, Open on Fit to Breed lands on add/edit, and Back returns to that dog @regression', async ({ page }) => {
     await openDogs(page);
     await card(page, 'Test Dog Two').locator('section.bb-sec .bb-chip').click();
+    await card(page, 'Test Dog Two').getByRole('button', { name: 'Open in Breed Better', exact: true }).click();
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
     const band = page.locator('details.bb-band', { hasText: 'Fit to Breed' });
@@ -76,13 +88,13 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect(screen.locator('input[name="answer"]')).toBeVisible();
     await expect(screen.locator('input[name="on"]')).toHaveAttribute('type', 'date');
     await expect(page.locator('#main h2')).toContainText('Breed Better');
-    await expect(page).toHaveURL(/#\/breed$/);
+    await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-2$/);
     await expect(page.locator('#rows')).toHaveCount(0);
     await screen.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('[data-bb-edit-screen]')).toHaveCount(0);
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
     await expect(page.locator('#main h2')).toContainText('Breed Better');
-    await expect(page).toHaveURL(/#\/breed$/);
+    await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-2$/);
   });
 
   test('phone: the section fits a 390px screen and the tap target is at least 44px', async ({ page }) => {

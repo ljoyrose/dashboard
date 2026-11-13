@@ -22,7 +22,8 @@
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
-<script src="../breed-better/dna-kit.js"></script>
+<script src="../breed-better/dna-panel.js"></script>
+<script src="staff/lib/viewer-levels.js"></script>
 <script src="../breed-better/hub-view.js"></script>
 <script src="../enquiries/core.js"></script>
 <script src="../enquiries/reader.js"></script>
@@ -4191,7 +4192,7 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries')?full:id;
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='breed')?full:id;   /* breed: #/breed/<tab> and #/breed/score.<dog> stay in the address, so Back and reload keep the tab */
  if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
  window.scrollTo(0,0);
 }

@@ -7,3 +7,17 @@
 .ins-list h3 { margin: 0 0 4px; font-size: var(--fs-body); }
 .ins-row { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-small); }
 .ins-row span b { font-weight: 600; }
+/* Layout to the owner's inspector design (13 Nov 2026): one card per dog, the must-pass lines, litters against the limit. */
+.ins-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ins-dog { border-left: 3px solid var(--line); }
+.ins-dog.ins-l-pass { border-left-color: var(--ljr-5); } .ins-dog.ins-l-unverified { border-left-color: var(--ljr-6); } .ins-dog.ins-l-fail { border-left-color: var(--ljr-2); }
+.ins-check { border-top: 1px solid var(--line); padding: 8px 0; }
+.ins-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ins-lab { font-weight: 500; }
+.ins-n { font-weight: 600; }
+.ins-sub { color: var(--muted); font-size: var(--fs-small); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.ins-open > summary { cursor: pointer; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; list-style: none; display: inline-block; min-height: 24px; }
+.ins-open > summary::-webkit-details-marker { display: none; }
+.ins-open[open] { flex: 1 1 100%; }
+.ins-v { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-small); font-weight: 500; white-space: nowrap; color: var(--ink); background: transparent; }
+.ins-pass { border-color: var(--ljr-5); } .ins-unverified { border-color: var(--ljr-6); } .ins-fail { border-color: var(--ljr-2); }

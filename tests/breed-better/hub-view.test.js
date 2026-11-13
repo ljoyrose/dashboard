@@ -25,7 +25,7 @@ test('only enrolled animals are scored, best first', () => {
 test('the chip is empty for an animal not enrolled', () => {
   const v = { T: tables(), today: '2026-06-02', esc };
   assert.equal(View.chip(v, 'a3'), '');
-  assert.match(View.chip(v, 'a1'), /data-go="breed"/);
+  assert.match(View.chip(v, "a1"), /data-go="breed\/score\.a1"/);
 });
 
 test('with no enrolment rows the page says not set up', () => {
@@ -210,9 +210,9 @@ test('band stats split each points section into earned and to prove', () => {
 });
 
 /* Calendar, More, My system, Archive and the sex filter (mock-up, 12 Nov 2026) */
-test('the list page has Dogs, Calendar and More tabs', () => {
+test('the list page has the five tabs in order: Score, Evidence, Dogs (current), Calendar, More', () => {
   const html = View.page({ T: pointsTables(), today: '2026-08-14', esc, dogs: hubDogs, photoId: (x) => x });
-  assert.match(html, /data-bb-tab="dogs"[^>]*aria-current="page"[\s\S]*data-bb-tab="cal"[\s\S]*data-bb-tab="more"/);
+  assert.match(html, /data-bb-tab="score"[\s\S]*data-bb-tab="evidence"[\s\S]*data-bb-tab="dogs"[^>]*aria-current="page"[\s\S]*data-bb-tab="cal"[\s\S]*data-bb-tab="more"/);
 });
 
 test('the calendar lists due dates from the rules, overdue ones marked', () => {
@@ -223,7 +223,7 @@ test('the calendar lists due dates from the rules, overdue ones marked', () => {
   View.setTab('cal');
   const html = View.page({ T, today: '2026-08-13', esc });
   View.setTab('dogs');
-  assert.match(html, /Calendar[\s\S]*Aug 2026/);
+  assert.match(html, /Calendar[\s\S]*August 2026/);
   assert.match(html, /Alpha, Hips[\s\S]*20 Aug 2026/);
 });
 
@@ -253,7 +253,7 @@ test('the sex filter appears when there is more than one sex, with counts', () =
   assert.match(html, /data-bb-sex="Male"/);
 });
 
-/* DNA Kit on the Breed Better dog page and the per-puppy calculator under More */
+/* DNA panel on the Breed Better dog page and the per-puppy calculator under More */
 test('the dog page shows the DNA card from dna_result and dna_marker rows', () => {
   const T = pointsTables();
   T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
