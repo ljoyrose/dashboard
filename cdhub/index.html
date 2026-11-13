@@ -839,12 +839,15 @@ async function load(){
   catch(e){
     if(!live()) return;
     endBootWait(ticket);
+    window._driveFiles=[]; window._driveIds={};
     LOAD.state='err'; LOAD.err=plainDriveErr(e); render(); return;
   }
   if(!live()) return;
   LOAD.storedAt=new Date().toISOString();
   var byTitle={};
   window._driveIds={};
+  /* Same listing the reads use. Saves look a file up by its name here. A missing or doubled name is not a save. */
+  window._driveFiles=files.map(function(f){ return {id:f.id,name:f.name,mimeType:f.mimeType||''}; });
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
   if(dup.length){ endBootWait(ticket); LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
@@ -1870,22 +1873,67 @@ async function placeDog(id,btn){
   var k=roundKey(date,aid), cur=ROUND[k]||(ROUND[k]={areaId:aid,date:date,access:''}); cur.subjects=ids;
   var td=btn.closest('tr').children[5]; if(td) td.textContent=a?a.code:aid; }
 }
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function headerCols(text){
+ text=String(text||'').replace(/^\uFEFF/,'').replace(/\r/g,'');
+ var line=(text.split('\n')[0]||'');
+ if(!line.trim()) return null;
+ var cols=[],f='',q=false;
+ for(var i=0;i<line.length;i++){
+  var c=line[i];
+  if(q){ if(c==='"'){ if(line[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+  else if(c==='"') q=true;
+  else if(c===','){ cols.push(f.trim()); f=''; }
+  else f+=c;
+ }
+ cols.push(f.trim());
+ return {cols:cols,text:text};
+}
+/* Append one row to the named file in the folder. A Sheet gets one appended row. A csv file is read and written back.
+   If the name is missing, doubled, or the read fails, nothing is written. */
+async function appendListedRow(name, label, fields){
+ var hits=(window._driveFiles||[]).filter(function(f){ return f&&f.name===name&&f.id; });
+ if(hits.length!==1) return {ok:false, message:hits.length>1?('Not saved: more than one '+label+' is in the folder.'):('Not saved: the '+label+' is not in the folder.')};
+ var file=hits[0], parsed;
+ try{ parsed=headerCols(await readDriveFile(file)); }
+ catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be read.'}; }
+ if(!parsed) return {ok:false, message:'Not saved: the '+label+' has no header.'};
+ var values=parsed.cols.map(function(c){ return fields[c]==null?'':String(fields[c]); });
+ try{
+  var res;
+  if(file.mimeType==='application/vnd.google-apps.spreadsheet'){
+   var url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(file.id)+'/values/A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+   res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify({values:[values]})});
+  }else{
+   var updated=parsed.text.trimEnd()+'\n'+values.map(csvCell).join(',');
+   var boundary='cdhub_bnd';
+   var meta=JSON.stringify({name:name,mimeType:file.mimeType||'text/csv'});
+   var body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+   res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  }
+  if(!res.ok) return {ok:false, message:'Not saved: the '+label+' could not be updated.'};
+  return {ok:true};
+ }catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be updated.'}; }
+}
+function finishListedSave(btn, result){
+ if(result.ok){ btn.textContent='saved ✓'; var tr=btn.closest&&btn.closest('tr'); if(tr) tr.style.opacity='0.4'; return; }
+ btn.textContent=result.message||'Not saved.'; btn.disabled=false;
+}
 async function saveChip(dogId,subjectId,chipVal,btn){
  if(!window.TOKEN){btn.textContent='no auth';return;}
  btn.textContent='saving…';btn.disabled=true;
- var fileId=window.DASH_CONFIG.cdhub.microchipFileId;
- var nameSlug=subjectId.replace('sub-','');
- var newRow='mc-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+chipVal+',,,,,false,,,dashboard';
- try{
-  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
-  var updated=existing.trimEnd()+'\n'+newRow;
-  var boundary='cdhub_bnd';
-  var meta=JSON.stringify({name:'BLD-microchip.csv',mimeType:'text/csv'});
-  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
-  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
-  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
-  else{btn.textContent='error';btn.disabled=false;}
- }catch(e){btn.textContent='error';btn.disabled=false;}
+ var slug=String(subjectId||'').replace('sub-','');
+ finishListedSave(btn, await appendListedRow('BLD-microchip.csv','microchip list',{
+  id:'mc-'+slug, tenant_id:'ten-dynamicdogs', subject_id:subjectId, chip_number:chipVal, source:'dashboard'
+ }));
+}
+async function saveArea(dogId,subjectId,areaId,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var slug=String(subjectId||'').replace('sub-','');
+ finishListedSave(btn, await appendListedRow('BLD-occupancy.csv','occupancy list',{
+  id:'occ-'+slug, tenant_id:'ten-dynamicdogs', subject_id:subjectId, area_id:areaId, source:'dashboard'
+ }));
 }
 async function saveMed(evt,dogId,nameSlug,form){
  evt.preventDefault();
