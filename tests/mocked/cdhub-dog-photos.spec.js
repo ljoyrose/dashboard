@@ -1,5 +1,5 @@
 // Dogs cards: a photo from the subject `photo` cell, the paw when there is none or it will not load,
-// and Add photo / Change photo. Invented dogs only. The save script is pretend; no folder id is in this file.
+// and Take photo / Upload photo. Invented dogs only. The save script is pretend; no folder id is in this file.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -61,20 +61,24 @@ test.describe('CD Hub dog photos', () => {
     await expect(broken.locator('img.dogphoto')).toBeHidden();
   });
 
-  test('each card has a photo button that opens a file input accepting images, camera or library', async ({ page, guard }) => {
+  test('each card has Take photo (camera) and Upload photo (library or files), both accepting images (Lisa, 13 Nov 2026)', async ({ page, guard }) => {
     await openDogs(page, guard);
     const shown = card(page, 'Pretend One');
     const empty = card(page, 'Pretend Two');
-    await expect(shown.locator('label.dogphoto-btn')).toHaveText('Change photo');
-    await expect(empty.locator('label.dogphoto-btn')).toHaveText('Add photo');
     for (const c of [shown, empty]) {
-      const input = c.locator('input[type="file"]');
-      await expect(input).toHaveAttribute('accept', 'image/*');
-      // no capture attribute: a phone offers both Take Photo and Photo Library (Lisa, 12 Nov 2026)
-      expect(await input.getAttribute('capture')).toBeNull();
+      await expect(c.locator('label.dogphoto-btn')).toHaveText(['Take photo', 'Upload photo']);
+      const take = c.locator('input[data-photo-src="camera"]');
+      const up = c.locator('input[data-photo-src="upload"]');
+      await expect(take).toHaveAttribute('accept', 'image/*');
+      await expect(up).toHaveAttribute('accept', 'image/*');
+      // Take photo opens the camera on a phone; Upload photo has no capture, so it offers the library and files
+      await expect(take).toHaveAttribute('capture', 'environment');
+      expect(await up.getAttribute('capture')).toBeNull();
     }
+    await expect(empty.locator('.dogphoto-btns')).toHaveAttribute('aria-label', 'Add a photo of Pretend Two');
+    await expect(shown.locator('.dogphoto-btns')).toHaveAttribute('aria-label', 'Change the photo of Pretend One');
     const chooser = page.waitForEvent('filechooser');
-    await empty.locator('label.dogphoto-btn').click();
+    await empty.locator('label[data-photo-upload]').click();
     const opened = await chooser;
     expect(await opened.element().getAttribute('accept')).toBe('image/*');
     expect(await opened.element().getAttribute('data-dog-photo')).toBe('sub-x2');
@@ -96,7 +100,7 @@ test.describe('CD Hub dog photos', () => {
     }, SINK);
     const png = path.join(os.tmpdir(), 'pretend-dog-photo.png');
     fs.writeFileSync(png, PNG);
-    await card(page, 'Pretend Two').locator('input[type="file"]').setInputFiles(png);
+    await card(page, 'Pretend Two').locator('input[data-photo-src="upload"]').setInputFiles(png);
     await page.locator('[data-crop-use]').click();
     await expect(card(page, 'Pretend Two').locator('img.dogphoto')).toHaveAttribute('data-photo-id', 'drv-photo-new');
     expect(body.action).toBe('dog_photo');
@@ -120,12 +124,13 @@ test.describe('CD Hub dog photos', () => {
     const png = path.join(os.tmpdir(), 'pretend-dog-photo.png');
     fs.writeFileSync(png, PNG);
     const two = card(page, 'Pretend Two');
-    await two.locator('input[type="file"]').setInputFiles(png);
+    await two.locator('input[data-photo-src="upload"]').setInputFiles(png);
     await page.locator('[data-crop-use]').click();
     await expect(two.locator('[data-photo-msg]')).toHaveText('Dog photos are not set up yet.');
     await expect(two.locator('img.dogphoto')).toHaveCount(0);
     await expect(two.locator('[data-paw]')).toBeVisible();
     await expect(two.locator('.nm')).toHaveText('Pretend Two');
-    await expect(two.locator('label.dogphoto-btn')).toHaveText('Add photo');
+    await expect(two.locator('label.dogphoto-btn')).toHaveText(['Take photo', 'Upload photo']);
+    await expect(two.locator('input[data-dog-photo]').first()).toBeEnabled();
   });
 });

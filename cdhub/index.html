@@ -299,12 +299,21 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.ph{position:relative;flex:0 0 auto;width:120px;height:120px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
 .ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ph .off{display:none !important}
 .dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .dogphoto-btn{justify-content:center;padding:0 8px}
+/* bigger photo, then Take photo and Upload photo under it (Lisa, 13 Nov 2026: camera or upload, any device) */
+.dogphoto-col{width:120px}
+.dogphoto-btns{display:flex;flex-direction:column;gap:6px}
+.dogphoto-btn{width:100%;box-sizing:border-box;white-space:nowrap}
+@media(max-width:400px){.ph{width:104px;height:104px}.dogphoto-col{width:104px}}
+.pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
+.pcrop-edit input{width:100%}
+.pcrop-size{margin:0;font-size:var(--fs-small)}
+.pcam video{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid var(--line);border-radius:var(--radius);background:var(--soft)}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
@@ -2291,6 +2300,15 @@ function photoDecode(file){
  }
  return viaImg();
 }
+/* Edit before save (Lisa, 13 Nov 2026): brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
+function photoTone(g,size,br,ct){
+ br=+br||0; ct=+ct||0; if(!br&&!ct) return;
+ var c=ct*2, f=(259*(c+255))/(255*(259-c)), o=br*2.55, im=g.getImageData(0,0,size,size), d=im.data;
+ for(var i=0;i<d.length;i+=4){ d[i]=f*(d[i]-128)+128+o; d[i+1]=f*(d[i+1]-128)+128+o; d[i+2]=f*(d[i+2]-128)+128+o; }
+ g.putImageData(im,0,0);
+}
+function photoBytes(n){ n=Math.max(1,Math.round(n/1024)); return n<1024?n+' KB':(Math.round(n/102.4)/10)+' MB'; }
+function photoKB(b64){ return photoBytes(b64.length*3/4); }
 /* The square output: JPEG quality steps down from 0.8 until the base64 fits. */
 function photoSquareB64(draw){
  var c=document.createElement('canvas'); c.width=PHOTO_OUT; c.height=PHOTO_OUT;
@@ -2300,18 +2318,26 @@ function photoSquareB64(draw){
  return b.length<=PHOTO_MAX_B64?b:'';
 }
 /* The crop step. Resolves {mime,b64} on Use photo, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
-function photoCrop(src){
+function photoCrop(src,was){
  return new Promise(function(resolve){
   var box=document.createElement('div');
   box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcropT');
-  box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop the photo</h3>'
+  box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop and edit the photo</h3>'
    +'<div class="pcrop-view" data-crop-view><canvas data-crop-canvas></canvas></div>'
    +'<p class="mut pcrop-tip">Drag to move. Pinch or use the slider to zoom.</p>'
    +'<label class="pcrop-zoom"><span class="sr">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" data-crop-zoom aria-label="Zoom"></label>'
-   +'<div class="pcrop-btns"><button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><span class="pcrop-gap"></span>'
+   +'<div class="pcrop-edit"><label for="pcropB">Brightness</label><input id="pcropB" type="range" min="-50" max="50" step="1" value="0" data-crop-bright>'
+   +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
+   +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
+   +'<div class="pcrop-btns"><button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Use photo</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
+  var bright=box.querySelector('[data-crop-bright]'), contrast=box.querySelector('[data-crop-contrast]'), sizeEl=box.querySelector('[data-crop-size]'), sizeT=0;
+  function tone(g,size){ photoTone(g,size,bright.value,contrast.value); }
+  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Use photo) */
+  function sizeNote(){ clearTimeout(sizeT); sizeT=setTimeout(function(){ var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
+   sizeEl.textContent=b?'Saves as '+PHOTO_OUT+' \u00d7 '+PHOTO_OUT+', about '+photoKB(b)+(was?' (picture was '+was+')':''):'Too large to save. Zoom in or crop closer.'; },250); }
   var rot=0, z=1, ox=0, oy=0, V=0, dpr=Math.min(3,window.devicePixelRatio||1), pts={}, last=null, pinch=null;
   function dims(){ return rot%2?{w:src.height,h:src.width}:{w:src.width,h:src.height}; }
   function base(){ var d=dims(); return V/Math.min(d.w,d.h); }
@@ -2319,7 +2345,7 @@ function photoCrop(src){
   function paint(g,size){ var k=size/V, d=dims(), s=base()*z;
    g.save(); g.scale(k,k); g.translate(ox,oy); g.scale(s,s); g.translate(d.w/2,d.h/2); g.rotate(rot*Math.PI/2);
    g.drawImage(src,-src.width/2,-src.height/2); g.restore(); }
-  function draw(){ var g=cv.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height); paint(g,cv.width); }
+  function draw(){ var g=cv.getContext('2d',{willReadFrequently:true}); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height); paint(g,cv.width); tone(g,cv.width); sizeNote(); }
   function fit(){ V=view.clientWidth||300; cv.width=Math.round(V*dpr); cv.height=Math.round(V*dpr);
    var d=dims(), s=base(); z=1; zoom.value='1'; ox=(V-d.w*s)/2; oy=(V-d.h*s)/2; clamp(); draw(); }
   function zoomAt(nz,cx,cy){ nz=Math.max(1,Math.min(4,nz)); var s0=base()*z, s1=base()*nz;
@@ -2335,13 +2361,15 @@ function photoCrop(src){
   view.addEventListener('pointerup',up); view.addEventListener('pointercancel',up);
   view.addEventListener('wheel',function(e){ e.preventDefault(); var p=at(e); zoomAt(z*(e.deltaY<0?1.1:1/1.1),p.x,p.y); },{passive:false});
   zoom.addEventListener('input',function(){ zoomAt(parseFloat(zoom.value)||1,V/2,V/2); });
-  function done(v){ document.removeEventListener('keydown',key,true); window.removeEventListener('resize',fit); box.remove(); resolve(v); }
+  bright.addEventListener('input',draw); contrast.addEventListener('input',draw);
+  box.querySelector('[data-crop-reset]').addEventListener('click',function(){ bright.value='0'; contrast.value='0'; rot=0; fit(); });
+  function done(v){ clearTimeout(sizeT); document.removeEventListener('keydown',key,true); window.removeEventListener('resize',fit); box.remove(); resolve(v); }
   function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); } }
   document.addEventListener('keydown',key,true); window.addEventListener('resize',fit);
   box.querySelector('[data-crop-rotate]').addEventListener('click',function(){ rot=(rot+1)%4; fit(); });
   box.querySelector('[data-crop-cancel]').addEventListener('click',function(){ done(null); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
-   var b=photoSquareB64(function(g,size){ paint(g,size); });
+   var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    done(b?{mime:'image/jpeg',b64:b}:{error:'That picture is too large.'}); });
   fit(); box.querySelector('[data-crop-use]').focus();
  });
@@ -2349,32 +2377,72 @@ function photoCrop(src){
 /* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
    Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
    holds the folder id and never changes who can see the file. */
-async function uploadDogPhoto(inp){
+/* Take photo: on a phone or tablet the input's capture opens the camera app. On a laptop or desktop (no touch pointer) the
+   page opens the camera itself (getUserMedia), so Take photo works on any device. The frame is handled like a picked file. */
+function photoCamera(){
+ return new Promise(function(resolve){
+  var md=navigator.mediaDevices;
+  if(!md||!md.getUserMedia){ resolve({error:'This device has no camera here. Use Upload photo instead.'}); return; }
+  md.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1920}},audio:false}).then(function(stream){
+   var box=document.createElement('div');
+   box.className='pcrop pcam'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcamT');
+   box.innerHTML='<div class="pcrop-in"><h3 id="pcamT">Take a photo</h3><video data-cam-video autoplay playsinline muted></video>'
+    +'<div class="pcrop-btns"><span class="pcrop-gap"></span><button type="button" class="btn" data-cam-cancel>Cancel</button>'
+    +'<button type="button" class="btn yes" data-cam-take>Take photo</button></div></div>';
+   document.body.appendChild(box);
+   var video=box.querySelector('[data-cam-video]'); video.srcObject=stream;
+   function done(v){ document.removeEventListener('keydown',key,true); stream.getTracks().forEach(function(t){ t.stop(); }); box.remove(); resolve(v); }
+   function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); } }
+   document.addEventListener('keydown',key,true);
+   box.querySelector('[data-cam-cancel]').addEventListener('click',function(){ done(null); });
+   box.querySelector('[data-cam-take]').addEventListener('click',function(){
+    var w=video.videoWidth, h=video.videoHeight; if(!w||!h) return;   /* not ready yet: the button waits for a frame */
+    var k=Math.min(1,PHOTO_WORK/Math.max(w,h)), c=document.createElement('canvas');
+    c.width=Math.round(w*k); c.height=Math.round(h*k); c.getContext('2d').drawImage(video,0,0,c.width,c.height);
+    done(c); });
+   box.querySelector('[data-cam-take]').focus();
+  }, function(){ resolve({error:'The camera could not be opened. Allow the camera, or use Upload photo.'}); });
+ });
+}
+function photoBusy(inp,on){
+ var card=inp&&inp.closest?inp.closest('article'):null;
+ Array.prototype.forEach.call(card?card.querySelectorAll('input[data-dog-photo]'):[inp],function(x){ x.disabled=!!on; });
+}
+/* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
+   Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
+   holds the folder id and never changes who can see the file. */
+async function photoSave(inp,getSrc,was){
  var id=inp.getAttribute('data-dog-photo')||'';
- var file=inp.files&&inp.files[0];
- inp.value='';
- if(!file) return;
  if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
- if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
  var g=await sinkGate();
  if(!g.ok){ photoMsg(inp, g.code==='NO_CODE'?'Enter your staff code. Nothing was saved.':'Could not reach the save script. Nothing was saved.'); return; }
  photoMsg(inp,'');
- inp.disabled=true;
+ photoBusy(inp,true);
  try{
-  var src=await photoDecode(file);
-  var pic=await photoCrop(src);
-  if(!pic){ inp.disabled=false; return; }   /* Cancel: nothing is sent */
-  if(pic.error){ inp.disabled=false; photoMsg(inp,pic.error); return; }
-  photoMsg(inp,'Saving the photo\u2026');
+  var src=await getSrc();
+  if(!src){ photoBusy(inp,false); return; }   /* camera closed: nothing is sent */
+  if(src.error){ photoBusy(inp,false); photoMsg(inp,src.error); return; }
+  var pic=await photoCrop(src,was);
+  if(!pic){ photoBusy(inp,false); return; }   /* Cancel: nothing is sent */
+  if(pic.error){ photoBusy(inp,false); photoMsg(inp,pic.error); return; }
+  photoMsg(inp,'Saving the photo…');
   var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
    body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code);
-  if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
+  if(!j.ok||!j.result||!j.result.file_id){ photoBusy(inp,false); photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
- }catch(e){ inp.disabled=false; photoMsg(inp,(e&&e.message)||'The photo was not saved.'); }
+ }catch(e){ photoBusy(inp,false); photoMsg(inp,(e&&e.message)||'The photo was not saved.'); }
+}
+async function uploadDogPhoto(inp){
+ var file=inp.files&&inp.files[0];
+ inp.value='';
+ if(!file) return;
+ if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
+ if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
+ return photoSave(inp,function(){ return photoDecode(file); },file.size?photoBytes(file.size):'');
 }
 /* Add weight (weighings panel), Add vaccination and Remove (newest vaccination only). Saved through the save script. */
 document.addEventListener('submit',async function(ev){
@@ -2458,6 +2526,15 @@ function bindDogPhotos(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-dog-photo]'), function(inp){
   inp.addEventListener('change', function(){ uploadDogPhoto(inp); });
  });
+ Array.prototype.forEach.call(document.querySelectorAll('label[data-photo-take]'), function(lb){
+  lb.addEventListener('click', function(e){
+   var inp=lb.querySelector('input[data-dog-photo]');
+   if(!inp||inp.disabled) return;
+   var touch=window.matchMedia&&window.matchMedia('(pointer: coarse)').matches;
+   if(touch||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return;   /* phone / tablet: the camera app opens */
+   e.preventDefault(); photoSave(inp,photoCamera,'');
+  });
+ });
 }
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
@@ -2504,9 +2581,14 @@ function drawDogs(){
       +(pic?'<img class="dogphoto off" alt="" data-photo-id="'+esc(pic)+'" referrerpolicy="no-referrer">':'')
       +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
     +'</div>'
-    +'<label class="btn dogphoto-btn">'+(pic?'Change photo':'Add photo')
-      +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'">'
+    +'<div class="dogphoto-btns" role="group" aria-label="'+esc((pic?'Change the photo of ':'Add a photo of ')+(d.name||'this dog'))+'">'
+    +'<label class="btn dogphoto-btn" data-photo-take>Take photo'
+      +'<input type="file" accept="image/*" capture="environment" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="camera">'
     +'</label>'
+    +'<label class="btn dogphoto-btn" data-photo-upload>Upload photo'
+      +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
+    +'</label>'
+    +'</div>'
     +'</div>'
     +'<div class="dc-info">'
       +'<div class="nl">'
