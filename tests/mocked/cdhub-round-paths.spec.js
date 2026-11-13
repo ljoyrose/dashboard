@@ -142,7 +142,7 @@ test.describe('CD Hub: The round controls', () => {
 
     const flap = page.locator('.racc[data-area="area-1"]');
     await flap.selectOption('limited');
-    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('NOT saved: saving is off on this device — set it up at the top of this page');
+    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('NOT saved — Could not reach the save script. Nothing is known to be saved.');
     await expect(flap).toHaveValue('free');
 
     await page.locator('[data-move-dog="sub-test-dog-1"]').click();
