@@ -329,7 +329,7 @@ test.describe('Dashboard: Tech section', () => {
   });
 
   test('public repo: the page holds no tool data and no Tech id; fixtures are invented', () => {
-    const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8') + fs.readFileSync(path.join(ROOT, 'tech', 'core.js'), 'utf8');
+    const page = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8') + fs.readFileSync(path.join(ROOT, 'studio', 'tech-core.js'), 'utf8');
     expect(page).toMatch(/CFG\.studio && CFG\.studio\.ownedTools/); // the id is read from config.js, never written in the page
     expect(page).not.toContain(CONF.studio.ownedTools.sheetId);
     const fx = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'tech-tools.js'), 'utf8');

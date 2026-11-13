@@ -19,7 +19,6 @@
 <script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
-<script src="tech/core.js"></script>
 <script>
 // Dashboard Main: each hub's 3 numbers, its "needs you" rows and its Decide / Do rows, read with the Dashboard's own
 // look-only sign-in (drive.readonly; Sheets values are read with it too, GET only). Every number is worked out the way
@@ -2878,24 +2877,29 @@
 
   // ---- Tech (TECH-HUB-1, More > Tech): one tile per paid tool, from the tools tab Studio already reads (config.js studio.ownedTools).
   // Read ONCE per page load, after sign-in, with the read-only token (GET only); the 5-minute refresh never reads it again, only
-  // Refresh does. tech/core.js does every sum (header check, flags, filter, sort, the tile); this part only reads and draws.
+  // Refresh does. studio/tech-core.js does every sum (header check, flags, filter, sort, the tile); this part only reads and draws.
   // Fails closed: tab unreadable, a Tech column missing or the code not loaded = one plain line and no tiles; the rest of the
   // Dashboard carries on. Add tech drops one TECH-ROW-REQUEST_ file into tech.requestsFolderId (empty = "Not saved", nothing sent).
-  var TECH = CFG.tech || {}, TECH_TAB = (CFG.studio && CFG.studio.ownedTools) || {}, TC = window.TechCore;
+  var TECH = CFG.tech || {}, TECH_TAB = (CFG.studio && CFG.studio.ownedTools) || {}, TC = window.TechCore || null;
+  // The Tech code and look load only when Tech first opens (studio/ is a published folder), so Main and every hub stay as light.
+  function techCode() {
+    if (!document.querySelector('link[data-tech-css]')) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'studio/tech.css'; l.setAttribute('data-tech-css', ''); document.head.appendChild(l); }
+    return needScripts(['studio/tech-core.js']).then(function () { TC = window.TechCore || null; if (!TC) throw new Error('Tech code did not load'); });
+  }
   var TQ = (function () { var o = {}; try { o = JSON.parse(localStorage.getItem('dash-tech') || '{}') || {}; } catch (e) { o = {}; }
     return { q: '', groups: o.groups || [], flags: o.flags || [], sort: o.sort || 'group', fopen: typeof o.fopen === 'boolean' ? o.fopen : null }; })();
   var TF = { open: false, d: {}, err: {}, res: null, busy: false };
   function techSaveQ() { try { localStorage.setItem('dash-tech', JSON.stringify({ groups: TQ.groups, flags: TQ.flags, sort: TQ.sort, fopen: TQ.fopen })); } catch (e) {} }
   function techOpts() { return { now: Date.now(), devHostingSlot: TECH.devHostingSlot, freshDays: TECH.freshDays }; }
   function loadTech() {
-    if (!signedIn || !accessToken || !TC) return;
+    if (!signedIn || !accessToken) return;
     if (!TECH_TAB.sheetId) { S.tech = { status: 'ok', readAt: Date.now(), error: null, data: { off: true } }; render(); return; }
-    run('tech', apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(TECH_TAB.sheetId) + '/values/' +
-      encodeURIComponent(TECH_TAB.tab || 'OWNED_TOOLS') + '?majorDimension=ROWS').then(function (r) { return TC.read((r && r.values) || [], techOpts()); }));
+    run('tech', techCode().then(function () { return apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(TECH_TAB.sheetId) + '/values/' +
+      encodeURIComponent(TECH_TAB.tab || 'OWNED_TOOLS') + '?majorDimension=ROWS'); }).then(function (r) { return TC.read((r && r.values) || [], techOpts()); }));
   }
   function techMode() {
     var p = S.tech, d = p.data;
-    return !TC || p.status === 'failed' ? 'err' : !d ? 'loading' : d.off ? 'off' : d.mode;
+    return p.status === 'failed' ? 'err' : !d ? 'loading' : d.off ? 'off' : d.mode;
   }
   function techOn() { return TQ.groups.length + TQ.flags.length + (TQ.sort !== 'group' ? 1 : 0); }
   function techChip(k, v, label, on) { return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-action="techchip" data-k="' + k + '" data-v="' + esc(v) + '" aria-pressed="' + on + '">' + label + '</button>'; }
@@ -2938,7 +2942,7 @@
   function viewTech() {
     var p = S.tech, d = p.data, mode = techMode(), I = KIT.icon, live = mode === 'live' || mode === 'example';
     var h = '<section class="techsec" id="techSec" data-tech="' + mode + '" aria-labelledby="techTitle"><div class="cardhead"><h3 id="techTitle">Tech</h3>' +
-      (mode === 'example' ? '<span class="mtag" data-example>Example</span>' : '') + (TC ? stateBadge(p, live ? d.tiles.length : null) : '') + '</div>';
+      (mode === 'example' ? '<span class="mtag" data-example>Example</span>' : '') + stateBadge(p, live ? d.tiles.length : null) + '</div>';
     if (live) {
       var n = techOn(), open = TQ.fopen === null ? window.matchMedia('(min-width: 900px)').matches : TQ.fopen;
       h += '<div class="tbar" data-bar="tech"><div class="srow"><label class="sbox">' + I('search') + '<input type="search" id="techQ" data-tq value="' + esc(TQ.q) + '" aria-label="Search tech" placeholder="Search" autocomplete="off"></label>' +
@@ -2951,7 +2955,7 @@
       if (d.skipped) h += '<p class="note" data-tech-note="skipped">' + num(d.skipped) + (d.skipped === 1 ? ' row' : ' rows') + ' skipped: no name.</p>';
       h += '<div id="techList">' + techList(d) + '</div>';
     } else {
-      var words = mode === 'loading' ? 'Reading the tools tab…' : mode === 'off' ? 'Not set up yet.' : !TC ? 'Tech code did not load.'
+      var words = mode === 'loading' ? 'Reading the tools tab…' : mode === 'off' ? 'Not set up yet.' : mode === 'err' && !TC ? 'Tech code did not load.'
         : mode === 'err' ? 'Could not read the tools tab: ' + friendlyError(p.error).text
         : 'The tools tab is missing columns: ' + d.missing.join(', ').replace(/_/g, ' ') + '. Nothing shown until they are back.';
       h += '<p class="note' + (mode === 'err' || mode === 'header' ? ' fail' : '') + '" data-tech-state="' + mode + '">' + esc(words) + '</p>';
@@ -2986,7 +2990,7 @@
     else if (a === 'techpick') { TF.d[t.getAttribute('data-f')] = v; techPaintForm(); }
     else if (a === 'techsave') techSave();
   }
-  // Add tech: check the entry (tech/core.js), then one request file for the engine. "Saved" only when Drive returns the new file.
+  // Add tech: check the entry (studio/tech-core.js), then one request file for the engine. "Saved" only when Drive returns the new file.
   function techSave() {
     if (TF.busy || !TC) return;
     var d = S.tech.data, keys = d && d.keys ? d.keys : [];

@@ -1,7 +1,7 @@
-// tech/core.js (TECH-HUB-1): the pure view-model behind Dashboard › Tech, tested in Node with no browser. Invented rows only.
+// studio/tech-core.js (TECH-HUB-1): the pure view-model behind Dashboard › Tech, tested in Node with no browser. Invented rows only.
 const path = require('path');
 const { test, expect } = require('@playwright/test');
-const T = require(path.join('..', '..', 'tech', 'core.js'));
+const T = require(path.join('..', '..', 'studio', 'tech-core.js'));
 const FX = require('../fixtures/tech-tools');
 
 const NOW = Date.UTC(2026, 10, 13, 9, 0);
@@ -10,7 +10,7 @@ const d = (off) => FX.iso(NOW, off);
 const base = { tool: 'Example Tool A', tool_key: 'example-a', group: 'AI', plan_or_tier: 'Tier 1', period: 'month', status: 'live', verified: 'VERIFIED', last_updated: d(-1) };
 const one = (o) => T.read([FX.HEADER, FX.row(Object.assign({}, base, o))], OPTS).tiles[0];
 
-test.describe('tech/core.js', () => {
+test.describe('studio/tech-core.js', () => {
   test('header: matched by name in any order; "tool" stands in for tool_name; required columns listed when missing', () => {
     const h = T.header(['verified', 'TOOL', 'group', 'tool_key', 'status', 'period', 'last_updated', 'extra']);
     expect(h.missing).toEqual([]);
@@ -146,7 +146,7 @@ test.describe('tech/core.js', () => {
   });
 
   test('the file holds no real tool data and no ids', () => {
-    const src = require('fs').readFileSync(path.join(__dirname, '..', '..', 'tech', 'core.js'), 'utf8');
+    const src = require('fs').readFileSync(path.join(__dirname, '..', '..', 'studio', 'tech-core.js'), 'utf8');
     const names = [...src.matchAll(/'(Example Tool [A-Z])'/g)].map((m) => m[1]);
     expect(names.length).toBe(6);
     expect(src).not.toMatch(/\b(?=[\w-]*\d)(?=[\w-]*[A-Z])(?=[\w-]*[a-z])[\w-]{25,}\b/);
