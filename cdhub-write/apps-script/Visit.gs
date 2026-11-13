@@ -519,8 +519,8 @@ function sinkVisitOpen_(req) {
  *   - visit_review adds one BLD-finding row (finding_kind review). outcome_id is a review word: a BLD-status_label code
  *     in group 'review'. target_table is one of the visit's lists; target_id (optional) must be a row of a dog on it.
  *   - visit_record adds one check_log row through the ordinary staff-check path (same checks, same repeat guard), for a
- *     job on the visit's record_jobs. taken_by is 'visit:<link id>', so a visitor's record is told apart without a new
- *     column; the jobs screen counts it only if the visit's record_counts lists that job (due.js, SOPJOBS).
+ *     job on the visit's record_jobs. taken_by is 'visit:<link id>'; visit_id names the visit and counts_due ('true' or
+ *     'false') is copied from the visit's record_counts at save time. The jobs screen counts it only when true (due.js).
  * --------------------------------------------------------------------------------------------------------------- */
 
 /** The visitor and their live link row, from a link code (code) or a card tag (t). */
@@ -589,7 +589,11 @@ function sinkVisitRecord_(req) {
     var fields = {};
     Object.keys(spec.input).forEach(function (k) { if (f[k] !== undefined) fields[k] = f[k]; });
     var who = { who: 'visit:' + v.link.id, role: ROLE_INSPECTOR, id: '' };
-    var out = sinkProcess_(spec, { action: 'add', fields: fields, values: f.values }, who, now, now.getTime());
+    var counts = String(v.link.record_counts || '').split('|').indexOf(typeRow.type_key) >= 0;
+    // the same spec, stamped with the visit and whether it counts as done (as granted now; later link changes do not alter it)
+    var vspec = Object.create(spec);
+    vspec.stamp = function (row, ctx) { spec.stamp(row, ctx); row.visit_id = v.link.id; row.counts_due = counts ? 'true' : 'false'; };
+    var out = sinkProcess_(vspec, { action: 'add', fields: fields, values: f.values }, who, now, now.getTime());
     out.who = v.link.visitor_name || v.link.label;
     return out;
   });

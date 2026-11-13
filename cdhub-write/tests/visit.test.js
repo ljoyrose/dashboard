@@ -295,6 +295,12 @@ test('visit_record: only jobs on the visit; through the normal check path; taken
   assert.equal(r.result.who, 'Pat Example');
   const row = e.ctx.store_read_('BLD-check_log.csv', true).records[0];
   assert.equal(row.taken_by, 'visit:' + g.result.link_id);
+  assert.equal(row.visit_id, g.result.link_id);
+  assert.equal(row.counts_due, 'false');
+  const g2 = give(e, { visit_type_id: t, rights: ['view', 'record'], record_jobs: ['water'], record_counts: ['water'] });
+  const r2 = act(e, 'visit_record', { code: g2.result.code }, { check_type_id: water, subject_id: 'sub-test-b', outcome: 'ok' });
+  assert.equal(r2.ok, true, JSON.stringify(r2));
+  assert.equal(e.ctx.store_read_('BLD-check_log.csv', true).records[1].counts_due, 'true');
   assert.equal(act(e, 'visit_record', { t: add.tag }, { check_type_id: feed, subject_id: 'sub-test-a', outcome: 'ok' }).code, 'NOT_ALLOWED');
   assert.equal(act(e, 'visit_record', { t: add.tag }, { check_type_id: water, subject_id: 'sub-test-a', outcome: 'concern' }).code, 'INVALID');   // the usual note rule
   const noRight = give(e, { visit_type_id: typeId(e) });

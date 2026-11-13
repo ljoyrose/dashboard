@@ -458,9 +458,10 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id',
+              'visit_id', 'counts_due'],   // V9: a visitor's record (Visit.gs) names its visit and says, as granted then, whether it counts as done
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'visit_id', 'counts_due'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
