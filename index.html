@@ -2231,13 +2231,14 @@
       busy = false; render();
     });
   }
-  // Personal Drive bin steps (estate/pbin.js): fetched only once bin actions are allowed.
+  // Personal Drive bin steps (estate/pbin.js): fetched only once bin actions are allowed. Its Rename step writes the bin-list rows.
   function loadPBin() {
     if (window.PBin) { PBin.load(); return; }
     if (scriptsLoaded.pb) return;
     scriptsLoaded.pb = 1;
     needScripts(['estate/pbin.js']).then(function () {
       PBin.init({ Q: function () { return Q; }, setQ: function (v) { Q = v; }, busy: function () { return busy; }, setBusy: function (b) { busy = b; }, pick: function () { return PICK; }, signedIn: function () { return signedIn; }, surf: function () { return ledgerSurf; },
+        writeGranted: function () { return writeGranted; }, requestWrite: requestWrite, resetLedger: function () { ledgerCache = null; }, driveUpload: driveUpload, csvCell: csvCell, ukNameStamp: ukNameStamp, slipPrefix: SLIP_PREFIX,
         personalAuth, pcpFresh, keepPersonalCandidate, isMoneyRollback, pcpAllPages, loadLedgerSet, classifyPcp, friendlyError, render, pickedItems, apiGet, apiCall, isZeroByte, nameHasRr, isZzFamilyName, mapLimit, spellingOf, recheckForBin, trashOnly, num, esc, visibleRows, pickCount, rowAllowed, tickBox, showBar, listShown, icon, CFG, API, LIVE_FIELDS, FOLDER_MIME, PCP_PREFIX, LEDGER_FAIL });
       render(); PBin.load();
     }).catch(function () { scriptsLoaded.pb = 0; });
