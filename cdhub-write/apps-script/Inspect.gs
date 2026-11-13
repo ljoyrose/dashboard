@@ -25,7 +25,7 @@ var INSPECT = {
   // copied from its visit type at give time (Visit.gs). Blank slots: id_checked_by, accompanied_by, tz. Old 7-column files still read.
   LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'starts_at', 'ends_at', 'visit_type_id', 'person_id',
     'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'rights', 'lists', 'record_jobs', 'record_counts', 'data_from_date',
-    'data_to_date', 'email_code', 'ended_at', 'ended_by', 'end_reason', 'id_checked_by', 'accompanied_by', 'tz'],
+    'data_to_date', 'email_code', 'ended_at', 'ended_by', 'end_reason', 'id_checked_by', 'accompanied_by', 'tz', 'issued_by', 'delegation_id'],
   LINK_COLUMNS_V1: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by'],
   SUBJECT_FILE: 'BLD-inspect_link_subject.csv',
   SUBJECT_COLUMNS: ['id', 'tenant_id', 'link_id', 'subject_id', 'from_date', 'to_date'],

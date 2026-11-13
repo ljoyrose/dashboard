@@ -52,6 +52,8 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'visit_give') return jsonOut_({ ok: true, result: sinkVisitGive_(req) });
     if (req && typeof req === 'object' && req.action === 'visit_end') return jsonOut_({ ok: true, result: sinkVisitEnd_(req) });
     if (req && typeof req === 'object' && req.action === 'visit_extend') return jsonOut_({ ok: true, result: sinkVisitExtend_(req) });
+    if (req && typeof req === 'object' && req.action === 'delegation_give') return jsonOut_({ ok: true, result: sinkDelegationGive_(req) });
+    if (req && typeof req === 'object' && req.action === 'delegation_end') return jsonOut_({ ok: true, result: sinkDelegationEnd_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {

@@ -97,7 +97,7 @@ test('card_add: a fixed visit type needs the fixed_type_id column and a real typ
 });
 
 // ---- Part B: visit_give / visit_end / visit_extend (London clock in tests: 15/10/26 23:30 BST)
-const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz';
+const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz,issued_by,delegation_id';
 function benv(props, linkHeader) {
   const e = env(props, TAG_H + ',fixed_type_id');
   e.addFile('BLD-inspect_link.csv', (linkHeader || LINK_H) + '\r\n');
@@ -305,4 +305,66 @@ test('visit_record: only jobs on the visit; through the normal check path; taken
   assert.equal(act(e, 'visit_record', { t: add.tag }, { check_type_id: water, subject_id: 'sub-test-a', outcome: 'concern' }).code, 'INVALID');   // the usual note rule
   const noRight = give(e, { visit_type_id: typeId(e) });
   assert.equal(act(e, 'visit_record', { code: noRight.result.code }, { check_type_id: water, outcome: 'ok' }).code, 'NOT_ALLOWED');
+});
+
+// ---- Delegated admin (Delegate.gs): give_visit conferred by the owner, never implied by a role
+const DELEG_H = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_at,to_at,visit_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes';
+function genv() {
+  const e = benv();
+  e.addFile('BLD-delegation.csv', DELEG_H + '\r\n');
+  e.second = e.ctx.sinkIssueCode_('Sue Second', 'STAFF', 'owner@example.test');   // invented person
+  return e;
+}
+const delegRows = (e) => e.ctx.store_read_('BLD-delegation.csv', true).records;
+
+test('delegation: a staff code cannot give a visit until the owner confers give_visit; then only within its limits', () => {
+  const e = genv();
+  const t = typeId(e), vet = typeId(e, { type_key: 'vet', name: 'Vet' });
+  const asStaff = (over) => post(e, 'visit_give', Object.assign({ visit_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], subject_ids: ['sub-test-a'], hours: '2' }, over), e.codes.staff);
+  assert.equal(asStaff().code, 'NOT_ALLOWED');
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.second.id }, e.codes.staff).code, 'NOT_ALLOWED');   // no row to pass on
+  const d = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, visit_type_ids: t, max_hours: '4', rights: 'view', fields: 'subject.name|subject.chip_number', subject_ids: 'sub-test-a', depth_left: '1' });
+  assert.equal(d.ok, true, JSON.stringify(d));
+  const ok = asStaff();
+  assert.equal(ok.ok, true, JSON.stringify(ok));
+  const L = links(e).filter((x) => x.id === ok.result.link_id)[0];
+  assert.equal(L.issued_by, e.ids.staff);
+  assert.equal(L.delegation_id, d.result.id);
+  assert.equal(asStaff({ visit_type_id: vet }).code, 'INVALID');
+  assert.equal(asStaff({ hours: '5' }).code, 'INVALID');
+  assert.equal(asStaff({ rights: ['view', 'review'] }).code, 'INVALID');
+  assert.equal(asStaff({ fields: ['subject.sex'] }).code, 'INVALID');
+  assert.equal(asStaff({ fields: ['subject.chip_number:last4'] }).ok, true);   // the full column allows its last 4
+  assert.equal(asStaff({ subject_ids: ['sub-test-b'] }).code, 'INVALID');
+  const all = asStaff({ subject_ids: [] });
+  assert.equal(all.result.dogs, 1);   // "all dogs" = all the dogs they may give
+});
+
+test('delegation: passing on is never wider or deeper; ending a row ends those below it and, if asked, their visits', () => {
+  const e = genv();
+  const t = typeId(e);
+  const top = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, rights: 'view|review', max_hours: '8', depth_left: '1' }).result.id;
+  const sueId = e.second.id;
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, rights: 'view|record', depth_left: '0' }, e.codes.staff).code, 'INVALID');
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, depth_left: '1' }, e.codes.staff).code, 'INVALID');
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, max_hours: '9' }, e.codes.staff).code, 'INVALID');
+  const child = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, rights: 'view' }, e.codes.staff);
+  assert.equal(child.ok, true, JSON.stringify(child));
+  const c = delegRows(e).filter((r) => r.id === child.result.id)[0];
+  assert.equal(c.max_hours, '8');            // blank = no wider than the parent, written out
+  assert.equal(c.conferred_by, e.ids.staff);
+  // Sue cannot pass it on (depth 0), and cannot end her own row
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, parent_id: child.result.id }, e.second.code).code, 'NOT_ALLOWED');
+  assert.equal(post(e, 'delegation_end', { id: child.result.id, reason: 'x' }, e.second.code).code, 'NOT_ALLOWED');
+  const v = post(e, 'visit_give', { visit_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], hours: '2' }, e.second.code);
+  assert.equal(v.ok, true, JSON.stringify(v));
+  // Sam (who gave Sue hers) cannot end Sue's visit without end_others
+  assert.equal(post(e, 'visit_end', { link_id: v.result.link_id, reason: 'x' }, e.codes.staff).code, 'NOT_ALLOWED');
+  const end = post(e, 'delegation_end', { id: top, reason: 'Role changed', end_issued: 'end' });
+  assert.equal(end.ok, true, JSON.stringify(end));
+  assert.equal(end.result.children_ended, 1);
+  assert.equal(end.result.visits_ended, 1);
+  assert.ok(delegRows(e).every((r) => r.ended_at));
+  assert.equal(links(e).filter((x) => x.id === v.result.link_id)[0].end_reason, 'permission ended: Role changed');
+  assert.equal(post(e, 'visit_give', { visit_type_id: t, person_name: 'X', rights: ['view'], fields: ['subject.name'], hours: '1' }, e.second.code).code, 'NOT_ALLOWED');
 });
