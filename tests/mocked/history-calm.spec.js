@@ -418,6 +418,8 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   for (const aid of ['area-r1', 'area-r2', 'area-r3']) {
     addRow(aid, '2026-07-10', 'am', aid === 'area-r1' ? '25.0' : '18.0', aid === 'area-r1' ? '28.2' : '22.0');
     addRow(aid, '2026-07-10', 'pm', '18.0', '22.0');
+    addRow(aid, '2026-07-12', 'am', '18.0', '22.0');
+    addRow(aid, '2026-07-12', 'pm', '18.0', '22.0');
     addRow(aid, '2026-08-10', 'am', '12.0', '15.0');
     addRow(aid, '2026-08-10', 'pm', '12.5', '16.0');
   }
@@ -449,11 +451,35 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   await expect(page.locator('.legend')).toContainText('Outside limit');
   await expect(page.locator('.legend')).toContainText('Missed');
   await expect(page.locator('.legend')).not.toContainText('Outside limit or missed');
+  const paint = (iso) => dayM(iso).evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { bg: s.backgroundColor, shadow: s.boxShadow };
+  });
+  const julyWarn = await paint('2026-07-10');
+  const julyMiss = await paint('2026-07-11');
+  expect(julyWarn.bg, 'outside limit is a solid fill, missed is not').not.toBe(julyMiss.bg);
+  expect(julyMiss.shadow, 'a missed day keeps an orange frame').toContain('rgb');
   await dayM('2026-07-10').click();
   await expect(page.locator('#drill')).toBeVisible();
-  await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first()).toHaveText('AM 25.0–28.2');
+  const drillBox = await page.locator('#drill').evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { radius: s.borderTopLeftRadius, border: s.borderTopWidth };
+  });
+  expect(drillBox.radius).not.toBe('0px');
+  expect(drillBox.border).toBe('1px');
+  const outLine = page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first();
+  await expect(outLine).toHaveText('AM 25.0–28.2');
+  await expect(outLine).not.toHaveClass(/\bmiss\b/);
   await expect(page.locator('#drill')).not.toContainText('what was done');
   await expect(page.locator('#drill')).not.toContainText('(from');
+  const rowFrame = await page.locator('#drill .rl').first().evaluate((el) => getComputedStyle(el).borderTopWidth);
+  expect(rowFrame).toBe('1px');
+  await page.locator('#drill .dclose').click();
+  await dayM('2026-07-11').click();
+  const missed = page.locator('#drill span.miss');
+  await expect(missed.first()).toBeVisible();
+  await expect(missed.first()).toHaveClass(/\bwarn\b/);
+  expect(await page.locator('#drill span.warn').count()).toBe(await page.locator('#drill span.warn.miss').count());
   await page.locator('#drill .dclose').click();
   // A limit typed with from_date of today still colours a July reading (standing guidance, entered late).
   upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,10,26,2026-11-12,\n');
@@ -462,4 +488,17 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   await page.locator('.yr-btn[data-yr="2026"]').click();
   await page.getByRole('button', { name: 'Heat map' }).click();
   expect((await dayM('2026-07-10').getAttribute('class')).split(' ')[1]).toBe('warn');
+  // A puppy row already in force must not hide the adult row that was typed later. 18–22 is inside 10–26, so the day is in limit, not an uncoloured pale cell.
+  upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\n'
+    + 'tb-p,under four weeks,0,28,26,28,,\n'
+    + 'tb-a,four weeks and over,29,,10,26,2026-11-12,\n');
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  expect((await dayM('2026-07-12').getAttribute('class')).split(' ')[1]).toBe('allok');
+  const julyIn = await paint('2026-07-12');
+  const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
+  expect(julyIn.shadow).not.toBe('none');
 });
