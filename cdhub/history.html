@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#2C2C2A">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
+<script src="hub-nav.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/capacity.js"></script>
@@ -32,7 +33,7 @@
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:60px}
+.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:140px}
 .hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
@@ -42,7 +43,7 @@ h1,h2,h3,b,strong{font-weight:600}
 .btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media(hover:hover){header .btn:hover{background:var(--frame-hov);}}
-@media(max-width:544px){.btn{min-height:44px}header.top{position:static}#view-d .rscroll{display:none}}   /* a phone shows the room cards only (quality review 12 Nov) */
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}#view-d .rscroll{display:none}.wrap{padding-bottom:170px}}   /* a phone shows the room cards only (quality review 12 Nov) */
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
 .bootline{margin:14px 0 0;color:var(--ink);font-weight:400}
 .bootmark{display:inline-flex;color:var(--ink)}
@@ -193,6 +194,8 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
     <div id="d-areas-inner"></div>
   </section>
 </aside>
+<nav id="nav" class="house-tabs" aria-label="Sections"></nav>
+<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});</script>
 
 <script>
 /* ---- config ---- */

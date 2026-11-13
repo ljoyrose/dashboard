@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#2C2C2A">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
+<script src="hub-nav.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
@@ -21,6 +22,7 @@
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
+<script src="../breed-better/dna-kit.js"></script>
 <script src="../breed-better/hub-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -838,12 +840,15 @@ async function load(){
   catch(e){
     if(!live()) return;
     endBootWait(ticket);
+    window._driveFiles=[]; window._driveIds={};
     LOAD.state='err'; LOAD.err=plainDriveErr(e); render(); return;
   }
   if(!live()) return;
   LOAD.storedAt=new Date().toISOString();
   var byTitle={};
   window._driveIds={};
+  /* Same listing the reads use. Saves look a file up by its name here. A missing or doubled name is not a save. */
+  window._driveFiles=files.map(function(f){ return {id:f.id,name:f.name,mimeType:f.mimeType||''}; });
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
   if(dup.length){ endBootWait(ticket); LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
@@ -1869,22 +1874,67 @@ async function placeDog(id,btn){
   var k=roundKey(date,aid), cur=ROUND[k]||(ROUND[k]={areaId:aid,date:date,access:''}); cur.subjects=ids;
   var td=btn.closest('tr').children[5]; if(td) td.textContent=a?a.code:aid; }
 }
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function headerCols(text){
+ text=String(text||'').replace(/^\uFEFF/,'').replace(/\r/g,'');
+ var line=(text.split('\n')[0]||'');
+ if(!line.trim()) return null;
+ var cols=[],f='',q=false;
+ for(var i=0;i<line.length;i++){
+  var c=line[i];
+  if(q){ if(c==='"'){ if(line[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+  else if(c==='"') q=true;
+  else if(c===','){ cols.push(f.trim()); f=''; }
+  else f+=c;
+ }
+ cols.push(f.trim());
+ return {cols:cols,text:text};
+}
+/* Append one row to the named file in the folder. A Sheet gets one appended row. A csv file is read and written back.
+   If the name is missing, doubled, or the read fails, nothing is written. */
+async function appendListedRow(name, label, fields){
+ var hits=(window._driveFiles||[]).filter(function(f){ return f&&f.name===name&&f.id; });
+ if(hits.length!==1) return {ok:false, message:hits.length>1?('Not saved: more than one '+label+' is in the folder.'):('Not saved: the '+label+' is not in the folder.')};
+ var file=hits[0], parsed;
+ try{ parsed=headerCols(await readDriveFile(file)); }
+ catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be read.'}; }
+ if(!parsed) return {ok:false, message:'Not saved: the '+label+' has no header.'};
+ var values=parsed.cols.map(function(c){ return fields[c]==null?'':String(fields[c]); });
+ try{
+  var res;
+  if(file.mimeType==='application/vnd.google-apps.spreadsheet'){
+   var url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(file.id)+'/values/A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+   res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify({values:[values]})});
+  }else{
+   var updated=parsed.text.trimEnd()+'\n'+values.map(csvCell).join(',');
+   var boundary='cdhub_bnd';
+   var meta=JSON.stringify({name:name,mimeType:file.mimeType||'text/csv'});
+   var body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+   res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  }
+  if(!res.ok) return {ok:false, message:'Not saved: the '+label+' could not be updated.'};
+  return {ok:true};
+ }catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be updated.'}; }
+}
+function finishListedSave(btn, result){
+ if(result.ok){ btn.textContent='saved ✓'; var tr=btn.closest&&btn.closest('tr'); if(tr) tr.style.opacity='0.4'; return; }
+ btn.textContent=result.message||'Not saved.'; btn.disabled=false;
+}
 async function saveChip(dogId,subjectId,chipVal,btn){
  if(!window.TOKEN){btn.textContent='no auth';return;}
  btn.textContent='saving…';btn.disabled=true;
- var fileId=window.DASH_CONFIG.cdhub.microchipFileId;
- var nameSlug=subjectId.replace('sub-','');
- var newRow='mc-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+chipVal+',,,,,false,,,dashboard';
- try{
-  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
-  var updated=existing.trimEnd()+'\n'+newRow;
-  var boundary='cdhub_bnd';
-  var meta=JSON.stringify({name:'BLD-microchip.csv',mimeType:'text/csv'});
-  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
-  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
-  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
-  else{btn.textContent='error';btn.disabled=false;}
- }catch(e){btn.textContent='error';btn.disabled=false;}
+ var slug=String(subjectId||'').replace('sub-','');
+ finishListedSave(btn, await appendListedRow('BLD-microchip.csv','microchip list',{
+  id:'mc-'+slug, tenant_id:'ten-dynamicdogs', subject_id:subjectId, chip_number:chipVal, source:'dashboard'
+ }));
+}
+async function saveArea(dogId,subjectId,areaId,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var slug=String(subjectId||'').replace('sub-','');
+ finishListedSave(btn, await appendListedRow('BLD-occupancy.csv','occupancy list',{
+  id:'occ-'+slug, tenant_id:'ten-dynamicdogs', subject_id:subjectId, area_id:areaId, source:'dashboard'
+ }));
 }
 async function saveMed(evt,dogId,nameSlug,form){
  evt.preventDefault();
@@ -2482,7 +2532,10 @@ function drawDogs(){
       +'<div class="meta">'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
         +(d.room&&!away?'<button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="'+esc(d.room)+'">'+esc(d.where)+'</button>'
-          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>')
+          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
+           /* no room yet (pups too) or off site: Place opens the same cabin picker (Lisa 13 Nov 2026) */
+           +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
+        +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+esc(CD._moved.text)+'</span>':'')
       +'</div>'
     +'</div>'
   +'</div>'
@@ -2664,11 +2717,13 @@ function spaceCabins(fromId, dogId, date){
 }
 function movePickerHtml(fromId, dogId){
  var d=CD._byId[dogId], rooms=spaceCabins(fromId,dogId), size=d&&d.sizeWord?d.sizeWord:'dog';
- if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p><button type="button" class="cb" data-move-cancel>Close</button></div>';
+ /* Off-site: a new occupancy_out row, as on the staff page; only for a dog that is in a cabin now */
+ var offBtn=d&&d.room&&!d.off?'<button type="button" class="cb" data-move-off="'+esc(dogId)+'">Off-site</button>':'';
+ if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p>'+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
  return '<div class="movepick" data-move-panel>'+rooms.map(function(x){
   return '<button type="button" class="mopt" data-move-to="'+esc(x.area.id)+'" data-move-dog="'+esc(dogId)+'">'
    +esc(x.area.code)+': '+x.free+' '+esc(x.size||size)+' free</button>';
- }).join('')+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
+ }).join('')+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
 }
 function overPickerHtml(fromId){
  var date=CD._roundDate||todayISO(), who=inCabin(fromId,date);
@@ -2706,7 +2761,21 @@ async function applyDogMove(dogId, toId, msgEl){
  Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o!==cur&&o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==dogId; }); });
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  if(page==='round') CD._roundMsg={area:toId,text:sinkMsg(r,'move')};
+ CD._moved={id:dogId,text:sinkMsg(r,'move')};   /* the dog card shows the tick after it redraws */
  if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
+}
+async function applyDogOff(dogId, msgEl){
+ if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
+ if(msgEl) msgEl.textContent='saving\u2026';
+ var r=await sinkPost('occupancy_out',{subject_id:dogId,off_site_kind:'temporary'});
+ if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ if(!(r.ok&&r.result&&r.result.status==='saved')) return;
+ CD._moved={id:dogId,text:sinkMsg(r,'move')};
+ var d=CD._byId[dogId], date=CD._roundDate||todayISO();
+ if(d){ d.area_id=''; d.room=''; d.off='temporary'; d.where='off site \u2014 temporary'; }
+ Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==dogId; }); });
+ var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
 function markSeen(areaId, sid, state){
@@ -3198,7 +3267,7 @@ async function sinkPost(table,fields){
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
 function sinkMsg(r,kind){
- if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved':'saved \u2713';
+ if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved \u2713':'saved \u2713';
  if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'moved \u2014 still waiting. Open Compliance, then Who has access, then the owner page.':'sent \u2014 waiting for approval';
  var f=r.fields?Object.keys(r.fields).map(function(k){ return r.fields[k]; }).join(' '):'';
  return 'NOT saved \u2014 '+(f||r.message||r.code||'error');
@@ -3841,23 +3910,15 @@ var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],[
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','areas'],areas:['today','litters'],litters:['dogs','areas'],buyers:['dogs','map'],sops:['dogs','buyers'],compliance:['litters','dogs']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
-var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
- round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
- buyers:['world','Assocs',6],sops:['clipboard','SOPs',6],compliance:['list-check','Compliance',2]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
-var MORE_VIEWS=['compliance','shape','round','areas','litters','buyers'];
 function bbV(){return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos};}
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
-if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; TABMETA.breed=['check','Breed Better',5]; MORE_VIEWS.push('breed'); }
+if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; }
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
- return TABS.map(function(t){ var n=counts[t[0]];
-   return DashKit.tabs.tab({go:t[0],slot:t[2],icon:'t-'+t[3],label:t[1],count:n?String(n):'',need:!!(n&&late[t[0]])}); }).join('')
-  +DashKit.tabs.more('houseMore',MORE_VIEWS.filter(function(id){return id!=='breed'||bbOn();}).map(function(id){ var m=TABMETA[id];
-   return '<button type="button" data-go="'+id+'" data-slot="'+m[2]+'"><svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg><span class="htl">'+esc(label(id))+'</span></button>'; }).join(''));
+ return HubNav.html({counts:counts,late:late,extraMore:(typeof BBHubView!=='undefined'&&bbOn())?[{id:'breed',label:'Breed Better',slot:'5',icon:'s-check'}]:[]});
 }
 function pill(){
  var p=document.getElementById('livepill');
@@ -4082,7 +4143,7 @@ function go(id,push){
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
- var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
+ var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
  if(!t) return;
  if(t.hasAttribute('data-move-cancel')){
   var h=t.closest('[data-move-host]'); if(h) h.innerHTML='';
@@ -4091,6 +4152,7 @@ document.addEventListener('click',function(e){
  }
  if(t.hasAttribute('data-over-move')){ openOverMove(t.getAttribute('data-over-move'), t); return; }
  if(t.hasAttribute('data-move-to')){ var msg=t.parentNode&&t.parentNode.querySelector('[data-move-msg]'); applyDogMove(t.getAttribute('data-move-dog'), t.getAttribute('data-move-to'), msg); return; }
+ if(t.hasAttribute('data-move-off')){ applyDogOff(t.getAttribute('data-move-off'), t.parentNode&&t.parentNode.querySelector('[data-move-msg]')); return; }
  if(t.hasAttribute('data-cabin-move')){ var did=t.getAttribute('data-cabin-move'), d=CD._byId[did]; openMovePicker((d&&d.area_id)||'', did, t); return; }
  if(t.hasAttribute('data-move-dog')){ openMovePicker(t.getAttribute('data-from')||'', t.getAttribute('data-move-dog'), t); return; }
  if(t.hasAttribute('data-here')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-here'), 'here'); return; }
