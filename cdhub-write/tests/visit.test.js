@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const crypto = require('node:crypto');
-const { standardEnv } = require('./harness');
+const { standardEnv, req: hreq, save: hsave } = require('./harness');
 
 const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source';
 const TAG_H = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by';
@@ -239,4 +239,64 @@ test('visit_open (link code): live, then ended after End now; a staff code is no
   assert.equal(open(e, { c: e.codes.staff }).code, 'BAD_CODE');
   post(e, 'visit_end', { link_id: g.result.link_id, reason: 'Done' });
   assert.deepEqual(open(e, { c: g.result.code }).result, { state: 'ended' });
+});
+
+// ---- Part D: visit_review and visit_record
+const FIND_H = 'id,tenant_id,inspection_id,declaration_id,outcome_id,authority,raised_on,wording_as_given,finding_kind,tenant_response,action_agreed,due_on,closed_on,evidence_document_id,notes,target_table,target_id,sign_in_id,raised_at,replies_to_id,visit_id';
+function denv() {
+  const e = benv({ TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true' });
+  e.addFile('BLD-finding.csv', FIND_H + '\r\n');
+  const sl = 'code,label,match,source,group,needs_action\r\nreview.ok,Seen - fine,,test,review,\r\nreview.ask,Please explain,,test,review,true\r\nok,OK,,test,,\r\n';
+  const f = e.file('BLD-status_label.csv');
+  if (f.length) { f[0].content = sl; f[0].sheet = undefined; } else e.addFile('BLD-status_label.csv', sl);
+  e.addFile('BLD-check_type.csv', e.ctx.TABLES.check_type.columns.join(',') + '\r\n');
+  e.addFile('BLD-check_log.csv', e.ctx.TABLES.check_log.columns.join(',') + '\r\n');
+  return e;
+}
+const act = (e, action, cred, fields) => { n += 1; return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(Object.assign({ v: 1, request_id: 'req-visitor-' + String(n).padStart(4, '0'), action, fields }, cred)) } }).getContent()); };
+const addJob = (e, key) => { const r = hsave(e, hreq(e, { code: e.codes.owner, table: 'check_type', fields: { type_key: key, label: key, target: 'dog', effective_from: '2026-01-01' } })); assert.equal(r.ok, true, JSON.stringify(r)); return r.result.id; };
+
+test('visit_review: only with the review right, only while live, a review word on one of its lists; target must be its dog', () => {
+  const e = denv();
+  const g = give(e, { visit_type_id: typeId(e) });
+  const c = { code: g.result.code };
+  const r = act(e, 'visit_review', c, { target_table: 'subject', target_id: 'sub-test-a', outcome_id: 'review.ask', note: 'Where is the vet letter?' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const row = e.ctx.store_read_('BLD-finding.csv', true).records[0];
+  assert.equal(row.finding_kind, 'review');
+  assert.equal(row.outcome_id, 'review.ask');
+  assert.equal(row.authority, 'Council');
+  assert.equal(row.visit_id, g.result.link_id);
+  assert.equal(row.raised_at, '2026-10-15T23:30:00+01:00');
+  const reply = act(e, 'visit_review', c, { target_table: 'subject', outcome_id: 'review.ok', replies_to_id: r.result.id });
+  assert.equal(reply.ok, true, JSON.stringify(reply));
+  assert.equal(act(e, 'visit_review', c, { target_table: 'subject', outcome_id: 'ok' }).code, 'INVALID');           // not a review word
+  assert.equal(act(e, 'visit_review', c, { target_table: 'health_screen', outcome_id: 'review.ok' }).code, 'INVALID');
+  assert.equal(act(e, 'visit_review', c, { target_table: 'subject', target_id: 'sub-test-b', outcome_id: 'review.ok' }).code, 'NOT_FOUND');
+  assert.equal(act(e, 'visit_review', { code: e.codes.staff }, { target_table: 'subject', outcome_id: 'review.ok' }).code, 'NOT_ALLOWED');
+  const viewOnly = give(e, { visit_type_id: typeId(e), rights: ['view'] });
+  assert.equal(act(e, 'visit_review', { code: viewOnly.result.code }, { target_table: 'subject', outcome_id: 'review.ok' }).code, 'NOT_ALLOWED');
+  post(e, 'visit_end', { link_id: g.result.link_id, reason: 'Done' });
+  assert.equal(act(e, 'visit_review', c, { target_table: 'subject', outcome_id: 'review.ok' }).ok, false);
+  assert.equal(e.ctx.store_read_('BLD-finding.csv', true).records.length, 2);
+});
+
+test('visit_record: only jobs on the visit; through the normal check path; taken_by marks the visit', () => {
+  const e = denv();
+  const water = addJob(e, 'water'), feed = addJob(e, 'feed');
+  const t = typeId(e, { type_key: 'helper', rights: 'view|record', record_jobs: 'water' });
+  const add = post(e, 'card_add', { label: 'Helper 1' }).result;
+  const g = give(e, { visit_type_id: t, card_tag_id: add.tag_id, rights: ['view', 'record'], record_jobs: ['water'] });
+  assert.equal(g.ok, true, JSON.stringify(g));
+  const opened = open(e, { t: add.tag }).result;
+  assert.deepEqual(opened.record_jobs.map((j) => j.type_key), ['water']);
+  const r = act(e, 'visit_record', { t: add.tag }, { check_type_id: water, subject_id: 'sub-test-a', outcome: 'ok' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.who, 'Pat Example');
+  const row = e.ctx.store_read_('BLD-check_log.csv', true).records[0];
+  assert.equal(row.taken_by, 'visit:' + g.result.link_id);
+  assert.equal(act(e, 'visit_record', { t: add.tag }, { check_type_id: feed, subject_id: 'sub-test-a', outcome: 'ok' }).code, 'NOT_ALLOWED');
+  assert.equal(act(e, 'visit_record', { t: add.tag }, { check_type_id: water, subject_id: 'sub-test-a', outcome: 'concern' }).code, 'INVALID');   // the usual note rule
+  const noRight = give(e, { visit_type_id: typeId(e) });
+  assert.equal(act(e, 'visit_record', { code: noRight.result.code }, { check_type_id: water, outcome: 'ok' }).code, 'NOT_ALLOWED');
 });

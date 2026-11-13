@@ -18,6 +18,10 @@ var VISIT_ = {
   TAG_FILE: 'BLD-qr_tag.csv',
   TAG_NEED: ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
   CARD_KIND: 'visitor_card',
+  FINDING_FILE: 'BLD-finding.csv',
+  // the live finding columns a review fills, plus the six V9 appends; other columns are left blank, found by name
+  FINDING_NEED: ['id', 'tenant_id', 'authority', 'raised_on', 'wording_as_given', 'finding_kind', 'outcome_id',
+    'target_table', 'target_id', 'sign_in_id', 'raised_at', 'replies_to_id', 'visit_id'],
   // the rights this script can carry out; which ones a visit gets is the owner's choice per type and per visit
   RIGHTS: ['view', 'review', 'print', 'export', 'record'],
   KEY_RE: /^[a-z][a-z0-9_]{1,39}$/,
@@ -27,7 +31,7 @@ var VISIT_ = {
 };
 
 function visitOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + VISIT_.ON) === 'true'; }
-function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE] : []; }
+function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE, VISIT_.FINDING_FILE] : []; }
 
 /** Shared entry for OWNER visit actions: switches, owner code, repeat-tap guard, one lock. */
 function sinkVisitOwner_(req, fn) {
@@ -508,4 +512,85 @@ function sinkVisitOpen_(req) {
     record_jobs: rights.indexOf('record') >= 0 ? visitJobs_(split(r.record_jobs), todayLondon_(now)) : [],
     review_words: rights.indexOf('review') >= 0 ? visitReviewWords_() : []
   };
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Part D: a visitor reviews or records, only while the visit is live and only if its rights allow.
+ *   - visit_review adds one BLD-finding row (finding_kind review). outcome_id is a review word: a BLD-status_label code
+ *     in group 'review'. target_table is one of the visit's lists; target_id (optional) must be a row of a dog on it.
+ *   - visit_record adds one check_log row through the ordinary staff-check path (same checks, same repeat guard), for a
+ *     job on the visit's record_jobs. taken_by is 'visit:<link id>', so a visitor's record is told apart without a new
+ *     column; the jobs screen counts it only if the visit's record_counts lists that job (due.js, SOPJOBS).
+ * --------------------------------------------------------------------------------------------------------------- */
+
+/** The visitor and their live link row, from a link code (code) or a card tag (t). */
+function visitLive_(req, now) {
+  var who = req.t ? visitCardWho_(req.t, now) : authStaff_(req.code);
+  if (who.role !== ROLE_INSPECTOR || !who.link_id) throw err_('NOT_ALLOWED', 'Only a visitor can do this.');
+  var tenant = prop_(BLD.PROP.TENANT_ID);
+  var link = inspectRead_(INSPECT.LINK_FILE).records.filter(function (r) { return r.tenant_id === tenant && r.id === who.link_id; })[0];
+  if (!link || visitState_(link, now.getTime()) !== 'live') throw err_('WINDOW', 'This visit is not open now.');
+  return { who: who, link: link, rights: String(link.rights || 'view').split('|') };
+}
+
+function sinkVisitorAct_(req, right, fn) {
+  if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
+  if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
+  if (!visitOn_()) throw err_('TABLE_OFF', 'Visits are switched off.');
+  var rid = String(req.request_id || '');
+  if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
+  var now = new Date(), v = visitLive_(req, now);
+  if (v.rights.indexOf(right) < 0) throw err_('NOT_ALLOWED', 'This visit does not include ' + right + '.');
+  var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
+  if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
+  var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
+  var result = withLock_(function () { return fn(f, v, now); });
+  cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
+  return result;
+}
+
+function sinkVisitReview_(req) {
+  return sinkVisitorAct_(req, 'review', function (f, v, now) {
+    var errors = {}, tenant = prop_(BLD.PROP.TENANT_ID), lists = String(v.link.lists || '').split('|').filter(String);
+    var table = String(f.target_table || '').trim(), target = String(f.target_id || '').trim();
+    if (lists.indexOf(table) < 0) errors.target_table = 'Choose one of the lists on this visit.';
+    if (target && !ID_RE_.test(target)) errors.target_id = 'That row was not understood.';
+    var word = String(f.outcome_id || '').trim(), words = visitReviewWords_();
+    if (!words.some(function (w) { return w.id === word; })) errors.outcome_id = words.length ? 'Choose one of the review words.' : 'No review words are set up yet.';
+    var note = dogcardText_(f.note, 'note', errors, BLD.LIMITS.MAX_TEXT_CHARS);
+    var reply = String(f.replies_to_id || '').trim();
+    if (reply && !ID_RE_.test(reply)) errors.replies_to_id = 'That review was not found.';
+    if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
+    if (target) {
+      var dogs = {};
+      inspectRead_(INSPECT.SUBJECT_FILE).records.forEach(function (r) { if (r.tenant_id === tenant && r.link_id === v.link.id) dogs[r.subject_id] = true; });
+      var data = store_read_(READABLE[table].file, false), col = INSPECT.LISTS[table];
+      var row = data && data.records.filter(function (r) { return r.id === target && (!r.tenant_id || r.tenant_id === tenant); })[0];
+      if (!row || !dogs[row[col]]) throw err_('NOT_FOUND', 'That row is not on this visit.');
+    }
+    var read = visitRead_(VISIT_.FINDING_FILE, VISIT_.FINDING_NEED);
+    if (reply && !visitMine_(read).some(function (r) { return r.id === reply && r.visit_id === v.link.id; })) throw err_('NOT_FOUND', 'That review was not found on this visit.');
+    var id = dogcardAppend_({ file: VISIT_.FINDING_FILE, idPrefix: 'fnd', need: VISIT_.FINDING_NEED }, {
+      authority: v.link.organisation || v.link.visitor_name || v.link.label, raised_on: todayLondon_(now), wording_as_given: note,
+      finding_kind: 'review', outcome_id: word, target_table: table, target_id: target, sign_in_id: '', raised_at: londonIso_(now),
+      replies_to_id: reply, visit_id: v.link.id
+    });
+    return { status: 'saved', id: id };
+  });
+}
+
+function sinkVisitRecord_(req) {
+  return sinkVisitorAct_(req, 'record', function (f, v, now) {
+    var spec = TABLES.check_log;
+    if (!tableOn_(spec)) throw err_('TABLE_OFF', 'Saving to ' + spec.file + ' is switched off.');
+    var jobs = String(v.link.record_jobs || '').split('|').filter(String), tenant = prop_(BLD.PROP.TENANT_ID);
+    var typeRow = store_read_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === String(f.check_type_id || '') && r.tenant_id === tenant; })[0];
+    if (!typeRow || jobs.indexOf(typeRow.type_key) < 0) throw err_('NOT_ALLOWED', 'This visit cannot record that job.');
+    var fields = {};
+    Object.keys(spec.input).forEach(function (k) { if (f[k] !== undefined) fields[k] = f[k]; });
+    var who = { who: 'visit:' + v.link.id, role: ROLE_INSPECTOR, id: '' };
+    var out = sinkProcess_(spec, { action: 'add', fields: fields, values: f.values }, who, now, now.getTime());
+    out.who = v.link.visitor_name || v.link.label;
+    return out;
+  });
 }
