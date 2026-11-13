@@ -433,7 +433,7 @@
     if (!lines.length) return '';
     var n = bandCount(r, b), todo = attentionFirst(lines).filter(needsWork), done = lines.filter(function (l) { return !needsWork(l); });
     var head = t(b.kind) === 'status' ? '<span class="bb-tag">' + esc(lines.map(function (l) { return l.answer_then || REASON[l.unknown_reason] || ''; }).filter(Boolean).join(', ') || 'Not recorded') + '</span>'
-      : '<span class="cnt bb-cnt' + (n.attention ? ' bb-att' : '') + '">' + n.text + '</span>';
+      : '<span class="cnt wide bb-cnt' + (n.attention ? ' bb-att' : '') + '">' + n.text + '</span>';
     var body = todo.map(function (l) { return lineHtml(v, l, r.words, r); }).join('');
     if (done.length && todo.length) {
       var key = 'done-' + r.subject_id + '-' + b.id;
@@ -522,10 +522,12 @@
 
   /* ---- the five tabs at the bottom (owner's design): Score, Evidence, Dogs, Calendar, More ---- */
   var TABS = [['score', 'Score', ICON.award], ['evidence', 'Evidence', ICON.folder], ['dogs', 'Dogs', ICON.list], ['cal', 'Calendar', ICON.cal], ['more', 'More', ICON.more]];
-  function tabsHtml(v) {
-    var on = MORE_TABS[state.tab] ? 'more' : state.tab, esc = v ? v.esc : function (s) { return s; };
+  /** The animal an animal tab opens: the one chosen (or last viewed), else the first in the list as it is now. */
+  function dogFor(c) { return state.dog || (c && (shownRows(c)[0] || c.results[0] || {}).subject_id) || ''; }
+  function tabsHtml(v, c) {
+    var on = MORE_TABS[state.tab] ? 'more' : state.tab, esc = v ? v.esc : function (s) { return s; }, id = dogFor(c);
     return '<nav class="bb-tabs" aria-label="Breed Better">' + TABS.map(function (x) {
-      var to = DOG_TABS[x[0]] && state.dog ? href(x[0], state.dog) : href(x[0]);
+      var to = DOG_TABS[x[0]] && id ? href(x[0], id) : href(x[0]);
       return '<button type="button" class="bb-tab" data-bb-tab="' + x[0] + '" data-go="' + esc(to) + '"' + (on === x[0] ? ' aria-current="page"' : '') + '><span class="bb-tabic">' + ic(x[2], 20) + '</span><span class="bb-tabw">' + x[1] + '</span></button>';
     }).join('') + '</nav>';
   }
@@ -594,8 +596,8 @@
       + '<span class="bb-strong">' + MONTH[m - 1] + ' ' + y + '</span><button type="button" class="bb-f bb-ico" data-bb-month="' + next + '" aria-label="Next month">' + ic(ICON.right, 18) + '</button></div>'
       + '<div class="bb-grid bb-wd" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div><div class="bb-grid">' + cells + '</div></div>'
       + (state.calDay ? '<div class="bb-dayon"><span class="bb-pts">Showing ' + day(state.calDay) + '</span><button type="button" class="bb-f" data-bb-day="">Show the whole month</button></div>' : '')
-      + (rows.length ? rows.map(row).join('') : '<p class="mut">Nothing here.</p>')
-      + (undated.length ? '<h4 class="bb-h4">No record yet <span class="cnt">' + undated.length + '</span></h4>' + undated.map(row).join('') : '');
+      + '<div class="bb-callist">' + (rows.length ? rows.map(row).join('') : '<p class="mut">Nothing here.</p>') + '</div>'
+      + (undated.length ? '<details class="bb-calnone bb-done" data-bb-band="cal-none"' + (state.open['cal-none'] ? ' open' : '') + '><summary>No record yet <span class="cnt">' + undated.length + '</span>' + chev() + '</summary>' + undated.map(row).join('') + '</details>' : '');
   }
 
   /* ---- Evidence: every dated record and judged answer the calculator reads for one animal. Read only, newest first. ---- */
@@ -647,7 +649,7 @@
     var sel = '<label class="bb-lab">Check<select data-bb-evcheck="1"><option value="">All checks</option>' + Object.keys(checks).map(function (id) {
       return '<option value="' + esc(id) + '"' + (state.evCheck === id ? ' selected' : '') + '>' + esc(checks[id]) + '</option>';
     }).join('') + '</select></label>';
-    return dogHead(v, r, c, 'evidence') + '<p class="bb-strong bb-sub">Evidence</p><p class="bb-pts">Every dated record the score reads, newest first. Never overwritten: a new result is a new record.</p>'
+    return dogHead(v, r, c, 'evidence') + '<p class="bb-strong bb-sub">' + esc(r.name) + '\'s evidence</p><p class="bb-pts">Every dated record the score reads, newest first. Never overwritten: a new result is a new record.</p>'
       + f + sel + '<div class="bb-evlist">' + (shown.length ? shown.map(function (x) {
         return '<div class="card bb-ev" data-bb-ev="' + esc(x.key) + '"><span class="bb-evic">' + ic(x.doc ? ICON.folder : x.kind === 'judged' ? ICON.eye : ICON.list, 18) + '</span>'
           + '<span class="bb-info"><span class="bb-l1"><span class="bb-name">' + esc(x.answer || 'Recorded') + '</span><span class="bb-pts">' + (x.date ? day(x.date) : 'No date') + '</span></span>'
@@ -679,15 +681,15 @@
   }
 
   /* ---- More ---- */
-  function moreRow(tab, icon, label, extra) {
-    return '<button type="button" class="bb-dog bb-more" data-bb-tab="' + tab + '" data-go="' + href(tab, DOG_TABS[tab] ? state.dog : '') + '"><span class="bb-mic">' + ic(icon, 20) + '</span><span class="bb-name">' + label + '</span>'
+  function moreRow(tab, icon, label, extra, c) {
+    return '<button type="button" class="bb-dog bb-more" data-bb-tab="' + tab + '" data-go="' + href(tab, DOG_TABS[tab] ? dogFor(c) : '') + '"><span class="bb-mic">' + ic(icon, 20) + '</span><span class="bb-name">' + label + '</span>'
       + (extra || '') + '<span class="bb-chev">' + ic(ICON.right, 18) + '</span></button>';
   }
   function moreHtml(c) {
     return '<h3 class="bb-h">More</h3>'
       + moreRow('system', ICON.sliders, 'My system', '<span class="bb-pts">Sections, checks and points</span>')
       + moreRow('archive', ICON.archive, 'Archive', '<span class="cnt">' + c.ended.length + '</span>')
-      + moreRow('history', ICON.history, 'History', '')
+      + moreRow('history', ICON.history, 'History', '', c)
       + (Dna ? moreRow('dna', ICON.dna, 'DNA panel', '<span class="bb-pts">Grades, probability per puppy, set-up</span>') : '')
       + (Levels ? moreRow('viewers', ICON.eye, 'Who sees what', '<span class="bb-pts">Inspector, vet, other breeder</span>') : '');
   }
@@ -759,7 +761,7 @@
       var r = pickDog(c);
       if (r && tab === 'score' && state.edit) {
         var screen = editHtml(v, r, state.edit);
-        if (screen) return err + screen + tabsHtml(v);
+        if (screen) return err + screen + tabsHtml(v, c);
         state.edit = '';
       }
       body = !r ? '<p class="mut">No animals scored yet.</p>' : tab === 'evidence' ? evidenceHtml(v, r, c) : tab === 'history' ? historyHtml(v, r, c) : dogHtml(v, r, c);
@@ -770,7 +772,7 @@
     else if (tab === 'dna' && Dna) body = backMore() + Dna.screen(v.T, state.calc, v.esc, v.today);
     else if (tab === 'viewers' && Levels) body = viewersHtml(v);
     else body = listHtml(v, c);
-    return err + body + tabsHtml(v);
+    return err + body + tabsHtml(v, c);
   }
 
   /* The look (owner's design, 13 Nov 2026): house tokens only; Lexend 400, 500 and 600; nothing under 14px; 12px corners;
@@ -802,9 +804,9 @@
     '.bb-sics{position:absolute;left:111px;right:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}.bb-sic{pointer-events:auto}',
     '.bb-sic{width:28px;height:28px;padding:0;border-color:transparent;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:var(--bi)}',
     '@media (max-width:544px){.bb-sic{width:32px;height:32px}}',
-    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bb-sic,:root:not([data-theme="light"]) .bb-bandic{color:var(--bd,var(--bi))}}',
-    ':root[data-theme="dark"] .bb-sic,:root[data-theme="dark"] .bb-bandic{color:var(--bd,var(--bi))}',
-    '.bb-sic.bb-off,:root .bb-sic.bb-off{color:var(--muted)}',
+    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #bbRoot .bb-sic:not(.bb-off),:root:not([data-theme="light"]) .bb-bandic{color:var(--bd,var(--bi))}}',
+    ':root[data-theme="dark"] #bbRoot .bb-sic:not(.bb-off),:root[data-theme="dark"] .bb-bandic{color:var(--bd,var(--bi))}',
+    '#bbRoot .bb-sic{color:var(--bi)}#bbRoot .bb-sic.bb-off,:root #bbRoot .bb-sic.bb-off{color:var(--muted)}',
     '.bb-ph{width:84px;height:84px;flex-shrink:0;position:relative}.bb-ring{position:absolute;inset:0}',
     '.bb-pic{position:absolute;inset:9px;border-radius:50%;background:var(--hov);overflow:hidden;display:block}',
     '.bb-pic img{width:100%;height:100%;object-fit:cover;display:block}.bb-pic img.off{display:none}',
@@ -840,7 +842,7 @@
     '.bb-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:8px 0;border-top:1px solid var(--line)}.bb-l{flex:1 1 55%;min-width:0}.bb-why{flex:1 1 100%;padding-left:24px}',
     '.bb-mk{display:inline-flex;width:16px}.bb-prove{flex:1 1 100%;padding-left:24px;font-size:var(--fs-small);color:var(--ink)}',
     '.bb-done>summary{cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;color:var(--muted);font-size:var(--fs-small);border-top:1px solid var(--line)}',
-    '.bb-src{min-height:24px;padding:0 8px;font-size:var(--fs-small);color:var(--ink)}',
+    '.bb-src{min-height:24px;padding:0 8px;font-size:var(--fs-small);color:var(--ink)}@media (max-width:544px){.bb-src{min-height:44px}}',
     '.bb-chip{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;margin-top:4px}',
     /* the five tabs, fixed at the bottom of Breed Better, directly above the house bar; the page pads so nothing hides under them */
     '#bbRoot{padding-bottom:calc(var(--bb-tabs-h) + 16px)}',
@@ -868,7 +870,7 @@
     '.bb-hist .bb-l1{align-items:center}.bb-hist p{margin:4px 0 0}',
     '.bb-shows{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}.bb-shows li{display:flex;gap:8px;align-items:center;font-size:var(--fs-small)}.bb-shows li[data-on=false]{color:var(--muted)}',
     /* the one-line section on a dog card: folded by default; unfolds to the checks, grouped by section, things to do first */
-    '.bb-sec{border-top:1px solid var(--line);padding:6px 12px;display:flex;flex-direction:column;gap:8px}',
+    '.bb-sec{border-top:1px solid var(--line);padding:6px 12px;display:flex;flex-direction:column;gap:8px}.dc .bb-sec{padding-bottom:40px}',
     '.bb-secd>summary{list-style:none}.bb-secd>summary::-webkit-details-marker{display:none}',
     '.bb-sec .bb-sechd{display:flex;flex-wrap:nowrap;align-items:center;gap:6px 8px;width:100%;box-sizing:border-box;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);text-align:left;cursor:pointer}',
     '.bb-sechd .bb-v{flex:none}.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body);white-space:nowrap}.bb-secpts{margin-left:auto;white-space:nowrap}',
@@ -931,7 +933,7 @@
       var lines = attentionFirst(r.lines.filter(function (l) { return l.band_id === b.id; }));
       if (!lines.length) return '';
       var n = bandCount(r, b);
-      return '<div class="bb-secg" style="' + bandVars(b) + '" data-bb-group="' + esc(b.id) + '"><p class="bb-secgh"><span class="bb-bandic">' + ic(bandIcon(b), 18) + '</span>' + esc(b.label) + ' <span class="cnt bb-cnt">' + n.text + '</span></p>'
+      return '<div class="bb-secg" style="' + bandVars(b) + '" data-bb-group="' + esc(b.id) + '"><p class="bb-secgh"><span class="bb-bandic">' + ic(bandIcon(b), 18) + '</span>' + esc(b.label) + ' <span class="cnt wide bb-cnt">' + n.text + '</span></p>'
         + '<ul class="bb-gates">' + lines.map(function (l) {
           var o, word, colour;
           if (l.kind === 'gate') { o = l.gate_outcome || 'unverified'; word = GATE_WORD[o] || o; colour = VTEXT[o] || '--muted'; }

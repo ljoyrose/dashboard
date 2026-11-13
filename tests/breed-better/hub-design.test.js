@@ -81,8 +81,8 @@ test('the dog page shows the percent line, Scored on, n of m met, x of y and a T
   View.open('');
   assert.match(html, /Target 60%\. This dog \d+%\./);
   assert.match(html, /Scored on 13 Nov 2026/);
-  assert.match(html, /Section G<\/span> <span class="cnt bb-cnt bb-att">1 of 2 met/);
-  assert.match(html, /Section B<\/span> <span class="cnt bb-cnt">10 of 10/);
+  assert.match(html, /Section G<\/span> <span class="cnt wide bb-cnt bb-att">1 of 2 met/);
+  assert.match(html, /Section B<\/span> <span class="cnt wide bb-cnt">10 of 10/);
   assert.match(html, /To prove: a dated record of Check Two/);
   assert.doesNotMatch(html, /Unproven/i);
   // a check's own proof_label names the evidence still needed
@@ -222,7 +222,7 @@ test('the dog card section is one folded line that unfolds to must-pass first, t
   assert.match(html, /<details class="bb-secd"[^>]*><summary class="bb-chip bb-sechd"/);
   assert.doesNotMatch(html, /<details class="bb-secd"[^>]* open/);
   assert.match(html, /bb-secpts">15 of 15<\/span>/);
-  assert.match(html, /Section G <span class="cnt bb-cnt">1 of 2 met[\s\S]*Check Two[\s\S]*Missing[\s\S]*Check One[\s\S]*Passed[\s\S]*Section A[\s\S]*Section B/);
+  assert.match(html, /Section G <span class="cnt wide bb-cnt">1 of 2 met[\s\S]*Check Two[\s\S]*Missing[\s\S]*Check One[\s\S]*Passed[\s\S]*Section A[\s\S]*Section B/);
   assert.match(html, /data-go="breed\/score\.f1" data-bb-sec="f1" data-bb-band-go="g"/);
   assert.doesNotMatch(html, /bb-bar/);
 });

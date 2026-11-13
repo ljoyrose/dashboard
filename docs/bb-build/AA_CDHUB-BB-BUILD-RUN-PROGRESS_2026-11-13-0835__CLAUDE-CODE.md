@@ -3,7 +3,7 @@
 Rewritten after each stage (not appended). Code words only.
 
 - Started from main 9ca0866 (13 Nov 2026). Branch: claude/serene-curie-pcau08.
-- Stage now: S1 to S8 code done in one pass; S9 to S11 next.
+- Stage now: S1 to S10 done; S11 (pull request) next.
 
 ## Done
 | Stage | What | Files |
@@ -17,9 +17,12 @@ Rewritten after each stage (not appended). Code words only.
 | S7 | DNA Kit renamed DNA panel (file moved with its test); grade-to-colour bands from rows; read-only set-up view | breed-better/dna-panel.js |
 | S8 | Inspector page laid out to the inspector design; must-pass words only when a summary is sent and the viewer level shows them; litters against the rule row | cdhub/staff/inspect/* |
 
+| S9 | Kept live behaviour listed in the pull request side-by-side table | (pull request text) |
+| S10 | tests/mocked/bb-design-click-through.spec.js: every Breed Better button and tab at 360px and 1280px; unit tests tests/breed-better/hub-design.test.js; house button rule skips Breed Better buttons (class bb-...) | tests, cdhub/index.html |
+
 ## Tests
 - node --test tests/breed-better/*.test.js: 99 pass.
-- Mocked browser specs for Breed Better, the dog card and the inspector page: pass locally.
+- Mocked browser specs: click-through (26), acceptance, dog card, inspector (7): pass locally.
 
 ## Next
-- S9 kept-improvements table; S10 the full click-through spec at 360px and 1280px, the full suite, screenshots; S11 the pull request.
+- S11: the pull request; CI green on the head commit before it is marked ready.

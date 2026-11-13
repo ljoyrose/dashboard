@@ -112,6 +112,9 @@ test('S10 inspector layout: A to Z, chip last 4, must-pass words per line and pe
   // inspectors never see points, the target, Below target or ranking
   await expect(page.locator('#screen')).not.toContainText(/points|target|Below target|rank/i);
   await expect(page.locator('#screen')).not.toContainText('Unproven');
+  if (process.env.BB_SHOTS) {
+    for (const w of [360, 1280]) { await page.setViewportSize({ width: w, height: 900 }); await page.screenshot({ path: require('path').join(process.env.BB_SHOTS, 'inspector-' + w + '.png'), fullPage: true }); }
+  }
 });
 
 test('S10 without a must-pass summary the inspector sees the records only, with no verdict words', async ({ page }) => {
