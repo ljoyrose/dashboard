@@ -45,7 +45,8 @@ test('the round lists each thermometer in a two-thermometer room by name; a save
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-h', thermometer_id: 'th-h6' } });
   await page.getByRole('button', { name: 'CLR pressed' }).click();
-  await expect(names(page)).toHaveText(['H5/6 · H5', '✓ H5/6 · H6', 'S1']);
+  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);   // the tick is the shared done line (BLDDone)
+  await expect(page.locator('.cards .card', { hasText: 'H5/6 · H6' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
 
 test('a thermometer QR opens that exact thermometer, no picking, and saves its thermometer_id', async ({ page }) => {
@@ -90,7 +91,8 @@ test('an older reading with no thermometer_id counts for a one-thermometer room 
   ];
   await setup(page, t);
   await page.goto('cdhub/staff/#m/temperature');
-  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', '✓ S1']);
+  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
+  await expect(page.locator('.cards .card', { hasText: 'S1' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
 
 test('year report: a room with two thermometers can be opened whole or per thermometer', async ({ page }) => {
@@ -122,12 +124,12 @@ test('round cards show due, the reading, outside the limit, or room empty', asyn
   ];
   await setup(page, t);
   await page.goto('cdhub/staff/#m/temperature');
-  const ds = (name) => page.locator('.cards .card', { hasText: name }).locator('.ds');
-  await expect(ds('H5/6 · H5')).toHaveText('Due');
-  await expect(ds('H5/6 · H6')).toHaveText('Outside 8.5–15.0');
+  const ds = (name) => page.locator('.cards .card', { hasText: name }).locator('.done-line');   // the shared done line (BLDDone)
+  await expect(page.locator('.cards .card', { hasText: 'H5/6 · H5' }).locator('.ds')).toHaveText('Due');
+  await expect(ds('H5/6 · H6')).toContainText(/^Concern noted \d\d:\d\d · Outside 8\.5–15\.0$/);
   await expect(page.locator('.cards .card', { hasText: 'H5/6 · H6' })).toHaveClass(/tg-out/);
-  await expect(ds('S1')).toHaveText('12.0–15.0');
-  await expect(ds('E1')).toHaveText('Room empty');
+  await expect(ds('S1')).toContainText(/^Done \d\d:\d\d · 12\.0–15\.0$/);
+  await expect(ds('E1')).toContainText(/^Done \d\d:\d\d · Room empty$/);
 });
 
 test('Lisa 12 Nov: the card shows its tick as soon as the save reply is OK, even when CLR pressed is never tapped', async ({ page }) => {
@@ -141,5 +143,6 @@ test('Lisa 12 Nov: the card shows its tick as soon as the save reply is OK, even
   await expect.poll(() => sent.length).toBe(1);
   await expect(page.getByText('✓ Saved')).toBeVisible();
   await page.getByRole('button', { name: '← Rooms' }).click();
-  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', '✓ S1']);
+  await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
+  await expect(page.locator('.cards .card', { hasText: 'S1' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
