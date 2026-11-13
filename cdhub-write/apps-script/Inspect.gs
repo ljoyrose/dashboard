@@ -24,11 +24,12 @@ var INSPECT = {
   // usable_to are London date-times (Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
-  // What a visit may see and do are rows (inspect_link_scope, inspect_link_right), not columns. Old 7-column files still read.
+  // What a visit may see and do are rows (inspect_link_scope, inspect_link_right), not columns. issued_by = the code id that
+  // gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs). Old 7-column files still read.
   LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'usable_from', 'usable_to', 'supersedes_id',
     'visit_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
     'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'revoked_at', 'revoked_by',
-    'revoke_reason', 'tz'],
+    'revoke_reason', 'tz', 'issued_by', 'delegation_id'],
   SCOPE_FILE: 'BLD-inspect_link_scope.csv',
   SCOPE_COLUMNS: ['id', 'tenant_id', 'link_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'is_active'],
   // the Regulatory-Core disclosure states; only 'record' shows rows so far, the rest read as withheld until defined
