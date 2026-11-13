@@ -78,9 +78,9 @@ test('guest: a person permission row cannot open anything to a guest', () => {
   assert.throws(() => env.ctx.sinkRead_({ code: env.guest, table: 'area' }), (e) => e.code === 'NOT_ALLOWED');
 });
 
-test('guest: the code ends by itself after 7 days', () => {
+test('guest: the code ends by itself after HOURS hours (8 in the editor function)', () => {
   const env = env0();
-  env.nowMs += 7 * 86400000 - 60000;
+  env.nowMs += 8 * 3600000 - 60000;
   assert.equal(reading(env, env.guest, 'guest_reading').ok, true);
   env.nowMs += 120000;
   assert.equal(reading(env, env.guest, 'guest_reading', { min_c: '15.0' }).code, 'BAD_CODE');

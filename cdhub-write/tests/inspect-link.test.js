@@ -6,7 +6,8 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const H = {
-  link: 'id,tenant_id,code_id,label,ends,made_at,made_by',
+  link: 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,data_from_date,data_to_date',
+  linkV1: 'id,tenant_id,code_id,label,ends,made_at,made_by',
   subj: 'id,tenant_id,link_id,subject_id,from_date,to_date',
   field: 'id,tenant_id,link_id,table_name,field_name,redaction',
   access: 'id,tenant_id,link_id,code_id,table_name,rows,at'
@@ -28,6 +29,10 @@ function setup(opts = {}) {
     `hs-b,${fx.TENANT},sub-test-b,Hips,30/32,2025-07-01`,
     `hs-x,other-tenant,sub-test-a,Hips,99/99,2025-07-01`
   ]));
+  // V9: how long a link lasts comes from rule rows (were the fixed 7 and 30 days)
+  const rules = crlf(['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
+    `brl-x1,${fx.TENANT},external.default_hours.inspector,168,2026-01-01,test,,,,`, `brl-x2,${fx.TENANT},external.max_hours.inspector,720,2026-01-01,test,,,,`]);
+  if (opts.rules !== false) { const rf = env.file('BLD-breeding_rule.csv'); if (rf.length) { rf[0].content = rules; rf[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', rules); }
   env.addFile('BLD-litter.csv', crlf(['id,tenant_id,dam_subject_id,dob', `lit-a,${fx.TENANT},sub-test-a,2024-03-03`, `lit-c,${fx.TENANT},sub-test-c,2024-04-04`]));
   return env;
 }
@@ -102,7 +107,8 @@ test('the link ends by itself at the end of its last day; Stop ends it at once; 
   assert.equal(r.message, 'This link has ended.');
 
   env.nowMs = Date.UTC(2026, 9, 16, 10, 0, 0);
-  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'owner@example.test')).ok, true);
+  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'owner@example.test')).code, 'INVALID');   // a reason is needed
+  assert.equal(ok(() => env.ctx.sinkInspectStop_(b.result.link_id, 'owner@example.test', 'visit finished')).ok, true);
   assert.equal(read(env, b.result.code, 'subject').code, 'BAD_CODE');
   const list = JSON.parse(JSON.stringify(env.ctx.sinkInspectLinks_()));
   assert.deepEqual(list.map((x) => [x.label, x.state, x.dogs, x.fields]), [['Second visit', 'stopped', 1, 7], ['Council visit', 'active', 1, 7]]);
@@ -149,8 +155,8 @@ test('making a link: checks every choice, writes nothing on a refusal, and needs
   });
   assert.equal(JSON.stringify(env.drive), before);
   assert.equal(env.props.STAFF_REGISTRY, reg);
-  // blank end date = 7 days on
-  assert.equal(make(env, { ends: '' }).result.ends, '2026-10-22T23:59:59+01:00');
+  // blank end = the external.default_hours.inspector rule row (168 hours from now)
+  assert.equal(make(env, { ends: '' }).result.ends, env.ctx.londonIso_(new Date(env.nowMs + 168 * 3600000)));
 
   const env2 = setup({ files: false });
   assert.equal(make(env2).code, 'READ_NOT_CONFIGURED');
@@ -181,7 +187,7 @@ test('owner page: only the signed-in owner can make, list or stop a link', () =>
   assert.equal(env.ctx.ui_inspectLinks().result.links[0].state, 'active');
   // the owner's staff list shows the link as a code that ends, never the code itself
   const staff = JSON.stringify(env.ctx.ui_staffList());
-  assert.match(staff, /Inspector - Vet visit \(ends 2026-10-22T23:59:59\+01:00\)/);
+  assert.ok(staff.includes('Inspector - Vet visit (ends ' + env.ctx.londonIso_(new Date(env.nowMs + 168 * 3600000)) + ')'));
   assert.equal(staff.includes(m.result.code), false);
 });
 
@@ -204,6 +210,7 @@ test('owner page: Make a link ticks the suggested set, shows the link once with 
   };
   w.google = { script: { get run() { return run(); } } };
   w.confirm = () => true;
+  w.prompt = () => 'visit finished';
   w.eval(html.split('<script>')[1].split('</script>')[0]);
   const tick = () => new Promise((r) => setTimeout(r, 5));
   const $ = (s) => w.document.querySelector(s);
@@ -225,7 +232,65 @@ test('owner page: Make a link ticks the suggested set, shows the link once with 
 
   $('#in-show').click(); await tick();
   assert.match($('#in-list').textContent, /Council visit.*Working/);
-  [...$('#in-list').querySelectorAll('button')].find((b) => b.textContent === 'Stop').click(); await tick();
+  [...$('#in-list').querySelectorAll('button')].find((b) => b.textContent === 'End now').click(); await tick();
   assert.equal(read(env, code, 'subject').code, 'BAD_CODE');
   assert.equal($('#in-list').textContent.includes(code), false);
+});
+
+// V9 (13 Nov 2026, Lisa: "now for specific time or scheduled date time from to"): one window shape, limits from rule rows.
+test('window: now for N hours, until HH:MM today, or scheduled from-to; the link says "Opens ..." until then', () => {
+  const env = setup();
+  const H = 3600000, start = env.nowMs;
+  const a = make(env, { ends: undefined, hours: 2 });
+  assert.equal(a.ok, true, JSON.stringify(a));
+  assert.equal(a.result.ends_at, env.ctx.londonIso_(new Date(start + 2 * H)));
+  assert.equal(read(env, a.result.code, 'subject').ok, true);
+  env.nowMs = start + 2 * H + 1000;
+  assert.equal(read(env, a.result.code, 'subject').code, 'BAD_CODE');
+  env.nowMs = start;
+
+  // scheduled: tomorrow 09:00 to 13:30 London
+  const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(start)), 1);
+  const s = make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T13:30' });
+  assert.equal(s.ok, true, JSON.stringify(s));
+  const early = read(env, s.result.code, 'subject');
+  assert.equal(early.code, 'NOT_YET');
+  assert.match(early.message, /^This link opens \d\d\/\d\d\/\d\d 09:00\.$/);
+  assert.equal(env.ctx.sinkInspectLinks_().find((x) => x.id === s.result.link_id).state, 'scheduled');
+  env.nowMs = env.ctx.londonLocalMs_(day + 'T09:01');
+  assert.equal(read(env, s.result.code, 'subject').ok, true);
+  env.nowMs = env.ctx.londonLocalMs_(day + 'T13:31');
+  assert.equal(read(env, s.result.code, 'subject').code, 'BAD_CODE');
+  // the link row keeps both times
+  const row = env.file('BLD-inspect_link.csv')[0].content;
+  assert.ok(row.includes(day + 'T09:00:00'));
+});
+
+test('window: refused when the end is before the start, too long for the rule row, or a time has passed; no rule row = the owner must say', () => {
+  const env = setup();
+  const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(env.nowMs)), 1);
+  assert.equal(make(env, { ends: undefined, starts_at: day + 'T13:00', ends_at: day + 'T09:00' }).fields.ends_at, 'The end must be after the start.');
+  assert.match(make(env, { ends: undefined, hours: 721 }).fields.hours, /720 hours at most/);
+  assert.equal(make(env, { ends: undefined, hours: 0 }).code, 'INVALID');
+  assert.equal(make(env, { ends: undefined, until: '25:00' }).code, 'INVALID');
+  const none = setup({ rules: false });
+  assert.equal(make(none, { ends: undefined }).fields.ends_at, 'Choose when it ends.');
+  assert.equal(make(none, { ends: undefined, hours: 2000 }).ok, true);   // no max row: the owner's own choice stands
+  // a rule row from a later date is not in force yet
+  const later = setup();
+  const rf = later.file('BLD-breeding_rule.csv')[0];
+  rf.content = rf.content.replace(/,2026-01-01,/g, ',2099-01-01,');
+  assert.equal(make(later, { ends: undefined }).fields.ends_at, 'Choose when it ends.');
+  assert.equal(env.ctx.sinkInspectChoices_().default_hours, 168);
+  assert.equal(env.ctx.sinkInspectChoices_().max_hours, 720);
+});
+
+test('window: an old 7-column link file still works for links from now, but cannot hold a later start', () => {
+  const env = setup();
+  env.file('BLD-inspect_link.csv')[0].content = crlf([H.linkV1]);
+  const a = make(env, { ends: undefined, hours: 4 });
+  assert.equal(a.ok, true, JSON.stringify(a));
+  assert.equal(read(env, a.result.code, 'subject').ok, true);
+  const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(env.nowMs)), 1);
+  assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('starts_at'), true);
 });

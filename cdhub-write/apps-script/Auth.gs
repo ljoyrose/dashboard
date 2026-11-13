@@ -69,10 +69,12 @@ function authStaff_(code) {
   if (entry.role === ROLE_INSPECTOR) {
     // an inspector link (Inspect.gs): read-only, ends by itself; reads only what its own link rows allow
     if (guestExpired_(entry)) throw err_('BAD_CODE', 'This link has ended.');
+    if (externalNotYet_(entry)) throw err_('NOT_YET', 'This link opens ' + externalShow_(entry.starts_at) + '.');
     return { who: entry.who, role: entry.role, id: String(entry.id || ''), ends: entry.expires_at || '', link_id: String(entry.link_id || '') };
   }
   if (entry.role === ROLE_GUEST) {
     if (guestExpired_(entry)) throw err_('BAD_CODE', 'This visitor code has ended. Ask Lisa for a new one.');
+    if (externalNotYet_(entry)) throw err_('NOT_YET', 'This visitor code opens ' + externalShow_(entry.starts_at) + '.');
     // id stays empty so no person:<id> permission row can ever open a list to a guest; the label carries the id instead
     return { who: entry.who + ' (' + entry.id + ')', role: entry.role, id: '' };
   }
@@ -138,7 +140,7 @@ function sinkStaffList_() {
 }
 
 /** Switch one code off, by its public id. Owner only (the caller checks). */
-function sinkRevokeCode_(codeId, adminEmail) {
+function sinkRevokeCode_(codeId, adminEmail, reason) {
   return withLock_(function () {
     var now = new Date(), id = String(codeId || '');
     if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code to switch off.');
@@ -149,33 +151,37 @@ function sinkRevokeCode_(codeId, adminEmail) {
     reg[hash].active = false;
     reg[hash].revoked_at = londonIso_(now);
     reg[hash].revoked_by = adminEmail;
+    if (reason) reg[hash].revoked_reason = String(reason).slice(0, 200);
     setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));            // the code is dead from this line on
     var logged = true;
     try {
       appendPendingEvent_({
         event_id: newId_('evt', now), pending_id: 'rev-' + id, event: 'revoked', at: londonIso_(now), by: adminEmail, role: 'OWNER',
-        kind: 'code_revoke', row_id: id, note: 'staff code switched off', result: 'revoked'
+        kind: 'code_revoke', row_id: id, note: reason ? 'ended now: ' + String(reason).slice(0, 200) : 'staff code switched off', result: 'revoked'
       });
     } catch (e) { logged = false; Logger.log('Revoked ' + id + ' but could not log it: ' + (e && e.message)); }
-    var mirrored = codeMirror_(id, 'switched off by owner', null, now);   // Codes.gs: the hub's no-secrets list
+    var mirrored = codeMirror_(id, reason ? 'ended now: ' + String(reason).slice(0, 100) : 'switched off by owner', null, now);   // Codes.gs: the hub's no-secrets list
     return { status: 'revoked', id: id, who: reg[hash].who, logged: logged, mirrored: mirrored };
   });
 }
 
 /**
- * OWNER: edit LABEL and DAYS, then press Run in the Apps Script editor. Prints a visitor code ONCE, in the Execution log.
- * It saves temperatures to the guest list only, can see the room list and nothing else, ends by itself after DAYS days, and can be switched off sooner on the
+ * OWNER: edit LABEL and HOURS, then press Run in the Apps Script editor. Prints a visitor code ONCE, in the Execution log.
+ * It saves temperatures to the guest list only, can see the room list and nothing else, ends by itself after HOURS hours, and can be switched off sooner on the
  * approvals page like any code. LABEL is a description such as 'Council visit Nov 2026': it is written on every reading.
+ * The longest allowed is the rule row external.max_hours.guest, if there is one (no number is fixed here).
  */
 function adminAddGuestCode() {
   var LABEL = 'Example visit';    // <- change this
-  var DAYS = 7;                   // <- whole days, 1 to 30
-  if (!(DAYS >= 1 && DAYS <= 30) || Math.floor(DAYS) !== DAYS) throw new Error('DAYS must be a whole number from 1 to 30.');
+  var HOURS = 8;                  // <- how many hours from now
+  if (!(HOURS > 0)) throw new Error('HOURS must be more than 0.');
+  var maxH = externalRule_('max_hours', ROLE_GUEST, todayLondon_(new Date()));
+  if (maxH !== null && HOURS > maxH) throw new Error('HOURS can be ' + maxH + ' at most (rule external.max_hours.guest).');
   var salt = prop_(BLD.PROP.SALT);
   if (!salt) throw new Error('Run adminSetup first.');
   var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
   for (var i = 0; i < 12; i++) code += alphabet.charAt(parseInt(raw.substr(i * 2, 2), 16) % alphabet.length);
-  var now = new Date(), reg = registry_(), id = newCodeId_(), ends = londonIso_(new Date(now.getTime() + DAYS * 86400000));
+  var now = new Date(), reg = registry_(), id = newCodeId_(), ends = londonIso_(new Date(now.getTime() + Math.round(HOURS * 3600000)));
   reg[hashCode_(code, salt)] = { id: id, who: 'Guest - ' + LABEL, role: ROLE_GUEST, active: true, added: londonIso_(now), expires_at: ends };
   setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
   Logger.log('Visitor code for ' + LABEL + ': ' + code + '   (public id ' + id + ', ends ' + ends + ')');
