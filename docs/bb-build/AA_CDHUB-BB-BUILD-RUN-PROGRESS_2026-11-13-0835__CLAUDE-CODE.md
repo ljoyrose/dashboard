@@ -3,7 +3,7 @@
 Rewritten after each stage (not appended). Code words only.
 
 - Started from main 9ca0866 (13 Nov 2026). Branch: claude/serene-curie-pcau08.
-- Stage now: S1 to S10 done; S11 (pull request) next.
+- Stage now: S11. Pull request #526 open (draft until CI is green on the head commit). Main merged in (f3754e1).
 
 ## Done
 | Stage | What | Files |
@@ -25,4 +25,5 @@ Rewritten after each stage (not appended). Code words only.
 - Mocked browser specs: click-through (26), acceptance, dog card, inspector (7): pass locally.
 
 ## Next
-- S11: the pull request; CI green on the head commit before it is marked ready.
+- Mark #526 ready when CI is green on its head commit. Live signed-in click-through: done by the owner's hub steward, on the preview and after merge.
+- Open for the owner: inspector view approval, viewer level names, the inspector must-pass summary from the save script, when evidence counts.
