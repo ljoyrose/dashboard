@@ -100,6 +100,8 @@
       if (tag && !BLDDue.forTarget(types, logs, target, today).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
+      /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
+      if (!v[2].ok) host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: 'This phone cannot read past records yet, so "Due" may already be done. Ask Lisa.' }));
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
       host.appendChild(status); host.appendChild(list);
       if (tag && !site) host.appendChild(h('button', { class: 'btn quiet job-move', type: 'button', text: 'Move dogs', onclick: moves }));

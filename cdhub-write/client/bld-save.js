@@ -96,11 +96,12 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
+    var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
-    function clearCode() { inMemoryCode = ''; lastRole = ''; put(session, CODE_KEY, ''); }
+    function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
@@ -285,7 +286,7 @@
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
       })).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; return res; }
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
@@ -303,7 +304,7 @@
           if (!prev.ok) return prev;
           return read(k).then(function (r) {
             if (r.ok) { out[k] = r.rows; return { ok: true }; }
-            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING')) { out[k] = []; return { ok: true }; }
+            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED'))   /* FILE_NOT_ALLOWED: the script does not know this list yet */ { out[k] = []; return { ok: true }; }
             return r;
           });
         });
@@ -342,6 +343,7 @@
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
       setCode: setCode, getCode: getCode, clearCode: clearCode,
       role: function () { return lastRole; },
+      name: function () { return lastName; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,

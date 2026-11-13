@@ -11,11 +11,10 @@
   /* More, in the hub's order. Temps opens the temperature history page. */
   var MORE = [
     { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check' },
-    { id: 'shape', label: 'Table map', slot: '0', icon: 't-main' },
     { id: 'round', label: 'The round', slot: '4', icon: 's-repeat' },
     { id: 'areas', label: 'Areas', slot: '3', icon: 't-room' },
     { id: 'litters', label: 'Litters', slot: '7', icon: 't-paw' },
-    { id: 'buyers', label: 'Assocs', slot: '6', icon: 't-world' },
+    { id: 'staff', label: 'Staff', slot: '5', icon: 't-user' },
     { id: 'temps', label: 'Temps', slot: '8', icon: 't-temp', href: './history.html' }
   ];
 

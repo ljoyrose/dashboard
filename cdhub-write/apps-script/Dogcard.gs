@@ -8,6 +8,10 @@
  *   action 'dog_details'       OWNER ONLY. Changes the dog card header in place: name, sex, date of birth, colour,
  *                              entire/neutered (BLD-subject.csv) and the microchip number (BLD-microchip.csv).
  *                              Switch: TABLE_ON_dog_details. Size is NOT here: it is worked out from the latest weight.
+ *   action 'subject_create'    OWNER ONLY (13 Nov 2026, field list agreed by DOGCARD + BB). Adds one dog: one BLD-subject row,
+ *                              an optional BLD-microchip row and one BLD-subject_status row (Active, from today).
+ *                              Switch: TABLE_ON_subject_create. No photo and no room here: Photo.gs and the occupancy
+ *                              action do those afterwards. Sex and kind come from rows, never a list in this file.
  *
  * Every one needs SAVE_ENABLED = true AND its own switch: TABLE_ON_weighing or TABLE_ON_vaccination = true. Both are OFF
  * until Lisa sets them. Columns are found by header NAME, never by position; a missing column is refused, not guessed.
@@ -16,8 +20,11 @@
 var DOGCARD_ = {
   weighing:    { file: 'BLD-weight.csv',      on: 'weighing',    idPrefix: 'wt',  need: ['id', 'subject_id', 'performed_on', 'weight_kg'] },
   vaccination: { file: 'BLD-vaccination.csv', on: 'vaccination', idPrefix: 'vax', need: ['id', 'subject_id', 'given_on', 'product'] },
-  dog_details: { file: 'BLD-subject.csv',     on: 'dog_details', idPrefix: 'mc',  need: ['id', 'name', 'sex', 'dob'], owner: true }
+  dog_details: { file: 'BLD-subject.csv',     on: 'dog_details', idPrefix: 'mc',  need: ['id', 'name', 'sex', 'dob'], owner: true },
+  subject_create: { file: 'BLD-subject.csv',  on: 'subject_create', idPrefix: 'sub', need: ['id', 'name', 'sex', 'dob', 'species', 'kind', 'source'], owner: true }
 };
+var STATUS_FILE_ = 'BLD-subject_status.csv';
+var SPECIES_FILE_ = 'BLD-species.csv';
 var CHIP_FILE_ = 'BLD-microchip.csv';
 var DETAIL_COLS_ = ['name', 'sex', 'dob', 'coat_colour_id', 'neuter_status'];
 var VOID_COLS_ = ['voided_on', 'voided_by'];
@@ -26,7 +33,10 @@ var VOID_COLS_ = ['voided_on', 'voided_by'];
 function dogcardFiles_() {
   var out = [DOGCARD_.weighing.file, DOGCARD_.vaccination.file];
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.dog_details.on) === 'true') out.push(DOGCARD_.dog_details.file, CHIP_FILE_);
-  return out;
+  if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_create.on) === 'true') {
+    [DOGCARD_.subject_create.file, CHIP_FILE_, STATUS_FILE_].forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); });
+  }
+  return out.concat(subjectLinkFiles_());
 }
 
 function dogcardText_(v, name, errors, max) {
@@ -194,5 +204,221 @@ function sinkDogDetails_(req) {
     }
     if (!changed.length) throw err_('NOTHING_CHANGED', 'Nothing was different, so nothing was changed.');
     return { status: 'edited', id: subjectId, changed: changed };
+  });
+}
+
+/** The rows of a lookup file for this tenant (rows with no tenant_id count for everyone). Missing file = []. */
+function dogcardRows_(file) {
+  var r = store_read_(file, false), tenant = prop_(BLD.PROP.TENANT_ID);
+  if (!r) return [];
+  return r.records.filter(function (x) { return !tenant || !x.tenant_id || x.tenant_id === tenant; });
+}
+
+/** The word as the rows spell it, matched without caring about case; '' if no row has it. */
+function dogcardPick_(word, allowed) {
+  var w = String(word || '').trim().toLowerCase(), hit = '';
+  allowed.forEach(function (a) { if (!hit && String(a).trim().toLowerCase() === w) hit = String(a).trim(); });
+  return hit;
+}
+
+/** sub-<name slug>, made unique against the ids already in the file. */
+function dogcardSubjectId_(name, ids) {
+  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'dog';
+  var id = 'sub-' + slug, n = 2;
+  while (ids[id]) id = 'sub-' + slug + '-' + (n++);
+  return id;
+}
+
+/**
+ * Add one dog (owner only). Required: name, sex, species, kind. dob is required for a pup (a birth litter, or a kind
+ * equal to the species row's young_word). Optional: breed, neuter_status (default entire), coat_type, coat_colour_id,
+ * coat_pattern_id, nose_pigment_id, birth_litter_id, chip_number. Every id must be an existing row.
+ * Sex: a value the dog rows already use, or the species row's adult_female_word / adult_male_word.
+ * Kind: a value the dog rows already use. Refused (DUPLICATE) when an active dog has the same name and date of birth.
+ */
+function sinkSubjectCreate_(req) {
+  return sinkDogcard_(req, 'subject_create', function (spec, f, who, now) {
+    var errors = {}, tenant = prop_(BLD.PROP.TENANT_ID), today = todayLondon_(now);
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need, spec.file);
+    var dogs = read.records.filter(function (r) { return !tenant || !r.tenant_id || r.tenant_id === tenant; });
+    var used = function (col) { var o = []; dogs.forEach(function (r) { var v = String(r[col] || '').trim(); if (v && o.indexOf(v) < 0) o.push(v); }); return o; };
+
+    var name = dogcardText_(f.name, 'name', errors, 80);
+    if (!name && !errors.name) errors.name = 'The dog needs a name.';
+
+    var sp = null, spWord = String(f.species || '').trim().toLowerCase();
+    dogcardRows_(SPECIES_FILE_).forEach(function (r) {
+      if (sp || String(r.active || 'yes').toLowerCase() === 'no') return;
+      if ([r.id, r.code, r.common_name].some(function (v) { return String(v || '').trim().toLowerCase() === spWord; })) sp = r;
+    });
+    if (!spWord || !sp) errors.species = 'Pick a species from the list.';
+    // keep the spelling the dog rows already use for this species
+    var species = '';
+    if (sp) {
+      var names = [sp.id, sp.code, sp.common_name].map(function (v) { return String(v || '').trim().toLowerCase(); });
+      dogs.some(function (r) { var v = String(r.species || '').trim(); if (v && names.indexOf(v.toLowerCase()) >= 0) { species = v; return true; } return false; });
+      if (!species) species = String(sp.common_name || sp.code || sp.id).trim();
+    }
+
+    var sexAllowed = used('sex');
+    if (sp) [sp.adult_female_word, sp.adult_male_word].forEach(function (w) { w = String(w || '').trim(); if (w) sexAllowed.push(w); });
+    var sex = dogcardPick_(f.sex, sexAllowed);
+    if (!sex) errors.sex = sexAllowed.length ? 'Pick ' + sexAllowed.join(' or ') + '.' : 'Pick the sex.';
+
+    var kindAllowed = used('kind');
+    var kind = dogcardPick_(f.kind, kindAllowed);
+    if (!kind) errors.kind = kindAllowed.length ? 'Pick ' + kindAllowed.join(' or ') + '.' : 'No dog has a kind yet: add one in the Sheet first.';
+
+    var litterId = String(f.birth_litter_id || '').trim();
+    if (litterId) {
+      var lit = dogcardRows_('BLD-litter.csv');
+      if (!ID_RE_.test(litterId) || !lit.some(function (r) { return r.id === litterId; })) errors.birth_litter_id = 'Pick a litter from the list.';
+    }
+    var isYoung = !!litterId || (sp && kind && String(sp.young_word || '').trim().toLowerCase() === kind.toLowerCase());
+
+    var dob = String(f.dob || '').trim();
+    if (dob && !isRealDate_(dob)) errors.dob = 'Use a real date as YYYY-MM-DD.';
+    else if (dob && dob > today) errors.dob = 'That date is in the future.';
+    else if (!dob && isYoung) errors.dob = 'A ' + (sp && sp.young_word || 'young one') + ' needs a date of birth.';
+
+    var neuter = String(f.neuter_status == null || f.neuter_status === '' ? 'entire' : f.neuter_status).trim();
+    if (['entire', 'neutered', 'spayed'].indexOf(neuter) < 0) errors.neuter_status = 'Pick entire, neutered or spayed.';
+    var breed = dogcardText_(f.breed, 'breed', errors, 80);
+    var coatType = dogcardText_(f.coat_type, 'coat_type', errors, 80);
+
+    var ids = {};
+    [['coat_colour_id', 'BLD-coat_colour.csv', 'colour'], ['coat_pattern_id', 'BLD-coat_pattern.csv', 'pattern'], ['nose_pigment_id', 'BLD-nose_pigment.csv', 'nose colour']].forEach(function (t) {
+      var v = String(f[t[0]] || '').trim();
+      ids[t[0]] = v;
+      if (v && !(ID_RE_.test(v) && dogcardRows_(t[1]).some(function (r) { return r.id === v; }))) errors[t[0]] = 'Pick a ' + t[2] + ' from the list.';
+    });
+
+    var chip = String(f.chip_number || '').replace(/\s+/g, '');
+    if (chip && !/^\d{15}$/.test(chip)) errors.chip_number = 'A microchip number is 15 digits.';
+    if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
+
+    // an active dog with the same name and date of birth = a second copy of the same dog
+    var st = store_read_(STATUS_FILE_, false), latest = {};
+    if (st) st.records.forEach(function (r) {
+      var cur = latest[r.subject_id];
+      if (!cur || String(r.from_date || '') >= String(cur.from_date || '')) latest[r.subject_id] = r;
+    });
+    var dup = dogs.filter(function (r) {
+      if (String(r.name || '').trim().toLowerCase() !== name.toLowerCase() || String(r.dob || '').trim() !== dob) return false;
+      var s = latest[r.id];
+      return !s || String(s.state || '').trim().toLowerCase() === 'active';
+    });
+    if (dup.length) throw err_('DUPLICATE', name + (dob ? ' born ' + dob : '') + ' is already on the list, so nothing was saved.', { duplicate_of: dup[0].id });
+
+    if (st) dogcardHeader_(st, ['id', 'subject_id', 'state', 'from_date'], STATUS_FILE_);
+    else throw err_('HEADER_MISMATCH', STATUS_FILE_ + ' was not found, so nothing was saved.');
+    if (chip) {
+      var mc = store_read_(CHIP_FILE_, true);
+      dogcardHeader_(mc, ['id', 'subject_id', 'chip_number'], CHIP_FILE_);
+      if (mc.records.some(function (r) { return String(r.chip_number || '') === chip; })) throw err_('DUPLICATE', 'That microchip number is already on another dog, so nothing was saved.');
+    }
+
+    var allIds = {}; read.records.forEach(function (r) { allIds[r.id] = 1; });
+    var id = dogcardSubjectId_(name, allIds);
+    var host = dogcardText_(f.host, 'host', {}, 40) || 'CD Hub';
+    var values = { id: id, tenant_id: tenant, name: name, sex: sex, dob: dob, size_band: '', coat_type: coatType, kind: kind,
+      neuter_status: neuter, species: species, breed: breed, coat_colour_id: ids.coat_colour_id, coat_pattern_id: ids.coat_pattern_id,
+      nose_pigment_id: ids.nose_pigment_id, birth_litter_id: litterId,
+      source: 'added in ' + host + ' by ' + who.role + ', ' + today };
+    dogcardHeader_(read, Object.keys(values).filter(function (k) { return values[k] !== '' && k !== 'tenant_id'; }), spec.file);
+    store_append_(spec.file, read.header, read.header.map(function (h) { return values[h] == null ? '' : String(values[h]); }), read);
+
+    var activeWord = 'Active';
+    st.records.some(function (r) { var v = String(r.state || '').trim(); if (v.toLowerCase() === 'active') { activeWord = v; return true; } return false; });
+    dogcardAppend_({ file: STATUS_FILE_, need: ['id', 'subject_id', 'state', 'from_date'], idPrefix: 'sst' },
+      { subject_id: id, state: activeWord, from_date: today, to_date: '', reason: 'added in ' + host });
+    if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
+    return { status: 'saved', id: id };
+  });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Dog links (13 Nov 2026, DOGCARD plan AA_DOGCARD_2026-11-13-1500): "BFFs" / "Fren." on the dog card and print card.
+ *   action 'subject_link'      OWNER ONLY. Adds one BLD-subject_link row: subject_id, other_subject_id, kind, from_date
+ *                              (blank = today), source, note. One row per pair, read both ways.
+ *   action 'subject_link_end'  OWNER ONLY. Ends one link by filling its to_date (blank = today). Never deletes.
+ * kind is a link_kind.<kind> row in BLD-breeding_rule in force today (e.g. link_kind.bff = BFFs), never a list here.
+ * A second open link of the same kind for the same pair (either way round) is refused as DUPLICATE.
+ * Switch: TABLE_ON_subject_link, OFF by default.
+ * --------------------------------------------------------------------------------------------------------------- */
+DOGCARD_.subject_link = { file: 'BLD-subject_link.csv', on: 'subject_link', idPrefix: 'slk', owner: true,
+  need: ['id', 'tenant_id', 'subject_id', 'other_subject_id', 'kind', 'from_date', 'to_date', 'source', 'note', 'set_at', 'set_by'] };
+
+function subjectLinkFiles_() {
+  return prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_link.on) === 'true' ? [DOGCARD_.subject_link.file] : [];
+}
+
+/** The link kinds in force on `day`: { bff: 'BFFs', not_with: 'Fren.' } from link_kind.* rule rows. */
+function linkKinds_(day) {
+  var out = {}, best = {}, rules;
+  try { rules = store_read_('BLD-breeding_rule.csv', true); } catch (e) { return out; }
+  var tenant = prop_(BLD.PROP.TENANT_ID);
+  rules.records.forEach(function (r) {
+    var m = /^link_kind\.([a-z][a-z0-9_]{0,39})$/.exec(String(r.rule_key || ''));
+    if (!m || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
+    var from = String(r.effective_from || ''), to = String(r.to_date || '');
+    if (!from || from > day || (to && to < day)) return;
+    if (best[m[1]] === undefined || from >= best[m[1]]) { best[m[1]] = from; out[m[1]] = String(r.value || '').trim(); }
+  });
+  Object.keys(out).forEach(function (k) { if (!out[k]) delete out[k]; });
+  return out;
+}
+
+function linkOpenOn_(r, day) {
+  return String(r.from_date || '') <= day && (!String(r.to_date || '') || String(r.to_date) >= day);
+}
+
+function sinkSubjectLink_(req) {
+  return sinkDogcard_(req, 'subject_link', function (spec, f, who, now) {
+    var errors = {}, today = todayLondon_(now);
+    var a = String(f.subject_id || '').trim(), b = String(f.other_subject_id || '').trim(), kind = String(f.kind || '').trim();
+    var from = String(f.from_date || '').trim() || today;
+    if (!ID_RE_.test(a)) errors.subject_id = 'Say which dog this is for.';
+    if (!ID_RE_.test(b)) errors.other_subject_id = 'Choose the other dog.';
+    else if (a === b) errors.other_subject_id = 'Choose a different dog.';
+    if (!isRealDate_(from)) errors.from_date = 'Use a real date as YYYY-MM-DD.';
+    var kinds = linkKinds_(today);
+    if (!Object.prototype.hasOwnProperty.call(kinds, kind)) errors.kind = Object.keys(kinds).length ? 'Choose BFFs, Fren. or another kind on the list.' : 'No link kinds are set up yet (link_kind rows).';
+    var source = dogcardText_(f.source, 'source', errors, 200), note = dogcardText_(f.note, 'note', errors, 500);
+    if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
+    dogcardSubject_(a); dogcardSubject_(b);
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need, spec.file);
+    var tenant = prop_(BLD.PROP.TENANT_ID);
+    var clash = read.records.filter(function (r) {
+      if (tenant && r.tenant_id && r.tenant_id !== tenant) return false;
+      var pair = (r.subject_id === a && r.other_subject_id === b) || (r.subject_id === b && r.other_subject_id === a);
+      return pair && r.kind === kind && (!String(r.to_date || '') || String(r.to_date) >= from);
+    })[0];
+    if (clash) throw err_('DUPLICATE', 'These two dogs already have that link.', { duplicate_of: clash.id });
+    var id = dogcardAppend_(spec, { subject_id: a, other_subject_id: b, kind: kind, from_date: from, to_date: '',
+      source: source || ('CD Hub, ' + who.who + ', ' + today), note: note,
+      set_at: Utilities.formatDate(now, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX"), set_by: who.who });
+    return { status: 'saved', id: id, subject_id: a, other_subject_id: b, kind: kind };
+  });
+}
+
+function sinkSubjectLinkEnd_(req) {
+  return sinkDogcard_(req, 'subject_link', function (spec, f, who, now) {
+    var rowId = String(f.id || '').trim(), today = todayLondon_(now), to = String(f.to_date || '').trim() || today;
+    if (!ID_RE_.test(rowId)) throw err_('INVALID', 'Say which link to end.');
+    if (!isRealDate_(to)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'Use a real date as YYYY-MM-DD.' } });
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need, spec.file);
+    var tenant = prop_(BLD.PROP.TENANT_ID), idx = -1;
+    read.records.forEach(function (r, i) { if (r.id === rowId && (!tenant || !r.tenant_id || r.tenant_id === tenant)) idx = i; });
+    if (idx < 0) throw err_('NOT_FOUND', 'That link was not found.');
+    var rec = read.records[idx];
+    if (String(rec.to_date || '')) throw err_('NOT_ALLOWED', 'That link has already ended.');
+    if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });
+    var row = read.header.map(function (h) { return h === 'to_date' ? to : (rec[h] == null ? '' : String(rec[h])); });
+    store_replaceRow_(spec.file, read.header, idx, row, read);
+    return { status: 'saved', id: rowId, ended: to };
   });
 }

@@ -40,6 +40,9 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'vaccination') return jsonOut_({ ok: true, result: sinkVaccination_(req) });
     if (req && typeof req === 'object' && req.action === 'vaccination_void') return jsonOut_({ ok: true, result: sinkVaccinationVoid_(req) });
     if (req && typeof req === 'object' && req.action === 'dog_details') return jsonOut_({ ok: true, result: sinkDogDetails_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
@@ -93,6 +96,24 @@ function ui_staffList() {
 /** Called from the approval page. Owner-only: switch a staff code off (kept in the list, refused from now on). */
 function ui_revokeCode(codeId) {
   try { requireAdmin_(); return { ok: true, result: sinkRevokeCode_(String(codeId), adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
+/** Code admin (Codes.gs). Owner-only. Issue and reset return the new code ONCE, for this page to show; never logged. */
+function ui_issueCode(who, role) {
+  try { requireAdmin_(); return { ok: true, result: sinkIssueCode_(who, role, adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_renameCode(codeId, who) {
+  try { requireAdmin_(); return { ok: true, result: sinkRenameCode_(String(codeId), who, adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_resetCode(codeId) {
+  try { requireAdmin_(); return { ok: true, result: sinkResetCode_(String(codeId), adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_codeRegisterSync() {
+  try { requireAdmin_(); return { ok: true, result: sinkCodeRegisterSync_() }; }
   catch (ex) { return errorBody_(ex); }
 }
 

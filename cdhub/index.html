@@ -20,6 +20,7 @@
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
+<script src="staff/lib/links.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
 <script src="../breed-better/dna-kit.js"></script>
@@ -29,6 +30,7 @@
 <script src="../enquiries/requests.js"></script>
 <script src="../enquiries/examples.js"></script>
 <script src="enquiries-view.js"></script>
+<script src="admin.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -512,8 +514,10 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv',
  'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
+WANT.push('BLD-subject_link.csv');   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
+var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
+if(typeof AdminView!=='undefined') AdminView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});   /* Admin (owner-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(function(f){ if(WANT.indexOf(f)<0) WANT.push(f); OPTIONAL_FILES[f]=1; });
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
@@ -2201,6 +2205,15 @@ function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
   +'</a></div>'; }
 /* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
    (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
+/* BFFs / Fren. (Lisa 13 Nov 2026): dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
+function dogLinksHtml(d){
+ if(typeof BLDLinks==='undefined') return '';
+ var g=BLDLinks.forDog(T['BLD-subject_link.csv']||[],T['BLD-breeding_rule.csv']||[],d.id,todayISO());
+ if(!g.length) return '';
+ return '<div class="meta" data-k="links">'+g.map(function(x){
+  return '<span data-link="'+esc(x.kind)+'"><span class="mut">'+esc(x.label)+':</span> '+x.ids.map(function(id){ var o=CD._byId&&CD._byId[id];
+   return '<a href="#/dogs/'+esc(id)+'">'+esc(o&&o.name||id)+'</a>'; }).join(', ')+'</span>'; }).join(' \u00b7 ')+'</div>';
+}
 function dogPhotoId(v){
  v=String(v==null?'':v).trim();
  if(!v) return '';
@@ -2527,6 +2540,7 @@ function drawDogs(){
            +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
         +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+esc(CD._moved.text)+'</span>':'')
       +'</div>'
+      +dogLinksHtml(d)
     +'</div>'
   +'</div>'
   +'<p class="mut dogphoto-msg" data-photo-msg role="status"></p>'
@@ -3921,7 +3935,7 @@ function compRehearsalHtml(){ var r=REHEARSAL;
    to the owner's Google account). The hub only links to it, from the save address this browser holds. */
 function compAccessHtml(){ var u=sinkGet(SINK_URL_KEY), ok=SINK_RE.test(u);
  return compFold('compAccess','access','Who has access',
-  '<p class="mut">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'
+  '<p class="mut">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'+(typeof AdminView!=='undefined'&&AdminView.on(T)?'<p><button type="button" class="btn" data-go="admin" data-adm-pre="codes">Codes, inspector and vet: Admin</button></p>':'')
   +(ok?'<p><a class="btn" id="accOpen" href="'+esc(u+'?page=approve')+'" target="_blank" rel="noopener">Open owner page</a></p>'
      :'<p class="mut" id="accOff">Saving is not set up in this browser yet. Set it up at the top of <a href="#/round">The round</a>.</p>')); }
 function bindRehearsal(){
@@ -3968,10 +3982,15 @@ function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
 if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; }
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); NEXT.enquiries=['litters','dogs']; }
+/* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
+function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']); NEXT.admin=['map','work'];
+ PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); NEXT.staff=['admin','map']; }
 function extraMore(){
  var x=[];
  if(typeof BBHubView!=='undefined'&&bbOn()) x.push({id:'breed',label:'Breed Better',slot:'5',icon:'s-check'});
  if(typeof CDEnquiries!=='undefined') x.push({id:'enquiries',label:'Enquiries',slot:'3',icon:'t-world'});
+ if(typeof AdminView!=='undefined'&&AdminView.on(T)) x.push({id:'admin',label:'Admin',slot:'8',icon:'t-user'});
  return x;
 }
 function navHtml(){
@@ -4072,6 +4091,7 @@ function go(id,push){
  levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='compliance') bindCompliance();
+ if(id==='admin') AdminView.bind(admV());
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');

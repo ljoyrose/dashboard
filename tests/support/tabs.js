@@ -28,4 +28,17 @@ async function tabTo(page, target, max = 150) {
   for (let i = 0; i < max; i++) { if (await focused(t)) return true; await page.keyboard.press('Tab'); }
   return focused(t);
 }
-module.exports = { tabClick, tabTo, MORE };
+/** Opens a hub view: by its tab or More item when it has one, else by its direct link (#/id). Lisa 13 Nov 2026: Table map and
+ *  Assocs are off the More menu but still open by link. */
+async function openView(page, id) {
+  const { expect } = require('@playwright/test');
+  const b = page.locator(`#nav [data-go="${id}"]`);
+  if (await b.count()) {
+    await tabClick(page, b.first());
+    await expect(b.first()).toHaveAttribute('aria-current', 'page');
+  } else {
+    await page.evaluate((h) => { location.hash = h; }, '#/' + id);
+    await expect(page).toHaveURL(new RegExp('#/' + id + '$'));
+  }
+}
+module.exports = { tabClick, tabTo, openView, MORE };

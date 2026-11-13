@@ -871,3 +871,17 @@ test('role(): the role the script reported on the last read, for showing owner-o
   s.clearCode();
   assert.equal(s.role(), '');
 });
+
+test('name(): the name held against this code from the last read (Welcome line); cleared with the code (13 Nov 2026)', async () => {
+  const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'STAFF', name: 'Sam Staff' } } } });
+  const s = mkSave(srv); await s.checkStatus();
+  s.setCode('SECRETCODE1');
+  assert.equal(s.name(), '');
+  await s.read('area');
+  assert.equal(s.name(), 'Sam Staff');
+  s.setCode('OTHER');
+  assert.equal(s.name(), '');
+  await s.read('area');
+  s.clearCode();
+  assert.equal(s.name(), '');
+});

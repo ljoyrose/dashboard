@@ -427,3 +427,16 @@ test('Part done needs a note, saves as part_done and shows on the card, not as d
   await expect(ears.locator('.done-line.flag')).toContainText('Part done');
   await expect(ears.locator('.ds')).toHaveText('Due');
 });
+
+test('when this code cannot read past records, the list says so instead of a silent Due', async ({ page }) => {
+  await setup(page, { check_log: undefined });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
+});
+
+test('with past records readable there is no warning', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-no-history]')).toHaveCount(0);
+});
