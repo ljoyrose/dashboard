@@ -190,9 +190,16 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     const health = page.locator('#bbRoot details.bb-band', { hasText: 'Health' });
     await health.locator('summary').click();
     await expect(health).toContainText('Recorded: Good');
-    await expect(health.locator('[data-go]').first()).toBeVisible();
-    await health.locator('[data-go]').first().click();
-    await expect(page.locator('#main h2')).not.toContainText('Breed Better');
+    const open = health.locator('[data-bb-edit]').first();
+    await expect(open).toBeVisible();
+    await open.click();
+    const screen = page.locator('[data-bb-edit-screen]');
+    await expect(screen).toBeVisible();
+    await expect(screen.locator('h3')).toContainText('Hips');
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await screen.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('#bbRoot h3')).toContainText('Test Dog One');
+    await expect(page).toHaveURL(/#\/breed$/);
   });
 
   asOwner('S7 look: verdict pills and buttons are 1px lines with no fill; each section has a 3px colour line', async ({ page }) => {

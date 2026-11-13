@@ -202,7 +202,9 @@ test('occupancy: a move can carry the over-limit reason', () => {
   const env = env1();
   const r = send(env, 'occupancy', { subject_id: dog(env), area_id: area(env), classification_note: 'Short stay' });
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.equal(JSON.parse(env.ctx.sinkPendingList_()[0] ? JSON.stringify(env.ctx.sinkPendingList_()[0].row) : '{}').classification_note, 'Short stay');
+  // moves go straight in (Lisa 12 Nov 2026), so the reason is on the saved row, not in the approvals queue
+  const rows = recs(env, 'BLD-occupancy.csv');
+  assert.equal(rows[rows.length - 1].classification_note, 'Short stay');
 });
 
 test('occupancy_out: waits for approval, then is written to the occupancy file with no room', () => {
