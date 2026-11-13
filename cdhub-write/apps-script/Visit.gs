@@ -15,14 +15,14 @@ var VISIT_ = {
   TYPE_FILE: 'BLD-grant_type.csv',
   TYPE_COLUMNS: ['id', 'tenant_id', 'type_key', 'name', 'role_code', 'default_hours', 'max_hours', 'rights', 'lists', 'fields',
     'data_years', 'record_jobs', 'record_counts', 'email_code', 'needs_id_check', 'terms_id', 'from_date', 'to_date',
-    'set_at', 'set_by', 'source', 'grant_basis'],   // grant_basis: the visit's default basis (blank = voluntary)
+    'set_by', 'set_on', 'source', 'grant_basis', 'created_at', 'updated_at'],   // S4: grant_basis = the default basis (blank = voluntary)
   TAG_FILE: 'BLD-qr_tag.csv',
   TAG_NEED: ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
   CARD_KIND: 'visitor_card',
   FINDING_FILE: 'BLD-finding.csv',
   // the live finding columns a review fills, plus the six V9 appends; other columns are left blank, found by name
   FINDING_NEED: ['id', 'tenant_id', 'authority', 'raised_on', 'wording_as_given', 'finding_kind', 'outcome_id',
-    'target_table', 'target_id', 'sign_in_id', 'raised_at', 'grant_id'],
+    'target_table', 'target_id', 'sign_in_id', 'grant_id', 'created_at', 'updated_at'],
   // the GrantRight codes this script can carry out (Regulatory-Core); which ones a visit gets is the owner's choice.
   // raise_finding is shown as "Review". BLD-grant_right holds their labels.
   RIGHTS: ['view', 'raise_finding', 'print', 'export', 'record'],
@@ -95,12 +95,12 @@ function grantRowOn_(r, day) {
   return (!from || from <= day) && (!to || to >= day);
 }
 
-/** The grant type version in force on `day` for a type_key: from_date <= day <= to_date, latest from_date then set_at. */
+/** The grant type version in force on `day` for a type_key: from_date <= day <= to_date, latest from_date then created_at. */
 function grantTypeInForce_(rows, key, day) {
   var best = null;
   rows.forEach(function (r) {
     if (r.type_key !== key || !String(r.from_date || '') || !grantRowOn_(r, day)) return;
-    if (!best || r.from_date > best.from_date || (r.from_date === best.from_date && String(r.set_at) >= String(best.set_at))) best = r;
+    if (!best || r.from_date > best.from_date || (r.from_date === best.from_date && String(r.created_at) >= String(best.created_at))) best = r;
   });
   return best;
 }
@@ -161,7 +161,8 @@ function sinkVisitTypeSave_(req) {
       type_key: key, name: name, role_code: role, default_hours: dh, max_hours: mh, rights: rights.join('|'), lists: lists.join('|'),
       fields: fields.join('|'), data_years: years ? String(+years) : '', record_jobs: jobs.join('|'), record_counts: counts.join('|'),
       email_code: email === 'true' ? 'true' : '', needs_id_check: '', terms_id: '', from_date: from, to_date: to,
-      set_at: londonIso_(now), set_by: who.who, source: source || ('CD Hub, ' + who.who + ', ' + today), grant_basis: basis === 'voluntary' ? '' : basis
+      set_by: who.who, set_on: today, source: source || ('CD Hub, ' + who.who + ', ' + today), grant_basis: basis === 'voluntary' ? '' : basis,
+      created_at: utcIso_(now), updated_at: ''
     });
     return { status: 'saved', id: id, type_key: key, new_version: !!latest };
   });
@@ -377,6 +378,7 @@ function sinkVisitGive_(req) {
     } else if (!salt) throw err_('NOT_SET_UP', 'Run adminSetup first.');
 
     var linkId = newId_('ilk', now), codeId = cardId ? '' : newCodeId_(), fromDay = todayLondon_(now);   // rows start the day given; the window itself gates use
+    var fromAt = utcIso_(new Date(win.startMs)), toAt = utcIso_(new Date(win.endMs)), made = utcIso_(now);   // S4.2: stored in UTC
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, '', ''];
     }), S);
@@ -384,22 +386,22 @@ function sinkVisitGive_(req) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
     store_appendMany_(INSPECT.SCOPE_FILE, INSPECT.SCOPE_COLUMNS, lists.map(function (k, i) {
-      return [linkId + '-c' + (i + 1), tenant, linkId, k, 'record', '', '', fromDay, ''];
+      return [linkId + '-c' + (i + 1), tenant, linkId, k, 'record', '', '', fromDay, '', 'CD Hub, ' + who.who, who.who, fromDay, made, ''];
     }), SC);
     var rightRows = [];
     rights.forEach(function (r) { if (r !== 'record') rightRows.push([r, '', '']); });
     jobs.forEach(function (j) { rightRows.push(['record', j, counts.indexOf(j) >= 0 ? 'true' : 'false']); });
     store_appendMany_(INSPECT.RIGHT_FILE, INSPECT.RIGHT_COLUMNS, rightRows.map(function (r, i) {
-      return [linkId + '-r' + (i + 1), tenant, linkId, r[0], r[1], r[2], fromDay, ''];
+      return [linkId + '-r' + (i + 1), tenant, linkId, r[0], r[1], r[2], fromDay, '', 'CD Hub, ' + who.who, who.who, fromDay, made, ''];
     }), RT);
     var label = name + (org ? ' - ' + org : '');
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), made_at: londonIso_(now),
-      made_by: who.who, usable_from: win.starts_at, usable_to: win.ends_at, supersedes_id: '', grant_type_id: typeId, person_id: personId,
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), made_at: utcIso_(now),
+      made_by: who.who, usable_from: fromAt, usable_to: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '',
       issued_by: deleg ? who.id : 'owner', delegation_id: deleg ? deleg.row.id : '' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
-    var out = { status: 'saved', grant_id: linkId, person_id: personId, usable_from: win.starts_at, usable_to: win.ends_at, dogs: subjects.length,
+    var out = { status: 'saved', grant_id: linkId, person_id: personId, usable_from: fromAt, usable_to: toAt, dogs: subjects.length,
       fields: fieldRows.length, email_sent: false };
     if (!cardId) {
       var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
@@ -464,7 +466,7 @@ function sinkVisitEnd_(req) {
       try { revokeCodeCore_(g.root.code_id, who.who, reason); }
       catch (e) { if (!e || e.code !== 'ALREADY_REVOKED') throw e; }
     }
-    var at = londonIso_(now);
+    var at = utcIso_(now);
     linkSupersede_(visitLinkRead_(), linkId, { ended_at: at, ended_by: who.who, end_reason: reason }, now);
     return { status: 'saved', grant_id: linkId, ended_at: at, logged: visitEvent_(now, who, 'visit_ended', linkId, reason) };
   }, true);
@@ -496,7 +498,7 @@ function sinkVisitExtend_(req) {
     if (deleg && deleg.limits.to_ms !== null && endMs > deleg.limits.to_ms) throw bad('usable_to', 'Your permission ends sooner than that.');
     var max = externalMax_(role, todayLondon_(now), tmax);
     if (max !== null && endMs - startMs > Math.round(max * H) + 60000) throw bad('usable_to', 'This can last ' + max + ' hours at most.');
-    var endsAt = londonIso_(new Date(endMs));
+    var endsAt = utcIso_(new Date(endMs));
     if (g.root.code_id) {
       var reg = registry_(), h, hit = false;
       for (h in reg) if (Object.prototype.hasOwnProperty.call(reg, h) && reg[h].id === g.root.code_id) { reg[h].expires_at = endsAt; hit = true; }
@@ -671,7 +673,7 @@ function sinkVisitReview_(req) {
     visitRead_(VISIT_.FINDING_FILE, VISIT_.FINDING_NEED);
     var id = dogcardAppend_({ file: VISIT_.FINDING_FILE, idPrefix: 'fnd', need: VISIT_.FINDING_NEED }, {
       authority: v.link.organisation || v.link.visitor_name || v.link.label, raised_on: todayLondon_(now), wording_as_given: note,
-      finding_kind: 'review', outcome_id: word, target_table: table, target_id: target, sign_in_id: '', raised_at: londonIso_(now),
+      finding_kind: 'review', outcome_id: word, target_table: table, target_id: target, sign_in_id: '', created_at: utcIso_(now), updated_at: '',
       grant_id: v.root
     });
     var level = (words.filter(function (w) { return w.id === word; })[0] || {}).level;
