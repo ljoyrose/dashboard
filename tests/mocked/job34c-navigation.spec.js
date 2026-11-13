@@ -28,7 +28,7 @@ const current = (page) => page.evaluate(() => [...document.querySelectorAll('[ar
 
 // Hub, a view deeper than the first one, the view an unknown address should fall back to.
 const DEEP = [
-  ['cdhub', 'shape', 'map'],
+  ['cdhub', 'litters', 'map'],   // Table map is off the menus (Lisa 13 Nov), so a menu view is the deep link
   ['food', 'invoices', 'home'],
   ['marketplace', 'decide', 'me'],
   ['factory', 'decide', 'rooms'],

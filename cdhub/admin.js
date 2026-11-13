@@ -9,7 +9,7 @@
  */
 var AdminView = (function () {
   'use strict';
-  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv'];
+  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv'];
   var S = { open: '', aud: '', cell: '', futureAll: false, future: null, futureErr: '', qr: false };
   var I = {   // Tabler outline paths, ours
     qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2',
@@ -25,10 +25,16 @@ var AdminView = (function () {
     eye: 'M10 12a2 2 0 1 0 4 0a2 2 0 0 0-4 0M21 12c-2.4 4-5.4 6-9 6s-6.6-2-9-6c2.4-4 5.4-6 9-6s6.6 2 9 6',
     dash: 'M5 12h14',
     shield: 'M12 3a12 12 0 0 0 8.5 3A12 12 0 0 1 12 21A12 12 0 0 1 3.5 6A12 12 0 0 0 12 3',
-    future: 'M12 7v5l3 3M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0'
+    future: 'M12 7v5l3 3M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0',
+    key: 'M16.5 3a4.5 4.5 0 1 1-2.6 8.2L5 20H3v-2l1-1v-2h2v-2h2l1.8-1.8A4.5 4.5 0 0 1 16.5 3zM17 7.5h.01',
+    board: 'M4 4h16v16H4zM4 9h16M9 9v11',
+    where: 'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 10m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+    temp: 'M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0zM12 9v6',
+    check: 'M5 12l5 5L20 7'
   };
   // card id, title, icon, slot colour (LJR7), group
   var CARDS = [
+    ['codes', 'Codes', 'key', 2, 'Codes'],
     ['phone', 'Set up a phone', 'qr', 5, 'Phones'], ['saving', 'This device', 'save', 5, 'Phones'],
     ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
     ['inspect', 'Inspector link', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
@@ -82,9 +88,9 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
-  function ownerPage(v, label) {
+  function ownerPage(v, label, section) {
     var u = scriptUrl();
-    return u ? '<a class="btn" href="' + v.esc(u + '?page=approve') + '" target="_blank" rel="noopener">' + (label || 'Open owner page') + '</a>'
+    return u ? '<a class="btn" href="' + v.esc(u + '?page=approve' + (section ? '&section=' + section : '')) + '" target="_blank" rel="noopener">' + (label || 'Open owner page') + '</a>'
       : '<span class="mut">No save address in this browser. <button type="button" class="cb" data-go="round">Set it up</button></span>';
   }
   function steps(list) { return '<ol class="adm-steps">' + list.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>'; }
@@ -161,6 +167,27 @@ var AdminView = (function () {
   /* ---- the cards ---- */
   function body(v, id) {
     var T = v.T, u = scriptUrl(), host = location.host;
+    if (id === 'codes') {
+      var C = rows(T, 'BLD-code_register.csv').filter(function (r) { return r.code_id; }), byCode = {};
+      C.forEach(function (r) { (byCode[r.code_id] = byCode[r.code_id] || []).push(r); });
+      var list = Object.keys(byCode).map(function (k) {
+        var sp = byCode[k].slice().sort(function (a, b) { return (a.from_date || '') < (b.from_date || '') ? -1 : 1; }), last = sp[sp.length - 1];
+        var live = (last.from_date || '') <= v.today && (!last.to_date || last.to_date >= v.today);
+        return { r: last, live: live, n: sp.length };
+      }).sort(function (a, b) { return (b.live - a.live) || (String(a.r.who) < String(b.r.who) ? -1 : 1); });
+      var roleName = {}; rows(T, 'BLD-role.csv').forEach(function (r) { if (r.code) roleName[r.code] = r.name || r.code; });
+      return (v.hasTable('BLD-code_register.csv') ? (list.length ? '<ul class="adm-list adm-codes">' + list.map(function (x) {
+        var r = x.r;
+        return '<li>' + mark(x.live) + ' <b>' + v.esc(r.who || r.code_id) + '</b> <span class="pill">' + v.esc(roleName[r.role] || r.role || '') + '</span>'
+          + ' <span class="dpill">' + v.esc(v.dmy(String(r.from_date || '').slice(0, 10))) + '</span>\u2013' + (r.to_date ? '<span class="dpill' + (x.live ? '' : ' late') + '">' + v.esc(v.dmy(String(r.to_date).slice(0, 10))) + '</span>' : 'now')
+          + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') + ' <span class="mut">' + v.esc(r.code_id) + '</span></li>';
+      }).join('') + '</ul>' : '<p class="mut">No codes yet.</p>')
+        : '<p class="mut">The list shows here after the next save-script update. Until then it is on the owner page.</p>')
+        + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + '</p>'
+        + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
+        + '<p class="mut"><b>End</b> sets an end date. Nothing is deleted.</p>'
+        + '<p class="mut">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
+    }
     if (id === 'phone') {
       var link = u ? staffBase() + '#setup=' + encodeURIComponent(u) : '', qr = '';
       if (S.qr && link && typeof BLDQr === 'undefined') {   // the QR drawer loads only when asked for (keeps the hub's first load small)
@@ -185,13 +212,13 @@ var AdminView = (function () {
       var roles = rows(T, 'BLD-role.csv').filter(function (r) { return r.code; });
       return steps(['Apps Script editor → <b>Admin.gs</b> → <b>adminAddStaffCode</b>', 'Type their NAME and ROLE', 'Press <b>Run</b>. Copy the code from the log (only you see it)', 'Give it to them, then <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
         + (roles.length ? '<p class="mut">Roles: ' + roles.map(function (r) { return '<b>' + v.esc(r.code) + '</b> ' + v.esc(r.name || ''); }).join(' · ') + '</p>' : '')
-        + '<p>Who has a code, and remove someone: ' + ownerPage(v) + '</p>';
+        + '<p>Who has a code, and remove someone: ' + ownerPage(v, '', 'codes') + '</p>';
     }
     if (id === 'visitor') {
       var m = access(T, v.today), g = m.tables.filter(function (t) { var c = m.cell[t + '|aud-guest']; return c && c.yes.length; });
       return steps(['Apps Script editor → <b>Admin.gs</b> → <b>adminAddGuestCode</b>', 'Type a LABEL and how many DAYS', 'Press <b>Run</b>. Copy the code (only you see it)', 'It ends by itself'])
         + '<p class="mut">A visitor sees: ' + (g.length ? g.map(function (t) { return v.esc(tblName(t)); }).join(', ') : 'nothing yet') + ' · <button type="button" class="cb" data-adm-aud="aud-guest">Detail</button></p>'
-        + '<p>Stop one early: ' + ownerPage(v) + '</p>';
+        + '<p>Stop one early: ' + ownerPage(v, '', 'codes') + '</p>';
     }
     if (id === 'inspect') {
       var L = rows(T, 'BLD-inspect_link.csv').filter(function (r) { return r.id; }).sort(function (a, b) { return a.ends < b.ends ? 1 : -1; });
@@ -205,7 +232,7 @@ var AdminView = (function () {
     }
     if (id === 'lost') {
       return steps(['Owner page → <b>Revoke</b> their code', 'That phone is wiped on its next use', 'New code: <button type="button" class="cb" data-adm-open="staff">Add staff</button>', 'New phone: <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
-        + '<p>' + ownerPage(v, 'Revoke a code') + '</p>';
+        + '<p>' + ownerPage(v, 'Revoke a code', 'codes') + '</p>';
     }
     if (id === 'print') {
       return '<p><a class="btn" href="' + v.esc(staffBase() + 'print/') + '">' + icon('print') + ' Open Print</a></p>'
@@ -246,6 +273,7 @@ var AdminView = (function () {
   function mark(ok) { return ok ? '<span class="adm-ok" aria-label="on">✓</span>' : '<span class="adm-no" aria-label="off">–</span>'; }
   function sub(v, id) {
     var u = !!scriptUrl();
+    if (id === 'codes') { var cr = rows(v.T, 'BLD-code_register.csv').filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }); return v.hasTable('BLD-code_register.csv') ? cr.length + ' live' : 'Who has one'; }
     if (id === 'phone') return u ? 'Show QR · ' + v.esc(location.host) : 'Needs a save address';
     if (id === 'saving') return v.sinkOn() ? 'Saving on ✓' : 'Saving off';
     if (id === 'staff') { var n = rows(v.T, 'BLD-role.csv').filter(function (r) { return r.code; }).length; return n ? n + ' roles' : 'Steps'; }
@@ -284,7 +312,7 @@ var AdminView = (function () {
     groups.forEach(function (g) {
       html += '<h3 class="adm-g">' + g + '</h3><div class="adm-grid">' + CARDS.filter(function (c) { return c[4] === g; }).map(function (c) {
         var open = S.open === c[0];
-        return '<button type="button" class="adm-card adm-line l' + c[3] + (open ? ' sel' : '') + (c[0] === 'phone' ? ' adm-hero' : '') + '" data-adm-open="' + c[0] + '" aria-expanded="' + open + '">'
+        return '<button type="button" class="adm-card adm-line l' + c[3] + (open ? ' sel' : '') + (c[0] === 'phone' || c[0] === 'codes' ? ' adm-hero' : '') + '" data-adm-open="' + c[0] + '" aria-expanded="' + open + '">'
           + icon(c[2], 'c' + c[3]) + '<span>' + v.esc(c[1]) + '</span><small>' + sub(v, c[0]) + '</small></button>';
       }).join('') + '</div>';
       var o = CARDS.filter(function (c) { return c[4] === g && c[0] === S.open; })[0];
@@ -294,6 +322,27 @@ var AdminView = (function () {
     return html + futureHtml(v);
   }
 
+
+  /* STAFF (More -> Staff): every staff page, so Lisa can see them all. A list of pages, not rules. Owner-only links show
+     only to the owner (the same check as Admin). The staff pages open as THIS device: they need a staff or owner code here. */
+  function staffPage(v) {
+    var b = staffBase(), owner = on(v.T), g = function (title, items) {
+      return '<h3 class="adm-g">' + title + '</h3><div class="adm-grid">' + items.map(function (x) {
+        return '<a class="adm-card adm-line l' + x[3] + '" href="' + v.esc(x[2]) + '"' + (x[5] ? ' data-go="admin" data-adm-pre="' + x[5] + '"' : '') + '>' + icon(x[1], 'c' + x[3]) + '<span>' + v.esc(x[0]) + '</span><small>' + v.esc(x[4]) + '</small></a>';
+      }).join('') + '</div>';
+    };
+    return '<h2 class="adm-h">' + icon('staff') + ' Staff</h2>'
+      + g('Staff phone', [['Board', 'board', b, 5, 'Home'], ['Jobs', 'check', b + '#m/jobs', 5, 'Due today'], ['Scan', 'qr', b + '#scan', 4, 'Room, dog, litter'],
+        ['Temps', 'temp', b + '#m/temperature', 2, 'Room readings'], ['Where', 'where', b + '#m/where', 6, 'Dogs by room'], ['This phone', 'save', b + '#device', 0, 'Code, saving']])
+      + g('Other pages', [['Checks', 'records', location.pathname.replace(/[^/]*$/, '') + 'checks/', 3, 'Staff checks'], ['Guest', 'visitor', b + 'guest/', 6, 'Visitor temps'], ['Inspector', 'inspect', b + 'inspect/', 7, 'Link only']])
+      + (owner ? g('Only you', [['Print', 'print', b + 'print/', 4, 'QR cards'], ['Phone set-up', 'qr', '#/admin', 5, 'Show QR', 'phone'], ['Codes', 'key', '#/admin', 2, 'Who has one', 'codes']]) : '')
+      + '<p class="mut">Staff pages open as this device: they need a code here.</p>';
+  }
+
+  /* a link elsewhere (the Staff page) that opens Admin on one card: registered now, so it runs before the hub's data-go handler */
+  if (typeof document !== 'undefined') document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-adm-pre]'); if (t) { S.open = t.dataset.admPre; S.qr = false; }
+  });
   var bound = false;
   function bind(v) {
     AdminView._v = v;
@@ -316,5 +365,5 @@ var AdminView = (function () {
       if (d.admFold === 'map') S.mapShut = !e.target.open; else S.futureShut = !e.target.open;
     }, true);
   }
-  return { FILES: FILES, on: on, page: page, bind: bind, access: access, _state: S };
+  return { FILES: FILES, on: on, page: page, staffPage: staffPage, bind: bind, access: access, _state: S };
 }());

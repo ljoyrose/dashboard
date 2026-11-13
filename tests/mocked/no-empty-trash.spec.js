@@ -2,7 +2,7 @@
 // Moving a file into the bin is allowed. Permanently deleting a shared-drive bin is not.
 // That old action was a DELETE to Drive's /trash endpoint (files.emptyTrash).
 const { test, expect } = require('../support/test');
-const { tabClick } = require('../support/tabs');
+const { openView } = require('../support/tabs');
 const { test: fileTest } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
@@ -105,7 +105,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   }
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
   for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops']) {
-    await tabClick(page, `#nav button[data-go="${id}"]`);
+    await openView(page, id);
     await expect(page).toHaveURL(new RegExp(`#/${id}$`));
     await assertClean('CD Hub ' + id);
   }

@@ -3,7 +3,7 @@
 // (the shared guard in tests/support/test.js does that on every test), and nothing scrolls sideways.
 // Google sign-in and Drive are pretend here too.
 const { test, expect } = require('../support/test');
-const { tabClick } = require('../support/tabs');
+const { tabClick, openView } = require('../support/tabs');
 
 // Sideways scroll = the page is wider than the screen. 1px of slack for rounding.
 const noSidewaysScroll = async (page, where) => {
@@ -37,8 +37,7 @@ test.describe('Phone: CD Hub', () => {
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     await noSidewaysScroll(page, 'first section');
     for (const id of ['dogs', 'litters', 'work', 'map']) {
-      await tabClick(page, `#nav button[data-go="${id}"]`);
-      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
+      await openView(page, id);
       await noSidewaysScroll(page, id);
     }
   });
@@ -60,8 +59,7 @@ test.describe('Phone: CD Hub house look', () => {
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops']) {
-      await tabClick(page, `#nav button[data-go="${id}"]`);
-      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
+      await openView(page, id);
       await noSidewaysScroll(page, id);
       const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, id + ': controls under 44px').toEqual([]);
