@@ -18,8 +18,15 @@ Drive (00 AI Commons > CHANGES), never here. Nothing has been switched: no visib
 - `auth.js`: one event (`dash-auth-change`) so this tab hears its own sign-in change.
 - Tests: `tests/mocked/private-config-rails.spec.js` (7), `private-config.spec.js` (14), `private-config-same-as-today.spec.js` (11).
 - Notes: `docs/private-config/README.md`.
-- Found by the full suite and fixed: the CD Hub "one key in this browser" test. The loader now keeps nothing in the
-  browser in dry run or when there is no usable file.
+- Found by the full suite and fixed:
+  1. CD Hub "one key in this browser" test: the loader now keeps nothing in the browser in dry run or with no usable file.
+  2. Page-weight budgets (14 tests): `config.js` grew by 16,618 bytes, so `tests/budget-growth/private-config-loader.json`
+     adds that to the 7 pages that load it (the house way to record growth).
+  3. Money Hub "someone else's account reads nothing" test: its filter now leaves out the one look for the private
+     settings file (not a figures read). This is the only existing test edited.
+- Local full run (mocked + phone, 4 workers): 2,093 tests, 2,059 passed, 15 skipped, 19 failed. 15 of the 19 were items 2
+  and 3 above (fixed, then re-run green). The other 4 are load-sensitive: 2 fail on untouched main under the same load
+  (`fold.spec.js` home, `every-click.spec.js` bin), 2 passed on re-run (`cdhub-dog-photos`, `hub-main-others`).
 
 ## How the suite was run here
 The container's browser is older than the one `package.json` pins, so the suite ran through a wrapper config that points

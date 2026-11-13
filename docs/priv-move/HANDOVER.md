@@ -47,6 +47,12 @@ Measured on 12 Nov (runner minutes, counts only):
 ## Known test noise (seen on untouched main too, under 4 workers)
 - `fold.spec.js` "home: every fold button..." and `every-click.spec.js` "./#/bin" fail on main under load. Not from this job.
 
+## A point to settle before dry run is switched off
+The loader trusts a My Drive file because the signed-in person owns it. So a different person who signs in can supply
+their own file for their own session (for example their own address as `money.owner`). They still only reach what Drive
+already shares with them, and the rails still hold, but the Money Hub "for Lisa only" screen is a looks-only gate and
+would let them past. If that matters, keep `money.owner` in `config.js`, or trust the domain-only shared drive alone.
+
 ## Not checked
 - The loader against real Drive (only the pretend Drive). In particular `corpora=allDrives` search and the
   `domainUsersOnly` restriction on a real shared drive.
