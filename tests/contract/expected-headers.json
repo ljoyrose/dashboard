@@ -179,6 +179,30 @@
     "BLD-weight.csv": {
       "columns": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"],
       "read": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"]
+    },
+    "BLD-person.csv": {
+      "columns": ["id", "tenant_id", "full_name", "known_as"],
+      "read": ["id", "full_name", "known_as"]
+    },
+    "BLD-household.csv": {
+      "columns": ["id", "tenant_id", "name", "primary_person_id", "stage"],
+      "read": ["id", "name", "primary_person_id", "stage"]
+    },
+    "BLD-household_member.csv": {
+      "columns": ["id", "tenant_id", "household_id", "person_id"],
+      "read": ["household_id", "person_id"]
+    },
+    "BLD-subject_owner.csv": {
+      "columns": ["id", "tenant_id", "subject_id", "person_id", "household_id", "role"],
+      "read": ["subject_id", "person_id", "household_id", "role"]
+    },
+    "BLD-sale.csv": {
+      "columns": ["id", "tenant_id", "subject_id", "person_id", "household_id", "deposit", "deposit_date", "sold_on", "price"],
+      "read": ["subject_id", "person_id", "household_id", "deposit", "deposit_date", "sold_on", "price"]
+    },
+    "BLD-match_candidate.csv": {
+      "columns": ["id", "tenant_id", "subject_id", "person_id", "household_id", "score"],
+      "read": ["subject_id", "person_id", "score"]
     }
   },
   "food": {

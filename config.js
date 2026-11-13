@@ -80,7 +80,9 @@
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
       // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
       // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
-      saveScriptUrl: ''
+      saveScriptUrl: '',
+      // Puppy enquiries may queue BLD rows (person, household, owner, sale) only when this is true. Off: the button is hidden and nothing is sent.
+      enquiriesWrites: false
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's

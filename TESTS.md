@@ -104,7 +104,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 
 **CD Hub**
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
-- The menu is Main, Do, Today, Dogs, SOPs, then More: Compliance, The round, Areas, and Temps. Assocs, Table map and Litters are hidden (the page functions stay in the file, unwired). Breed Better is unchanged.
+- The menu is Main, Do, Today, Dogs, SOPs, then More: Compliance, The round, Areas, Temps, and Enquiries. Assocs, Table map and Litters are hidden (the page functions stay in the file, unwired). Breed Better is unchanged.
 - Old addresses `#/buyers`, `#/shape`, `#/litters` and `#/vet` open Main and do not show those headings. The bottom bar and More never show Assocs, Table map, Litters or Vet link. Next and previous from every visible page stay on a visible page. Search does not list litters. (`tests/mocked/cdhub.spec.js`)
 - Dogs, cabins, litters and weights from the sample files join up correctly. Litter rows still join dam and sire in the data the page reads.
 - A dog or pup with no room has Place on its card; the cabin picker lists cabins with space (a pup with its dam counts once, against the dam's '+ pups' row) and Off-site for a dog in a cabin; a move is one occupancy or occupancy_out row through the save script and the card shows "moved ✓". (`tests/mocked/cdhub-dog-card-room.spec.js`)

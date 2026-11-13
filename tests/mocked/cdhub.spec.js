@@ -134,7 +134,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(8);   // main's 11, minus Assocs, Table map and Litters
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(9);   // main's 12, minus Assocs, Table map and Litters; Enquiries stays
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -200,12 +200,12 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('eight sections are in the bar: five tabs, then three under More, plus the Temps link (Assocs, Table map, Litters and Vet link hidden); Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('nine sections are in the bar: five tabs, then four under More, plus the Temps link (Assocs, Table map and Litters hidden; Enquiries stays); Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(8);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(9);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(3);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(4);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
@@ -219,7 +219,7 @@ test.describe('CD Hub: navigation', () => {
     const hiddenGo = page.locator('#nav button[data-go="buyers"], #nav button[data-go="shape"], #nav button[data-go="litters"], #nav button[data-go="vet"]');
     await expect(hiddenGo).toHaveCount(0);
     await page.locator('nav.house-tabs [data-house-more]').click();
-    await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'The round', 'Areas', 'Temps']);
+    await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'The round', 'Areas', 'Temps', 'Enquiries']);
     const words = await page.locator('#nav').innerText();
     for (const word of ['Assocs', 'Table map', 'Litters', 'Vet link']) expect(words).not.toContain(word);
   });
