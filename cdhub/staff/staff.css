@@ -29,6 +29,8 @@ textarea.inp{padding:10px 14px}
 .msg{font-size:var(--fs-small);margin:10px 0;min-height:1.2em}
 .msg.bad{color:var(--bad)}.msg.good{color:var(--good)}.msg.warn{color:var(--warn)}
 .back{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:var(--fs-small);padding:0;margin-bottom:6px;min-height:44px}
+.me{max-width:520px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top,0px)) var(--house-gutter) 0;color:var(--muted);font-size:var(--fs-small);font-weight:600}
+.me[hidden]{display:none}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:4px;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
 .tabs button{flex:1;max-width:110px;border:0;background:transparent;color:var(--muted);display:grid;justify-items:center;gap:2px;font-size:var(--fs-small);font-weight:600;min-height:52px;padding:4px;border-radius:var(--radius)}
 .tabs .ring{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center}

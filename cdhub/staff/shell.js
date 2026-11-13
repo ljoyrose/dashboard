@@ -84,7 +84,7 @@
     return e;
   }
   function isSetUp() { return save.getScriptUrlSet() && !!storeGet(CODE_KEY); }
-  function forget() { storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; }
+  function forget() { storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
 
   /** Any read or save answering BAD_CODE means this phone was switched off: wipe it. */
   function guard(r) {
@@ -118,7 +118,18 @@
 
   var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
 
+  /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
+  function showMe() {
+    var me = document.getElementById('me');
+    if (!me) return;
+    var name = save.name ? save.name() : '', role = save.role ? save.role() : '';
+    if (!name && !role) { me.hidden = true; return; }
+    role = role ? role.charAt(0) + role.slice(1).toLowerCase() : '';
+    me.textContent = 'Welcome ' + (name || '') + (name && role ? ' · ' : '') + role;
+    me.hidden = false;
+  }
   function setTabs(cur) {
+    showMe();
     tabs.hidden = false; tabs.textContent = '';
     [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['m/report', 'Report', 'report'], ['device', 'Phone', 'gear']].forEach(function (t) {
       tabs.appendChild(h('button', { type: 'button', 'aria-current': cur === t[0] ? 'page' : false, onclick: function () { go(t[0]); } }, [h('span', { class: 'ring', html: ICONS[t[2]] }), t[1]]));
@@ -192,6 +203,7 @@
   function drawHome() {
     clearScreen(); setTabs('home'); delete ctx.reportFor;
     screen.appendChild(h('h1', { text: 'The Board' }));
+    data().then(showMe);   // the first read tells us whose code this is
     screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) }));
     var list = h('div', { class: 'cards' });
     modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
