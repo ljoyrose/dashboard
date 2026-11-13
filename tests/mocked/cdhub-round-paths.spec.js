@@ -60,6 +60,59 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await expect(page).not.toHaveURL(/#\/work$/);
   });
 
+  // Lisa, 12 Nov 2026: tapping a February medicine item kept returning to the same view. With one dog the page opened that
+  // dog's medicines by itself; with two or more it opened nothing and the rows in the list could not be tapped.
+  test('February medicine for two dogs: tapping a row opens that dog’s medicines, it does not leave the view as it was @regression', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-WORK.csv', WORK);
+    setFile(guard.world, 'BLD-dispense.csv', [
+      'id,subject_id,given_on,product,dose_volume,route,ruling_needed,note',
+      'dsp-1,sub-test-dog-1,2026-02-03,NOT STATED,1 tablet,Oral,,',
+      'dsp-2,sub-test-dog-2,2026-02-09,NOT STATED,2 ml,Oral,,',
+      'dsp-3,sub-not-on-list,2026-02-10,NOT STATED,1 tablet,Oral,,',
+    ].join('\n') + '\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Identify the medicine given in February' }).locator('a').first().click();
+    await expect(page).toHaveURL(/#\/dogs\/feb$/);
+    const answer = page.locator('#medAnswer');
+    await expect(answer.locator('tbody tr')).toHaveCount(3);
+    const one = page.locator('.dc[data-dog="sub-test-dog-1"]'), two = page.locator('.dc[data-dog="sub-test-dog-2"]');
+    await expect(one.locator('details.meds')).not.toHaveAttribute('open', '');   // two dogs: nothing is opened for you
+    await expect(two.locator('details.meds')).not.toHaveAttribute('open', '');
+
+    // the dog's name in each row is a button; it opens that dog's medicines and moves to them
+    await answer.locator('tr[data-med="sub-test-dog-2"]').getByRole('button', { name: 'Open Test Dog Two: medicines' }).click();
+    await expect(two.locator('details.meds')).toHaveAttribute('open', '');
+    await expect(two.locator('details.meds > summary')).toBeFocused();
+    await expect(two).toBeInViewport();
+    await expect(two).toContainText('Not named');
+    await expect(one.locator('details.meds')).not.toHaveAttribute('open', '');
+    await expect(page).toHaveURL(/#\/dogs\/feb$/);
+    await expect(answer).toBeVisible();   // the February list stays, to pick the next dog
+
+    // a tap anywhere on a row does the same
+    await answer.locator('tr[data-med="sub-test-dog-1"] td').first().click();
+    await expect(one.locator('details.meds')).toHaveAttribute('open', '');
+    await expect(one.locator('details.meds > summary')).toBeFocused();
+
+    // a dog the list is not showing (filtered out) is brought into the list, not skipped
+    await page.locator('#q').fill('Test Dog One');
+    await expect(two).toHaveCount(0);
+    await answer.locator('tr[data-med="sub-test-dog-2"]').getByRole('button').click();
+    await expect(two).toHaveCount(1);
+    await expect(two.locator('details.meds')).toHaveAttribute('open', '');
+
+    // a row for an animal that is not on the dog list is words only: no button that could go nowhere
+    const gone = answer.locator('tr[data-med="sub-not-on-list"]');
+    await expect(gone).toContainText('not on the current list');
+    await expect(gone.getByRole('button')).toHaveCount(0);
+
+    // leaving and coming back starts clean
+    await open(page, 'dogs');
+    await expect(page.locator('#medAnswer')).toHaveCount(0);
+    await expect(page.locator('#cnt')).toHaveText('3 of 3');
+  });
+
   test('a February medicine ask with no dispense row is not a button that reopens Outstanding', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-WORK.csv', 'id,area,item,status,owner,blocked_on,evidence,note\nW010,medicine,Identify medicine given in Feb,BLOCKED,Lisa,,,\n');
     setFile(guard.world, 'BLD-dispense.csv', 'id,subject_id,given_on,product,dose_volume,route,ruling_needed,note\n');
