@@ -303,7 +303,7 @@
           if (!prev.ok) return prev;
           return read(k).then(function (r) {
             if (r.ok) { out[k] = r.rows; return { ok: true }; }
-            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING')) { out[k] = []; return { ok: true }; }
+            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED'))   /* FILE_NOT_ALLOWED: the script does not know this list yet */ { out[k] = []; return { ok: true }; }
             return r;
           });
         });

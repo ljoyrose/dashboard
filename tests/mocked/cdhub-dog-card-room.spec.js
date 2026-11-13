@@ -55,3 +55,29 @@ test('a pup with no room has Place on its card; Off-site and a move save through
   expect(sent[1]).toMatchObject({ table: 'occupancy_out', fields: { subject_id: 'sub-test-dog-2', off_site_kind: 'temporary' } });
   await expect(page.locator('.dc[data-dog="sub-test-dog-2"]')).toContainText('off site');
 });
+
+test('BFFs and Fren. show on the dog card from dated link rows, both ways, with the words from the rule rows', async ({ page, guard }) => {
+  setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
+    + 'r1,t,link_kind.bff,BFFs,2026-01-01,Pretend,,,\nr2,t,link_kind.not_with,Fren.,2026-01-01,Pretend,,,\n');
+  setFile(guard.world, 'BLD-subject_link.csv', 'id,tenant_id,subject_id,other_subject_id,kind,from_date,to_date,source,note,set_at,set_by\n'
+    + 'sl-1,t,sub-test-dog-1,sub-test-dog-2,bff,2026-01-01,,Pretend,,,\n'
+    + 'sl-2,t,sub-test-pup-1,sub-test-dog-1,not_with,2026-01-01,,Pretend,,,\n'
+    + 'sl-3,t,sub-test-dog-2,sub-test-pup-1,bff,2020-01-01,2020-12-31,Pretend,,,\n');
+  await page.goto('cdhub/');
+  await expect(page.locator('#signinbtn')).toBeEnabled();
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  const one = page.locator('.dc[data-dog="sub-test-dog-1"] [data-k="links"]');
+  await expect(one).toHaveText('BFFs: Test Dog Two · Fren.: Test Pup One');
+  await expect(page.locator('.dc[data-dog="sub-test-dog-2"] [data-k="links"]')).toHaveText('BFFs: Test Dog One');   // the 2020 link has ended
+  await expect(one.getByRole('link', { name: 'Test Dog Two' })).toHaveAttribute('href', '#/dogs/sub-test-dog-2');
+});
+
+test('no link file yet: the hub still loads and no card shows a links line', async ({ page }) => {
+  await page.goto('cdhub/');
+  await expect(page.locator('#signinbtn')).toBeEnabled();
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  await expect(page.locator('.dc').first()).toBeVisible();
+  await expect(page.locator('[data-k="links"]')).toHaveCount(0);
+});

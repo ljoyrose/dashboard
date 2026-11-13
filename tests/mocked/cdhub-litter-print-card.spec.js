@@ -21,7 +21,8 @@ test('print: litter cards look like kennel cards and list only litters still on 
       { id: 'lit-old', dam_subject_id: 'dam1', sire_subject_id: 'sire1', born_on: '2024-03-01' },
       { id: 'lit-new', dam_subject_id: 'dam1', sire_subject_id: 'sire1', born_on: '2026-09-30' }
     ],
-    breeding_rule: [{ rule_key: 'size_colour.medium', value: 'green' }],
+    breeding_rule: [{ rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'link_kind.bff', value: 'BFFs', effective_from: '2026-01-01' }],
+    subject_link: [{ subject_id: 'p1', other_subject_id: 'dam1', kind: 'bff', from_date: '2026-01-01' }],
     area_access: [], area_capacity: [],
     occupancy: [
       { subject_id: 'dam1', area_id: 'ar-a', moved_in: '2025-06-01', classification: 'Pretend Breeding Bitch' },
@@ -71,6 +72,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   const dam = page.locator('.dcard[data-dog="dam1"]');
   await expect(dam.locator('[data-k="Colour"] dd')).toHaveText('Pretend Gold parti');
   await expect(dam.locator('[data-k="chip"] b')).toHaveText('123 456 789 012 345');
+  await expect(dam.locator('[data-k="BFFs:"] dd')).toHaveText('Pretend Pup A');   // BFFs from the link rows, read both ways
   // Lisa 13 Nov 2026: the print checks name, size, classification, microchip, photo, colour and DOB
   await expect(dam.locator('[data-k="Class"] dd')).toHaveText('Pretend Breeding Bitch');   // kept from the older row; the move row is blank
   await expect(dam.locator('[data-k="photo"] img')).toHaveAttribute('src', /thumbnail\?id=FAKEphotoFileId123/);
