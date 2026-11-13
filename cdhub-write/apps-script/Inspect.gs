@@ -20,12 +20,21 @@ var ROLE_INSPECTOR = 'INSPECTOR';
 
 var INSPECT = {
   LINK_FILE: 'BLD-inspect_link.csv',
-  // V9 (13 Nov 2026, Lisa: "now for a specific time or scheduled date time from to"; visits agreed with ADMIN in
-  // AA_VISIT-API_2026-11-13-2034): starts_at/ends_at are London date-times; the rest is what the visit actually got,
-  // copied from its visit type at give time (Visit.gs). Blank slots: id_checked_by, accompanied_by, tz. Old 7-column files still read.
-  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'starts_at', 'ends_at', 'visit_type_id', 'person_id',
-    'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'rights', 'lists', 'record_jobs', 'record_counts', 'data_from_date',
-    'data_to_date', 'email_code', 'ended_at', 'ended_by', 'end_reason', 'id_checked_by', 'accompanied_by', 'tz'],
+  // V9 (13 Nov 2026), named after the Regulatory-Core DisclosureGrant (map in AA_ACCESS_2026-11-13-1535): usable_from /
+  // usable_to are London date-times (Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
+  // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
+  // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
+  // What a visit may see and do are rows (inspect_link_scope, inspect_link_right), not columns. Old 7-column files still read.
+  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'usable_from', 'usable_to', 'supersedes_id',
+    'visit_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
+    'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'revoked_at', 'revoked_by',
+    'revoke_reason', 'tz'],
+  SCOPE_FILE: 'BLD-inspect_link_scope.csv',
+  SCOPE_COLUMNS: ['id', 'tenant_id', 'link_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'is_active'],
+  // the Regulatory-Core disclosure states; only 'record' shows rows so far, the rest read as withheld until defined
+  DISCLOSURE_STATES: ['withheld', 'existing_only', 'summary', 'record', 'record_and_evidence'],
+  RIGHT_FILE: 'BLD-inspect_link_right.csv',
+  RIGHT_COLUMNS: ['id', 'tenant_id', 'link_id', 'grant_right_code', 'scope_summary', 'counts_due', 'is_active'],
   LINK_COLUMNS_V1: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by'],
   SUBJECT_FILE: 'BLD-inspect_link_subject.csv',
   SUBJECT_COLUMNS: ['id', 'tenant_id', 'link_id', 'subject_id', 'from_date', 'to_date'],
@@ -55,7 +64,20 @@ function inspectScriptId_() {
   return /^[A-Za-z0-9_-]{10,}$/.test(s) ? s : '';
 }
 
-function inspectFiles_() { return [INSPECT.LINK_FILE, INSPECT.SUBJECT_FILE, INSPECT.FIELD_FILE, INSPECT.ACCESS_FILE]; }
+function inspectFiles_() { return [INSPECT.LINK_FILE, INSPECT.SUBJECT_FILE, INSPECT.FIELD_FILE, INSPECT.ACCESS_FILE, INSPECT.SCOPE_FILE, INSPECT.RIGHT_FILE]; }
+
+/** The current row of every grant, keyed by its ROOT id (follow supersedes_id forward; the current row has no successor). */
+function linkCurrent_(records, tenant) {
+  var next = {}, out = {};
+  records.forEach(function (r) { if ((!tenant || r.tenant_id === tenant) && r.supersedes_id) next[r.supersedes_id] = r; });
+  records.forEach(function (r) {
+    if ((tenant && r.tenant_id !== tenant) || r.supersedes_id) return;
+    var cur = r, n = 0;
+    while (next[cur.id] && n++ < 1000) cur = next[cur.id];
+    out[r.id] = cur;
+  });
+  return out;
+}
 
 /** The header a link file must have, or null if the title is not one of them. */
 function inspectHeader_(title) {
@@ -63,6 +85,8 @@ function inspectHeader_(title) {
   if (title === INSPECT.SUBJECT_FILE) return INSPECT.SUBJECT_COLUMNS;
   if (title === INSPECT.FIELD_FILE) return INSPECT.FIELD_COLUMNS;
   if (title === INSPECT.ACCESS_FILE) return INSPECT.ACCESS_COLUMNS;
+  if (title === INSPECT.SCOPE_FILE) return INSPECT.SCOPE_COLUMNS;
+  if (title === INSPECT.RIGHT_FILE) return INSPECT.RIGHT_COLUMNS;
   return null;
 }
 
@@ -104,13 +128,25 @@ function inspectSinkRead_(req, who, now) {
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
   var rd = READABLE[key], subjCol = INSPECT.LISTS[key], today = todayLondon_(now);
 
-  var link = inspectRead_(INSPECT.LINK_FILE).records.filter(function (r) {
-    if (r.tenant_id !== tenant) return false;
+  var links = inspectRead_(INSPECT.LINK_FILE).records;
+  var link = links.filter(function (r) {
+    if (r.tenant_id !== tenant || r.supersedes_id) return false;              // the root row: children and the code hang on it
     if (who.card) return r.id === who.link_id && !!r.card_tag_id;             // a visitor card (Visit.gs)
     return who.id && r.code_id === who.id && (!who.link_id || r.id === who.link_id);
   })[0];
   if (!link) throw denied;
-  if (String(link.ended_at || '')) throw err_('WINDOW', 'This visit has ended.');
+  var current = linkCurrent_(links, tenant)[link.id] || link;
+  if (String(current.revoked_at || '')) throw err_('WINDOW', 'This visit has ended.');
+  // scope rows (V9): when a visit has any, a list shows only if its row is active and 'record'; none = an older link
+  var scope = store_read_(INSPECT.SCOPE_FILE, false), scoped = false, shown = false;
+  if (scope && sameHeader_(scope.header, INSPECT.SCOPE_COLUMNS)) {
+    scope.records.forEach(function (r) {
+      if (r.tenant_id !== tenant || r.link_id !== link.id) return;
+      scoped = true;
+      if (r.scope_item_type === key && String(r.is_active) !== 'false' && r.disclosure_state === 'record') shown = true;
+    });
+  }
+  if (scoped && !shown) throw denied;
 
   var cols = {};
   inspectRead_(INSPECT.FIELD_FILE).records.forEach(function (r) {
@@ -256,7 +292,7 @@ function sinkInspectMake_(spec, adminEmail) {
     inspectRead_(INSPECT.ACCESS_FILE);   // the visit log must exist before a link can be opened
     var linkId = newId_('ilk', now), codeId = newCodeId_(), endsAt = win.ends_at, by = adminEmail || 'owner';
     var v1 = sameHeader_(L.header, INSPECT.LINK_COLUMNS_V1);
-    if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the starts_at and ends_at columns in BLD-inspect_link. Ask STAFF to add them.');
+    if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the usable_from and usable_to columns in BLD-inspect_link. Ask STAFF to add them.');
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, todayLondon_(new Date(win.startMs)), ends];
     }), S);
@@ -264,7 +300,7 @@ function sinkInspectMake_(spec, adminEmail) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: londonIso_(now), made_by: by,
-      starts_at: win.starts_at, ends_at: win.ends_at, data_from_date: '', data_to_date: '' };
+      usable_from: win.starts_at, usable_to: win.ends_at, purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
@@ -282,15 +318,17 @@ function sinkInspectLinks_() {
   for (h in reg) if (Object.prototype.hasOwnProperty.call(reg, h) && reg[h].id) byId[reg[h].id] = reg[h];
   var L = inspectRead_(INSPECT.LINK_FILE), S = inspectRead_(INSPECT.SUBJECT_FILE), F = inspectRead_(INSPECT.FIELD_FILE), A = inspectRead_(INSPECT.ACCESS_FILE);
   var count = function (f, id) { return f.records.filter(function (r) { return r.tenant_id === tenant && r.link_id === id; }).length; };
-  return L.records.filter(function (r) { return r.tenant_id === tenant; }).map(function (r) {
-    var e = byId[r.code_id], state = 'stopped', stopped = '', reason = '';
+  var cur = linkCurrent_(L.records, tenant);
+  return L.records.filter(function (r) { return r.tenant_id === tenant && !r.supersedes_id; }).map(function (root) {
+    var r = cur[root.id] || root;
+    var e = byId[root.code_id], state = 'stopped', stopped = '', reason = '';
     if (e && (e.active === false || e.revoked_at)) { stopped = e.revoked_at || ''; reason = e.revoked_reason || ''; }
     else if (e && !guestExpired_(e)) state = externalNotYet_(e) ? 'scheduled' : 'active';
     else if (e) state = 'ended';
     return {
-      id: r.id, code_id: r.code_id, label: r.label, ends: r.ends, starts_at: r.starts_at || (e && e.starts_at) || r.made_at, ends_at: r.ends_at || r.ends,
-      made_at: r.made_at, made_by: r.made_by, state: state, stopped_at: stopped, stop_reason: reason,
-      dogs: count(S, r.id), fields: count(F, r.id), visits: count(A, r.id)
+      id: root.id, code_id: root.code_id, label: r.label, ends: r.ends, starts_at: r.usable_from || (e && e.starts_at) || root.made_at, ends_at: r.usable_to || r.ends,
+      made_at: root.made_at, made_by: root.made_by, state: state, stopped_at: stopped || r.revoked_at || '', stop_reason: reason || r.revoke_reason || '',
+      dogs: count(S, root.id), fields: count(F, root.id), visits: count(A, root.id)
     };
   }).reverse();
 }
@@ -301,9 +339,31 @@ function sinkInspectStop_(linkId, adminEmail, reason) {
   reason = String(reason == null ? '' : reason).trim();
   if (!reason) throw err_('INVALID', 'Say briefly why it is ending now.', { fields: { reason: 'Say briefly why it is ending now.' } });
   if (reason.length > 200 || /[\r\n]/.test(reason)) throw err_('INVALID', 'Keep the reason to one short line.', { fields: { reason: 'Keep the reason to one short line.' } });
-  var link = inspectRead_(INSPECT.LINK_FILE).records.filter(function (r) { return r.tenant_id === tenant && r.id === String(linkId || ''); })[0];
+  var L = inspectRead_(INSPECT.LINK_FILE);
+  var link = L.records.filter(function (r) { return r.tenant_id === tenant && r.id === String(linkId || '') && !r.supersedes_id; })[0];
   if (!link) throw err_('NOT_FOUND', 'That link was not found.');
-  return sinkRevokeCode_(link.code_id, adminEmail, reason);
+  return withLock_(function () {
+    var out = revokeCodeCore_(link.code_id, adminEmail, reason), now = new Date();
+    // a V9 file also gets the revoke as a new row (never an edit); an old 7-column file keeps only the code switch-off
+    var L2 = inspectRead_(INSPECT.LINK_FILE);
+    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { revoked_at: londonIso_(now), revoked_by: adminEmail || 'owner', revoke_reason: reason }, now);
+    return out;
+  });
+}
+
+/** Write a NEW row replacing the grant's current row: a copy with `changes` and supersedes_id = the current row. */
+function linkSupersede_(L, rootId, changes, now) {
+  var tenant = prop_(BLD.PROP.TENANT_ID), cur = linkCurrent_(L.records, tenant)[rootId];
+  if (!cur) throw err_('NOT_FOUND', 'That visit was not found.');
+  var ids = {}, id = newId_('ilk', now);
+  L.records.forEach(function (r) { ids[r.id] = true; });
+  while (ids[id]) id = newId_('ilk', now);
+  var v = {};
+  L.header.forEach(function (h) { v[h] = cur[h] == null ? '' : String(cur[h]); });
+  for (var k in changes) if (Object.prototype.hasOwnProperty.call(changes, k)) v[k] = changes[k];
+  v.id = id; v.supersedes_id = cur.id; v.made_at = londonIso_(now);
+  store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return v[h] == null ? '' : v[h]; })], L);
+  return v;
 }
 
 /* ---------------------------------------------------------------------------------------------------------------

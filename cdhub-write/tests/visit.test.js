@@ -37,7 +37,7 @@ test('visit_type_save: owner code only, behind TABLE_ON_visit; one row by header
   assert.equal(r.result.new_version, false);
   const got = rows(e, 'BLD-visit_type.csv');
   assert.equal(got.length, 1);
-  assert.match(got[0], /,inspector,Inspector,INSPECTOR,8,72,view\|review,subject\|microchip,subject\.name\|microchip\.chip_number:last4,,,,,,,true,2026-10-15,/);
+  assert.match(got[0], /,inspector,Inspector,INSPECTOR,8,72,view\|raise_finding,subject\|microchip,subject\.name\|microchip\.chip_number:last4,,,,,,,true,2026-10-15,/);
 });
 
 test('visit_type_save: refuses bad rights, fields off the chosen lists, record jobs without record, default over max', () => {
@@ -97,38 +97,46 @@ test('card_add: a fixed visit type needs the fixed_type_id column and a real typ
 });
 
 // ---- Part B: visit_give / visit_end / visit_extend (London clock in tests: 15/10/26 23:30 BST)
-const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz';
+const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,usable_from,usable_to,supersedes_id,visit_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,revoked_at,revoked_by,revoke_reason,tz';
 function benv(props, linkHeader) {
   const e = env(props, TAG_H + ',fixed_type_id');
   e.addFile('BLD-inspect_link.csv', (linkHeader || LINK_H) + '\r\n');
   e.addFile('BLD-inspect_link_subject.csv', 'id,tenant_id,link_id,subject_id,from_date,to_date\r\n');
   e.addFile('BLD-inspect_link_field.csv', 'id,tenant_id,link_id,table_name,field_name,redaction\r\n');
   e.addFile('BLD-inspect_access.csv', 'id,tenant_id,link_id,code_id,table_name,rows,at\r\n');
+  e.addFile('BLD-inspect_link_scope.csv', 'id,tenant_id,link_id,scope_item_type,disclosure_state,depth_limit,withhold_basis,is_active\r\n');
+  e.addFile('BLD-inspect_link_right.csv', 'id,tenant_id,link_id,grant_right_code,scope_summary,counts_due,is_active\r\n');
   e.props.READ_ENABLED = 'true';
   return e;
 }
 function typeId(e, over) { return post(e, 'visit_type_save', Object.assign({}, INSPECTOR, { fields: 'subject.name', lists: 'subject' }, over || {})).result.id; }
 const give = (e, over) => post(e, 'visit_give', Object.assign({ person_name: 'Pat Example', organisation: 'Council', rights: ['view', 'review'],
-  fields: ['subject.name', 'subject.chip_number:last4'], subject_ids: ['sub-test-a'], hours: '3' }, over));
+  fields: ['subject.name', 'subject.chip_number:last4'], subject_ids: ['sub-test-a'], hours: '3', purpose_text: 'Annual inspection' }, over));
 const links = (e) => e.ctx.store_read_('BLD-inspect_link.csv', true).records;
+const current = (e, root) => e.ctx.linkCurrent_(links(e), e.props.TENANT_ID)[root];
+const rowsOf = (e, f, root) => e.ctx.store_read_(f, true).records.filter((x) => x.link_id === root);
 
 test('visit_give (link): rows, code once, window from hours, capped by the type; reads only its own rows', () => {
   const e = benv();
   const t = typeId(e);
-  const st = post(e, 'visit_give', { visit_type_id: t, person_name: 'X', rights: ['view'], fields: ['subject.name'], hours: '1' }, e.codes.staff);
+  const st = post(e, 'visit_give', { visit_type_id: t, person_name: 'X', rights: ['view'], fields: ['subject.name'], hours: '1', purpose_text: 'x' }, e.codes.staff);
   assert.equal(st.code, 'NOT_ALLOWED');
   const r = give(e, { visit_type_id: t });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.match(r.result.code, /^[A-Z2-9]{16}$/);
-  assert.equal(r.result.starts_at, '2026-10-15T23:30:00+01:00');
-  assert.equal(r.result.ends_at, '2026-10-16T02:30:00+01:00');
+  assert.equal(r.result.usable_from, '2026-10-15T23:30:00+01:00');
+  assert.equal(r.result.usable_to, '2026-10-16T02:30:00+01:00');
   const L = links(e).filter((x) => x.id === r.result.link_id)[0];
   assert.equal(L.visitor_name, 'Pat Example');
   assert.equal(L.organisation, 'Council');
-  assert.equal(L.rights, 'view|review');
-  assert.equal(L.lists, 'subject');
+  assert.equal(L.purpose_text, 'Annual inspection');
+  assert.equal(L.grant_basis, 'voluntary');
+  assert.equal(L.identity_assurance, 'none');
   assert.equal(L.visit_type_id, t);
-  assert.equal(L.ended_at, '');
+  assert.equal(L.revoked_at, '');
+  assert.deepEqual(rowsOf(e, 'BLD-inspect_link_scope.csv', L.id).map((x) => [x.scope_item_type, x.disclosure_state]), [['subject', 'record']]);
+  assert.deepEqual(rowsOf(e, 'BLD-inspect_link_right.csv', L.id).map((x) => x.grant_right_code), ['view', 'raise_finding']);
+  assert.equal(give(e, { visit_type_id: t, purpose_text: '' }).code, 'INVALID');   // a grant with no purpose is unreviewable
   assert.equal(give(e, { visit_type_id: t, hours: '100' }).code, 'INVALID');   // the type's max is 72
   const s = e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' });
   assert.deepEqual(Array.from(s.fields), ['id', 'name', 'chip_number']);
@@ -144,7 +152,8 @@ test('visit_give: refuses an old link header, a switched-off type, and fields of
   const t = typeId(e);
   assert.equal(give(e, { visit_type_id: t, fields: ['score_x.total'] }).code, 'INVALID');
   assert.equal(give(e, { visit_type_id: t, person_name: '' }).code, 'INVALID');
-  assert.equal(give(e, { visit_type_id: t, hours: '', starts_at: '', ends_at: '2026-10-15T20:00:00+01:00' }).code, 'INVALID');   // a past end
+  assert.equal(give(e, { visit_type_id: t, hours: '', usable_from: '', usable_to: '2026-10-15T20:00:00+01:00' }).code, 'INVALID');   // a past end
+  assert.equal(give(e, { visit_type_id: t, grant_basis: 'court_order' }).code, 'INVALID');   // not a grant_basis row yet
   assert.equal(links(e).length, 0);
 });
 
@@ -159,23 +168,28 @@ test('visit_give (card): no code; one live window per card (CARD_IN_USE); a fixe
   assert.equal(r.result.url, undefined);
   assert.equal(links(e)[0].code_id, '');
   assert.equal(links(e)[0].card_tag_id, card);
+  assert.equal(r.result.link_id, links(e)[0].id);
   assert.equal(give(e, { visit_type_id: t, card_tag_id: card }).code, 'CARD_IN_USE');
   assert.equal(give(e, { visit_type_id: t, card_tag_id: fixed }).code, 'INVALID');
   assert.equal(give(e, { visit_type_id: vet, card_tag_id: fixed }).ok, true);
   assert.equal(give(e, { visit_type_id: t, card_tag_id: 'qrt-nope' }).code, 'NOT_FOUND');
 });
 
-test('visit_end: needs a reason; kills a link code at once; keeps the planned end; never twice', () => {
+test('visit_end: needs a reason; kills a link code at once; a NEW row revokes it, the first row is untouched; never twice', () => {
   const e = benv();
   const r = give(e, { visit_type_id: typeId(e) });
   const id = r.result.link_id;
   assert.equal(post(e, 'visit_end', { link_id: id }).code, 'INVALID');
+  const before = e.file('BLD-inspect_link.csv')[0].content;
   const end = post(e, 'visit_end', { link_id: id, reason: 'Inspection finished' });
   assert.equal(end.ok, true, JSON.stringify(end));
-  const L = links(e)[0];
-  assert.equal(L.end_reason, 'Inspection finished');
-  assert.equal(L.ended_at, '2026-10-15T23:30:00+01:00');
-  assert.equal(L.ends_at, '2026-10-16T02:30:00+01:00');
+  assert.ok(e.file('BLD-inspect_link.csv')[0].content.startsWith(before), 'the first row is never edited');
+  assert.equal(links(e).length, 2);
+  const L = current(e, id);
+  assert.equal(L.supersedes_id, id);
+  assert.equal(L.revoke_reason, 'Inspection finished');
+  assert.equal(L.revoked_at, '2026-10-15T23:30:00+01:00');
+  assert.equal(L.usable_to, '2026-10-16T02:30:00+01:00');
   assert.throws(() => e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }));
   assert.equal(post(e, 'visit_end', { link_id: id, reason: 'again' }).code, 'ALREADY_ENDED');
   assert.equal(post(e, 'visit_end', { link_id: 'ilk-nope', reason: 'x' }).code, 'NOT_FOUND');
@@ -188,8 +202,9 @@ test('visit_extend: moves the end on the row and the code; capped by the type; n
   assert.equal(post(e, 'visit_extend', { link_id: id, hours: '5' }).code, 'INVALID');   // reason needed
   const x = post(e, 'visit_extend', { link_id: id, hours: '5', reason: 'Running late' });
   assert.equal(x.ok, true, JSON.stringify(x));
-  assert.equal(x.result.ends_at, '2026-10-16T04:30:00+01:00');
-  assert.equal(links(e)[0].ends_at, '2026-10-16T04:30:00+01:00');
+  assert.equal(x.result.usable_to, '2026-10-16T04:30:00+01:00');
+  assert.equal(current(e, id).usable_to, '2026-10-16T04:30:00+01:00');
+  assert.equal(links(e)[0].usable_to, '2026-10-16T02:30:00+01:00');   // the first row keeps what was first granted
   e.nowMs += 4 * 3600000;   // after the first end, before the new one
   assert.equal(e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }).rows.length, 1);
   assert.equal(post(e, 'visit_extend', { link_id: id, hours: '100', reason: 'x' }).code, 'INVALID');
@@ -208,7 +223,7 @@ test('visit_open (card): free card shows nothing; a scheduled visit says when it
   assert.deepEqual(open(e, { t: add.tag }).result, { state: 'free' });
   assert.equal(open(e, { t: 'vc' + 'a'.repeat(26) }).code, 'BAD_CODE');
   assert.equal(open(e, { t: 'nonsense' }).code, 'BAD_CODE');
-  const g = give(e, { visit_type_id: t, card_tag_id: add.tag_id, hours: '', starts_at: '2026-10-16T09:00', ends_at: '2026-10-16T12:00' });
+  const g = give(e, { visit_type_id: t, card_tag_id: add.tag_id, hours: '', usable_from: '2026-10-16T09:00', usable_to: '2026-10-16T12:00' });
   assert.equal(g.ok, true, JSON.stringify(g));
   const soon = open(e, { t: add.tag }).result;
   assert.equal(soon.state, 'opens');
@@ -217,7 +232,7 @@ test('visit_open (card): free card shows nothing; a scheduled visit says when it
   e.nowMs = Date.parse('2026-10-16T10:00:00+01:00');
   const live = open(e, { t: add.tag }).result;
   assert.equal(live.state, 'live');
-  assert.deepEqual(live.rights, ['view', 'review']);
+  assert.deepEqual(live.rights, ['view', 'raise_finding']);
   assert.deepEqual(live.record_jobs, []);
   const s = cardRead(e, add.tag, 'subject');
   assert.equal(s.ok, true, JSON.stringify(s));
@@ -242,11 +257,11 @@ test('visit_open (link code): live, then ended after End now; a staff code is no
 });
 
 // ---- Part D: visit_review and visit_record
-const FIND_H = 'id,tenant_id,inspection_id,declaration_id,outcome_id,authority,raised_on,wording_as_given,finding_kind,tenant_response,action_agreed,due_on,closed_on,evidence_document_id,notes,target_table,target_id,sign_in_id,raised_at,replies_to_id,visit_id';
+const FIND_H = 'id,tenant_id,inspection_id,declaration_id,outcome_id,authority,raised_on,wording_as_given,finding_kind,tenant_response,action_agreed,due_on,closed_on,evidence_document_id,notes,target_table,target_id,sign_in_id,raised_at,visit_id';
 function denv() {
   const e = benv({ TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true' });
   e.addFile('BLD-finding.csv', FIND_H + '\r\n');
-  const sl = 'code,label,match,source,group,needs_action\r\nreview.ok,Seen - fine,,test,review,\r\nreview.ask,Please explain,,test,review,true\r\nok,OK,,test,,\r\n';
+  const sl = 'code,label,match,source,group,level\r\nreview.ok,Seen,,test,review,green\r\nreview.ask,Needs a fix,,test,review,amber\r\nok,OK,,test,,\r\n';
   const f = e.file('BLD-status_label.csv');
   if (f.length) { f[0].content = sl; f[0].sheet = undefined; } else e.addFile('BLD-status_label.csv', sl);
   e.addFile('BLD-check_type.csv', e.ctx.TABLES.check_type.columns.join(',') + '\r\n');
@@ -268,8 +283,8 @@ test('visit_review: only with the review right, only while live, a review word o
   assert.equal(row.authority, 'Council');
   assert.equal(row.visit_id, g.result.link_id);
   assert.equal(row.raised_at, '2026-10-15T23:30:00+01:00');
-  const reply = act(e, 'visit_review', c, { target_table: 'subject', outcome_id: 'review.ok', replies_to_id: r.result.id });
-  assert.equal(reply.ok, true, JSON.stringify(reply));
+  const second = act(e, 'visit_review', c, { target_table: 'subject', outcome_id: 'review.ok' });
+  assert.equal(second.ok, true, JSON.stringify(second));
   assert.equal(act(e, 'visit_review', c, { target_table: 'subject', outcome_id: 'ok' }).code, 'INVALID');           // not a review word
   assert.equal(act(e, 'visit_review', c, { target_table: 'health_screen', outcome_id: 'review.ok' }).code, 'INVALID');
   assert.equal(act(e, 'visit_review', c, { target_table: 'subject', target_id: 'sub-test-b', outcome_id: 'review.ok' }).code, 'NOT_FOUND');
