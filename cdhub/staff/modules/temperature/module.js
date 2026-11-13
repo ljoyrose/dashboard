@@ -76,6 +76,12 @@
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
   }
+  /* can(c, key): may this code use the feature named by key? One helper, so the rule can move to BLD-permission rows
+     (People & access design) without touching each button. Today: owner codes only, from the role the save script
+     reported on the last read (save.role(), STAFF PR 443); '' or any other role is no. The script still decides what is read. */
+  function can(c, key) {
+    return !!(c && c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
+  }
   /* Dates (Lisa 13 Nov 2026): one format everywhere, "2 Mar 2026"; never DD/MM/YY. Stored dates stay ISO. */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dayWords(iso) { iso = String(iso || ''); if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8, 10), 10) + ' ' + MON[parseInt(iso.slice(5, 7), 10) - 1] + ' ' + iso.slice(0, 4); }
@@ -748,15 +754,15 @@
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
-      // Year report and Sensor CSV: owner codes only (Lisa). The role is the one the save script reported on the
-      // last read (save.role(), STAFF PR 443); '' or any other role hides them. The script still decides what is read.
-      var owner = !!(c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
+      // Who may open the Year report or the Sensor CSV import is an owner setting (permission keys temps.year_report,
+      // temps.sensor_import), read through can(). Until BLD-permission is served, can() allows owner codes only.
+      var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
             backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
-          owner ? h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }) : null,
-          owner ? h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
+          mayReport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }) : null,
+          mayImport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
         ].filter(Boolean));
       }
       var sub = h('div');
