@@ -93,6 +93,31 @@ test.describe('CD Hub: every small control answers a tap', () => {
     test.info().annotations.push({ type: 'note', description: wired ? 'Litters is still wired on this branch (PR 472 not merged): the test switched it off itself' : 'Litters is already switched off' });
   });
 
+  test('after Skip to content, a section heading still folds when tapped', async ({ page }) => {
+    await signIn(page);
+    await open(page, 'work');
+    await page.locator('a.skip').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#main')).toBeFocused();
+    const card = page.locator('#needsCard'), chevron = card.locator('.house-fold').first();
+    await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+    await page.locator('#main h2').first().click();   // the focus leaves the page body, as it does on any tap
+    await card.locator('[data-fold-row]').click({ position: { x: 150, y: 10 } });
+    await expect(chevron).toHaveAttribute('aria-expanded', 'false');
+    await card.locator('[data-fold-row]').click({ position: { x: 150, y: 10 } });
+    await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  test('a 360px phone: Compliance and The round do not scroll sideways', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await signIn(page);
+    for (const id of ['compliance', 'round']) {
+      await open(page, id);
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(over, id + ' is ' + over + 'px wider than the screen').toBeLessThanOrEqual(0);
+    }
+  });
+
   test('a rule with no start date says so in plain words (no column name on screen)', async ({ page }) => {
     await signIn(page);
     await page.evaluate(() => { T['BLD-declaration.csv'] = [{ id: 'd1', declaration_key: 'sample.rule', version: '1', effective_from: '', effective_to: '' }]; CD._built = (CD._built || 0) + 1; CD._needs = null; go('compliance', false); });
