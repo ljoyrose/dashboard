@@ -1062,5 +1062,7 @@ var READABLE = {
   capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' },
   // 12 Nov 2026 (Lisa): size is worked out from the latest weight, never kept as its own field. The room scan needs
   // the weights to do that; read only as far as visibility rows allow (one row: table_name weight, staff, all rows).
-  weight:          { file: 'BLD-weight.csv',          vis: 'weight',          authorCol: '',            dateCol: 'performed_on' }
+  weight:          { file: 'BLD-weight.csv',          vis: 'weight',          authorCol: '',            dateCol: 'performed_on' },
+  // 13 Nov 2026 (DOGCARD): BFFs / Fren. links between two dogs; read only as far as visibility rows allow
+  subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' }
 };
