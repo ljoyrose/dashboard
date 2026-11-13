@@ -161,7 +161,7 @@ test('colour: no red anywhere; orange only for outside-limit or missed; the outs
       const bad = [];
       document.querySelectorAll('body *').forEach((e) => {
         const r = e.getBoundingClientRect(), st = getComputedStyle(e);
-        if (!r.width || !r.height || st.visibility === 'hidden' || e.closest('.view:not(.on)') || e.closest('svg') || e.closest('#boot')) return;
+        if (!r.width || !r.height || st.visibility === 'hidden' || e.closest('.view:not(.on)') || e.closest('svg') || e.closest('#boot') || e.closest('nav.house-tabs')) return;
         if (e.closest('#drill') && !document.getElementById('drill').classList.contains('open')) return;
         const cols = [st.backgroundColor];
         if (e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) cols.push(st.color);

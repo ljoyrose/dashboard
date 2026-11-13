@@ -27,10 +27,11 @@
     },
     // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until Lisa presses "Allow personal bin
     // actions". A file can be binned only if it starts ZZ_DELETE_DRIVE_ and has a ledger row whose surface is `surface`.
-    // dryRun true = the page lists what would be renamed or binned and changes nothing; switching it off is Lisa's call.
+    // dryRun true = the page lists what would be renamed or binned and changes nothing. Lisa switched it off on 13 Nov 2026.
+    // Its Rename step writes each renamed exact copy's ledger row itself (surface below), so those files become binnable.
     personalBin: {
       surface: 'drive-personal',
-      dryRun: true
+      dryRun: false
     },
     // TidyUp Apps stage 5: one row per app outside Drive and Dropbox. status: 'bot-and-browser' | 'bot-capable' |
     // 'browser-only' | 'nothing'. how = the only tidy route allowed; never = API actions no bot may call for that app.
@@ -78,12 +79,11 @@
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables',
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
-      // Write targets for inline dashboard edits (chip and area saves)
-      microchipFileId: '1GnL88Xtf0tlcXjFf_P2ML-Vfglz08-Ee',
-      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-',
       // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
       // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
-      saveScriptUrl: ''
+      saveScriptUrl: '',
+      // Puppy enquiries may queue BLD rows (person, household, owner, sale) only when this is true. Off: the button is hidden and nothing is sent.
+      enquiriesWrites: false
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's

@@ -208,3 +208,76 @@ test('band stats split each points section into earned and to prove', () => {
   const st = View.bandStats(c.byId.a1);
   assert.deepEqual(st.map((o) => [o.band.id, o.max, o.earned, o.unv]), [['h', 9, 4, 5]]);
 });
+
+/* Calendar, More, My system, Archive and the sex filter (mock-up, 12 Nov 2026) */
+test('the list page has Dogs, Calendar and More tabs', () => {
+  const html = View.page({ T: pointsTables(), today: '2026-08-14', esc, dogs: hubDogs, photoId: (x) => x });
+  assert.match(html, /data-bb-tab="dogs"[^>]*aria-current="page"[\s\S]*data-bb-tab="cal"[\s\S]*data-bb-tab="more"/);
+});
+
+test('the calendar lists due dates from the rules, overdue ones marked', () => {
+  const T = pointsTables();
+  T['BLD-score_criterion.csv'][1].valid_months = '12';
+  T['BLD-score_criterion.csv'][1].due_soon_days = '60';
+  T['BLD-exam.csv'] = [{ id: 'x', subject_id: 'a1', r: 'ok', on: '2025-08-20' }];
+  View.setTab('cal');
+  const html = View.page({ T, today: '2026-08-13', esc });
+  View.setTab('dogs');
+  assert.match(html, /Calendar[\s\S]*Aug 2026/);
+  assert.match(html, /Alpha, Hips[\s\S]*20 Aug 2026/);
+});
+
+test('the archive lists animals whose enrolment has ended, with dates', () => {
+  const T = pointsTables();
+  T['BLD-score_enrolment.csv'] = [{ id: 'e1', scheme_id: 's1', subject_id: 'a1' }, { id: 'e2', scheme_id: 's1', subject_id: 'a2', valid_from: '2025-01-01', to_date: '2026-03-02' }];
+  View.setTab('archive');
+  const html = View.page({ T, today: '2026-08-12', esc });
+  View.setTab('dogs');
+  assert.match(html, /Archive[\s\S]*Beta[\s\S]*From 1 Jan 2025, to 2 Mar 2026/);
+});
+
+test('My system shows the rules in force today, read only, with the must-pass star', () => {
+  View.setTab('system');
+  const html = View.page({ T: pointsTables(), today: '2026-08-14', esc });
+  View.setTab('dogs');
+  assert.match(html, /My system[\s\S]*Target 6/);
+  assert.match(html, /aria-label="Must pass"[\s\S]*Check[\s\S]*is:ok: Pass/);
+  assert.match(html, /Hips[\s\S]*is:ok: 4 points/);
+  assert.doesNotMatch(html, /<input|<select/);
+});
+
+test('the sex filter appears when there is more than one sex, with counts', () => {
+  const dogs = Object.assign({}, hubDogs, { a2: { id: 'a2', sex: 'Male' } });
+  const html = View.page({ T: pointsTables(), today: '2026-08-14', esc, dogs });
+  assert.match(html, /data-bb-sex="Female"[^>]*>Female <span class="cnt">1/);
+  assert.match(html, /data-bb-sex="Male"/);
+});
+
+/* DNA Kit on the Breed Better dog page and the per-puppy calculator under More */
+test('the dog page shows the DNA card from dna_result and dna_marker rows', () => {
+  const T = pointsTables();
+  T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
+  T['BLD-dna_result.csv'] = [{ subject_id: 'a1', marker_code: 'TESTR', copies: '1' }];
+  View.open('a1');
+  const html = View.page({ T, today: '2026-08-11', esc });
+  View.open('');
+  assert.match(html, /bb-dna[\s\S]*1 Carrier[\s\S]*TESTR/);
+});
+
+test('Open on a check is the add/edit control, not a jump back to the dog list', () => {
+  View.open('a1');
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  View.open('');
+  assert.match(html, /data-bb-edit="c"[^>]*>Open</);
+  assert.doesNotMatch(html, /data-go="dogs"/);
+  assert.match(html, /data-bb-edit-screen|bb-line/);
+});
+
+test('More offers the per-puppy calculator', () => {
+  const T = pointsTables();
+  T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
+  View.setTab('dna');
+  const html = View.page({ T, today: '2026-08-10', esc });
+  View.setTab('dogs');
+  assert.match(html, /Probability per puppy[\s\S]*TESTR/);
+});

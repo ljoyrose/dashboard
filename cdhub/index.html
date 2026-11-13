@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#2C2C2A">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
+<script src="hub-nav.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
@@ -21,7 +22,13 @@
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
+<script src="../breed-better/dna-kit.js"></script>
 <script src="../breed-better/hub-view.js"></script>
+<script src="../enquiries/core.js"></script>
+<script src="../enquiries/reader.js"></script>
+<script src="../enquiries/requests.js"></script>
+<script src="../enquiries/examples.js"></script>
+<script src="enquiries-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -120,7 +127,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
+@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -508,10 +515,12 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv',
+ 'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+var OPTIONAL_FILES={'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
+if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(function(f){ if(WANT.indexOf(f)<0) WANT.push(f); OPTIONAL_FILES[f]=1; });
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
@@ -843,12 +852,15 @@ async function load(){
   catch(e){
     if(!live()) return;
     endBootWait(ticket);
+    window._driveFiles=[]; window._driveIds={};
     LOAD.state='err'; LOAD.err=plainDriveErr(e); render(); return;
   }
   if(!live()) return;
   LOAD.storedAt=new Date().toISOString();
   var byTitle={};
   window._driveIds={};
+  /* Same listing the reads use. Saves look a file up by its name here. A missing or doubled name is not a save. */
+  window._driveFiles=files.map(function(f){ return {id:f.id,name:f.name,mimeType:f.mimeType||''}; });
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
   if(dup.length){ endBootWait(ticket); LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
@@ -1112,14 +1124,11 @@ function wGraph(h){ if(!h||h.length<2) return '';
   +h.map(function(x,i){ return '<circle cx="'+X(x,i).toFixed(1)+'" cy="'+Y(x).toFixed(1)+'" r="2.5" class="wg-dot"><title>'+esc(dmy(x.on)+' '+x.kg+' kg')+'</title></circle>'; }).join('')
   +'</svg><p class="mut wg-cap"><span>'+esc(dmy(f.on))+' \u00b7 '+f.kg+' kg</span><span>'+mn+'\u2013'+mx+' kg</span><span>'+esc(dmy(l.on))+' \u00b7 '+l.kg+' kg</span></p>'; }
 function todayLondon(){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }catch(e){ return new Date().toISOString().slice(0,10); } }
-/* One dog-card save through the save script (same address and staff code as The round). Plain answer for an older script. */
+/* One dog-card save through the save script. The staff code is checked by the script. Plain answer for an older script. */
 async function sinkAct(action,fields){
- if(!sinkOn()) return {ok:false,code:'SAVE_OFF',message:'Saving is not set up on this device.'};
- try{
-  var j=await sinkFetch({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),action:action,fields:fields});
-  if(!j.ok&&/^Unknown action/.test(j.message||'')) j.message='The save script has not been updated for this yet. Nothing was saved.';
-  return j;
- }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
+ var j=await sinkSend({action:action,fields:fields});
+ if(!j.ok&&/^Unknown action/.test(j.message||'')) j.message='The save script has not been updated for this yet. Nothing was saved.';
+ return j;
 }
 function tile(c,n,k,s){ return '<div class="tile '+c+'"><div class="n">'+n+'</div><div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</div>'; }
 function counts(){
@@ -1423,7 +1432,7 @@ function checks(){
  out.push({k:'rule changes',ok:!ra.bad.length,
    msg:ra.bad.length? ra.bad.slice(0,4).join('; ')+(ra.bad.length>4?' \u2026':'')
      :ra.keys+' declaration(s) version cleanly; '+ra.checked+' record(s) still resolve to the rule in force on their own date'});
- out.push({k:sinkOn()?'saving':'saving off',ok:true,msg:sinkOn()?'Round saves go to the save script (one row added, nothing changed or deleted).':'Read-only on this device. Set up saving on the Round page.'});
+ out.push({k:'saving',ok:true,msg:'A valid staff code saves through the save script, which checks the code and records who saved.'});
  return out;
 }
 function strip(){
@@ -1865,7 +1874,6 @@ async function placeDog(id,btn){
  var date=CD._roundDate||todayISO(), ids=inCabin(aid,date).filter(function(x){ return x!==id; }).concat([id]);
  var rc=roomCheck(aid,ids,accessOf(aid),date);
  if(rc.status==='over'&&!window.confirm(rc.message+' Place anyway?')){ msg.textContent='Not placed.'; return; }
- if(!sinkOn()){ msg.textContent='Saving is off on this device: set it up on The round.'; return; }
  btn.disabled=true; msg.textContent='Saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:id,area_id:aid}); btn.disabled=false;
  msg.textContent=sinkMsg(r);
@@ -1874,22 +1882,67 @@ async function placeDog(id,btn){
   var k=roundKey(date,aid), cur=ROUND[k]||(ROUND[k]={areaId:aid,date:date,access:''}); cur.subjects=ids;
   var td=btn.closest('tr').children[5]; if(td) td.textContent=a?a.code:aid; }
 }
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function headerCols(text){
+ text=String(text||'').replace(/^\uFEFF/,'').replace(/\r/g,'');
+ var line=(text.split('\n')[0]||'');
+ if(!line.trim()) return null;
+ var cols=[],f='',q=false;
+ for(var i=0;i<line.length;i++){
+  var c=line[i];
+  if(q){ if(c==='"'){ if(line[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+  else if(c==='"') q=true;
+  else if(c===','){ cols.push(f.trim()); f=''; }
+  else f+=c;
+ }
+ cols.push(f.trim());
+ return {cols:cols,text:text};
+}
+/* Append one row to the named file in the folder. A Sheet gets one appended row. A csv file is read and written back.
+   If the name is missing, doubled, or the read fails, nothing is written. */
+async function appendListedRow(name, label, fields){
+ var hits=(window._driveFiles||[]).filter(function(f){ return f&&f.name===name&&f.id; });
+ if(hits.length!==1) return {ok:false, message:hits.length>1?('Not saved: more than one '+label+' is in the folder.'):('Not saved: the '+label+' is not in the folder.')};
+ var file=hits[0], parsed;
+ try{ parsed=headerCols(await readDriveFile(file)); }
+ catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be read.'}; }
+ if(!parsed) return {ok:false, message:'Not saved: the '+label+' has no header.'};
+ var values=parsed.cols.map(function(c){ return fields[c]==null?'':String(fields[c]); });
+ try{
+  var res;
+  if(file.mimeType==='application/vnd.google-apps.spreadsheet'){
+   var url='https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(file.id)+'/values/A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+   res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body:JSON.stringify({values:[values]})});
+  }else{
+   var updated=parsed.text.trimEnd()+'\n'+values.map(csvCell).join(',');
+   var boundary='cdhub_bnd';
+   var meta=JSON.stringify({name:name,mimeType:file.mimeType||'text/csv'});
+   var body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+   res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  }
+  if(!res.ok) return {ok:false, message:'Not saved: the '+label+' could not be updated.'};
+  return {ok:true};
+ }catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be updated.'}; }
+}
+function finishListedSave(btn, result){
+ if(result.ok){ btn.textContent='saved ✓'; var tr=btn.closest&&btn.closest('tr'); if(tr) tr.style.opacity='0.4'; return; }
+ btn.textContent=result.message||'Not saved.'; btn.disabled=false;
+}
 async function saveChip(dogId,subjectId,chipVal,btn){
  if(!window.TOKEN){btn.textContent='no auth';return;}
  btn.textContent='saving…';btn.disabled=true;
- var fileId=window.DASH_CONFIG.cdhub.microchipFileId;
- var nameSlug=subjectId.replace('sub-','');
- var newRow='mc-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+chipVal+',,,,,false,,,dashboard';
- try{
-  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
-  var updated=existing.trimEnd()+'\n'+newRow;
-  var boundary='cdhub_bnd';
-  var meta=JSON.stringify({name:'BLD-microchip.csv',mimeType:'text/csv'});
-  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
-  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
-  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
-  else{btn.textContent='error';btn.disabled=false;}
- }catch(e){btn.textContent='error';btn.disabled=false;}
+ var slug=String(subjectId||'').replace('sub-','');
+ finishListedSave(btn, await appendListedRow('BLD-microchip.csv','microchip list',{
+  id:'mc-'+slug, tenant_id:'ten-dynamicdogs', subject_id:subjectId, chip_number:chipVal, source:'dashboard'
+ }));
+}
+async function saveArea(dogId,subjectId,areaId,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var slug=String(subjectId||'').replace('sub-','');
+ finishListedSave(btn, await appendListedRow('BLD-occupancy.csv','occupancy list',{
+  id:'occ-'+slug, tenant_id:'ten-dynamicdogs', subject_id:subjectId, area_id:areaId, source:'dashboard'
+ }));
 }
 async function saveMed(evt,dogId,nameSlug,form){
  evt.preventDefault();
@@ -2312,8 +2365,9 @@ async function uploadDogPhoto(inp){
  inp.value='';
  if(!file) return;
  if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
- if(!sinkOn()){ photoMsg(inp,'Saving is not set up on this device.'); return; }
  if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
+ var g=await sinkGate();
+ if(!g.ok){ photoMsg(inp, g.code==='NO_CODE'?'Enter your staff code. Nothing was saved.':'Could not reach the save script. Nothing was saved.'); return; }
  photoMsg(inp,'');
  inp.disabled=true;
  try{
@@ -2322,10 +2376,11 @@ async function uploadDogPhoto(inp){
   if(!pic){ inp.disabled=false; return; }   /* Cancel: nothing is sent */
   if(pic.error){ inp.disabled=false; photoMsg(inp,pic.error); return; }
   photoMsg(inp,'Saving the photo\u2026');
-  var res=await fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-   body:JSON.stringify({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
+  var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+   body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
   if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
@@ -2477,7 +2532,10 @@ function drawDogs(){
       +'<div class="meta">'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
         +(d.room&&!away?'<button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="'+esc(d.room)+'">'+esc(d.where)+'</button>'
-          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>')
+          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
+           /* no room yet (pups too) or off site: Place opens the same cabin picker (Lisa 13 Nov 2026) */
+           +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
+        +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+esc(CD._moved.text)+'</span>':'')
       +'</div>'
     +'</div>'
   +'</div>'
@@ -2559,6 +2617,7 @@ function drawDogs(){
     +'</div></details>'
   +'</div>'
   +(typeof BBHubView!=='undefined'?(BBHubView.section||BBHubView.chip)(bbV(),d.id):'')
+  +(typeof CDEnquiries!=='undefined'?(function(){ var t=CDEnquiries.householdLine(T,d.id); return t?'<div class="dcs dcs-line" data-k="keeper"><span class="dcs-label">'+esc(t)+'</span></div>':''; })():'')
   +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
 +'</article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
@@ -2659,11 +2718,13 @@ function spaceCabins(fromId, dogId, date){
 }
 function movePickerHtml(fromId, dogId){
  var d=CD._byId[dogId], rooms=spaceCabins(fromId,dogId), size=d&&d.sizeWord?d.sizeWord:'dog';
- if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p><button type="button" class="cb" data-move-cancel>Close</button></div>';
+ /* Off-site: a new occupancy_out row, as on the staff page; only for a dog that is in a cabin now */
+ var offBtn=d&&d.room&&!d.off?'<button type="button" class="cb" data-move-off="'+esc(dogId)+'">Off-site</button>':'';
+ if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p>'+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
  return '<div class="movepick" data-move-panel>'+rooms.map(function(x){
   return '<button type="button" class="mopt" data-move-to="'+esc(x.area.id)+'" data-move-dog="'+esc(dogId)+'">'
    +esc(x.area.code)+': '+x.free+' '+esc(x.size||size)+' free</button>';
- }).join('')+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
+ }).join('')+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
 }
 function overPickerHtml(fromId){
  var date=CD._roundDate||todayISO(), who=inCabin(fromId,date);
@@ -2690,7 +2751,6 @@ function openOverMove(fromId, near){
 
 async function applyDogMove(dogId, toId, msgEl){
  if(!toId) return;
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:dogId,area_id:toId});
  if(!(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(r,'move'); return; }
@@ -2701,7 +2761,20 @@ async function applyDogMove(dogId, toId, msgEl){
  Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o!==cur&&o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==dogId; }); });
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  if(page==='round') CD._roundMsg={area:toId,text:sinkMsg(r,'move')};
+ CD._moved={id:dogId,text:sinkMsg(r,'move')};   /* the dog card shows the tick after it redraws */
  if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
+}
+async function applyDogOff(dogId, msgEl){
+ if(msgEl) msgEl.textContent='saving\u2026';
+ var r=await sinkPost('occupancy_out',{subject_id:dogId,off_site_kind:'temporary'});
+ if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ if(!(r.ok&&r.result&&r.result.status==='saved')) return;
+ CD._moved={id:dogId,text:sinkMsg(r,'move')};
+ var d=CD._byId[dogId], date=CD._roundDate||todayISO();
+ if(d){ d.area_id=''; d.room=''; d.off='temporary'; d.where='off site \u2014 temporary'; }
+ Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==dogId; }); });
+ var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
 function markSeen(areaId, sid, state){
@@ -2714,7 +2787,6 @@ function markSeen(areaId, sid, state){
 async function accessSave(aid,mode,msgEl){
  if(mode!=='free'&&mode!=='limited'){ if(msgEl) msgEl.textContent=''; return; }
  if(accessOf(aid)===mode){ if(msgEl) msgEl.textContent='Already set.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var ar=await sinkPost('area_access',{area_id:aid,access_type:mode});
  if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(ar); return; }
@@ -3154,26 +3226,88 @@ function tempVerdict(val,band){
  var n=parseFloat(val); if(isNaN(n)) return '';
  if(n<band.b.min) return 'low'; if(n>band.b.max) return 'high'; return 'ok';
 }
-/* ROUND SAVING (Nov 2026). Saves go to the cdhub-write save script (Apps Script web app), which adds ONE row to the
-   Google Sheet and never edits or deletes. The script address and the staff code are typed on the Round page and kept
-   on this device only (localStorage); neither is ever in this file. Room temperatures are 1 decimal place (Lisa, 7 Nov). */
+/* ROUND SAVING. One new row on the save script. The script checks the staff code and records who saved.
+   A code remembered in this tab is reused. A missing device set-up does not block a save. Room temperatures are 1 decimal place. */
 var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code';
-/* Saving on this device (12 Nov 2026, Lisa: "make it simpler"). The address and code are remembered on the phone. If this
-   phone was set up for the staff page (its set-up QR), CD Hub uses the same address and code, so nothing is typed twice.
-   A link #join=<code>&url=<address> (the staff set-up QR's form) also switches it on here. "Switch off here" wins. */
+/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" only clears
+   the round card's copy. It does not stop a valid staff code. #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
+var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
+/* A code the save script ACCEPTED is kept on this device (localStorage), so a phone is not asked again after the tab
+   or the Home Screen app is closed. A refused code is removed. This tab's copy (sessionStorage) is only a fallback. */
+var STAFF_KEEP_KEY='cdhub.staff.code';
+function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) return;
+ sinkSet(STAFF_KEEP_KEY,c);
+ try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
 function sinkGet(k){ var v=sinkRaw(k); if(v) return v;
  if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||''; if(k===SINK_CODE_KEY&&!sinkRaw(SINK_OFF_KEY)) return sinkRaw('bld.device.code'); return ''; }
-/* The save address is private: after sign-in it is read once from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
-   in the Drive folder, so a phone only needs the staff code. Missing file: the address box shows as before. */
+/* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
+   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
-function saveUrlLoad(){ if(CD.saveUrlTried||sinkRaw(SINK_URL_KEY)||sinkRaw('bld.scriptUrl')) return; CD.saveUrlTried=true;
- try{ listFolder().then(function(files){ var f=files.filter(function(x){ return x.name===SAVE_URL_FILE; }); return f.length===1?readDriveFile(f[0]):''; })
-  .then(function(txt){ if(!txt) return; var u=String((JSON.parse(txt)||{}).url||'').trim(); if(SINK_RE.test(u)){ CD.saveUrl=u; if(/^#\/round/.test(location.hash)) go('round',false); } })
-  .catch(function(){}); }catch(e){} }
+function saveUrlLoad(){
+ if(SINK_RE.test(sinkGet(SINK_URL_KEY))) return Promise.resolve(sinkGet(SINK_URL_KEY));
+ if(CD.saveUrlPromise) return CD.saveUrlPromise;
+ CD.saveUrlTried=true;
+ CD.saveUrlPromise=Promise.resolve().then(function(){ return listFolder(); }).then(function(files){
+  var f=(files||[]).filter(function(x){ return x.name===SAVE_URL_FILE; });
+  return f.length===1?readDriveFile(f[0]):'';
+ }).then(function(txt){
+  if(!txt) return '';
+  var u=''; try{ u=String((JSON.parse(txt)||{}).url||'').trim(); }catch(e){ u=''; }
+  if(SINK_RE.test(u)){ CD.saveUrl=u; if(/^#\/round/.test(location.hash)) go('round',false); return u; }
+  return '';
+ }).catch(function(){ return ''; });
+ return CD.saveUrlPromise;
+}
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!sinkGet(SINK_CODE_KEY); }
+function staffCodeNow(){
+ var c=STAFF_MEM;
+ if(!c){ try{ c=sessionStorage.getItem('cdhub.staff.session')||''; }catch(e){ c=''; } if(c) STAFF_MEM=c; }
+ if(!c) c=sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')||'';
+ if(c&&c===STAFF_REJECTED) return '';
+ return c;
+}
+function rememberStaffCode(c){
+ c=String(c||'').trim(); if(!c) return '';
+ STAFF_REJECTED=''; STAFF_MEM=c;
+ try{ sessionStorage.setItem('cdhub.staff.session', c); }catch(e){}
+ return c;
+}
+function noteBadCode(c){
+ STAFF_REJECTED=String(c||''); STAFF_MEM='';
+ try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
+ if(sinkRaw(STAFF_KEEP_KEY)===STAFF_REJECTED) sinkSet(STAFF_KEEP_KEY,'');
+}
+function askStaffCode(){
+ var have=staffCodeNow(); if(have) return Promise.resolve(have);
+ if(STAFF_ASK) return STAFF_ASK;
+ STAFF_ASK=new Promise(function(resolve){
+  var box=document.createElement('div');
+  box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','staffCodeT'); box.setAttribute('data-staff-code','1');
+  box.innerHTML='<form class="pcrop-in" data-staff-code-form><h3 id="staffCodeT">Staff code</h3>'
+   +'<p class="mut">Enter your staff code. The save script checks it. Any valid code works here.</p>'
+   +'<label class="mut">Your staff code<input type="password" name="code" autocomplete="off" aria-label="Your staff code" required style="display:block;width:100%;min-height:44px;margin-top:4px"></label>'
+   +'<div class="pcrop-btns"><button type="button" class="btn" data-code-cancel>Cancel</button><span class="pcrop-gap"></span>'
+   +'<button type="submit" class="btn yes">Use this code</button></div></form>';
+  document.body.appendChild(box);
+  var input=box.querySelector('input');
+  function done(v){ STAFF_ASK=null; box.remove(); resolve(v||''); }
+  box.querySelector('[data-code-cancel]').addEventListener('click',function(){ done(''); });
+  box.querySelector('form').addEventListener('submit',function(e){ e.preventDefault(); var v=String(input.value||'').trim(); if(!v){ input.focus(); return; } done(rememberStaffCode(v)); });
+  input.focus();
+ });
+ return STAFF_ASK;
+}
+async function sinkGate(){
+ if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
+ var url=sinkGet(SINK_URL_KEY);
+ if(!SINK_RE.test(url)) return {ok:false,code:'UNREACHABLE',message:'Could not reach the save script. Nothing is known to be saved.'};
+ var code=await askStaffCode();
+ if(!code) return {ok:false,code:'NO_CODE',message:'Enter your staff code. Nothing was saved.'};
+ return {ok:true,url:url,code:code};
+}
 (function sinkJoin(){ var raw=(location.hash||'').replace(/^#\/?/,''); if(raw.indexOf('join=')!==0) return;
  var at=raw.indexOf('&url='), c='', u=''; try{ c=decodeURIComponent(raw.slice(5,at>0?at:raw.length)).trim(); u=at>0?decodeURIComponent(raw.slice(at+5)).trim():''; }catch(e){ c=''; }
  try{ history.replaceState(null,'',location.pathname+'#/round'); }catch(e){ location.hash='#/round'; }
@@ -3182,18 +3316,25 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
 /* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved): no answer in 40 s = NOT saved, said plainly. */
-function sinkFetch(body){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
- return fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
+function sinkFetch(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
+ return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
    function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 40 seconds. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
-async function sinkPost(table,fields){
- if(!sinkOn()) return {ok:false,code:'SAVE_OFF',message:'Saving is not set up on this device.'};
+async function sinkSend(body){
+ var g=await sinkGate();
+ if(!g.ok) return g;
+ body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code;
  try{
-  return await sinkFetch({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),table:table,action:'add',fields:fields});
+  var j=await sinkFetch(body,g.url);
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
+  return j;
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
+async function sinkPost(table,fields){
+ return sinkSend({table:table,action:'add',fields:fields});
+}
 function sinkMsg(r,kind){
- if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved':'saved \u2713';
+ if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved \u2713':'saved \u2713';
  if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'moved \u2014 still waiting. Open Compliance, then Who has access, then the owner page.':'sent \u2014 waiting for approval';
  var f=r.fields?Object.keys(r.fields).map(function(k){ return r.fields[k]; }).join(' '):'';
  return 'NOT saved \u2014 '+(f||r.message||r.code||'error');
@@ -3223,7 +3364,6 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
  var startH=slot==='am'?'00':'12', ps=isoAt(date,startH);
  if(have.at){ if(msgEl) msgEl.textContent='already saved. Wrong? Tell Lisa \u2014 a saved reading is never changed here'; return; }
  if(t.min!==''&&t.max!==''&&Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon reading can be saved from 12:00':'That time has not arrived yet.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  if(t.min===''||t.max===''){ if(msgEl) msgEl.textContent='type '+(t.min===''?'min':'max')+' too, then it saves'; return; }
  if(t.busy) return; t.busy=true;
  if(msgEl) msgEl.textContent='saving\u2026';
@@ -3240,7 +3380,7 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
 function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-area_reading.csv']=[]);
  rows.push(Object.assign({id:(r.result&&r.result.id)||'',area_id:areaId,period_start:ps,taken_at:(r.result&&r.result.at)||new Date().toISOString()},f)); }
 function roundRefresh(date){
- var st=document.getElementById('rstat'); if(st&&sinkOn()){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
+ var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
 /* Empty cabin (Lisa, 12 Nov 2026): one area_reading row with room_empty = yes for that slot. It is the evidence (date,
    slot, who: the save script stamps taken_at and taken_by), needs no temperature, and Compliance counts it as covered. */
@@ -3249,7 +3389,6 @@ async function roomEmptySave(areaId,slot,msgEl){
  if(have.at){ if(msgEl) msgEl.textContent='already saved'; return; }
  var ps=isoAt(date,slot==='am'?'00':'12');
  if(Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon can be marked from 12:00':'That time has not arrived yet.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('area_reading',{area_id:areaId,room_empty:'yes',period_start:ps});
  if(msgEl) msgEl.textContent=sinkMsg(r);
@@ -3266,7 +3405,6 @@ async function roundAddLitter(areaId,litterId,msgEl){
  if(l.dam_subject_id) ids.unshift(l.dam_subject_id);
  ids=ids.filter(function(id){ return here.indexOf(id)<0; });
  if(!ids.length){ if(msgEl) msgEl.textContent='They are all here already.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  var ok=0, bad='';
  for(var i=0;i<ids.length;i++){ if(msgEl) msgEl.textContent='saving '+(i+1)+' of '+ids.length+'\u2026';
   var r=await sinkPost('occupancy',{subject_id:ids[i],area_id:areaId});
@@ -3282,7 +3420,6 @@ async function roundSave(areaId,patch,msgEl,sel){
   var mode=patch.access, back=function(){ if(sel) sel.value=accessOf(areaId)||''; };
   if(mode!=='free'&&mode!=='limited'){ if(msgEl) msgEl.textContent='Choose free access or limited.'; back(); return; }
   if(accessOf(areaId)===mode){ if(msgEl) msgEl.textContent='Already set to '+(mode==='free'?'free access':'limited')+'.'; return; }
-  if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; back(); return; }
   if(msgEl) msgEl.textContent='saving\u2026';
   var ar=await sinkPost('area_access',{area_id:areaId,access_type:mode});
   if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(ar); back(); return; }
@@ -3294,7 +3431,6 @@ async function roundSave(areaId,patch,msgEl,sel){
   go('round',false);
   return;
  }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  if(!patch.add){ if(msgEl) msgEl.textContent='To move a dog, add them to the cabin they moved to.'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:patch.add,area_id:areaId});
@@ -3820,7 +3956,6 @@ function bindCompliance(){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(from)){ msg.textContent='Choose the date it is in force from.'; return; }
   var last=breedRuleRows(key).slice(-1)[0];
   if(last&&last.effective_from>=from){ msg.textContent='This rule already has a version from '+dmy(last.effective_from)+'. A change must start after that date.'; return; }
-  if(!sinkOn()){ msg.textContent='saving off — set it up at the top of The round'; return; }
   b.disabled=true; msg.textContent='saving…';
   var r=await sinkPost('breeding_rule',{rule_key:key,value:val,effective_from:from,source:src});
   b.disabled=false; msg.textContent=sinkMsg(r);
@@ -3836,23 +3971,23 @@ var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],[
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','areas'],areas:['today','litters'],litters:['dogs','areas'],buyers:['dogs','map'],sops:['dogs','buyers'],compliance:['litters','dogs']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
-var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
- round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
- buyers:['world','Assocs',6],sops:['clipboard','SOPs',6],compliance:['list-check','Compliance',2]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
-var MORE_VIEWS=['compliance','shape','round','areas','litters','buyers'];
 function bbV(){return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos};}
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
-if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; TABMETA.breed=['check','Breed Better',5]; MORE_VIEWS.push('breed'); }
+if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; }
+function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
+if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); NEXT.enquiries=['litters','dogs']; }
+function extraMore(){
+ var x=[];
+ if(typeof BBHubView!=='undefined'&&bbOn()) x.push({id:'breed',label:'Breed Better',slot:'5',icon:'s-check'});
+ if(typeof CDEnquiries!=='undefined') x.push({id:'enquiries',label:'Enquiries',slot:'3',icon:'t-world'});
+ return x;
+}
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
- return TABS.map(function(t){ var n=counts[t[0]];
-   return DashKit.tabs.tab({go:t[0],slot:t[2],icon:'t-'+t[3],label:t[1],count:n?String(n):'',need:!!(n&&late[t[0]])}); }).join('')
-  +DashKit.tabs.more('houseMore',MORE_VIEWS.filter(function(id){return id!=='breed'||bbOn();}).map(function(id){ var m=TABMETA[id];
-   return '<button type="button" data-go="'+id+'" data-slot="'+m[2]+'"><svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg><span class="htl">'+esc(label(id))+'</span></button>'; }).join(''));
+ return HubNav.html({counts:counts,late:late,extraMore:extraMore()});
 }
 function pill(){
  var p=document.getElementById('livepill');
@@ -3938,7 +4073,9 @@ function go(id,push){
  cdIn(true);
  document.getElementById('nav').innerHTML=navHtml();
  if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
+ if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.open(sub||'home');
  main.innerHTML=PAGES[id]();
+ if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.bind(main, enqV());
  if(id==='breed') loadDogPhotos();
  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
  labelControls(main);
@@ -4071,13 +4208,13 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas')?full:id;
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries')?full:id;
  if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
  window.scrollTo(0,0);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
- var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
+ var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
  if(!t) return;
  if(t.hasAttribute('data-move-cancel')){
   var h=t.closest('[data-move-host]'); if(h) h.innerHTML='';
@@ -4086,6 +4223,7 @@ document.addEventListener('click',function(e){
  }
  if(t.hasAttribute('data-over-move')){ openOverMove(t.getAttribute('data-over-move'), t); return; }
  if(t.hasAttribute('data-move-to')){ var msg=t.parentNode&&t.parentNode.querySelector('[data-move-msg]'); applyDogMove(t.getAttribute('data-move-dog'), t.getAttribute('data-move-to'), msg); return; }
+ if(t.hasAttribute('data-move-off')){ applyDogOff(t.getAttribute('data-move-off'), t.parentNode&&t.parentNode.querySelector('[data-move-msg]')); return; }
  if(t.hasAttribute('data-cabin-move')){ var did=t.getAttribute('data-cabin-move'), d=CD._byId[did]; openMovePicker((d&&d.area_id)||'', did, t); return; }
  if(t.hasAttribute('data-move-dog')){ openMovePicker(t.getAttribute('data-from')||'', t.getAttribute('data-move-dog'), t); return; }
  if(t.hasAttribute('data-here')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-here'), 'here'); return; }
