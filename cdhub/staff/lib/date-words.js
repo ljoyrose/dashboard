@@ -1,7 +1,7 @@
 /*!
- * BLDDates - the one date formatter (Lisa 13 Nov 2026). Storage is unchanged: ISO date (YYYY-MM-DD), datetime in UTC.
- *   BLDDates.long(iso)   "2 Mar 2026"  owner screens, exports, PDFs
- *   BLDDates.short(iso)  "2 Mar '26"   staff screens (the year is always shown)
+ * BLDDates - the one date formatter (Lisa 13 Nov 2026): "2 Mar 2026" everywhere, owner and staff screens, exports, PDFs.
+ * Storage is unchanged: ISO date (YYYY-MM-DD), datetime in UTC.
+ *   BLDDates.long(iso)   "2 Mar 2026"
  *   BLDDates.setLocale(rows)           the BLD-locale rows: month names come from the row's language_tag
  * A value that is not a date (blank, free text) is returned as it is, never guessed at.
  * With no locale row the browser's own language words are used (display only, never a rule).
@@ -31,6 +31,5 @@
     return m ? { y: m[1], m: Number(m[2]), d: Number(m[3]) } : null;
   }
   function long(v) { var p = parts(v); return p ? p.d + ' ' + month(p.m) + ' ' + p.y : String(v == null ? '' : v); }
-  function short(v) { var p = parts(v); return p ? p.d + ' ' + month(p.m) + " '" + p.y.slice(2) : String(v == null ? '' : v); }
-  return { long: long, short: short, setLocale: setLocale, month: month };
+  return { long: long, setLocale: setLocale, month: month };
 }));
