@@ -30,11 +30,13 @@ var INSPECT = {
     'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
     'end_reason', 'tz'],
   SCOPE_FILE: 'BLD-grant_scope.csv',
-  SCOPE_COLUMNS: ['id', 'tenant_id', 'grant_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'from_date', 'to_date'],
+  SCOPE_COLUMNS: ['id', 'tenant_id', 'grant_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'from_date', 'to_date',
+    'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
   // the Regulatory-Core disclosure states; only 'record' shows rows so far, the rest read as withheld until defined
   DISCLOSURE_STATES: ['withheld', 'existing_only', 'summary', 'record', 'record_and_evidence'],
   RIGHT_FILE: 'BLD-grant_right_link.csv',
-  RIGHT_COLUMNS: ['id', 'tenant_id', 'grant_id', 'right_code', 'scope_summary', 'counts_due', 'from_date', 'to_date'],
+  RIGHT_COLUMNS: ['id', 'tenant_id', 'grant_id', 'right_code', 'scope_summary', 'counts_due', 'from_date', 'to_date', 'source', 'set_by',
+    'set_on', 'created_at', 'updated_at'],
   LINK_COLUMNS_V1: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by'],
   SUBJECT_FILE: 'BLD-inspect_link_subject.csv',
   SUBJECT_COLUMNS: ['id', 'tenant_id', 'link_id', 'subject_id', 'from_date', 'to_date'],
@@ -299,8 +301,8 @@ function sinkInspectMake_(spec, adminEmail) {
     store_appendMany_(INSPECT.FIELD_FILE, INSPECT.FIELD_COLUMNS, fieldRows.map(function (r, i) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: londonIso_(now), made_by: by,
-      usable_from: win.starts_at, usable_to: win.ends_at, purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: utcIso_(now), made_by: by,
+      usable_from: utcIso_(new Date(win.startMs)), usable_to: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
@@ -346,7 +348,7 @@ function sinkInspectStop_(linkId, adminEmail, reason) {
     var out = revokeCodeCore_(link.code_id, adminEmail, reason), now = new Date();
     // a V9 file also gets the revoke as a new row (never an edit); an old 7-column file keeps only the code switch-off
     var L2 = inspectRead_(INSPECT.LINK_FILE);
-    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { ended_at: londonIso_(now), ended_by: adminEmail || 'owner', end_reason: reason }, now);
+    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { ended_at: utcIso_(now), ended_by: adminEmail || 'owner', end_reason: reason }, now);
     return out;
   });
 }
@@ -361,7 +363,7 @@ function linkSupersede_(L, rootId, changes, now) {
   var v = {};
   L.header.forEach(function (h) { v[h] = cur[h] == null ? '' : String(cur[h]); });
   for (var k in changes) if (Object.prototype.hasOwnProperty.call(changes, k)) v[k] = changes[k];
-  v.id = id; v.supersedes_id = cur.id; v.made_at = londonIso_(now);
+  v.id = id; v.supersedes_id = cur.id; v.made_at = utcIso_(now);   // S4.2: UTC
   store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return v[h] == null ? '' : v[h]; })], L);
   return v;
 }

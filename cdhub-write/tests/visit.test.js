@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const crypto = require('node:crypto');
 const { standardEnv, req: hreq, save: hsave } = require('./harness');
 
-const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,from_date,to_date,set_at,set_by,source,grant_basis';
+const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,from_date,to_date,set_by,set_on,source,grant_basis,created_at,updated_at';
 const TAG_H = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by';
 let n = 0;
 
@@ -104,8 +104,8 @@ function benv(props, linkHeader) {
   e.addFile('BLD-inspect_link_subject.csv', 'id,tenant_id,link_id,subject_id,from_date,to_date\r\n');
   e.addFile('BLD-inspect_link_field.csv', 'id,tenant_id,link_id,table_name,field_name,redaction\r\n');
   e.addFile('BLD-inspect_access.csv', 'id,tenant_id,link_id,code_id,table_name,rows,at\r\n');
-  e.addFile('BLD-grant_scope.csv', 'id,tenant_id,grant_id,scope_item_type,disclosure_state,depth_limit,withhold_basis,from_date,to_date\r\n');
-  e.addFile('BLD-grant_right_link.csv', 'id,tenant_id,grant_id,right_code,scope_summary,counts_due,from_date,to_date\r\n');
+  e.addFile('BLD-grant_scope.csv', 'id,tenant_id,grant_id,scope_item_type,disclosure_state,depth_limit,withhold_basis,from_date,to_date,source,set_by,set_on,created_at,updated_at\r\n');
+  e.addFile('BLD-grant_right_link.csv', 'id,tenant_id,grant_id,right_code,scope_summary,counts_due,from_date,to_date,source,set_by,set_on,created_at,updated_at\r\n');
   e.props.READ_ENABLED = 'true';
   return e;
 }
@@ -124,8 +124,8 @@ test('grant_give (link): rows, code once, window from hours, capped by the type;
   const r = give(e, { grant_type_id: t });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.match(r.result.code, /^[A-Z2-9]{16}$/);
-  assert.equal(r.result.usable_from, '2026-10-15T23:30:00+01:00');
-  assert.equal(r.result.usable_to, '2026-10-16T02:30:00+01:00');
+  assert.equal(r.result.usable_from, '2026-10-15T22:30:00Z');
+  assert.equal(r.result.usable_to, '2026-10-16T01:30:00Z');
   const L = links(e).filter((x) => x.id === r.result.grant_id)[0];
   assert.equal(L.visitor_name, 'Pat Example');
   assert.equal(L.organisation, 'Council');
@@ -152,7 +152,7 @@ test('grant_give: refuses an old link header, a switched-off type, and fields of
   const t = typeId(e);
   assert.equal(give(e, { grant_type_id: t, fields: ['score_x.total'] }).code, 'INVALID');
   assert.equal(give(e, { grant_type_id: t, person_name: '' }).code, 'INVALID');
-  assert.equal(give(e, { grant_type_id: t, hours: '', usable_from: '', usable_to: '2026-10-15T20:00:00+01:00' }).code, 'INVALID');   // a past end
+  assert.equal(give(e, { grant_type_id: t, hours: '', usable_from: '', usable_to: '2026-10-15T19:00:00Z' }).code, 'INVALID');   // a past end
   assert.equal(give(e, { grant_type_id: t, grant_basis: 'court_order' }).code, 'INVALID');   // not a grant_basis row yet
   const sl = 'code,label,match,source,group,level\r\nstatutory_duty,Statutory duty,,test,grant_basis,\r\n';
   const f = e.file('BLD-status_label.csv');
@@ -195,8 +195,8 @@ test('grant_end: needs a reason; kills a link code at once; a NEW row revokes it
   const L = current(e, id);
   assert.equal(L.supersedes_id, id);
   assert.equal(L.end_reason, 'Inspection finished');
-  assert.equal(L.ended_at, '2026-10-15T23:30:00+01:00');
-  assert.equal(L.usable_to, '2026-10-16T02:30:00+01:00');
+  assert.equal(L.ended_at, '2026-10-15T22:30:00Z');
+  assert.equal(L.usable_to, '2026-10-16T01:30:00Z');
   assert.throws(() => e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }));
   assert.equal(post(e, 'grant_end', { grant_id: id, reason: 'again' }).code, 'ALREADY_ENDED');
   assert.equal(post(e, 'grant_end', { grant_id: 'ilk-nope', reason: 'x' }).code, 'NOT_FOUND');
@@ -209,9 +209,9 @@ test('grant_extend: moves the end on the row and the code; capped by the type; n
   assert.equal(post(e, 'grant_extend', { grant_id: id, hours: '5' }).code, 'INVALID');   // reason needed
   const x = post(e, 'grant_extend', { grant_id: id, hours: '5', reason: 'Running late' });
   assert.equal(x.ok, true, JSON.stringify(x));
-  assert.equal(x.result.usable_to, '2026-10-16T04:30:00+01:00');
-  assert.equal(current(e, id).usable_to, '2026-10-16T04:30:00+01:00');
-  assert.equal(links(e)[0].usable_to, '2026-10-16T02:30:00+01:00');   // the first row keeps what was first granted
+  assert.equal(x.result.usable_to, '2026-10-16T03:30:00Z');
+  assert.equal(current(e, id).usable_to, '2026-10-16T03:30:00Z');
+  assert.equal(links(e)[0].usable_to, '2026-10-16T01:30:00Z');   // the first row keeps what was first granted
   e.nowMs += 4 * 3600000;   // after the first end, before the new one
   assert.equal(e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }).rows.length, 1);
   assert.equal(post(e, 'grant_extend', { grant_id: id, hours: '100', reason: 'x' }).code, 'INVALID');
@@ -236,7 +236,7 @@ test('grant_open (card): free card shows nothing; a scheduled visit says when it
   assert.equal(soon.state, 'opens');
   assert.equal(soon.who, 'Pat Example');
   assert.equal(cardRead(e, add.tag, 'subject').code, 'WINDOW');
-  e.nowMs = Date.parse('2026-10-16T10:00:00+01:00');
+  e.nowMs = Date.parse('2026-10-16T09:00:00Z');
   const live = open(e, { t: add.tag }).result;
   assert.equal(live.state, 'live');
   assert.deepEqual(live.rights, ['view', 'raise_finding']);
@@ -264,7 +264,7 @@ test('grant_open (link code): live, then ended after End now; a staff code is no
 });
 
 // ---- Part D: grant_review and grant_record
-const FIND_H = 'id,tenant_id,inspection_id,declaration_id,outcome_id,authority,raised_on,wording_as_given,finding_kind,tenant_response,action_agreed,due_on,closed_on,evidence_document_id,notes,target_table,target_id,sign_in_id,raised_at,grant_id';
+const FIND_H = 'id,tenant_id,inspection_id,declaration_id,outcome_id,authority,raised_on,wording_as_given,finding_kind,tenant_response,action_agreed,due_on,closed_on,evidence_document_id,notes,target_table,target_id,sign_in_id,grant_id,created_at,updated_at';
 function denv() {
   const e = benv({ TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true' });
   e.addFile('BLD-finding.csv', FIND_H + '\r\n');
@@ -289,7 +289,7 @@ test('grant_review: only with the review right, only while live, a review word o
   assert.equal(row.outcome_id, 'review.ask');
   assert.equal(row.authority, 'Council');
   assert.equal(row.grant_id, g.result.grant_id);
-  assert.equal(row.raised_at, '2026-10-15T23:30:00+01:00');
+  assert.equal(row.created_at, '2026-10-15T22:30:00Z');
   const second = act(e, 'grant_review', c, { target_table: 'subject', outcome_id: 'review.ok' });
   assert.equal(second.ok, true, JSON.stringify(second));
   assert.equal(act(e, 'grant_review', c, { target_table: 'subject', outcome_id: 'ok' }).code, 'INVALID');           // not a review word

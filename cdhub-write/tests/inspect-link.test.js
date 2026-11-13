@@ -261,9 +261,9 @@ test('window: now for N hours, until HH:MM today, or scheduled from-to; the link
   assert.equal(read(env, s.result.code, 'subject').ok, true);
   env.nowMs = env.ctx.londonLocalMs_(day + 'T13:31');
   assert.equal(read(env, s.result.code, 'subject').code, 'BAD_CODE');
-  // the link row keeps both times
+  // the link row keeps both times, stored in UTC (S4.2)
   const row = env.file('BLD-inspect_link.csv')[0].content;
-  assert.ok(row.includes(day + 'T09:00:00'));
+  assert.ok(row.includes(new Date(env.ctx.londonLocalMs_(day + 'T09:00')).toISOString().replace(/\.\d{3}Z$/, 'Z')));
 });
 
 test('window: refused when the end is before the start, too long for the rule row, or a time has passed; no rule row = the owner must say', () => {
