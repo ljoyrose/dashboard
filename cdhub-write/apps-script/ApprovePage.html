@@ -163,6 +163,11 @@
     go.onclick=function(){
       if(!cb.checked){ msg.textContent='Tick the box first.'; return; }
       var f={}; Object.keys(inputs).forEach(function(k){ f[k]=inputs[k].value; });
+      // Same rule and words as tempPairError_ in Specs.gs and BLDTempPair (staff/lib/temp-pair.js).
+      var lo=parseFloat(f.min_c), hi=parseFloat(f.max_c);
+      if(f.min_c!==undefined&&f.max_c!==undefined&&String(f.min_c).trim()!==''&&String(f.max_c).trim()!==''&&!isNaN(lo)&&!isNaN(hi)&&lo>hi){
+        msg.textContent='The lowest reading cannot be higher than the highest reading.'; return;
+      }
       msg.textContent='Working...';
       google.script.run.withSuccessHandler(function(r){
         msg.textContent = r.ok ? 'Done. Changed: '+r.result.changed.join(', ')+'.' : (r.message+(r.fields?' '+Object.keys(r.fields).map(function(k){return k+': '+r.fields[k];}).join(' '):''));

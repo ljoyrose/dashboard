@@ -28,11 +28,11 @@ const RULES = {
     allowed: ['--paper', '--card', '--soft', '--line', '--ink', '--muted', '--frame', '--frame-ink', '--frame-line', '--press',
       '--ljr-5', '--ljr-5-tint', '--ljr-5-text', '--ljr-6', '--ljr-6-tint', '--ljr-4-tint', '--ljr-3', '--ljr-3-text'],
     never: ['--ljr-2', '--ljr-2-text', '--ljr-2-icon', '--ljr-2-solid'],   // red: never
-    warnOnly: ['--ljr-3', '--ljr-3-text'],   // orange: only on .warn (outside limit, missed) and its legend swatch
+    warnOnly: ['--ljr-3', '--ljr-3-text'],   // orange: .warn (outside limit), .miss (outline), and those legend swatches
     outsideCalendarNever: ['--ljr-3', '--ljr-3-text', '--ljr-2', '--ljr-2-text'],
   },
   audit: {
-    dayStates: { allok: 'In limit', warn: 'Check', nd: 'No readings', nolimit: 'No limit set' },
+    dayStates: { allok: 'In limit', warn: 'Check', miss: 'Missed', nd: 'No readings', nolimit: 'No limit set' },
   },
 };
 
@@ -66,13 +66,13 @@ function expected() {
   return { read, out, miss: slots - read };
 }
 
-async function open(page, guard, size, rooms) {
+async function open(page, guard, size, rooms, now) {
   const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
   put('BLD-area.csv', rooms || ROOMS);
   put('BLD-area_reading.csv', READINGS);
   const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
   guard.world.file('bld-req', 'BLD-requirement.csv', NEEDS, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
-  await page.clock.setFixedTime(NOW);
+  await page.clock.setFixedTime(now || NOW);
   if (size) await page.setViewportSize({ width: size.width, height: size.height });
   await page.addInitScript(() => localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: 'FAKE-TEST-TOKEN', expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' })));
   await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export\?/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: OUTDOOR }));
@@ -171,7 +171,7 @@ test('colour: no red anywhere; orange only for outside-limit or missed; the outs
         for (const c of cols) {
           if (red.has(c)) bad.push('red on ' + name);
           else if (!allowed.has(c)) bad.push('colour ' + c + ' on ' + name);
-          else if (warn.has(c) && !e.closest('.warn') && !(e.classList.contains('leg-sq') && e.closest('.legend'))) bad.push('orange without a warning on ' + name);
+          else if (warn.has(c) && !e.closest('.warn') && !e.classList.contains('miss') && !(e.classList.contains('leg-sq') && e.closest('.legend'))) bad.push('orange without a warning on ' + name);
           if (outNever.has(c) && e.closest('[data-cal="out"]')) bad.push('warning colour on the outside calendar: ' + name);
         }
       });
@@ -193,8 +193,8 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   expect(await state('2026-01-04')).toBe('nd');      // before any room was in use: nothing needed, no alarm
   expect(await state('2026-01-05')).toBe('allok');
   expect(await state('2026-01-06')).toBe('warn');    // R2 AM outside the limit
-  expect(await state('2026-01-07')).toBe('warn');    // R3 PM missed
-  expect(await state('2026-01-08')).toBe('warn');    // nothing read, rooms in use
+  expect(await state('2026-01-07')).toBe('miss');    // R3 PM missed
+  expect(await state('2026-01-08')).toBe('miss');    // nothing read, rooms in use
   expect(await state('2026-01-12')).toBe('allok');   // today: AM all read, PM still due
   for (const [cls, word] of Object.entries(RULES.audit.dayStates)) {
     const one = page.locator(`#view-a [data-cal="indoors"] button.d.${cls}`).first();
@@ -207,7 +207,8 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM what was done: Fan on, door open');
   await page.locator('#drill .dclose').click();
   await openDay(page, '2026-01-10');
-  await expect(page.locator('#drill .rl', { hasText: 'R1' })).toContainText('PM what was done: not recorded');
+  await expect(page.locator('#drill .rl', { hasText: 'R1' })).toContainText('PM 9.0–14.0');
+  await expect(page.locator('#drill .rl', { hasText: 'R1' })).not.toContainText('what was done');
   await page.locator('#drill .dclose').click();
   await openDay(page, '2026-01-07');
   await expect(page.locator('#drill .rl', { hasText: 'R3' }).locator('.warn')).toHaveText('PM missed');
@@ -253,7 +254,7 @@ test('audit: a room in use with no readings at all is listed and shows missed, n
   await expect(page.locator('#view-d .rtile .rn')).toHaveText(['R1', 'R2', 'R3', 'R5']);
   await expect(page.locator('#view-d .rtile', { hasText: 'R5' }).locator('.warn')).toHaveText(['AM missed', 'PM missed']);
   await page.getByRole('button', { name: 'Heat map' }).click();
-  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('warn');   // R5 missed from the first reading day
+  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('miss');   // R5 missed from the first reading day
   expect((await day(page, '2026-01-04').getAttribute('class')).split(' ')[1]).toBe('nd');     // nothing before readings began
   await page.getByRole('button', { name: 'Month cards' }).click();
   const want = expected();
@@ -372,4 +373,132 @@ test('audit: a room holding a puppy under 4 weeks is judged by the puppy band th
   // R2 has no dogs: the adult band, 12.0–15.0 is in
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
   await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
+});
+
+test('audit: a reading with max lower than min is flagged, even when both figures are inside the limit', async ({ page, guard }) => {
+  const rows = R.map((r, i) => {
+    if (r[0] === 'area-r1' && r[1] === '2026-01-05' && r[2] === 'am') return ['area-r1', '2026-01-05', 'am', '22.0', '18.0', ''];
+    return r;
+  });
+  const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camera_value_changed,taken_by,mitigation_note\n'
+    + rows.map((r, i) => ['rdg-' + i, r[0], r[1] + 'T' + (r[2] === 'am' ? '09' : '16') + ':00:00Z', r[1] + 'T' + (r[2] === 'am' ? '00' : '12') + ':00:00+00:00', r[3], r[4], 'camera', 'true', 'stf-1', '"' + r[5] + '"'].join(',')).join('\n') + '\n';
+  await open(page, guard);
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  put('BLD-area_reading.csv', readings);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('warn');
+  await openDay(page, '2026-01-05');
+  const r1 = page.locator('#drill .rl', { hasText: 'R1' });
+  await expect(r1.locator('.warn').first()).toHaveText('AM 22.0–18.0 · max lower than min');
+  await expect(r1).toContainText('PM 12.5–16.0 ✓');
+  await expect(r1).not.toContainText('AM 22.0–18.0 ✓');
+  const dir = process.env.MINMAX_SHOTS_DIR || test.info().outputDir;
+  fs.mkdirSync(dir, { recursive: true });
+  await page.locator('#drill').screenshot({ path: path.join(dir, 'history-swapped.png') });
+  await page.locator('#drill .dclose').click();
+  await page.getByRole('button', { name: 'The round' }).click();
+  await page.locator('#rdate').fill('2026-01-05');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile', { hasText: 'R1' }).locator('.warn')).toContainText('AM 22.0–18.0 · max lower than min');
+  await page.screenshot({ path: path.join(dir, 'history-round-swapped.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Month cards' }).click();
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-swap', '1');
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toContainText('1 max lower than min');
+});
+
+// Lisa 12 Nov 2026 (t957u/t958u): July/August cells take their colour from the day's readings and the standing
+// limits (empty from_date / to_date, as on the live band table). Invented rooms and figures only. Outside the
+// limit is solid orange (.warn); a missed needed reading is an orange outline (.miss). The day panel does not
+// repeat empty "what was done" lines or "(from …)" source text.
+test('audit: July and August indoor days colour from the readings; missed is an outline, outside-limit is solid', async ({ page, guard }) => {
+  const rows = R.slice();
+  const addRow = (aid, day, slot, min, max, note) => rows.push([aid, day, slot, min, max, note || '']);
+  for (const aid of ['area-r1', 'area-r2', 'area-r3']) {
+    addRow(aid, '2026-07-10', 'am', aid === 'area-r1' ? '25.0' : '18.0', aid === 'area-r1' ? '28.2' : '22.0');
+    addRow(aid, '2026-07-10', 'pm', '18.0', '22.0');
+    addRow(aid, '2026-07-12', 'am', '18.0', '22.0');
+    addRow(aid, '2026-07-12', 'pm', '18.0', '22.0');
+    addRow(aid, '2026-08-10', 'am', '12.0', '15.0');
+    addRow(aid, '2026-08-10', 'pm', '12.5', '16.0');
+  }
+  const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camera_value_changed,taken_by,mitigation_note\n'
+    + rows.map((r, i) => ['rdg-' + i, r[0], r[1] + 'T' + (r[2] === 'am' ? '09' : '16') + ':00:00Z', r[1] + 'T' + (r[2] === 'am' ? '00' : '12') + ':00:00+00:00', r[3], r[4], 'camera', 'true', 'stf-1', '"' + r[5] + '"'].join(',')).join('\n') + '\n';
+  const bands = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date,note\n'
+    + 'tb-p,under four weeks,0,28,26,28,,,""\n'
+    + 'tb-a,four weeks and over,29,,10,26,,,"standing limit"\n';
+  await open(page, guard, null, ROOMS, new Date('2026-11-12T20:00:00'));
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  const upsert = (id, name, content) => {
+    const f = guard.world.files.find((x) => x.name === name);
+    if (f) { f.content = content; f.size = String(content.length); }
+    else guard.world.file(id, name, content, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  };
+  upsert('bld-readings', 'BLD-area_reading.csv', readings);
+  upsert('bld-band', 'BLD-temperature_band.csv', bands);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  const dayM = (iso) => {
+    const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+iso.slice(5, 7) - 1];
+    return page.locator(`#view-a [data-cal="indoors"] button.d[title^="${+iso.slice(8)} ${mon} 2026 indoors"]`);
+  };
+  expect((await dayM('2026-07-10').getAttribute('class')).split(' ')[1]).toBe('warn');
+  expect((await dayM('2026-07-11').getAttribute('class')).split(' ')[1]).toBe('miss');
+  expect((await dayM('2026-08-10').getAttribute('class')).split(' ')[1]).toBe('allok');
+  await expect(page.locator('.legend')).toContainText('Outside limit');
+  await expect(page.locator('.legend')).toContainText('Missed');
+  await expect(page.locator('.legend')).not.toContainText('Outside limit or missed');
+  const paint = (iso) => dayM(iso).evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { bg: s.backgroundColor, shadow: s.boxShadow };
+  });
+  const julyWarn = await paint('2026-07-10');
+  const julyMiss = await paint('2026-07-11');
+  expect(julyWarn.bg, 'outside limit is a solid fill, missed is not').not.toBe(julyMiss.bg);
+  expect(julyMiss.shadow, 'a missed day keeps an orange frame').toContain('rgb');
+  await dayM('2026-07-10').click();
+  await expect(page.locator('#drill')).toBeVisible();
+  const drillBox = await page.locator('#drill').evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { radius: s.borderTopLeftRadius, border: s.borderTopWidth };
+  });
+  expect(drillBox.radius).not.toBe('0px');
+  expect(drillBox.border).toBe('1px');
+  const outLine = page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first();
+  await expect(outLine).toHaveText('AM 25.0–28.2');
+  await expect(outLine).not.toHaveClass(/\bmiss\b/);
+  await expect(page.locator('#drill')).not.toContainText('what was done');
+  await expect(page.locator('#drill')).not.toContainText('(from');
+  const rowFrame = await page.locator('#drill .rl').first().evaluate((el) => getComputedStyle(el).borderTopWidth);
+  expect(rowFrame).toBe('1px');
+  await page.locator('#drill .dclose').click();
+  await dayM('2026-07-11').click();
+  const missed = page.locator('#drill span.miss');
+  await expect(missed.first()).toBeVisible();
+  await expect(missed.first()).toHaveClass(/\bwarn\b/);
+  expect(await page.locator('#drill span.warn').count()).toBe(await page.locator('#drill span.warn.miss').count());
+  await page.locator('#drill .dclose').click();
+  // A limit typed with from_date of today still colours a July reading (standing guidance, entered late).
+  upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,10,26,2026-11-12,\n');
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  expect((await dayM('2026-07-10').getAttribute('class')).split(' ')[1]).toBe('warn');
+  // A puppy row already in force must not hide the adult row that was typed later. 18–22 is inside 10–26, so the day is in limit, not an uncoloured pale cell.
+  upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\n'
+    + 'tb-p,under four weeks,0,28,26,28,,\n'
+    + 'tb-a,four weeks and over,29,,10,26,2026-11-12,\n');
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  expect((await dayM('2026-07-12').getAttribute('class')).split(' ')[1]).toBe('allok');
+  const julyIn = await paint('2026-07-12');
+  const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
+  expect(julyIn.shadow).not.toBe('none');
 });

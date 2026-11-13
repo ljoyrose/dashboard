@@ -155,3 +155,56 @@ test('a later version of the enrolled scheme takes over on its own date; old rec
   assert.equal(later.byId.a1.lines[0].rules_then, true);
   assert.match(View.lineHtml({ esc }, later.byId.a1.lines[0]), /rules then/);
 });
+
+/* Mock-up screens (12 Nov 2026): list row, Information fold, verdict box, must-pass star */
+function pointsTables() {
+  return tables({
+    'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', target_points: '6' }],
+    'BLD-score_band.csv': [
+      { id: 'g', scheme_id: 's1', kind: 'gate', label: 'Must pass', colour: 'red', sort_order: '1' },
+      { id: 'h', scheme_id: 's1', kind: 'points', label: 'Health', colour: 'orange', sort_order: '2' },
+      { id: 't', scheme_id: 's1', kind: '', label: 'TOTAL' }],
+    'BLD-score_criterion.csv': [
+      { id: 'c', scheme_id: 's1', band_id: 'g', label: 'Check', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on' },
+      { id: 'h1', scheme_id: 's1', band_id: 'h', label: 'Hips', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on' },
+      { id: 'h2', scheme_id: 's1', band_id: 'h', label: 'Eyes', evidence_source: 'BLD-eyes', answer_field: 'r', date_field: 'on' }],
+    'BLD-score_point.csv': [
+      { id: 'p', criterion_id: 'c', answer_match: 'is:ok', gate_outcome: 'pass' },
+      { id: 'p1', criterion_id: 'h1', answer_match: 'is:ok', points: '4' }, { id: 'p0', criterion_id: 'h1', answer_match: 'any', points: '0' },
+      { id: 'p2', criterion_id: 'h2', answer_match: 'is:ok', points: '5' }],
+    'BLD-subject.csv': [{ id: 'a1', name: 'Alpha', dob: '2023-01-15' }, { id: 'a2', name: 'Beta' }]
+  });
+}
+const hubDogs = { a1: { id: 'a1', sex: 'Female', breed: 'Example breed', photo: 'PHOTOID12345', chip: '900000000004821', colour: { name: 'Chocolate' }, state: 'Active', littersAsDam: [{}, {}] } };
+
+test('age reads in years and months on the day given', () => {
+  assert.equal(View.age('2023-01-15', '2026-08-14'), '3 yrs 6 mths');
+  assert.equal(View.age('2026-05-01', '2026-06-01'), '1 mth');
+  assert.equal(View.age('', '2026-06-01'), '');
+});
+
+test('a list row shows the photo inside the score ring, sex and age, and the verdict word', () => {
+  const v = { T: pointsTables(), today: '2026-08-14', esc, dogs: hubDogs, photoId: (x) => x };
+  const html = View.page(v);
+  assert.match(html, /bb-ring[\s\S]*data-photo-id="PHOTOID12345"/);
+  assert.match(html, /Female, 3 yrs 6 mths/);
+  assert.match(html, /bb-vw[\s\S]*Unverified/);
+});
+
+test('the dog page has the Information fold, the verdict box and a star on must-pass lines', () => {
+  View.open('a1');
+  const v = { T: pointsTables(), today: '2026-08-14', esc, dogs: hubDogs, photoId: (x) => x };
+  const html = View.page(v);
+  View.open('');
+  assert.match(html, /Information[\s\S]*Born 15 Jan 2023[\s\S]*Chocolate[\s\S]*Chip \.\.\.4821[\s\S]*2 litters/);
+  assert.match(html, /4 earned<\/span><span>5 to prove<\/span><span>0 lost/);
+  assert.match(html, /bb-tmark" style="left:66\.6/);
+  assert.match(html, /aria-label="Must pass"[\s\S]*Check/);
+  assert.match(html, /5 points still to prove could reach the target/);
+});
+
+test('band stats split each points section into earned and to prove', () => {
+  const c = View.compute({ T: pointsTables(), today: '2026-08-15', esc });
+  const st = View.bandStats(c.byId.a1);
+  assert.deepEqual(st.map((o) => [o.band.id, o.max, o.earned, o.unv]), [['h', 9, 4, 5]]);
+});

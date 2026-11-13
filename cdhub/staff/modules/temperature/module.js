@@ -311,9 +311,11 @@
     function check() {
       requestId = null;
       var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx));
+      var pe = (window.BLDTempPair && mx && mn) ? window.BLDTempPair.error(mn, mx) : '';
       noteRow.hidden = !b;
+      [minIn, maxIn].forEach(function (i) { i.classList.toggle('swap', !!pe); });
       if ((maxIn.value && !mx) || (minIn.value && !mn)) setMsg(checkMsg, 'One decimal place, e.g. 18.5', 'bad');
-      else if (mx && mn && parseFloat(mn) > parseFloat(mx)) setMsg(checkMsg, 'MIN is higher than MAX. Wrong way round?', 'bad');
+      else if (pe) setMsg(checkMsg, pe, 'bad');
       else if (b) setMsg(checkMsg, (b === 'low' ? 'Below' : 'Above') + ' the limit.', 'bad');
       else setMsg(checkMsg, '');
     }
@@ -322,7 +324,7 @@
       var empty = emptyIn.checked; none = empty && !maxIn.value.trim() && !minIn.value.trim();
       if (!none && (!mx || !mn)) { setMsg(msg, empty ? 'Type MAX and MIN, or leave both blank.' : 'Type MAX and MIN, one decimal place.', 'bad'); return; }
       if (sp === null) { setMsg(msg, 'Bed spot: one decimal place, or leave it empty.', 'bad'); return; }
-      if (!none && parseFloat(mn) > parseFloat(mx)) { setMsg(msg, 'MIN is higher than MAX. Check the screen.', 'bad'); return; }
+      if (!none && window.BLDTempPair && window.BLDTempPair.swapped(mn, mx)) { setMsg(msg, window.BLDTempPair.message, 'bad'); return; }
       var b = empty ? null : breach(lim, num(mn), num(mx));
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
@@ -359,8 +361,10 @@
           setMsg(msg, (r.code === 'DUPLICATE' ? 'Already saved for this ' + slot.label.toLowerCase() + '.' : r.message) + extra, 'bad'); return;
         }
         form.hidden = true; camBox.textContent = ''; camMsg.textContent = '';
+        // Lisa 12 Nov 2026: the item shows its tick as soon as the save reply is OK, even if CLR pressed / Done is never tapped
+        if (o.onSaved) o.onSaved(f);
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
-          h('div', { class: 'nm', text: r.status === 'queued' ? 'Sent' : 'Saved' }),
+          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') }),
           past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' })
         ]));
         host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(f); } }));
@@ -405,7 +409,8 @@
           o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot,
             dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length,
             limit: limitFor(a.id, o.bands, (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }), slot.date),
-            onDone: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); show(); } }));
+            onSaved: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); },
+            onDone: function () { show(); } }));
         } }, [h('div', { class: 'nm', text: (done[k] ? '✓ ' : '') + a.label }), done[k] ? h('div', { class: 'ds', text: 'Already has a reading' }) : null]));
       });
       list.appendChild(cards);
@@ -430,7 +435,7 @@
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
       stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
-        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onDone: function (f) { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = f || true; list(); } });
+        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = f || true; }, onDone: function () { list(); } });
     }
     /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
     function cardState(a, d) {
@@ -655,11 +660,14 @@
       out.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
     }
     function rowBreach(r, lo, hi) {
+      var swapped = r.min !== null && r.max !== null && r.min > r.max;
+      var hadNote = !!r.note;
+      if (swapped) { r.flag = true; r.note = [r.note, 'max lower than min'].filter(Boolean).join(' · '); }
       if (r.kind !== 'staff') return;
       var outside = (lo !== null && r.min !== null && r.min < lo) || (hi !== null && r.max !== null && r.max > hi);
       // Room empty (Lisa 11 Nov 2026): an outside reading is flagged with the caveat, never counted as outside the limit.
-      if (r.empty) { r.flag = outside; r.breach = false; return; }
-      r.breach = !!r.note || outside;
+      if (r.empty) { r.flag = !!(r.flag || outside); r.breach = false; return; }
+      r.breach = hadNote || outside;
     }
   }
   /** Rows of one room and year from the three lists, oldest first. Guest and sensor rows are labelled, never merged. */
@@ -699,7 +707,7 @@
       '.tg-guide{position:absolute;left:6%;right:6%;top:50%;transform:translateY(-50%);aspect-ratio:2.2/1;border:3px solid var(--accent);border-radius:10px;box-shadow:0 0 0 999px color-mix(in srgb,var(--ljr-ink) 35%,transparent)}' +
       '.tg-guide span{position:absolute;right:4px;font:700 11px var(--body);color:var(--ljr-paper);background:var(--accent);padding:0 4px;border-radius:4px}.tg-max{top:2px}.tg-min{bottom:2px}' +
       '.tg-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tg-f{display:grid;font-size:13px;font-weight:700;color:var(--mut)}.tg-f[hidden]{display:none}' +
-      '.tg-pair .inp{font-size:24px;text-align:center}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
+      '.tg-pair .inp{font-size:24px;text-align:center}.tg-pair .inp.swap{outline:2px solid var(--ljr-3);background:var(--ljr-3-tint,var(--soft))}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
       '.tg-empty{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:700;margin:8px 0}.tg-empty input{width:24px;height:24px}' +
       '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}.tg-out{border-left-color:var(--ljr-3)}.tg-warn{color:var(--ljr-3-text);font-weight:700}' +
       '.tg-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 14px}.tg-tab th,.tg-tab td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}' +
