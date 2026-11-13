@@ -340,7 +340,7 @@ var VisitView = (function () {
     var id = r.result.link_id;
     (v.T['BLD-inspect_link.csv'] = v.T['BLD-inspect_link.csv'] || []).push({ id: id, visitor_name: F.visitor_name, organisation: F.organisation, starts_at: F.starts_at || new Date().toISOString(),
       ends_at: F.ends_at || new Date(Date.now() + parseFloat(F.hours) * 36e5).toISOString(), visit_type_id: t.id, card_tag_id: F.card_tag_id || '' });
-    S.mode = ''; S.f = null; S.ok = id; S.url = r.result.url || ''; S.msg = '';
+    S.mode = ''; S.f = null; S.ok = id; S.url = r.result.url || ''; S.msg = F.email && r.result.email_sent === false ? 'Email not sent: send the link yourself.' : '';
     return '';
   }
 
