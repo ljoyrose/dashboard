@@ -23,7 +23,7 @@
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link'], ['subject_link', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -85,11 +85,19 @@
     out.sort(function (a, b) { return a.localeCompare(b); });
     return out.length ? h('div', { class: 'jobs', 'data-k': 'jobs' }, out.map(function (n) { return h('span', { class: 'job', text: n }); })) : null; }
   function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
+  /* BFFs / Fren. (Lisa 13 Nov 2026): dated link rows, words from link_kind.* rules; up to 3 names, then +n */
+  function linksOf(id) {
+    if (typeof BLDLinks === 'undefined') return [];
+    var names = {}; (T.subject || []).forEach(function (x) { names[x.id] = x.name || x.id; });
+    return BLDLinks.forDog(T.subject_link || [], T.breeding_rule || [], id, BLDNeeds.today()).map(function (g) {
+      var n = g.ids.map(function (x) { return names[x] || x; });
+      return { label: g.label + ':', names: n.slice(0, 3).join(', ') + (n.length > 3 ? ' +' + (n.length - 3) : '') }; }); }
   function dogCard(tag, it) {
     var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s);
     if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
+    linksOf(s.id).forEach(function (g) { rows.push([g.label, g.names]); });
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
       h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band ? h('small', { 'data-size': sizeKey(s.size_band) }, sizeLines(s.size_band)) : null]),
       h('div', { class: 'dbody' }, [
