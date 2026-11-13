@@ -162,3 +162,15 @@ test('a whole-site job about dogs: shown on each dog and room it covers, done on
   const old = Object.assign(line('d2'), { taken_at: '2026-02-27T09:00:00Z' });
   assert.equal(one({ dogs }, [line('d1'), old]).days_late, 2);
 });
+
+test("a visitor's record is kept separate unless that visit counts the job", () => {
+  const types = [T('clean', 'area', '1')];
+  const room = { area_id: 'r1' };
+  const rec = (visit) => ({ id: 'v-l', check_type_id: 'cty-clean-1', area_id: 'r1', outcome: 'ok', visit_id: visit, taken_at: '2026-03-02T09:00:00Z' });
+  const one = (logs, visits) => D.forTarget(types, logs, room, '2026-03-02', visits)[0].status;
+  assert.equal(one([rec('vl1')]), 'never');                                                        // no visit rows given: left out
+  assert.equal(one([rec('vl1')], [{ id: 'vl1', record_counts: '' }]), 'never');                     // default: kept separate
+  assert.equal(one([rec('vl1')], [{ id: 'vl1', record_counts: 'feed|clean' }]), 'ok');              // the visit counts this job
+  assert.equal(one([rec('vl2')], [{ id: 'vl1', record_counts: 'clean' }]), 'never');                // another visit's grant does not carry over
+  assert.equal(one([Object.assign(rec(''), { visit_id: '' })]), 'ok');                              // a staff record is unchanged
+});
