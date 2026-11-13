@@ -6,12 +6,15 @@ const { tabClick } = require('../support/tabs');
 const sha = (t) => 'sha256:' + require('crypto').createHash('sha256').update(t, 'utf8').digest('hex');
 const SINK = 'https://script.google.com/macros/s/PRETEND-visits/exec';
 const FV = 'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason\nfv-1,ten-x,area,*,aud-staff,yes,,,test,2026-10-16,x\n';
-const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz,issued_by,delegation_id';
+const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,usable_from,usable_to,visit_type_id,person_id,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,as_of_from,as_of_to,email_code,revoked_at,revoked_by,revoke_reason,id_checked_by,accompanied_by,tz,issued_by,delegation_id,supersedes_id';
 const LINK = [LINK_H,
-  'il-old,ten-x,ic-1,Old style,2099-12-31,2026-11-01,test,,,,,,,,,,,,,,,,,,,,,',
-  'il-live,ten-x,ic-2,Pretend Inspector,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-1,view|review,subject,,,,,,,,,,,,,',
-  'il-soon,ten-x,ic-3,Pretend Vet,,2026-11-01,test,2098-05-01T09:00:00+01:00,2098-05-01T11:00:00+01:00,vt-1,,,,view,subject,,,,,,,,,,,,sc-a,dl-1',
-  'il-done,ten-x,ic-4,Pretend Ended,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-2,view,,,,,,,2021-01-01T10:00:00+00:00,owner,left,,,,,',
+  'il-old,ten-x,ic-1,Old style,2099-12-31,2026-11-01,test,,,,,,,,,,,,,,,,,,,,,,',
+  'il-live,ten-x,ic-2,Pretend Inspector,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-1,view|review,subject,,,,,,,,,,,,,,',
+  'il-soon,ten-x,ic-3,Pretend Vet,,2026-11-01,test,2098-05-01T09:00:00+01:00,2098-05-01T11:00:00+01:00,vt-1,,,,view,subject,,,,,,,,,,,,sc-a,dl-1,',
+  'il-done,ten-x,ic-4,Pretend Ended,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-2,view,,,,,,,2021-01-01T10:00:00+00:00,owner,left,,,,,,',
+  'il-live2,ten-x,,,,,,,2099-01-02T17:00:00+00:00,,,,,,,,,,,,,,,,,,,,il-live',
+  'il-gone,ten-x,ic-5,Pretend Revoked,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,,view,,,,,,,,,,,,,,,',
+  'il-gone2,ten-x,,,,,,,,,,,,,,,,,,,2021-02-02T10:00:00+00:00,owner,left,,,,,,il-gone',
 ].join('\n') + '\n';
 const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source';
 const TYPES = [TYPE_H,
@@ -73,6 +76,8 @@ test.describe('CD Hub Visits', () => {
     await expect(live).toContainText('Visitor 1');
     await expect(live).toContainText('Old style');
     await expect(live).not.toContainText('Pretend Ended');
+    await expect(live).not.toContainText('Pretend Revoked');   // a later row revoked it: nothing is edited
+    await expect(live.locator('[data-vis-link="il-live"]')).toContainText('02/01/99');   // the extension row's end, sent as the root id
     await expect(soon).toContainText('Pretend Vet');
     await expect(soon).toContainText('01/05/98');
     await expect(page.locator('[data-adm-open="visits"] small')).toHaveText('2 here now');
@@ -102,6 +107,7 @@ test.describe('CD Hub Visits', () => {
     await expect(f.locator('[name="hours"]')).toHaveValue('4');
     await f.locator('[name="name"]').fill('Pretend Person');
     await f.locator('[name="org"]').fill('Pretend Council');
+    await f.locator('[name="purpose"]').fill('Annual inspection');
     await f.locator('[name="hours"]').fill('20');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('#adm-visits [role="status"]')).toContainText('Longest for Pretend Inspector type is 12 hours');
@@ -111,7 +117,7 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('.vis-row[data-vis-link="il-new"] .adm-ok')).toBeVisible();
     const b = bodies[0];
     expect(b.action).toBe('visit_give');
-    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', starts_at: '', hours: '3', rights: ['view', 'review'], lists: ['subject', 'microchip'], subject_ids: [] });
+    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: 'voluntary', identity_assurance: 'none', rights: ['view', 'review'], lists: ['subject', 'microchip'], subject_ids: [] });
   });
 
   test('Give a visit by link, scheduled: DD/MM/YY HH:MM, email code from the type; the link shows once', async ({ page }) => {
@@ -123,6 +129,7 @@ test.describe('CD Hub Visits', () => {
     await page.locator('form[data-vis-form="give"] [name="win"][value="sched"]').check();
     const f = page.locator('form[data-vis-form="give"]');
     await f.locator('[name="name"]').fill('Pretend Remote');
+    await f.locator('[name="purpose"]').fill('Records check');
     await f.locator('[name="fd"]').fill('01/05/98'); await f.locator('[name="ft"]').fill('09:00');
     await f.locator('[name="td"]').fill('01/05/98'); await f.locator('[name="tt"]').fill('08:00');
     await f.locator('button[type="submit"]').click();
@@ -135,8 +142,8 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('.vis-url')).toHaveText('https://example.test/inspect/#t=PRETEND');
     const b = bodies[0].fields;
     expect(b.card_tag_id).toBeUndefined();
-    expect(b.starts_at).toMatch(/^2098-05-01T09:00:00[+-]\d\d:\d\d$/);
-    expect(b.ends_at).toMatch(/^2098-05-01T11:30:00[+-]\d\d:\d\d$/);
+    expect(b.usable_from).toMatch(/^2098-05-01T09:00:00[+-]\d\d:\d\d$/);
+    expect(b.usable_to).toMatch(/^2098-05-01T11:30:00[+-]\d\d:\d\d$/);
     expect(b.email).toBe('someone@example.test');
     await page.locator('[data-vis-url]').click();
     await expect(page.locator('.vis-url')).toHaveCount(0);
@@ -150,6 +157,9 @@ test.describe('CD Hub Visits', () => {
     await page.locator('[data-vis-mode="give"]').click();
     const f = page.locator('form[data-vis-form="give"]');
     await f.locator('[name="name"]').fill('Pretend Person');
+    await f.locator('button[type="submit"]').click();
+    await expect(page.locator('#adm-visits [role="status"]')).toContainText('Type the purpose');
+    await f.locator('[name="purpose"]').fill('Visit');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('#adm-visits [role="status"]')).toHaveText('NOT saved — That card already has a visit then.');
     await expect(page.locator('#adm-visits .adm-ok')).toHaveCount(0);
