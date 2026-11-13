@@ -105,9 +105,12 @@ function inspectSinkRead_(req, who, now) {
   var rd = READABLE[key], subjCol = INSPECT.LISTS[key], today = todayLondon_(now);
 
   var link = inspectRead_(INSPECT.LINK_FILE).records.filter(function (r) {
-    return r.tenant_id === tenant && who.id && r.code_id === who.id && (!who.link_id || r.id === who.link_id);
+    if (r.tenant_id !== tenant) return false;
+    if (who.card) return r.id === who.link_id && !!r.card_tag_id;             // a visitor card (Visit.gs)
+    return who.id && r.code_id === who.id && (!who.link_id || r.id === who.link_id);
   })[0];
   if (!link) throw denied;
+  if (String(link.ended_at || '')) throw err_('WINDOW', 'This visit has ended.');
 
   var cols = {};
   inspectRead_(INSPECT.FIELD_FILE).records.forEach(function (r) {

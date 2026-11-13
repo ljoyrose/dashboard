@@ -196,3 +196,47 @@ test('visit_extend: moves the end on the row and the code; capped by the type; n
   post(e, 'visit_end', { link_id: id, reason: 'Done' });
   assert.equal(post(e, 'visit_extend', { link_id: id, hours: '1', reason: 'x' }).code, 'ALREADY_ENDED');
 });
+
+// ---- Part C: visit_open and reads with a card tag
+const open = (e, f) => JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(Object.assign({ v: 1, action: 'visit_open' }, f)) } }).getContent());
+const cardRead = (e, t, table) => JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify({ v: 1, action: 'read', t, table }) } }).getContent());
+
+test('visit_open (card): free card shows nothing; a scheduled visit says when it opens; live reads only its rows; WINDOW outside', () => {
+  const e = benv();
+  const t = typeId(e);
+  const add = post(e, 'card_add', { label: 'Visitor 1' }).result;
+  assert.deepEqual(open(e, { t: add.tag }).result, { state: 'free' });
+  assert.equal(open(e, { t: 'vc' + 'a'.repeat(26) }).code, 'BAD_CODE');
+  assert.equal(open(e, { t: 'nonsense' }).code, 'BAD_CODE');
+  const g = give(e, { visit_type_id: t, card_tag_id: add.tag_id, hours: '', starts_at: '2026-10-16T09:00', ends_at: '2026-10-16T12:00' });
+  assert.equal(g.ok, true, JSON.stringify(g));
+  const soon = open(e, { t: add.tag }).result;
+  assert.equal(soon.state, 'opens');
+  assert.equal(soon.who, 'Pat Example');
+  assert.equal(cardRead(e, add.tag, 'subject').code, 'WINDOW');
+  e.nowMs = Date.parse('2026-10-16T10:00:00+01:00');
+  const live = open(e, { t: add.tag }).result;
+  assert.equal(live.state, 'live');
+  assert.deepEqual(live.rights, ['view', 'review']);
+  assert.deepEqual(live.record_jobs, []);
+  const s = cardRead(e, add.tag, 'subject');
+  assert.equal(s.ok, true, JSON.stringify(s));
+  assert.deepEqual(s.result.fields, ['id', 'name', 'chip_number']);
+  assert.equal(s.result.rows.length, 1);
+  assert.equal(cardRead(e, add.tag, 'health_screen').ok, false);   // not one of its lists
+  const log = e.ctx.store_read_('BLD-inspect_access.csv', true).records;
+  assert.equal(log.length, 1);
+  assert.equal(log[0].code_id, 'card:' + add.tag_id);
+  post(e, 'visit_end', { link_id: g.result.link_id, reason: 'Left early' });
+  assert.equal(cardRead(e, add.tag, 'subject').code, 'WINDOW');
+  assert.deepEqual(open(e, { t: add.tag }).result, { state: 'free' });   // the card can be given again
+});
+
+test('visit_open (link code): live, then ended after End now; a staff code is not a visit', () => {
+  const e = benv();
+  const g = give(e, { visit_type_id: typeId(e) });
+  assert.equal(open(e, { c: g.result.code }).result.state, 'live');
+  assert.equal(open(e, { c: e.codes.staff }).code, 'BAD_CODE');
+  post(e, 'visit_end', { link_id: g.result.link_id, reason: 'Done' });
+  assert.deepEqual(open(e, { c: g.result.code }).result, { state: 'ended' });
+});

@@ -402,3 +402,110 @@ function sinkVisitExtend_(req) {
     return { status: 'saved', link_id: linkId, ends_at: endsAt, logged: visitEvent_(now, who, 'visit_extended', linkId, 'to ' + endsAt + ': ' + reason) };
   });
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Part C: a visitor opens a visit with a link code (c) or a printed card's tag (t). No staff code.
+ *   - visit_open says whether the visit is live, opens later, has ended, or (a card) is free. A free or ended visit
+ *     shows nothing else. A wrong code or tag counts toward the same lock-out as a wrong staff code.
+ *   - read with t: a card visit reads exactly as a link visit does (its own dog and field rows), only while live;
+ *     outside its window the answer is WINDOW. A scan opens a page; it never proves anyone was there.
+ * --------------------------------------------------------------------------------------------------------------- */
+var CARD_TAG_RE_ = /^vc[a-z2-9]{26}$/;
+
+function visitBadTag_() {
+  authNoteFailure_();
+  return err_('BAD_CODE', 'That card or link was not recognised.');
+}
+
+/** The card's qr_tag row for a scanned tag, or throws BAD_CODE. */
+function visitCard_(t) {
+  if (authBlocked_()) throw err_('TOO_MANY_TRIES', 'Too many wrong codes recently. Try again in a few minutes.');
+  t = String(t || '').trim();
+  if (!CARD_TAG_RE_.test(t)) throw visitBadTag_();
+  var tags = store_read_(VISIT_.TAG_FILE, false);
+  if (!tags) throw visitBadTag_();
+  var hash = visitCardHash_(t);
+  var card = visitMine_(tags).filter(function (r) { return r.kind === VISIT_.CARD_KIND && r.tag === hash && r.active === 'true'; })[0];
+  if (!card) throw visitBadTag_();
+  return card;
+}
+
+/** The card's live visit, else the next one to open, else null. */
+function visitForCard_(L, cardId, nowMs) {
+  var tenant = prop_(BLD.PROP.TENANT_ID), live = null, next = null;
+  L.records.forEach(function (r) {
+    if (r.tenant_id !== tenant || r.card_tag_id !== cardId) return;
+    var st = visitState_(r, nowMs);
+    if (st === 'live') live = r;
+    else if (st === 'opens' && (!next || String(r.starts_at) < String(next.starts_at))) next = r;
+  });
+  return live || next;
+}
+
+/** For a read with t: the visitor as sinkRead_ needs it, only while the card's visit is live. */
+function visitCardWho_(t, now) {
+  var card = visitCard_(t), L = inspectRead_(INSPECT.LINK_FILE), nowMs = now.getTime();
+  var r = visitForCard_(L, card.id, nowMs);
+  if (!r) throw err_('WINDOW', 'This card has no visit right now.');
+  if (visitState_(r, nowMs) !== 'live') throw err_('WINDOW', 'This card opens ' + externalShow_(r.starts_at) + '.');
+  return { who: 'Visitor - ' + r.label, role: ROLE_INSPECTOR, id: 'card:' + card.id, link_id: r.id, ends: r.ends_at || '', card: true };
+}
+
+/** Rows of a file in force today by key (latest effective_from <= today, active), picked columns only. */
+function visitJobs_(keys, today) {
+  if (!keys.length) return [];
+  var ct = store_read_('BLD-check_type.csv', false);
+  if (!ct) return [];
+  var rows = visitMine_(ct), want = ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label',
+    'note_required', 'asks_outcome', 'group', 'sop', 'evidence'];
+  var out = [];
+  keys.forEach(function (k) {
+    var r = visitTypeInForce_(rows, k, today);
+    if (!r || String(r.active) === 'false') return;
+    var o = { id: r.id };
+    want.forEach(function (c) { if (ct.header.indexOf(c) >= 0) o[c] = String(r[c] == null ? '' : r[c]); });
+    out.push(o);
+  });
+  return out;
+}
+
+/** Review words: BLD-status_label rows in group 'review' (none until the owner adds them; nothing fixed here). */
+function visitReviewWords_() {
+  var sl = store_read_('BLD-status_label.csv', false);
+  if (!sl || sl.header.indexOf('group') < 0) return [];
+  return sl.records.filter(function (r) { return r.group === 'review' && r.code; }).map(function (r) {
+    return { id: r.code, label: r.label || r.code, needs_action: String(r.needs_action) === 'true' };
+  });
+}
+
+function sinkVisitOpen_(req) {
+  if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
+  if (!readEnabled_()) throw err_('READ_OFF', 'Reading from the records is switched off.');
+  if (!visitOn_()) throw err_('TABLE_OFF', 'Visits are switched off.');
+  var f = req.fields && typeof req.fields === 'object' ? req.fields : req;
+  var now = new Date(), nowMs = now.getTime(), L = inspectRead_(INSPECT.LINK_FILE), tenant = prop_(BLD.PROP.TENANT_ID), r = null, off = false;
+  if (f.t) {
+    var card = visitCard_(f.t);
+    r = visitForCard_(L, card.id, nowMs);
+    if (!r) return { state: 'free' };
+  } else {
+    if (authBlocked_()) throw err_('TOO_MANY_TRIES', 'Too many wrong codes recently. Try again in a few minutes.');
+    var c = String(f.c || '').trim(), salt = prop_(BLD.PROP.SALT);
+    if (!c || !salt) throw visitBadTag_();
+    var entry = registry_()[hashCode_(c, salt)];
+    if (!entry || entry.role !== ROLE_INSPECTOR || !entry.link_id) throw visitBadTag_();
+    off = entry.active === false || !!entry.revoked_at;
+    r = L.records.filter(function (x) { return x.tenant_id === tenant && x.id === entry.link_id; })[0];
+    if (!r) throw visitBadTag_();
+  }
+  var state = off ? 'ended' : visitState_(r, nowMs);
+  if (state === 'ended') return { state: 'ended' };
+  var split = function (v) { return String(v || '').split('|').filter(String); };
+  var rights = r.rights ? split(r.rights) : ['view'];
+  return {
+    state: state, starts_at: r.starts_at || r.made_at, ends_at: r.ends_at || inspectEndOfDay_(r.ends), who: r.visitor_name || r.label,
+    org: r.organisation || '', rights: rights, lists: split(r.lists),
+    record_jobs: rights.indexOf('record') >= 0 ? visitJobs_(split(r.record_jobs), todayLondon_(now)) : [],
+    review_words: rights.indexOf('review') >= 0 ? visitReviewWords_() : []
+  };
+}
