@@ -90,10 +90,10 @@
     (visits || []).forEach(function (v) { if (v && v.id) m[v.id] = listOf(v.record_counts); });
     return m;
   }
-  /** The visit a record was saved under: taken_by 'visit:<link id>' (or a visit_id column, if one is ever added); '' for staff. */
+  /** The visit a record was saved under: taken_by 'visit:<link id>' (or its visit_id / grant_id column); '' for staff. */
   function visitOf(log) {
     var by = String(log.taken_by || '');
-    return log.visit_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');
+    return log.visit_id || log.grant_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');   // grant_id: the planned name for visit_id (schema Q-N2)
   }
   function counts(log, version, vm) {
     var visit = visitOf(log);
