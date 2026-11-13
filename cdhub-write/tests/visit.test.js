@@ -330,7 +330,7 @@ test('grant_record: only jobs on the visit; through the normal check path; taken
 });
 
 // ---- // ---- Delegated admin (Delegate.gs): give_visit conferred by the owner, never implied by a role
-const DELEG_H = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_date,to_date,grant_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes';
+const DELEG_H = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_date,to_date,grant_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,set_by,set_on,source,notes,created_at,updated_at';
 function genv() {
   const e = benv();
   e.addFile('BLD-delegation.csv', DELEG_H + '\r\n');
@@ -374,7 +374,7 @@ test('delegation: passing on is never wider or deeper; ending a row ends those b
   assert.equal(child.ok, true, JSON.stringify(child));
   const c = delegRows(e).filter((r) => r.id === child.result.id)[0];
   assert.equal(c.max_hours, '8');            // blank = no wider than the parent, written out
-  assert.equal(c.conferred_by, e.ids.staff);
+  assert.equal(c.set_by, e.ids.staff);
   // Sue cannot pass it on (depth 0), and cannot end her own row
   assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, parent_id: child.result.id }, e.second.code).code, 'NOT_ALLOWED');
   assert.equal(post(e, 'delegation_end', { id: child.result.id, reason: 'x' }, e.second.code).code, 'NOT_ALLOWED');

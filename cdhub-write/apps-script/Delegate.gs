@@ -18,7 +18,7 @@ var DELEG_ = {
   FILE: 'BLD-delegation.csv',
   COLUMNS: ['id', 'tenant_id', 'power', 'holder_person_id', 'holder_code_id', 'holder_sign_in_id', 'parent_id', 'depth_left', 'from_date',
     'to_date', 'grant_type_ids', 'max_hours', 'rights', 'lists', 'fields', 'area_ids', 'subject_ids', 'end_others', 'extend_others',
-    'ended_at', 'ended_by', 'end_reason', 'end_issued', 'conferred_by', 'conferred_at', 'source', 'notes'],
+    'ended_at', 'ended_by', 'end_reason', 'end_issued', 'set_by', 'set_on', 'source', 'notes', 'created_at', 'updated_at'],   // S4
   POWERS: ['give_visit', 'issue_code', 'issue_device', 'give_role'],
   LISTS: ['grant_type_ids', 'rights', 'lists', 'fields', 'area_ids', 'subject_ids'],
   MAX_DEPTH: 5
@@ -190,7 +190,8 @@ function sinkDelegationGive_(req) {
       grant_type_ids: lists.grant_type_ids.join('|'), max_hours: mh, rights: lists.rights.join('|'), lists: lists.lists.join('|'),
       fields: lists.fields.join('|'), area_ids: lists.area_ids.join('|'), subject_ids: lists.subject_ids.join('|'),
       end_others: endOthers ? 'yes' : '', extend_others: extOthers ? 'yes' : '', end_issued: '',
-      conferred_by: owner ? 'owner' : who.id, conferred_at: londonIso_(now), source: source || ('CD Hub, ' + who.who), notes: notes
+      set_by: owner ? 'owner' : who.id, set_on: todayLondon_(now), source: source || ('CD Hub, ' + who.who), notes: notes,
+      created_at: utcIso_(now), updated_at: ''
     });
     try {
       appendPendingEvent_({ event_id: newId_('evt', now), pending_id: 'dlg-' + id, event: 'delegation_given', at: londonIso_(now), by: who.who,
@@ -227,7 +228,7 @@ function sinkDelegationEnd_(req) {
       grew = false;
       rows.forEach(function (r) { if (!ending[r.id] && ending[r.parent_id] && !String(r.ended_at || '')) { ending[r.id] = true; grew = true; } });
     }
-    var at = londonIso_(now), done = 0;
+    var at = utcIso_(now), done = 0;
     read.records.forEach(function (r, i) {
       if (!ending[r.id] || String(r.ended_at || '')) return;
       var rec = read.records[i];

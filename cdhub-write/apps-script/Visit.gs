@@ -195,7 +195,7 @@ function sinkCardAdd_(req) {
     if (clash) throw err_('DUPLICATE', 'A card with that label already exists.', { duplicate_of: clash.id });
     var tag = visitCardTag_();
     var id = dogcardAppend_({ file: VISIT_.TAG_FILE, idPrefix: 'qrt', need: VISIT_.TAG_NEED }, {
-      tag: visitCardHash_(tag), kind: VISIT_.CARD_KIND, ref_id: label, active: 'true', made_at: londonIso_(now),
+      tag: visitCardHash_(tag), kind: VISIT_.CARD_KIND, ref_id: label, active: 'true', made_at: utcIso_(now),
       made_by: who.who, fixed_type_id: fixed
     });
     return { status: 'saved', tag_id: id, tag: tag, label: label };
