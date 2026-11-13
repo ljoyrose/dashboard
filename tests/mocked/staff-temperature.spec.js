@@ -55,9 +55,9 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await page.getByRole('button', { name: 'Add earlier reading' }).click();
   await page.getByLabel('Day').fill('2026-11-10');
   await page.getByLabel('Day').dispatchEvent('change');
-  await expect(cards).toHaveText(['3A.2/3 (retired 11/11/26)']);
+  await expect(cards).toHaveText(['3A.2/3 (retired 11 Nov \'26)']);
   await cards.first().click();
-  await expect(page.getByText('Earlier reading · 10/11/26 Morning')).toBeVisible();
+  await expect(page.getByText('Earlier reading · 10 Nov \'26 Morning')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);
   await page.getByLabel('MAX').fill('18.5');
   await page.getByLabel('MIN').fill('12.0');
@@ -67,7 +67,7 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11/11/26)']);
+  await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11 Nov \'26)']);
 });
 
 test('an earlier reading cannot be for now or later: that is the round', async ({ page }) => {
@@ -178,7 +178,7 @@ test('year report: an empty room\'s outside reading is flagged "Room empty" but 
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     const month = page.locator('.tg-tab').first().locator('tbody tr').first();
-    await expect(month.locator('td')).toHaveText(['11/26', '1', '8.0', '24.0', '0']);
+    await expect(month.locator('td')).toHaveText(['Nov 2026', '1', '8.0', '24.0', '0']);
     const rows = page.locator('.tg-tab').nth(1).locator('tbody tr');
     await expect(rows.first()).toHaveClass(/tg-br/);
     await expect(rows.first()).toContainText('Room empty');
@@ -319,7 +319,7 @@ test('year report: a saved reading with max lower than min is flagged, not count
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     const month = page.locator('.tg-tab').first().locator('tbody tr').first();
-    await expect(month.locator('td')).toHaveText(['11/26', '1', '22.0', '18.0', '0']);
+    await expect(month.locator('td')).toHaveText(['Nov 2026', '1', '22.0', '18.0', '0']);
     const row = page.locator('.tg-tab').nth(1).locator('tbody tr').first();
     await expect(row).toHaveClass(/tg-br/);
     await expect(row).toContainText('max lower than min');

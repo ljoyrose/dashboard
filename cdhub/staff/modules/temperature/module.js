@@ -76,7 +76,12 @@
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
   }
-  function ddmmyy(iso) { iso = String(iso || ''); return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(2, 4) : iso; }
+  /* Dates (Lisa 13 Nov 2026): staff screens "2 Mar '26", owner screens "2 Mar 2026"; never DD/MM/YY. Stored dates stay ISO. */
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function dayWords(iso, full) { iso = String(iso || ''); if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8, 10), 10) + ' ' + MON[parseInt(iso.slice(5, 7), 10) - 1] + ' ' + (full ? iso.slice(0, 4) : "'" + iso.slice(2, 4)); }
+  function staffDay(iso) { return dayWords(iso, false); }
+  function ownerDay(iso) { return dayWords(iso, true); }
+  function ownerMonth(ym) { return /^\d{4}-\d{2}/.test(ym) ? MON[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4) : ym; }
   function remembered(key) {
     try { var r = JSON.parse(localStorage.getItem(key) || 'null'); if (r && Date.now() - r.at < ROOM_MINUTES * 60000) return r; } catch (e) { /* none */ }
     return null;
@@ -127,13 +132,13 @@
     });
     return out;
   }
-  /* "3A.1 (retired 11/11/26)": a room whose room.in_use rows all ended before today (BLDNeeds.endDay). */
+  /* "3A.1 (retired 11 Nov '26)": a room whose room.in_use rows all ended before today (BLDNeeds.endDay). */
   function areaRows(raw, req, today) {
     var N = window.BLDNeeds;
     return (raw || []).map(function (a) {
       var code = String(a.code || a.id), end = N && N.endDay ? N.endDay(req, 'room.in_use', 'area', a.id) : '';
       var gone = !!end && end < today;
-      return { id: a.id, code: code, endDay: end, retired: gone, label: gone ? code + ' (retired ' + ddmmyy(end) + ')' : code, sort: parseFloat(a.group_sort) };
+      return { id: a.id, code: code, endDay: end, retired: gone, label: gone ? code + ' (retired ' + staffDay(end) + ')' : code, sort: parseFloat(a.group_sort) };
     }).sort(function (a, b) {
       if (a.retired !== b.retired) return a.retired ? 1 : -1;
       var x = isNaN(a.sort) ? Infinity : a.sort, y = isNaN(b.sort) ? Infinity : b.sort;
@@ -159,7 +164,7 @@
   function limitFor(areaId, bands, dogsInRoom, onIso) {
     if (!bands || !bands.length) return { reason: 'No room limits loaded.' };
     bands = bandsOn(bands, onIso);
-    if (!bands.length) return { reason: 'No room limit row in force on ' + ddmmyy(String(onIso || '').slice(0, 10)) + '.' };
+    if (!bands.length) return { reason: 'No room limit row in force on ' + staffDay(String(onIso || '').slice(0, 10)) + '.' };
     var young = null;
     (dogsInRoom || []).forEach(function (d) { var a = ageDays(d.dob, onIso); if (a !== null && a >= 0 && (young === null || a < young)) young = a; });
     var fits = bands.filter(function (b) {
@@ -256,7 +261,7 @@
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
     host.textContent = '';
     host.appendChild(h('h2', { text: o.area.label }));
-    host.appendChild(h('p', { class: 'sub', text: (past ? 'Earlier reading · ' + ddmmyy(slot.date) + ' ' + slot.label : slot.label + ' reading') + (lim.min != null ? ' · Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C' + (lim.label ? ' (' + lim.label + ')' : '') : '') }));
+    host.appendChild(h('p', { class: 'sub', text: (past ? 'Earlier reading · ' + staffDay(slot.date) + ' ' + slot.label : slot.label + ' reading') + (lim.min != null ? ' · Limit ' + lim.min.toFixed(1) + ' to ' + lim.max.toFixed(1) + ' C' + (lim.label ? ' (' + lim.label + ')' : '') : '') }));
     var banner = o.save.banner(table);
     var bannerEl = say(banner.canSave ? '' : banner.text, banner.canSave ? '' : 'warn');
     host.appendChild(bannerEl);
@@ -451,7 +456,7 @@
       if (stop) { stop(); stop = null; }
       host.textContent = '';
       host.appendChild(h('h2', { text: o.guest ? 'Guest temperatures' : 'Room temperatures' }));
-      host.appendChild(h('p', { class: 'sub', text: slot.label + ' · ' + ddmmyy(slot.date) + (o.guest ? ' · Your readings are kept apart from the staff record.' : '') }));
+      host.appendChild(h('p', { class: 'sub', text: slot.label + ' · ' + staffDay(slot.date) + (o.guest ? ' · Your readings are kept apart from the staff record.' : '') }));
       if (!o.areas.length) { host.appendChild(say('No rooms loaded.', 'bad')); return; }
       var here = !o.guest && rememberedRoom(o.areas), cards = h('div', { class: 'cards' });
       var sorted = o.areas.slice();
@@ -541,7 +546,7 @@
         parsed = r;
         setMsg(msg, r.days.length + ' days' + (r.unit === 'F' ? ' (changed from F to C)' : '') + (r.skipped ? ', ' + r.skipped + ' lines skipped' : '') + '.', 'good');
         var tb = h('tbody');
-        r.days.slice(0, 400).forEach(function (d) { tb.appendChild(h('tr', {}, [h('td', { text: ddmmyy(d.day) }), h('td', { text: d.min }), h('td', { text: d.max }), h('td', { text: String(d.samples) })])); });
+        r.days.slice(0, 400).forEach(function (d) { tb.appendChild(h('tr', {}, [h('td', { text: ownerDay(d.day) }), h('td', { text: d.min }), h('td', { text: d.max }), h('td', { text: String(d.samples) })])); });
         out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Day', 'Low', 'High', 'Samples'].map(function (x) { return h('th', { text: x }); }))]), tb]));
         out.appendChild(h('button', { class: 'btn', type: 'button', text: 'Save ' + r.days.length + ' days', onclick: function (e) { saveAll(e.target); } }));
       });
@@ -649,14 +654,14 @@
       var mb = h('tbody');
       Object.keys(months).sort().forEach(function (m) {
         var x = months[m];
-        mb.appendChild(h('tr', {}, [h('td', { text: m.slice(5, 7) + '/' + m.slice(2, 4) }), h('td', { text: String(x.n) }), h('td', { text: x.lo === null ? '' : x.lo.toFixed(1) }), h('td', { text: x.hi === null ? '' : x.hi.toFixed(1) }), h('td', { text: String(x.br) })]));
+        mb.appendChild(h('tr', {}, [h('td', { text: ownerMonth(m) }), h('td', { text: String(x.n) }), h('td', { text: x.lo === null ? '' : x.lo.toFixed(1) }), h('td', { text: x.hi === null ? '' : x.hi.toFixed(1) }), h('td', { text: String(x.br) })]));
       });
       out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Month', 'Readings', 'Lowest', 'Highest', 'Outside limit'].map(function (t) { return h('th', { text: t }); }))]), mb]));
       // every reading
       var tb = h('tbody');
       rows.forEach(function (r) {
         tb.appendChild(h('tr', { class: r.breach || r.flag ? 'tg-br' : '' }, [
-          h('td', { text: ddmmyy(r.date) }), h('td', { text: r.slot }), h('td', { text: r.min === null ? '' : r.min.toFixed(1) }), h('td', { text: r.max === null ? '' : r.max.toFixed(1) }),
+          h('td', { text: ownerDay(r.date) }), h('td', { text: r.slot }), h('td', { text: r.min === null ? '' : r.min.toFixed(1) }), h('td', { text: r.max === null ? '' : r.max.toFixed(1) }),
           h('td', { text: r.spot }), h('td', { text: r.note })   // neither how nor who/when is shown (Lisa, 11 Nov; who is on hold)
         ]));
       });
