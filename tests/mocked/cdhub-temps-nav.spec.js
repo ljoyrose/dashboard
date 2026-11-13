@@ -21,6 +21,7 @@ const MORE = [
   ['Areas', './index.html#/areas'],
   ['Litters', './index.html#/litters'],
   ['Assocs', './index.html#/buyers'],
+  ['Staff', './index.html#/staff'],
   ['Temps', './history.html'],
 ];
 
