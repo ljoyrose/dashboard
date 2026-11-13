@@ -127,7 +127,8 @@ test('two copies of a list are not a save', async ({ page, guard }) => {
   expect(writes).toEqual([]);
 });
 
-test('a listed file that cannot be read is not written', async ({ page, guard }) => {
+test('a listed file that cannot be read is not written', async ({ page, guard, allowedConsole }) => {
+  allowedConsole.push(/status of 404/);
   guard.world.file('bld-chip-live', CHIP, CHIP_HEADER, { parents: [IDS.bld], driveId: 'drv-alpha1', mimeType: SHEET });
   const writes = [];
   await watchWrites(page, writes);
@@ -162,7 +163,8 @@ test('a csv occupancy file is updated at the id the folder listed', async ({ pag
   expect(guard.world.calls.slice(mark).some((c) => c.path === '/files/' + occ.id + '/export')).toBe(false);
 });
 
-test('a sheet update that is refused is not tried again on another id', async ({ page, guard }) => {
+test('a sheet update that is refused is not tried again on another id', async ({ page, guard, allowedConsole }) => {
+  allowedConsole.push(/status of 403/);
   guard.world.file('bld-chip-live', CHIP, CHIP_HEADER, { parents: [IDS.bld], driveId: 'drv-alpha1', mimeType: SHEET });
   const writes = [];
   await page.route(/https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/A1:append/, (route) => {
