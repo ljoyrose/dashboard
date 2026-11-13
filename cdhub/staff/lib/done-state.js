@@ -1,6 +1,6 @@
 /*!
  * BLDDone - one look, on every staff screen, for "the save script has this". Lisa: show a tick once received.
- *   BLDDone.mark(el, {outcome, at, who, extra})  a tick line on the card: "Done 14:32 · Sam" (or "Concern noted", "Not done noted"),
+ *   BLDDone.mark(el, {outcome, at, who, extra, note})  a tick line on the card: "Done 14:32 · Sam" (or "Concern noted", "Not done noted"),
  *                                                 and the card's main button greys (it still works, for a second time that day)
  *   BLDDone.saving(el)                            straight after the tap: "Saving..." and the button is off until the reply
  *   BLDDone.wait(el, text)                        sent but not received yet (no signal): a clock, never a tick
@@ -51,7 +51,8 @@
   function mark(el, s) {
     if (!el) return;
     el.classList.add('is-done'); el.classList.toggle('is-concern', !!s && (s.outcome === 'concern' || s.outcome === 'not_done'));
-    set(el, s && (s.outcome === 'concern' || s.outcome === 'not_done') ? 'flag' : 'good', TICK, text(s));
+    var n = set(el, s && (s.outcome === 'concern' || s.outcome === 'not_done') ? 'flag' : 'good', TICK, text(s));
+    if (s && s.note) { var p = el.ownerDocument.createElement('span'); p.className = 'done-note'; p.textContent = s.note; n.appendChild(p); }
     btn(el, true);
   }
   function saving(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'wait', CLOCK, words || 'Saving...'); btn(el, false, true); }

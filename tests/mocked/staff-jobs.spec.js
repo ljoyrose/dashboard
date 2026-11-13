@@ -354,3 +354,22 @@ test('a check the screen refuses before sending still shows on the card', async 
   await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
   await expect(walk.locator('.done-line.bad')).toContainText('Tick a dog.');
 });
+
+test('Note on a job not done yet saves it as done with the note, shown under the tick', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await ears.getByRole('button', { name: 'Note', exact: true }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('Write the note.');
+  expect(sent).toHaveLength(0);
+  await ears.getByLabel('Note').fill('Pretend explanation');
+  await ears.getByRole('button', { name: 'Note', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-ears', outcome: 'ok', note: 'Pretend explanation' } });
+  await expect(ears.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
+  await expect(ears.locator('.done-note')).toHaveText('Pretend explanation');
+  await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await expect(ears.getByRole('button', { name: 'Note', exact: true })).toHaveCount(0);
+});

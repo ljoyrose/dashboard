@@ -84,7 +84,7 @@
         if (!l) return;
         if (l._queued) { BLDDone.wait(card, l._queued); return; }
         var n = dogIds ? Object.keys(doneToday(key)).filter(function (x) { return dogIds.indexOf(x) >= 0; }).length : 0;
-        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
+        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, note: l.note, extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
       }
       /* a job's form: the owner's check_field rows in force today, in their sort order */
       var formOf = {}, latestField = {};
@@ -197,10 +197,19 @@
           state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
         }
-        var problems = h('div', { class: 'job-btns', hidden: true }, [
+        /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
+           On a job already done today it waits for the save script's note record (outcome note + note_for_id). */
+        var dogIds = state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null);
+        var doneHere = todays(t.type_key).some(function (l) { return l.outcome !== 'not_done' && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); });
+        var problems = h('div', { class: 'job-btns', hidden: true }, (doneHere ? [] : [
+          h('button', { class: 'btn quiet', type: 'button', text: 'Note', onclick: function () {
+            if (!inputs.note.value.trim()) { BLDDone.fail(state.card, 'Write the note.'); return; }
+            send(job, t, done, inputs, panelMsg, state);
+          } })
+        ]).concat([
           h('button', { class: 'btn quiet', type: 'button', text: 'Concern', onclick: function () { send(job, t, 'concern', inputs, panelMsg, state); } }),
           h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } })
-        ]);
+        ]));
         panel.appendChild(problems); panel.appendChild(panelMsg);
         var head = h('div', { class: 'job-head' }, [
           h('div', { class: 'job-txt' }, [h('div', { class: 'nm', text: job.label }), h('div', { class: 'ds', text: dueLine(job) + byLine(job) })]),
@@ -214,7 +223,7 @@
         if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem/Note?', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
         kids.push(panel);
         var card = state.card = h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);
-        showDone(card, t.type_key, state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null));
+        showDone(card, t.type_key, dogIds);
         return card;
       }
       /* one dog in a tick list: a dog with a line today shows a tick and the time */
