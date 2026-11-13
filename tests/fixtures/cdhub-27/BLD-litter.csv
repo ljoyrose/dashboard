@@ -1,0 +1,4 @@
+id,tenant_id,dam_subject_id,sire_subject_id,born_on,dob,pairing,status,raw_name,notes
+lit-0,ten-sample,sub-a07,sub-a09,2024-07-03,2024-07-03,Dog A07 x Dog A09,homed,Sample litter 0,invented
+lit-1,ten-sample,sub-a01,sub-a09,2026-01-20,2026-01-20,Dog A01 x Dog A09,on site,Sample litter 1,invented
+lit-2,ten-sample,sub-a02,sub-a09,2026-02-17,2026-02-17,Dog A02 x Dog A09,on site,Sample litter 2,invented
