@@ -390,3 +390,16 @@ test('a save refused as a repeat says so once, in plain words', async ({ page })
   await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
   await expect(weigh.getByText('Saving...')).toHaveCount(0);
 });
+
+test('when this code cannot read past records, the list says so instead of a silent Due', async ({ page }) => {
+  await setup(page, { check_log: undefined });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
+});
+
+test('with past records readable there is no warning', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-no-history]')).toHaveCount(0);
+});
