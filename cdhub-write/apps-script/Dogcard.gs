@@ -36,7 +36,7 @@ function dogcardFiles_() {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_create.on) === 'true') {
     [DOGCARD_.subject_create.file, CHIP_FILE_, STATUS_FILE_].forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); });
   }
-  return out;
+  return out.concat(subjectLinkFiles_());
 }
 
 function dogcardText_(v, name, errors, max) {
@@ -335,5 +335,90 @@ function sinkSubjectCreate_(req) {
       { subject_id: id, state: activeWord, from_date: today, to_date: '', reason: 'added in ' + host });
     if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
     return { status: 'saved', id: id };
+  });
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Dog links (13 Nov 2026, DOGCARD plan AA_DOGCARD_2026-11-13-1500): "BFFs" / "Fren." on the dog card and print card.
+ *   action 'subject_link'      OWNER ONLY. Adds one BLD-subject_link row: subject_id, other_subject_id, kind, from_date
+ *                              (blank = today), source, note. One row per pair, read both ways.
+ *   action 'subject_link_end'  OWNER ONLY. Ends one link by filling its to_date (blank = today). Never deletes.
+ * kind is a link_kind.<kind> row in BLD-breeding_rule in force today (e.g. link_kind.bff = BFFs), never a list here.
+ * A second open link of the same kind for the same pair (either way round) is refused as DUPLICATE.
+ * Switch: TABLE_ON_subject_link, OFF by default.
+ * --------------------------------------------------------------------------------------------------------------- */
+DOGCARD_.subject_link = { file: 'BLD-subject_link.csv', on: 'subject_link', idPrefix: 'slk', owner: true,
+  need: ['id', 'tenant_id', 'subject_id', 'other_subject_id', 'kind', 'from_date', 'to_date', 'source', 'note', 'set_at', 'set_by'] };
+
+function subjectLinkFiles_() {
+  return prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_link.on) === 'true' ? [DOGCARD_.subject_link.file] : [];
+}
+
+/** The link kinds in force on `day`: { bff: 'BFFs', not_with: 'Fren.' } from link_kind.* rule rows. */
+function linkKinds_(day) {
+  var out = {}, best = {}, rules;
+  try { rules = store_read_('BLD-breeding_rule.csv', true); } catch (e) { return out; }
+  var tenant = prop_(BLD.PROP.TENANT_ID);
+  rules.records.forEach(function (r) {
+    var m = /^link_kind\.([a-z][a-z0-9_]{0,39})$/.exec(String(r.rule_key || ''));
+    if (!m || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
+    var from = String(r.effective_from || ''), to = String(r.to_date || '');
+    if (!from || from > day || (to && to < day)) return;
+    if (best[m[1]] === undefined || from >= best[m[1]]) { best[m[1]] = from; out[m[1]] = String(r.value || '').trim(); }
+  });
+  Object.keys(out).forEach(function (k) { if (!out[k]) delete out[k]; });
+  return out;
+}
+
+function linkOpenOn_(r, day) {
+  return String(r.from_date || '') <= day && (!String(r.to_date || '') || String(r.to_date) >= day);
+}
+
+function sinkSubjectLink_(req) {
+  return sinkDogcard_(req, 'subject_link', function (spec, f, who, now) {
+    var errors = {}, today = todayLondon_(now);
+    var a = String(f.subject_id || '').trim(), b = String(f.other_subject_id || '').trim(), kind = String(f.kind || '').trim();
+    var from = String(f.from_date || '').trim() || today;
+    if (!ID_RE_.test(a)) errors.subject_id = 'Say which dog this is for.';
+    if (!ID_RE_.test(b)) errors.other_subject_id = 'Choose the other dog.';
+    else if (a === b) errors.other_subject_id = 'Choose a different dog.';
+    if (!isRealDate_(from)) errors.from_date = 'Use a real date as YYYY-MM-DD.';
+    var kinds = linkKinds_(today);
+    if (!Object.prototype.hasOwnProperty.call(kinds, kind)) errors.kind = Object.keys(kinds).length ? 'Choose BFFs, Fren. or another kind on the list.' : 'No link kinds are set up yet (link_kind rows).';
+    var source = dogcardText_(f.source, 'source', errors, 200), note = dogcardText_(f.note, 'note', errors, 500);
+    if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
+    dogcardSubject_(a); dogcardSubject_(b);
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need, spec.file);
+    var tenant = prop_(BLD.PROP.TENANT_ID);
+    var clash = read.records.filter(function (r) {
+      if (tenant && r.tenant_id && r.tenant_id !== tenant) return false;
+      var pair = (r.subject_id === a && r.other_subject_id === b) || (r.subject_id === b && r.other_subject_id === a);
+      return pair && r.kind === kind && (!String(r.to_date || '') || String(r.to_date) >= from);
+    })[0];
+    if (clash) throw err_('DUPLICATE', 'These two dogs already have that link.', { duplicate_of: clash.id });
+    var id = dogcardAppend_(spec, { subject_id: a, other_subject_id: b, kind: kind, from_date: from, to_date: '',
+      source: source || ('CD Hub, ' + who.who + ', ' + today), note: note,
+      set_at: Utilities.formatDate(now, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX"), set_by: who.who });
+    return { status: 'saved', id: id, subject_id: a, other_subject_id: b, kind: kind };
+  });
+}
+
+function sinkSubjectLinkEnd_(req) {
+  return sinkDogcard_(req, 'subject_link', function (spec, f, who, now) {
+    var rowId = String(f.id || '').trim(), today = todayLondon_(now), to = String(f.to_date || '').trim() || today;
+    if (!ID_RE_.test(rowId)) throw err_('INVALID', 'Say which link to end.');
+    if (!isRealDate_(to)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'Use a real date as YYYY-MM-DD.' } });
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need, spec.file);
+    var tenant = prop_(BLD.PROP.TENANT_ID), idx = -1;
+    read.records.forEach(function (r, i) { if (r.id === rowId && (!tenant || !r.tenant_id || r.tenant_id === tenant)) idx = i; });
+    if (idx < 0) throw err_('NOT_FOUND', 'That link was not found.');
+    var rec = read.records[idx];
+    if (String(rec.to_date || '')) throw err_('NOT_ALLOWED', 'That link has already ended.');
+    if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });
+    var row = read.header.map(function (h) { return h === 'to_date' ? to : (rec[h] == null ? '' : String(rec[h])); });
+    store_replaceRow_(spec.file, read.header, idx, row, read);
+    return { status: 'saved', id: rowId, ended: to };
   });
 }

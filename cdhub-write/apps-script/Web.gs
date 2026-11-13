@@ -41,6 +41,8 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'vaccination_void') return jsonOut_({ ok: true, result: sinkVaccinationVoid_(req) });
     if (req && typeof req === 'object' && req.action === 'dog_details') return jsonOut_({ ok: true, result: sinkDogDetails_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
