@@ -126,8 +126,7 @@ test.describe('CD Hub: The round controls', () => {
     await amMin.blur();
     await page.locator(`.tmax[data-area="${area}"][data-slot="am"]`).fill('12.4');
     await page.locator(`.tmax[data-area="${area}"][data-slot="am"]`).blur();
-    await expect(amMsg).toContainText('lower than min');
-    await expect(amMsg).toContainText('Not saved');
+    await expect(amMsg).toHaveText('The lowest reading cannot be higher than the highest reading.');
 
     const pmMin = page.locator(`.tmin[data-area="${area}"][data-slot="pm"]`);
     const pmMax = page.locator(`.tmax[data-area="${area}"][data-slot="pm"]`);
