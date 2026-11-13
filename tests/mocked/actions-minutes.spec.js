@@ -105,6 +105,21 @@ test.describe('Home: Actions minutes card', () => {
     await shot(card, 'stale');
   });
 
+  test('collector still on engine 0.1: waits for the update, never a false red', async ({ page, guard }) => {
+    await withFile(page, guard, state(1900, 3, { engine: '0.1' })); // 95%: would be red if shown
+    const card = await open(page);
+    await expect(card.locator('[data-mins-oldengine]')).toHaveText('Waiting for the collector update (v0.2). The old one counts the public repo, so its total is wrong.');
+    await expect(card.locator('[data-mins-used], [data-mins-level], [data-mins-diet]')).toHaveCount(0);
+    await shot(card, 'old-engine');
+  });
+
+  test('collector on engine 0.2 shows its numbers', async ({ page, guard }) => {
+    await withFile(page, guard, state(210, 3, { engine: '0.2' }));
+    const card = await open(page);
+    await expect(card.locator('[data-mins-oldengine]')).toHaveCount(0);
+    await expect(card.locator('[data-mins-used]')).toContainText('210 / 2,000');
+  });
+
   test('folder set but no file yet: a plain note, not a failure', async ({ page, guard }) => {
     await withFile(page, guard, null);
     const card = await open(page);
