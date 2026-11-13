@@ -525,6 +525,25 @@ test('readMany: area, subject and occupancy are required; subject_status may be 
   assert.equal(no.ok, false); assert.match(no.message, /not allowed/);
 });
 
+test('readMany (speed): a wrong code costs one try; the rest go together; the first refusal in list order wins', async () => {
+  const bad = scriptFake({ reads: { area: { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' } } });
+  const s = mkSave(bad); await s.checkStatus(); s.setCode('WRONG');
+  const r = await s.readMany(['area', 'subject', 'occupancy']);
+  assert.equal(r.code, 'BAD_CODE');
+  assert.equal(bad.posts().length, 1);                                            // never one wrong try per list
+  const two = scriptFake({ reads: { subject: { ok: false, code: 'NOT_ALLOWED', message: 'subject no' }, occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'occupancy no' } } });
+  const s2 = mkSave(two); await s2.checkStatus(); s2.setCode('C');
+  assert.equal((await s2.readMany(['area', 'subject', 'occupancy'])).message, 'subject no');
+  let open = 0, most = 0;
+  const srv = scriptFake();
+  const slow = (url, init) => { open += 1; most = Math.max(most, open); return new Promise((res) => setTimeout(res, 5)).then(() => { open -= 1; return srv.f(url, init); }); };
+  const s3 = BLDSave.create({ fetch: slow, localStorage: null, sessionStorage: null, scriptUrl: GOOD_URL }); await s3.checkStatus(); s3.setCode('C');
+  most = 0;
+  const all = await s3.readMany(['area', 'subject', 'occupancy', 'subject_status']);
+  assert.equal(all.ok, true);
+  assert.equal(most, 3);                                                          // after the first, the other three at once
+});
+
 test('banners for the live occupancy list, the daily check log and the still-proposed staff roster', async () => {
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();

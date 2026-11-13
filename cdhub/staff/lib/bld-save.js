@@ -298,18 +298,24 @@
     function readMany(keys, optional) {
       var out = {}, optionalSet = {};
       (optional || ['subject_status']).forEach(function (k) { optionalSet[k] = true; });
-      var chain = Promise.resolve({ ok: true });
-      keys.forEach(function (k) {
-        chain = chain.then(function (prev) {
-          if (!prev.ok) return prev;
-          return read(k).then(function (r) {
-            if (r.ok) { out[k] = r.rows; return { ok: true }; }
-            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED'))   /* FILE_NOT_ALLOWED: the script does not know this list yet */ { out[k] = []; return { ok: true }; }
-            return r;
-          });
+      var take = function (k, r) {
+        if (r.ok) { out[k] = r.rows; return { ok: true }; }
+        if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED'))   /* FILE_NOT_ALLOWED: the script does not know this list yet */ { out[k] = []; return { ok: true }; }
+        return r;
+      };
+      if (!keys.length) return Promise.resolve({ ok: true, tables: out });
+      // Speed (Lisa 13/11): the first list goes alone, so a wrong or ended code costs one try, not one per list
+      // (each wrong try counts toward the lock-out). The rest go together; the first refusal in list order is
+      // reported, exactly as when they went one after another.
+      return read(keys[0]).then(function (first) {
+        var r0 = take(keys[0], first);
+        if (!r0.ok) return r0;
+        var rest = keys.slice(1);
+        return Promise.all(rest.map(function (k) { return read(k); })).then(function (rs) {
+          for (var i = 0; i < rest.length; i++) { var r = take(rest[i], rs[i]); if (!r.ok) return r; }
+          return { ok: true, tables: out };
         });
       });
-      return chain.then(function (r) { return r.ok ? { ok: true, tables: out } : r; });
     }
 
     /**
