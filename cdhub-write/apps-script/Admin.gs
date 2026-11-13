@@ -55,7 +55,7 @@ function adminRevokeStaff() {
 /** 4b. Run once on a project that had codes BEFORE ids existed: gives each code without one a public id (sc-xxxxxx). Changes nothing else. */
 function adminAssignCodeIds() {
   var reg = registry_(), n = 0;
-  Object.keys(reg).forEach(function (h) { if (!reg[h].id) { reg[h].id = newCodeId_(); n++; } });
+  Object.keys(reg).forEach(function (h) { if (!reg[h].id && !reg[h].was_id) { reg[h].id = newCodeId_(); n++; } });   // was_id: an old code replaced by a new one (Codes.gs) keeps no id
   setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
   Logger.log(n ? ('Gave ' + n + ' code(s) a public id. Run adminListStaff to see them.') : 'Every code already has an id. Nothing changed.');
 }
@@ -81,7 +81,7 @@ function adminCreateEmptyTables() {
     return;
   }
   TO_CREATE.forEach(function (title) {
-    var header = title === BLD.PENDING_FILE ? BLD.PENDING_COLUMNS : ((specFor_(title) || {}).columns || inspectHeader_(title));
+    var header = title === BLD.PENDING_FILE ? BLD.PENDING_COLUMNS : ((specFor_(title) || {}).columns || inspectHeader_(title) || codeRegisterHeader_(title));
     if (!header) { Logger.log('Skipped ' + title + ': not on the allow-list.'); return; }
     try { store_createEmpty_(title, header); Logger.log('Created ' + title + ' (header only).'); }
     catch (e) { Logger.log('Not created ' + title + ': ' + (e.userMessage || e)); }
@@ -101,7 +101,7 @@ function adminCheckSetup() {
     try {
       var r = store_read_(title, false);
       if (!r) { Logger.log('--   ' + title + ' does not exist yet (fine until you switch that table on)'); return; }
-      var spec = specFor_(title), want = spec ? spec.columns : (inspectHeader_(title) || BLD.PENDING_COLUMNS);
+      var spec = specFor_(title), want = spec ? spec.columns : (inspectHeader_(title) || codeRegisterHeader_(title) || BLD.PENDING_COLUMNS);
       say(sameHeader_(r.header, want), title + ' exists with ' + r.records.length + ' row(s); header ' + (sameHeader_(r.header, want) ? 'matches' : 'DOES NOT MATCH'));
     } catch (e) { say(false, title + ': ' + (e.userMessage || e)); }
   });
@@ -109,7 +109,7 @@ function adminCheckSetup() {
     Logger.log('--   table ' + k + ': ' + (tableOn_(TABLES[k]) ? 'ON' : 'off') + ', mode ' + modeFor_(TABLES[k]));
   });
   Logger.log('--   dog moves: straight in (MOVES_QUEUE_UNTIL is ignored for occupancy)');
-  var noId = Object.keys(registry_()).filter(function (h) { return !registry_()[h].id; }).length;
+  var noId = Object.keys(registry_()).filter(function (h) { return !registry_()[h].id && !registry_()[h].was_id; }).length;
   if (noId) Logger.log('FIX  ' + noId + ' staff code(s) have no public id yet (run adminAssignCodeIds)');
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));
   Logger.log('--   dog photos: ' + (prop_(BLD.PROP.DOG_PHOTOS_FOLDER) ? 'folder id is set in Script Properties' : 'not set (create a Shared Drive folder and set DOG_PHOTOS_FOLDER_ID)'));

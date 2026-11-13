@@ -1,0 +1,1 @@
+{"cdhub": 27800, "why": "Owner-only Admin page (More -> Admin), PR 504: cdhub/admin.js (~27.3 KB with its styles) plus 5 hooks in index.html. The QR drawer (staff/lib/qr.js) and admin-future.json load only on the Admin page."}
