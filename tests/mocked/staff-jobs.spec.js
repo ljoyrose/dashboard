@@ -65,7 +65,7 @@ test('a job that asks for an amount opens its field first; a problem needs a not
   expect(sent[0].fields.amount).toBe('21.5');
   const card = page.locator('[data-job="ears"]');
   await page.locator('[data-group="Grooming"]').click();
-  await expect(page.getByRole('button', { name: 'Problem: Ears' })).toHaveText('Problem?');
+  await expect(page.getByRole('button', { name: 'Problem: Ears' })).toHaveText('Problem/Note?');
   await page.getByRole('button', { name: 'Problem: Ears' }).click();
   await expect(card.getByLabel('Note')).toBeVisible();
   await expect(card.getByRole('button', { name: 'Not done' })).toBeVisible();
