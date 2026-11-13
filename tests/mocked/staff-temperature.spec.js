@@ -249,6 +249,10 @@ test('Sensor CSV opens for an owner: room picker and file box; a sensor file is 
   const sent = await setup(page);
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
+  // this test's save script also has the sensor back-up list switched on
+  await page.route(SCRIPT, (route) => (route.request().method() === 'GET'
+    ? route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }, { key: 'sensor_reading', on: true, mode: 'direct' }] } })
+    : route.fallback()));
   await page.goto('cdhub/staff/#m/temperature');
   await page.getByRole('button', { name: 'Sensor CSV' }).click();
   await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
