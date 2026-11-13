@@ -168,6 +168,8 @@ tr:last-child td{border-bottom:none}
 
 .filt,.srow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
 .rdate-out{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap}
+@media (max-width:389px){.rdate-out{flex-wrap:wrap}}   /* a 360px phone: the outside line drops under the date, the page never scrolls sideways */
+#brKey{max-width:100%}
 .rout{white-space:nowrap;font-size:var(--fs-small);color:var(--ink)}
 .filt input{min-width:190px}
 .fbar{position:relative;margin:0 0 12px}
@@ -4101,7 +4103,9 @@ document.addEventListener('click',function(e){
  var row=document.getElementById(j.dataset.jump);
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
-document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
+document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus();
+  /* the tabindex is only there to take the focus: left on, every section heading inside stops folding when tapped */
+  m.addEventListener('blur',function(){ m.removeAttribute('tabindex'); },{once:true}); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
  if(b.getAttribute('data-dogshow')){
