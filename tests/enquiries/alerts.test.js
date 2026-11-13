@@ -12,8 +12,8 @@ const person = (n, o) => Object.assign({ person_key: 'P-x' + n, ref: 'E-00' + n,
 const kinds = (list, kind) => list.filter((a) => a.kind === kind);
 const refs = (list, kind) => kinds(list, kind).map((a) => a.ref || a.pup_ref || a.source);
 
-test('version is 1.14.0 and the seven alert kinds are named', () => {
-  assert.match(C.VERSION, /^enquiries-core 1\.14\.0 /);
+test('version is 1.15.0 and the seven alert kinds are named', () => {
+  assert.match(C.VERSION, /^enquiries-core 1\.15\.0 /);
   assert.deepEqual(C.ALERT_KINDS, ['hot-no-reply', 'blank-run', 'contact-blocked', 'call-no-prep', 'pup-no-offer', 'balance-overdue', 'source-silent']);
 });
 

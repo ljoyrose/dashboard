@@ -725,6 +725,140 @@ var TABLES = {
         }
       }
     }
+  },
+
+  // ---------------------------------------------------------------- person
+  // A buyer. Append only, and only by the owner. Always waits for approval. Nothing here is deleted or overwritten.
+  // BLD-prospect is never a lookup and never a write target.
+  person: {
+    key: 'person',
+    file: 'BLD-person.csv',
+    idPrefix: 'per',
+    columns: ['id', 'tenant_id', 'full_name', 'known_as'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: true,
+    defaultMode: 'pending',
+    input: {
+      full_name: { type: 'text', required: true },
+      known_as:  { type: 'text' }
+    },
+    dupKey: ['full_name', 'known_as'], dupTimeCol: null,
+    stamp: function () {},
+    checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- household
+  // stage is one of the four plain words. The owner approves every row before it is appended.
+  household: {
+    key: 'household',
+    file: 'BLD-household.csv',
+    idPrefix: 'hhd',
+    columns: ['id', 'tenant_id', 'name', 'primary_person_id', 'stage'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [{ name: 'person', file: 'BLD-person.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: true,
+    defaultMode: 'pending',
+    input: {
+      name: { type: 'text', required: true },
+      primary_person_id: { type: 'ref', lookup: 'person', required: true },
+      stage: { type: 'enum', values: ['enquiry', 'deposit', 'working to collection', 'after collection'], required: true }
+    },
+    dupKey: ['primary_person_id', 'stage'], dupTimeCol: null,
+    stamp: function () {},
+    checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- household_member
+  household_member: {
+    key: 'household_member',
+    file: 'BLD-household_member.csv',
+    idPrefix: 'hhm',
+    columns: ['id', 'tenant_id', 'household_id', 'person_id'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [
+      { name: 'household', file: 'BLD-household.csv', idCol: 'id' },
+      { name: 'person', file: 'BLD-person.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: true,
+    defaultMode: 'pending',
+    input: {
+      household_id: { type: 'ref', lookup: 'household', required: true },
+      person_id: { type: 'ref', lookup: 'person', required: true }
+    },
+    dupKey: ['household_id', 'person_id'], dupTimeCol: null,
+    stamp: function () {},
+    checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- subject_owner
+  // role assigned when a pup is assigned, owner when the pup is collected. Append only.
+  subject_owner: {
+    key: 'subject_owner',
+    file: 'BLD-subject_owner.csv',
+    idPrefix: 'sow',
+    columns: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'role'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
+      { name: 'person', file: 'BLD-person.csv', idCol: 'id' },
+      { name: 'household', file: 'BLD-household.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: true,
+    defaultMode: 'pending',
+    input: {
+      subject_id: { type: 'ref', lookup: 'subject', required: true },
+      person_id: { type: 'ref', lookup: 'person', required: true },
+      household_id: { type: 'ref', lookup: 'household', required: true },
+      role: { type: 'enum', values: ['assigned', 'owner'], required: true }
+    },
+    dupKey: ['subject_id', 'person_id', 'role'], dupTimeCol: null,
+    stamp: function () {},
+    checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- sale
+  // sold_on and price only once the pup is collected. A deposit and its date may be sent earlier. Append only.
+  sale: {
+    key: 'sale',
+    file: 'BLD-sale.csv',
+    idPrefix: 'sal',
+    columns: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'deposit', 'deposit_date', 'sold_on', 'price'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
+      { name: 'person', file: 'BLD-person.csv', idCol: 'id' },
+      { name: 'household', file: 'BLD-household.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: true,
+    defaultMode: 'pending',
+    input: {
+      subject_id: { type: 'ref', lookup: 'subject', required: true },
+      person_id: { type: 'ref', lookup: 'person', required: true },
+      household_id: { type: 'ref', lookup: 'household', required: true },
+      deposit: { type: 'text' },
+      deposit_date: { type: 'date' },
+      sold_on: { type: 'date' },
+      price: { type: 'text' }
+    },
+    dupKey: ['subject_id', 'person_id', 'deposit_date', 'sold_on'], dupTimeCol: null,
+    stamp: function () {},
+    checkRow: function () {}
   }
 };
 

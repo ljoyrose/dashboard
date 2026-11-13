@@ -61,8 +61,8 @@ function csvFiles() {
     // (docs: AA_2026-10-16_JOB4-PROPOSED-field_visibility-rows). Row rules use field_name *.
     'BLD-field_visibility.csv': crlf(VISIBILITY_ROWS),
     'BLD-person.csv': crlf([
-      'id,tenant_id,full_name',
-      `per-test-1,${TENANT},Pat Tester`
+      'id,tenant_id,full_name,known_as',
+      `per-test-1,${TENANT},Pat Tester,`
     ]),
     'BLD-role.csv': crlf([
       'id,tenant_id,code,name,can_sign_off,notes',
