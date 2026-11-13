@@ -44,7 +44,7 @@
   </div>
   <div id="ed-list"></div>
 
-  <h1 style="margin-top:28px">Staff codes (owner only)</h1>
+  <h1 style="margin-top:28px" id="codes">Staff codes (owner only)</h1>
   <p class="sub">Switch off the code of someone who has left. It stops working at once for reading and saving. The entry stays in the list and the switch-off is noted in the approvals queue file. A code is shown once, when you make it, and never again.</p>
   <div class="card"><button class="ok" id="sc-show" type="button">Show staff codes</button><div class="msg" id="sc-msg"></div></div>
   <div class="card">
@@ -166,6 +166,12 @@
     }).withFailureHandler(function(e){ scMsg('Failed: '+e.message); }).ui_staffList();
   }
   document.getElementById('sc-show').onclick=showStaff;
+  // ?page=approve&section=codes (or #codes) opens straight on the codes list: the hub's Codes card links here
+  try {
+    google.script.url.getLocation(function(loc){
+      if((loc.parameter && loc.parameter.section==='codes') || loc.hash==='codes'){ document.getElementById('codes').scrollIntoView(); showStaff(); }
+    });
+  } catch(e) { /* not inside Apps Script: nothing to do */ }
 
   /* ---- staff codes: make one, or a new one for the same person. The code is shown once, here only. ---- */
   function showOnce(r){
