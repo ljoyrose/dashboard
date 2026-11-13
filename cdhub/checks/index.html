@@ -40,7 +40,16 @@
         if (r && r.reason === 'read') { save.clearCode(); document.getElementById('code').value = ''; gate.hidden = false; }
       });
     }
-    if (!save.getScriptUrlSet()) { note.textContent = 'This phone is not set up. Open The Board and set it up first.'; return; }
+    if (!save.getScriptUrlSet()) {
+      note.textContent = '';
+      note.appendChild(document.createTextNode('This phone is not set up. Ask the hub owner or an admin, then set it up on '));
+      var a = document.createElement('a');
+      a.href = '../staff/';
+      a.textContent = 'The Board';
+      note.appendChild(a);
+      note.appendChild(document.createTextNode('.'));
+      return;
+    }
     try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
     gate.hidden = !!device;
     if (device) { save.setCode(device, false); open(); }

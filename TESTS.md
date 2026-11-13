@@ -339,6 +339,8 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 8 Nov 2026 | Food Reorder due listed customers who had already reordered (the page could not tell customers apart; Lisa) | "reorder due with engine v1.15.3 keys: a customer who ordered again…" |
 | 8 Nov 2026 | Dashboard Food tile showed "✓ XML" and nothing waiting while paid order #5400 waited for its Send tap (Lisa) | "Food tile: an order waiting for its Send tap…" |
 | 11 Nov 2026 | CD Hub: a medicine ask such as "identify the medicine given in February" opened Outstanding, and the same button opened Outstanding again. The round also stopped if a cabin already had its flap set | "Identify the medicine given in February opens that dog’s February record, and a second click does not return to Outstanding @regression" and "date, saving, flap, move, temperatures and history each finish or explain @regression" (tests/mocked/cdhub-round-paths.spec.js) |
+| 12 Nov 2026 | The Board's not-set-up screen could only scan a QR, and Staff checks did not say who to ask | "a typed set-up code follows the QR: a good one opens the staff code, a bad one is refused @regression" and "a typed private set-up code follows the QR: a good code is kept, a refused code is not @regression" (tests/mocked/staff-setup-qr.spec.js) |
+| 12 Nov 2026 | CD Hub could sit on Getting things ready with no way on, and a failed record read did not say what went wrong | "boot hangs about 15s then shows Retry @regression" and "a failed Drive read shows the message @regression" (tests/mocked/cdhub.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

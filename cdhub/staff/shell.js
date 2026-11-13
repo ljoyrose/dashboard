@@ -1,7 +1,7 @@
 /*!
  * The Board, staff page shell. No Google sign-in: a phone is set up ONCE (the save address arrives by the owner's
- * set-up QR, then the person types their own staff code). The code stays on that phone. If the owner switches the
- * code off, the next read or save is refused and this page wipes it and goes back to set-up.
+ * set-up QR, or the same payload typed in, then the person types their own staff code). The code stays on that phone.
+ * If the owner switches the code off, the next read or save is refused and this page wipes it and goes back to set-up.
  *
  * Nothing about dogs, rooms or people is in these files. Everything is read through the save script with the code.
  *
@@ -24,16 +24,50 @@
   save.deviceCode = true;
   var modules = [], cleanup = null, dataP = null, started = false, join = null;
 
-  /** Private set-up QR (#join=<code>&url=<save address>): take it out of the address bar and history before anything else runs. */
-  function takeJoin() {
-    var raw = (location.hash || '').slice(1);
-    if (raw.indexOf(JOIN_PREFIX) !== 0) return;
-    history.replaceState(null, '', location.pathname);
+  /** The encoded # body of a private set-up QR (#join=<code>&url=<save address>), or null. */
+  function readJoin(raw) {
+    if (String(raw || '').indexOf(JOIN_PREFIX) !== 0) return null;
     var at = raw.indexOf(JOIN_URL), c = '', u = '';
-    if (at > 0) { try { c = decodeURIComponent(raw.slice(JOIN_PREFIX.length, at)).trim(); u = decodeURIComponent(raw.slice(at + JOIN_URL.length)); } catch (e) { c = ''; } }
-    join = { code: c, url: u };
+    if (at > 0) { try { c = decodeURIComponent(raw.slice(JOIN_PREFIX.length, at)).trim(); u = decodeURIComponent(raw.slice(at + JOIN_URL.length)); } catch (e) { c = ''; u = ''; } }
+    return { code: c, url: u };
+  }
+  /** Take a private set-up QR out of the address bar and history before anything else runs. */
+  function takeJoin() {
+    var j = readJoin((location.hash || '').slice(1));
+    if (!j) return;
+    history.replaceState(null, '', location.pathname);
+    join = j;
   }
   takeJoin();
+  function setupFail() {
+    clearScreen(); tabs.hidden = true;
+    screen.appendChild(h('p', { class: 'msg bad', text: 'That set-up QR was not right. Ask the owner for a new one.' }));
+  }
+  /**
+   * One set-up payload, from a scan or from typing. text is the QR contents (a full link or the # part).
+   * Returns true when it was a set-up payload. The same checks as a scan; nothing else is stored.
+   */
+  function acceptScan(text) {
+    var raw = String(text || '').trim();
+    var hashAt = raw.lastIndexOf('#');
+    if (hashAt >= 0) raw = raw.slice(hashAt + 1);
+    if (!raw) return false;
+    var j = readJoin(raw);
+    if (j) {
+      history.replaceState(null, '', location.pathname);
+      join = null;
+      runJoin(j);
+      return true;
+    }
+    var hash;
+    try { hash = decodeURIComponent(raw); } catch (e) { return false; }
+    if (hash.indexOf(SETUP_PREFIX) !== 0) return false;
+    var r = save.setScriptUrl(hash.slice(SETUP_PREFIX.length), true);
+    history.replaceState(null, '', location.pathname);
+    if (!r.ok) { setupFail(); return true; }
+    save.checkStatus().then(function () { drawSetup(); });
+    return true;
+  }
 
   function storeGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function storeSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; } catch (e) { return false; } }
@@ -96,7 +130,29 @@
     clearScreen(); tabs.hidden = true;
     screen.appendChild(h('h1', { text: 'Set up this phone' }));
     if (!save.getScriptUrlSet()) {
-      screen.appendChild(h('p', { class: 'sub', text: 'This phone is not set up. Ask Lisa for the set-up QR and scan it.' }));
+      screen.appendChild(h('p', { class: 'sub', text: 'This phone is not set up. Ask the hub owner for the set-up QR and scan it.' }));
+      var box = h('div');
+      box.hidden = true;
+      var field = h('input', { class: 'inp', type: 'password', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': 'Set-up code', placeholder: 'Paste the set-up code' });
+      var status = h('div', { class: 'msg', role: 'status' });
+      function submitTyped() {
+        var typed = field.value;
+        field.value = '';
+        status.className = 'msg';
+        status.textContent = '';
+        if (!String(typed || '').trim()) { status.className = 'msg bad'; status.textContent = 'Paste the set-up code.'; return; }
+        if (!acceptScan(typed)) setupFail();
+      }
+      field.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); submitTyped(); } });
+      box.appendChild(field);
+      box.appendChild(h('button', { class: 'btn', type: 'button', text: 'Use this code', onclick: submitTyped }));
+      box.appendChild(status);
+      screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Type set-up code instead', onclick: function (ev) {
+        box.hidden = false;
+        ev.currentTarget.hidden = true;
+        field.focus();
+      } }));
+      screen.appendChild(box);
       return;
     }
     screen.appendChild(h('p', { class: 'sub', text: note || 'Type your own staff code. You only do this once on this phone.' }));
@@ -124,10 +180,10 @@
     screen.appendChild(msg);
     function fail(t) { save.clearCode(); msg.className = 'msg bad'; msg.textContent = t; }
     var r = j.code ? save.setScriptUrl(j.url, true) : { ok: false };
-    if (!r.ok) { fail('That set-up QR was not right. Ask Lisa for a new one.'); return; }
+    if (!r.ok) { fail('That set-up QR was not right. Ask the owner for a new one.'); return; }
     save.setCode(j.code, false);
     save.checkStatus().then(function () { return rawRead('area'); }).then(function (res) {
-      if (!res.ok) { fail(res.code === 'BAD_CODE' ? 'That code was not accepted. Ask Lisa for a new QR.' : (res.message || 'That did not work. Ask Lisa for a new QR.')); return; }
+      if (!res.ok) { fail(res.code === 'BAD_CODE' ? 'That code was not accepted. Ask the owner for a new QR.' : (res.message || 'That did not work. Ask the owner for a new QR.')); return; }
       if (!storeSet(CODE_KEY, j.code)) { fail('This browser will not remember the code. Turn off private browsing and scan again.'); return; }
       dataP = null; go('home');
     });
@@ -173,14 +229,10 @@
   function route() {
     takeJoin();
     if (join) { var j = join; join = null; runJoin(j); return; }
-    var hash = decodeURIComponent((location.hash || '').slice(1));
-    if (hash.indexOf(SETUP_PREFIX) === 0) {
-      var r = save.setScriptUrl(hash.slice(SETUP_PREFIX.length), true);
-      history.replaceState(null, '', location.pathname);      // the address does not stay in the bar or history
-      if (!r.ok) { clearScreen(); screen.appendChild(h('p', { class: 'msg bad', text: 'That set-up QR was not right. Ask Lisa for a new one.' })); return; }
-      save.checkStatus().then(function () { drawSetup(); });
-      return;
-    }
+    var raw = (location.hash || '').slice(1);
+    if (raw && acceptScan(raw)) return;   // the same checks as a typed set-up code; the address does not stay in the bar
+    var hash;
+    try { hash = decodeURIComponent(raw); } catch (e) { hash = raw; }
     if (!isSetUp()) { drawSetup(); return; }
     save.setCode(storeGet(CODE_KEY), false);
     if (hash.indexOf(SCAN_PREFIX) === 0) {
