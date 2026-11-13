@@ -7,6 +7,6 @@
 | S2 alerts | done | alerts.js: optional Mail map argument; loop red, unknown target and 3+ stops amber, no MX only with addresses |
 | S3 #/mail view | done | estate/index.html: "DNS & Email" under More, #/mail?d=<domain> for one domain, back button returns |
 | S4 header contracts | done | mailMapFromValues / mailSwitchFromValues fail closed; page shows the problem line and no rows |
-| S5 suite + guard + PR | running | full mocked + phone suite, guard --range, PR |
+| S5 suite + guard + PR | done | PR #494 open; CI tab-bar plan updated for the new More item |
 
 Tests: tests/estate/mail-phase2.test.js 19/19; tests/mocked/estate-mail-section.spec.js 3/3; estate browser specs 23/23.
