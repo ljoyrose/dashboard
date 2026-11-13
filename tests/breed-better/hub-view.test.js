@@ -264,6 +264,15 @@ test('the dog page shows the DNA card from dna_result and dna_marker rows', () =
   assert.match(html, /bb-dna[\s\S]*1 Carrier[\s\S]*TESTR/);
 });
 
+test('Open on a check is the add/edit control, not a jump back to the dog list', () => {
+  View.open('a1');
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  View.open('');
+  assert.match(html, /data-bb-edit="c"[^>]*>Open</);
+  assert.doesNotMatch(html, /data-go="dogs"/);
+  assert.match(html, /data-bb-edit-screen|bb-line/);
+});
+
 test('More offers the per-puppy calculator', () => {
   const T = pointsTables();
   T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];

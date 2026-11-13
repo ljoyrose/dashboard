@@ -1118,14 +1118,11 @@ function wGraph(h){ if(!h||h.length<2) return '';
   +h.map(function(x,i){ return '<circle cx="'+X(x,i).toFixed(1)+'" cy="'+Y(x).toFixed(1)+'" r="2.5" class="wg-dot"><title>'+esc(dmy(x.on)+' '+x.kg+' kg')+'</title></circle>'; }).join('')
   +'</svg><p class="mut wg-cap"><span>'+esc(dmy(f.on))+' \u00b7 '+f.kg+' kg</span><span>'+mn+'\u2013'+mx+' kg</span><span>'+esc(dmy(l.on))+' \u00b7 '+l.kg+' kg</span></p>'; }
 function todayLondon(){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }catch(e){ return new Date().toISOString().slice(0,10); } }
-/* One dog-card save through the save script (same address and staff code as The round). Plain answer for an older script. */
+/* One dog-card save through the save script. The staff code is checked by the script. Plain answer for an older script. */
 async function sinkAct(action,fields){
- if(!sinkOn()) return {ok:false,code:'SAVE_OFF',message:'Saving is not set up on this device.'};
- try{
-  var j=await sinkFetch({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),action:action,fields:fields});
-  if(!j.ok&&/^Unknown action/.test(j.message||'')) j.message='The save script has not been updated for this yet. Nothing was saved.';
-  return j;
- }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
+ var j=await sinkSend({action:action,fields:fields});
+ if(!j.ok&&/^Unknown action/.test(j.message||'')) j.message='The save script has not been updated for this yet. Nothing was saved.';
+ return j;
 }
 function tile(c,n,k,s){ return '<div class="tile '+c+'"><div class="n">'+n+'</div><div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</div>'; }
 function counts(){
@@ -1429,7 +1426,7 @@ function checks(){
  out.push({k:'rule changes',ok:!ra.bad.length,
    msg:ra.bad.length? ra.bad.slice(0,4).join('; ')+(ra.bad.length>4?' \u2026':'')
      :ra.keys+' declaration(s) version cleanly; '+ra.checked+' record(s) still resolve to the rule in force on their own date'});
- out.push({k:sinkOn()?'saving':'saving off',ok:true,msg:sinkOn()?'Round saves go to the save script (one row added, nothing changed or deleted).':'Read-only on this device. Set up saving on the Round page.'});
+ out.push({k:'saving',ok:true,msg:'A valid staff code saves through the save script, which checks the code and records who saved.'});
  return out;
 }
 function strip(){
@@ -1871,7 +1868,6 @@ async function placeDog(id,btn){
  var date=CD._roundDate||todayISO(), ids=inCabin(aid,date).filter(function(x){ return x!==id; }).concat([id]);
  var rc=roomCheck(aid,ids,accessOf(aid),date);
  if(rc.status==='over'&&!window.confirm(rc.message+' Place anyway?')){ msg.textContent='Not placed.'; return; }
- if(!sinkOn()){ msg.textContent='Saving is off on this device: set it up on The round.'; return; }
  btn.disabled=true; msg.textContent='Saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:id,area_id:aid}); btn.disabled=false;
  msg.textContent=sinkMsg(r);
@@ -2359,8 +2355,9 @@ async function uploadDogPhoto(inp){
  inp.value='';
  if(!file) return;
  if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
- if(!sinkOn()){ photoMsg(inp,'Saving is not set up on this device.'); return; }
  if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
+ var g=await sinkGate();
+ if(!g.ok){ photoMsg(inp, g.code==='NO_CODE'?'Enter your staff code. Nothing was saved.':'Could not reach the save script. Nothing was saved.'); return; }
  photoMsg(inp,'');
  inp.disabled=true;
  try{
@@ -2369,10 +2366,11 @@ async function uploadDogPhoto(inp){
   if(!pic){ inp.disabled=false; return; }   /* Cancel: nothing is sent */
   if(pic.error){ inp.disabled=false; photoMsg(inp,pic.error); return; }
   photoMsg(inp,'Saving the photo\u2026');
-  var res=await fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-   body:JSON.stringify({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
+  var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+   body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code);
   if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
@@ -2743,7 +2741,6 @@ function openOverMove(fromId, near){
 
 async function applyDogMove(dogId, toId, msgEl){
  if(!toId) return;
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:dogId,area_id:toId});
  if(!(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(r,'move'); return; }
@@ -2759,7 +2756,6 @@ async function applyDogMove(dogId, toId, msgEl){
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
 async function applyDogOff(dogId, msgEl){
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy_out',{subject_id:dogId,off_site_kind:'temporary'});
  if(msgEl) msgEl.textContent=sinkMsg(r,'move');
@@ -2781,7 +2777,6 @@ function markSeen(areaId, sid, state){
 async function accessSave(aid,mode,msgEl){
  if(mode!=='free'&&mode!=='limited'){ if(msgEl) msgEl.textContent=''; return; }
  if(accessOf(aid)===mode){ if(msgEl) msgEl.textContent='Already set.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var ar=await sinkPost('area_access',{area_id:aid,access_type:mode});
  if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(ar); return; }
@@ -3221,26 +3216,81 @@ function tempVerdict(val,band){
  var n=parseFloat(val); if(isNaN(n)) return '';
  if(n<band.b.min) return 'low'; if(n>band.b.max) return 'high'; return 'ok';
 }
-/* ROUND SAVING (Nov 2026). Saves go to the cdhub-write save script (Apps Script web app), which adds ONE row to the
-   Google Sheet and never edits or deletes. The script address and the staff code are typed on the Round page and kept
-   on this device only (localStorage); neither is ever in this file. Room temperatures are 1 decimal place (Lisa, 7 Nov). */
+/* ROUND SAVING. One new row on the save script. The script checks the staff code and records who saved.
+   A code remembered in this tab is reused. A missing device set-up does not block a save. Room temperatures are 1 decimal place. */
 var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code';
-/* Saving on this device (12 Nov 2026, Lisa: "make it simpler"). The address and code are remembered on the phone. If this
-   phone was set up for the staff page (its set-up QR), CD Hub uses the same address and code, so nothing is typed twice.
-   A link #join=<code>&url=<address> (the staff set-up QR's form) also switches it on here. "Switch off here" wins. */
+/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" only clears
+   the round card's copy. It does not stop a valid staff code. #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
+var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
 function sinkGet(k){ var v=sinkRaw(k); if(v) return v;
  if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||''; if(k===SINK_CODE_KEY&&!sinkRaw(SINK_OFF_KEY)) return sinkRaw('bld.device.code'); return ''; }
-/* The save address is private: after sign-in it is read once from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
-   in the Drive folder, so a phone only needs the staff code. Missing file: the address box shows as before. */
+/* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
+   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
-function saveUrlLoad(){ if(CD.saveUrlTried||sinkRaw(SINK_URL_KEY)||sinkRaw('bld.scriptUrl')) return; CD.saveUrlTried=true;
- try{ listFolder().then(function(files){ var f=files.filter(function(x){ return x.name===SAVE_URL_FILE; }); return f.length===1?readDriveFile(f[0]):''; })
-  .then(function(txt){ if(!txt) return; var u=String((JSON.parse(txt)||{}).url||'').trim(); if(SINK_RE.test(u)){ CD.saveUrl=u; if(/^#\/round/.test(location.hash)) go('round',false); } })
-  .catch(function(){}); }catch(e){} }
+function saveUrlLoad(){
+ if(SINK_RE.test(sinkGet(SINK_URL_KEY))) return Promise.resolve(sinkGet(SINK_URL_KEY));
+ if(CD.saveUrlPromise) return CD.saveUrlPromise;
+ CD.saveUrlTried=true;
+ CD.saveUrlPromise=Promise.resolve().then(function(){ return listFolder(); }).then(function(files){
+  var f=(files||[]).filter(function(x){ return x.name===SAVE_URL_FILE; });
+  return f.length===1?readDriveFile(f[0]):'';
+ }).then(function(txt){
+  if(!txt) return '';
+  var u=''; try{ u=String((JSON.parse(txt)||{}).url||'').trim(); }catch(e){ u=''; }
+  if(SINK_RE.test(u)){ CD.saveUrl=u; if(/^#\/round/.test(location.hash)) go('round',false); return u; }
+  return '';
+ }).catch(function(){ return ''; });
+ return CD.saveUrlPromise;
+}
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!sinkGet(SINK_CODE_KEY); }
+function staffCodeNow(){
+ var c=STAFF_MEM;
+ if(!c){ try{ c=sessionStorage.getItem('cdhub.staff.session')||''; }catch(e){ c=''; } if(c) STAFF_MEM=c; }
+ if(!c) c=sinkRaw(SINK_CODE_KEY)||sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')||'';
+ if(c&&c===STAFF_REJECTED) return '';
+ return c;
+}
+function rememberStaffCode(c){
+ c=String(c||'').trim(); if(!c) return '';
+ STAFF_REJECTED=''; STAFF_MEM=c;
+ try{ sessionStorage.setItem('cdhub.staff.session', c); }catch(e){}
+ return c;
+}
+function noteBadCode(c){
+ STAFF_REJECTED=String(c||''); STAFF_MEM='';
+ try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
+}
+function askStaffCode(){
+ var have=staffCodeNow(); if(have) return Promise.resolve(have);
+ if(STAFF_ASK) return STAFF_ASK;
+ STAFF_ASK=new Promise(function(resolve){
+  var box=document.createElement('div');
+  box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','staffCodeT'); box.setAttribute('data-staff-code','1');
+  box.innerHTML='<form class="pcrop-in" data-staff-code-form><h3 id="staffCodeT">Staff code</h3>'
+   +'<p class="mut">Enter your staff code. The save script checks it. Any valid code works here.</p>'
+   +'<label class="mut">Your staff code<input type="password" name="code" autocomplete="off" aria-label="Your staff code" required style="display:block;width:100%;min-height:44px;margin-top:4px"></label>'
+   +'<div class="pcrop-btns"><button type="button" class="btn" data-code-cancel>Cancel</button><span class="pcrop-gap"></span>'
+   +'<button type="submit" class="btn yes">Use this code</button></div></form>';
+  document.body.appendChild(box);
+  var input=box.querySelector('input');
+  function done(v){ STAFF_ASK=null; box.remove(); resolve(v||''); }
+  box.querySelector('[data-code-cancel]').addEventListener('click',function(){ done(''); });
+  box.querySelector('form').addEventListener('submit',function(e){ e.preventDefault(); var v=String(input.value||'').trim(); if(!v){ input.focus(); return; } done(rememberStaffCode(v)); });
+  input.focus();
+ });
+ return STAFF_ASK;
+}
+async function sinkGate(){
+ if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
+ var url=sinkGet(SINK_URL_KEY);
+ if(!SINK_RE.test(url)) return {ok:false,code:'UNREACHABLE',message:'Could not reach the save script. Nothing is known to be saved.'};
+ var code=await askStaffCode();
+ if(!code) return {ok:false,code:'NO_CODE',message:'Enter your staff code. Nothing was saved.'};
+ return {ok:true,url:url,code:code};
+}
 (function sinkJoin(){ var raw=(location.hash||'').replace(/^#\/?/,''); if(raw.indexOf('join=')!==0) return;
  var at=raw.indexOf('&url='), c='', u=''; try{ c=decodeURIComponent(raw.slice(5,at>0?at:raw.length)).trim(); u=at>0?decodeURIComponent(raw.slice(at+5)).trim():''; }catch(e){ c=''; }
  try{ history.replaceState(null,'',location.pathname+'#/round'); }catch(e){ location.hash='#/round'; }
@@ -3249,15 +3299,22 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
 /* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved): no answer in 40 s = NOT saved, said plainly. */
-function sinkFetch(body){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
- return fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
+function sinkFetch(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
+ return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
    function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 40 seconds. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
-async function sinkPost(table,fields){
- if(!sinkOn()) return {ok:false,code:'SAVE_OFF',message:'Saving is not set up on this device.'};
+async function sinkSend(body){
+ var g=await sinkGate();
+ if(!g.ok) return g;
+ body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code;
  try{
-  return await sinkFetch({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),table:table,action:'add',fields:fields});
+  var j=await sinkFetch(body,g.url);
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code);
+  return j;
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
+}
+async function sinkPost(table,fields){
+ return sinkSend({table:table,action:'add',fields:fields});
 }
 function sinkMsg(r,kind){
  if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved \u2713':'saved \u2713';
@@ -3290,7 +3347,6 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
  var startH=slot==='am'?'00':'12', ps=isoAt(date,startH);
  if(have.at){ if(msgEl) msgEl.textContent='already saved. Wrong? Tell Lisa \u2014 a saved reading is never changed here'; return; }
  if(t.min!==''&&t.max!==''&&Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon reading can be saved from 12:00':'That time has not arrived yet.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  if(t.min===''||t.max===''){ if(msgEl) msgEl.textContent='type '+(t.min===''?'min':'max')+' too, then it saves'; return; }
  if(t.busy) return; t.busy=true;
  if(msgEl) msgEl.textContent='saving\u2026';
@@ -3307,7 +3363,7 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
 function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-area_reading.csv']=[]);
  rows.push(Object.assign({id:(r.result&&r.result.id)||'',area_id:areaId,period_start:ps,taken_at:(r.result&&r.result.at)||new Date().toISOString()},f)); }
 function roundRefresh(date){
- var st=document.getElementById('rstat'); if(st&&sinkOn()){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
+ var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
 /* Empty cabin (Lisa, 12 Nov 2026): one area_reading row with room_empty = yes for that slot. It is the evidence (date,
    slot, who: the save script stamps taken_at and taken_by), needs no temperature, and Compliance counts it as covered. */
@@ -3316,7 +3372,6 @@ async function roomEmptySave(areaId,slot,msgEl){
  if(have.at){ if(msgEl) msgEl.textContent='already saved'; return; }
  var ps=isoAt(date,slot==='am'?'00':'12');
  if(Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon can be marked from 12:00':'That time has not arrived yet.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('area_reading',{area_id:areaId,room_empty:'yes',period_start:ps});
  if(msgEl) msgEl.textContent=sinkMsg(r);
@@ -3333,7 +3388,6 @@ async function roundAddLitter(areaId,litterId,msgEl){
  if(l.dam_subject_id) ids.unshift(l.dam_subject_id);
  ids=ids.filter(function(id){ return here.indexOf(id)<0; });
  if(!ids.length){ if(msgEl) msgEl.textContent='They are all here already.'; return; }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  var ok=0, bad='';
  for(var i=0;i<ids.length;i++){ if(msgEl) msgEl.textContent='saving '+(i+1)+' of '+ids.length+'\u2026';
   var r=await sinkPost('occupancy',{subject_id:ids[i],area_id:areaId});
@@ -3349,7 +3403,6 @@ async function roundSave(areaId,patch,msgEl,sel){
   var mode=patch.access, back=function(){ if(sel) sel.value=accessOf(areaId)||''; };
   if(mode!=='free'&&mode!=='limited'){ if(msgEl) msgEl.textContent='Choose free access or limited.'; back(); return; }
   if(accessOf(areaId)===mode){ if(msgEl) msgEl.textContent='Already set to '+(mode==='free'?'free access':'limited')+'.'; return; }
-  if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; back(); return; }
   if(msgEl) msgEl.textContent='saving\u2026';
   var ar=await sinkPost('area_access',{area_id:areaId,access_type:mode});
   if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(ar); back(); return; }
@@ -3361,7 +3414,6 @@ async function roundSave(areaId,patch,msgEl,sel){
   go('round',false);
   return;
  }
- if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device \u2014 set it up at the top of this page'; return; }
  if(!patch.add){ if(msgEl) msgEl.textContent='To move a dog, add them to the cabin they moved to.'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:patch.add,area_id:areaId});
@@ -3887,7 +3939,6 @@ function bindCompliance(){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(from)){ msg.textContent='Choose the date it is in force from.'; return; }
   var last=breedRuleRows(key).slice(-1)[0];
   if(last&&last.effective_from>=from){ msg.textContent='This rule already has a version from '+dmy(last.effective_from)+'. A change must start after that date.'; return; }
-  if(!sinkOn()){ msg.textContent='saving off — set it up at the top of The round'; return; }
   b.disabled=true; msg.textContent='saving…';
   var r=await sinkPost('breeding_rule',{rule_key:key,value:val,effective_from:from,source:src});
   b.disabled=false; msg.textContent=sinkMsg(r);
