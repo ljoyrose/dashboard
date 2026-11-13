@@ -185,3 +185,15 @@ test("a visitor's record is kept separate unless that visit counts the job", () 
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'TRUE' })]), 'ok');
   assert.equal(one([Object.assign(rec('vl1'), { counts_due: 'false' })], [{ id: 'vl1', record_counts: 'clean' }]), 'never');
 });
+
+test('a note added to a done job never counts as a second done', () => {
+  const types = [T('bowls', 'none', '1')];
+  const logs = [{ id: 'n1', check_type_id: 'cty-bowls-1', outcome: 'note', note: 'x', note_for_id: 'gone', taken_at: '2026-03-02T09:00:00Z' }];
+  assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
+});
+
+test('part done is never counted as done', () => {
+  const types = [T('bowls', 'none', '1')];
+  const logs = [{ id: 'p1', check_type_id: 'cty-bowls-1', outcome: 'part_done', note: 'x', taken_at: '2026-03-02T09:00:00Z' }];
+  assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
+});

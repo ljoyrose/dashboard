@@ -370,8 +370,28 @@ test('Note on a job not done yet saves it as done with the note, shown under the
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-ears', outcome: 'ok', note: 'Pretend explanation' } });
   await expect(ears.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
   await expect(ears.locator('.done-note')).toHaveText('Pretend explanation');
+  // already done today: a second note is its own row pointing at the done one, never a second done
   await page.getByRole('button', { name: 'Problem: Ears' }).click();
-  await expect(ears.getByRole('button', { name: 'Note', exact: true })).toHaveCount(0);
+  await ears.getByLabel('Note').fill('Pretend second note');
+  await ears.getByRole('button', { name: 'Note', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-ears', outcome: 'note', note: 'Pretend second note', note_for_id: 'clg-1', subject_id: 'dog-1' } });
+  await expect(ears.locator('.done-note')).toHaveText('Pretend explanation\nPretend second note');
+});
+
+test('a note on a whole-site job already done today is one plain row, not a whole-site tap', async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const sent = await setup(page, { check_log: [{ id: 'clg-7', check_type_id: 'cty-bowls', outcome: 'ok', how_recorded: 'site_tap', taken_at: today + 'T09:00:00Z' }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'More' }).click();
+  const bowls = page.locator('[data-job="bowls"]');
+  await page.getByRole('button', { name: 'Problem: Bowls' }).click();
+  await bowls.getByLabel('Note').fill('Pretend note');
+  await bowls.getByRole('button', { name: 'Note', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { outcome: 'note', note_for_id: 'clg-7' } });
+  expect(sent[0].fields.dog_ids).toBeUndefined();
+  await expect(bowls.locator('.done-note')).toHaveText('Pretend note');
 });
 
 test('a save refused as a repeat says so once, in plain words', async ({ page }) => {
@@ -389,6 +409,23 @@ test('a save refused as a repeat says so once, in plain words', async ({ page })
   await expect(weigh.locator('.done-line.bad')).toContainText('Already saved a moment ago');
   await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
   await expect(weigh.getByText('Saving...')).toHaveCount(0);
+});
+
+test('Part done needs a note, saves as part_done and shows on the card, not as done', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await ears.getByRole('button', { name: 'Part done' }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('Say briefly');
+  expect(sent).toHaveLength(0);
+  await ears.getByLabel('Note').fill('Pretend: one ear only');
+  await ears.getByRole('button', { name: 'Part done' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { outcome: 'part_done', note: 'Pretend: one ear only' } });
+  await expect(ears.locator('.done-line.flag')).toContainText('Part done');
+  await expect(ears.locator('.ds')).toHaveText('Due');
 });
 
 test('when this code cannot read past records, the list says so instead of a silent Due', async ({ page }) => {

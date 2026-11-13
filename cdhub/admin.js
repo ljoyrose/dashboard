@@ -181,7 +181,7 @@ var AdminView = (function () {
         return '<li>' + mark(x.live) + ' <b>' + v.esc(r.who || r.code_id) + '</b> <span class="pill">' + v.esc(roleName[r.role] || r.role || '') + '</span>'
           + ' <span class="dpill">' + v.esc(v.dmy(String(r.from_date || '').slice(0, 10))) + '</span>\u2013' + (r.to_date ? '<span class="dpill' + (x.live ? '' : ' late') + '">' + v.esc(v.dmy(String(r.to_date).slice(0, 10))) + '</span>' : 'now')
           + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') + ' <span class="mut">' + v.esc(r.code_id) + '</span></li>';
-      }).join('') + '</ul>' : '<p class="mut">No codes yet.</p>')
+      }).join('') + '</ul>' : '<p class="mut">Empty. On the owner page press <b>Fill the code register</b> once; your codes then list here.</p>')
         : '<p class="mut">The list shows here after the next save-script update. Until then it is on the owner page.</p>')
         + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + '</p>'
         + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
