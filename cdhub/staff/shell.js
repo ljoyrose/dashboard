@@ -221,7 +221,7 @@
   function drawDevice() {
     clearScreen(); setTabs('device');
     screen.appendChild(h('h2', { text: 'This phone' }));
-    screen.appendChild(h('p', { class: 'sub', text: 'This phone is set up with your staff code. If it is lost, tell Lisa: she switches the code off and it stops working everywhere.' }));
+    screen.appendChild(h('p', { class: 'sub', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
     screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Remove my code from this phone', onclick: function () { forget(); go('home'); } }));
   }
   function openModule(id, params) {
