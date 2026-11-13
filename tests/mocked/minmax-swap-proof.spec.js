@@ -63,8 +63,7 @@ test.describe('Proof: min 22.0 and max 18.0 are the wrong way round', () => {
     await mn.fill('22.0'); await mn.blur();
     await mx.fill('18.0'); await mx.blur();
     await expect(msg).toHaveAttribute('role', 'alert');
-    await expect(msg).toContainText('max (18.0) is lower than min (22.0)');
-    await expect(msg).toContainText('Not saved');
+    await expect(msg).toHaveText('The lowest reading cannot be higher than the highest reading.');
     await expect(mn).toHaveClass(/\bbad\b/);
     await expect(mx).toHaveClass(/\bbad\b/);
     expect(sent, 'no POST must be sent when min/max are swapped').toHaveLength(0);
@@ -91,8 +90,7 @@ test.describe('Proof: min 22.0 and max 18.0 are the wrong way round', () => {
     await mx.fill('18.0'); await mx.blur();
     await mn.fill('22.0'); await mn.blur();
     await expect(msg).toHaveAttribute('role', 'alert');
-    await expect(msg).toContainText('max (18.0) is lower than min (22.0)');
-    await expect(msg).toContainText('Not saved');
+    await expect(msg).toHaveText('The lowest reading cannot be higher than the highest reading.');
     await expect(mn).toHaveClass(/\bbad\b/);
     await expect(mx).toHaveClass(/\bbad\b/);
     expect(sent, 'no POST must be sent when min/max are swapped (max typed first)').toHaveLength(0);

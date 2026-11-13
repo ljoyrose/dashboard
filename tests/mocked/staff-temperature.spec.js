@@ -269,6 +269,8 @@ function staffShot(name) {
   return path.join(SHOTS, name);
 }
 
+const PAIR_MSG = 'The lowest reading cannot be higher than the highest reading.';
+
 test('min 22.0 and max 18.0 (min first) is flagged as the wrong way round and nothing is posted', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
@@ -276,13 +278,14 @@ test('min 22.0 and max 18.0 (min first) is flagged as the wrong way round and no
   await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MIN').fill('22.0');
   await page.getByLabel('MAX').fill('18.0');
-  await expect(page.getByText('MIN is higher than MAX. Wrong way round?')).toBeVisible();
+  const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
+  await expect(bad).toHaveCount(1);
   await expect(page.getByLabel('MIN')).toHaveClass(/\bswap\b/);
   await expect(page.getByLabel('MAX')).toHaveClass(/\bswap\b/);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('MIN is higher than MAX. Check the screen.')).toBeVisible();
+  await expect(bad).toHaveCount(2);
   expect(sent, 'staff must not POST a swapped min/max').toHaveLength(0);
-  await page.getByText('MIN is higher than MAX. Check the screen.').scrollIntoViewIfNeeded();
+  await bad.last().scrollIntoViewIfNeeded();
   await page.screenshot({ path: staffShot('staff-min-first.png'), fullPage: false });
   require('fs').writeFileSync(staffShot('staff-min-first-posts.json'), JSON.stringify(sent, null, 2));
 });
@@ -294,11 +297,12 @@ test('min 22.0 and max 18.0 (max first) is flagged as the wrong way round and no
   await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('22.0');
-  await expect(page.getByText('MIN is higher than MAX. Wrong way round?')).toBeVisible();
+  const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
+  await expect(bad).toHaveCount(1);
   await expect(page.getByLabel('MIN')).toHaveClass(/\bswap\b/);
   await expect(page.getByLabel('MAX')).toHaveClass(/\bswap\b/);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText('MIN is higher than MAX. Check the screen.')).toBeVisible();
+  await expect(bad).toHaveCount(2);
   expect(sent, 'staff must not POST a swapped min/max (max typed first)').toHaveLength(0);
   await page.screenshot({ path: staffShot('staff-max-first.png'), fullPage: false });
   require('fs').writeFileSync(staffShot('staff-max-first-posts.json'), JSON.stringify(sent, null, 2));
