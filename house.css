@@ -397,11 +397,11 @@ button.house-fold-more:not(#hf-a):not(#hf-b):hover, button.house-fold-more:not(#
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]),
   textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]):not(#ti-a):not(#ti-b) { font-size: var(--fs-input); }
 /* 17 The shared dialogs (toolkit.js: Search, Keyboard keys): Close is a house button, never the browser's own. 1px control line,
-   12px corners, Lexend 14px / 600, 36px (44px on a phone), no fill in any state; hover draws the 1px line inside, keyboard focus the ring. */
+   12px corners, Lexend 14px / 600, 36px (44px on a phone), no fill in any state; hover and keyboard focus draw the 1px line inside. */
 dialog button.house-close { box-sizing: border-box; display: inline-flex; align-items: center; min-height: var(--house-btn); padding: 0 14px; margin: 0;
   border: var(--house-line) solid var(--press); border-radius: var(--house-radius); background: transparent; color: inherit;
   font-family: var(--house-font); font-size: var(--house-press-size); font-weight: 600; line-height: 1.2; cursor: pointer; }
 @media (max-width: 600px) { dialog button.house-close { min-height: var(--house-btn-phone); } }
 @media (hover: hover) { dialog button.house-close:hover { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); } }
 dialog button.house-close:active { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); }
-dialog button.house-close:focus-visible { outline: var(--house-focus) solid currentColor; outline-offset: 2px; }
+dialog button.house-close:focus-visible { outline: var(--house-focus) solid currentColor; outline-offset: calc(-1 * var(--house-focus)); }

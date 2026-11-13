@@ -1,11 +1,11 @@
 // Phone install support. Keeps ONLY the site's own page files so the dashboard opens fast and opens at all
 // when offline. It never stores Google Drive data, the sign-in token, or anything from another address:
 // Google requests are not touched (no respondWith), so they go straight to the network as before.
-var CACHE = 'ljr-shell-v8'; // v8: SOP category and role on the public index. v7: CD Hub file-type labels and icons. Bump this when the page files change.
+var CACHE = 'ljr-shell-v9'; // v9: CD Hub tab list. v8: SOP category and role on the public index. Bump this when the page files change.
 var SHELL = [
   './', 'index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png',
-  'money/', 'money/index.html', 'money/core.js', 'cdhub/', 'cdhub/index.html', 'cdhub/sop-index.json', 'cdhub/asset-types.json', 'cdhub/asset-type-icons.svg', 'studio/', 'studio/index.html',
+  'money/', 'money/index.html', 'money/core.js', 'cdhub/', 'cdhub/index.html', 'cdhub/hub-nav.js', 'cdhub/sop-index.json', 'cdhub/asset-types.json', 'cdhub/asset-type-icons.svg', 'studio/', 'studio/index.html',
   'factory/', 'factory/index.html', 'food/', 'food/index.html', 'marketplace/', 'marketplace/index.html'
 ];
 var BASE = self.registration ? new URL(self.registration.scope) : new URL('./', self.location);

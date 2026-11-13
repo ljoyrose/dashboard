@@ -78,9 +78,6 @@
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables',
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
-      // Write targets for inline dashboard edits (chip and area saves)
-      microchipFileId: '1GnL88Xtf0tlcXjFf_P2ML-Vfglz08-Ee',
-      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-',
       // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
       // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
       saveScriptUrl: ''
