@@ -84,7 +84,7 @@
         if (!l) return;
         if (l._queued) { BLDDone.wait(card, l._queued); return; }
         var n = dogIds ? Object.keys(doneToday(key)).filter(function (x) { return dogIds.indexOf(x) >= 0; }).length : 0;
-        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
+        BLDDone.mark(card, { outcome: l.outcome, at: l.taken_at, who: l.taken_by, note: l.note, extra: dogIds && dogIds.length > 1 ? n + ' of ' + dogIds.length + ' dogs' : '' });
       }
       /* a job's form: the owner's check_field rows in force today, in their sort order */
       var formOf = {}, latestField = {};
@@ -106,7 +106,13 @@
       function byLine(job) { var b = job.reset_by && byKey[job.reset_by]; return b && job.status === 'ok' ? ' · ' + b.label : ''; }
       function say(text, kind) { status.className = 'msg ' + (kind || ''); status.textContent = text; }
 
+      /* every tap shows something on the card: Saving..., then a tick or a plain red line (Lisa, 13 Nov) */
       function send(job, t, outcome, inputs, panelMsg, state) {
+        try { sendNow(job, t, outcome, inputs, panelMsg, state); }
+        catch (e) { BLDDone.fail(state.card, 'Not saved. Something went wrong on this screen; try again.'); if (window.console) console.error(e); }
+      }
+      function sendNow(job, t, outcome, inputs, panelMsg, state) {
+        function stop(text) { panelMsg.textContent = ''; BLDDone.fail(state.card, text); }   // on the card, so it shows even with the panel shut
         var entry = { check_type_id: t.id, outcome: outcome, how_recorded: how };
         if (target.subject_id) entry.subject_id = target.subject_id;
         if (target.area_id) entry.area_id = target.area_id;
@@ -117,27 +123,28 @@
         var check = Object.assign({}, entry);
         if (t.target === 'none') delete check.area_id;
         var bad = BLDChecks.checkEntry(t, check), first = Object.keys(bad)[0];
-        if (first) { panelMsg.className = 'msg bad'; panelMsg.textContent = bad[first]; return; }
+        if (first) { stop(bad[first]); return; }
         var values = {}, missing = '';
         (state.form || []).forEach(function (q) {
           var val = q.input.value.trim();
           if (val) values[q.field.field_key] = val; else if (!missing && String(q.field.required).toLowerCase() === 'true') missing = q.field.label;
         });
-        if (missing) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'This is needed: ' + missing + '.'; return; }
+        if (missing) { stop('This is needed: ' + missing + '.'); return; }
         var opts = { requestId: state.rid = state.rid || c.save.newRequestId() };
         if (Object.keys(values).length) opts.values = values;
         if (state.ticks) {
           var ticked = state.ticks.filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
-          if (!ticked.length) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'Tick a dog.'; return; }
+          if (!ticked.length) { stop('Tick a dog.'); return; }
           opts.action = 'add_site'; entry.dog_ids = ticked.join('|');
         } else if (BLDDue.perDogSite(t) && target.subject_id) { opts.action = 'add_site'; entry.dog_ids = target.subject_id; }
         if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; }
-        panelMsg.className = 'msg'; panelMsg.textContent = 'Saving...';
+        panelMsg.className = 'msg'; panelMsg.textContent = ''; BLDDone.saving(state.card);
         c.save.submit('check_log', entry, opts).then(function (r) {
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
-            panelMsg.className = 'msg bad'; panelMsg.textContent = fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : r.message;
-            BLDDone.fail(state.card, 'Not saved.' + (fe ? '' : ' ' + (r.message || '')));
+            panelMsg.textContent = '';   // said once, on the card
+            BLDDone.fail(state.card, r.code === 'DUPLICATE' ? 'Already saved a moment ago, so not saved twice. To add to it, use Note.'
+              : 'Not saved: ' + (fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : (r.message || 'try again.')));
             if (r.code !== 'NETWORK') state.rid = null; return;
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
@@ -168,7 +175,7 @@
       function jobCard(job) {
         var t = byKey[job.type_key], a = BLDChecks.askedFields(t), dogJob = BLDDue.perDogSite(t), many = site || dogJob || BLDDue.perDogRoom(t), form = many ? [] : (formOf[t.type_key] || []);
         var needs = a.item || a.amount || a.noteRequired || form.length > 0 || (dogJob && site);   // a whole-site or per-dog tap has no form: the save script refuses one
-        var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null };
+        var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null, panel: panel };
         state.form = form.map(function (f) { var q = { field: f, input: question(f, function () { state.rid = null; }) }; panel.appendChild(q.input); return q; });
         function input(key, label) { inputs[key] = h('input', { class: 'inp', 'aria-label': label, placeholder: label, oninput: function () { state.rid = null; } }); panel.appendChild(inputs[key]); }
         if (a.item) input('item', t.item_label || 'What');
@@ -191,10 +198,19 @@
           state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
         }
-        var problems = h('div', { class: 'job-btns', hidden: true }, [
+        /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
+           On a job already done today it waits for the save script's note record (outcome note + note_for_id). */
+        var dogIds = state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null);
+        var doneHere = todays(t.type_key).some(function (l) { return l.outcome !== 'not_done' && (dogIds ? dogIds.indexOf(l.subject_id) >= 0 : here(l)); });
+        var problems = h('div', { class: 'job-btns', hidden: true }, (doneHere ? [] : [
+          h('button', { class: 'btn quiet', type: 'button', text: 'Note', onclick: function () {
+            if (!inputs.note.value.trim()) { BLDDone.fail(state.card, 'Write the note.'); return; }
+            send(job, t, done, inputs, panelMsg, state);
+          } })
+        ]).concat([
           h('button', { class: 'btn quiet', type: 'button', text: 'Concern', onclick: function () { send(job, t, 'concern', inputs, panelMsg, state); } }),
           h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } })
-        ]);
+        ]));
         panel.appendChild(problems); panel.appendChild(panelMsg);
         var head = h('div', { class: 'job-head' }, [
           h('div', { class: 'job-txt' }, [h('div', { class: 'nm', text: job.label }), h('div', { class: 'ds', text: dueLine(job) + byLine(job) })]),
@@ -205,10 +221,10 @@
           } })
         ]);
         var kids = roomList ? [head, roomList] : [head];
-        if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
+        if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem/Note?', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
         kids.push(panel);
         var card = state.card = h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);
-        showDone(card, t.type_key, state.dogIds || (dogJob && target.subject_id ? [target.subject_id] : null));
+        showDone(card, t.type_key, dogIds);
         return card;
       }
       /* one dog in a tick list: a dog with a line today shows a tick and the time */

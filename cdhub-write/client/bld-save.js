@@ -22,7 +22,7 @@
   var URL_OK = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
-  var TIMEOUT_MS = 20000;
+  var TIMEOUT_MS = 45000;   // the save script can take over 20 s when busy; a shorter wait said "could not reach" for saves that landed
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
   var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)

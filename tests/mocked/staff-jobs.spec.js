@@ -65,9 +65,14 @@ test('a job that asks for an amount opens its field first; a problem needs a not
   expect(sent[0].fields.amount).toBe('21.5');
   const card = page.locator('[data-job="ears"]');
   await page.locator('[data-group="Grooming"]').click();
+  await expect(page.getByRole('button', { name: 'Problem: Ears' })).toHaveText('Problem/Note?');
   await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await expect(card.getByLabel('Note')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Not done' })).toBeVisible();
   await card.getByRole('button', { name: 'Concern' }).click();
-  await expect(card.getByText('Say briefly')).toBeVisible();
+  await expect(card.locator('.done-line.bad')).toContainText('Say briefly');
+  await card.getByRole('button', { name: 'Not done' }).click();
+  await expect(card.locator('.done-line.bad')).toContainText('Say briefly');
   expect(sent).toHaveLength(1);
 });
 
@@ -316,7 +321,72 @@ test('a tick only once received: Problem shows its result, a refusal shows a red
   });
   const nails = page.locator('[data-job="nails"]');
   await page.getByRole('button', { name: 'Done: Nails' }).click();
-  await expect(nails.locator('.done-line.bad')).toContainText('Not saved.');
+  await expect(nails.locator('.done-line.bad')).toContainText('Not saved: Pretend refusal.');
   await expect(page.getByRole('button', { name: 'Done: Nails' })).not.toHaveClass(/is-done/);
   expect(sent).toHaveLength(1);
+});
+
+test('every tap shows Saving straight away, with the button off until the reply', async ({ page }) => {
+  const sent = await setup(page);
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.route(SCRIPT, async (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    await held;
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'clg-held' } } });
+  });
+  const bowls = page.locator('[data-job="bowls"]');
+  await page.getByRole('button', { name: 'Yes, done: Bowls' }).click();
+  await expect(bowls.locator('.done-line')).toContainText('Saving...');
+  await expect(page.getByRole('button', { name: 'Yes, done: Bowls' })).toBeDisabled();
+  release();
+  await expect(bowls.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
+  expect(sent).toHaveLength(0);
+});
+
+test('a check the screen refuses before sending still shows on the card', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const walk = page.locator('[data-job="walk"]');
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(walk.locator('.done-line.bad')).toContainText('Tick a dog.');
+});
+
+test('Note on a job not done yet saves it as done with the note, shown under the tick', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await ears.getByRole('button', { name: 'Note', exact: true }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('Write the note.');
+  expect(sent).toHaveLength(0);
+  await ears.getByLabel('Note').fill('Pretend explanation');
+  await ears.getByRole('button', { name: 'Note', exact: true }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-ears', outcome: 'ok', note: 'Pretend explanation' } });
+  await expect(ears.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
+  await expect(ears.locator('.done-note')).toHaveText('Pretend explanation');
+  await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await expect(ears.getByRole('button', { name: 'Note', exact: true })).toHaveCount(0);
+});
+
+test('a save refused as a repeat says so once, in plain words', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved.' } });
+  });
+  const weigh = page.locator('[data-job="weigh"]');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await weigh.getByLabel('Amount (kg)').fill('21.5');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect(weigh.locator('.done-line.bad')).toContainText('Already saved a moment ago');
+  await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
+  await expect(weigh.getByText('Saving...')).toHaveCount(0);
 });
