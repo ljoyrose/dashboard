@@ -516,9 +516,25 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 WANT.push('BLD-subject_link.csv');   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
 var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
-if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
-if(typeof AdminView!=='undefined') AdminView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});   /* Admin (owner-only): admin.js */
-if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(function(f){ if(WANT.indexOf(f)<0) WANT.push(f); OPTIONAL_FILES[f]=1; });
+/* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
+   screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
+var LATER={};
+['medicinal_product','stock_level','clinical_note','dispense',                      /* medicines */
+ 'dna_marker','dna_result',                                                         /* DNA */
+ 'prospect','prospect_set','export_route','breeder_category','association',          /* prospects (Assocs) */
+ 'subject_owner','household','household_member','sale','match_candidate',           /* enquiries */
+ 'audience','code_register','retention_setting',                                    /* Admin */
+ /* read by Compliance, Dogs and the Table map only (traced 13 Nov 2026); the first screen does not touch them */
+ 'authority','jurisdiction','locale','checklist_instance','checklist_template','checklist_template_item','credential','credential_version',
+ 'deviation','finding','governed_by','inspection','microchip_registration','outcome','reminder','verification','visit','fit_to_breed'
+].forEach(function(t){ LATER['BLD-'+t+'.csv']=1; });
+function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTIONAL_FILES[f]=1; }
+if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
+if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
+if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
+var LATER_PAGES={dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
+/* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
+var LIVE_PAGES={compliance:1};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
@@ -760,7 +776,7 @@ function signOut(){
   var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
   if(window.DashAuth) DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
-  T={}; CD={}; LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
+  T={}; CD={}; copyWipe(); LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
 }
 function initGoogle(){
   if(!auth.init()) return false;
@@ -769,6 +785,7 @@ function initGoogle(){
 /* Assigned before restoreShared(): a saved sign-in calls load() while this script is still running,
    and a var lower down would still be undefined (a 0ms timeout, and the read is then ignored). */
 var BOOT_SLOW_MS=15000, BOOT_READ_MS=45000, bootTicket=0, bootSlowTimer=0;
+var COPY_DB='cdhub-owner-copy', copyWiped=0, agoTimer=0;   /* the device copy (see load); copyWiped: a put that started before a wipe must not bring the copy back */
 function restoreShared(){
   var saved=window.DashAuth&&DashAuth.valid();
   if(!saved||!DashAuth.hasScope(saved,SCOPE)) return;
@@ -778,7 +795,7 @@ function restoreShared(){
 restoreShared();
 
 if(window.DashAuth) DashAuth.onChange(function(saved){
-  if(!saved||!DashAuth.hasScope(saved,SCOPE)){ if(TOKEN){ TOKEN=null; TOKEN_EXP=0; T={}; CD={}; LOAD={state:'signin',err:'Signed out in another tab.',storedAt:null,notes:[]}; render(); } return; }
+  if(!saved||!DashAuth.hasScope(saved,SCOPE)){ if(TOKEN){ TOKEN=null; TOKEN_EXP=0; T={}; CD={}; copyWipe(); LOAD={state:'signin',err:'Signed out in another tab.',storedAt:null,notes:[]}; render(); } return; }
   var was=TOKEN; TOKEN=saved.access_token; TOKEN_EXP=saved.expires_at;
   if(!was||LOAD.state==='signin'||LOAD.state==='err') load();
 });
@@ -838,60 +855,122 @@ function readPool(items,limit,fn){
     kick();
   });
 }
+/* Device copy (owner speed, Lisa 13 Nov 2026): the owner's last full read is kept on this device (IndexedDB) and shown
+   at once on the next open, marked "updated x min ago", while the live read runs behind it. Wiped on Sign out and on
+   "Signed out in another tab", and when Google refuses this account. Only this owner page uses it: the inspector and
+   visitor pages never read it, and LIVE_PAGES (Compliance) wait for the live read. Saves wait for the live read too:
+   the file list saves look names up in is filled only by a live read. */
+function copyOpen(){ return new Promise(function(res,rej){ if(!window.indexedDB){ rej(new Error('none')); return; }
+  var r; try{ r=indexedDB.open(COPY_DB,1); }catch(e){ rej(e); return; }
+  r.onupgradeneeded=function(){ r.result.createObjectStore('copy'); };
+  r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; r.onblocked=function(){ rej(new Error('blocked')); }; }); }
+function copyGet(){ return copyOpen().then(function(db){ return new Promise(function(res){
+  try{ var q=db.transaction('copy','readonly').objectStore('copy').get('last');
+    q.onsuccess=function(){ db.close(); res(q.result||null); }; q.onerror=function(){ db.close(); res(null); }; }catch(e){ db.close(); res(null); } }); })
+  .catch(function(){ return null; }); }
+function copyPut(v){ var w=copyWiped; return copyOpen().then(function(db){ return new Promise(function(res){
+  if(w!==copyWiped){ db.close(); res(); return; }
+  try{ var tx=db.transaction('copy','readwrite'); tx.objectStore('copy').put(v,'last');
+    tx.oncomplete=function(){ db.close(); if(w!==copyWiped) copyWipe(); res(); }; tx.onerror=tx.onabort=function(){ db.close(); res(); }; }catch(e){ db.close(); res(); } }); })
+  .catch(function(){}); }
+function copyWipe(){ copyWiped++; try{ if(window.indexedDB) indexedDB.deleteDatabase(COPY_DB); }catch(e){} }
+function agoText(iso){ var m=Math.floor((Date.now()-Date.parse(iso))/60000); if(!(m>=0)) return '';
+  if(m<1) return 'updated just now'; if(m<60) return 'updated '+m+' min ago';
+  var h=Math.floor(m/60); if(h<24) return 'updated '+h+' hr ago'; var d=Math.floor(h/24); return 'updated '+d+' day'+(d===1?'':'s')+' ago'; }
+function agoTick(){ clearInterval(agoTimer); if(LOAD.copy) agoTimer=setInterval(function(){ if(LOAD.copy) pill(); else clearInterval(agoTimer); },30000); }
+/* a page re-drawn when more rows land must not lose what someone is typing */
+function typing(){ var a=document.activeElement; return !!(a&&a.closest&&a.closest('#main')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); }
+var SHOWN='';   /* the view go() last drew, so a redraw keeps it (go() can be called without a hash change) */
+function redrawAfterRead(){ if(LOAD.state!=='ok') return; if(typing()){ document.getElementById('nav').innerHTML=navHtml(); pill(); return; }
+  if(SHOWN) go(SHOWN,false); else render(); }
+function readSet(titles,byTitle,live){
+  var got={};
+  return readPool(titles, READ_AT_ONCE, function(title){
+    return bootLimit(readDriveFile(byTitle[title][0])).then(function(txt){ got[title]={ok:true,txt:txt}; }, function(e){ got[title]={ok:false,e:e}; });
+  }).then(function(){
+    if(!live()) return null;
+    var fail=null, failE=null;
+    titles.forEach(function(title){ var r=got[title]; if(!r||!r.ok){ if(!fail){ fail=plainDriveErr(r&&r.e); failE=r&&r.e; } } });
+    if(fail) return {fail:fail,e:failE};
+    var out={};
+    titles.forEach(function(title){
+      var txt=String(got[title].txt||'').replace(/^﻿/,'');
+      if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
+      out[title]=parseCSV(txt);
+    });
+    return {tables:out};
+  });
+}
+function refused(e){ return !!(e&&(e.status===401||e.status===403||e.status===404)); }
+function showTables(){ DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
 async function load(){
   var ticket=++bootTicket;
-  T={}; LOAD={state:'loading',err:null,errKind:'',storedAt:null,notes:[]};
-  document.getElementById('nav').innerHTML=''; pill();
-  document.getElementById('main').innerHTML=bootHtml();
-  armBootSlow(ticket);
   function live(){ return ticket===bootTicket; }
+  var showing=LOAD.state==='ok';   /* Refresh keeps what is on screen and reads behind it */
+  if(!showing){
+    var c=await copyGet();
+    if(!live()) return;
+    if(c&&c.tables&&TOKEN){
+      T=c.tables; LOAD={state:'ok',err:null,errKind:'',storedAt:c.at,notes:c.notes||[],copy:true,later:'ok',files:c.files||0,manifestLine:c.manifestLine};
+      window._driveFiles=[]; window._driveIds={};
+      showTables(); render(); showing=true;
+    }
+  }
+  if(showing){ LOAD.copy=true; LOAD.stale=''; pill(); agoTick(); }
+  else {
+    T={}; LOAD={state:'loading',err:null,errKind:'',storedAt:null,notes:[]};
+    document.getElementById('nav').innerHTML=''; pill();
+    document.getElementById('main').innerHTML=bootHtml();
+    armBootSlow(ticket);
+  }
+  /* a read that fails behind the copy keeps the copy on screen and says so; a refusal wipes it */
+  function failed(msg,e,kind){
+    endBootWait(ticket);
+    if(showing&&!refused(e)){ LOAD.stale=msg; redrawAfterRead(); return; }
+    if(refused(e)) copyWipe();
+    clearInterval(agoTimer);
+    if(kind==='list'){ window._driveFiles=[]; window._driveIds={}; }
+    T={}; CD={}; LOAD={state:'err',err:msg,errKind:kind==='list'?'':'files',storedAt:null,notes:[]}; render();
+  }
   var files;
   try{ files=await bootLimit(listFolder()); }
-  catch(e){
-    if(!live()) return;
-    endBootWait(ticket);
-    window._driveFiles=[]; window._driveIds={};
-    LOAD.state='err'; LOAD.err=plainDriveErr(e); render(); return;
-  }
+  catch(e){ if(!live()) return; failed(plainDriveErr(e),e,'list'); return; }
   if(!live()) return;
-  LOAD.storedAt=new Date().toISOString();
+  var storedAt=new Date().toISOString();
   var byTitle={};
-  window._driveIds={};
   /* Same listing the reads use. Saves look a file up by its name here. A missing or doubled name is not a save. */
+  window._driveIds={};
   window._driveFiles=files.map(function(f){ return {id:f.id,name:f.name,mimeType:f.mimeType||''}; });
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
-  if(dup.length){ endBootWait(ticket); LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
+  if(dup.length){ endBootWait(ticket); clearInterval(agoTimer); T={}; CD={}; LOAD={state:'ambiguous',err:dup.join(', '),storedAt:null,notes:[]}; render(); return; }
+  var notes=[];
   var missing=WANT.filter(function(t){return !byTitle[t] && !OPTIONAL_FILES[t];});
-  if(missing.length) LOAD.notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
-  var present=WANT.filter(function(t){ return byTitle[t]; });
-  WANT.forEach(function(t){ if(!byTitle[t]) T[t]=[]; });
-  var got={};
-  await readPool(present, READ_AT_ONCE, function(title){
-    return bootLimit(readDriveFile(byTitle[title][0])).then(function(txt){ got[title]={ok:true,txt:txt}; }, function(e){ got[title]={ok:false,e:e}; });
-  });
-  if(!live()) return;
-  var fail=null;
-  present.forEach(function(title){
-    var r=got[title];
-    if(!r||!r.ok){ if(!fail) fail=plainDriveErr(r&&r.e); }
-  });
-  if(fail){
-    endBootWait(ticket);
-    LOAD.state='err'; LOAD.errKind='files'; LOAD.err=fail; render(); return;
-  }
-  var done=0;
-  present.forEach(function(title){
-    var txt=String(got[title].txt||'').replace(/^\uFEFF/,'');
-    if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
-    T[title]=parseCSV(txt); done++;
-  });
+  if(missing.length) notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
+  var first=WANT.filter(function(t){ return byTitle[t] && !LATER[t]; }), later=WANT.filter(function(t){ return byTitle[t] && LATER[t]; });
+  var r1=await readSet(first,byTitle,live);
+  if(!r1) return;
+  if(r1.fail){ failed(r1.fail,r1.e,'files'); return; }
   endBootWait(ticket);
-  if(!live()) return;
-  LOAD.state='ok'; LOAD.files=done;
-  DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
-  foldAreaReadings(T['BLD-area_reading.csv']||[]);
-  build(); render();
+  var keep=showing?T:{};   /* the copy's later tables stay until the live ones land */
+  var nt={};
+  WANT.forEach(function(t){ nt[t]=byTitle[t]?(LATER[t]?(keep[t]||[]):r1.tables[t]):[]; });
+  T=nt;
+  LOAD={state:'ok',err:null,errKind:'',storedAt:storedAt,notes:notes,copy:false,stale:'',later:(showing&&LOAD.later==='ok')?'ok':'wait',
+    files:first.length,manifestLine:LOAD.manifestLine};
+  if(showing) LOAD.laterCopy=true;
+  clearInterval(agoTimer);
+  showTables(); redrawAfterRead();
+  var r2=await readSet(later,byTitle,live);
+  if(!r2) return;
+  if(r2.fail){
+    if(refused(r2.e)) copyWipe();
+    LOAD.later=LOAD.laterCopy?'ok':'err'; LOAD.laterErr=r2.fail; if(LOAD.laterCopy) LOAD.stale=r2.fail; redrawAfterRead(); return;
+  }
+  later.forEach(function(t){ T[t]=r2.tables[t]; });
+  LOAD.later='ok'; LOAD.laterCopy=false; LOAD.laterErr=''; LOAD.files=first.length+later.length;
+  showTables(); redrawAfterRead();
+  copyPut({at:storedAt,tables:T,notes:notes,files:LOAD.files,manifestLine:LOAD.manifestLine});
 }
 var CD={};
 function idx(rows,k){ var m={}; (rows||[]).forEach(function(r){ m[r[k]]=r; }); return m; }
@@ -4005,7 +4084,12 @@ function navHtml(){
 function pill(){
  var p=document.getElementById('livepill');
  p.removeAttribute('data-read');
- if(LOAD.state==='ok'){ p.className='live ok';
+ if(LOAD.state==='ok'&&(LOAD.copy||LOAD.stale)){
+  /* the device copy: plain words, so no one takes it for a live read */
+  var ago=agoText(LOAD.storedAt);
+  p.className='live'+(LOAD.stale?' bad':''); p.textContent=LOAD.stale?'read failed · '+ago:ago;
+  p.title=LOAD.stale?'Showing the copy on this device. '+LOAD.stale:'Showing the copy on this device while the live read runs.'; }
+ else if(LOAD.state==='ok'){ p.className='live ok';
   if(LOAD.storedAt) p.setAttribute('data-read','Read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}));
   var w='live · read-only'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
 
@@ -4056,7 +4140,7 @@ function focusView(){
 
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
- pill();
+ pill(); SHOWN=String(id||'');
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
@@ -4087,7 +4171,15 @@ function go(id,push){
  document.getElementById('nav').innerHTML=navHtml();
  if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.open(sub||'home');
- main.innerHTML=PAGES[id]();
+ var wait=LIVE_PAGES[id]&&LOAD.copy?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
+ if(wait){
+  main.innerHTML='<div class="card" id="cdWait" style="margin-top:24px"><h2 class="hx4">'+esc(label(id))+'</h2>'
+   +(wait==='err'?'<p>These records could not be read. '+esc(LOAD.laterErr||'')+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
+    :'<p class="mut">'+(wait==='live'?'Reading the live records. This page never shows the copy on this device.':'Getting these records ready…')+'</p>')+'</div>';
+  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  document.getElementById('next').innerHTML=''; return;
+ }
+ main.innerHTML=(LOAD.stale?'<p class="card acc4" role="status" style="margin-top:16px">Showing the copy on this device ('+esc(agoText(LOAD.storedAt))+'). The live read failed: '+esc(LOAD.stale)+'. <button data-reload="1">Try again</button></p>':'')+PAGES[id]();
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.bind(main, enqV());
  if(id==='breed') loadDogPhotos();
  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
