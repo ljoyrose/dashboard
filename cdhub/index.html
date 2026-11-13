@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="manifest" href="../manifest.webmanifest">
+<link rel="manifest" href="../manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#2C2C2A">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
@@ -2370,7 +2370,7 @@ async function uploadDogPhoto(inp){
    body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) sinkAccepted(g);
   if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
@@ -3219,46 +3219,84 @@ function tempVerdict(val,band){
 /* ROUND SAVING. One new row on the save script. The script checks the staff code and records who saved.
    A code remembered in this tab is reused. A missing device set-up does not block a save. Room temperatures are 1 decimal place. */
 var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code';
-/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" only clears
-   the round card's copy. It does not stop a valid staff code. #join=<code>&url=<address> still fills the card. */
+/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" forgets the
+   code and the address kept on this device (and stops the staff page's copy being reused here). #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
 var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
 /* A code the save script ACCEPTED is kept on this device (localStorage), so a phone is not asked again after the tab
    or the Home Screen app is closed. A refused code is removed. This tab's copy (sessionStorage) is only a fallback. */
-var STAFF_KEEP_KEY='cdhub.staff.code';
+var STAFF_KEEP_KEY='cdhub.staff.code', SAVE_KEEP_KEY='cdhub.save.url';
+/* ONE source of truth (live test 13 Nov 2026: the panel said "off", both boxes empty, although saving worked). The code is
+   staffCodeNow(), the address is saveAddr(); the panel, the save and the photo all read these two. An address that
+   worked (or was read from Drive) is kept on this device too, with a backup copy of both in IndexedDB. */
+var KEEP_MEM={code:'',url:''};
+function keepDb(mode,fn){ return new Promise(function(res){ try{ if(!window.indexedDB) return res(null);
+ var rq=indexedDB.open('cdhub-keep',1);
+ rq.onupgradeneeded=function(){ rq.result.createObjectStore('kv'); };
+ rq.onerror=rq.onblocked=function(){ res(null); };
+ rq.onsuccess=function(){ var db=rq.result, out=null; try{ var tx=db.transaction('kv',mode); out=fn(tx.objectStore('kv'));
+  tx.oncomplete=function(){ db.close(); res(out); }; tx.onerror=tx.onabort=function(){ db.close(); res(null); }; }catch(e){ db.close(); res(null); } };
+ }catch(e){ res(null); } }); }
+function keepBackup(k,v){ KEEP_MEM[k]=v||''; return keepDb('readwrite',function(st){ if(v) st.put(v,k); else st.delete(k); }); }
+function keepAsk(){ try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
 function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) return;
- sinkSet(STAFF_KEEP_KEY,c);
- try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
+ sinkSet(STAFF_KEEP_KEY,c); sinkSet(SINK_OFF_KEY,''); keepBackup('code',c); keepAsk(); }
+function keepSaveAddr(u){ u=String(u||'').trim(); if(!SINK_RE.test(u)||sinkRaw(SINK_OFF_KEY)) return;
+ if(sinkRaw(SAVE_KEEP_KEY)!==u) sinkSet(SAVE_KEEP_KEY,u); if(KEEP_MEM.url!==u) keepBackup('url',u); }
+function sinkAccepted(g){ keepStaffCode(g.code); keepSaveAddr(g.url); }
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-function sinkGet(k){ var v=sinkRaw(k); if(v) return v;
- if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||''; if(k===SINK_CODE_KEY&&!sinkRaw(SINK_OFF_KEY)) return sinkRaw('bld.device.code'); return ''; }
+function cfgSaveUrl(){ return (window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||''; }
+/* Live sources first (typed on this card, the staff page, the public config, Drive this visit), then the kept copy. */
+function saveAddr(){ var all=[sinkRaw(SINK_URL_KEY),sinkRaw('bld.scriptUrl'),cfgSaveUrl(),CD.saveUrl||'',sinkRaw(SAVE_KEEP_KEY),KEEP_MEM.url];
+ for(var i=0;i<all.length;i++) if(SINK_RE.test(all[i])) return all[i];
+ return sinkRaw(SINK_URL_KEY); }
+function sinkGet(k){ if(k===SINK_URL_KEY) return saveAddr(); if(k===SINK_CODE_KEY) return staffCodeNow(); return sinkRaw(k); }
 /* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
    in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
+/* Drive is read once a visit even when a kept copy exists, so a changed address replaces the kept one. A failed read
+   (signed out for a moment) is tried again next time; it no longer sticks for the whole visit. */
 function saveUrlLoad(){
- if(SINK_RE.test(sinkGet(SINK_URL_KEY))) return Promise.resolve(sinkGet(SINK_URL_KEY));
+ var live=[sinkRaw(SINK_URL_KEY),sinkRaw('bld.scriptUrl'),cfgSaveUrl(),CD.saveUrl||''].filter(function(u){ return SINK_RE.test(u); })[0];
+ if(live){ keepSaveAddr(live); return Promise.resolve(live); }
  if(CD.saveUrlPromise) return CD.saveUrlPromise;
  CD.saveUrlTried=true;
  CD.saveUrlPromise=Promise.resolve().then(function(){ return listFolder(); }).then(function(files){
   var f=(files||[]).filter(function(x){ return x.name===SAVE_URL_FILE; });
   return f.length===1?readDriveFile(f[0]):'';
  }).then(function(txt){
-  if(!txt) return '';
+  if(!txt) return saveAddr();
   var u=''; try{ u=String((JSON.parse(txt)||{}).url||'').trim(); }catch(e){ u=''; }
-  if(SINK_RE.test(u)){ CD.saveUrl=u; if(/^#\/round/.test(location.hash)) go('round',false); return u; }
-  return '';
- }).catch(function(){ return ''; });
+  if(SINK_RE.test(u)){ var shown=saveAddr(); CD.saveUrl=u; keepSaveAddr(u); if(shown!==u&&document.getElementById('sinkcard')) go('round',false); return u; }
+  return saveAddr();
+ }).catch(function(){ CD.saveUrlPromise=null; return saveAddr(); });
  return CD.saveUrlPromise;
 }
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
-function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!sinkGet(SINK_CODE_KEY); }
+function sinkOn(){ return SINK_RE.test(saveAddr()) && !!staffCodeNow(); }
+/* The staff page's set-up (bld.*) is reused unless "Switch off here" was tapped on this device. */
+function codeKept(){ var off=!!sinkRaw(SINK_OFF_KEY);
+ return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||KEEP_MEM.code||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
  var c=STAFF_MEM;
  if(!c){ try{ c=sessionStorage.getItem('cdhub.staff.session')||''; }catch(e){ c=''; } if(c) STAFF_MEM=c; }
- if(!c) c=sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')||'';
+ if(!c) c=codeKept();
  if(c&&c===STAFF_REJECTED) return '';
  return c;
 }
+/* Backup copy: if this browser kept the IndexedDB copy but lost the localStorage one, put it back. "Switch off" wins. */
+(function keepRestore(){ keepDb('readonly',function(st){ return {code:st.get('code'),url:st.get('url')}; }).then(function(r){
+ if(!r||sinkRaw(SINK_OFF_KEY)) return;
+ var c=String(r.code.result||''), u=String(r.url.result||''), was=sinkOn();
+ KEEP_MEM.code=c; KEEP_MEM.url=SINK_RE.test(u)?u:'';
+ if(c&&!sinkRaw(STAFF_KEEP_KEY)) sinkSet(STAFF_KEEP_KEY,c);
+ if(KEEP_MEM.url&&!sinkRaw(SAVE_KEEP_KEY)) sinkSet(SAVE_KEEP_KEY,KEEP_MEM.url);
+ if(!was&&sinkOn()&&document.getElementById('sinkcard')) go('round',false);
+ }).catch(function(){}); })();
+function forgetHere(){ STAFF_MEM=''; KEEP_MEM.code=''; KEEP_MEM.url='';
+ try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
+ [SINK_URL_KEY,SINK_CODE_KEY,STAFF_KEEP_KEY,SAVE_KEEP_KEY].forEach(function(k){ sinkSet(k,''); });
+ keepBackup('code',''); keepBackup('url',''); sinkSet(SINK_OFF_KEY,'1'); }
 function rememberStaffCode(c){
  c=String(c||'').trim(); if(!c) return '';
  STAFF_REJECTED=''; STAFF_MEM=c;
@@ -3269,6 +3307,8 @@ function noteBadCode(c){
  STAFF_REJECTED=String(c||''); STAFF_MEM='';
  try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
  if(sinkRaw(STAFF_KEEP_KEY)===STAFF_REJECTED) sinkSet(STAFF_KEEP_KEY,'');
+ if(sinkRaw(SINK_CODE_KEY)===STAFF_REJECTED) sinkSet(SINK_CODE_KEY,'');
+ if(KEEP_MEM.code===STAFF_REJECTED) keepBackup('code','');
 }
 function askStaffCode(){
  var have=staffCodeNow(); if(have) return Promise.resolve(have);
@@ -3291,8 +3331,8 @@ function askStaffCode(){
  return STAFF_ASK;
 }
 async function sinkGate(){
- if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
- var url=sinkGet(SINK_URL_KEY);
+ if(!SINK_RE.test(saveAddr())) await saveUrlLoad(); else saveUrlLoad();
+ var url=saveAddr();
  if(!SINK_RE.test(url)) return {ok:false,code:'UNREACHABLE',message:'Could not reach the save script. Nothing is known to be saved.'};
  var code=await askStaffCode();
  if(!code) return {ok:false,code:'NO_CODE',message:'Enter your staff code. Nothing was saved.'};
@@ -3316,7 +3356,7 @@ async function sinkSend(body){
  body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code;
  try{
   var j=await sinkFetch(body,g.url);
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) sinkAccepted(g);
   return j;
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
@@ -3432,12 +3472,17 @@ async function roundSave(areaId,patch,msgEl,sel){
   CD._roundMsg={area:areaId,text:sinkMsg(r,'move')};
   go('round',false); }
 }
+/* One line that says what this device holds. It never shows the code, only whether one is kept. */
+function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
+ var yn=function(b){ return b?'yes':'no'; };
+ return 'This device: app mode '+yn(app)+' \u00b7 code kept '+yn(!!codeKept())+' \u00b7 save address '+yn(SINK_RE.test(saveAddr())); }
 function sinkCard(){
- saveUrlLoad(); var on=sinkOn();
+ saveUrlLoad(); var on=sinkOn(), addr=saveAddr();
  return '<div class="card '+(on?'acc5':'acc2')+'" id="sinkcard"><h4>Saving on this device: '+(on?'on':'off')+'</h4>'
-  +(!on&&SINK_RE.test(sinkGet(SINK_URL_KEY))?'<p class="mut">The save address is already on this phone: type your staff code and tap Use these.</p>':'')
-  +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(sinkGet(SINK_URL_KEY))+'"'+(SINK_RE.test(sinkGet(SINK_URL_KEY))?' hidden style="display:none"':'')+'>'
-  +'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(sinkGet(SINK_CODE_KEY)?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">'
+  +(!on&&SINK_RE.test(addr)?'<p class="mut">The save address is already on this phone: type your staff code and tap Use these.</p>':'')
+  +'<p class="mut" data-device-line>'+deviceLine()+'</p>'
+  +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(addr)+'">'
+  +'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(staffCodeNow()?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">'
   +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
   +'<span class="mut" id="sinkmsg" role="status"></span></div></div>';
 }
@@ -4172,14 +4217,17 @@ function go(id,push){
   var sOn=document.getElementById('sinkon'), sOff=document.getElementById('sinkoff');
   if(sOn) sOn.addEventListener('click',function(){
    var u=(document.getElementById('sinkurl').value||'').trim(), c=document.getElementById('sinkcode').value||'', m=document.getElementById('sinkmsg');
-   if(!u) u=sinkGet(SINK_URL_KEY);
+   if(!u) u=saveAddr();
    if(!SINK_RE.test(u)){ m.textContent='That is not a save script address (it ends in /exec).'; return; }
    sinkSet(SINK_OFF_KEY,'');
-   if(c&&c.indexOf('\u2022')<0) sinkSet(SINK_CODE_KEY,c);
-   if(!sinkGet(SINK_CODE_KEY)){ m.textContent='Type your staff code too.'; return; }
-   if(!sinkSet(SINK_URL_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
+   c=String(c).trim();
+   if(c&&c.indexOf('\u2022')<0){ sinkSet(SINK_CODE_KEY,c); if(sinkRaw(STAFF_KEEP_KEY)!==c){ sinkSet(STAFF_KEEP_KEY,''); keepBackup('code',''); } rememberStaffCode(c); }
+   if(!staffCodeNow()){ m.textContent='Type your staff code too.'; return; }
+   if(u!==saveAddr()&&!sinkSet(SINK_URL_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
+   if(!sinkSet(SAVE_KEEP_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
+   keepBackup('url',u); keepAsk();
    go('round',false); });
-  if(sOff) sOff.addEventListener('click',function(){ sinkSet(SINK_URL_KEY,''); sinkSet(SINK_CODE_KEY,''); sinkSet(SINK_OFF_KEY,'1'); go('round',false); });
+  if(sOff) sOff.addEventListener('click',function(){ forgetHere(); go('round',false); });
   Array.prototype.forEach.call(document.querySelectorAll('.tmin, .tmax'),function(el){
    var which=(el.className.indexOf('tmin')>=0)?'min':'max';
    var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]');
