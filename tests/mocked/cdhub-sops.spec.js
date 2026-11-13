@@ -76,14 +76,14 @@ test('the public seed is 49 name rows and carries no form address', () => {
   }
 });
 
-test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is only under More', async ({ page }) => {
+test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is off the menus', async ({ page }) => {
   await page.goto('cdhub/');
   await signIn(page);
   await expect(page.locator('#nav > button.ht .htl')).toHaveText(['Main', 'Do', 'Today', 'Dogs', 'SOPs']);
   await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
   await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAttribute('data-slot', '6');
   await page.locator('nav.house-tabs [data-house-more]').click();
-  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'Table map', 'The round', 'Areas', 'Litters', 'Assocs', 'Staff', 'Temps', 'Enquiries']);
+  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'The round', 'Areas', 'Litters', 'Staff', 'Temps', 'Enquiries']);
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveText('Temps');
   await tabClick(page, '#nav button[data-go="sops"]');
   await expect(page).toHaveURL(/#\/sops$/);

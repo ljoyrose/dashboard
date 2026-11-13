@@ -1,12 +1,9 @@
-const { tabClick } = require('../support/tabs');
+const { tabClick, openView } = require('../support/tabs');
 // JOB 34 (group B): CD Hub buttons, links and states that no other spec proves yet.
 // Gap map: kept outside the repo. Every dog, litter and buyer here is invented (Test Dog One, Sample Buyer, @example.test).
 const { test, expect, HUBS, IDS, fixture, DRIVE } = require('../fixtures/job34/load');
 
-const tab = async (page, id) => {
-  await tabClick(page, `#nav button[data-go="${id}"]`);
-  await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
-};
+const tab = (page, id) => openView(page, id);
 const addTable = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
   if (f) { f.content = content; f.size = String(content.length); }
@@ -450,7 +447,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);   // Enquiries sits under More; Staff added (PR 538)
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
   });
 
   test('after a failed read, Try again reads the folder again and the tables load', async ({ page, guard, allowedConsole }) => {
@@ -463,7 +460,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     guard.world.failWith = null;
     await page.locator('#main button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);   // Enquiries sits under More; Staff added (PR 538)
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
   });
 });
 

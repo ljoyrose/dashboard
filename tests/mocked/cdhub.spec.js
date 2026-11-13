@@ -1,5 +1,5 @@
 const { test, expect, buildWorld } = require('../support/test');
-const { tabClick, tabTo } = require('../support/tabs');
+const { tabClick, tabTo, openView } = require('../support/tabs');
 const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
@@ -134,7 +134,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -192,37 +192,32 @@ test.describe('CD Hub: navigation', () => {
     test(`section button "${id}" opens that section`, async ({ page }) => {
       await page.goto('cdhub/');
       await signIn(page);
-      await tabClick(page, `#nav button[data-go="${id}"]`);
-      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
+      await openView(page, id);
       await expect(page.locator('#main')).not.toBeEmpty();
       await expect(page.locator('#main')).not.toContainText('Sign in to see the tables');
     });
   }
 
-  test('all thirteen sections are in the bar: five tabs, then the rest under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('eleven sections are in the bar (Table map and Assocs open by link): five tabs, then the rest under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(8);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('Assocs sits under More and still opens #/buyers', async ({ page }) => {
+  test('Assocs and Table map are off the bar and More (Lisa 13 Nov) but still open by link', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
+    await expect(page.locator('#nav [data-go="buyers"], #nav [data-go="shape"]')).toHaveCount(0);
     await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAccessibleName('SOPs');
-    const tab = page.locator('#nav .house-more button[data-go="buyers"]');
-    await expect(tab).toHaveText('Assocs');
-    await expect(tab).not.toContainText('Buyers');
-    await page.locator('nav.house-tabs [data-house-more]').click();
-    await expect(tab).toHaveAccessibleName('Assocs');
-    await tab.click();
-    await expect(page).toHaveURL(/#\/buyers$/);
+    await openView(page, 'shape');
+    await expect(page.locator('#main')).not.toBeEmpty();
+    await openView(page, 'buyers');
     await expect(page.locator('#main h2')).toHaveText('Assocs');
     await expect(page.locator('#next')).toContainText('Next: Dogs');
   });
@@ -359,10 +354,7 @@ const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,meth
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
   + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84']
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
-const openTab = async (page, id) => {
-  await tabClick(page, `#nav button[data-go="${id}"]`);
-  await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
-};
+const openTab = (page, id) => openView(page, id);
 // Walks every visible element and returns plain-English problems, one list per rule.
 function cdAudit() {
   const rgb = (s) => { let m = /^rgba?\(([^)]+)\)/.exec(s); if (m) { const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] === undefined ? 1 : p[3]]; }
