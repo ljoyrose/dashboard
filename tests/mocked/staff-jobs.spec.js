@@ -51,7 +51,7 @@ test('a dog scan shows that dog\'s jobs, groups them, and one tap saves as scann
   await expect(page.locator('[data-job="nails"] .done-line')).toContainText(/Done \d\d:\d\d/);
   await expect(page.getByRole('button', { name: 'Done: Nails' })).toHaveClass(/is-done/);
   expect(sent[0]).toMatchObject({ table: 'check_log', action: 'add', fields: { check_type_id: 'cty-nails', subject_id: 'dog-1', outcome: 'ok', how_recorded: 'scanned' } });
-  await expect(page.locator('[data-job="nails"] .ds')).toHaveText(/^Next \d{1,2} [A-Z][a-z]{2} '\d{2}$/);   // staff date: "2 Mar '26"
+  await expect(page.locator('[data-job="nails"] .ds')).toHaveText(/^Next \d{1,2} [A-Z][a-z]{2} \d{4}$/);   // date: "2 Mar 2026"
 });
 
 test('a job that asks for an amount opens its field first; a problem needs a note', async ({ page }) => {
