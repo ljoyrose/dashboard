@@ -45,6 +45,7 @@ BLD-outcome.csv,outcome,2,invented sample
 BLD-outdoor_temp.csv,outdoor_temp,6,invented sample
 BLD-prospect.csv,prospect,1,invented sample
 BLD-prospect_set.csv,prospect_set,1,invented sample
+BLD-qr_tag.csv,qr_tag,9,invented sample
 BLD-reminder.csv,reminder,2,invented sample
 BLD-requirement.csv,requirement,2,invented sample
 BLD-role.csv,role,2,invented sample

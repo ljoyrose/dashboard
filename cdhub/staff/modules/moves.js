@@ -87,12 +87,14 @@
         host.appendChild(h('p', { class: 'sub', text: 'Now scan each dog card with your camera. ' + capLine(r) }));
         if (r.status === 'over') host.appendChild(say('This room is already over its limit.', 'bad'));
         var msg = say('');
+        var flaps = {};   // the two flap buttons: the lit one moves only when a save has landed
         function flapBtn(mode) {
           var cur = BLDCapacity.accessOf(access, areaId) === mode;
-          return h('button', { class: cur ? 'btn' : 'btn quiet', type: 'button', 'aria-pressed': String(cur), text: mode === 'free' ? 'Flap free' : 'Flap limited', onclick: function () {
+          return flaps[mode] = h('button', { class: cur ? 'btn' : 'btn quiet', type: 'button', 'aria-pressed': String(cur), text: mode === 'free' ? 'Flap free' : 'Flap limited', onclick: function () {
             msg.className = 'msg'; msg.textContent = 'Saving...';
             c.save.submit('area_access', { area_id: areaId, access_type: mode }).then(function (res) {
-              if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '.'; }
+              if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '.';
+                if (res.status !== 'queued') Object.keys(flaps).forEach(function (m) { flaps[m].className = m === mode ? 'btn' : 'btn quiet'; flaps[m].setAttribute('aria-pressed', String(m === mode)); }); }
               else { msg.className = 'msg bad'; msg.textContent = res.message; }
             });
           } });

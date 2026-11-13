@@ -9,6 +9,7 @@ const TODAY = '2026-03-10';                       // the day this set is "about"
 const NOW = new Date(TODAY + 'T09:30:00Z');
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';   // a made-up save address
 const CODE = 'FAKE-CODE-27';
+const SAVE_ONLY = ['occupancy_out', 'sensor_reading'];   // lists the staff page saves to but never reads
 const names = () => fs.readdirSync(DIR).filter((f) => /^BLD-.*\.csv$/.test(f)).sort();
 const read = (f) => fs.readFileSync(path.join(DIR, f), 'utf8');
 
@@ -47,7 +48,7 @@ async function staffScript(page, { role = 'OWNER' } = {}) {
   const CORS = { 'access-control-allow-origin': '*' };
   await page.route(SCRIPT, (route) => {
     const req = route.request();
-    if (req.method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: Object.keys(t).map((k) => ({ key: k, on: true, mode: 'direct' })) } });
+    if (req.method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: Object.keys(t).concat(SAVE_ONLY).map((k) => ({ key: k, on: true, mode: 'direct' })) } });
     const b = JSON.parse(req.postData() || '{}');
     if (String(b.action).indexOf('read') === 0) {
       if (b.table && !t[b.table]) return route.fulfill({ headers: CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'off' } });

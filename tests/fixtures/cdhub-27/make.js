@@ -255,6 +255,13 @@ table('export_route', 'id,country,country_iso,difficulty,lead_time,requirement,c
 table('breeder_category', 'id,code,name', [['bc-1', 'CAT-A', 'Sample category']]);
 table('prospect_set', 'id,name', [['ps-1', 'Sample set']]);
 
+// ---------- QR tags (staff page only: what a scanned card means) ----------
+table('qr_tag', 'tag,kind,ref_id,active', [
+  ['ROOMAAAA', 'area', 'ar-1', 'true'], ['ROOMAAAB', 'area', 'ar-2', 'true'], ['ROOMAAAF', 'area', 'ar-6', 'true'],
+  ['DOGAAAAD', 'subject', A(4), 'true'], ['DOGAAAAF', 'subject', A(6), 'true'], ['DOGAAAAK', 'subject', A(10), 'true'],
+  ['LITAAAAB', 'litter', 'lit-2', 'true'], ['THMAAAAE', 'thermometer', 'thm-5', 'true'], ['SITEAAAA', 'site', 'site', 'true'],
+]);
+
 // ---------- tables the hub only counts ----------
 const plain = (name, n) => table(name, 'id,tenant_id,name,note', Array.from({ length: n || 1 }, (_, i) => [name.slice(0, 3) + '-' + (i + 1), T, 'Sample ' + name.replace(/_/g, ' ') + ' ' + (i + 1), SRC]));
 ['doc_type', 'jurisdiction', 'authority', 'unit', 'locale', 'species', 'frequency', 'checklist_template', 'checklist_template_item', 'checklist_instance',
