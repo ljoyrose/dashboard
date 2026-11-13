@@ -2,7 +2,7 @@
  * VISITS (Admin -> Visits), owner-only. Lisa, 13 Nov 2026: inspectors, vets, auditors and guests get a time-boxed visit.
  * Loaded only when the Visits card opens (admin.js), so the hub's first load stays the same size.
  * One window shape: Now for X hours, Now until HH:MM, or Scheduled DD/MM/YY HH:MM to DD/MM/YY HH:MM. End now needs a reason. Field names follow Regulatory-Core (7 Nov): a visit is a DisclosureGrant.
- * A visit is given by a pre-printed visitor card (BLD-qr_tag kind visitor_card) or a link. Visit types (BLD-visit_type)
+ * A visit is given by a pre-printed visitor card (BLD-qr_tag kind visitor_card) or a link. Visit types (BLD-grant_type)
  * are the owner's own rows: length, rights, lists, fields and the jobs a visitor may record. No type, length, right or
  * list is fixed here: the three "suggested" types are only filled into the form for the owner to change and save.
  * Writes go through the save script (API: notes AA_VISIT-API_2026-11-13-2034). The SERVER clock decides open and ended;
@@ -15,11 +15,14 @@ var VisitView = (function () {
   var LISTS = [['subject', 'Dogs'], ['microchip', 'Microchips'], ['subject_status', 'Status'], ['health_screen', 'Health tests'], ['fit_to_breed', 'Fit to breed'], ['litter', 'Litters'], ['check_log', 'Jobs done']];
   /* rights are BLD-grant_right rows (Regulatory-Core GrantRight); this list is only the fallback until that table is live */
   var RIGHTS0 = [['view', 'View'], ['raise_finding', 'Review'], ['record', 'Record jobs'], ['print', 'Print'], ['export', 'Export']], RIGHTS = RIGHTS0;
+  function today() { var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  /* R3: a row is in force when from_date <= day and (to_date blank or >= day) */
+  function dated(r, day) { var f = String(r.from_date || '').slice(0, 10), t = String(r.to_date || '').slice(0, 10); return (!f || f <= day) && (!t || t >= day); }
   function rlabel(code) { var x = RIGHTS.filter(function (r) { return r[0] === code; })[0]; return x ? x[1] : code; }
   function rightsFrom(T) {
-    var R = (T['BLD-grant_right.csv'] || []).filter(function (r) { return r.grant_right_code && String(r.is_active).toLowerCase() !== 'false' && String(r.is_active).toLowerCase() !== 'no'; })
+    var R = (T['BLD-grant_right.csv'] || []).filter(function (r) { return r.code && dated(r, today()); })
       .sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0); });
-    RIGHTS = R.length ? R.map(function (r) { return [r.grant_right_code, r.grant_right_label || r.grant_right_code]; }) : RIGHTS0;
+    RIGHTS = R.length ? R.map(function (r) { return [r.code, r.label || r.code]; }) : RIGHTS0;
   }
   /* first-use suggestions only: filled into the form, saved only if the owner presses Save */
   var SUGGEST = {
@@ -66,7 +69,7 @@ var VisitView = (function () {
   }
   /* A visit is a grant (Regulatory-Core DisclosureGrant). Nothing is edited: extend and end each add a row whose
      supersedes_id points at the row it replaces. The CURRENT row is the one nothing points at; child rows, the code
-     and the card stay on the ROOT row, so the hub sends link_id = root id. cur() returns one merged row per visit:
+     and the card stay on the ROOT row, so the hub sends grant_id = root id. cur() returns one merged row per visit:
      id = root id, later rows' filled columns laid over earlier ones. */
   function cur(T) {
     var L = rows(T, 'BLD-inspect_link.csv'), by = {}, next = {};
@@ -81,19 +84,19 @@ var VisitView = (function () {
   function win(r) {
     var s = Date.parse(r.usable_from || r.made_at || '') || 0;
     var e = r.usable_to ? Date.parse(r.usable_to) : (r.ends ? new Date(String(r.ends).slice(0, 10) + 'T23:59:59').getTime() : 0);
-    if (r.revoked_at) e = Math.min(e || Infinity, Date.parse(r.revoked_at));
+    if (r.ended_at) e = Math.min(e || Infinity, Date.parse(r.ended_at));
     return { s: s, e: e || 0 };
   }
   function state(r, now) { var w = win(r); return w.e && now >= w.e ? 'ended' : (w.s > now ? 'soon' : 'live'); }
-  /* the type in force today: latest effective_from on or before today, per type_key */
+  /* the type in force today (BLD-grant_type, R3): per type_key, the latest from_date on or before today; to_date ends it */
   function types(T, today) {
     var by = {};
-    rows(T, 'BLD-visit_type.csv').forEach(function (r) {
-      var k = r.type_key || r.id, f = String(r.effective_from || '').slice(0, 10);
+    rows(T, 'BLD-grant_type.csv').forEach(function (r) {
+      var k = r.type_key || r.id, f = String(r.from_date || '').slice(0, 10);
       if (f > today) return;
-      if (!by[k] || f >= String(by[k].effective_from || '').slice(0, 10)) by[k] = r;
+      if (!by[k] || f >= String(by[k].from_date || '').slice(0, 10)) by[k] = r;
     });
-    return Object.keys(by).map(function (k) { return by[k]; }).filter(function (r) { return String(r.active).toLowerCase() !== 'no' && String(r.active).toLowerCase() !== 'false'; })
+    return Object.keys(by).map(function (k) { return by[k]; }).filter(function (r) { return dated(r, today); })
       .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
   }
   function jobs(T, today) {
@@ -144,7 +147,7 @@ var VisitView = (function () {
   }
 
   function endForm(v, id) {
-    return '<form class="vis-f" data-vis-form="end"><input type="hidden" name="link_id" value="' + v.esc(id) + '"><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
+    return '<form class="vis-f" data-vis-form="end"><input type="hidden" name="grant_id" value="' + v.esc(id) + '"><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
       + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>End now</button> <button type="button" class="cb" data-vis-end="">Back</button></p></form>';
   }
   function dendForm(v, id) {
@@ -155,13 +158,13 @@ var VisitView = (function () {
   function listHtml(v, L, now, kind) {
     var T = types(v.T, v.today), C = cards(v.T);
     return L.map(function (r) {
-      var w = win(r), t = byId(T, r.visit_type_id), c = byId(C, r.card_tag_id), ok = S.ok === r.id ? ' <span class="adm-ok" aria-label="saved">✓</span>' : '';
+      var w = win(r), t = byId(T, r.grant_type_id), c = byId(C, r.card_tag_id), ok = S.ok === r.id ? ' <span class="adm-ok" aria-label="saved">✓</span>' : '';
       var span = kind === 'live' ? 'until ' + (new Date(w.e).toDateString() === new Date(now).toDateString() ? hm(w.e) : when(w.e)) : when(w.s) + ' to ' + when(w.e);
       var h = '<div class="vis-row" data-vis-link="' + v.esc(r.id) + '"><b>' + v.esc(r.visitor_name ? r.visitor_name + (r.organisation ? ', ' + r.organisation : '') : (r.label || r.id)) + ok + '</b><span class="vis-when">' + v.esc(span)
         + (t ? ' · ' + v.esc(t.name) : '') + (by(r.issued_by) ? ' · by ' + v.esc(person(v.T, r.issued_by)) : '') + (c ? ' · ' + v.esc(c.ref_id || c.tag) : (r.card_tag_id ? '' : ' · link')) + '</span>'
         + '<button type="button" class="cb" data-vis-ext="' + v.esc(r.id) + '">Extend</button><button type="button" class="cb" data-vis-end="' + v.esc(r.id) + '">' + (kind === 'live' ? 'End now' : 'Cancel') + '</button></div>';
       if (S.end === r.id) h += endForm(v, r.id);
-      if (S.ext === r.id) h += '<form class="vis-f" data-vis-form="ext"><input type="hidden" name="link_id" value="' + v.esc(r.id) + '"><div class="vis-two"><label>New end DD/MM/YY<input type="text" name="d" inputmode="numeric" value="' + v.esc(when(w.e).slice(0, 8)) + '"></label>'
+      if (S.ext === r.id) h += '<form class="vis-f" data-vis-form="ext"><input type="hidden" name="grant_id" value="' + v.esc(r.id) + '"><div class="vis-two"><label>New end DD/MM/YY<input type="text" name="d" inputmode="numeric" value="' + v.esc(when(w.e).slice(0, 8)) + '"></label>'
         + '<label>HH:MM<input type="text" name="t" inputmode="numeric" value="' + v.esc(hm(w.e)) + '"></label></div><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
         + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>Extend</button> <button type="button" class="cb" data-vis-ext="">Back</button></p></form>';
       return h;
@@ -226,7 +229,7 @@ var VisitView = (function () {
       + '<label>Role<select name="role_code"><option value="">–</option>' + roles.map(function (r) { return '<option' + (r.code === t.role_code ? ' selected' : '') + '>' + v.esc(r.code) + '</option>'; }).join('') + '</select></label></div>'
       + pick(v, 'grant_basis', 'Basis', t.grant_basis || 'voluntary') + grant(v, t, 't_')
       + '<label>Source or reason<input type="text" name="source" autocomplete="off" value="' + v.esc(t.source || '') + '"></label>'
-      + '<div class="vis-ticks"><label><input type="checkbox" name="active" value="yes"' + (String(t.active).toLowerCase() === 'no' ? '' : ' checked') + '> In use</label></div>'
+      + '<div class="vis-ticks"><label><input type="checkbox" name="active" value="yes"' + (t.to_date ? '' : ' checked') + '> In use</label></div>'
       + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>Save type</button> <button type="button" class="cb" data-vis-edit="">Back</button></p>'
       + '<p class="mut">A change is a new row from today; earlier visits keep what they were given.</p></form>';
   }
@@ -241,10 +244,10 @@ var VisitView = (function () {
   }
   function hk(r) { return r.holder_code_id || r.holder_person_id || ''; }   /* the server keys a holder on their code */
   function by(x) { return !x || x === 'owner' ? '' : x; }
-  function dlive(r, now) { return !r.ended_at && (!r.to_at || Date.parse(r.to_at) > now) && (!r.from_at || Date.parse(r.from_at) <= now); }
+  function dlive(r) { return !r.ended_at && dated(r, today()); }
   function limits(v, r) {
     var T = types(v.T, v.today), x = [];
-    x.push(pipe(r.visit_type_ids).length ? pipe(r.visit_type_ids).map(function (id) { var t = byId(T, id); return t ? t.name : id; }).join(', ') : 'any type');
+    x.push(pipe(r.grant_type_ids).length ? pipe(r.grant_type_ids).map(function (id) { var t = byId(T, id); return t ? t.name : id; }).join(', ') : 'any type');
     if (r.max_hours) x.push('up to ' + r.max_hours + 'h');
     rightsFrom(v.T); x.push(pipe(r.rights).length ? pipe(r.rights).map(rlabel).join(', ') : 'any rights');
     if (pipe(r.area_ids).length) x.push(pipe(r.area_ids).length + ' rooms');
@@ -252,7 +255,7 @@ var VisitView = (function () {
     if (r.end_others === 'yes') x.push('ends others');
     if (r.extend_others === 'yes') x.push('extends others');
     x.push(+r.depth_left > 0 ? 'may pass on (' + r.depth_left + ')' : 'may not pass on');
-    if (r.to_at) x.push('until ' + when(r.to_at));
+    if (r.to_date) x.push('until ' + r.to_date.slice(8, 10) + '/' + r.to_date.slice(5, 7) + '/' + r.to_date.slice(2, 4));
     return x.join(' · ');
   }
   function whoHtml(v) {
@@ -272,7 +275,7 @@ var VisitView = (function () {
   }
   function delegForm(v) {
     rightsFrom(v.T);
-    var d = S.d, P = (v.T['BLD-code_register.csv'] || []).filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }), T = types(v.T, v.today), A = rows(v.T, 'BLD-area.csv'), R = pipe(d.rights), Ty = pipe(d.visit_type_ids), Ar = pipe(d.area_ids);
+    var d = S.d, P = (v.T['BLD-code_register.csv'] || []).filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }), T = types(v.T, v.today), A = rows(v.T, 'BLD-area.csv'), R = pipe(d.rights), Ty = pipe(d.grant_type_ids), Ar = pipe(d.area_ids);
     var tick = function (name, val, on, label) { return '<label><input type="checkbox" name="' + name + '" value="' + v.esc(val) + '"' + (on ? ' checked' : '') + '> ' + label + '</label>'; };
     return '<form class="vis-f" data-vis-form="deleg">'
       + '<label>Who<select name="holder"><option value="">–</option>' + P.map(function (p) { return '<option value="' + v.esc(p.code_id) + '"' + (p.code_id === d.holder ? ' selected' : '') + '>' + v.esc((p.who || p.code_id) + (p.role ? ' (' + p.role + ')' : '')) + '</option>'; }).join('') + '</select></label>'
@@ -282,8 +285,7 @@ var VisitView = (function () {
       + (A.length ? '<fieldset class="vis-ticks"><legend>Rooms (none ticked = all)</legend>' + A.map(function (a) { return tick('d_areas', a.id, has(Ar, a.id), v.esc(a.code || a.id)); }).join('') + '</fieldset>' : '')
       + '<div class="vis-two"><label>Longest visit (hours)<input type="number" name="max_hours" min="0.25" step="0.25" value="' + v.esc(d.max_hours || '') + '"></label>'
       + '<label>Pass on (layers, 0 = no)<input type="number" name="depth_left" min="0" step="1" value="' + v.esc(d.depth_left || '0') + '"></label>'
-      + '<label>Until DD/MM/YY (blank = until ended)<input type="text" name="td" inputmode="numeric" placeholder="DD/MM/YY" value="' + v.esc(d.td || '') + '"></label>'
-      + '<label>HH:MM<input type="text" name="tt" inputmode="numeric" placeholder="HH:MM" value="' + v.esc(d.tt || '') + '"></label></div>'
+      + '<label>Last day DD/MM/YY (blank = until ended)<input type="text" name="td" inputmode="numeric" placeholder="DD/MM/YY" value="' + v.esc(d.td || '') + '"></label></div>'
       + '<div class="vis-ticks">' + tick('end_others', 'yes', d.end_others === 'yes', 'May end visits others gave') + tick('extend_others', 'yes', d.extend_others === 'yes', 'May extend visits others gave') + '</div>'
       + '<label>Reason<input type="text" name="source" autocomplete="off" value="' + v.esc(d.source || '') + '"></label>'
       + '<p><button type="submit" class="btn">Save</button> <button type="button" class="cb" data-vis-dnew="">Back</button></p></form>';
@@ -291,10 +293,10 @@ var VisitView = (function () {
   async function saveDeleg(v, form) {
     var el = form.elements, all = function (n) { return Array.prototype.filter.call(form.querySelectorAll('[name="' + n + '"]'), function (i) { return i.checked; }).map(function (i) { return i.value; }).join('|'); };
     if (!el.holder.value) return 'Pick who.';
-    var F = { power: 'give_visit', holder_person_id: '', holder_code_id: el.holder.value, parent_id: '', depth_left: String(Math.max(0, parseInt(el.depth_left.value, 10) || 0)), from_at: '', to_at: '',
-      visit_type_ids: all('d_types'), max_hours: el.max_hours.value, rights: all('d_rights'), lists: '', fields: '', area_ids: all('d_areas'), subject_ids: '',
+    var F = { power: 'give_visit', holder_person_id: '', holder_code_id: el.holder.value, parent_id: '', depth_left: String(Math.max(0, parseInt(el.depth_left.value, 10) || 0)), from_date: v.today, to_date: '',
+      grant_type_ids: all('d_types'), max_hours: el.max_hours.value, rights: all('d_rights'), lists: '', fields: '', area_ids: all('d_areas'), subject_ids: '',
       end_others: el.end_others.checked ? 'yes' : 'no', extend_others: el.extend_others.checked ? 'yes' : 'no', source: el.source.value.trim() };
-    if (el.td.value || el.tt.value) { var e = parse(el.td.value, el.tt.value || '23:59'); if (!e) return 'Type the end as DD/MM/YY and HH:MM.'; if (e <= new Date()) return 'That time has passed.'; F.to_at = iso(e); }
+    if (el.td.value) { var e = parse(el.td.value, '23:59'); if (!e) return 'Type the last day as DD/MM/YY.'; if (e <= new Date()) return 'That day has passed.'; F.to_date = iso(e).slice(0, 10); }
     var r = await v.send({ action: 'delegation_give', fields: F });
     if (!(r && r.ok && r.result && r.result.status === 'saved')) return v.msg(r || {});
     F.id = r.result.id || ('dl-' + Date.now());
@@ -311,7 +313,7 @@ var VisitView = (function () {
     var at = r.result.ended_at || new Date().toISOString(), D = rows(v.T, 'BLD-delegation.csv'), gone = {}; gone[F.id] = 1;
     for (var more = true; more;) { more = false; D.forEach(function (x) { if (!gone[x.id] && gone[x.parent_id]) { gone[x.id] = 1; more = true; } }); }   /* children go too */
     D.forEach(function (x) { if (gone[x.id] && !x.ended_at) x.ended_at = at; });
-    if (F.end_issued === 'end') cur(v.T).forEach(function (l) { if (gone[l.delegation_id] && !l.revoked_at) v.T['BLD-inspect_link.csv'].push({ id: l._cur + '+r', supersedes_id: l._cur, revoked_at: at, revoke_reason: reason }); });
+    if (F.end_issued === 'end') cur(v.T).forEach(function (l) { if (gone[l.delegation_id] && !l.ended_at) v.T['BLD-inspect_link.csv'].push({ id: l._cur + '+r', supersedes_id: l._cur, ended_at: at, end_reason: reason }); });
     S.dend = ''; S.msg = 'Ended ✓';
     return '';
   }
@@ -333,7 +335,7 @@ var VisitView = (function () {
     rows(v.T, 'BLD-code_register.csv').forEach(function (r) { out.push({ kind: 'code', by: by(r.issued_by), at: Date.parse(r.from_date) || 0, what: (r.who || '') + ' ' + (r.role || ''), live: !r.to_date || r.to_date >= v.today, id: r.id }); });
     rows(v.T, 'BLD-person_role.csv').forEach(function (r) { out.push({ kind: 'role', by: by(r.granted_by), at: Date.parse(r.started_on) || 0, what: person(v.T, r.person_id) + ' ' + (r.role_code || ''), live: !r.ended_on || r.ended_on >= v.today, id: r.id }); });
     rows(v.T, 'BLD-delegation.csv').forEach(function (r) { var p = byId(rows(v.T, 'BLD-delegation.csv'), r.parent_id);
-      out.push({ kind: 'power', by: p ? hk(p) : '', at: Date.parse(r.from_at || r.conferred_at) || 0, what: person(v.T, hk(r)) + ': ' + (POWER[r.power] || r.power), live: dlive(r, now), id: r.id, end: 'deleg' }); });
+      out.push({ kind: 'power', by: p ? hk(p) : '', at: Date.parse(r.from_date || r.conferred_at) || 0, what: person(v.T, hk(r)) + ': ' + (POWER[r.power] || r.power), live: dlive(r, now), id: r.id, end: 'deleg' }); });
     return out;
   }
   function gaveHtml(v) {
@@ -386,7 +388,7 @@ var VisitView = (function () {
       + '<p><button type="button" class="btn" data-vis-mode="give">Give a visit</button> <button type="button" class="cb" data-vis-mode="types">Visit types</button> <button type="button" class="cb" data-vis-mode="who">Who can give visits</button> <button type="button" class="cb" data-vis-mode="gave">Who gave what</button></p>'
       + '<div class="vis-sec"><h4>Active now</h4>' + (live.length ? listHtml(v, live, now, 'live') : '<p class="mut">No one.</p>') + '</div>'
       + '<div class="vis-sec"><h4>Coming up</h4>' + (soon.length ? listHtml(v, soon, now, 'soon') : '<p class="mut">None.</p>') + '</div>'
-      + (v.hasTable('BLD-visit_type.csv') ? '' : '<p class="mut">Visit types not set up yet.</p>');
+      + (v.hasTable('BLD-grant_type.csv') ? '' : '<p class="mut">Visit types not set up yet.</p>');
   }
   function sub(v) {
     var now = Date.now(), n = cur(v.T).filter(function (r) { return state(r, now) === 'live'; }).length;
@@ -427,7 +429,7 @@ var VisitView = (function () {
 
   async function give(v, form) {
     keep(form);
-    var f = S.f, t = byId(types(v.T, v.today), f.type) || types(v.T, v.today)[0], g = f.g || t, F = { visit_type_id: t.id, visitor_name: (f.name || '').trim(), organisation: (f.org || '').trim(), purpose_text: (f.purpose || '').trim(),
+    var f = S.f, t = byId(types(v.T, v.today), f.type) || types(v.T, v.today)[0], g = f.g || t, F = { grant_type_id: t.id, visitor_name: (f.name || '').trim(), organisation: (f.org || '').trim(), purpose_text: (f.purpose || '').trim(),
       grant_basis: f.basis || t.grant_basis || '', identity_assurance: f.assure || '' };
     if (!F.visitor_name) return 'Type their name.';
     if (!F.purpose_text) return 'Type the purpose.';
@@ -446,11 +448,11 @@ var VisitView = (function () {
     F.retention_until = keepUntil(v, endAt);
     ['rights', 'lists', 'fields', 'record_jobs', 'record_counts'].forEach(function (k) { F[k] = pipe(g[k]); });
     if (f.how === 'link' && g.email_code === 'yes') { if (!/^\S+@\S+\.\S+$/.test(f.email || '')) return 'Type their email for the code.'; F.email = f.email.trim(); }
-    var r = await v.send({ action: 'visit_give', fields: F });
+    var r = await v.send({ action: 'grant_give', fields: F });
     if (!(r && r.ok && r.result && r.result.status === 'saved')) return v.msg(r || {});
-    var id = r.result.link_id;
+    var id = r.result.grant_id;
     (v.T['BLD-inspect_link.csv'] = v.T['BLD-inspect_link.csv'] || []).push({ id: id, visitor_name: F.visitor_name, organisation: F.organisation, usable_from: F.usable_from || new Date().toISOString(),
-      usable_to: endAt, visit_type_id: t.id, card_tag_id: F.card_tag_id || '' });
+      usable_to: endAt, grant_type_id: t.id, card_tag_id: F.card_tag_id || '' });
     S.mode = ''; S.f = null; S.ok = id; S.url = r.result.url || ''; S.msg = F.email && r.result.email_sent === false ? 'Email not sent: send the link yourself.' : '';
     return '';
   }
@@ -460,26 +462,26 @@ var VisitView = (function () {
     if (!name) return 'Type a name.';
     var key = S.t.type_key || name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
     var F = { type_key: key, name: name, role_code: el.role_code.value, default_hours: el.default_hours.value, max_hours: el.max_hours.value, data_years: el.data_years.value,
-      active: el.active.checked ? 'yes' : 'no', effective_from: v.today, source: el.source.value.trim(), grant_basis: el.grant_basis ? el.grant_basis.value : '' };
+      from_date: v.today, to_date: el.active.checked ? '' : v.today, source: el.source.value.trim(), grant_basis: el.grant_basis ? el.grant_basis.value : '' };
     Object.keys(g).forEach(function (k) { F[k] = g[k]; });
     if (F.default_hours && F.max_hours && +F.default_hours > +F.max_hours) return 'Usual hours are more than the longest.';
-    var r = await v.send({ action: 'visit_type_save', fields: F });
+    var r = await v.send({ action: 'grant_type_save', fields: F });
     if (!(r && r.ok && r.result && r.result.status === 'saved')) return v.msg(r || {});
     F.id = r.result.id || ('vt-' + key + '-' + v.today);
-    (v.T['BLD-visit_type.csv'] = v.T['BLD-visit_type.csv'] || []).push(F);
+    (v.T['BLD-grant_type.csv'] = v.T['BLD-grant_type.csv'] || []).push(F);
     S.t = null; S.ok = key; S.msg = '';
     return '';
   }
 
   async function endOrExtend(v, form, kind) {
-    var el = form.elements, reason = el.reason.value.trim(), id = el.link_id.value, F = { link_id: id, reason: reason };
+    var el = form.elements, reason = el.reason.value.trim(), id = el.grant_id.value, F = { grant_id: id, reason: reason };
     if (!reason) return 'Type a reason.';
     if (kind === 'ext') { var e = parse(el.d.value, el.t.value); if (!e) return 'Type the end as DD/MM/YY and HH:MM.'; if (e <= new Date()) return 'That time has passed.'; F.usable_to = iso(e); }
-    var r = await v.send({ action: kind === 'ext' ? 'visit_extend' : 'visit_end', fields: F });
+    var r = await v.send({ action: kind === 'ext' ? 'grant_extend' : 'grant_end', fields: F });
     if (!(r && r.ok && r.result && r.result.status === 'saved')) return v.msg(r || {});
     var row = byId(cur(v.T), id);   /* nothing is edited: add the superseding row the server wrote */
     if (row) v.T['BLD-inspect_link.csv'].push(kind === 'ext' ? { id: r.result.id || row._cur + '+x', supersedes_id: row._cur, usable_to: F.usable_to }
-      : { id: r.result.id || row._cur + '+r', supersedes_id: row._cur, revoked_at: r.result.revoked_at || r.result.ended_at || new Date().toISOString(), revoke_reason: reason });
+      : { id: r.result.id || row._cur + '+r', supersedes_id: row._cur, ended_at: r.result.ended_at || new Date().toISOString(), end_reason: reason });
     S.end = ''; S.ext = ''; S.ok = id; S.msg = kind === 'ext' ? 'Extended ✓' : 'Ended ✓';
     return '';
   }
@@ -514,7 +516,7 @@ var VisitView = (function () {
         else if (n === 'how' || n === 'win' || n === 'alldogs' || n === 'g_rights' || n === 'g_lists' || n === 'g_jobs') { keep(form); if (n === 'alldogs' && !e.target.checked) S.f.dogs = []; redraw(); }
       } else if (form.dataset.visForm === 'type' && /^t_(rights|lists|jobs)$/.test(e.target.name)) {
         var g = readGrant(form, 't_'), el = form.elements;
-        S.t = Object.assign({}, S.t, g, { name: el.name.value, default_hours: el.default_hours.value, max_hours: el.max_hours.value, data_years: el.data_years.value, role_code: el.role_code.value, source: el.source.value, active: el.active.checked ? 'yes' : 'no' });
+        S.t = Object.assign({}, S.t, g, { name: el.name.value, default_hours: el.default_hours.value, max_hours: el.max_hours.value, data_years: el.data_years.value, role_code: el.role_code.value, source: el.source.value, to_date: el.active.checked ? '' : v.today });
         redraw();
       }
     });

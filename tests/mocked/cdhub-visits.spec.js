@@ -6,7 +6,7 @@ const { tabClick } = require('../support/tabs');
 const sha = (t) => 'sha256:' + require('crypto').createHash('sha256').update(t, 'utf8').digest('hex');
 const SINK = 'https://script.google.com/macros/s/PRETEND-visits/exec';
 const FV = 'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason\nfv-1,ten-x,area,*,aud-staff,yes,,,test,2026-10-16,x\n';
-const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,usable_from,usable_to,visit_type_id,person_id,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,as_of_from,as_of_to,email_code,revoked_at,revoked_by,revoke_reason,id_checked_by,accompanied_by,tz,issued_by,delegation_id,supersedes_id';
+const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,usable_from,usable_to,grant_type_id,person_id,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,as_of_from,as_of_to,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz,issued_by,delegation_id,supersedes_id';
 const LINK = [LINK_H,
   'il-old,ten-x,ic-1,Old style,2099-12-31,2026-11-01,test,,,,,,,,,,,,,,,,,,,,,,',
   'il-live,ten-x,ic-2,Pretend Inspector,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-1,view|review,subject,,,,,,,,,,,,,,',
@@ -16,15 +16,15 @@ const LINK = [LINK_H,
   'il-gone,ten-x,ic-5,Pretend Revoked,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,,view,,,,,,,,,,,,,,,',
   'il-gone2,ten-x,,,,,,,,,,,,,,,,,,,2021-02-02T10:00:00+00:00,owner,left,,,,,,il-gone',
 ].join('\n') + '\n';
-const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source';
+const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,from_date,to_date,set_at,set_by,source,grant_basis';
 const TYPES = [TYPE_H,
-  'vt-1,ten-x,inspector,Pretend Inspector type,,4,12,view|raise_finding,subject|microchip,,3,,,yes,,,yes,2026-01-01,,test,invented',
-  'vt-0,ten-x,inspector,Older inspector,,2,6,view,subject,,3,,,,,,yes,2025-01-01,,test,invented',
-  'vt-9,ten-x,later,Not yet,,1,2,view,,,,,,,,,yes,2099-01-01,,test,invented',
+  'vt-1,ten-x,inspector,Pretend Inspector type,,4,12,view|raise_finding,subject|microchip,,3,,,yes,,,2026-01-01,,,test,invented,',
+  'vt-0,ten-x,inspector,Older inspector,,2,6,view,subject,,3,,,,,,2025-01-01,,,test,invented,',
+  'vt-9,ten-x,later,Not yet,,1,2,view,,,,,,,,,2099-01-01,,,test,invented,',
 ].join('\n') + '\n';
 const TAGS = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by,fixed_type_id\nqt-1,ten-x,' + sha('VC1') + ',visitor_card,Visitor 1,yes,2026-11-01,test,\nqt-2,ten-x,' + sha('VC2') + ',visitor_card,Visitor 2,yes,2026-11-01,test,\nqt-3,ten-x,R1,area,area-1,yes,2026-11-01,test,\n';
 
-const DELEG = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_at,to_at,visit_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes\n'
+const DELEG = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_date,to_date,grant_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes\n'
   + 'dl-1,ten-x,give_visit,,sc-a,,,1,,,vt-1,6,view|raise_finding,,,,,yes,no,,,,,owner,2026-11-13,invented,\n'
   + 'dl-2,ten-x,give_visit,,sc-b,,dl-1,0,,,vt-1,4,view,,,,,no,no,,,,,sc-a,2026-11-13,invented,\n'
   + 'dl-3,ten-x,give_visit,,sc-c,,,0,,,,,,,,,,no,no,2026-11-01T10:00:00+00:00,owner,left,keep,owner,2026-10-01,invented,\n'
@@ -36,7 +36,7 @@ function world({ types = true } = {}) {
   const put = (id, name, body) => d.file(id, name, body, { parents: [IDS.bld], driveId: 'drv-alpha1' });
   put('v-fv', 'BLD-field_visibility.csv', FV);
   put('v-link', 'BLD-inspect_link.csv', LINK);
-  if (types) put('v-type', 'BLD-visit_type.csv', TYPES);
+  if (types) put('v-type', 'BLD-grant_type.csv', TYPES);
   put('v-tag', 'BLD-qr_tag.csv', TAGS);
   put('v-deleg', 'BLD-delegation.csv', DELEG);
   put('v-codes', 'BLD-code_register.csv', CODES);
@@ -83,7 +83,7 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('[data-adm-open="visits"] small')).toHaveText('2 here now');
   });
 
-  test('End now needs a reason, sends visit_end, then ticks and leaves the list', async ({ page }) => {
+  test('End now needs a reason, sends grant_end, then ticks and leaves the list', async ({ page }) => {
     await open(page);
     const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', ended_at: '2026-11-13T12:00:00+00:00' } }));
     await visits(page);
@@ -91,14 +91,14 @@ test.describe('CD Hub Visits', () => {
     await page.locator('form[data-vis-form="end"] [name="reason"]').fill('Visit finished');
     await page.locator('form[data-vis-form="end"] button[type="submit"]').click();
     await expect(page.locator('#adm-visits [role="status"]')).toHaveText('Ended ✓');
-    expect(bodies[0].action).toBe('visit_end');
-    expect(bodies[0].fields).toEqual({ link_id: 'il-live', reason: 'Visit finished' });
+    expect(bodies[0].action).toBe('grant_end');
+    expect(bodies[0].fields).toEqual({ grant_id: 'il-live', reason: 'Visit finished' });
     await expect(page.locator('#adm-visits .vis-sec').nth(0)).not.toContainText('Pretend Inspector');
   });
 
   test('Give a visit by card, now for X hours: type in force today, free cards only, capped by the type', async ({ page }) => {
     await open(page);
-    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', link_id: 'il-new' } }));
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', grant_id: 'il-new' } }));
     await visits(page);
     await page.locator('[data-vis-mode="give"]').click();
     const f = page.locator('form[data-vis-form="give"]');
@@ -116,13 +116,13 @@ test.describe('CD Hub Visits', () => {
     await page.locator('form[data-vis-form="give"] button[type="submit"]').click();
     await expect(page.locator('.vis-row[data-vis-link="il-new"] .adm-ok')).toBeVisible();
     const b = bodies[0];
-    expect(b.action).toBe('visit_give');
-    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: '', identity_assurance: '', rights: ['view', 'raise_finding'], lists: ['subject', 'microchip'], subject_ids: [] });
+    expect(b.action).toBe('grant_give');
+    expect(b.fields).toMatchObject({ grant_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: '', identity_assurance: '', rights: ['view', 'raise_finding'], lists: ['subject', 'microchip'], subject_ids: [] });
   });
 
   test('Give a visit by link, scheduled: DD/MM/YY HH:MM, email code from the type; the link shows once', async ({ page }) => {
     await open(page);
-    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', link_id: 'il-l', url: 'https://example.test/inspect/#t=PRETEND' } }));
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', grant_id: 'il-l', url: 'https://example.test/inspect/#t=PRETEND' } }));
     await visits(page);
     await page.locator('[data-vis-mode="give"]').click();
     await page.locator('form[data-vis-form="give"] [name="how"][value="link"]').check();
@@ -168,7 +168,7 @@ test.describe('CD Hub Visits', () => {
   test('owner rescans a card: #/admin?visit_tag= opens End now for its visit, or Give for a free card', async ({ page }) => {
     await open(page);
     await page.evaluate(() => { location.hash = '#/admin?visit_tag=VC1'; });
-    await expect(page.locator('form[data-vis-form="end"] [name="link_id"]')).toHaveValue('il-live');
+    await expect(page.locator('form[data-vis-form="end"] [name="grant_id"]')).toHaveValue('il-live');
     await page.evaluate(() => { location.hash = '#/admin?visit_tag=VC2'; });
     await expect(page.locator('form[data-vis-form="give"] [name="card"]')).toHaveValue('qt-2');
     await page.evaluate(() => { location.hash = '#/admin?visit_tag=' + 'sha256:x'; });   // the stored hash itself is not a card
@@ -212,7 +212,7 @@ test.describe('CD Hub Visits: who can give visits', () => {
     await f.locator('[name="max_hours"]').fill('3');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('.vis-row[data-vis-deleg="dl-new"] .adm-ok')).toBeVisible();
-    expect(bodies[0]).toMatchObject({ action: 'delegation_give', fields: { power: 'give_visit', holder_code_id: 'sc-c', visit_type_ids: 'vt-1', rights: 'view', max_hours: '3', depth_left: '0', end_others: 'no' } });
+    expect(bodies[0]).toMatchObject({ action: 'delegation_give', fields: { power: 'give_visit', holder_code_id: 'sc-c', grant_type_ids: 'vt-1', rights: 'view', max_hours: '3', depth_left: '0', end_others: 'no' } });
   });
 });
 
@@ -237,7 +237,7 @@ test.describe('CD Hub Visits: who gave what', () => {
     await page.locator('form[data-vis-form="end"] [name="reason"]').fill('Not needed');
     await page.locator('form[data-vis-form="end"] button[type="submit"]').click();
     await expect(page.locator('#adm-visits [role="status"]')).toHaveText('Ended ✓');
-    expect(bodies[0]).toMatchObject({ action: 'visit_end', fields: { link_id: 'il-soon' } });
+    expect(bodies[0]).toMatchObject({ action: 'grant_end', fields: { grant_id: 'il-soon' } });
     await expect(manny).toContainText('ended');
   });
 });
@@ -261,8 +261,8 @@ fresh.describe('CD Hub Visits: first use', () => {
     await f.locator('[name="max_hours"]').fill('6');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('#adm-visits .vis-row .adm-ok')).toBeVisible();
-    expect(bodies[0].action).toBe('visit_type_save');
-    expect(bodies[0].fields).toMatchObject({ type_key: 'vet', name: 'Vet', default_hours: '2', max_hours: '6', rights: 'view|raise_finding|record', lists: 'subject|microchip|health_screen', active: 'yes' });
-    expect(bodies[0].fields.effective_from).toMatch(/^\d{4}-\d\d-\d\d$/);
+    expect(bodies[0].action).toBe('grant_type_save');
+    expect(bodies[0].fields).toMatchObject({ type_key: 'vet', name: 'Vet', default_hours: '2', max_hours: '6', rights: 'view|raise_finding|record', lists: 'subject|microchip|health_screen', to_date: '' });
+    expect(bodies[0].fields.from_date).toMatch(/^\d{4}-\d\d-\d\d$/);
   });
 });
