@@ -244,6 +244,35 @@ test('Year report and Sensor CSV show for an owner code only; a staff code sees 
   } finally { ROLE.v = 'OWNER'; }
 });
 
+// Found by the click-crawl, 13 Nov 2026: Sensor CSV threw "thermos is not defined", so the owner got a title and nothing else.
+test('Sensor CSV opens for an owner: room picker and file box; a sensor file is read and saved one day at a time @regression', async ({ page }) => {
+  const sent = await setup(page);
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.getByRole('button', { name: 'Sensor CSV' }).click();
+  await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
+  const room = page.getByLabel('Room');
+  await expect(room.locator('option')).toHaveText(['Choose the room', '3A.1/2']);   // rooms in use today, one choice each
+  await expect(room.locator('option').nth(1)).toHaveAttribute('value', 'area-new');   // a room id, so the save names a room
+  await expect(page.getByLabel('Sensor name')).toBeVisible();
+  await page.getByLabel('Sensor CSV file').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('Timestamp,Temperature_Celsius\n2026-11-10 08:00:00,12.0\n2026-11-10 15:00:00,18.5\n2026-11-11 09:00:00,13.0\n') });
+  await expect(page.getByText('2 days.')).toBeVisible();
+  const saveAll = page.getByRole('button', { name: 'Save 2 days' });
+  await saveAll.click();
+  await expect(page.getByText('Choose the room.')).toBeVisible();   // nothing is sent without a room
+  expect(sent).toHaveLength(0);
+  await room.selectOption('area-new');
+  await saveAll.click();
+  await expect(page.getByText('2 saved.')).toBeVisible();
+  expect(sent.map((b) => b.table)).toEqual(['sensor_reading', 'sensor_reading']);
+  expect(sent[0].fields).toMatchObject({ area_id: 'area-new', day: '2026-11-10', min_c: '12.0', max_c: '18.5', source: 'govee' });
+  await page.getByRole('button', { name: '← Rooms' }).click();
+  await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
+  expect(errors, errors.join('\n')).toEqual([]);
+});
+
 test('an unusual temperature is the script\'s warning: the screen shows it with "Save anyway", which resends with confirm_unusual yes', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
