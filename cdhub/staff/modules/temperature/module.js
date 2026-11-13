@@ -435,7 +435,7 @@
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
       stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
-        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) (o.done = o.done || {})[itemKey(a)] = f || true; }, onDone: function () { list(); } });
+        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) { var g = {}; Object.keys(f || {}).forEach(function (k) { if (k !== 'confirm_unusual') g[k] = f[k]; }); g._saved_at = new Date().toISOString(); (o.done = o.done || {})[itemKey(a)] = g; } }, onDone: function () { list(); } });
     }
     /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
     function cardState(a, d) {
@@ -459,10 +459,15 @@
       if (here) sorted.sort(function (a, b) { return isHere(b) - isHere(a); });
       sorted.forEach(function (a) {
         var done = o.done && o.done[itemKey(a)], scanned = isHere(a), st = o.guest ? null : cardState(a, done);
-        cards.appendChild(h('button', { class: 'card go' + (done ? ' tg-done' : '') + (st && st.out ? ' tg-out' : ''), type: 'button', onclick: function () { open(a); } }, [
-          h('div', { class: 'nm', text: (done ? '✓ ' : '') + a.label }),
-          scanned || st ? h('div', { class: 'ds' + (st && st.out ? ' tg-warn' : ''), text: [scanned ? 'You scanned this' : '', st ? st.text : ''].filter(Boolean).join(' · ') }) : null
-        ]));
+        var D = window.BLDDone, shared = !!(D && done);
+        var card = h('button', { class: 'card go' + (done ? ' tg-done' : '') + (st && st.out ? ' tg-out' : ''), type: 'button', onclick: function () { open(a); } }, [
+          h('div', { class: 'nm', text: (done && !shared ? '✓ ' : '') + a.label }),
+          scanned || (st && !shared) ? h('div', { class: 'ds' + (st && st.out ? ' tg-warn' : ''), text: [scanned ? 'You scanned this' : '', st && !shared ? st.text : ''].filter(Boolean).join(' · ') }) : null
+        ]);
+        // Lisa 12 Nov 2026: every save shows the shared tick (BLDDone, staff/lib/done-state.js): "Done 09:14 · 12.0–15.0".
+        // An outside reading is flagged (the shared "concern" look), never a plain green tick.
+        if (shared) D.mark(card, { outcome: st && st.out ? 'concern' : 'ok', at: done.taken_at || done._saved_at || '', extra: st ? st.text : '' });
+        cards.appendChild(card);
       });
       host.appendChild(cards);
       if (o.tools) host.appendChild(o.tools());
