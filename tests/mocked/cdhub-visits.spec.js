@@ -142,8 +142,8 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('.vis-url')).toHaveText('https://example.test/inspect/#t=PRETEND');
     const b = bodies[0].fields;
     expect(b.card_tag_id).toBeUndefined();
-    expect(b.usable_from).toMatch(/^2098-05-01T09:00:00[+-]\d\d:\d\d$/);
-    expect(b.usable_to).toMatch(/^2098-05-01T11:30:00[+-]\d\d:\d\d$/);
+    expect(b.usable_from).toBe('2098-05-01T08:00:00Z'); // 09:00 London (BST) stored in UTC, S4.2
+    expect(b.usable_to).toBe('2098-05-01T10:30:00Z');
     expect(b.email).toBe('someone@example.test');
     await page.locator('[data-vis-url]').click();
     await expect(page.locator('.vis-url')).toHaveCount(0);

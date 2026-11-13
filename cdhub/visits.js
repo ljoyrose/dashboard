@@ -15,7 +15,7 @@ var VisitView = (function () {
   var LISTS = [['subject', 'Dogs'], ['microchip', 'Microchips'], ['subject_status', 'Status'], ['health_screen', 'Health tests'], ['fit_to_breed', 'Fit to breed'], ['litter', 'Litters'], ['check_log', 'Jobs done']];
   /* rights are BLD-grant_right rows (Regulatory-Core GrantRight); this list is only the fallback until that table is live */
   var RIGHTS0 = [['view', 'View'], ['raise_finding', 'Review'], ['record', 'Record jobs'], ['print', 'Print'], ['export', 'Export']], RIGHTS = RIGHTS0;
-  function today() { var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function today() { return ymd(new Date()); }
   /* R3: a row is in force when from_date <= day and (to_date blank or >= day) */
   function dated(r, day) { var f = String(r.from_date || '').slice(0, 10), t = String(r.to_date || '').slice(0, 10); return (!f || f <= day) && (!t || t >= day); }
   function rlabel(code) { var x = RIGHTS.filter(function (r) { return r[0] === code; })[0]; return x ? x[1] : code; }
@@ -57,9 +57,10 @@ var VisitView = (function () {
   /* a time this device can show; the server's own clock decides open/ended */
   function when(iso) { var d = new Date(iso); if (isNaN(d)) return ''; return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()); }
   function hm(iso) { var d = new Date(iso); return isNaN(d) ? '' : p2(d.getHours()) + ':' + p2(d.getMinutes()); }
-  /* local ISO with offset, e.g. 2026-11-13T14:30:00+00:00 */
-  function iso(d) { var o = -d.getTimezoneOffset(), sg = o < 0 ? '-' : '+'; o = Math.abs(o);
-    return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + 'T' + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':00' + sg + p2(Math.floor(o / 60)) + ':' + p2(o % 60); }
+  /* datetime is stored in UTC (STANDARD S4.2), e.g. 2026-11-13T14:30:00Z */
+  function iso(d) { return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+  /* a date column (S4.15 from_date/to_date): this device's calendar day, YYYY-MM-DD */
+  function ymd(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
   /* DD/MM/YY and HH:MM typed -> Date, or null */
   function parse(dmy, t) {
     var a = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(String(dmy || '').trim()), b = /^(\d{1,2}):(\d{2})$/.exec(String(t || '').trim());
@@ -82,7 +83,7 @@ var VisitView = (function () {
   }
   /* window: usable_from/usable_to (datetimes); V1 rows have only `ends` (a date, to 23:59:59) */
   function win(r) {
-    var s = Date.parse(r.usable_from || r.made_at || '') || 0;
+    var s = Date.parse(r.usable_from || r.created_at || r.made_at || '') || 0;
     var e = r.usable_to ? Date.parse(r.usable_to) : (r.ends ? new Date(String(r.ends).slice(0, 10) + 'T23:59:59').getTime() : 0);
     if (r.ended_at) e = Math.min(e || Infinity, Date.parse(r.ended_at));
     return { s: s, e: e || 0 };
@@ -296,7 +297,7 @@ var VisitView = (function () {
     var F = { power: 'give_visit', holder_person_id: '', holder_code_id: el.holder.value, parent_id: '', depth_left: String(Math.max(0, parseInt(el.depth_left.value, 10) || 0)), from_date: v.today, to_date: '',
       grant_type_ids: all('d_types'), max_hours: el.max_hours.value, rights: all('d_rights'), lists: '', fields: '', area_ids: all('d_areas'), subject_ids: '',
       end_others: el.end_others.checked ? 'yes' : 'no', extend_others: el.extend_others.checked ? 'yes' : 'no', source: el.source.value.trim() };
-    if (el.td.value) { var e = parse(el.td.value, '23:59'); if (!e) return 'Type the last day as DD/MM/YY.'; if (e <= new Date()) return 'That day has passed.'; F.to_date = iso(e).slice(0, 10); }
+    if (el.td.value) { var e = parse(el.td.value, '23:59'); if (!e) return 'Type the last day as DD/MM/YY.'; if (e <= new Date()) return 'That day has passed.'; F.to_date = ymd(e); }
     var r = await v.send({ action: 'delegation_give', fields: F });
     if (!(r && r.ok && r.result && r.result.status === 'saved')) return v.msg(r || {});
     F.id = r.result.id || ('dl-' + Date.now());
