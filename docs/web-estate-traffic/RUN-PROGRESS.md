@@ -15,3 +15,4 @@ Aliases only. No traffic numbers here: they load at run time, behind the sign-in
 - Full mocked + phone suite, privacy scan of the range, push, PR, click-through on a local serve of the branch.
 - Done: bar colours moved to palette swatches (amber was rendering brown). Click-through 8/8 PASS, screenshots in shots/.
   PR 521 open, CI pending. Slip: AA_WEB-ESTATE-TRAFFIC_2026-11-13-0832__CLAUDE-CODE.md.
+- Correction: a Cloudflare Pages preview exists but is behind Cloudflare Access; preview click-through is Lisa-only. CI privacy guard (real denylist) green.

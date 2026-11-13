@@ -16,7 +16,9 @@ Repo: ljoyrose/dashboard, branch claude/nice-gates-7n1wq6, PR 521 (open, not mer
 - All estate browser specs: 37/37. Lint: 40 known, 0 new.
 - Full mocked + phone suite: runs in CI on PR 521 (local run too slow for this box).
 
-## CLICK-THROUGH (branch served locally; no PR preview host exists)
+## CLICK-THROUGH (branch served locally)
+The Cloudflare Pages preview exists (branch preview for this PR) but sits behind Cloudflare Access login, so this session
+cannot open it. Lisa-only: open the PR's "Branch Preview URL" > estate > All, sign in, open each row's Traffic details.
 config.js unchanged, so the page shows the example rows. 8/8 detail clicks PASS (4 web rows x desktop and 360px).
 Screenshots: shots/traffic-{desktop,360}-{all,example-com,shop-example-org,app-example-test,funnels-example-net}.png.
 
