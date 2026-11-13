@@ -42,7 +42,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await expect(answer).toContainText('Medicine in Feb 2026');
     await expect(answer).toContainText('Test Dog One');
     await expect(answer).toContainText('Not named');
-    await expect(answer).toContainText('03/02/26');
+    await expect(answer).toContainText('3 Feb 2026');
     await expect(answer).toContainText('1 tablet');
     await expect(answer).not.toContainText('not on the current list');
     await expect(page.locator('#cnt')).toHaveText('3 of 3');

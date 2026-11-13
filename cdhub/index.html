@@ -20,6 +20,7 @@
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
+<script src="staff/lib/date-words.js"></script>
 <script src="staff/lib/links.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
@@ -525,7 +526,7 @@ var LATER={};
  'subject_owner','household','household_member','sale','match_candidate',           /* enquiries */
  'audience','code_register','retention_setting',                                    /* Admin */
  /* read by Compliance, Dogs and the Table map only (traced 13 Nov 2026); the first screen does not touch them */
- 'authority','jurisdiction','locale','checklist_instance','checklist_template','checklist_template_item','credential','credential_version',
+ 'authority','jurisdiction','checklist_instance','checklist_template','checklist_template_item','credential','credential_version',
  'deviation','finding','governed_by','inspection','microchip_registration','outcome','reminder','verification','visit','fit_to_breed'
 ].forEach(function(t){ LATER['BLD-'+t+'.csv']=1; });
 function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTIONAL_FILES[f]=1; }
@@ -902,7 +903,7 @@ function readSet(titles,byTitle,live){
   });
 }
 function refused(e){ return !!(e&&(e.status===401||e.status===403||e.status===404)); }
-function showTables(){ DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
+function showTables(){ BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
 async function load(){
   var ticket=++bootTicket;
   function live(){ return ticket===bootTicket; }
@@ -1089,7 +1090,7 @@ function build(){
 }
 
 var TODAY=new Date();
-function dmy(iso){ if(!iso) return ''; var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m? m[3]+'/'+m[2]+'/'+m[1].slice(2) : iso; }   /* house: DD/MM/YY */
+function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* owner screens: "2 Mar 2026" (Lisa 13 Nov 2026), one formatter: staff/lib/date-words.js */
 function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
 var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
@@ -1526,7 +1527,7 @@ var BREED_CHECKS={'litter gap':1,'dam age':1,'litter count':1,'breeding rules':1
 var CHECKNAME={'room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
  'placed in an area':'Placed in a cabin','joins':'Joins','dates':'Dates','rule changes':'Rule changes','saving off':'Saving'};
 function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
-function dmyShort(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||''); return m? m[3]+'/'+m[2]+'/'+m[1].slice(2) : (iso||''); }
+function dmyShort(iso){ return BLDDates.long(iso||''); }
 /* foundation: date on a record. Every date pill wears a plain ring; late = rose ring + tint, soon = amber ring + tint. */
 function dpill(iso,tone){ return iso?'<span class="dpill'+(tone?' '+tone:'')+'">'+esc(dmyShort(iso))+(tone?'<span class="sr"> ('+tone+')</span>':'')+'</span>':''; }
 /* foundation: needs-you queue. One list of things waiting on the owner, from checks, rules, places and work records.
@@ -2216,7 +2217,7 @@ function moxiLine(d){
   +(url?'<a class="cb" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
   +'</div>';
 }
-/* card summary lines (Lisa's dog card mock-up, 7 Nov 2026): dates DD/MM/YY, fewest words */
+/* card summary lines (Lisa's dog card mock-up, 7 Nov 2026): dates as "2 Mar 2026" (13 Nov), fewest words */
 function wtChange(dl){ if(dl===null||dl===undefined||isNaN(dl)) return '';
  var r=Math.round(dl*10)/10; return (r>0?'↑ ':(r<0?'↓ ':'= '))+Math.abs(r).toFixed(1)+' · '; }
 function lastOn(rows){ var last=''; (rows||[]).forEach(function(r){ if(r.on&&r.on>last) last=r.on; });

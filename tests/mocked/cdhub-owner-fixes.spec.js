@@ -1,4 +1,4 @@
-// Owner hub small fixes (13 Nov 2026): dates as DD/MM/YY on Compliance and Data checks; hover is a grey fill only.
+// Owner hub small fixes (13 Nov 2026): dates as "2 Mar 2026" on Compliance and Data checks; hover is a grey fill only.
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {
@@ -8,7 +8,7 @@ const signIn = async (page) => {
   await page.waitForFunction(() => window.LOAD && LOAD.state === 'ok' && LOAD.later === 'ok');
 };
 
-test('Compliance and Data checks show mating, birth and litter dates as DD/MM/YY, never ISO', async ({ page }) => {
+test('Compliance and Data checks show mating, birth and litter dates as "2 Mar 2026", never ISO', async ({ page }) => {
   await signIn(page);
   const text = await page.evaluate(() => {
     const L1 = { id: 'l1', dob: '2025-03-04' }, L2 = { id: 'l2', dob: '2025-09-10' };
@@ -22,10 +22,10 @@ test('Compliance and Data checks show mating, birth and litter dates as DD/MM/YY
     go('compliance', false);
     return checks + '\n' + document.getElementById('main').innerText;
   });
-  expect(text).toContain('15/01/26');
-  expect(text).toContain('02/01/25');
-  expect(text).toContain('06/05/24');
-  expect(text).toContain('04/03/25');
+  expect(text).toContain('15 Jan 2026');
+  expect(text).toContain('2 Jan 2025');
+  expect(text).toContain('6 May 2024');
+  expect(text).toContain('4 Mar 2025');
   expect(text).not.toMatch(/\b20\d\d-\d\d-\d\d\b/);
 });
 

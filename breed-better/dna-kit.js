@@ -15,7 +15,7 @@
   var COLOUR = { clear: '--ljr-5', carrier: '--ljr-3', affected: '--ljr-2', unknown: '--line' };
   var TEXT = { clear: '--ljr-5-text', carrier: '--ljr-3-text', affected: '--ljr-2-text', unknown: '--muted' };
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  function day(d) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d)); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d); }
+  function day(d) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d)); if (m && typeof BLDDates !== 'undefined') return BLDDates.long(t(d)); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d); }
 
   /** Marker rows by code (case kept, matched without case). */
   function markers(T) {
