@@ -373,3 +373,20 @@ test('Note on a job not done yet saves it as done with the note, shown under the
   await page.getByRole('button', { name: 'Problem: Ears' }).click();
   await expect(ears.getByRole('button', { name: 'Note', exact: true })).toHaveCount(0);
 });
+
+test('a save refused as a repeat says so once, in plain words', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved.' } });
+  });
+  const weigh = page.locator('[data-job="weigh"]');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await weigh.getByLabel('Amount (kg)').fill('21.5');
+  await page.getByRole('button', { name: 'Done: Weigh' }).click();
+  await expect(weigh.locator('.done-line.bad')).toContainText('Already saved a moment ago');
+  await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
+  await expect(weigh.getByText('Saving...')).toHaveCount(0);
+});
