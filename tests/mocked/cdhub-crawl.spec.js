@@ -91,7 +91,7 @@ for (const view of VIEWS) {
         busy: () => page.evaluate(() => typeof LOAD !== 'undefined' && LOAD.state === 'loading'),
         inSite: ours,
         hidden: hiddenState,
-        skip: (c) => (/signout=/.test(c.sig) ? 'signing out ends the walk (it has its own check below)' : ''),
+        skip: (c) => (/sign\s?out/i.test(c.label + ' ' + c.sig) ? 'signing out ends the walk (it has its own check below)' : ''),
         // Refresh reads the tables again and draws the same screen: with nothing new to read, nothing new shows.
         deadOk: (c) => (/reload=/.test(c.sig) ? 'reads the tables again' : ''),
         // The Look menu changes how the whole page looks and remembers it: the next tap starts from a fresh load.
@@ -107,11 +107,49 @@ for (const view of VIEWS) {
       }
       // Sign out, last: back to the sign-in card, nothing left on screen.
       await page.goto('cdhub/#/map'); await ready();
-      await page.locator('#cdSignout').click();
+      if (await page.locator('#cdSignout').isVisible()) await page.locator('#cdSignout').click();
+      else { await page.locator('[data-house-look] button').first().click(); await page.getByRole('button', { name: 'Sign out' }).click(); }   // a phone keeps Sign out inside the Look menu
       await expect(page.locator('#signinbtn')).toBeVisible();
       await expect(page.locator('#nav')).toBeEmpty();
       r.rows.push({ screen: '#/map · Main', control: 'Sign out', kind: 'button', target: 'Sign in to see the tables', result: 'signs out' });
       save('hub-' + view.name, r); report(r); judge(r);
+    });
+
+    test('the Temperatures page: every control', async ({ page, guard }) => {
+      test.setTimeout(300_000);
+      await page.goto('cdhub/');
+      await expect(page.locator('#signinbtn')).toBeEnabled();
+      await page.locator('#signinbtn').click();
+      await expect(page.locator('#nav button[data-go]').first()).toBeVisible({ timeout: 15000 });
+      const ready = async () => { await expect(page.locator('#boot')).toHaveCount(0, { timeout: 15000 }); await expect(page.locator('#main :is(h2, h3)').first()).toBeVisible({ timeout: 15000 }); };
+      const open = async (file) => { await page.goto('about:blank'); await page.goto('cdhub/' + file); await ready(); };
+      await open('history.html');
+      const r = await crawl({
+        name: 'temperatures ' + view.name, page, guard, roots: ['history.html'], maxDepth: 2, maxStates: 12, open, inSite: ours,
+        // A year calendar is hundreds of day buttons of a few kinds (inside the limit, outside, missed...): each kind is sampled.
+        sample: (c) => { const m = /^<(?:button|div)[^>]*class="((?:d|sd) [^"]*)"/.exec(c.tag); return m ? m[1].replace(/\s*\btoday\b/, '') : ''; },
+        skip: (c) => (/sign\s?out/i.test(c.label + ' ' + c.sig) ? 'signing out ends the walk (checked on the hub)' : ''),
+      });
+      save('temperatures-' + view.name, r); report(r); judge(r);
+    });
+
+    test('the staff page: every control, with the save script pretend', async ({ page, guard, allowedConsole }) => {
+      test.setTimeout(600_000);
+      allowedConsole.push(/404/);   // the page asks for optional helper files that are not all published
+      const script = await c27.staffScript(page);
+      const ready = async () => { await expect(page.locator('#screen')).not.toBeEmpty({ timeout: 15000 }); await expect(page.locator('#screen')).not.toHaveText(/^(Loading|Checking)\.\.\.$/, { timeout: 15000 }); };
+      const open = async (route) => { await page.goto('about:blank'); await page.goto('cdhub/staff/#' + route); await ready(); };
+      await open('home');
+      const r = await crawl({
+        name: 'staff ' + view.name, page, guard, roots: ['home', 'm/temperature', 'm/moves', 'm/where', 'm/jobs', 'm/report', 'scan', 'device'], maxDepth: 2, maxStates: 12, open, inSite: ours,
+        allowConsole: [/404/],
+        busy: () => page.evaluate(() => /^(Loading|Checking)\.\.\.$/.test((document.getElementById('screen') || {}).textContent || '')),
+        // Removing the code un-sets the phone, and Print opens the printer box: each has its own test.
+        skip: (c) => (/Remove my code/.test(c.label) ? 'it un-sets the phone (it has its own test)' : /^Print/.test(c.label) ? 'it opens the printer box' : ''),
+        typeText: '18.5',
+      });
+      r.saves = script.sent.length;
+      save('staff-' + view.name, r); report(r); judge(r);
     });
   });
 }

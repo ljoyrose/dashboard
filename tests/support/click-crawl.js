@@ -18,7 +18,7 @@ function inPage() {
   const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   const cut = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
   const CONTROL = 'a[href], button, summary, select, textarea, input:not([type="hidden"]), [role="button"], [role="tab"], [role="link"], [role="checkbox"], [role="switch"], [onclick], [data-go], [data-open-row], [tabindex]:not([tabindex="-1"])';
-  const CHROME = 'header, nav, #nav, #tabs';
+  const CHROME = 'header, nav, #nav, #tabs, .skip, [data-skip]';
   const nav = { n: 0 };
   ['pushState', 'replaceState'].forEach((k) => { const o = history[k]; history[k] = function () { nav.n++; return o.apply(this, arguments); }; });
   addEventListener('hashchange', () => { nav.n++; }, true);
@@ -92,7 +92,7 @@ function inPage() {
       if (!shown(el)) return;
       const kind = kindOf(el);
       if (kind === 'row' && el.matches('[tabindex]') && !el.matches('[data-open-row], [onclick]') && getComputedStyle(el).cursor !== 'pointer') {
-        if (el.matches('[role="group"], [role="status"], [role="img"], h1, h2, h3, h4, main, section, table, dialog, .scroll')) return;   // a focus stop for reading or scrolling, not a control
+        if (el.matches('[role="group"], [role="region"], [role="status"], [role="img"], [role="note"], h1, h2, h3, h4, main, section, table, dialog, .scroll')) return;   // a focus stop for reading or scrolling, not a control
       }
       if (kind === 'row' && el.querySelector('input, select, textarea') && !el.matches('[data-open-row], [onclick]')) return;   // a label wrapping a box: the box is the control
       if (kind === 'input:file') return;                                                         // opened by its own button
@@ -107,7 +107,7 @@ function inPage() {
       const a = el.closest('a[href]');
       out.push({ i, sig, k: count[sig]++, kind, label, href, disabled, chrome: !!el.closest(CHROME), target: (a && a.getAttribute('target')) || '', subject: subjectOf(el),
         outside: !!href && /^(https?:)?\/\//.test(href) && new URL(href, location.href).origin !== location.origin, special: /^(mailto|tel|sms):/.test(href),
-        chosen: el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-selected') === 'true' || el.hasAttribute('aria-current'),
+        chosen: el.getAttribute('aria-pressed') === 'true' || el.getAttribute('aria-selected') === 'true' || el.hasAttribute('aria-current') || /(^|\s)(on|active|selected|current)(\s|$)/.test(typeof el.className === 'string' ? el.className : ''),
         tag: el.cloneNode(false).outerHTML.replace(/\sdata-cc="\d+"/, '').slice(0, 160),
         where: (el.closest('dialog') ? 'dialog' : ''), off: (() => { const r = el.getBoundingClientRect(); return r.right <= 0 || r.left >= innerWidth; })() });
     });
@@ -121,6 +121,8 @@ function inPage() {
     document.querySelectorAll('details[open]').forEach((d) => { if (shown(d)) p.add('fold.' + tmpl(Array.from(d.classList).join('.') || labelOf(d.querySelector('summary') || d))); });
     document.querySelectorAll('[aria-expanded="true"]').forEach((e) => { if (shown(e) && !e.matches(window.__ccFoldSkip || 'button.house-fold')) p.add('open:' + (typeof e.className === 'string' && e.className.trim() ? e.tagName.toLowerCase() + '.' + e.className.trim().split(/\s+/).join('.') : cut(tmpl(labelOf(e)), 40))); });
     document.querySelectorAll('[role="tab"][aria-selected="true"]').forEach((e) => { if (shown(e)) p.add('tab:' + cut(tmpl(labelOf(e)), 40)); });
+    // a tab or chip that is lit by its class only (no aria state): the view it shows is a screen of its own
+    document.querySelectorAll('button.on, button.active, button.selected, button.current').forEach((e) => { if (shown(e) && !e.closest('header, nav')) p.add('lit:' + cut(tmpl(labelOf(e)), 40)); });
     return Array.from(p).sort();
   }
   function heading() {
@@ -129,14 +131,16 @@ function inPage() {
     return h ? norm(h.textContent) : '';
   }
   function state() {
-    const hash = location.hash || '';
+    let hash = location.hash || '';
+    if (/^#[\w-]+$/.test(hash) && document.getElementById(hash.slice(1))) hash = '';   // a jump to a place on the same screen is not another screen
     // one screen per kind of address: #/dogs/sub-a01 and #/dogs/sub-a02 are the same screen with a different dog in it
     return { path: location.pathname, hash, heading: heading(), panels: panels(), key: [location.pathname.replace(/index\.html$/, ''), tmpl(hash), tmpl(heading()), panels().join(',')].join(' | ') };
   }
   function textHash() {
-    const root = document.querySelector('main') || document.body;
+    const root = document.body;
     let s = document.documentElement.className + (document.documentElement.getAttribute('data-theme') || '') + '§' + root.innerText + '§' + Array.from(document.querySelectorAll('dialog[open]')).map((d) => d.innerText).join('§')
       + '§' + Array.from(document.querySelectorAll('[aria-current], [aria-pressed], [aria-expanded], [aria-selected], details')).map((e) => (e.getAttribute('aria-current') || '') + (e.getAttribute('aria-pressed') || '') + (e.getAttribute('aria-expanded') || '') + (e.getAttribute('aria-selected') || '') + (e.open ? 'o' : '')).join('')
+      + '§' + Array.from(document.querySelectorAll('button, [role="tab"], a.btn')).map((e) => (typeof e.className === 'string' ? e.className : '')).join('|')   // which chip or tab is lit
       + '§' + Array.from(document.querySelectorAll('input, select, textarea')).map((e) => (e.type === 'checkbox' || e.type === 'radio' ? e.checked : e.value)).join('|');
     let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
     return h;
@@ -227,6 +231,7 @@ async function crawl(site) {
   const maxDepth = site.maxDepth == null ? 2 : site.maxDepth, maxStates = site.maxStates || 14;
   const rows = [], findings = [], reach = new Map(), done = new Set(), skipped = [], slow = [];
   const visited = new Map();           // screen key -> how it was reached
+  const sampled = new Map();           // kind of control on a screen -> how many copies were left untapped
   const wordSeen = new Set();
   let sameAddress = 0;
   const ev = { dialog: 0, popup: [], chooser: 0, download: 0 };
@@ -348,6 +353,12 @@ async function crawl(site) {
         rows.push({ screen, control: c0.label, kind: c0.kind, target: c0.special ? c0.href.split(':')[0] + ' link' : 'outside link (new tab)', result: 'checked, not followed' });
         continue;
       }
+      // Many copies of one kind (the days of a year calendar): the first two and the last of each kind are tapped, the rest are counted apart.
+      const grp = site.sample && site.sample(c0);
+      if (grp) {
+        const all = list.filter((x) => site.sample(x) === grp), at = all.indexOf(c0);
+        if (at > 1 && at !== all.length - 1) { reach.delete(id); sampled.set(grp + ' ¦ ' + key, (sampled.get(grp + ' ¦ ' + key) || 0) + 1); continue; }
+      }
       // A plain link to an address already tapped on this screen goes to the same place: checked for its name, not tapped again.
       const plain = c0.kind === 'link' && /^#/.test(c0.href) && !c0.sig.split('|')[3];
       if (plain && hrefDone.has(c0.href)) {
@@ -443,7 +454,8 @@ async function crawl(site) {
   }
   page.off('dialog', onDialog); page.off('popup', onPopup); page.off('filechooser', onChooser); page.off('download', onDownload);
   const reachable = reach.size, tapped = Array.from(reach.keys()).filter((k) => done.has(k)).length;
-  return { name: site.name, rows, findings, reachable, tapped, sameAddress, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
+  const left = Array.from(sampled.values()).reduce((a, b) => a + b, 0);
+  return { name: site.name, rows, findings, reachable, tapped, sameAddress, sampledLeft: left, sampledKinds: sampled.size, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
 }
 
 /** One line a person can read in the test output. */
@@ -451,7 +463,8 @@ function summary(r) {
   const n = (t) => r.findings.filter((f) => f.type === t).length;
   const pct = r.reachable ? (100 * r.tapped / r.reachable) : 100;
   return `${r.name}: visited ${r.tapped} of ${r.reachable} reachable controls (${pct.toFixed(1)}%) on ${r.states} screens`
-    + (r.sameAddress ? ` (${r.sameAddress} of them are links to an address already tapped on the same screen)` : '') + ' · ' + FLAGS.map((t) => t + ' ' + n(t)).join(' · ');
+    + (r.sameAddress ? ` (${r.sameAddress} of them are links to an address already tapped on the same screen)` : '')
+    + (r.sampledLeft ? ` · plus ${r.sampledLeft} repeated copies not tapped (calendar days: the first two and the last of each of ${r.sampledKinds} kinds were)` : '') + ' · ' + FLAGS.map((t) => t + ' ' + n(t)).join(' · ');
 }
 function findingLines(r) { return r.findings.map((f) => `${f.type} · ${f.screen} · ${short(f.control, 60)} · ${f.detail}`); }
 
