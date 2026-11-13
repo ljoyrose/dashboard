@@ -27,7 +27,8 @@
 .rcard .limits{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}
 .sz{--c:#57504A;display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:2px solid var(--c);border-radius:12px;font-weight:600;font-size:13px;color:var(--c)}
 .sz i{width:12px;height:12px;border-radius:50%;background:var(--c)}
-@media print{@page{size:A4;margin:8mm}
+/* margin 0: the browser then has no room for its own header and footer, which print the page address and title (Lisa 13 Nov 2026: no address on any print-out). The 8mm moves into the body. */
+@media print{@page{size:A4;margin:0} body{padding:8mm;margin:0}
  .dcard,.rcard{-webkit-print-color-adjust:exact;print-color-adjust:exact}
  .sheet.dogs.per1 .dcard{height:277mm;page-break-after:always}.sheet.dogs.per1 .dcard .code svg{max-width:150mm}.sheet.dogs.per1 .dcard .who b{font-size:52px}
  .sheet.dogs.per2{grid-template-columns:1fr 1fr}.sheet.dogs.per2 .dcard{height:190mm}

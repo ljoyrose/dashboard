@@ -44,10 +44,25 @@
   </div>
   <div id="ed-list"></div>
 
-  <h1 style="margin-top:28px">Staff codes (owner only)</h1>
-  <p class="sub">Switch off the code of someone who has left. It stops working at once for reading and saving. The entry stays in the list and the switch-off is noted in the approvals queue file. The code itself is never shown here.</p>
+  <h1 style="margin-top:28px" id="codes">Staff codes (owner only)</h1>
+  <p class="sub">Switch off the code of someone who has left. It stops working at once for reading and saving. The entry stays in the list and the switch-off is noted in the approvals queue file. A code is shown once, when you make it, and never again.</p>
   <div class="card"><button class="ok" id="sc-show" type="button">Show staff codes</button><div class="msg" id="sc-msg"></div></div>
+  <div class="card">
+    <b>Give someone a code</b>
+    <input id="sc-name" type="text" maxlength="60" autocomplete="off" placeholder="Their name" aria-label="Their name">
+    <select id="sc-role" aria-label="Role"><option value="STAFF">Staff</option><option value="OWNER">Owner</option><option value="VET">Vet</option><option value="TRAINER">Trainer</option></select>
+    <button class="ok" id="sc-issue" type="button">Make their code</button>
+    <div class="msg" id="sc-imsg"></div>
+  </div>
+  <div class="card" id="sc-once" hidden>
+    <b id="sc-once-who"></b>
+    <p style="font:700 28px/1.3 monospace;letter-spacing:2px;margin:8px 0" id="sc-once-code"></p>
+    <p class="sub">Write it down for them now. It is shown once and cannot be shown again.</p>
+    <button class="ok" id="sc-once-hide" type="button">I have written it down</button>
+  </div>
   <div id="sc-list"></div>
+  <div class="card"><button class="ok" id="sc-sync" type="button">Fill the code register</button><div class="msg" id="sc-smsg"></div>
+    <p class="sub">Adds every code that is not yet in BLD-code_register (names, roles and dates only). Safe to press again.</p></div>
 
   <h1 style="margin-top:28px">Inspector links (owner only)</h1>
   <p class="sub">A link an inspector opens with no login. It shows only the dogs and fields you tick, never scores, and it cannot save anything. It ends by itself after its last day, or when you press Stop.</p>
@@ -109,8 +124,8 @@
         var c=el('div','card'); var dl=el('dl');
         dl.appendChild(el('dt',null,'Name')); dl.appendChild(el('dd',null,p.who));
         dl.appendChild(el('dt',null,'Role')); dl.appendChild(el('dd',null,p.role));
-        dl.appendChild(el('dt',null,'Code id')); dl.appendChild(el('dd',null,p.id || '(none yet: run adminAssignCodeIds)'));
-        dl.appendChild(el('dt',null,'State')); dl.appendChild(el('dd',null,p.active ? 'active' : 'SWITCHED OFF ' + (p.revoked_at || '')));
+        dl.appendChild(el('dt',null,'Code id')); dl.appendChild(el('dd',null,p.id || (p.replaced ? '(moved to the new code)' : '(none yet: run adminAssignCodeIds)')));
+        dl.appendChild(el('dt',null,'State')); dl.appendChild(el('dd',null,p.active ? 'active' : (p.replaced ? 'REPLACED by a new code ' : 'SWITCHED OFF ') + (p.revoked_at || '')));
         c.appendChild(dl);
         var msg=el('div','msg');
         if(p.active && p.id){
@@ -124,12 +139,64 @@
             }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_revokeCode(p.id);
           };
           c.appendChild(b);
+          if(p.role!=='GUEST' && p.role!=='INSPECTOR'){
+            var rn=el('button','ok','Change name'); rn.type='button';
+            rn.onclick=function(){
+              var nm=window.prompt('New name for '+p.who+':', p.who); if(nm===null) return;
+              msg.textContent='Working...';
+              google.script.run.withSuccessHandler(function(r){
+                msg.textContent = r.ok ? 'Name changed.' + (r.result.mirrored ? '' : ' (Not in the code register: is it switched on?)') : r.message;
+                if(r.ok) setTimeout(showStaff, 900);
+              }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_renameCode(p.id, nm);
+            };
+            var rs=el('button','no','Give them a new code'); rs.type='button';
+            rs.onclick=function(){
+              if(!window.confirm('Give '+p.who+' a new code? Their old code stops working at once.')) return;
+              msg.textContent='Working...';
+              google.script.run.withSuccessHandler(function(r){
+                if(!r.ok){ msg.textContent=r.message; return; }
+                msg.textContent='New code made. The old one is switched off.'; showOnce(r.result);
+              }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_resetCode(p.id);
+            };
+            c.appendChild(rn); c.appendChild(rs);
+          }
         }
         c.appendChild(msg); box.appendChild(c);
       });
     }).withFailureHandler(function(e){ scMsg('Failed: '+e.message); }).ui_staffList();
   }
   document.getElementById('sc-show').onclick=showStaff;
+  // ?page=approve&section=codes (or #codes) opens straight on the codes list: the hub's Codes card links here
+  try {
+    google.script.url.getLocation(function(loc){
+      if((loc.parameter && loc.parameter.section==='codes') || loc.hash==='codes'){ document.getElementById('codes').scrollIntoView(); showStaff(); }
+    });
+  } catch(e) { /* not inside Apps Script: nothing to do */ }
+
+  /* ---- staff codes: make one, or a new one for the same person. The code is shown once, here only. ---- */
+  function showOnce(r){
+    document.getElementById('sc-once-who').textContent='Code for '+r.who+' ('+r.role+')';
+    document.getElementById('sc-once-code').textContent=r.code;
+    document.getElementById('sc-once').hidden=false;
+  }
+  document.getElementById('sc-once-hide').onclick=function(){
+    document.getElementById('sc-once-code').textContent=''; document.getElementById('sc-once').hidden=true; showStaff();
+  };
+  document.getElementById('sc-issue').onclick=function(){
+    var nm=document.getElementById('sc-name'), rl=document.getElementById('sc-role'), m=document.getElementById('sc-imsg'), b=this;
+    if(!nm.value.trim()){ m.textContent='Type their name.'; return; }
+    b.disabled=true; m.textContent='Working...';
+    google.script.run.withSuccessHandler(function(r){
+      b.disabled=false;
+      if(!r.ok){ m.textContent=r.message; return; }
+      nm.value=''; m.textContent='Made.' + (r.result.mirrored ? '' : ' (Not in the code register: is it switched on?)'); showOnce(r.result);
+    }).withFailureHandler(function(e){ b.disabled=false; m.textContent='Failed: '+e.message; }).ui_issueCode(nm.value, rl.value);
+  };
+  document.getElementById('sc-sync').onclick=function(){
+    var m=document.getElementById('sc-smsg'); m.textContent='Working...';
+    google.script.run.withSuccessHandler(function(r){ m.textContent = r.ok ? ('Added '+r.result.added+' code(s).') : r.message; })
+      .withFailureHandler(function(e){ m.textContent='Failed: '+e.message; }).ui_codeRegisterSync();
+  };
 
   /* ---- owner edit ---- */
   function edMsg(t){ document.getElementById('ed-msg').textContent=t; }

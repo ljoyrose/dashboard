@@ -130,7 +130,8 @@ function sinkStaffList_() {
     var e = reg[h], guest = e.role === ROLE_GUEST || e.role === ROLE_INSPECTOR, ended = guest && guestExpired_(e), off = e.active === false || !!e.revoked_at;
     out.push({
       id: String(e.id || ''), who: guest ? e.who + ' (ends ' + (e.expires_at || 'unknown') + ')' : e.who, role: e.role, added: e.added || '',
-      active: !off && !ended, revoked_at: e.revoked_at || (ended ? 'ended ' + (e.expires_at || '') : ''), revoked_by: e.revoked_by || ''
+      active: !off && !ended, revoked_at: e.revoked_at || (ended ? 'ended ' + (e.expires_at || '') : ''), revoked_by: e.revoked_by || '',
+      replaced: e.ended === 'new code'   // an old code whose person was given a new one (Codes.gs); its id moved to the new code
     });
   });
   return out;
@@ -156,7 +157,8 @@ function sinkRevokeCode_(codeId, adminEmail) {
         kind: 'code_revoke', row_id: id, note: 'staff code switched off', result: 'revoked'
       });
     } catch (e) { logged = false; Logger.log('Revoked ' + id + ' but could not log it: ' + (e && e.message)); }
-    return { status: 'revoked', id: id, who: reg[hash].who, logged: logged };
+    var mirrored = codeMirror_(id, 'switched off by owner', null, now);   // Codes.gs: the hub's no-secrets list
+    return { status: 'revoked', id: id, who: reg[hash].who, logged: logged, mirrored: mirrored };
   });
 }
 
