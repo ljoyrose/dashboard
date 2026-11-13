@@ -82,6 +82,7 @@ test.describe('CD Hub: jobs', () => {
     await hist.locator('summary').click();
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
+    await expect(hist).toContainText('6 Jan 2026');   // owner date: "2 Mar 2026"
     await expect(hist).not.toContainText(/verified|attended/i);
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Nothing here'))).toBe('');
