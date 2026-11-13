@@ -347,6 +347,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 12 Nov 2026 | CD Hub could sit on Getting things ready with no way on, and a failed record read did not say what went wrong | "boot hangs about 15s then shows Retry @regression" and "a failed Drive read shows the message @regression" (tests/mocked/cdhub.spec.js) |
 | 13 Nov 2026 | CD Hub chip and occupancy saves wrote to retired file ids. A missing folder file still saved, instead of stopping | "saveChip and saveArea write the folder file and refuse when it is missing @regression" (tests/mocked/cdhub-listed-saves.spec.js) |
 | 13 Nov 2026 | CD Hub dog card refused a room move and a photo unless this browser had already been set up, and Breed Better Open on a check returned to the dog list | "staff code River saves a room and a photo from empty storage @regression", "an invalid staff code is refused and nothing is saved @regression" and "dog card, Breed Better, Open on Fit to Breed lands on add/edit, and Back returns to that dog @regression" |
+| 13 Nov 2026 | CD Hub kept an accepted staff code for the tab only, so a phone asked again after the tab or the Home Screen app was closed | "an accepted staff code is kept on this device and not asked again in a new tab @regression" (tests/mocked/cdhub-staff-code-save.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
