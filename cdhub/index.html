@@ -753,6 +753,9 @@ function initGoogle(){
   if(!auth.init()) return false;
   render(); return true;
 }
+/* Assigned before restoreShared(): a saved sign-in calls load() while this script is still running,
+   and a var lower down would still be undefined (a 0ms timeout, and the read is then ignored). */
+var BOOT_SLOW_MS=15000, BOOT_READ_MS=45000, bootTicket=0, bootSlowTimer=0;
 function restoreShared(){
   var saved=window.DashAuth&&DashAuth.valid();
   if(!saved||!DashAuth.hasScope(saved,SCOPE)) return;
@@ -770,8 +773,38 @@ if(window.DashAuth) DashAuth.onChange(function(saved){
   else if(!auth.ready()){ LOAD.err='Google sign-in could not load. Check the connection and reload the page.'; render(); } })(0);
 /* READ_AT_ONCE: present files are read together, this many at a time, after the one folder list.
    Do not put await readDriveFile back inside a for-loop: that waited on every file in turn.
-   The mocked boot test fails if this becomes one-by-one or an unlimited burst. Boot copy stays the friendly line only. */
+   The mocked boot test fails if this becomes one-by-one or an unlimited burst.
+   The friendly line stays until a read has been waiting BOOT_SLOW_MS. A read that never answers
+   is given up after BOOT_READ_MS so the page cannot sit on the spinner. */
 var READ_AT_ONCE=6;
+function plainDriveErr(e){
+  if(!e) return 'A record could not be read';
+  var code=e.code, msg=e.message?String(e.message):'';
+  if(typeof code==='string'&&code) return code;
+  if(!msg||msg==='Failed to fetch'||msg==='Load failed'||msg==='NetworkError when attempting to fetch resource.'||msg==='timed out') return 'The connection failed. Check it and try again';
+  return msg;
+}
+function bootLimit(p){
+  return new Promise(function(resolve,reject){
+    var done=false;
+    var t=setTimeout(function(){ if(done) return; done=true; var e=new Error('timed out'); e.code='This is taking too long. Check the connection and try again'; reject(e); }, BOOT_READ_MS);
+    Promise.resolve(p).then(function(v){ if(done) return; done=true; clearTimeout(t); resolve(v); }, function(err){ if(done) return; done=true; clearTimeout(t); reject(err); });
+  });
+}
+function armBootSlow(ticket){
+  clearTimeout(bootSlowTimer);
+  bootSlowTimer=setTimeout(function(){
+    if(ticket!==bootTicket||LOAD.state!=='loading') return;
+    var boot=document.getElementById('boot'); if(!boot) return;
+    var line=boot.querySelector('.bootline'); if(line) line.textContent='Taking longer than usual';
+    var rows=document.getElementById('bootrows'); if(!rows||rows.querySelector('[data-boot-retry]')) return;
+    rows.textContent='';
+    var b=document.createElement('button');
+    b.type='button'; b.className='btn'; b.setAttribute('data-boot-retry','1'); b.setAttribute('data-reload','1'); b.textContent='Retry';
+    rows.appendChild(b);
+  }, BOOT_SLOW_MS);
+}
+function endBootWait(ticket){ if(ticket===bootTicket) clearTimeout(bootSlowTimer); }
 function readPool(items,limit,fn){
   var next=0, running=0;
   return new Promise(function(resolve){
@@ -793,12 +826,21 @@ function readPool(items,limit,fn){
   });
 }
 async function load(){
-  T={}; LOAD={state:'loading',err:null,storedAt:null,notes:[]};
+  var ticket=++bootTicket;
+  T={}; LOAD={state:'loading',err:null,errKind:'',storedAt:null,notes:[]};
   document.getElementById('nav').innerHTML=''; pill();
   document.getElementById('main').innerHTML=bootHtml();
+  armBootSlow(ticket);
+  function live(){ return ticket===bootTicket; }
   var files;
-  try{ files=await listFolder(); }
-  catch(e){ window._driveFiles=[]; window._driveIds={}; LOAD.state='err'; LOAD.err=(e&&e.code)||String(e&&e.message||e); render(); return; }
+  try{ files=await bootLimit(listFolder()); }
+  catch(e){
+    if(!live()) return;
+    endBootWait(ticket);
+    window._driveFiles=[]; window._driveIds={};
+    LOAD.state='err'; LOAD.err=plainDriveErr(e); render(); return;
+  }
+  if(!live()) return;
   LOAD.storedAt=new Date().toISOString();
   var byTitle={};
   window._driveIds={};
@@ -806,23 +848,33 @@ async function load(){
   window._driveFiles=files.map(function(f){ return {id:f.id,name:f.name,mimeType:f.mimeType||''}; });
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
-  if(dup.length){ LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
+  if(dup.length){ endBootWait(ticket); LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
   var missing=WANT.filter(function(t){return !byTitle[t] && !OPTIONAL_FILES[t];});
   if(missing.length) LOAD.notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
   var present=WANT.filter(function(t){ return byTitle[t]; });
   WANT.forEach(function(t){ if(!byTitle[t]) T[t]=[]; });
   var got={};
   await readPool(present, READ_AT_ONCE, function(title){
-    return readDriveFile(byTitle[title][0]).then(function(txt){ got[title]={ok:true,txt:txt}; }, function(e){ got[title]={ok:false,e:e}; });
+    return bootLimit(readDriveFile(byTitle[title][0])).then(function(txt){ got[title]={ok:true,txt:txt}; }, function(e){ got[title]={ok:false,e:e}; });
   });
-  var done=0;
+  if(!live()) return;
+  var fail=null;
   present.forEach(function(title){
     var r=got[title];
-    if(!r||!r.ok){ T[title]=[]; LOAD.notes.push(title+': '+((r&&r.e&&r.e.code)||'read failed')); return; }
-    var txt=String(r.txt||'').replace(/^\uFEFF/,'');
+    if(!r||!r.ok){ if(!fail) fail=plainDriveErr(r&&r.e); }
+  });
+  if(fail){
+    endBootWait(ticket);
+    LOAD.state='err'; LOAD.errKind='files'; LOAD.err=fail; render(); return;
+  }
+  var done=0;
+  present.forEach(function(title){
+    var txt=String(got[title].txt||'').replace(/^\uFEFF/,'');
     if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
     T[title]=parseCSV(txt); done++;
   });
+  endBootWait(ticket);
+  if(!live()) return;
   LOAD.state='ok'; LOAD.files=done;
   DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
   foldAreaReadings(T['BLD-area_reading.csv']||[]);
@@ -3911,7 +3963,7 @@ function go(id,push){
  if(LOAD.state!=='ok'){
 
   main.innerHTML='<div style="margin-top:24px"><h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',error:(LOAD.state==='ambiguous'?'More than one file shares a title. Refusing to guess which is current: '+(LOAD.err||'')
-     :LOAD.state==='err'?'The folder could not be read. '+(LOAD.err||'')+'.'
+     :LOAD.state==='err'?(LOAD.errKind==='files'?'The records could not be read. ':'The folder could not be read. ')+(LOAD.err||'')+'.'
      :'Getting things ready. Nothing is stored in this page, so there is nothing to show yet.'),nums:mainNums(false),doHref:'#/work'})
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
