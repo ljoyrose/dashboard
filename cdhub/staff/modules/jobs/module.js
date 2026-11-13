@@ -122,7 +122,10 @@
         if (inputs.item) entry.item = inputs.item.value.trim();
         if (inputs.amount) entry.amount = inputs.amount.value.trim();
         if (inputs.note) entry.note = inputs.note.value.trim();
-        if (noteFor) entry.note_for_id = noteFor;   // a note added to a job already done: its own row, pointing at the done one
+        if (noteFor) {   // a note added to a job already done: its own row, same room, dog or litter as the done row, pointing at it
+          ['subject_id', 'area_id', 'litter_id'].forEach(function (k) { if (noteFor[k]) entry[k] = noteFor[k]; else delete entry[k]; });
+          entry.note_for_id = noteFor.id;
+        }
         var check = Object.assign({}, entry);
         if (t.target === 'none') delete check.area_id;
         var bad = BLDChecks.checkEntry(t, check), first = Object.keys(bad)[0];
@@ -208,7 +211,7 @@
         var problems = h('div', { class: 'job-btns', hidden: true }, [
           h('button', { class: 'btn quiet', type: 'button', text: 'Note', onclick: function () {
             if (!inputs.note.value.trim()) { BLDDone.fail(state.card, 'Write the note.'); return; }
-            if (doneLine) send(job, t, 'note', inputs, panelMsg, state, doneLine.id);   // already done today: add the note, not a second done
+            if (doneLine) send(job, t, 'note', inputs, panelMsg, state, doneLine);   // already done today: add the note, not a second done
             else send(job, t, done, inputs, panelMsg, state);
           } })
         ].concat([
