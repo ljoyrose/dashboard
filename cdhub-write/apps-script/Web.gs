@@ -35,9 +35,9 @@ function doPost(e) {
     if (big && (!req || req.action !== 'dog_photo')) throw err_('BAD_REQUEST', 'That request was too large.');
     if (req && typeof req === 'object' && req.action === 'dog_photo') return jsonOut_({ ok: true, result: sinkDogPhoto_(req) });
     if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
-    if (req && typeof req === 'object' && req.action === 'visit_open') return jsonOut_({ ok: true, result: sinkVisitOpen_(req) });
-    if (req && typeof req === 'object' && req.action === 'visit_review') return jsonOut_({ ok: true, result: sinkVisitReview_(req) });
-    if (req && typeof req === 'object' && req.action === 'visit_record') return jsonOut_({ ok: true, result: sinkVisitRecord_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_open') return jsonOut_({ ok: true, result: sinkVisitOpen_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_review') return jsonOut_({ ok: true, result: sinkVisitReview_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_record') return jsonOut_({ ok: true, result: sinkVisitRecord_(req) });
     // dog card saves (12 Nov 2026, draft; each OFF until TABLE_ON_weighing / TABLE_ON_vaccination is true)
     if (req && typeof req === 'object' && req.action === 'weighing') return jsonOut_({ ok: true, result: sinkWeighing_(req) });
     if (req && typeof req === 'object' && req.action === 'vaccination') return jsonOut_({ ok: true, result: sinkVaccination_(req) });
@@ -47,11 +47,11 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
     // visits (V9, Visit.gs; OWNER code, OFF until TABLE_ON_visit is true)
-    if (req && typeof req === 'object' && req.action === 'visit_type_save') return jsonOut_({ ok: true, result: sinkVisitTypeSave_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_type_save') return jsonOut_({ ok: true, result: sinkVisitTypeSave_(req) });
     if (req && typeof req === 'object' && req.action === 'card_add') return jsonOut_({ ok: true, result: sinkCardAdd_(req) });
-    if (req && typeof req === 'object' && req.action === 'visit_give') return jsonOut_({ ok: true, result: sinkVisitGive_(req) });
-    if (req && typeof req === 'object' && req.action === 'visit_end') return jsonOut_({ ok: true, result: sinkVisitEnd_(req) });
-    if (req && typeof req === 'object' && req.action === 'visit_extend') return jsonOut_({ ok: true, result: sinkVisitExtend_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_give') return jsonOut_({ ok: true, result: sinkVisitGive_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_end') return jsonOut_({ ok: true, result: sinkVisitEnd_(req) });
+    if (req && typeof req === 'object' && req.action === 'grant_extend') return jsonOut_({ ok: true, result: sinkVisitExtend_(req) });
     if (req && typeof req === 'object' && req.action === 'delegation_give') return jsonOut_({ ok: true, result: sinkDelegationGive_(req) });
     if (req && typeof req === 'object' && req.action === 'delegation_end') return jsonOut_({ ok: true, result: sinkDelegationEnd_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }

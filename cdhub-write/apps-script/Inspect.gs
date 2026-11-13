@@ -24,18 +24,19 @@ var INSPECT = {
   // usable_to are London date-times (Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
-  // What a visit may see and do are rows (inspect_link_scope, inspect_link_right), not columns. issued_by = the code id that
-  // gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs). Old 7-column files still read.
+  // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant.
+  // issued_by = the code id that gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs).
+  // Old 7-column files still read.
   LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'usable_from', 'usable_to', 'supersedes_id',
-    'visit_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
-    'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'revoked_at', 'revoked_by',
-    'revoke_reason', 'tz', 'issued_by', 'delegation_id'],
-  SCOPE_FILE: 'BLD-inspect_link_scope.csv',
-  SCOPE_COLUMNS: ['id', 'tenant_id', 'link_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'is_active'],
+    'grant_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
+    'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
+    'end_reason', 'tz', 'issued_by', 'delegation_id'],
+  SCOPE_FILE: 'BLD-grant_scope.csv',
+  SCOPE_COLUMNS: ['id', 'tenant_id', 'grant_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'from_date', 'to_date'],
   // the Regulatory-Core disclosure states; only 'record' shows rows so far, the rest read as withheld until defined
   DISCLOSURE_STATES: ['withheld', 'existing_only', 'summary', 'record', 'record_and_evidence'],
-  RIGHT_FILE: 'BLD-inspect_link_right.csv',
-  RIGHT_COLUMNS: ['id', 'tenant_id', 'link_id', 'grant_right_code', 'scope_summary', 'counts_due', 'is_active'],
+  RIGHT_FILE: 'BLD-grant_right_link.csv',
+  RIGHT_COLUMNS: ['id', 'tenant_id', 'grant_id', 'right_code', 'scope_summary', 'counts_due', 'from_date', 'to_date'],
   LINK_COLUMNS_V1: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by'],
   SUBJECT_FILE: 'BLD-inspect_link_subject.csv',
   SUBJECT_COLUMNS: ['id', 'tenant_id', 'link_id', 'subject_id', 'from_date', 'to_date'],
@@ -137,14 +138,14 @@ function inspectSinkRead_(req, who, now) {
   })[0];
   if (!link) throw denied;
   var current = linkCurrent_(links, tenant)[link.id] || link;
-  if (String(current.revoked_at || '')) throw err_('WINDOW', 'This visit has ended.');
-  // scope rows (V9): when a visit has any, a list shows only if its row is active and 'record'; none = an older link
+  if (String(current.ended_at || '')) throw err_('WINDOW', 'This visit has ended.');
+  // scope rows (V9): when a visit has any, a list shows only if its row is in force today and 'record'; none = an older link
   var scope = store_read_(INSPECT.SCOPE_FILE, false), scoped = false, shown = false;
   if (scope && sameHeader_(scope.header, INSPECT.SCOPE_COLUMNS)) {
     scope.records.forEach(function (r) {
-      if (r.tenant_id !== tenant || r.link_id !== link.id) return;
+      if (r.tenant_id !== tenant || r.grant_id !== link.id) return;
       scoped = true;
-      if (r.scope_item_type === key && String(r.is_active) !== 'false' && r.disclosure_state === 'record') shown = true;
+      if (r.scope_item_type === key && grantRowOn_(r, today) && r.disclosure_state === 'record') shown = true;
     });
   }
   if (scoped && !shown) throw denied;
@@ -328,7 +329,7 @@ function sinkInspectLinks_() {
     else if (e) state = 'ended';
     return {
       id: root.id, code_id: root.code_id, label: r.label, ends: r.ends, starts_at: r.usable_from || (e && e.starts_at) || root.made_at, ends_at: r.usable_to || r.ends,
-      made_at: root.made_at, made_by: root.made_by, state: state, stopped_at: stopped || r.revoked_at || '', stop_reason: reason || r.revoke_reason || '',
+      made_at: root.made_at, made_by: root.made_by, state: state, stopped_at: stopped || r.ended_at || '', stop_reason: reason || r.end_reason || '',
       dogs: count(S, root.id), fields: count(F, root.id), visits: count(A, root.id)
     };
   }).reverse();
@@ -347,7 +348,7 @@ function sinkInspectStop_(linkId, adminEmail, reason) {
     var out = revokeCodeCore_(link.code_id, adminEmail, reason), now = new Date();
     // a V9 file also gets the revoke as a new row (never an edit); an old 7-column file keeps only the code switch-off
     var L2 = inspectRead_(INSPECT.LINK_FILE);
-    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { revoked_at: londonIso_(now), revoked_by: adminEmail || 'owner', revoke_reason: reason }, now);
+    if (sameHeader_(L2.header, INSPECT.LINK_COLUMNS)) linkSupersede_(L2, link.id, { ended_at: londonIso_(now), ended_by: adminEmail || 'owner', end_reason: reason }, now);
     return out;
   });
 }

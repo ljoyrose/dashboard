@@ -2,8 +2,9 @@
  * VISITS (external access, V9, 13 Nov 2026; API agreed with ADMIN in AA_VISIT-API_2026-11-13-2034 + STAFF reply 2055).
  * Part A: the owner's visit types and visitor cards. Both OWNER code only, behind one switch TABLE_ON_visit (OFF).
  *
- *   action 'visit_type_save'  Adds one BLD-visit_type row. A type is never changed in place: the same type_key again is
- *                             a new version with a later (or same-day, later-saved) effective_from. Nothing is fixed here:
+ *   action 'grant_type_save'  Adds one BLD-grant_type row (a PRESET, copied into the grant's rows at give time). A type is
+ *                             never changed in place: the same type_key again is a new version with a later (or same-day,
+ *                             later-saved) from_date; to_date ends it. Nothing is fixed here:
  *                             the hub offers suggested rows for the owner to save or change.
  *   action 'card_add'         Adds one BLD-qr_tag row of kind visitor_card. The card's tag is random (about 128 bits) and
  *                             is returned ONCE for printing. The file keeps only 'sha256:<hex>' of it, so anyone who can
@@ -11,9 +12,9 @@
  * --------------------------------------------------------------------------------------------------------------- */
 var VISIT_ = {
   ON: 'visit',
-  TYPE_FILE: 'BLD-visit_type.csv',
+  TYPE_FILE: 'BLD-grant_type.csv',
   TYPE_COLUMNS: ['id', 'tenant_id', 'type_key', 'name', 'role_code', 'default_hours', 'max_hours', 'rights', 'lists', 'fields',
-    'data_years', 'record_jobs', 'record_counts', 'email_code', 'needs_id_check', 'terms_id', 'active', 'effective_from',
+    'data_years', 'record_jobs', 'record_counts', 'email_code', 'needs_id_check', 'terms_id', 'from_date', 'to_date',
     'set_at', 'set_by', 'source', 'grant_basis'],   // grant_basis: the visit's default basis (blank = voluntary)
   TAG_FILE: 'BLD-qr_tag.csv',
   TAG_NEED: ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
@@ -21,7 +22,7 @@ var VISIT_ = {
   FINDING_FILE: 'BLD-finding.csv',
   // the live finding columns a review fills, plus the six V9 appends; other columns are left blank, found by name
   FINDING_NEED: ['id', 'tenant_id', 'authority', 'raised_on', 'wording_as_given', 'finding_kind', 'outcome_id',
-    'target_table', 'target_id', 'sign_in_id', 'raised_at', 'visit_id'],
+    'target_table', 'target_id', 'sign_in_id', 'raised_at', 'grant_id'],
   // the GrantRight codes this script can carry out (Regulatory-Core); which ones a visit gets is the owner's choice.
   // raise_finding is shown as "Review". BLD-grant_right holds their labels.
   RIGHTS: ['view', 'raise_finding', 'print', 'export', 'record'],
@@ -88,7 +89,23 @@ function visitMine_(read) {
   return read.records.filter(function (r) { return !tenant || !r.tenant_id || r.tenant_id === tenant; });
 }
 
-/** The visit type version in force on `day` for a type_key (latest effective_from <= day, then latest set_at). */
+/** A dated row is in force on `day` when from_date <= day <= to_date (blank to_date = open). Blank from_date = always. */
+function grantRowOn_(r, day) {
+  var from = String(r.from_date || ''), to = String(r.to_date || '');
+  return (!from || from <= day) && (!to || to >= day);
+}
+
+/** The grant type version in force on `day` for a type_key: from_date <= day <= to_date, latest from_date then set_at. */
+function grantTypeInForce_(rows, key, day) {
+  var best = null;
+  rows.forEach(function (r) {
+    if (r.type_key !== key || !String(r.from_date || '') || !grantRowOn_(r, day)) return;
+    if (!best || r.from_date > best.from_date || (r.from_date === best.from_date && String(r.set_at) >= String(best.set_at))) best = r;
+  });
+  return best;
+}
+
+/** The check_type version in force on `day` for a type_key (latest effective_from <= day, then latest set_at). */
 function visitTypeInForce_(rows, key, day) {
   var best = null;
   rows.forEach(function (r) {
@@ -128,22 +145,22 @@ function sinkVisitTypeSave_(req) {
     if (!counts || (jobs && counts.some(function (c) { return jobs.indexOf(c) < 0; }))) errors.record_counts = 'Only jobs the visitor may record can count.';
     var email = String(f.email_code == null ? '' : f.email_code).trim();
     if (['', 'true', 'false'].indexOf(email) < 0) errors.email_code = 'Yes or no.';
-    var active = String(f.active == null ? 'true' : f.active).trim() || 'true';
-    if (['true', 'false'].indexOf(active) < 0) errors.active = 'Yes or no.';
-    var from = String(f.effective_from || '').trim() || today;
-    if (!isRealDate_(from)) errors.effective_from = 'Use a real date as YYYY-MM-DD.';
+    var from = String(f.from_date || '').trim() || today, to = String(f.to_date || '').trim();
+    if (!isRealDate_(from)) errors.from_date = 'Use a real date as YYYY-MM-DD.';
+    if (to && !isRealDate_(to)) errors.to_date = 'Use a real date as YYYY-MM-DD.';
+    else if (to && !errors.from_date && to < from) errors.to_date = 'The end cannot be before the start.';
     var source = dogcardText_(f.source, 'source', errors, 200);
     var basis = String(f.grant_basis || '').trim();
     if (basis) basis = visitLabelCode_(basis, 'grant_basis', 'voluntary', errors, 'grant_basis');
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     var read = visitRead_(VISIT_.TYPE_FILE, VISIT_.TYPE_COLUMNS), mine = visitMine_(read);
     var latest = '';
-    mine.forEach(function (r) { if (r.type_key === key && String(r.effective_from) > latest) latest = String(r.effective_from); });
-    if (latest && from < latest) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { effective_from: 'A newer version already starts ' + latest + '. Start this one on or after that.' } });
+    mine.forEach(function (r) { if (r.type_key === key && String(r.from_date) > latest) latest = String(r.from_date); });
+    if (latest && from < latest) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { from_date: 'A newer version already starts ' + latest + '. Start this one on or after that.' } });
     var id = dogcardAppend_({ file: VISIT_.TYPE_FILE, idPrefix: 'vty', need: VISIT_.TYPE_COLUMNS }, {
       type_key: key, name: name, role_code: role, default_hours: dh, max_hours: mh, rights: rights.join('|'), lists: lists.join('|'),
       fields: fields.join('|'), data_years: years ? String(+years) : '', record_jobs: jobs.join('|'), record_counts: counts.join('|'),
-      email_code: email === 'true' ? 'true' : '', needs_id_check: '', terms_id: '', active: active, effective_from: from,
+      email_code: email === 'true' ? 'true' : '', needs_id_check: '', terms_id: '', from_date: from, to_date: to,
       set_at: londonIso_(now), set_by: who.who, source: source || ('CD Hub, ' + who.who + ', ' + today), grant_basis: basis === 'voluntary' ? '' : basis
     });
     return { status: 'saved', id: id, type_key: key, new_version: !!latest };
@@ -186,8 +203,8 @@ function sinkCardAdd_(req) {
 
 /* ---------------------------------------------------------------------------------------------------------------
  * Part B: give, end and extend a visit. A visit is a Regulatory-Core DisclosureGrant: one BLD-inspect_link row (V9 header)
- * plus its dog rows, field rows, scope rows (one per list: disclosure_state) and right rows (view, raise_finding, print,
- * export, and one 'record' row per job with counts_due). Map: AA_ACCESS_2026-11-13-1535 "Map onto Regulatory-Core".
+ * plus its dog rows, field rows, BLD-grant_scope rows (one per list: disclosure_state) and BLD-grant_right_link rows
+ * (view, raise_finding, print, export, and one 'record' row per job with counts_due). Names: AA_V9-NAMES_2026-11-13-2140. Map: AA_ACCESS_2026-11-13-1535 "Map onto Regulatory-Core".
  *   - A LINK visit gets a fresh code (registry role INSPECTOR, so it can only read what its own rows allow, never save
  *     through the staff path). The code is returned ONCE with the page url; it is never logged or stored.
  *   - A CARD visit gets no code: the printed card's tag opens it while its window is live (part C).
@@ -210,7 +227,7 @@ function visitTypeById_(id) {
 
 /** A visit's state from its CURRENT row: 'ended' (revoked or past usable_to), 'opens' (not yet) or 'live'. */
 function visitState_(r, nowMs) {
-  if (String(r.revoked_at || '')) return 'ended';
+  if (String(r.ended_at || '')) return 'ended';
   var end = Date.parse(r.usable_to || '') || Date.parse(inspectEndOfDay_(String(r.ends || '')));
   if (isNaN(end) || nowMs >= end) return 'ended';
   var start = Date.parse(r.usable_from || '');
@@ -261,17 +278,17 @@ function visitLabelCode_(v, group, dflt, errors, name) {
   return v;
 }
 
-/** The scope and right rows of a grant (root id): {lists, rights, jobs: {type_key: counts_due}} from active rows. */
-function visitGrant_(rootId) {
+/** The scope and right rows of a grant (root id) in force on `day`: {lists, rights, jobs: {type_key: counts_due}}. */
+function visitGrant_(rootId, day) {
   var tenant = prop_(BLD.PROP.TENANT_ID), out = { lists: [], rights: [], jobs: {} };
   var sc = store_read_(INSPECT.SCOPE_FILE, false), rt = store_read_(INSPECT.RIGHT_FILE, false);
   if (sc) sc.records.forEach(function (r) {
-    if (r.tenant_id === tenant && r.link_id === rootId && String(r.is_active) !== 'false' && r.disclosure_state === 'record' && out.lists.indexOf(r.scope_item_type) < 0) out.lists.push(r.scope_item_type);
+    if (r.tenant_id === tenant && r.grant_id === rootId && grantRowOn_(r, day) && r.disclosure_state === 'record' && out.lists.indexOf(r.scope_item_type) < 0) out.lists.push(r.scope_item_type);
   });
   if (rt) rt.records.forEach(function (r) {
-    if (r.tenant_id !== tenant || r.link_id !== rootId || String(r.is_active) === 'false') return;
-    if (out.rights.indexOf(r.grant_right_code) < 0) out.rights.push(r.grant_right_code);
-    if (r.grant_right_code === 'record' && r.scope_summary) out.jobs[r.scope_summary] = String(r.counts_due) === 'true' || String(r.counts_due) === 'yes';
+    if (r.tenant_id !== tenant || r.grant_id !== rootId || !grantRowOn_(r, day)) return;
+    if (out.rights.indexOf(r.right_code) < 0) out.rights.push(r.right_code);
+    if (r.right_code === 'record' && r.scope_summary) out.jobs[r.scope_summary] = String(r.counts_due) === 'true' || String(r.counts_due) === 'yes';
   });
   return out;
 }
@@ -281,11 +298,11 @@ function sinkVisitGive_(req) {
     var errors = {}, bad = function (field, msg) { var e = {}; e[field] = msg; return err_('INVALID', msg, { fields: e }); };
     var tenant = prop_(BLD.PROP.TENANT_ID), salt = prop_(BLD.PROP.SALT);
     if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
-    var typeId = String(f.visit_type_id || '').trim();
-    if (!ID_RE_.test(typeId)) throw bad('visit_type_id', 'Choose the kind of visit.');
+    var typeId = String(f.grant_type_id || '').trim();
+    if (!ID_RE_.test(typeId)) throw bad('grant_type_id', 'Choose the kind of visit.');
     var type = visitTypeById_(typeId);
-    if (!type) throw err_('NOT_FOUND', 'That visit type was not found. Reload the page.');
-    if (type.active !== 'true') throw bad('visit_type_id', 'That visit type is switched off.');
+    if (!type) throw err_('NOT_FOUND', 'That kind of visit was not found. Reload the page.');
+    if (!grantRowOn_(type, todayLondon_(now))) throw bad('grant_type_id', 'That kind of visit is not in use today.');
     var role = type.role_code || ROLE_INSPECTOR;
 
     var personId = String(f.person_id || '').trim(), name = dogcardText_(f.person_name || f.visitor_name, 'person_name', errors, 80);
@@ -347,7 +364,7 @@ function sinkVisitGive_(req) {
       var fixed = String(card.fixed_type_id || '');
       if (fixed && fixed !== typeId) {
         var ft = visitTypeById_(fixed);
-        if (!ft || ft.type_key !== type.type_key) throw bad('visit_type_id', 'This card is kept for another kind of visit.');
+        if (!ft || ft.type_key !== type.type_key) throw bad('grant_type_id', 'This card is kept for another kind of visit.');
       }
       var nowMs = now.getTime(), cur = linkCurrent_(L.records, tenant), busy = null;
       Object.keys(cur).forEach(function (root) {
@@ -359,7 +376,7 @@ function sinkVisitGive_(req) {
       if (busy) throw err_('CARD_IN_USE', 'That card already has a visit at that time. End it first or choose another card.', { duplicate_of: busy });
     } else if (!salt) throw err_('NOT_SET_UP', 'Run adminSetup first.');
 
-    var linkId = newId_('ilk', now), codeId = cardId ? '' : newCodeId_();
+    var linkId = newId_('ilk', now), codeId = cardId ? '' : newCodeId_(), fromDay = todayLondon_(now);   // rows start the day given; the window itself gates use
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, '', ''];
     }), S);
@@ -367,22 +384,22 @@ function sinkVisitGive_(req) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
     store_appendMany_(INSPECT.SCOPE_FILE, INSPECT.SCOPE_COLUMNS, lists.map(function (k, i) {
-      return [linkId + '-c' + (i + 1), tenant, linkId, k, 'record', '', '', 'true'];
+      return [linkId + '-c' + (i + 1), tenant, linkId, k, 'record', '', '', fromDay, ''];
     }), SC);
     var rightRows = [];
     rights.forEach(function (r) { if (r !== 'record') rightRows.push([r, '', '']); });
     jobs.forEach(function (j) { rightRows.push(['record', j, counts.indexOf(j) >= 0 ? 'true' : 'false']); });
     store_appendMany_(INSPECT.RIGHT_FILE, INSPECT.RIGHT_COLUMNS, rightRows.map(function (r, i) {
-      return [linkId + '-r' + (i + 1), tenant, linkId, r[0], r[1], r[2], 'true'];
+      return [linkId + '-r' + (i + 1), tenant, linkId, r[0], r[1], r[2], fromDay, ''];
     }), RT);
     var label = name + (org ? ' - ' + org : '');
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), made_at: londonIso_(now),
-      made_by: who.who, usable_from: win.starts_at, usable_to: win.ends_at, supersedes_id: '', visit_type_id: typeId, person_id: personId,
+      made_by: who.who, usable_from: win.starts_at, usable_to: win.ends_at, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '',
       issued_by: deleg ? who.id : 'owner', delegation_id: deleg ? deleg.row.id : '' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
-    var out = { status: 'saved', link_id: linkId, person_id: personId, usable_from: win.starts_at, usable_to: win.ends_at, dogs: subjects.length,
+    var out = { status: 'saved', grant_id: linkId, person_id: personId, usable_from: win.starts_at, usable_to: win.ends_at, dogs: subjects.length,
       fields: fieldRows.length, email_sent: false };
     if (!cardId) {
       var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
@@ -403,9 +420,9 @@ function sinkVisitGive_(req) {
 /** A holder's visit must sit inside their delegation: type, rights, lists, fields, jobs. Throws INVALID naming what is wider. */
 function visitWithin_(lim, type, rights, lists, fieldRows, jobs) {
   var wider = {};
-  if (lim.visit_type_ids !== null) {
-    var keys = visitMine_(visitRead_(VISIT_.TYPE_FILE, VISIT_.TYPE_COLUMNS)).filter(function (r) { return lim.visit_type_ids.indexOf(r.id) >= 0; }).map(function (r) { return r.type_key; });
-    if (keys.indexOf(type.type_key) < 0) wider.visit_type_id = 'You may not give this kind of visit.';
+  if (lim.grant_type_ids !== null) {
+    var keys = visitMine_(visitRead_(VISIT_.TYPE_FILE, VISIT_.TYPE_COLUMNS)).filter(function (r) { return lim.grant_type_ids.indexOf(r.id) >= 0; }).map(function (r) { return r.type_key; });
+    if (keys.indexOf(type.type_key) < 0) wider.grant_type_id = 'You may not give this kind of visit.';
   }
   if (lim.rights !== null && rights.some(function (x) { return lim.rights.indexOf(x) < 0; })) wider.rights = 'You may not give some of these rights.';
   if (lim.lists !== null && lists.some(function (x) { return lim.lists.indexOf(x) < 0; })) wider.fields = 'You may not show some of these lists.';
@@ -437,8 +454,8 @@ function visitCurrentRow_(L, rootId) {
 
 function sinkVisitEnd_(req) {
   return sinkVisitOwner_(req, function (f, who, now, deleg) {
-    var errors = {}, linkId = String(f.link_id || '').trim(), reason = visitReason_(f, errors, true);
-    if (!ID_RE_.test(linkId)) errors.link_id = 'Say which visit to end.';
+    var errors = {}, linkId = String(f.grant_id || '').trim(), reason = visitReason_(f, errors, true);
+    if (!ID_RE_.test(linkId)) errors.grant_id = 'Say which visit to end.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     var L = visitLinkRead_(), g = visitCurrentRow_(L, linkId);
     if (visitState_(g.cur, now.getTime()) === 'ended') throw err_('ALREADY_ENDED', 'That visit has already ended.');
@@ -448,15 +465,15 @@ function sinkVisitEnd_(req) {
       catch (e) { if (!e || e.code !== 'ALREADY_REVOKED') throw e; }
     }
     var at = londonIso_(now);
-    linkSupersede_(visitLinkRead_(), linkId, { revoked_at: at, revoked_by: who.who, revoke_reason: reason }, now);
-    return { status: 'saved', link_id: linkId, revoked_at: at, logged: visitEvent_(now, who, 'visit_ended', linkId, reason) };
+    linkSupersede_(visitLinkRead_(), linkId, { ended_at: at, ended_by: who.who, end_reason: reason }, now);
+    return { status: 'saved', grant_id: linkId, ended_at: at, logged: visitEvent_(now, who, 'visit_ended', linkId, reason) };
   }, true);
 }
 
 function sinkVisitExtend_(req) {
   return sinkVisitOwner_(req, function (f, who, now, deleg) {
-    var errors = {}, linkId = String(f.link_id || '').trim(), reason = visitReason_(f, errors, true);
-    if (!ID_RE_.test(linkId)) errors.link_id = 'Say which visit to change.';
+    var errors = {}, linkId = String(f.grant_id || '').trim(), reason = visitReason_(f, errors, true);
+    if (!ID_RE_.test(linkId)) errors.grant_id = 'Say which visit to change.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     var bad = function (field, msg) { var e = {}; e[field] = msg; return err_('INVALID', msg, { fields: e }); };
     var L = visitLinkRead_(), g = visitCurrentRow_(L, linkId), rec = g.cur, nowMs = now.getTime();
@@ -472,7 +489,7 @@ function sinkVisitExtend_(req) {
       if (isNaN(endMs)) throw bad('usable_to', 'Choose the date and time it ends.');
     }
     if (endMs <= nowMs || endMs <= startMs) throw bad('usable_to', 'The end must be later than now and the start.');
-    var type = rec.visit_type_id ? visitTypeById_(rec.visit_type_id) : null;
+    var type = rec.grant_type_id ? visitTypeById_(rec.grant_type_id) : null;
     var role = (type && type.role_code) || ROLE_INSPECTOR;
     var tmax = type && Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
     if (deleg && deleg.limits.max_hours !== null && (tmax === null || deleg.limits.max_hours < tmax)) tmax = deleg.limits.max_hours;
@@ -486,14 +503,14 @@ function sinkVisitExtend_(req) {
       if (!hit) throw err_('NOT_FOUND', 'That visit\'s code was not found.');
       setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
     }
-    linkSupersede_(L, linkId, { usable_to: endsAt, ends: todayLondon_(new Date(endMs)) }, now);
-    return { status: 'saved', link_id: linkId, usable_to: endsAt, logged: visitEvent_(now, who, 'visit_extended', linkId, 'to ' + endsAt + ': ' + reason) };
+    var row = linkSupersede_(L, linkId, { usable_to: endsAt, ends: todayLondon_(new Date(endMs)) }, now);
+    return { status: 'saved', grant_id: row.id, root_id: linkId, usable_to: endsAt, logged: visitEvent_(now, who, 'visit_extended', linkId, 'to ' + endsAt + ': ' + reason) };
   }, true);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------
  * Part C: a visitor opens a visit with a link code (c) or a printed card's tag (t). No staff code.
- *   - visit_open says whether the visit is live, opens later, has ended, or (a card) is free. A free or ended visit
+ *   - grant_open says whether the visit is live, opens later, has ended, or (a card) is free. A free or ended visit
  *     shows nothing else. A wrong code or tag counts toward the same lock-out as a wrong staff code.
  *   - read with t: a card visit reads exactly as a link visit does (its own rows), only while live; outside its window
  *     the answer is WINDOW. A scan opens a page; it never proves anyone was there.
@@ -590,9 +607,9 @@ function sinkVisitOpen_(req) {
   }
   var r = g.cur, state = off ? 'ended' : visitState_(r, nowMs);
   if (state === 'ended') return { state: 'ended' };
-  var grant = visitGrant_(g.root);
+  var grant = visitGrant_(g.root, todayLondon_(now));
   return {
-    state: state, link_id: g.root, usable_from: r.usable_from || r.made_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
+    state: state, grant_id: g.root, usable_from: r.usable_from || r.made_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
     who: r.visitor_name || r.label, org: r.organisation || '', rights: grant.rights, lists: grant.lists,
     record_jobs: grant.rights.indexOf('record') >= 0 ? visitJobs_(Object.keys(grant.jobs), todayLondon_(now)) : [],
     review_words: grant.rights.indexOf('raise_finding') >= 0 ? visitReviewWords_() : []
@@ -601,11 +618,11 @@ function sinkVisitOpen_(req) {
 
 /* ---------------------------------------------------------------------------------------------------------------
  * Part D: a visitor reviews (right raise_finding) or records (right record), only while live and only if granted.
- *   - visit_review adds one BLD-finding row (finding_kind review). outcome_id is a review word: a BLD-status_label code
+ *   - grant_review adds one BLD-finding row (finding_kind review). outcome_id is a review word: a BLD-status_label code
  *     in group 'review'. target_table is one of the visit's lists; target_id (optional) must be a row of a dog on it.
  *     A finding is never edited; the owner's reply will be a finding_response row (later).
- *   - visit_record adds one check_log row through the ordinary staff-check path (same checks, same repeat guard), for a
- *     job the visit has a 'record' right row for. taken_by is always 'visit:<link id>'; visit_id names the grant and
+ *   - grant_record adds one check_log row through the ordinary staff-check path (same checks, same repeat guard), for a
+ *     job the visit has a 'record' right row for. taken_by is always 'grant:<root id>'; grant_id names the grant and
  *     counts_due is copied from that right row at save time. The jobs screen counts it only when true (due.js).
  * --------------------------------------------------------------------------------------------------------------- */
 
@@ -615,7 +632,7 @@ function visitLive_(req, now) {
   if (who.role !== ROLE_INSPECTOR || !who.link_id) throw err_('NOT_ALLOWED', 'Only a visitor can do this.');
   var cur = linkCurrent_(inspectRead_(INSPECT.LINK_FILE).records, prop_(BLD.PROP.TENANT_ID))[who.link_id];
   if (!cur || visitState_(cur, now.getTime()) !== 'live') throw err_('WINDOW', 'This visit is not open now.');
-  return { who: who, root: who.link_id, link: cur, grant: visitGrant_(who.link_id) };
+  return { who: who, root: who.link_id, link: cur, grant: visitGrant_(who.link_id, todayLondon_(now)) };
 }
 
 function sinkVisitorAct_(req, right, fn) {
@@ -655,10 +672,10 @@ function sinkVisitReview_(req) {
     var id = dogcardAppend_({ file: VISIT_.FINDING_FILE, idPrefix: 'fnd', need: VISIT_.FINDING_NEED }, {
       authority: v.link.organisation || v.link.visitor_name || v.link.label, raised_on: todayLondon_(now), wording_as_given: note,
       finding_kind: 'review', outcome_id: word, target_table: table, target_id: target, sign_in_id: '', raised_at: londonIso_(now),
-      visit_id: v.root
+      grant_id: v.root
     });
     var level = (words.filter(function (w) { return w.id === word; })[0] || {}).level;
-    if (level === 'amber' || level === 'red') visitEvent_(now, { who: 'visit:' + v.root, role: ROLE_INSPECTOR }, 'review_' + level, v.root, word + (note ? ': ' + note : ''));
+    if (level === 'amber' || level === 'red') visitEvent_(now, { who: 'grant:' + v.root, role: ROLE_INSPECTOR }, 'review_' + level, v.root, word + (note ? ': ' + note : ''));
     return { status: 'saved', id: id };
   });
 }
@@ -672,11 +689,11 @@ function sinkVisitRecord_(req) {
     if (!typeRow || !Object.prototype.hasOwnProperty.call(v.grant.jobs, typeRow.type_key)) throw err_('NOT_ALLOWED', 'This visit cannot record that job.');
     var fields = {};
     Object.keys(spec.input).forEach(function (k) { if (f[k] !== undefined) fields[k] = f[k]; });
-    var who = { who: 'visit:' + v.root, role: ROLE_INSPECTOR, id: '' };
+    var who = { who: 'grant:' + v.root, role: ROLE_INSPECTOR, id: '' };
     var counts = v.grant.jobs[typeRow.type_key];
     // the same spec, stamped with the visit and whether it counts as done (as granted now; later changes do not alter it)
     var vspec = Object.create(spec);
-    vspec.stamp = function (row, ctx) { spec.stamp(row, ctx); row.visit_id = v.root; row.counts_due = counts ? 'true' : 'false'; };
+    vspec.stamp = function (row, ctx) { spec.stamp(row, ctx); row.grant_id = v.root; row.counts_due = counts ? 'true' : 'false'; };
     var out = sinkProcess_(vspec, { action: 'add', fields: fields, values: f.values }, who, now, now.getTime());
     out.who = v.link.visitor_name || v.link.label;
     return out;

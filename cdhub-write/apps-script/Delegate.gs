@@ -3,7 +3,7 @@
  * as dated, limited rows. Design: AA_ACCESS_2026-11-13-1535 "Delegated admin", agreed with ADMIN; holders keyed on code id).
  *
  *   BLD-delegation: one row per conferral. A role never implies a power. parent_id blank = conferred by the owner.
- *   Limits (pipe lists, blank = no wider than the parent; on an owner row blank = no limit): visit_type_ids, max_hours,
+ *   Limits (pipe lists, blank = no wider than the parent; on an owner row blank = no limit): grant_type_ids, max_hours,
  *   rights, lists, fields, area_ids, subject_ids; end_others / extend_others yes or blank.
  *   The ceiling: what a holder may do is the INTERSECTION of their row and every row above it, worked out each time it is
  *   used, so a parent narrowed or ended later also narrows or ends everything under it.
@@ -16,11 +16,11 @@
  * --------------------------------------------------------------------------------------------------------------- */
 var DELEG_ = {
   FILE: 'BLD-delegation.csv',
-  COLUMNS: ['id', 'tenant_id', 'power', 'holder_person_id', 'holder_code_id', 'holder_sign_in_id', 'parent_id', 'depth_left', 'from_at',
-    'to_at', 'visit_type_ids', 'max_hours', 'rights', 'lists', 'fields', 'area_ids', 'subject_ids', 'end_others', 'extend_others',
+  COLUMNS: ['id', 'tenant_id', 'power', 'holder_person_id', 'holder_code_id', 'holder_sign_in_id', 'parent_id', 'depth_left', 'from_date',
+    'to_date', 'grant_type_ids', 'max_hours', 'rights', 'lists', 'fields', 'area_ids', 'subject_ids', 'end_others', 'extend_others',
     'ended_at', 'ended_by', 'end_reason', 'end_issued', 'conferred_by', 'conferred_at', 'source', 'notes'],
   POWERS: ['give_visit', 'issue_code', 'issue_device', 'give_role'],
-  LISTS: ['visit_type_ids', 'rights', 'lists', 'fields', 'area_ids', 'subject_ids'],
+  LISTS: ['grant_type_ids', 'rights', 'lists', 'fields', 'area_ids', 'subject_ids'],
   MAX_DEPTH: 5
 };
 
@@ -34,13 +34,10 @@ function delegRead_() {
 
 function delegSplit_(v) { return String(v || '').split('|').map(function (s) { return s.trim(); }).filter(String); }
 
-/** Is this row itself live at nowMs (not ended, inside from_at..to_at)? */
+/** Is this row itself live at nowMs (not ended, London today inside from_date..to_date, both whole days)? */
 function delegRowLive_(r, nowMs) {
   if (String(r.ended_at || '')) return false;
-  var from = Date.parse(r.from_at || ''), to = Date.parse(r.to_at || '');
-  if (!isNaN(from) && nowMs < from) return false;
-  if (!isNaN(to) && nowMs >= to) return false;
-  return true;
+  return grantRowOn_(r, todayLondon_(new Date(nowMs)));
 }
 
 /** The row and every row above it, nearest first; null if any is missing or not live (the chain is broken). */
@@ -61,7 +58,7 @@ function delegChain_(rows, id, nowMs) {
 
 /** The effective limits of a chain: each list the intersection of the non-blank ones (null = no limit). */
 function delegLimits_(chain) {
-  var lim = { max_hours: null, end_others: true, extend_others: true, depth_left: Number(chain[0].depth_left) || 0, power: chain[0].power, to_ms: null };
+  var lim = { max_hours: null, end_others: true, extend_others: true, depth_left: Number(chain[0].depth_left) || 0, power: chain[0].power, to_date: null, to_ms: null };
   DELEG_.LISTS.forEach(function (k) {
     var set = null;
     chain.forEach(function (r) {
@@ -76,9 +73,10 @@ function delegLimits_(chain) {
     if (h > 0 && (lim.max_hours === null || h < lim.max_hours)) lim.max_hours = h;
     if (String(r.end_others) !== 'yes') lim.end_others = false;
     if (String(r.extend_others) !== 'yes') lim.extend_others = false;
-    var to = Date.parse(r.to_at || '');
-    if (!isNaN(to) && (lim.to_ms === null || to < lim.to_ms)) lim.to_ms = to;
+    var to = String(r.to_date || '');
+    if (to && (lim.to_date === null || to < lim.to_date)) lim.to_date = to;
   });
+  if (lim.to_date !== null) lim.to_ms = Date.parse(inspectEndOfDay_(lim.to_date));   // a visit given under it ends by then
   return lim;
 }
 
@@ -131,13 +129,14 @@ function sinkDelegationGive_(req) {
     if (person && !ID_RE_.test(person)) errors.holder_person_id = 'Choose the person from the list.';
     var depth = String(f.depth_left == null || f.depth_left === '' ? '0' : f.depth_left).trim();
     if (!/^\d$/.test(depth) || +depth > DELEG_.MAX_DEPTH) errors.depth_left = 'How many more layers they may pass it on: 0 to ' + DELEG_.MAX_DEPTH + '.';
-    var fromMs = f.from_at ? externalMs_(f.from_at) : nowMs, toMs = f.to_at ? externalMs_(f.to_at) : NaN;
-    if (isNaN(fromMs)) errors.from_at = 'Choose when it starts.';
-    if (f.to_at && isNaN(toMs)) errors.to_at = 'Choose when it ends.';
-    else if (!isNaN(toMs) && toMs <= Math.max(fromMs, nowMs)) errors.to_at = 'The end must be later than the start and now.';
+    var today = todayLondon_(now), from = String(f.from_date || '').trim() || today, to = String(f.to_date || '').trim();
+    if (!isRealDate_(from)) errors.from_date = 'Use a real date as YYYY-MM-DD.';
+    else if (from < today) from = today;
+    if (to && !isRealDate_(to)) errors.to_date = 'Use a real date as YYYY-MM-DD.';
+    else if (to && !errors.from_date && to < from) errors.to_date = 'The end cannot be before the start.';
     var lists = {};
     var okFor = {
-      visit_type_ids: function (s) { return ID_RE_.test(s); }, rights: function (s) { return VISIT_.RIGHTS.indexOf(visitRightCode_(s)) >= 0; },
+      grant_type_ids: function (s) { return ID_RE_.test(s); }, rights: function (s) { return VISIT_.RIGHTS.indexOf(visitRightCode_(s)) >= 0; },
       lists: function (s) { return VISIT_.KEY_RE.test(s); }, fields: function (s) { return VISIT_.FIELD_RE.test(s); },
       area_ids: function (s) { return ID_RE_.test(s); }, subject_ids: function (s) { return ID_RE_.test(s); }
     };
@@ -182,13 +181,13 @@ function sinkDelegationGive_(req) {
       if (lim.max_hours !== null && (!mh || +mh > lim.max_hours)) { if (mh) wider.max_hours = 'At most ' + lim.max_hours + ' hours.'; else mh = String(lim.max_hours); }
       if (endOthers && !lim.end_others) wider.end_others = 'You may not end others\' visits yourself.';
       if (extOthers && !lim.extend_others) wider.extend_others = 'You may not extend others\' visits yourself.';
-      if (lim.to_ms !== null && (isNaN(toMs) || toMs > lim.to_ms)) { if (isNaN(toMs)) toMs = lim.to_ms; else wider.to_at = 'It cannot last longer than yours.'; }
+      if (lim.to_date !== null && (!to || to > lim.to_date)) { if (!to) to = lim.to_date; else wider.to_date = 'It cannot last longer than yours.'; }
       if (Object.keys(wider).length) throw err_('INVALID', 'You cannot give more than you hold.', { fields: wider });
     }
     var id = dogcardAppend_({ file: DELEG_.FILE, idPrefix: 'dlg', need: DELEG_.COLUMNS }, {
       power: power, holder_person_id: person, holder_code_id: holder, holder_sign_in_id: '', parent_id: parentId, depth_left: depth,
-      from_at: londonIso_(new Date(Math.max(fromMs, nowMs))), to_at: isNaN(toMs) ? '' : londonIso_(new Date(toMs)),
-      visit_type_ids: lists.visit_type_ids.join('|'), max_hours: mh, rights: lists.rights.join('|'), lists: lists.lists.join('|'),
+      from_date: from, to_date: to,
+      grant_type_ids: lists.grant_type_ids.join('|'), max_hours: mh, rights: lists.rights.join('|'), lists: lists.lists.join('|'),
       fields: lists.fields.join('|'), area_ids: lists.area_ids.join('|'), subject_ids: lists.subject_ids.join('|'),
       end_others: endOthers ? 'yes' : '', extend_others: extOthers ? 'yes' : '', end_issued: '',
       conferred_by: owner ? 'owner' : who.id, conferred_at: londonIso_(now), source: source || ('CD Hub, ' + who.who), notes: notes
@@ -251,7 +250,7 @@ function sinkDelegationEnd_(req) {
         if (!ending[lk.delegation_id] || visitState_(lk, nowMs) === 'ended') return;
         var first = L.records.filter(function (r) { return r.id === root; })[0];
         if (first && first.code_id) { try { revokeCodeCore_(first.code_id, who.who, 'permission ended: ' + reason); } catch (e) { if (!e || e.code !== 'ALREADY_REVOKED') throw e; } }
-        linkSupersede_(visitLinkRead_(), root, { revoked_at: at, revoked_by: who.who, revoke_reason: 'permission ended: ' + reason }, now);
+        linkSupersede_(visitLinkRead_(), root, { ended_at: at, ended_by: who.who, end_reason: 'permission ended: ' + reason }, now);
         visitsEnded++;
       });
     }
