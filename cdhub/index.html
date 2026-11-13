@@ -482,6 +482,48 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 .pill.dna.d-affected{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 @media(max-width:767px){.dcs-link{height:var(--house-btn-phone)}}
 @media(max-width:767px){.dcs>summary,.dcs-form input,.dcs-form select,.dcs-form button{height:var(--house-btn-phone)}}
+/* Print (13 Nov 2026): A4 from the browser's Print or Save as PDF. Bars, buttons and forms stay off the paper; no card
+   splits across pages. The round prints as a two-column round sheet with blank min/max boxes; Dogs prints two cards a row.
+   Inline-block, not grid, so Safari and Chrome break pages the same way. Screen is unchanged. */
+@media print{
+@page{size:A4;margin:10mm}
+html,body{background:#fff!important;color:var(--ljr-8)!important}
+*{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.top,#nav,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
+.wrap{padding:0!important;margin:0!important;max-width:none!important}
+#main{max-width:none!important;margin:0!important;padding:0!important}
+#main [data-house-folded]>[data-fold-part]{display:revert!important}
+#main .card,#main .mcard,#main .dc{background:#fff!important}
+.card,.mcard,.dc{break-inside:avoid;page-break-inside:avoid}
+h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
+#main h2{margin:0 0 3mm}
+#main[data-view="round"]{font-size:9pt;line-height:1.25}
+#main[data-view="round"] .filt>a.btn,#main[data-view="round"] .radd,#main[data-view="round"] .racc,#main[data-view="round"] .herebtns,#main[data-view="round"] .rempty,#main[data-view="round"] [data-over-move],#main[data-view="round"] [data-unshow]{display:none!important}
+#main[data-view="round"] #rdate{border:0;padding:0;height:auto;min-height:0;background:none;font:inherit;font-weight:600;width:auto}
+#main[data-view="round"] #rdate::-webkit-calendar-picker-indicator{display:none}
+#main[data-view="round"] .card{padding:2mm 2.5mm;margin:0 0 2.5mm;border:1px solid var(--ljr-0-icon)}
+#main[data-view="round"] .card h3,#main[data-view="round"] .card h4{margin:0 0 1mm}
+.rcabins{font-size:0;orphans:1;widows:1}   /* each row of cards is one line: without this a page keeps two rows back */
+#main[data-view="round"] .rcabins>.card{display:inline-block;vertical-align:top;box-sizing:border-box;width:calc(50% - 1.5mm);font-size:9pt;margin:0 0 2.5mm}
+#main[data-view="round"] .rcabins>.card:nth-child(odd){margin-right:3mm}
+#main[data-view="round"] .rcabins h4{margin:0 0 1mm;font-size:10.5pt}
+#main[data-view="round"] .rcabins .filt{margin:0!important;min-height:0}
+#main[data-view="round"] .chips{margin:0 0 1mm!important}
+#main[data-view="round"] .drow{display:block;margin:0 0 0.8mm}
+#main[data-view="round"] .dchip{display:inline-block!important;min-height:0!important;height:auto!important;padding:0 0 0 1.5mm!important;margin:0!important;border:0!important;border-left:1.2mm solid var(--sz,var(--ljr-0-icon))!important;border-radius:0!important;font-size:9pt;font-weight:600;background:none!important;text-align:left;white-space:normal;color:var(--ljr-8)}
+#main[data-view="round"] .dchip .mut{font-weight:400}
+#main[data-view="round"] .tmp{grid-template-columns:auto 1fr 1fr;gap:1mm 2mm;padding-top:1mm;margin-top:1mm}
+#main[data-view="round"] .tmp input{height:7mm;min-height:0!important;width:100%;box-sizing:border-box;border:1px solid var(--house-muted);border-radius:2mm;background:#fff;font-size:9pt}
+#main[data-view="round"] .tmp input::placeholder{color:var(--ljr-0-text)}
+#main[data-view="round"] .tmsg{grid-column:1/-1;margin:0;min-height:0}
+#main[data-view="round"] .tmsg:empty{display:none}
+#main[data-view="dogs"] #rows{display:block;font-size:0;orphans:1;widows:1}
+#main[data-view="dogs"] #rows>.dc{display:inline-flex;vertical-align:top;box-sizing:border-box;width:calc(50% - 2mm);margin:0 0 4mm;font-size:10pt}
+#main[data-view="dogs"] #rows>.dc:nth-child(odd){margin-right:4mm}
+.dc .wtc{margin:0;padding:0}
+.dc .ph{break-inside:avoid}
+#main .dc button.cb[data-cabin-move]{border:0!important;padding:0!important;min-height:0!important;height:auto!important;background:none!important;font:inherit;font-weight:600;color:inherit}
+}
 </style>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></symbol><symbol id="i-female" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="M12 14v7M9 18h6"/></symbol><symbol id="i-male" viewBox="0 0 24 24"><circle cx="10" cy="14" r="5"/><path d="M19 5l-5.5 5.5M19 5h-5M19 5v5"/></symbol><symbol id="i-neuter" viewBox="0 0 24 24"><circle cx="12" cy="10" r="5"/><path d="M12 15v6M9 18h6M4 4l16 16" stroke-linecap="round"/></symbol><symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7V4M12 7V4M15 7V4M9 20v-3M12 20v-3M15 20v-3M4 9h3M4 12h3M4 15h3M17 9h3M17 12h3M17 15h3"/></symbol><symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v1M6 7l-3 7h6l-3-7zM18 7l-3 7h6l-3-7zM3 20h18M12 4a2 2 0 0 0-2 2M12 4a2 2 0 0 1 2 2M6 14c0 1.1-.9 2-2 2s-2-.9-2-2M18 14c0 1.1.9 2 2 2s2-.9 2-2"/></symbol><symbol id="i-pill" viewBox="0 0 24 24"><path d="M4.5 12.5l8-8a4.95 4.95 0 1 1 7 7l-8 8a4.95 4.95 0 1 1-7-7zM12 12l-3.5-3.5"/></symbol></svg>
@@ -500,6 +542,14 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 <div class="next" id="next"></div></div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
+/* Print in the light look (13 Nov 2026): a phone or Mac in dark mode, or Look > Dark, printed pale text and a black
+   margin on white paper. Light for the print only, then back. Same in ../cdhub/staff/look.js. */
+(function(){ var r=document.documentElement, was=null, on=false;
+ function light(){ if(on) return; on=true; was=r.getAttribute('data-theme'); r.setAttribute('data-theme','light'); }
+ function back(){ if(!on) return; on=false; if(was===null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme',was); }
+ window.addEventListener('beforeprint',light); window.addEventListener('afterprint',back);
+ if(window.matchMedia){ var mq=window.matchMedia('print'); if(mq.addListener) mq.addListener(function(e){ if(e.matches) light(); else back(); }); }
+}());
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;
 var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
@@ -2523,7 +2573,7 @@ function drawDogs(){
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
         +(d.room&&!away?'<button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="'+esc(d.room)+'">'+esc(d.where)+'</button>'
           :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
-           /* no room yet (pups too) or off site: Place opens the same cabin picker (Lisa 13 Nov 2026) */
+           /* no room yet (pups too) or off site: Place opens the same cabin picker (13 Nov 2026) */
            +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
         +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+esc(CD._moved.text)+'</span>':'')
       +'</div>'
@@ -3133,6 +3183,7 @@ function pageRound(){
  h+='<div class="card '+(unplaced.length?'acc2':'acc5')+'"><h4>'+(unplaced.length?unplaced.length+' dogs not yet placed':'Every dog on the premises is placed')+'</h4>'
   +(unplaced.length?'<p style="margin-bottom:0" class="mut">'+unplaced.slice(0,unN).map(function(d){return esc(d.name);}).join(' \u00b7 ')+(unN<unplaced.length?' \u2026':'')+'</p>'
     +(unN<unplaced.length?'<p class="mut">Showing '+unN+' of '+unplaced.length+'.</p><button type="button" class="cb" data-unshow="more">Show more</button> <button type="button" class="cb" data-unshow="all">Show all</button>':''):'')+'</div>';
+ h+='<div class="rcabins">';   /* the cabins together: two a row on the printed round sheet */
  w.forEach(function(c){
   var a=c.area, aid=a.id;
   var k=roundKey(date,aid), r=ROUND[k]||{}, sel=inCabin(aid, date);
@@ -3188,6 +3239,7 @@ function pageRound(){
    +(over?' <button type="button" class="pill no" data-over-move="'+esc(aid)+'">over its limit</button>':'')+'</div>'
    +'</div>';
  });
+ h+='</div>';
  return h;
 }
 function ageDays(iso,onISO){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -4039,6 +4091,7 @@ function go(id,push){
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
  if(id!=='compliance') REHEARSAL=null;   /* leaving Compliance ends a rehearsal: nothing kept (H-04) */
  var main=document.getElementById('main');
+ main.setAttribute('data-view',id);   /* print rules per page (round sheet, dog cards) */
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
    +'<ul class="notes"><li>Read-only. One sign-in for the whole site.</li></ul>'
