@@ -10,7 +10,7 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'];
-const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'];
+const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'];
 const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'];
 const VALUE_H = ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'];
 const NOW = Date.UTC(2026, 10, 12, 10, 0, 0);
@@ -35,7 +35,7 @@ const log = (env, f, values, code) => save(env, req(env, Object.assign({ code: c
 test('litter: a check can target a litter; a litter job saves with litter_id, the last column, and the litter must exist', () => {
   const env = env0();
   const id = typeId(env, 'pup_weigh', { target: 'litter' });
-  assert.deepEqual(Array.from(env.ctx.TABLES.check_log.columns).slice(-1), ['litter_id']);
+  assert.deepEqual(Array.from(env.ctx.TABLES.check_log.columns).slice(-2), ['litter_id', 'note_for_id']);
   const r = log(env, { check_type_id: id, litter_id: 'ltr-1' });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(recs(env, 'BLD-check_log.csv')[0].litter_id, 'ltr-1');
@@ -177,4 +177,24 @@ test('only_in_areas: a room job for some rooms only; it is the last column; neve
   assert.equal(log(env, { check_type_id: iso, area_id: 'area-t2' }).ok, true);
   const any = typeId(env, 'room_clean', { target: 'area' });   // blank = every room
   assert.equal(log(env, { check_type_id: any, area_id: 'area-t1' }).ok, true);
+});
+
+// ---- 4. a note added to a job already done (Lisa 13 Nov 2026: "in addition to done rather than instead")
+test('note: added to a record already saved, never a duplicate and never blocking one; must point at a real, non-note record', () => {
+  const env = env0();
+  const id = typeId(env, 'pup_weigh', { target: 'litter' });
+  const done = log(env, { check_type_id: id, litter_id: 'ltr-1' });
+  assert.equal(done.ok, true);
+  const n1 = log(env, { check_type_id: id, litter_id: 'ltr-1', outcome: 'note', note: 'Runt slow to feed', note_for_id: done.result.id });
+  assert.equal(n1.ok, true, JSON.stringify(n1));
+  assert.equal(log(env, { check_type_id: id, litter_id: 'ltr-1', outcome: 'note', note: 'Second note', note_for_id: done.result.id }).ok, true);
+  assert.equal(log(env, { check_type_id: id, litter_id: 'ltr-1' }).code, 'DUPLICATE');   // the done row still guards against a second done
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.filter((r) => r.outcome === 'note' && r.note_for_id === done.result.id).length, 2);
+  const bad = (f) => log(env, Object.assign({ check_type_id: id, litter_id: 'ltr-1', outcome: 'note', note: 'x', note_for_id: done.result.id }, f));
+  assert.equal(bad({ note: '' }).fields.note, 'Type the note.');
+  assert.equal(bad({ note_for_id: '' }).fields.note_for_id, 'Say which record the note is for.');
+  assert.equal(bad({ note_for_id: 'clg-nope' }).fields.note_for_id, 'That record was not found.');
+  assert.equal(bad({ note_for_id: n1.result.id }).fields.note_for_id, 'That record was not found.');   // not a note on a note
+  assert.equal(bad({ outcome: 'ok' }).fields.note_for_id, 'Only a note can point at another record.');
 });

@@ -458,16 +458,17 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
       { name: 'check_type_only', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'only_in_areas' },
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
       { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
-      { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' }
+      { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' },
+      { name: 'check_log_outcome', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'outcome' }   // a note points at a saved record
     ],
     perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER'] },
     alwaysPending: false,
@@ -478,18 +479,29 @@ var TABLES = {
       subject_id:    { type: 'ref', lookup: 'subject' },
       item:          { type: 'text' },
       amount:        { type: 'text' },
-      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded'], required: true },   // recorded = a report, such as an incident, with no pass or fail
+      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note'], required: true },   // recorded = a report, such as an incident, with no pass or fail; note = a note added to a record already saved (13 Nov 2026), never counted as done
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
       how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] },      // scanned = opened from a tag: it says which screen, not that anyone was there
-      litter_id:     { type: 'ref', lookup: 'litter' }                              // 12 Nov 2026: a litter job (check_type target litter)
+      litter_id:     { type: 'ref', lookup: 'litter' },                             // 12 Nov 2026: a litter job (check_type target litter)
+      note_for_id:   { type: 'text' }                                               // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item'], dupTimeCol: 'taken_at',
+    dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors, lookups) {
       if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
         errors.note = 'Say briefly what the concern is or why it was not done.';
+      }
+      // a note added to a record already saved (Lisa 13 Nov 2026: "in addition to done rather than instead")
+      if (row.outcome === 'note') {
+        if (row.note === '' && !errors.note) errors.note = 'Type the note.';
+        var target = lookups && lookups.check_log_outcome ? lookups.check_log_outcome[row.note_for_id] : undefined;
+        if (!row.note_for_id) errors.note_for_id = 'Say which record the note is for.';
+        else if (lookups && lookups.check_log_outcome && (target === undefined || target === 'note')) errors.note_for_id = 'That record was not found.';
+      } else if (row.note_for_id && !errors.note_for_id) {
+        errors.note_for_id = 'Only a note can point at another record.';
       }
       // a room job for some rooms only (check_type.only_in_areas): never saved for another room
       var only = lookups && lookups.check_type_only ? lookups.check_type_only[row.check_type_id] : true;
