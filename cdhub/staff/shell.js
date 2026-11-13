@@ -125,7 +125,9 @@
     var name = save.name ? save.name() : '', role = save.role ? save.role() : '';
     if (!name && !role) { me.hidden = true; return; }
     role = role ? role.charAt(0) + role.slice(1).toLowerCase() : '';
-    me.textContent = 'Welcome ' + (name || '') + (name && role ? ' · ' : '') + role;
+    me.textContent = 'Welcome ' + (name || '') + (name && role ? ' · ' : '') + role + ' ';
+    // shared work phone: the next person swaps in with two taps; the save address stays, so no set-up QR again
+    me.appendChild(h('button', { class: 'switch', type: 'button', text: 'Not ' + (name || 'you') + '? Switch', onclick: function () { forget(); go('home'); } }));
     me.hidden = false;
   }
   function setTabs(cur) {
