@@ -615,6 +615,21 @@
   .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
   .nextcard .actions a.more { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; border: 0; background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
+  /* Needs you and Next as hub colour cards (Lisa, 13 Nov 2026). The 12 Nov house look: no fill at rest, the pale grey fill on hover
+     and tap (house.css [data-open-row]), no hover line. The hub's colour is its 3px line and its icon only. */
+  .nextcard .nexthub { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: var(--fs-small); font-weight: 600; }
+  .nextcard .nexthub + .mtag { margin-left: 0; }
+  .needs .needhubs { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .needhub.house-lbar { --house-lbar-out: 0px; padding: 0 0 0 12px; border-radius: var(--radius); }
+  .needhub.house-lbar::before { border-radius: 0; }
+  .needhub .nhh { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 36px; font-weight: 600; }
+  .needhub .nhh .nhn { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .needs .needhub ol { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+  .needs .needhub li[class], .needs .needhub li[class]:hover, .needs .needhub li[class]:focus-within, .needs .needhub li[class]:active {
+    display: flex; gap: 8px; align-items: center; margin: 0; padding: 6px 8px; border: 0; border-radius: var(--radius); outline: none; }
+  .needs .needhub li[data-open-row]:has(.house-open:focus-visible) { outline: 1px solid var(--ink); outline-offset: -1px; }
+  .needs .needhub li a { color: var(--ink); text-decoration: none; }
+  @media (max-width: 600px) { .needhub .nhh { min-height: 44px; } .needs .needhub li[class] { min-height: 44px; box-sizing: border-box; } }
   .needs a.needsmore { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
   @media (hover: hover) { .hsplit a.cnt:hover { background:var(--hov); }
@@ -2775,13 +2790,35 @@
   // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
   function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
+  // ---- Needs you as hub colour cards (Lisa, 13 Nov 2026; the 12 Nov house look: no fill at rest, pale grey on hover and tap, no line).
+  // The same 5 rows as before, most urgent first, grouped by hub. A hub's card sits where its most urgent row would sit, so the
+  // first card still holds the first row. The card carries the hub's 3px line, icon, name and its own count; rows inside carry
+  // only their tag and text. A row with no hub (a failed read, the Bin) sits on a Dashboard card. Nothing is folded shut. ----
+  function needHubOf(x) { return (x.hub && HUB[x.hub]) ? HUB[x.hub] : HUB.dash; }
+  function needHubGroups(items) {
+    var by = {}, order = [];
+    items.forEach(function (x) { var k = needHubOf(x).key; if (!by[k]) { by[k] = []; order.push(k); } by[k].push(x); });
+    return order.map(function (k) { return { hub: HUB[k], items: by[k] }; });
+  }
+  function needHubRow(x) {
+    return '<li class="n-' + x.kind + '" data-hub="' + needHubOf(x).key + '" data-open-row><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span>' +
+      '<span class="nt"><a class="house-open" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
+  }
+  function needHubCards(items, all) {
+    return '<div class="needhubs">' + needHubGroups(items).map(function (g) {
+      var key = g.hub.key, n = all.filter(function (x) { return needHubOf(x).key === key; }).length, late = g.items.some(isLateNeed);
+      return '<div class="house-lbar needhub" data-hub="' + key + '"' + hubStyle(g.hub) + '><p class="nhh">' + hubIcon(g.hub) + '<span class="nhn">' + esc(g.hub.name) + '</span>' +
+        '<span class="cnt' + (late ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '" aria-label="' + esc(g.hub.name + ': ' + n + (late ? ' late' : ' waiting')) + '">' + n + '</span></p>' +
+        '<ol>' + g.items.map(needHubRow).join('') + '</ol></div>';
+    }).join('') + '</div>';
+  }
   function needsPanel() {
     if (!signedIn) return '';
     var all = needsToday(), items = all.slice(0, NEEDS_MAX), reading = firstRead();
     var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you</h3>' +
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
-    h += '<ol>' + items.map(needRow).join('') + '</ol>';
+    h += needHubCards(items, all);
     if (all.length > items.length) h += '<a class="needsmore" data-needs-more href="#/do">+' + (all.length - items.length) + ' more</a>'; // plain "+N more" link to Do (Lisa, 2 Nov)
     return h + '</section>';
   }
@@ -2819,7 +2856,10 @@
     if (n) {
       var x = all[0];
       // Next: the one thing to do now, with one button. White card, 1px ink edge.
-      h += '<div class="card urgent nextcard" id="urgentOne"><div class="cardhead"><h3>Next</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
+      // Next wears its hub's colour (Lisa, 13 Nov 2026): the hub's 3px line, icon and name, like the hub cards below it.
+      var nh = needHubOf(x);
+      h += '<div class="card house-lbar urgent nextcard" id="urgentOne" data-hub="' + nh.key + '"' + hubStyle(nh) + '><div class="cardhead"><h3>Next</h3>' +
+        '<span class="nexthub">' + hubIcon(nh) + '<span>' + esc(nh.name) + '</span></span><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
         '<p class="what">' + esc(x.text) + '</p>' +
         '<div class="actions"><a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
         (n > 1 ? '<a class="hint more" href="#/do">+' + (n - 1) + ' more</a>' : '') + '</div></div>';
