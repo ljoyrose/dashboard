@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const crypto = require('node:crypto');
 const { standardEnv, req: hreq, save: hsave } = require('./harness');
 
-const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source';
+const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source,grant_basis';
 const TAG_H = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by';
 let n = 0;
 
@@ -154,7 +154,14 @@ test('visit_give: refuses an old link header, a switched-off type, and fields of
   assert.equal(give(e, { visit_type_id: t, person_name: '' }).code, 'INVALID');
   assert.equal(give(e, { visit_type_id: t, hours: '', usable_from: '', usable_to: '2026-10-15T20:00:00+01:00' }).code, 'INVALID');   // a past end
   assert.equal(give(e, { visit_type_id: t, grant_basis: 'court_order' }).code, 'INVALID');   // not a grant_basis row yet
-  assert.equal(links(e).length, 0);
+  const sl = 'code,label,match,source,group,level\r\nstatutory_duty,Statutory duty,,test,grant_basis,\r\n';
+  const f = e.file('BLD-status_label.csv');
+  if (f.length) { f[0].content = sl; f[0].sheet = undefined; } else e.addFile('BLD-status_label.csv', sl);
+  const stat = typeId(e, { type_key: 'council', grant_basis: 'statutory_duty' });
+  const g = give(e, { visit_type_id: stat });
+  assert.equal(g.ok, true, JSON.stringify(g));
+  assert.equal(links(e).filter((x) => x.id === g.result.link_id)[0].grant_basis, 'statutory_duty');   // the type's default
+  assert.equal(links(e).length, 1);   // only the statutory one
 });
 
 test('visit_give (card): no code; one live window per card (CARD_IN_USE); a fixed card keeps its type', () => {
