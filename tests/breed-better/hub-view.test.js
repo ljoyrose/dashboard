@@ -252,3 +252,23 @@ test('the sex filter appears when there is more than one sex, with counts', () =
   assert.match(html, /data-bb-sex="Female"[^>]*>Female <span class="cnt">1/);
   assert.match(html, /data-bb-sex="Male"/);
 });
+
+/* DNA Kit on the Breed Better dog page and the per-puppy calculator under More */
+test('the dog page shows the DNA card from dna_result and dna_marker rows', () => {
+  const T = pointsTables();
+  T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
+  T['BLD-dna_result.csv'] = [{ subject_id: 'a1', marker_code: 'TESTR', copies: '1' }];
+  View.open('a1');
+  const html = View.page({ T, today: '2026-08-11', esc });
+  View.open('');
+  assert.match(html, /bb-dna[\s\S]*1 Carrier[\s\S]*TESTR/);
+});
+
+test('More offers the per-puppy calculator', () => {
+  const T = pointsTables();
+  T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
+  View.setTab('dna');
+  const html = View.page({ T, today: '2026-08-10', esc });
+  View.setTab('dogs');
+  assert.match(html, /Probability per puppy[\s\S]*TESTR/);
+});
