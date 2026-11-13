@@ -19,6 +19,7 @@
 <script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
+<script src="tech/core.js"></script>
 <script>
 // Dashboard Main: each hub's 3 numbers, its "needs you" rows and its Decide / Do rows, read with the Dashboard's own
 // look-only sign-in (drive.readonly; Sheets values are read with it too, GET only). Every number is worked out the way
@@ -681,6 +682,7 @@
   <symbol id="h-factory" viewBox="0 0 24 24"><path d="M3 21h18M5 21v-12l5 4v-4l5 4h4M19 21v-8l-1.4 -9h-2.2l-1.4 9"/></symbol>
   <symbol id="h-store" viewBox="0 0 24 24"><path d="M3 21h18M4 21v-11M20 21v-11M3 10l2 -6h14l2 6zM9 21v-6h6v6"/></symbol>
   <symbol id="h-brush" viewBox="0 0 24 24"><path d="M3 21v-4a4 4 0 1 1 4 4h-4"/><path d="M21 3a16 16 0 0 0 -12.8 10.2M21 3a16 16 0 0 1 -10.2 12.8"/></symbol>
+  <symbol id="i-tech" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9zM3 10h2M3 14h2M19 10h2M19 14h2M10 3v2M14 3v2M10 19v2M14 19v2"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
@@ -714,6 +716,7 @@
       <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n" id="n-bin"></span></a>
       <a href="#/money" data-nav="money" data-slot="3"><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="htl">Money</span></a>
       <a href="#/minutes" data-nav="minutes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="htl">Actions minutes</span></a>
+      <a href="#/tech" data-nav="tech" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-tech"/></svg><span class="htl">Tech</span></a>
       <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
       <a id="move-link" href="#" target="_blank" rel="noopener" data-slot="0" hidden><svg class="icon" aria-hidden="true"><use href="#i-read"/></svg><span class="htl">MOVE</span></a>
     </div>
@@ -809,7 +812,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), icloud: blank(), mac: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), icloud: blank(), mac: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank(), tech: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1442,7 +1445,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.canva = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); if (window.DoQ) DoQ.reset(); }
+    if (!timed) { F = {}; S.bin = blank(); S.canva = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); S.tech = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); if (window.DoQ) DoQ.reset(); }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -1498,6 +1501,7 @@
     else if (r.view === 'bin' && S.bin.status === 'idle' && S.drive.status === 'failed') run('bin', Promise.reject(S.drive.error)); // J34b-F01: no drive list, so the Bin read fails too
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
     if (r.view === 'map' && S.mins.status === 'idle') loadMins();
+    if (r.view === 'tech' && S.tech.status === 'idle') loadTech();
     if (r.view === 'personal' || r.view === 'bin') loadPcpCandidates();
   }
   function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
@@ -2872,6 +2876,143 @@
     return h + foot;
   }
 
+  // ---- Tech (TECH-HUB-1, More > Tech): one tile per paid tool, from the tools tab Studio already reads (config.js studio.ownedTools).
+  // Read ONCE per page load, after sign-in, with the read-only token (GET only); the 5-minute refresh never reads it again, only
+  // Refresh does. tech/core.js does every sum (header check, flags, filter, sort, the tile); this part only reads and draws.
+  // Fails closed: tab unreadable, a Tech column missing or the code not loaded = one plain line and no tiles; the rest of the
+  // Dashboard carries on. Add tech drops one TECH-ROW-REQUEST_ file into tech.requestsFolderId (empty = "Not saved", nothing sent).
+  var TECH = CFG.tech || {}, TECH_TAB = (CFG.studio && CFG.studio.ownedTools) || {}, TC = window.TechCore;
+  var TQ = (function () { var o = {}; try { o = JSON.parse(localStorage.getItem('dash-tech') || '{}') || {}; } catch (e) { o = {}; }
+    return { q: '', groups: o.groups || [], flags: o.flags || [], sort: o.sort || 'group', fopen: typeof o.fopen === 'boolean' ? o.fopen : null }; })();
+  var TF = { open: false, d: {}, err: {}, res: null, busy: false };
+  function techSaveQ() { try { localStorage.setItem('dash-tech', JSON.stringify({ groups: TQ.groups, flags: TQ.flags, sort: TQ.sort, fopen: TQ.fopen })); } catch (e) {} }
+  function techOpts() { return { now: Date.now(), devHostingSlot: TECH.devHostingSlot, freshDays: TECH.freshDays }; }
+  function loadTech() {
+    if (!signedIn || !accessToken || !TC) return;
+    if (!TECH_TAB.sheetId) { S.tech = { status: 'ok', readAt: Date.now(), error: null, data: { off: true } }; render(); return; }
+    run('tech', apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(TECH_TAB.sheetId) + '/values/' +
+      encodeURIComponent(TECH_TAB.tab || 'OWNED_TOOLS') + '?majorDimension=ROWS').then(function (r) { return TC.read((r && r.values) || [], techOpts()); }));
+  }
+  function techMode() {
+    var p = S.tech, d = p.data;
+    return !TC || p.status === 'failed' ? 'err' : !d ? 'loading' : d.off ? 'off' : d.mode;
+  }
+  function techOn() { return TQ.groups.length + TQ.flags.length + (TQ.sort !== 'group' ? 1 : 0); }
+  function techChip(k, v, label, on) { return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-action="techchip" data-k="' + k + '" data-v="' + esc(v) + '" aria-pressed="' + on + '">' + label + '</button>'; }
+  function techChips(d) {
+    var v = TC.view(d.tiles, TQ, techOpts()), cnt = function (n) { return ' <span class="cnt">' + n + '</span>'; };
+    var gs = TC.GROUPS.filter(function (g) { return v.groupCounts[g.key] || TQ.groups.indexOf(g.key) >= 0; });
+    var fs = TC.FLAGS.filter(function (f) { return v.flagCounts[f[0]] || TQ.flags.indexOf(f[0]) >= 0; });
+    return '<div class="pills" data-frow="group"><span class="flab">Group</span>' + gs.map(function (g) {
+      var slot = g.slot == null ? (TECH.devHostingSlot == null ? TC.DEV_SLOT_DEFAULT : TECH.devHostingSlot) : g.slot;
+      return techChip('group', g.key, '<span class="dot" style="--c:var(--ljr-' + slot + ')" aria-hidden="true"></span>' + esc(g.name) + cnt(v.groupCounts[g.key] || 0), TQ.groups.indexOf(g.key) >= 0);
+    }).join('') + '</div>' +
+      (fs.length ? '<div class="pills" data-frow="flag"><span class="flab">Show</span>' + fs.map(function (f) { return techChip('flag', f[0], esc(f[1]) + cnt(v.flagCounts[f[0]] || 0), TQ.flags.indexOf(f[0]) >= 0); }).join('') + '</div>' : '') +
+      '<div class="pills" data-frow="sort"><span class="flab">Sort</span>' + TC.SORTS.map(function (x) { return techChip('sort', x[0], esc(x[1]), TQ.sort === x[0]); }).join('') + '</div>' +
+      (techOn() || TQ.q ? '<div class="pills"><button class="pill" type="button" data-action="techclear">Clear</button></div>' : '');
+  }
+  function techList(d) {
+    if (!d.tiles.length) return '<p class="note" data-tech-state="empty">No tools on the list yet. Add tech to start.</p>';
+    var v = TC.view(d.tiles, TQ, techOpts());
+    if (!v.shown) return '<div class="card" data-empty><p class="note" data-tech-state="nomatch">Nothing matches.</p><button class="pill" type="button" data-action="techclear">Clear</button></div>';
+    return v.groups.map(function (g) {
+      return '<section class="tgroup" data-group="' + g.key + '" style="--c:var(--ljr-' + g.slot + ')" aria-labelledby="tg-' + g.key + '"><h4 class="tg-h" id="tg-' + g.key + '"><span class="dot" aria-hidden="true"></span>' + esc(g.name) +
+        ' <span class="cnt">' + g.tiles.length + '</span></h4><div class="tgrid">' + g.tiles.map(function (t) { return TC.tileHtml(t, KIT.icon); }).join('') + '</div></section>';
+    }).join('');
+  }
+  function techForm() {
+    if (!TF.open) return '';
+    var d = TF.d, I = KIT.icon, er = function (k) { return TF.err[k] ? '<p class="ferr" data-err="' + k + '">' + esc(TF.err[k]) + '</p>' : ''; };
+    var star = '<span class="req" title="Must answer">★</span>';
+    var inp = function (k, label, req, type, extra) { return '<div class="tfq"><label><span class="qt">' + label + (req ? star : '') + '</span><input class="fin" data-tf="' + k + '" value="' + esc(d[k] || '') + '"' + (type ? ' type="' + type + '"' : '') + ' autocomplete="off"' + (extra || '') + '></label>' + er(k) + '</div>'; };
+    var pick = function (k, label, opts) { return '<div class="tfq" role="group" aria-label="' + label + '"><span class="qt">' + label + star + '</span><div class="pills">' + opts.map(function (o) { var on = d[k] === o[0]; return '<button type="button" class="pill' + (on ? ' on' : '') + '" data-action="techpick" data-f="' + k + '" data-v="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>'; }).join('') + '</div>' + er(k) + '</div>'; };
+    return '<div class="card tform" data-techform><h4>Add tech</h4>' + inp('tool_name', 'Name', 1) +
+      pick('group', 'Group', TC.GROUPS.map(function (g) { return [g.name, g.name]; })) + inp('plan_or_tier', 'Plan or tier', 1) +
+      pick('status', 'Status', [['live', 'Live'], ['trial', 'Trial']]) + pick('period', 'Allowance resets', [['month', 'Month'], ['week', 'Week'], ['lifetime', 'Lifetime']]) +
+      '<div class="trow2">' + inp('allowance_amount', 'Allowance', 0, 'text', ' inputmode="decimal"') + inp('allowance_unit', 'Unit') + '</div>' +
+      (d.period === 'lifetime' ? '' : inp('renewal_or_expiry', 'Renews on', 0, 'date')) + inp('logo_url', 'Logo address (https)', 0, 'url') +
+      '<div class="actions"><button class="btn" type="button" data-action="techsave"' + (TF.busy ? ' disabled' : '') + '>' + I('plus') + '<span>' + (TF.busy ? 'Saving…' : 'Save') + '</span></button>' +
+      '<button class="btn" type="button" data-action="techcancel"><span>Cancel</span></button></div>' +
+      (TF.res ? '<p class="note' + (TF.res.ok ? '' : ' fail') + '" data-tech-result="' + (TF.res.ok ? 'saved' : 'notsaved') + '" role="status">' + esc(TF.res.text) + '</p>' : '') + '</div>';
+  }
+  function viewTech() {
+    var p = S.tech, d = p.data, mode = techMode(), I = KIT.icon, live = mode === 'live' || mode === 'example';
+    var h = '<section class="techsec" id="techSec" data-tech="' + mode + '" aria-labelledby="techTitle"><div class="cardhead"><h3 id="techTitle">Tech</h3>' +
+      (mode === 'example' ? '<span class="mtag" data-example>Example</span>' : '') + (TC ? stateBadge(p, live ? d.tiles.length : null) : '') + '</div>';
+    if (live) {
+      var n = techOn(), open = TQ.fopen === null ? window.matchMedia('(min-width: 900px)').matches : TQ.fopen;
+      h += '<div class="tbar" data-bar="tech"><div class="srow"><label class="sbox">' + I('search') + '<input type="search" id="techQ" data-tq value="' + esc(TQ.q) + '" aria-label="Search tech" placeholder="Search" autocomplete="off"></label>' +
+        '<button class="pill fbtn' + (open ? ' on' : '') + '" type="button" data-action="techfilter" aria-expanded="' + open + '" aria-controls="techFbody">' + I('filter') + 'Filter<span class="cnt" id="techNF">' + (n || '') + '</span></button>' +
+        '<button class="pill" type="button" data-action="techadd" aria-expanded="' + TF.open + '">' + I('plus') + 'Add tech</button></div>' +
+        '<div class="tfbody" id="techFbody"' + (open ? '' : ' hidden') + '>' + techChips(d) + '</div></div>';
+      h += '<div id="techForm">' + techForm() + '</div>';
+      if (mode === 'example') h += '<p class="note" data-tech-note="example">Example tiles. Yours show once the tools tab has the Tech columns.</p>';
+      if (d.hidden) h += '<p class="note" data-tech-note="hidden">' + num(d.hidden) + ' not shown: ended, or no plan.</p>';
+      if (d.skipped) h += '<p class="note" data-tech-note="skipped">' + num(d.skipped) + (d.skipped === 1 ? ' row' : ' rows') + ' skipped: no name.</p>';
+      h += '<div id="techList">' + techList(d) + '</div>';
+    } else {
+      var words = mode === 'loading' ? 'Reading the tools tab…' : mode === 'off' ? 'Not set up yet.' : !TC ? 'Tech code did not load.'
+        : mode === 'err' ? 'Could not read the tools tab: ' + friendlyError(p.error).text
+        : 'The tools tab is missing columns: ' + d.missing.join(', ').replace(/_/g, ' ') + '. Nothing shown until they are back.';
+      h += '<p class="note' + (mode === 'err' || mode === 'header' ? ' fail' : '') + '" data-tech-state="' + mode + '">' + esc(words) + '</p>';
+    }
+    var when = p.readAt ? (p.status === 'failed' ? 'Failed ' : 'Read ') + esc(stamp(p.readAt)) : 'Not read yet';
+    return h + '<div class="source"><span>From the tools tab in your Drive sheet. Read once when the page opens; Refresh reads it again.</span><span>' + when + '</span></div></section>';
+  }
+  // Typing repaints only the list and the chips, so the search box keeps its place.
+  function techPaint() {
+    var d = S.tech.data;
+    if (!d || !d.tiles || !$('techList')) { render(); return; }
+    $('techList').innerHTML = techList(d);
+    var fb = $('techFbody'); if (fb) fb.innerHTML = techChips(d);
+  }
+  function techPaintForm() { var el = $('techForm'); if (el) el.innerHTML = techForm(); else render(); }
+  function techInput(el) {
+    if (!el || !el.matches) return;
+    if (el.matches('[data-tq]')) { TQ.q = el.value; techPaint(); return; }
+    var f = el.getAttribute('data-tf'); if (f) TF.d[f] = el.value;
+  }
+  function techAction(a, t) {
+    var k = t.getAttribute('data-k'), v = t.getAttribute('data-v');
+    if (a === 'techfilter') { var fb = $('techFbody'); TQ.fopen = fb ? fb.hidden : true; techSaveQ(); render(); }
+    else if (a === 'techchip') {
+      if (k === 'sort') TQ.sort = v;
+      else { var list = k === 'group' ? TQ.groups : TQ.flags, i = list.indexOf(v); if (i >= 0) list.splice(i, 1); else list.push(v); }
+      techSaveQ(); render();
+    }
+    else if (a === 'techclear') { TQ.q = ''; TQ.groups = []; TQ.flags = []; TQ.sort = 'group'; techSaveQ(); render(); }
+    else if (a === 'techadd') { TF.open = !TF.open; TF.err = {}; TF.res = null; render(); var f = document.querySelector('[data-tf="tool_name"]'); if (f) f.focus(); }
+    else if (a === 'techcancel') { TF.open = false; TF.err = {}; TF.res = null; render(); }
+    else if (a === 'techpick') { TF.d[t.getAttribute('data-f')] = v; techPaintForm(); }
+    else if (a === 'techsave') techSave();
+  }
+  // Add tech: check the entry (tech/core.js), then one request file for the engine. "Saved" only when Drive returns the new file.
+  function techSave() {
+    if (TF.busy || !TC) return;
+    var d = S.tech.data, keys = d && d.keys ? d.keys : [];
+    var v = TC.newRow(TF.d, Date.now(), keys), kept = ' Your entry is kept here.';
+    TF.err = v.errors; TF.res = null;
+    if (!v.ok) { techPaintForm(); return; }
+    if (!d || d.mode !== 'live') TF.res = { ok: false, text: 'Not saved: the tools tab has no Tech columns yet.' + kept };
+    else if (!TECH.requestsFolderId) TF.res = { ok: false, text: 'Not saved: Add tech is not switched on yet.' + kept };
+    else if (!writeGranted) { TF.res = { ok: false, text: 'Not saved yet: allow Drive saving in the Google window, then press Save again.' }; techPaintForm(); requestWrite(); return; }
+    if (TF.res) { techPaintForm(); return; }
+    TF.busy = true; techPaintForm();
+    var now = Date.now(), req = { kind: 'tech-row', v: 1, requested_at: new Date(now).toISOString(), row: v.row };
+    driveUpload('TECH-ROW-REQUEST_' + ukNameStamp(now) + '.json', 'application/json', JSON.stringify(req, null, 2), TECH.requestsFolderId).then(function (f) {
+      if (!f || !f.id) throw new Error('No file id');
+      TF.res = { ok: true, text: 'Saved. ' + v.row.tool_name + ' shows as a tile once the engine adds the row; then press Refresh.' }; TF.d = {};
+    }).catch(function (err) {
+      TF.res = { ok: false, text: 'Not saved: ' + friendlyError(err).text + kept };
+    }).then(function () { TF.busy = false; techPaintForm(); });
+  }
+  // A tool logo that fails to load swaps to its initials in the same 20 x 20 slot (as Studio's brand marks do).
+  document.addEventListener('error', function (e) {
+    var t = e.target; if (!t || !t.matches || !t.matches('img.tlogo')) return;
+    var sp = document.createElement('span'); sp.className = 'bmark bav'; sp.setAttribute('aria-hidden', 'true');
+    sp.style.setProperty('--c', t.getAttribute('data-col')); sp.textContent = t.getAttribute('data-ini'); t.replaceWith(sp);
+  }, true);
+
   function viewReadFirst(r) {
     var p = S.readfirst, items = p.data ? p.data.files : [];
     var html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Read first</h3>' + stateBadge(p, p.data ? items.length : null) + '</div>';
@@ -3210,8 +3351,8 @@
     if (!d.accounts) return 0;
     return d.accounts.reduce(function (n, a) { return n + a.ready.length + a.held.length + a.rename.length; }, 0);
   }
-  function driveUpload(name, mime, text) {
-    var meta = { name: name, parents: [CANVA.folderId], mimeType: mime }, b = 'cv' + Date.now();
+  function driveUpload(name, mime, text, folderId) { // folderId: another request folder (Add tech); default the Canva card's
+    var meta = { name: name, parents: [folderId || CANVA.folderId], mimeType: mime }, b = 'cv' + Date.now();
     var body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: ' + mime + '\r\n\r\n' + text + '\r\n--' + b + '--';
     return KIT.googleFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
       method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'multipart/related; boundary=' + b }, body: body
@@ -3401,7 +3542,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', dropbox: 'Dropbox', icloud: 'iCloud', mac: 'Mac', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', tech: 'Tech', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', dropbox: 'Dropbox', icloud: 'iCloud', mac: 'Mac', bin: 'Bin', changes: 'Changes' };
   // Every Drives page lights up the Drives tab.
   var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives', dropbox: 'drives', icloud: 'drives', mac: 'drives' };
   // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
@@ -3443,7 +3584,7 @@
     if (parts[0] === 'drives') {
       var sub = DRIVES.filter(function (d) { return d.key === parts[1]; })[0];
       parts = parts[1] === 'readfirst' ? ['readfirst'].concat(parts.slice(2)) : sub ? [sub.view].concat(parts.slice(2)) : ['drives'].concat(parts.slice(1));
-    } else if (['map', 'bin', 'changes', 'decide', 'do', 'money', 'minutes'].indexOf(parts[0]) < 0) parts = [];
+    } else if (['map', 'bin', 'changes', 'decide', 'do', 'money', 'minutes', 'tech'].indexOf(parts[0]) < 0) parts = [];
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
     var r = { view: view, sub: null, page: 1 };
     parts.slice(1).forEach(function (x) {
@@ -3462,7 +3603,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? (r.group ? viewDoGroup(r.group) : viewDo()) : r.view === 'money' ? moneyTile() : r.view === 'minutes' ? minsTile() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : r.view === 'dropbox' || r.view === 'icloud' || r.view === 'mac' ? viewCoverage(r.view) : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? (r.group ? viewDoGroup(r.group) : viewDo()) : r.view === 'money' ? moneyTile() : r.view === 'minutes' ? minsTile() : r.view === 'tech' ? viewTech() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : r.view === 'dropbox' || r.view === 'icloud' || r.view === 'mac' ? viewCoverage(r.view) : viewChanges(r);
     if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
@@ -3555,7 +3696,7 @@
   // The 5-minute refresh waits while the tab is hidden, while something is being moved, or while you have ticks.
   function timedRefresh() {
     if (Date.now() > tokenExpiresAt) { handleExpired(); return; }
-    if (document.hidden || busy || hasTicks()) { refreshPending = true; return; }
+    if (document.hidden || busy || hasTicks() || TF.open) { refreshPending = true; return; } // TF.open: an Add tech entry is being typed
     refreshPending = false;
     loadAll(true);
   }
@@ -3666,6 +3807,7 @@
     else if (a === 'usbstop') { U.stop = true; }
     else if (a === 'usbmark') usbMark();
     else if (a === 'usbcsv') usbCsv(t.getAttribute('data-which'));
+    else if (a.indexOf('tech') === 0) techAction(a, t);
   });
   document.addEventListener('toggle', function (e) {
     var d = e.target;
@@ -3673,6 +3815,7 @@
   }, true);
   document.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'binFilter') { BF = e.target.value; applyBinFilter(); }
+    else techInput(e.target);
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
