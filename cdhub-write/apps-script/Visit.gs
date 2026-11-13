@@ -192,7 +192,7 @@ function sinkCardAdd_(req) {
     if (clash) throw err_('DUPLICATE', 'A card with that label already exists.', { duplicate_of: clash.id });
     var tag = visitCardTag_();
     var id = dogcardAppend_({ file: VISIT_.TAG_FILE, idPrefix: 'qrt', need: VISIT_.TAG_NEED }, {
-      tag: visitCardHash_(tag), kind: VISIT_.CARD_KIND, ref_id: label, active: 'true', made_at: londonIso_(now),
+      tag: visitCardHash_(tag), kind: VISIT_.CARD_KIND, ref_id: label, active: 'true', made_at: utcIso_(now),
       made_by: who.who, fixed_type_id: fixed
     });
     return { status: 'saved', tag_id: id, tag: tag, label: label };
@@ -386,8 +386,8 @@ function sinkVisitGive_(req) {
       return [linkId + '-r' + (i + 1), tenant, linkId, r[0], r[1], r[2], fromDay, '', 'CD Hub, ' + who.who, who.who, fromDay, made, ''];
     }), RT);
     var label = name + (org ? ' - ' + org : '');
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), made_at: utcIso_(now),
-      made_by: who.who, usable_from: fromAt, usable_to: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), created_at: utcIso_(now),
+      set_by: who.who, usable_from: fromAt, usable_to: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
@@ -442,7 +442,7 @@ function sinkVisitExtend_(req) {
     var bad = function (field, msg) { var e = {}; e[field] = msg; return err_('INVALID', msg, { fields: e }); };
     var L = visitLinkRead_(), g = visitCurrentRow_(L, linkId), rec = g.cur, nowMs = now.getTime();
     if (visitState_(rec, nowMs) === 'ended') throw err_('ALREADY_ENDED', 'That visit has already ended. Give a new one.');
-    var startMs = Date.parse(rec.usable_from || g.root.made_at || ''), endMs, H = 3600000;
+    var startMs = Date.parse(rec.usable_from || g.root.created_at || ''), endMs, H = 3600000;
     if (f.hours !== undefined && f.hours !== null && f.hours !== '') {
       var n = Number(f.hours);
       if (!(n > 0) || n > 100000) throw bad('hours', 'Choose how many hours.');
@@ -569,7 +569,7 @@ function sinkVisitOpen_(req) {
   if (state === 'ended') return { state: 'ended' };
   var grant = visitGrant_(g.root, todayLondon_(now));
   return {
-    state: state, grant_id: g.root, usable_from: r.usable_from || r.made_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
+    state: state, grant_id: g.root, usable_from: r.usable_from || r.created_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
     who: r.visitor_name || r.label, org: r.organisation || '', rights: grant.rights, lists: grant.lists,
     record_jobs: grant.rights.indexOf('record') >= 0 ? visitJobs_(Object.keys(grant.jobs), todayLondon_(now)) : [],
     review_words: grant.rights.indexOf('raise_finding') >= 0 ? visitReviewWords_() : []

@@ -25,10 +25,10 @@ var INSPECT = {
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
   // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant. Old 7-column files still read.
-  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'usable_from', 'usable_to', 'supersedes_id',
+  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'usable_from', 'usable_to', 'supersedes_id',
     'grant_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
     'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
-    'end_reason', 'tz'],
+    'end_reason', 'tz', 'updated_at'],
   SCOPE_FILE: 'BLD-grant_scope.csv',
   SCOPE_COLUMNS: ['id', 'tenant_id', 'grant_id', 'scope_item_type', 'disclosure_state', 'depth_limit', 'withhold_basis', 'from_date', 'to_date',
     'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
@@ -301,7 +301,7 @@ function sinkInspectMake_(spec, adminEmail) {
     store_appendMany_(INSPECT.FIELD_FILE, INSPECT.FIELD_COLUMNS, fieldRows.map(function (r, i) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: utcIso_(now), made_by: by,
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by, made_at: utcIso_(now), made_by: by,
       usable_from: utcIso_(new Date(win.startMs)), usable_to: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
@@ -328,8 +328,8 @@ function sinkInspectLinks_() {
     else if (e && !guestExpired_(e)) state = externalNotYet_(e) ? 'scheduled' : 'active';
     else if (e) state = 'ended';
     return {
-      id: root.id, code_id: root.code_id, label: r.label, ends: r.ends, starts_at: r.usable_from || (e && e.starts_at) || root.made_at, ends_at: r.usable_to || r.ends,
-      made_at: root.made_at, made_by: root.made_by, state: state, stopped_at: stopped || r.ended_at || '', stop_reason: reason || r.end_reason || '',
+      id: root.id, code_id: root.code_id, label: r.label, ends: r.ends, starts_at: r.usable_from || (e && e.starts_at) || root.created_at || root.made_at, ends_at: r.usable_to || r.ends,
+      made_at: root.created_at || root.made_at, made_by: root.set_by || root.made_by, state: state, stopped_at: stopped || r.ended_at || '', stop_reason: reason || r.end_reason || '',
       dogs: count(S, root.id), fields: count(F, root.id), visits: count(A, root.id)
     };
   }).reverse();
@@ -363,7 +363,7 @@ function linkSupersede_(L, rootId, changes, now) {
   var v = {};
   L.header.forEach(function (h) { v[h] = cur[h] == null ? '' : String(cur[h]); });
   for (var k in changes) if (Object.prototype.hasOwnProperty.call(changes, k)) v[k] = changes[k];
-  v.id = id; v.supersedes_id = cur.id; v.made_at = utcIso_(now);   // S4.2: UTC
+  v.id = id; v.supersedes_id = cur.id; v.created_at = utcIso_(now);   // S4.2: UTC
   store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return v[h] == null ? '' : v[h]; })], L);
   return v;
 }

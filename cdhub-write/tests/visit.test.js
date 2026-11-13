@@ -97,7 +97,7 @@ test('card_add: a fixed visit type needs the fixed_type_id column and a real typ
 });
 
 // ---- Part B: grant_give / grant_end / grant_extend (London clock in tests: 15/10/26 23:30 BST)
-const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,usable_from,usable_to,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz';
+const LINK_H = 'id,tenant_id,code_id,label,ends,created_at,set_by,usable_from,usable_to,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,updated_at';
 function benv(props, linkHeader) {
   const e = env(props, TAG_H + ',fixed_type_id');
   e.addFile('BLD-inspect_link.csv', (linkHeader || LINK_H) + '\r\n');
