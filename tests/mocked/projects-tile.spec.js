@@ -30,13 +30,13 @@ test.describe('Home: Projects tile numbers', () => {
     await expect(go).toHaveText('Projects');
     await expect(go.locator('svg use')).toHaveAttribute('href', '#i-briefcase');
     const nums = tile.locator('a.hk');
-    await expect(nums).toHaveText(['3Stuck', '2Waiting', '2Running']);
+    await expect(nums).toHaveText(['3 Stuck', '2 Waiting', '2 Running']);
     for (const a of await nums.all()) { await expect(a).toHaveAttribute('href', IDS.projectsHub); await expect(a).toHaveAttribute('target', '_blank'); }
     // Stuck above 0 is broken: the black badge, read out as "3 stuck"; Waiting and Running stay grey; nothing is rose (rose = late).
     // (Lisa, 3 Nov 2026; tests/mocked/house-rose-broken.spec.js pins the colours in the light and dark looks.)
     await expect(nums.locator('b.need')).toHaveCount(0);
     await expect(nums.nth(0).locator('b')).toHaveClass('broken');
-    await expect(nums.nth(0)).toHaveAttribute('aria-label', 'Projects, Stuck: 3 stuck');
+    await expect(nums.nth(0)).toHaveAttribute('aria-label', '3 Stuck stuck, Projects');
     await expect(tile.locator('b.broken')).toHaveCount(1);
     // Only GET reads, each with the sign-in token; the Projects Hub Sheet is read only at its INDEX tab.
     expect(PH_SHEET).toBeTruthy();
@@ -66,7 +66,7 @@ test.describe('Home: Projects tile numbers', () => {
     ] }) }));
     await signIn(page);
     const tile = page.locator(TILE);
-    await expect(tile.locator('a.hk')).toHaveText(['0Stuck', '0Waiting', '1Running']);
+    await expect(tile.locator('a.hk')).toHaveText(['0 Stuck', '0 Waiting', '1 Running']);
     await expect(tile.locator('b.need')).toHaveCount(0);
     await expect(tile.locator('b.broken')).toHaveCount(0);
     await expect(tile.locator('a.hk').first()).not.toHaveAttribute('aria-label', /stuck/);

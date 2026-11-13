@@ -705,13 +705,13 @@
 </main>
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
-  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-map"></span></a>
-  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
-  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
+  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span> <span class="n" id="n-map"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span> <span class="n" id="n-decide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span> <span class="n" id="n-do"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/drives" data-nav="drives" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-drive"/></svg><span class="htl">Drives</span></a>
-      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n" id="n-bin"></span></a>
+      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span> <span class="n" id="n-bin"></span></a>
       <a href="#/money" data-nav="money" data-slot="3"><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="htl">Money</span></a>
       <a href="#/minutes" data-nav="minutes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="htl">Actions minutes</span></a>
       <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
@@ -2682,7 +2682,7 @@
       var body = '<span class="hks"' + (h.key === 'projects' ? ' data-ph="' + (S.ph.data ? 'ok' : esc(S.ph.status)) + '"' : '') + '>' + HUB_NUMS[h.key].map(function (k, i) {
         // n[2]: true = late (rose ring), or the broken word 'down' / 'stuck' / 'failed' (black badge): DashKit.count, the one rule.
         var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', why = DashKit.count.why(v, n && n[2]);
-        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + (why ? ' aria-label="' + esc(h.name + ', ' + k[0] + ': ' + v + ' ' + why) + '"' : '') + '>' + '<b' + (why ? ' class="' + DashKit.count.cls(v, n[2]).trim() + '"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
+        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + (why ? ' aria-label="' + esc(v + ' ' + k[0] + ' ' + why + ', ' + h.name) + '"' : '') + '>' + '<b' + (why ? ' class="' + DashKit.count.cls(v, n[2]).trim() + '"' : '') + '>' + esc(v) + '</b> ' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
       // Same target as the Food hub's own tick: orders filtered to "Not at GA yet".
       var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>'

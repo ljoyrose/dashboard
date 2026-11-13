@@ -174,9 +174,9 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-home"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span> <span class="n" id="n-home"></span></a>
   <a class="ht" data-slot="3" href="#/invoices" data-nav="invoices"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Invoices</span><span class="n"></span></a>
-  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n" id="n-orders"></span></a>
+  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span> <span class="n" id="n-orders"></span></a>
   <a class="ht" data-slot="6" href="#/products" data-nav="products"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Products</span><span class="n"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
@@ -358,7 +358,7 @@
     var g = growth(), mo = num(setting('MIN_ORDERS_MONTH')), d = g.last - g.prev;
     var h = '<section class="growth" aria-label="Grow orders"><p class="grp">Grow orders</p><div class="tiles">' +
       '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
-      '<a class="tile" href="#/orders" aria-label="Repeat orders: ' + g.repeat + '%. Open Orders"><span class="k">Repeat orders</span><span class="v">' + g.repeat + '%</span><span class="m">from customers on their 2nd order or more</span></a>' +
+      '<a class="tile" href="#/orders" aria-label="Repeat orders ' + g.repeat + '% from customers on their 2nd order or more. Open Orders"><span class="k">Repeat orders</span> <span class="v">' + g.repeat + '%</span> <span class="m">from customers on their 2nd order or more</span></a>' +
       '<a class="tile" href="#/orders?sub"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
       // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
       (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
@@ -636,7 +636,7 @@
       var open1 = !i.paid_date && i.due_date;   // unpaid: the due date is a pill whose ring shows how close it is
       return '<div class="row"><div class="txt"><b>' + esc(i.si_no) + '</b> · order #' + esc(i.order_no) + '<div class="m">' + esc([ukDate(i.invoice_date), i.due_date && !open1 ? 'due ' + ukDate(i.due_date) : '', i.paid_date ? 'paid ' + ukDate(i.paid_date) : 'unpaid'].filter(Boolean).join(' · ')) + '</div>' +
         (open1 ? '<div class="badges"><span class="datep' + dateCls(i.due_date) + '">due ' + esc(ukDate(i.due_date)) + '</span></div>' : '') + '</div>' +
-        '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
+        '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="PDF of ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
     if (inv.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + inv.length + '</button>';
     return h;
   }
