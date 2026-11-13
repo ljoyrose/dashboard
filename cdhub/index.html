@@ -3772,9 +3772,9 @@ function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
  var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
  var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(x.from&&x.from.length?'<span class="mut" data-from> \u2014 from '+esc(x.from.join(', '))+'</span>':'')+(extra||'')+'</li>'; };
- if(!c.win.set) return compFold('compTemps','temps','Room temperatures','<p class="mut" data-window="unset" id="tempsUnset"><span class="pill w">not set</span> Days Compliance looks back \u00b7 <a href="#/compliance" data-change-window>set it</a>. Readings are not checked here until it is set.</p>'
+ if(!c.win.set) return compFold('compTemps','temps','Room temperatures','<p class="mut" data-window="unset" id="tempsUnset"><span class="pill w">not set</span> Days Compliance looks back \u00b7 <a href="#/compliance" data-change-window="compliance.look_back_days">set it</a>. Readings are not checked here until it is set.</p>'
   +'<p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
- return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set&&c.win.src?' ('+esc(c.win.src)+')':'')+' \u00b7 <a href="#/compliance" data-change-window>change</a>. A reading in a room marked empty is flagged but never counted.</p>'
+ return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set&&c.win.src?' ('+esc(c.win.src)+')':'')+' \u00b7 <a href="#/compliance" data-change-window="compliance.look_back_days">change</a>. A reading in a room marked empty is flagged but never counted.</p>'
   +'<ul class="ctemps">'
   +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'
   +'<li data-k="empty"><span class="pill w">'+c.empty.length+'</span> in an empty room, not counted'+(c.empty.length?'<ul class="ctl">'+c.empty.map(function(x){ return li(x,' \u2014 Room empty'); }).join('')+'</ul>':'')+'</li>'
@@ -3799,13 +3799,13 @@ function pageCompliance(){
  var pb='';
  if(da.unest&&breedRuleRows('min_dam_age_months').length) pb+='<p id="damAgeUnest"><span class="pill w">not set</span> Days from mating to due date \u00b7 '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked for the youngest age.</p>';
  if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
- pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
+ pb+=probs.length?'<ul class="notes" data-calm="off">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
  h+=compFold('compProblems','problems','Needs a look'+cntPill(probs.length),pb);
  var rl=roomAudit(today), cl=closedAudit(today), clBad=cl.filter(function(x){ return x.dogs; });
  h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length+clBad.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses your room limits and how each cabin is run.</p>'
-  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
-  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
+  +(rl.over.length?'<ul class="notes" data-calm="off">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
+  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes" data-calm="off">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src&&hideSource(x.src)?' ('+esc(hideSource(x.src))+')':'')+'</span></li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
  h+=compTempsHtml();
@@ -3871,7 +3871,7 @@ function compStateHtml(iso){ var c=compCredentials(iso), n={ok:0,soon:0,late:0,n
  var body=!c.on?'<p class="mut" id="stateOff">Not set up yet. External requirements (services, certificates, licence) will show here once their list exists.</p>'
   :'<ul class="ctemps" id="stateSum"><li data-k="ok"><span class="pill ok">'+n.ok+'</span> in date</li>'
    +(c.win.set?'<li data-k="soon"><span class="pill w">'+n.soon+'</span> due within '+c.win.n+' days</li>'
-     :'<li data-k="soon"><span class="pill w">not set</span> Days ahead that count as due soon \u00b7 <a href="#/compliance" data-change-window>set it</a></li>')
+     :'<li data-k="soon"><span class="pill w">not set</span> Days ahead that count as due soon \u00b7 <a href="#/compliance" data-change-window="compliance.due_soon_days">set it</a></li>')
    +'<li data-k="none"><span class="pill">'+n.none+'</span> expiry not stated</li>'
    +'<li data-k="late"><span class="pill no">'+n.late+'</span> overdue</li></ul>'
    +(c.items.length?'<p class="mut">'+n.ok+' of '+c.items.length+' in date ('+Math.round(100*n.ok/c.items.length)+'%). External requirements only; internal checks never count.</p>':'<p class="mut">No requirements listed yet.</p>')
@@ -3945,7 +3945,11 @@ function bindRehearsal(){
  if(ad) ad.addEventListener('click',function(){ var i=document.getElementById('rhNote'), v=String(i&&i.value||'').trim(); if(!v||!REHEARSAL) return; REHEARSAL.notes.push(v); re(); });
 }
 function bindCompliance(){
- Array.prototype.forEach.call(document.querySelectorAll('[data-change-window]'),function(cw){ cw.addEventListener('click',function(e){ e.preventDefault(); var t=document.getElementById('compAdd'); if(t&&t.scrollIntoView) t.scrollIntoView({block:'start'}); }); });
+ Array.prototype.forEach.call(document.querySelectorAll('[data-change-window]'),function(cw){ cw.addEventListener('click',function(e){ e.preventDefault(); var t=document.getElementById('compAdd'); if(!t) return;
+  /* open the rule box, pick the rule this link is about, and put the cursor in the number */
+  var d=t.querySelector('details'); if(d) d.open=true; var k=cw.getAttribute('data-change-window'), sel=document.getElementById('brKey'), v=document.getElementById('brVal');
+  if(k&&sel&&sel.querySelector('option[value="'+k+'"]')){ sel.value=k; sel.dispatchEvent(new Event('change')); }
+  if(t.scrollIntoView) t.scrollIntoView({block:'start'}); if(v) v.focus(); }); });
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  bindRehearsal();
  var aa=document.getElementById('compAsAt'), at=document.getElementById('compAsAtToday');
@@ -4297,7 +4301,8 @@ window.addEventListener('hashchange',followHash);
 render();
 </script>
 <script>
-/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
+/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap.
+   Findings lists (Compliance: needs a look, room limits) carry data-calm="off" and always show. */
 (function () {
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {

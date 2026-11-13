@@ -16,17 +16,18 @@ const AUD = 'id,code,name,description,is_signed_in,rank,notes\naud-staff,staff,S
 const CODES = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\ncr-1,ten-x,sc-aaaaaa,Test Person,STAFF,2026-10-01,,\ncr-2,ten-x,sc-bbbbbb,Old Helper,STAFF,2026-01-01,2026-06-30,ended by owner\n';
 const LINK = 'id,tenant_id,code_id,label,ends,made_at,made_by\nil-1,ten-x,ic-1,Test visit,2099-12-31,2026-11-01,test\nil-2,ten-x,ic-2,Old visit,2020-01-01,2019-12-25,test\n';
 
-function world({ owner = true } = {}) {
+function world({ owner = true, codes = CODES } = {}) {
   const d = buildWorld();
   if (!owner) return d;
   d.file('adm-fv', 'BLD-field_visibility.csv', FV, { parents: [IDS.bld], driveId: 'drv-alpha1' });
   d.file('adm-aud', 'BLD-audience.csv', AUD, { parents: [IDS.bld], driveId: 'drv-alpha1' });
-  d.file('adm-codes', 'BLD-code_register.csv', CODES, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+  d.file('adm-codes', 'BLD-code_register.csv', codes, { parents: [IDS.bld], driveId: 'drv-alpha1' });
   d.file('adm-link', 'BLD-inspect_link.csv', LINK, { parents: [IDS.bld], driveId: 'drv-alpha1' });
   return d;
 }
 const asOwner = base.extend({ world: async ({}, use) => use(world()) });
 const asOther = base.extend({ world: async ({}, use) => use(world({ owner: false })) });
+const asOwnerEmpty = base.extend({ world: async ({}, use) => use(world({ codes: 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\n' })) });
 
 const open = async (page) => {
   await page.goto('cdhub/');
@@ -115,4 +116,12 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await page.locator('#main a.adm-card', { hasText: 'Phone set-up' }).click();
     await expect(page.locator('#adm-phone')).toBeVisible();
   });
+});
+
+asOwnerEmpty('Codes: an empty register (V8 live, not yet filled) says to press Fill the code register on the owner page', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await expect(page.locator('[data-adm-open="codes"] small')).toHaveText('0 live');
+  await page.locator('[data-adm-open="codes"]').click();
+  await expect(page.locator('#adm-codes')).toContainText('Fill the code register');
 });
