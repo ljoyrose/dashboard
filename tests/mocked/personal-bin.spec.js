@@ -1,5 +1,5 @@
 // TidyUp Apps stage 3: the Personal Drive page as a trash-only bin. Pretend Drive only; every name and id is invented.
-// Look-only until "Allow personal bin actions"; dry run by default; a file can be binned only if it starts
+// Look-only until "Allow personal bin actions"; live since 13 Nov 2026 (dry run still tested); a file can be binned only if it starts
 // ZZ_DELETE_DRIVE_ and has a ledger row with surface 'drive-personal'; each move re-checks the file live, then trashes only.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
@@ -25,10 +25,20 @@ function world(w) {
     '2026-11-01,example-other.pdf,me-other,sh-ot,sample,drive\n';
 }
 const writes = (w) => w.calls.filter((c) => c.method !== 'GET');
-const live = (page) => page.route('**/config.js', async (route) => {
+const setDry = (page, dry) => page.route('**/config.js', async (route) => {
   const res = await route.fetch();
-  await route.fulfill({ response: res, body: (await res.text()) + '\nwindow.DASH_CONFIG.personalBin.dryRun = false;' });
+  await route.fulfill({ response: res, body: (await res.text()) + '\nwindow.DASH_CONFIG.personalBin.dryRun = ' + dry + ';' });
 });
+const live = (page) => setDry(page, false);
+// Ledger slips the Rename step uploads (multipart POST); answered here, recorded for the test.
+function catchUploads(page) {
+  const uploads = [];
+  page.route(/googleapis\.com\/upload\/drive\/v3\/files/, async (route) => {
+    uploads.push({ body: route.request().postData(), auth: route.request().headers().authorization });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"id":"FAKE-UPLOAD-0001","name":"x"}' });
+  });
+  return uploads;
+}
 async function open(page, { allow = true, scan = false } = {}) {
   await page.goto('./#/drives/personal-drive');
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -90,7 +100,13 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     expect(got.length).toBe(1);
   });
 
-  test('dry run (the default): lists what would go, no tick boxes, no bin button, nothing written', async ({ page, guard }) => {
+  test('config.js: the Personal Drive bin is live (Lisa, 13 Nov 2026)', async ({ page }) => {
+    await page.goto('./#/drives/personal-drive');
+    expect(await page.evaluate(() => window.DASH_CONFIG.personalBin.dryRun)).toBe(false);
+  });
+
+  test('dry run: lists what would go, no tick boxes, no bin button, nothing written', async ({ page, guard }) => {
+    await setDry(page, true);
     await open(page, { scan: true });
     await expect(view(page).locator('[data-qbin-dry]')).toBeVisible();
     await expect(view(page).locator('[data-qbin-would]')).toHaveText('Dry run: 1 would go to the bin.');
@@ -172,14 +188,24 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     expect(writes(guard.world)).toEqual([]);
   });
 
-  test('Rename: renames only the ticked exact copy, with the opted-in token', async ({ page, guard }) => {
+  test('Rename: renames only the ticked exact copy, with the opted-in token, and adds it to the bin list', async ({ page, guard }) => {
     await live(page);
+    const uploads = catchUploads(page);
     page.on('dialog', (d) => d.accept());
     await open(page, { scan: true });
     await view(page).locator('[data-action="selectall"][data-group="qmark"]').click();
     await expect(view(page).locator('[data-action="qmark"]')).toHaveText('Rename these (1)');
+    await view(page).locator('[data-action="qmark"]').click(); // first press asks the work account for write access
+    await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(2);
     await view(page).locator('[data-action="qmark"]').click();
     await expect(view(page).locator('[data-q-marked]')).toHaveText('Renamed 1.');
+    await expect(view(page).locator('[data-q-logged]')).toHaveText('Added 1 to the bin list.');
+    expect(uploads).toHaveLength(1);
+    expect(uploads[0].auth).toBe('Bearer FAKE-TEST-TOKEN');
+    expect(uploads[0].body).toMatch(/"name":"AA_DELETE-LEDGER-ROWS_\d{4}-\d{2}-\d{2}-\d{4}_01\.csv"/);
+    const folder = await page.evaluate(() => window.DASH_CONFIG.canvaBin.folderId); // the CHANGES folder (ids live only in config.js)
+    expect(uploads[0].body).toContain('"parents":["' + folder + '"]');
+    expect(uploads[0].body).toMatch(/"\d{4}-\d{2}-\d{2}","example-a\.pdf","me-a","exact copy in a shared drive \(md5 \+ size checked live before rename\)","dashboard Personal Drive rename","drive-personal"/);
     expect(guard.world.byId('me-a').name).toBe(PCP + 'example-a.pdf');
     expect(guard.world.byId('sh-a').name).toBe('example-a.pdf');
     expect(guard.world.byId('me-only').name).toBe('only-mine.pdf');
