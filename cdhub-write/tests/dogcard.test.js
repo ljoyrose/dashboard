@@ -94,3 +94,56 @@ test('dog_details: owner only, behind its own switch; changes the header fields 
   const off = env();
   assert.equal(post(off, 'dog_details', { subject_id: 'sub-test-a', name: 'X' }, off.codes.owner).code, 'TABLE_OFF');
 });
+
+// subject_create (13 Nov 2026): add one dog. Invented dogs and invented rows only.
+function createEnv(props) {
+  const e = env(Object.assign({ TABLE_ON_subject_create: 'true' }, props || {}));
+  const T = e.props.TENANT_ID;
+  e.file('BLD-subject.csv')[0].content = 'id,tenant_id,name,sex,dob,size_band,coat_type,kind,neuter_status,source,species,breed,coat_colour_id,coat_pattern_id,nose_pigment_id,birth_litter_id,photo\r\n' +
+    'sub-test-a,' + T + ',Test A,Female,2021-01-01,,,Adult,entire,seed,Dog,Pretend Breed,,,,,\r\n' +
+    'sub-test-p,' + T + ',Test P,Male,2026-01-01,,,Pup,entire,seed,Dog,Pretend Breed,,,,,\r\n';
+  e.addFile('BLD-species.csv', 'id,code,common_name,young_word,adult_female_word,adult_male_word,active\r\nsp-dog,dog,Dog,puppy,bitch,stud,yes\r\n');
+  e.addFile('BLD-coat_colour.csv', 'id,name\r\ncol-choc,Pretend Chocolate\r\n');
+  e.addFile('BLD-litter.csv', 'id,tenant_id,dam_subject_id,born_on\r\nltr-1,' + T + ',sub-test-a,2026-03-01\r\n');
+  e.addFile('BLD-microchip.csv', 'id,tenant_id,subject_id,chip_number,source\r\n');
+  const st = e.file('BLD-subject_status.csv');
+  const sth = 'id,tenant_id,subject_id,state,from_date,to_date,reason\r\nsst-a,' + T + ',sub-test-a,Active,,,\r\n';
+  if (st.length) { st[0].content = sth; st[0].sheet = undefined; } else e.addFile('BLD-subject_status.csv', sth);
+  return e;
+}
+
+test('subject_create: owner only, behind its own switch; one dog row, one Active status row, optional chip row', () => {
+  const off = createEnv({ TABLE_ON_subject_create: '' });
+  assert.equal(post(off, 'subject_create', { name: 'New One', sex: 'Female', species: 'dog', kind: 'Adult' }, off.codes.owner).code, 'TABLE_OFF');
+  const e = createEnv();
+  assert.equal(post(e, 'subject_create', { name: 'New One', sex: 'Female', species: 'dog', kind: 'Adult' }).code, 'NOT_ALLOWED');   // staff code
+  const r = post(e, 'subject_create', { name: 'New One', sex: 'female', species: 'Dog', kind: 'adult', breed: 'Pretend Breed', coat_colour_id: 'col-choc', chip_number: '000 000 000 000 009', host: 'Breed Better' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(r.result, { status: 'saved', id: 'sub-new-one' });
+  const row = text(e, 'BLD-subject.csv').trim().split(/\r?\n/)[3];
+  assert.match(row, /^sub-new-one,[^,]+,New One,Female,,,,Adult,entire,"?added in Breed Better by OWNER, \d{4}-\d{2}-\d{2}"?,Dog,Pretend Breed,col-choc,,,,$/);
+  assert.match(text(e, 'BLD-subject_status.csv'), /,sub-new-one,Active,\d{4}-\d{2}-\d{2},,/);
+  assert.match(text(e, 'BLD-microchip.csv'), /,sub-new-one,000000000000009,/);
+  // the same name with no date of birth is the same dog again; a second New One with a dob gets its own id
+  assert.equal(post(e, 'subject_create', { name: 'new one', sex: 'Female', species: 'dog', kind: 'Adult' }, e.codes.owner).code, 'DUPLICATE');
+  const r2 = post(e, 'subject_create', { name: 'New One', sex: 'Male', species: 'dog', kind: 'Adult', dob: '2024-02-02' }, e.codes.owner);
+  assert.equal(r2.result.id, 'sub-new-one-2');
+  assert.equal(post(e, 'subject_create', { name: 'Other', sex: 'Male', species: 'dog', kind: 'Adult', chip_number: '000000000000009' }, e.codes.owner).code, 'DUPLICATE');
+});
+
+test('subject_create: sex, kind, species and every id come from rows; a pup needs a date of birth', () => {
+  const e = createEnv();
+  const bad = post(e, 'subject_create', { name: 'X', sex: 'Other', species: 'cat', kind: 'Senior', coat_colour_id: 'col-none', birth_litter_id: 'ltr-none', chip_number: '12' }, e.codes.owner);
+  assert.equal(bad.code, 'INVALID');
+  assert.deepEqual(Object.keys(bad.fields).sort(), ['birth_litter_id', 'chip_number', 'coat_colour_id', 'dob', 'kind', 'sex', 'species']);
+  assert.equal(post(e, 'subject_create', { name: 'Pup One', sex: 'Male', species: 'dog', kind: 'Pup', birth_litter_id: 'ltr-1' }, e.codes.owner).fields.dob, 'A puppy needs a date of birth.');
+  assert.equal(post(e, 'subject_create', { name: 'Pup One', sex: 'stud', species: 'dog', kind: 'Pup', birth_litter_id: 'ltr-1', dob: '2026-03-01' }, e.codes.owner).ok, true);   // the species row's word is allowed too
+  assert.equal(post(e, 'subject_create', { name: 'Late', sex: 'Male', species: 'dog', kind: 'Adult', dob: '2999-01-01' }, e.codes.owner).code, 'INVALID');
+  assert.equal(post(e, 'subject_create', { name: '=SUM(A1)', sex: 'Male', species: 'dog', kind: 'Adult' }, e.codes.owner).code, 'INVALID');
+});
+
+test('subject_create: a sold dog with the same name and dob is not a duplicate', () => {
+  const e = createEnv();
+  e.file('BLD-subject_status.csv')[0].content += 'sst-a2,' + e.props.TENANT_ID + ',sub-test-a,Sold,2025-01-01,,\r\n';
+  assert.equal(post(e, 'subject_create', { name: 'Test A', sex: 'Female', species: 'dog', kind: 'Adult', dob: '2021-01-01' }, e.codes.owner).ok, true);
+});
