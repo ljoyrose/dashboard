@@ -197,7 +197,9 @@
   // Second, look-only sign-in for the Personal Drive page. Its token is held only in this object (never saved to
   // the browser, never shared with other tabs or pages) and is cleared on sign-out. It never replaces the work token.
   function personal(opts) {
-    var client = null, token = null, expiresAt = 0;
+    // binScope (optional): the full Drive scope, asked for only from the separate "Allow personal bin actions" button.
+    // Until then the token is look-only. binOk is true only for a token Google granted with binScope; it ends on clear().
+    var client = null, token = null, expiresAt = 0, binOk = false, wantBin = false, binScope = opts.binScope || '';
     function init() {
       if (client) return true;
       if (!(global.google && google.accounts && google.accounts.oauth2)) return false;
@@ -205,24 +207,45 @@
         client_id: opts.clientId,
         scope: opts.scope,
         callback: function (resp) {
-          if (!resp || resp.error || !google.accounts.oauth2.hasGrantedAllScopes(resp, opts.scope)) { if (opts.onError) opts.onError(resp || {}); return; }
+          var forBin = wantBin;
+          wantBin = false;
+          var need = forBin ? opts.scope + ' ' + binScope : opts.scope;
+          if (!resp || resp.error || !google.accounts.oauth2.hasGrantedAllScopes(resp, need)) {
+            // A refused bin request keeps the look-only token as it was.
+            if (forBin) { if (opts.onBinError) opts.onBinError(resp || {}); } else if (opts.onError) opts.onError(resp || {});
+            return;
+          }
           token = resp.access_token;
           expiresAt = expiryFrom(resp.expires_in);
-          if (opts.onToken) opts.onToken();
+          binOk = forBin;
+          if (forBin) { if (opts.onBin) opts.onBin(); } else if (opts.onToken) opts.onToken();
         },
-        error_callback: function (e) { if (opts.onError) opts.onError(e || {}); }
+        error_callback: function (e) {
+          var forBin = wantBin;
+          wantBin = false;
+          if (forBin) { if (opts.onBinError) opts.onBinError(e || {}); } else if (opts.onError) opts.onError(e || {});
+        }
       });
       return true;
     }
     return {
       // Only ever called from a button press on the Personal Drive page.
-      request: function () { if (init()) client.requestAccessToken({ prompt: 'select_account' }); },
+      request: function () { if (init()) { wantBin = false; client.requestAccessToken({ prompt: 'select_account' }); } },
+      // Only from the "Allow personal bin actions" button, after the look-only sign-in. Same incremental pattern as the
+      // work account's write upgrade (scope added, granted scopes kept); select_account so the personal account is chosen.
+      requestBin: function () {
+        if (!binScope || !(token && Date.now() < expiresAt) || !init()) return;
+        wantBin = true;
+        client.requestAccessToken({ scope: opts.scope + ' ' + binScope, include_granted_scopes: true, prompt: 'select_account' });
+      },
       /** Returns the Personal Drive token while it has not expired, otherwise null. */
       token: function () { return token && Date.now() < expiresAt ? token : null; },
-      /** Forgets the Personal Drive token and asks Google to revoke it. */
+      /** Returns the token only when bin actions were allowed and it has not expired, otherwise null. */
+      binToken: function () { return binOk && token && Date.now() < expiresAt ? token : null; },
+      /** Forgets the Personal Drive token (and any bin permission) and asks Google to revoke it. */
       clear: function () {
         var t = token;
-        token = null; expiresAt = 0;
+        token = null; expiresAt = 0; binOk = false; wantBin = false;
         if (t && global.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
       }
     };

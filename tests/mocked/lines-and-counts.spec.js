@@ -1,5 +1,7 @@
 // Counts and colour lines (Lisa's house-style picks, 2 Nov 2026), on all 8 pages:
 //  - a ringed count is a ring only: never a fill or tint behind the number (rose ring = late, grey ring = waiting, 0 = no ring);
+// the ONE exception (Lisa, 3 Nov 2026): a BROKEN count (down, expired, stuck, failed) is the black badge, --house-broken-fill
+// with a --house-broken-ink number, in the same box as the ring (light ink with a near-black number in the dark looks);
 //  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with a card's corner.
 //    A Needs-you row shell is rounded (12px); its bar stays a straight 3px line, not a "(" bracket
 //    (no short stub floating in the middle, no inset shadow);
@@ -39,7 +41,9 @@ function scan() {
     const s = getComputedStyle(e);
     const ring = s.borderTopStyle !== 'none' && px(s.borderTopWidth) > 0 && alpha(s.borderTopColor) > 0;
     if (!ring) continue;
-    counts.push({ what: name(e) + ' "' + e.textContent.trim() + '"', bg: s.backgroundColor, bgA: alpha(s.backgroundColor), img: s.backgroundImage });
+    counts.push({ what: name(e) + ' "' + e.textContent.trim() + '"', bg: s.backgroundColor, bgA: alpha(s.backgroundColor), img: s.backgroundImage,
+      broken: e.classList.contains('broken'), color: s.color, line: s.borderTopColor, h: e.getBoundingClientRect().height,
+      fill: getComputedStyle(document.documentElement).getPropertyValue('--house-broken-fill').trim(), ink: getComputedStyle(document.documentElement).getPropertyValue('--house-broken-ink').trim() });
   }
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e)) continue;
@@ -71,6 +75,13 @@ for (const [hub, H] of Object.entries(ALL)) {
       await go(page, v);
       const m = await page.evaluate(scan);
       for (const c of m.counts) {
+        if (c.broken) {
+          // Broken: the black badge (light look: #1E1C1A with a white number), its line the same colour, nothing else.
+          expect([c.fill, c.ink], `${hub} #/${v}: the broken tokens (light look)`).toEqual(['#1E1C1A', '#FFFFFF']);
+          expect([c.bg, c.line, c.color], `${hub} #/${v} ${c.what}: a broken count is the black badge`).toEqual(['rgb(30, 28, 26)', 'rgb(30, 28, 26)', 'rgb(255, 255, 255)']);
+          expect(c.img, `${hub} #/${v} ${c.what}: a solid badge`).toBe('none');
+          continue;
+        }
         expect(c.bgA, `${hub} #/${v} ${c.what}: a ringed count has no fill (${c.bg})`).toBe(0);
         expect(c.img, `${hub} #/${v} ${c.what}: a ringed count has no fill`).toBe('none');
       }
@@ -98,7 +109,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       await page.setViewportSize({ width: W, height: W > 600 ? 800 : 844 });
       await H.open(page, guard);
       await page.mouse.move(W / 2, 200);
-      // Every tab gets a two-digit count (the widest fixed ring), so every tab is checked, waiting and late.
+      // Every tab gets a two-digit count (the widest fixed ring), so every tab is checked, waiting, late and broken.
       const m = await page.evaluate(() => {
         const nav = [...document.querySelectorAll('nav.house-tabs')].find((n) => n.getBoundingClientRect().height > 0);
         const tabs = [...nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht')];
@@ -106,23 +117,26 @@ for (const [hub, H] of Object.entries(ALL)) {
           let n = t.querySelector(':scope > .n, :scope > .cnt');
           if (!n) { n = document.createElement('span'); n.className = 'n'; t.appendChild(n); }
           if (!n.textContent.trim()) n.textContent = '88';
-          n.classList.toggle('need', i % 2 === 0);
+          n.classList.toggle('need', i % 3 === 0);
+          n.classList.toggle('broken', i % 3 === 1);
           n.classList.remove('wide');
         });
         return tabs.map((t) => {
           const r = t.getBoundingClientRect(), a = t.querySelector(':scope > .hic').getBoundingClientRect(), b = t.querySelector(':scope > .n, :scope > .cnt').getBoundingClientRect();
           const l = t.querySelector(':scope > .htl').getBoundingClientRect();
           const cs = getComputedStyle(t.querySelector(':scope > .n, :scope > .cnt'));
-          return { word: l.width ? t.querySelector(':scope > .htl').textContent.trim() : '?', need: t.querySelector(':scope > .n, :scope > .cnt').classList.contains('need'), tab: [r.left, r.right], icon: [a.left, a.top, a.right, a.bottom], count: [b.left, b.top, b.right, b.bottom], bg: cs.backgroundColor,
+          return { word: l.width ? t.querySelector(':scope > .htl').textContent.trim() : '?', need: t.querySelector(':scope > .n, :scope > .cnt').classList.contains('need'), broken: t.querySelector(':scope > .n, :scope > .cnt').classList.contains('broken'), size: [b.width, b.height], tab: [r.left, r.right], icon: [a.left, a.top, a.right, a.bottom], count: [b.left, b.top, b.right, b.bottom], bg: cs.backgroundColor,
             overlap: !(b.right <= a.left || b.left >= a.right || b.bottom <= a.top || b.top >= a.bottom) };
         });
       });
       for (const t of m) {
         expect(t.overlap, `${t.word}: count ${t.count.map(Math.round)} clear of the icon ${t.icon.map(Math.round)}`).toBe(false);
-        if (W === 1280) expect(t.bg, `${t.word}: the count has no fill`).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
-        // On a phone the count is a dot (Lisa's pick b, 2 Nov): filled rose or grey, beside the icon's top-right corner.
-        else {
-          expect(t.bg, `${t.word}: the dot is rose (late) or grey (waiting)`).toBe(t.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
+        // A broken count is the black badge (Lisa, 3 Nov 2026), the same size as the ring beside it: nothing shifts.
+        if (W === 1280) expect(t.bg, `${t.word}: the count has no fill, or is the black badge when broken`).toMatch(t.broken ? /^rgb\(30, 28, 26\)$/ : /^(transparent|rgba\(0, 0, 0, 0\))$/);
+        expect(t.size, `${t.word}: late, broken and waiting counts are one size`).toEqual(m[0].size);
+        // On a phone the count is a dot (Lisa's pick b, 2 Nov): filled rose (late), black (broken) or grey, beside the icon's top-right corner.
+        if (W !== 1280) {
+          expect(t.bg, `${t.word}: the dot is rose (late), black (broken) or grey (waiting)`).toBe(t.need ? 'rgb(230, 68, 61)' : t.broken ? 'rgb(30, 28, 26)' : 'rgb(138, 127, 112)');
           expect(t.count[0] - t.icon[2], `${t.word}: the dot sits right beside the icon's right edge`).toBeLessThanOrEqual(3);
           expect(Math.abs(t.count[1] - t.icon[1]), `${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
           expect(t.count[2], `${t.word}: the dot stays inside its tab`).toBeLessThanOrEqual(t.tab[1]);

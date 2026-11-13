@@ -25,16 +25,18 @@
   var TIMEOUT_MS = 20000;
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
-  var TEMP_RE = /^-?\d{1,2}(\.\d{1,2})?$/;
+  var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
   var TABLES = {
     area_reading: {
       label: 'Room temperatures', file: 'BLD-area_reading.csv',
       fields: {
         area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' },
-        min_c: { type: 'temp', required: true, label: 'Lowest (min) C' },
-        max_c: { type: 'temp', required: true, label: 'Highest (max) C' },
+        min_c: { type: 'temp', label: 'Lowest (min) C' },    // needed unless room_empty = yes (as the save, Specs.gs)
+        max_c: { type: 'temp', label: 'Highest (max) C' },
         spot_c: { type: 'temp', label: 'Spot reading C' },
-        mitigation_note: { type: 'text', label: 'What was done about it' }
+        mitigation_note: { type: 'text', label: 'What was done about it' },
+        room_empty: { type: 'enum', values: ['yes'], label: 'Room empty' },   // Lisa 11 Nov 2026: no dog; a reading is optional
+        thermometer_id: { type: 'ref', lookup: 'thermometer', ifLoaded: true, label: 'Thermometer' }   // checked only when the thermometer list is loaded
       }
     },
     occupancy: {
@@ -94,10 +96,11 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
-    function clearCode() { inMemoryCode = ''; put(session, CODE_KEY, ''); }
+    var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
+    function clearCode() { inMemoryCode = ''; lastRole = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
@@ -140,8 +143,27 @@
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving is on. What you send goes into the approvals queue until Lisa approves it; then it joins the records.' };
-      return { kind: 'on', canSave: true, text: 'Saving is on. What you send is added to the records straight away. It cannot be changed afterwards. If something is wrong, tell the owner.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. Lisa approves each entry.' };
+      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
+    }
+
+    /** Same rule and words as tempPairError_ in Specs.gs. The shared file is loaded when this page has it. */
+    function pairLib() {
+      if (typeof module === 'object' && module.exports) {
+        var tries = ['./temp-pair.js', '../../cdhub/staff/lib/temp-pair.js'];
+        for (var i = 0; i < tries.length; i++) { try { return require(tries[i]); } catch (e0) { /* the other copy of this file */ } }
+      }
+      var g = typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : this);
+      return (g && g.BLDTempPair) || null;
+    }
+    function pairError(min, max) {
+      var lib = pairLib();
+      if (lib && lib.error) return lib.error(min, max);
+      var a = min === undefined || min === null ? '' : String(min).trim();
+      var b = max === undefined || max === null ? '' : String(max).trim();
+      var lo = parseFloat(a), hi = parseFloat(b);
+      if (a !== '' && b !== '' && !isNaN(lo) && !isNaN(hi) && lo > hi) return 'The lowest reading cannot be higher than the highest reading.';
+      return '';
     }
 
     /** Check the fields on the page. */
@@ -152,8 +174,8 @@
         var def = spec.fields[name], raw = fields[name], v = (raw === undefined || raw === null) ? '' : (Array.isArray(raw) ? raw.join('|') : String(raw)).trim();
         if (v === '') { if (def.required) errors[name] = 'This is needed.'; return; }
         if (def.type === 'temp') {
-          if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 2 decimals, e.g. 21.47.';
-          else if (parseFloat(v) < -30 || parseFloat(v) > 60) errors[name] = 'That is outside -30 to 60 C. Check the number.';
+          if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 1 decimal, e.g. 21.4.';
+          // an unusual temperature is a warning the script gives (confirm_unusual "Save anyway?"), not a stop here
         } else if (def.type === 'text') {
           if (v.length > 500) errors[name] = 'Too long (500 characters at most).';
           else if (/^[=+\-@\t]/.test(v)) errors[name] = 'Please do not start with = + - or @.';
@@ -173,14 +195,22 @@
             if (bad.length) errors[name] = 'Not found in the ' + def.lookup + ' list: ' + bad.slice(0, 3).join(', ') + (bad.length > 3 ? ' and ' + (bad.length - 3) + ' more' : '') + '.';
           }
         } else if (def.type === 'ref') {
-          if (lookupSize(def.lookup) === 0) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.';
+          if (lookupSize(def.lookup) === 0) { if (!def.ifLoaded) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.'; }
           else if (!hasId(lookups[def.lookup], v)) errors[name] = 'Not found in the ' + def.lookup + ' list.';
         }
       });
-      if (!errors.min_c && !errors.max_c && fields.min_c !== undefined && fields.max_c !== undefined &&
-          String(fields.min_c).trim() !== '' && String(fields.max_c).trim() !== '' &&
-          parseFloat(fields.min_c) > parseFloat(fields.max_c)) {
-        errors.min_c = 'The lowest cannot be higher than the highest.';
+      if (spec.fields.room_empty && !errors.min_c && !errors.max_c && !errors.room_empty) {
+        var blank = function (k) { var x = fields[k]; return x === undefined || x === null || String(x).trim() === ''; };
+        if (String(fields.room_empty || '').trim() !== 'yes') {
+          if (blank('min_c')) errors.min_c = 'This is needed.';
+          if (blank('max_c')) errors.max_c = 'This is needed.';
+        } else if (blank('min_c') !== blank('max_c')) {
+          errors[blank('min_c') ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
+        }
+      }
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg = pairError(fields.min_c, fields.max_c);
+        if (pairMsg) errors.min_c = pairMsg;
       }
       return { ok: Object.keys(errors).length === 0, errors: errors };
     }
@@ -210,11 +240,12 @@
       if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
-      var action = o.action === 'correct' ? 'correct' : 'add';
+      var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
+      if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',
@@ -241,19 +272,20 @@
 
     /**
      * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
+     * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
      * Nothing is cached or kept: the rows live only in the page.
      */
-    function read(tableKey) {
+    function read(tableKey, filter) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ v: 1, action: 'read', code: getCode(), table: tableKey })
+        body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
       })).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; return res; }
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
@@ -309,6 +341,7 @@
       TABLES: TABLES,
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
       setCode: setCode, getCode: getCode, clearCode: clearCode,
+      role: function () { return lastRole; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,

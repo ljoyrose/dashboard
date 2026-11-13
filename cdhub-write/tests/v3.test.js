@@ -74,7 +74,7 @@ test('staff cannot read any past temperature entry, not even their own, with the
   assert.equal(save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).ok, true);
   const r = read(env, { table: 'area_reading' });
   assert.equal(r.code, 'NOT_ALLOWED');
-  assert.equal(JSON.stringify(r).includes('20.00'), false);
+  assert.equal(JSON.stringify(r).includes('20.0'), false);
   assert.equal(read(env, { table: 'area_reading', code: env.codes.owner }).result.count, 1);   // the owner sees it
 });
 
@@ -428,46 +428,34 @@ test('the daily check can be read by the owner only if Lisa adds rows; staff get
 const mv = (env, s, a) => save(env, req(env, { table: 'occupancy', fields: { subject_id: s, area_id: a } }));
 const DAY = 86400000;
 
-test('moves queue up to and including MOVES_QUEUE_UNTIL, then go straight in (both sides of the date)', () => {
+test('occupancy moves go straight in on both sides of MOVES_QUEUE_UNTIL', () => {
   const env = standardEnv({ props: { TABLE_ON_occupancy: 'true', MOVES_QUEUE_UNTIL: '2026-10-20' } });
-  assert.equal(env.ctx.modeFor_(env.ctx.TABLES.occupancy), 'pending');           // 15 Oct
-  assert.equal(mv(env, 'sub-test-b', 'area-t2').result.status, 'queued');
-  env.nowMs = Date.UTC(2026, 9, 20, 12, 0, 0);                                   // the last queued day
-  assert.equal(mv(env, 'sub-test-e', 'area-t1').result.status, 'queued');
-  assert.equal(rows(env, 'BLD-occupancy.csv').length, 5);                        // nothing reached the table
-  env.nowMs = Date.UTC(2026, 9, 20, 22, 59, 59);                                 // 23:59:59 London, still the 20th
-  assert.equal(env.ctx.modeFor_(env.ctx.TABLES.occupancy), 'pending');
-  env.nowMs = Date.UTC(2026, 9, 20, 23, 0, 0);                                   // 00:00 on the 21st London
   assert.equal(env.ctx.modeFor_(env.ctx.TABLES.occupancy), 'direct');
+  const r0 = mv(env, 'sub-test-b', 'area-t2');
+  assert.equal(r0.result.status, 'saved');
+  env.nowMs = Date.UTC(2026, 9, 20, 12, 0, 0);
+  assert.equal(mv(env, 'sub-test-e', 'area-t1').result.status, 'saved');
   env.nowMs = Date.UTC(2026, 9, 21, 12, 0, 0);
   const r = mv(env, 'sub-test-b', 'area-t3-1');
-  assert.equal(r.result.status, 'saved');                                        // straight in
+  assert.equal(r.result.status, 'saved');
   const last = rows(env, 'BLD-occupancy.csv').pop();
   assert.equal(last.subject_id, 'sub-test-b');
   assert.equal(last.moved_in, '2026-10-21');
-  assert.equal(rows(env, 'BLD-occupancy.csv').length, 6);
-  // the status page tells the screens which way it is today
   const mode = (e) => JSON.parse(e.ctx.doGet({ parameter: {} }).getContent()).tables.filter((t) => t.key === 'occupancy')[0].mode;
   assert.equal(mode(env), 'direct');
   env.nowMs = Date.UTC(2026, 9, 18, 12, 0, 0);
-  assert.equal(mode(env), 'pending');
+  assert.equal(mode(env), 'direct');
 });
 
-test('moves queue: missing or unreadable date = always queue; an explicit MODE_occupancy beats the date either way', () => {
+test('occupancy stays direct when the queue date is missing or MODE_occupancy is pending; other tables are unchanged', () => {
   const env = standardEnv({ props: { TABLE_ON_occupancy: 'true' } });
   const spec = env.ctx.TABLES.occupancy;
   env.nowMs = Date.UTC(2027, 0, 1, 12, 0, 0);
-  assert.equal(env.ctx.modeFor_(spec), 'pending');                               // unset
-  ['not a date', '2026-13-45', '20/10/2026', ''].forEach((v) => { env.props.MOVES_QUEUE_UNTIL = v; assert.equal(env.ctx.modeFor_(spec), 'pending', v); });
-  env.props.MOVES_QUEUE_UNTIL = '2026-10-20';
-  assert.equal(env.ctx.modeFor_(spec), 'direct');                                // long past
+  assert.equal(env.ctx.modeFor_(spec), 'direct');
+  ['not a date', '2026-13-45', '20/10/2026', ''].forEach((v) => { env.props.MOVES_QUEUE_UNTIL = v; assert.equal(env.ctx.modeFor_(spec), 'direct', v); });
   env.props.MODE_occupancy = 'pending';
-  assert.equal(env.ctx.modeFor_(spec), 'pending');
-  env.nowMs = Date.UTC(2026, 9, 15, 12, 0, 0);
-  env.props.MODE_occupancy = 'direct';
-  assert.equal(env.ctx.modeFor_(spec), 'direct');                                // still inside the queue period
-  // other tables ignore the date
   env.props.MOVES_QUEUE_UNTIL = '2099-01-01';
+  assert.equal(env.ctx.modeFor_(spec), 'direct');
   assert.equal(env.ctx.modeFor_(env.ctx.TABLES.area_reading), 'direct');
   assert.equal(env.ctx.modeFor_(env.ctx.TABLES.occupancy_check), 'direct');
 });
@@ -478,7 +466,7 @@ test('adminStartMovesQueue sets the last queued day to 14 days counting today, a
   assert.equal(env.props.MOVES_QUEUE_UNTIL, '2026-10-28');                       // 15 Oct + 13
   const spec = env.ctx.TABLES.occupancy;
   env.nowMs = Date.UTC(2026, 9, 28, 12, 0, 0);                                   // day 14
-  assert.equal(env.ctx.modeFor_(spec), 'pending');
+  assert.equal(env.ctx.modeFor_(spec), 'direct');                                // occupancy ignores the queue date
   env.nowMs = Date.UTC(2026, 9, 29, 12, 0, 0);                                   // day 15
   assert.equal(env.ctx.modeFor_(spec), 'direct');
   // a clock change in the middle (25 Oct 2026) cannot move the date: calendar arithmetic

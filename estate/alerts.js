@@ -1,12 +1,15 @@
 // Web Estate Hub, Stage 11: alerts and suggested open-work rows. Pure: no network, no Drive, no DOM.
 // Suggested rows are for the slip only; code never writes them anywhere. Reuses estate/core.js.
+// Nothing here changes DNS, a registrar or a mailbox.
 (function (root, factory) {
   'use strict';
   var core = (typeof module === 'object' && module.exports) ? require('./core.js') : root.EstateCore;
-  var api = factory(core);
+  var status = (typeof module === 'object' && module.exports) ? require('./status.js') : root.EstateStatus;
+  var mail = (typeof module === 'object' && module.exports) ? require('./mail.js') : root.EstateMail;
+  var api = factory(core, status, mail);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.EstateAlerts = api;
-})(this, function (E) {
+})(this, function (E, S, M) {
   'use strict';
 
   var WITHIN = 30; // days; 30 is inside, 31 is not
@@ -34,8 +37,24 @@
       });
       var mail = E.emailProblems(r);
       if (mail.indexOf('DMARC missing') !== -1) add('dmarc', 'amber', 'DMARC missing');
+      if (mail.indexOf('DMARC weak') !== -1) add('dmarc', 'amber', 'DMARC weak (p=none, no report address)');
       if (mail.indexOf('two SPF records') !== -1) add('spf', 'amber', 'two SPF records (mail can fail)');
+      if (mail.indexOf('SPF broken') !== -1) add('spf', 'amber', 'SPF broken');
+      if (mail.indexOf('DKIM missing') !== -1) add('dkim', 'amber', 'DKIM missing (Google Workspace)');
+      if (mail.indexOf('no MX') !== -1) add('mx', 'amber', 'no MX');
+      if (mail.indexOf('more than one forward hop') !== -1) {
+        var chain = M && M.forwardChain ? M.forwardChain(r) : null;
+        add('forward', 'amber', chain && chain.text ? chain.text : 'more than one forward hop');
+      }
+      if (mail.indexOf('target unknown, needs registrar export') !== -1) add('forward', 'amber', 'target unknown, needs registrar export');
       var p = prev[r.key];
+      if (S) {
+        var prevNs = (p && S.nameserverList(p.nameservers).length) ? p.nameservers : (S.nameserverList(r.nameservers_previous).length ? r.nameservers_previous : '');
+        if (prevNs) {
+          var ch = S.nameserverChange(r.nameservers, prevNs);
+          if (ch && ch.changed) add('ns', 'amber', 'nameservers changed from ' + ch.previous.join(', '));
+        }
+      }
       if (p) TAGS.forEach(function (t) {
         if (/^found/i.test(String(p[t[0]] || '')) && String(r[t[0]] || '') === 'not found in page source') {
           add('tag-lost', 'amber', t[1] + ' tag lost since last scan');

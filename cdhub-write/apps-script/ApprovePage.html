@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Approvals queue</title>
 <style>
-  :root{--bg:var(--ljr-cream,#FAF7F2);--card:#fff;--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#6B645C);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#217A2D);--bad:var(--ljr-2-text,#C32924);--warn:var(--ljr-3-text,#9E5802)}
-  @media (prefers-color-scheme:dark){:root{--bg:var(--ljr-cream,#FAF7F2);--card:var(--ljr-paper,#FFFEFB);--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#6B645C);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#217A2D);--bad:var(--ljr-2-text,#C32924);--warn:var(--ljr-3-text,#9E5802)}}
+  :root{--bg:var(--ljr-cream,#FAF7F2);--card:#fff;--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#615A53);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#1C6A27);--bad:var(--ljr-2-text,#AF2420);--warn:var(--ljr-3-text,#894C01)}
+  @media (prefers-color-scheme:dark){:root{--bg:var(--ljr-cream,#FAF7F2);--card:var(--ljr-paper,#FFFEFB);--ink:var(--ljr-ink,#2C2C2A);--mut:var(--ljr-muted,#615A53);--line:var(--ljr-0,#C7C0B4);--good:var(--ljr-5-text,#1C6A27);--bad:var(--ljr-2-text,#AF2420);--warn:var(--ljr-3-text,#894C01)}}
   body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
   main{max-width:640px;margin:0 auto}
   h1{font-size:22px;margin:0 0 4px}
@@ -21,6 +21,11 @@
   button{font:inherit;font-weight:700;border:0;border-radius:999px;padding:10px 16px;margin-right:8px;cursor:pointer;min-height:44px}
   .ok{background:var(--good);color:#fff}.no{background:transparent;color:var(--bad);border:1px solid var(--bad)}
   .msg{margin-top:8px;font-weight:600}
+  fieldset{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px 12px}
+  legend{font-weight:700;padding:0 4px}
+  label.tick{display:flex;gap:8px;align-items:center;min-height:44px}
+  input[type=date]{padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin:6px 0}
+  .once{word-break:break-all;font:600 15px/1.4 ui-monospace,monospace;padding:10px;border:1px solid var(--line);border-radius:10px;margin:8px 0}
   .empty{padding:18px;border:1px dashed var(--line);border-radius:14px;color:var(--mut);text-align:center}
 </style>
 </head>
@@ -33,7 +38,7 @@
   <h1 style="margin-top:28px">Edit an entry (owner only)</h1>
   <p class="sub">Overwrites a wrong entry <b>in place</b>. <b>No record of the old value is kept</b> by this system. Staff cannot do this: they can only add rows, and they tell you about a wrong entry.</p>
   <div class="card">
-    <select id="ed-table" aria-label="Which list"><option value="area_reading">Room temperatures</option><option value="occupancy">Where the dogs are</option></select>
+    <select id="ed-table" aria-label="Which list"><option value="area_reading">Room temperatures</option><option value="occupancy">Where the dogs are</option><option value="thermometer">Thermometers</option><option value="requirement">Needs</option><option value="area_link">Room links</option></select>
     <button class="ok" id="ed-show" type="button">Show newest entries</button>
     <div class="msg" id="ed-msg"></div>
   </div>
@@ -43,6 +48,16 @@
   <p class="sub">Switch off the code of someone who has left. It stops working at once for reading and saving. The entry stays in the list and the switch-off is noted in the approvals queue file. The code itself is never shown here.</p>
   <div class="card"><button class="ok" id="sc-show" type="button">Show staff codes</button><div class="msg" id="sc-msg"></div></div>
   <div id="sc-list"></div>
+
+  <h1 style="margin-top:28px">Inspector links (owner only)</h1>
+  <p class="sub">A link an inspector opens with no login. It shows only the dogs and fields you tick, never scores, and it cannot save anything. It ends by itself after its last day, or when you press Stop.</p>
+  <div class="card">
+    <button class="ok" id="in-new" type="button">Make a link</button>
+    <button class="no" id="in-show" type="button">Show links</button>
+    <div class="msg" id="in-msg" role="status"></div>
+  </div>
+  <div id="in-form"></div>
+  <div id="in-list"></div>
 </main>
 <script>
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
@@ -148,6 +163,11 @@
     go.onclick=function(){
       if(!cb.checked){ msg.textContent='Tick the box first.'; return; }
       var f={}; Object.keys(inputs).forEach(function(k){ f[k]=inputs[k].value; });
+      // Same rule and words as tempPairError_ in Specs.gs and BLDTempPair (staff/lib/temp-pair.js).
+      var lo=parseFloat(f.min_c), hi=parseFloat(f.max_c);
+      if(f.min_c!==undefined&&f.max_c!==undefined&&String(f.min_c).trim()!==''&&String(f.max_c).trim()!==''&&!isNaN(lo)&&!isNaN(hi)&&lo>hi){
+        msg.textContent='The lowest reading cannot be higher than the highest reading.'; return;
+      }
       msg.textContent='Working...';
       google.script.run.withSuccessHandler(function(r){
         msg.textContent = r.ok ? 'Done. Changed: '+r.result.changed.join(', ')+'.' : (r.message+(r.fields?' '+Object.keys(r.fields).map(function(k){return k+': '+r.fields[k];}).join(' '):''));
@@ -155,6 +175,97 @@
     };
     form.appendChild(go); form.appendChild(msg); card.appendChild(form);
   }
+
+  /* ---- inspector links (Inspect.gs) ---- */
+  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status'};
+  // Suggested set (Breed Better spec S10): name, sex, DOB, chip last 4, health and Fit to Breed results, litters with date of birth
+  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob']};
+  function inMsg(t){ document.getElementById('in-msg').textContent=t; }
+  function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }
+  document.getElementById('in-new').onclick=function(){
+    inMsg('Loading...');
+    google.script.run.withSuccessHandler(function(res){
+      var box=document.getElementById('in-form'); box.textContent='';
+      if(!res.ok){ inMsg(res.message); return; }
+      inMsg(''); var ch=res.result, card=el('div','card');
+      card.appendChild(el('div','k','Who is it for'));
+      var name=el('input'); name.type='text'; name.maxLength=80; name.placeholder='e.g. Council visit'; card.appendChild(name);
+      card.appendChild(el('div','k','Last day it works'));
+      var ends=el('input'); ends.type='date'; ends.min=ch.today;
+      function plus(d,n){ var x=new Date(d+'T12:00:00Z'); x.setUTCDate(x.getUTCDate()+n); return x.toISOString().slice(0,10); }
+      ends.max=plus(ch.today,ch.max_days); ends.value=plus(ch.today,ch.default_days); card.appendChild(ends);
+      var dogTicks=[];
+      [[false,'Dogs'],[true,'Archived or retired (shown only if ticked)']].forEach(function(g){
+        var fs=el('fieldset'); fs.appendChild(el('legend',null,g[1]));
+        ch.dogs.filter(function(d){ return !!d.archived===g[0]; }).sort(function(a,b){ return a.name.localeCompare(b.name); }).forEach(function(d){
+          var t=tick(d.name,false); t.id=d.id; dogTicks.push(t); fs.appendChild(t.label);
+        });
+        if(fs.children.length>1) card.appendChild(fs);
+      });
+      var fieldTicks=[];
+      Object.keys(ch.lists).forEach(function(list){
+        var fs=el('fieldset'); fs.appendChild(el('legend',null,IN_NAMES[list]||list));
+        var def=IN_DEFAULT[list]||[];
+        ch.lists[list].filter(function(c){ return c!=='id' && c!==ch.keys[list]; }).forEach(function(col){
+          var t=tick(col, def==='*' || def.indexOf(col)>=0); var f={list:list,field:col,t:t};
+          fs.appendChild(t.label);
+          if(col==='chip_number'){ var s=el('select'); s.setAttribute('aria-label','How much of '+col); s.innerHTML='<option value="last4">Last 4 digits only</option><option value="">Whole number</option>'; f.red=s; fs.appendChild(s); }
+          fieldTicks.push(f);
+        });
+        card.appendChild(fs);
+      });
+      var msg=el('div','msg'); msg.setAttribute('role','status');
+      var go=el('button','ok','Make link'); go.type='button';
+      go.onclick=function(){
+        var spec={label:name.value, ends:ends.value, subjects:[], fields:{}};
+        dogTicks.forEach(function(t){ if(t.box.checked) spec.subjects.push(t.id); });
+        fieldTicks.forEach(function(f){ if(!f.t.box.checked) return; (spec.fields[f.list]=spec.fields[f.list]||[]).push(f.red&&f.red.value ? {field:f.field,redaction:f.red.value} : f.field); });
+        msg.textContent='Working...'; go.disabled=true;
+        google.script.run.withSuccessHandler(function(r){
+          go.disabled=false;
+          if(!r.ok){ msg.textContent=r.message; return; }
+          box.textContent=''; var done=el('div','card');
+          done.appendChild(el('div','k','Shown once'));
+          done.appendChild(el('p',null,'Copy it now and send it to the inspector. It cannot be shown again. It works until '+r.result.ends.slice(0,10)+'.'));
+          var link=(ch.page_url && ch.script_id) ? ch.page_url+'#s='+ch.script_id+'&c='+r.result.code : r.result.code;
+          var out=el('div','once',link); done.appendChild(out);
+          if(!(ch.page_url && ch.script_id)) done.appendChild(el('p','sub','This is the code only: INSPECT_PAGE_URL or INSPECT_SCRIPT_ID is not set yet.'));
+          var cp=el('button','ok','Copy'); cp.type='button'; var cm=el('div','msg'); cm.setAttribute('role','status');
+          cp.onclick=function(){ navigator.clipboard.writeText(link).then(function(){ cm.textContent='Copied.'; },function(){ cm.textContent='Could not copy. Select the text and copy it.'; }); };
+          done.appendChild(cp); done.appendChild(cm); box.appendChild(done);
+          r.result.code=''; link='';
+        }).withFailureHandler(function(e){ go.disabled=false; msg.textContent='Failed: '+e.message; }).ui_inspectMake(spec);
+      };
+      card.appendChild(go); card.appendChild(msg); box.appendChild(card);
+    }).withFailureHandler(function(e){ inMsg('Failed: '+e.message); }).ui_inspectChoices();
+  };
+  function showLinks(){
+    inMsg('Loading...');
+    google.script.run.withSuccessHandler(function(res){
+      var box=document.getElementById('in-list'); box.textContent='';
+      if(!res.ok){ inMsg(res.message); return; }
+      var links=res.result.links; inMsg(links.length ? 'Newest first.' : 'No links yet.');
+      links.forEach(function(k){
+        var c=el('div','card'), dl=el('dl');
+        function add(a,b){ dl.appendChild(el('dt',null,a)); dl.appendChild(el('dd',null,b)); }
+        add('For',k.label); add('State',k.state==='active'?'Working':(k.state==='ended'?'Ended':'Stopped '+(k.stopped_at||'')));
+        add('Last day',String(k.ends).slice(0,10)); add('Dogs',String(k.dogs)); add('Fields',String(k.fields)); add('Opened',k.visits+' time'+(k.visits===1?'':'s'));
+        c.appendChild(dl); var msg=el('div','msg'); msg.setAttribute('role','status');
+        if(k.state==='active'){
+          var b=el('button','no','Stop'); b.type='button';
+          b.onclick=function(){
+            if(!window.confirm('Stop the link for '+k.label+'? It stops working at once.')) return;
+            msg.textContent='Working...';
+            google.script.run.withSuccessHandler(function(r){ msg.textContent=r.ok?'Stopped.':r.message; if(r.ok) setTimeout(showLinks,900); })
+              .withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_inspectStop(k.id);
+          };
+          c.appendChild(b);
+        }
+        c.appendChild(msg); box.appendChild(c);
+      });
+    }).withFailureHandler(function(e){ inMsg('Failed: '+e.message); }).ui_inspectLinks();
+  }
+  document.getElementById('in-show').onclick=showLinks;
 </script>
 </body>
 </html>

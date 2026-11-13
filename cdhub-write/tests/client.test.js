@@ -74,11 +74,11 @@ test('banner follows what the script reports', async () => {
 test('page checks mirror the server and give plain messages', () => {
   const s = mk(fakeServer());
   s.setLookups({ area: [{ id: 'area-t1' }] });
-  assert.equal(s.validate('area_reading', { area_id: 'area-t1', min_c: '21.47', max_c: '24' }).ok, true);
+  assert.equal(s.validate('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24' }).ok, true);
   const e = s.validate('area_reading', { area_id: 'area-zz', min_c: '25', max_c: '20', spot_c: '1.234', mitigation_note: '=SUM(A1)' }).errors;
   assert.match(e.area_id, /Not found/);
-  assert.match(e.min_c, /lowest cannot be higher/);
-  assert.match(e.spot_c, /2 decimals/);
+  assert.match(e.min_c, /The lowest reading cannot be higher than the highest reading/);
+  assert.match(e.spot_c, /1 decimal/);
   assert.match(e.mitigation_note, /do not start with/);
   const none = mk(fakeServer());
   assert.match(none.validate('area_reading', { area_id: 'area-t1', min_c: '1', max_c: '2' }).errors.area_id, /list is not loaded/);
@@ -88,7 +88,7 @@ test('submit sends one POST as plain text with the code in the body, never in th
   const srv = fakeServer();
   const s = mk(srv, { scriptUrl: GOOD_URL });
   await s.checkStatus(); s.setLookups({ area: [{ id: 'area-t1' }] }); s.setCode('SECRETCODE1');
-  const r = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21.47', max_c: '24.10' });
+  const r = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24.1' });
   assert.equal(r.ok, true);
   assert.equal(r.status, 'queued');
   assert.match(r.message, /approvals queue/);
@@ -160,12 +160,12 @@ test('config file in Drive: only a clean, single, switched-on file with a real S
 
 // ------------------------------------------------------------------ bands
 const BANDS = BLDBands.parseBands([
-  { id: 'tb-u4', band: 'under four weeks', age_from_days: '0', age_to_days: '28', min_temp: '26.00', max_temp: '28.00' },
-  { id: 'tb-o4', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.00', max_temp: '26.00' }
+  { id: 'tb-u4', band: 'under four weeks', age_from_days: '0', age_to_days: '28', min_temp: '26.0', max_temp: '28.0' },
+  { id: 'tb-o4', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.0', max_temp: '26.0' }
 ]);
 const ACTIONS = BLDBands.parseActions([
-  { direction: 'below', threshold_c: '10.00', action: 'EMERGENCY' }, { direction: 'above', threshold_c: '25.00', action: 'shade' },
-  { direction: 'above', threshold_c: '26.00', action: 'fans' }, { direction: 'above', threshold_c: '28.00', action: 'hose' }
+  { direction: 'below', threshold_c: '10.0', action: 'EMERGENCY' }, { direction: 'above', threshold_c: '25.0', action: 'shade' },
+  { direction: 'above', threshold_c: '26.0', action: 'fans' }, { direction: 'above', threshold_c: '28.0', action: 'hose' }
 ]);
 
 test('bands: the youngest dog sets the band; no dogs or no dates is said plainly', () => {
@@ -179,9 +179,9 @@ test('bands: the youngest dog sets the band; no dogs or no dates is said plainly
 
 test('bands: verdicts and the action ladder', () => {
   const adult = BANDS[1];
-  assert.equal(BLDBands.verdict('21.47', adult), 'ok');
-  assert.equal(BLDBands.verdict('9.99', adult), 'low');
-  assert.equal(BLDBands.verdict('26.01', adult), 'high');
+  assert.equal(BLDBands.verdict('21.4', adult), 'ok');
+  assert.equal(BLDBands.verdict('9.9', adult), 'low');
+  assert.equal(BLDBands.verdict('26.1', adult), 'high');
   assert.equal(BLDBands.verdict('', adult), '');
   assert.equal(BLDBands.verdict('20', null), '');
   assert.equal(BLDBands.actionFor('9', ACTIONS), 'EMERGENCY');
@@ -236,9 +236,9 @@ domTest('temperature screen: save, show the result, no staff correction path, "W
   const [minIn, maxIn] = card.querySelectorAll('.bs-pair .bs-in');
   const btn = card.querySelector('.bs-btn');
   assert.equal(btn.disabled, false);
-  assert.match(card.querySelector('.bs-band').textContent, /Band: four weeks and over, 10.00 to 26.00/);
+  assert.match(card.querySelector('.bs-band').textContent, /Band: four weeks and over, 10.0 to 26.0/);
 
-  minIn.value = '21.47'; maxIn.value = '27.5';
+  minIn.value = '21.4'; maxIn.value = '27.5';
   maxIn.dispatchEvent(new (doc.defaultView.Event)('input'));
   const noteField = [...card.querySelectorAll('.bs-field')].find((f) => /What was done/.test(f.textContent));
   assert.equal(noteField.hidden, false);
@@ -375,21 +375,21 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
   d.querySelector('#bw-on').click();
   await tick();
-  assert.match(d.querySelector('.bs-banner').textContent, /approvals queue until Lisa approves/);
+  assert.match(d.querySelector('.bs-banner').textContent, /Lisa approves each entry/);
   const card = d.querySelector('.bs-card[data-area="area-t1"]');
   assert.equal(card.querySelector('.bs-btn').disabled, false);
 
   d.querySelector('input[type=password]').value = 'CODE123456';
   d.querySelector('input[type=password]').dispatchEvent(new w.Event('input'));
   const [mn, mx] = card.querySelectorAll('.bs-pair .bs-in');
-  mn.value = '21.47'; mx.value = '24.10';
+  mn.value = '21.4'; mx.value = '24.1';
   card.querySelector('.bs-btn').click();
   await tick();
   assert.match(card.querySelector('.bs-result').textContent, /approvals queue/);
   const post = calls.find((c) => c.init.method === 'POST');
   const body = JSON.parse(post.init.body);
   assert.equal(body.table, 'area_reading');
-  assert.equal(body.fields.min_c, '21.47');
+  assert.equal(body.fields.min_c, '21.4');
   assert.equal(body.code, 'CODE123456');
   assert.ok(!post.url.includes('CODE123456'));
 });
@@ -529,7 +529,7 @@ test('banners for the live occupancy list, the daily check log and the still-pro
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
-  assert.match(s.banner('occupancy').text, /approvals queue until Lisa approves/);
+  assert.match(s.banner('occupancy').text, /Lisa approves each entry/);
   assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
   assert.equal(s.banner('occupancy_check').kind, 'on');
   assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal
@@ -556,7 +556,7 @@ domTest('location check: saving off disables every tap and says why; no dogs sho
   Screens.locationConfirm(host, { save: BLDSave.create({ fetch: scriptFake().f, localStorage: null, sessionStorage: null }), dogs: DOGS, areas: ROOMS, document: doc });
   assert.match(host.querySelector('.bs-banner').textContent, /Saving is off/);
   host.querySelectorAll('button').forEach((b) => assert.equal(b.disabled, true, b.textContent));
-  assert.match(host.querySelector('.bs-prog-t').textContent, /0 of 3 dogs done \(1 away\)/);
+  assert.match(host.querySelector('.bs-prog-t').textContent, /0 of 3 dogs done \(1 off-site\)/);
   ({ doc, host } = page());
   Screens.locationConfirm(host, { save: BLDSave.create({ fetch: scriptFake().f, localStorage: null, sessionStorage: null }), dogs: [], areas: ROOMS, document: doc });
   assert.match(host.querySelector('.bs-empty').textContent, /No dogs are loaded/);
@@ -579,9 +579,9 @@ domTest('location check: each dog shows its last room, pre-filled; only a Moved 
   assert.equal(e.querySelector('.bs-move').hidden, false);                                 // goes straight to picking a room
   // Away: shown, keeps its room, no buttons, not counted as something to do
   assert.ok(f.className.includes('bs-away'));
-  assert.match(f.textContent, /Away/); assert.match(f.textContent, /keeps its room: T1/);
+  assert.match(f.textContent, /Off-site/); assert.match(f.textContent, /keeps its room: T1/);
   assert.equal(f.querySelectorAll('button').length, 0);
-  assert.match(host.querySelector('.bs-away-h').textContent, /not asked to move/);
+  assert.match(host.querySelector('.bs-away-h').textContent, /Off-site/);
   // exactly ONE confirm button, with the count of dogs it will confirm (a and b; not e, not the away dog)
   assert.equal(host.querySelectorAll('.bs-rest').length, 1);
   assert.match(restBtn(host).textContent, /All the rest unmoved \(2\)/);
@@ -731,11 +731,34 @@ domTest('away and gone dogs in the daily list (browser side): off_site_temp is A
   assert.ok(lk.dogs.some((x) => x.away));
 });
 
-domTest('location check look: The Board\'s fonts and tokens are in the stylesheet, scoped to this screen', () => {
+domTest('off-site from the picker: saves temporary with no room; the dog stays listed as Off-site with a Back button', async () => {
+  const occ = [{ id: 'o0', subject_id: 'sub-x', area_id: 'area-t1', moved_in: '2026-10-01' }, { id: 'o1', subject_id: 'sub-x', off_site_kind: 'temporary', moved_in: '2026-10-09' }];
+  const d = BLDOcc.dailyList({ area: [{ id: 'area-t1', code: 'T1' }], subject: [{ id: 'sub-x', name: 'Test X' }], subject_status: [], occupancy: occ });
+  assert.equal(d.dogs.length, 1); assert.equal(d.dogs[0].out, true); assert.equal(d.dogs[0].away, true); assert.equal(d.dogs[0].known, false);
+  const Screens = require(CODE + '/screens/screens.js');
+  const { doc, host } = page();
+  const srv = scriptFake({ tables: ['occupancy', 'occupancy_check', 'occupancy_out'].map((key) => ({ key, file: 'BLD-occupancy.csv', on: true, mode: 'pending' })), saveReply: { ok: true, result: { status: 'queued', id: 'occ-1' } } });
+  const save = mkSave(srv); save.TABLES.occupancy_out = ({ label: 'Dog taken out', file: 'BLD-occupancy.csv', fields: { subject_id: { type: 'ref', lookup: 'subject', required: true }, off_site_kind: { type: 'enum', values: ['temporary'], required: true } } });
+  const dogs = [DOGS[0], d.dogs[0]];
+  await save.checkStatus(); lookups(save, dogs); save.setCode('CODE');
+  Screens.locationConfirm(host, { save, dogs, areas: ROOMS, offSite: true, document: doc });
+  const a = host.querySelector('[data-dog="sub-test-a"]'), x = host.querySelector('[data-dog="sub-x"]');
+  assert.match(x.textContent, /Off-site/); assert.doesNotMatch(x.textContent, /not recorded/); assert.match(x.querySelector('.bs-no').textContent, /Back/);
+  assert.equal([...x.querySelectorAll('option')].some((o) => o.textContent === 'Off-site'), false);
+  a.querySelector('.bs-no').click();
+  const sel = a.querySelector('select');
+  sel.value = [...sel.options].find((o) => o.textContent === 'Off-site').value; sel.dispatchEvent(new doc.defaultView.Event('input'));
+  a.querySelector('.bs-move .bs-btn').click();
+  await new Promise((r) => setTimeout(r, 30));
+  const p = srv.posts().filter((y) => y.table === 'occupancy_out');
+  assert.equal(p.length, 1); assert.equal(p[0].fields.subject_id, 'sub-test-a'); assert.equal(p[0].fields.off_site_kind, 'temporary'); assert.equal(p[0].fields.area_id, undefined);
+});
+
+domTest('location check look: the CD Hub font and tokens are in the stylesheet, scoped to this screen', () => {
   const css = read('screens/bld-save.css');
-  assert.match(css, /Bricolage Grotesque/); assert.match(css, /Figtree/);
+  assert.match(css, /--bs-display:var\(--house-font,inherit\)/); assert.match(css, /--bs-body:var\(--house-font,inherit\)/);
   assert.match(css, /\.bs\.bs-board\{/);
-  assert.match(css, /--bs-accent:#e39a2d/);                       // the Board's amber
+  assert.doesNotMatch(css, /--bs-accent:var\(--ljr-3/);          // orange only ever means a warning
   assert.match(css, /min-height:60px/);                          // big yes/no taps
   assert.match(css, /prefers-color-scheme:dark/);
 });
@@ -779,7 +802,7 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
   load.click();
   await tick(60);
   const reads = srv.posts().filter((p) => p.action === 'read');
-  assert.deepEqual(reads.map((p) => p.table), ['area', 'subject', 'occupancy', 'subject_status']);
+  assert.deepEqual(reads.map((p) => p.table), ['area', 'subject', 'occupancy', 'subject_status', 'requirement']);
   reads.forEach((p) => assert.equal(p.code, 'STAFFCODE12'));
   srv.calls.forEach((c) => assert.ok(!c.url.includes('STAFFCODE12')));
   assert.equal(d.querySelectorAll('.bs-dog').length, 2);
@@ -791,7 +814,7 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
 
 test('rooms and bands: after a move the dog is in its NEW room only (the old row is never closed, so it must not count)', () => {
   const T = fakeTables();
-  T['BLD-temperature_band.csv'] = [{ id: 'b1', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.00', max_temp: '26.00' }];
+  T['BLD-temperature_band.csv'] = [{ id: 'b1', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.0', max_temp: '26.0' }];
   const before = BLDLook.fromTables(T, '2026-10-15');
   assert.equal(before.bandForArea('area-t2').dogId, 'sub-test-a');                      // Test A is in T2 (latest row)
   assert.equal(before.bandForArea('area-t1').dogId, 'sub-test-b');                      // T1 has Test B (undated legacy row)
@@ -827,4 +850,24 @@ test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check`
     assert.equal((after.match(/<script src="/g) || []).length, 7);           // bld-schema.js (context) + the six added
     assert.match(after, /BLDWire\.mount\(CUR\)/);
   } finally { fsx.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('role(): the role the script reported on the last read, for showing owner-only buttons; cleared with the code (TEMPS, 12 Nov 2026)', async () => {
+  const srv = scriptFake({ reads: { area: { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'OWNER' } } } });
+  const s = mkSave(srv); await s.checkStatus();
+  assert.equal(s.role(), '');
+  s.setCode('SECRETCODE1');
+  assert.equal(s.role(), '');
+  await s.read('area');
+  assert.equal(s.role(), 'OWNER');
+  srv.st.reads.area = { ok: false, code: 'BAD_CODE', message: 'no' };
+  await s.read('area');
+  assert.equal(s.role(), 'OWNER');   // a refusal does not change it; a new code does
+  s.setCode('OTHER');
+  assert.equal(s.role(), '');
+  srv.st.reads.area = { ok: true, result: { table: 'area', fields: ['id'], rows: [], count: 0, role: 'STAFF' } };
+  await s.read('area');
+  assert.equal(s.role(), 'STAFF');
+  s.clearCode();
+  assert.equal(s.role(), '');
 });

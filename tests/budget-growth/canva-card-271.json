@@ -1,0 +1,2 @@
+{"home": 14600, "cdhub": 600, "factory": 600, "food": 600, "marketplace": 600, "money": 600, "studio": 600,
+ "why": "Canva card on the Bin page (TidyUp Apps 1), PR 271: index.html +14033 bytes; the canvaBin block adds 533 bytes to config.js, which every hub loads."}

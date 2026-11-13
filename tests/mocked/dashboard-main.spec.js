@@ -148,6 +148,19 @@ test.describe('Dashboard Main', () => {
     await expect(page.locator('#hubTiles [data-xml]')).toHaveCount(0);
   });
 
+  test('Food tile: an order waiting for its Send tap shows "1 to send" (to Do), never ✓ XML; a Send card for an order already at GA does not count @regression', async ({ page, guard }) => {
+    const ans = food(false);   // no order Not at GA: before 8 Nov this alone showed ✓ XML
+    ans.valueRanges[0].values = ans.valueRanges[0].values.concat([
+      ['SEND-9010', 'send', 'Orders', 'Send order #9010 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), new Date().toISOString()],
+      ['SEND-9001', 'send', 'Orders', 'Send order #9001 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), new Date().toISOString()]]);   // 9001 already has S1000001
+    await seed(page, guard, { foodAnswer: ans });
+    await signIn(page);
+    const tile = page.locator('#hubTiles .hubtile[data-hub="food"]');
+    await expect(tile.locator('[data-send]')).toHaveText('1 to send');
+    await expect(tile.locator('[data-send]')).toHaveAttribute('href', 'food/#/do');
+    await expect(tile.locator('[data-xml]')).toHaveCount(0);
+  });
+
   test('Apps tile header opens Factory Main, and Food tick opens Not at GA yet @regression', async ({ page, guard }) => {
     await seed(page, guard, { foodAnswer: food(false) });
     await signIn(page);
@@ -320,8 +333,13 @@ test.describe('Dashboard Main', () => {
           expect(w[1], v + ' body width').toBeLessThanOrEqual(w[2]);
         }
         await page.evaluate(() => { location.hash = '#/map'; });
-        const lines = await page.locator('#hubTiles .hubtile').evaluateAll((ts) => ts.map((t) => { const b = getComputedStyle(t, '::before'); return /linear-gradient/.test(b.backgroundImage) ? 'gradient' : b.borderLeftColor; }));
-        expect(lines).toEqual(TILES.map((t) => t[2]));
+        await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
+        // Wait for the tiles to be drawn with their line class before reading colours (read too early, every colour came back
+        // blank about 1 run in 6: the map re-renders after the hash change).
+        const tiles = page.locator('#hubTiles .hubtile.house-lbar');
+        await expect(tiles).toHaveCount(TILES.length);
+        await expect.poll(() => tiles.evaluateAll((ts) => ts.map((t) => { const b = getComputedStyle(t, '::before'); return /linear-gradient/.test(b.backgroundImage) ? 'gradient' : b.borderLeftColor; })))
+          .toEqual(TILES.map((t) => t[2]));
         const ink = await page.locator('#hubTiles .hubtile[data-hub="apps"] .hk b').first().evaluate((b) => [getComputedStyle(b).color, getComputedStyle(document.body).backgroundColor]);
         expect(ink[0]).not.toBe(ink[1]);
       });

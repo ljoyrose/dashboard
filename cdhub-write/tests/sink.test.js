@@ -21,7 +21,7 @@ function assertAppendOnly(env) {
 test('valid reading is appended as exactly one new row (direct mode)', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   const before = env.text('BLD-area_reading.csv');
-  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '21.47', max_c: '24.1', spot_c: '22' } }));
+  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '21.4', max_c: '24.1', spot_c: '22' } }));
   assert.equal(r.ok, true);
   assert.equal(r.result.status, 'saved');
   const after = env.text('BLD-area_reading.csv');
@@ -33,10 +33,10 @@ test('valid reading is appended as exactly one new row (direct mode)', () => {
   assert.equal(row.tenant_id, fx.TENANT);
   assert.equal(row.area_id, 'area-t1');
   assert.equal(row.reading_type, 'temperature');
-  assert.equal(row.min_c, '21.47');
-  assert.equal(row.max_c, '24.10'); // kept to two decimal places
-  assert.equal(row.spot_c, '22.00');
-  assert.equal(row.precision_dp, '2');
+  assert.equal(row.min_c, '21.4');
+  assert.equal(row.max_c, '24.1'); // kept to one decimal place
+  assert.equal(row.spot_c, '22.0');
+  assert.equal(row.precision_dp, '1');
   assert.equal(row.taken_at, '2026-10-15T23:30:00+01:00');
   assert.equal(row.taken_by, 'Sam Staff');
   assert.equal(row.corrects_id, '');
@@ -52,7 +52,7 @@ test('bad input is refused with plain messages and nothing is written', () => {
   const bad = [
     [{ area_id: 'area-t1', min_c: '25', max_c: '20' }, 'min_c', /cannot be higher/],
     [{ area_id: 'area-t1', min_c: 'warm', max_c: '20' }, 'min_c', /degrees C/],
-    [{ area_id: 'area-t1', min_c: '21.475', max_c: '22' }, 'min_c', /at most 2 decimals/],
+    [{ area_id: 'area-t1', min_c: '21.45', max_c: '22' }, 'min_c', /at most 1 decimal/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '99' }, 'max_c', /outside/],
     [{ area_id: 'area-t1', min_c: '21' }, 'max_c', /needed/],
     [{ min_c: '21', max_c: '22' }, 'area_id', /needed/],
@@ -61,7 +61,7 @@ test('bad input is refused with plain messages and nothing is written', () => {
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', reading_type: 'humidity' }, 'reading_type', /Not one of/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-10-15 07:40' }, 'period_start', /time zone/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2027-01-01T00:00:00Z' }, 'period_start', /future/],
-    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-09-01T00:00:00Z' }, 'period_start', /7 days/]
+    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2019-09-01T00:00:00Z' }, 'period_start', /kept \(6 years\)/]   // no 7-day limit on readings, only the kept years
   ];
   bad.forEach(([fields, field, re]) => {
     const r = save(env, req(env, { fields }));
@@ -102,7 +102,7 @@ test('rows of another tenant are not accepted as lookups', () => {
 test('a file that is not on the allow-list is refused, and no live table is touched', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   const snapshot = JSON.stringify(env.drive);
-  ['BLD-subject.csv', 'BLD-area.csv', 'BLD-field_visibility.csv', 'BLD-subject_status.csv', '../BLD-area_reading.csv', 'area_reading.csv ', '', 'constructor', '__proto__']
+  ['BLD-subject.csv', 'BLD-area.csv', 'BLD-field_visibility.csv', 'BLD-subject_status.csv', 'BLD-inspect_link.csv', 'BLD-inspect_access.csv', 'inspect_link', '../BLD-area_reading.csv', 'area_reading.csv ', '', 'constructor', '__proto__']
     .forEach((name) => {
       const r = save(env, req(env, { table: name }));
       assert.equal(r.ok, false, name);
@@ -116,7 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
-    ['BLD-_pending.csv', 'BLD-area_reading.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv']);
+    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sensor_reading.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
 });
 
 test('the exact file name is accepted as an alias for the table key', () => {
@@ -249,7 +249,7 @@ test('a correction is a NEW row pointing at the old one, and always waits for ap
 
   const c = save(env, req(env, {
     code: env.codes.owner, action: 'correct', corrects_id: first.result.id, reason: 'typed the wrong digit',
-    fields: { area_id: 'area-t1', min_c: '21.74', max_c: '24.10' }
+    fields: { area_id: 'area-t1', min_c: '21.7', max_c: '24.1' }
   }));
   assert.equal(c.ok, true);
   assert.equal(c.result.status, 'queued');
@@ -263,7 +263,7 @@ test('a correction is a NEW row pointing at the old one, and always waits for ap
   assert.equal(lines(t2).length, 3);
   const all = rows(env, 'BLD-area_reading.csv');
   assert.equal(all[1].corrects_id, first.result.id);
-  assert.equal(all[1].min_c, '21.74');
+  assert.equal(all[1].min_c, '21.7');
   assertAppendOnly(env);
 
   // the original cannot be corrected a second time
@@ -317,7 +317,7 @@ test('the proposed staff table and the retired round_event are NOT on the allow-
     const r = save(env, req(env, { table: t, code: env.codes.owner, fields: {} }));
     assert.equal(r.code, 'FILE_NOT_ALLOWED', t);
   });
-  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'occupancy', 'occupancy_check']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'guest_reading', 'sensor_reading', 'thermometer', 'requirement', 'area_link', 'check_type', 'check_field', 'check_value', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
   assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff']);
   assert.deepEqual(Array.from(Object.keys(env.ctx.RETIRED_TABLES)), ['round_event']);
   assert.equal(env.writes.length, 0);
@@ -517,9 +517,9 @@ test('status check shows switches only: no codes, no ids, no data', () => {
   assert.equal(out.saveEnabled, true);
   const s = JSON.stringify(out);
   assert.ok(!s.includes(env.codes.staff) && !s.includes(fx.TENANT) && !s.includes('FOLDER-TEST'));
-  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'occupancy', 'occupancy_check']);
-  assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false]);        // occupancy and the daily check have their own switches, OFF
-  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'pending', 'direct']);   // temperature straight in, moves queue, the check log straight in
+  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'guest_reading', 'sensor_reading', 'thermometer', 'requirement', 'area_link', 'check_type', 'check_field', 'check_value', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
+  assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);        // occupancy, the daily check and breeding rules have their own switches, OFF
+  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'pending', 'direct', 'direct', 'direct', 'direct']);   // temperature and occupancy moves straight in; occupancy_out still queues
   assert.equal(out.readEnabled, false);                                                    // reading is OFF by default
   assert.deepEqual(Array.from(out.proposed), ['staff']);
   // approval page is only for owners
@@ -537,9 +537,13 @@ test('admin: empty files are created only when allowed, only the listed ones, ne
   env.props.ALLOW_CREATE = 'true';
   env.ctx.adminCreateEmptyTables();
   assert.deepEqual(env.created.sort(), ['BLD-_pending.csv', 'BLD-area_reading.csv', 'BLD-occupancy_check.csv']);
-  assert.equal(env.text('BLD-area_reading.csv'), fx.headerOnly(fx.AREA_READING_HEADER));
-  assert.equal(env.text('BLD-_pending.csv'), fx.headerOnly(fx.PENDING_HEADER));
-  assert.equal(env.text('BLD-occupancy_check.csv'), fx.headerOnly(fx.OCCUPANCY_CHECK_HEADER));
+  // new tables are Google Sheets (".csv" name kept), header row only, every row plain text
+  const hdr = (h) => h.slice();
+  assert.deepEqual(env.rows('BLD-area_reading.csv'), [hdr(fx.AREA_READING_HEADER)]);
+  assert.deepEqual(env.rows('BLD-_pending.csv'), [hdr(fx.PENDING_HEADER)]);
+  assert.deepEqual(env.rows('BLD-occupancy_check.csv'), [hdr(fx.OCCUPANCY_CHECK_HEADER)]);
+  assert.equal(env.file('BLD-_pending.csv')[0].fmt[1], '@');
+  assert.equal(env.file('BLD-_pending.csv')[0].parent, 'folder');
   env.created.length = 0;
   env.ctx.adminCreateEmptyTables(); // second run: nothing is overwritten
   assert.equal(env.created.length, 0);
@@ -637,15 +641,10 @@ test('occupancy input is checked: unknown dog or room, fields the system fills, 
   assert.equal(env.writes.length, 0);
 });
 
-test('occupancy in pending mode (its default): the move waits in the approvals queue and Lisa\'s approval appends the row', () => {
-  const env = standardEnv({ props: { TABLE_ON_occupancy: 'true' } });
-  const before = env.text('BLD-occupancy.csv');
+test('occupancy moves go straight in: MOVES_QUEUE_UNTIL and MODE_occupancy are ignored', () => {
+  const env = standardEnv({ props: { TABLE_ON_occupancy: 'true', MOVES_QUEUE_UNTIL: '2099-01-01', MODE_occupancy: 'pending' } });
   const r = move(env, 'sub-test-b', 'area-t2');
-  assert.equal(r.result.status, 'queued');
-  assert.equal(env.text('BLD-occupancy.csv'), before);
-  assert.match(move(env, 'sub-test-b', 'area-t2').fields.area_id, /has not moved/);       // a waiting move counts as the current room
-  env.email = 'owner@example.test';
-  assert.equal(env.ctx.ui_decide(r.result.pending_id, 'approve', '').ok, true);
+  assert.equal(r.result.status, 'saved');
   assert.equal(occTable(env).pop().subject_id, 'sub-test-b');
   assertAppendOnly(env);
 });
@@ -845,7 +844,7 @@ test('owner edit REPLACES the row in place; every other row is byte-for-byte unc
   const list = env.ctx.ui_editList('area_reading');
   assert.equal(list.ok, true);
   assert.deepEqual(Array.from(list.result.rows).map((x) => x.id), [c, b, a]);               // newest first
-  const r = env.ctx.ui_edit('area_reading', b, { min_c: '19.5', max_c: '21.25', mitigation_note: 'thermometer was misread' });
+  const r = env.ctx.ui_edit('area_reading', b, { min_c: '19.5', max_c: '21.3', mitigation_note: 'thermometer was misread' });
   assert.equal(r.ok, true);
   assert.equal(r.result.status, 'edited');
   assert.deepEqual(Array.from(r.result.changed).sort(), ['max_c', 'min_c', 'mitigation_note']);
@@ -856,8 +855,8 @@ test('owner edit REPLACES the row in place; every other row is byte-for-byte unc
   assert.equal(after[3], lns[3]);                                                            // row c untouched
   const row = rows(env, 'BLD-area_reading.csv')[1];
   assert.equal(row.id, b);                                                                   // same id
-  assert.equal(row.min_c, '19.50');                                                          // new values, kept to 2 dp
-  assert.equal(row.max_c, '21.25');
+  assert.equal(row.min_c, '19.5');                                                          // new values, kept to 2 dp
+  assert.equal(row.max_c, '21.3');
   assert.equal(row.mitigation_note, 'thermometer was misread');
   assert.equal(row.taken_by, 'Sam Staff');                                                   // stamped fields untouched
   assert.equal(row.area_id, 'area-t2');
@@ -866,13 +865,13 @@ test('owner edit REPLACES the row in place; every other row is byte-for-byte unc
   assert.equal(w.title, 'BLD-area_reading.csv');
   assert.equal(env.text('BLD-_pending.csv'), queueBefore);                                   // NO event, NO record of the old value
   assert.equal(JSON.stringify(env.drive.map((f) => f.content)).includes(' 19.00') , false);
-  assert.equal(env.text('BLD-area_reading.csv').includes('19.00'), false);                   // the old value is gone from the file
+  assert.equal(env.text('BLD-area_reading.csv').includes('19.0'), false);                   // the old value is gone from the file
   // a staff save after the edit still appends cleanly and the edit survives
   env.nowMs += 13 * 3600000;
   assert.equal(save(env, req(env, { fields: { area_id: 'area-t1', min_c: '21', max_c: '23' } })).ok, true);
   const all = rows(env, 'BLD-area_reading.csv');
   assert.equal(all.length, 4);
-  assert.equal(all[1].min_c, '19.50');
+  assert.equal(all[1].min_c, '19.5');
 });
 
 test('owner edit of an OLD row: an unchanged old period_start is not re-checked (no "more than 7 days ago")', () => {
@@ -885,9 +884,10 @@ test('owner edit of an OLD row: an unchanged old period_start is not re-checked 
   assert.equal(e.ok, true);
   assert.deepEqual(Array.from(e.result.changed), ['mitigation_note']);
   assert.equal(rows(env, 'BLD-area_reading.csv')[0].period_start, ps);
-  // but a CHANGED date is checked
-  const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' });
-  assert.match(bad.fields.period_start, /7 days/);
+  // but a CHANGED date is checked: readings have no 7-day limit (Lisa 11 Nov 2026), only how long records are kept
+  const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2019-01-01T00:00:00Z' });
+  assert.match(bad.fields.period_start, /kept \(6 years\)/);
+  assert.equal(env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' }).ok, true);
 });
 
 test('owner edit of an occupancy row (including moved_out, which staff can never set); other rows unchanged', () => {
@@ -963,7 +963,7 @@ test('owner edit refuses plainly: unknown entry, fields it cannot change, bad va
   assert.match(env.ctx.ui_edit('area_reading', a, { mitigation_note: '=HYPERLINK("x")' }).fields.mitigation_note, /formula/);
   assert.match(env.ctx.ui_edit('area_reading', a, { area_id: 'area-nope' }).fields.area_id, /Not found/);
   assert.match(env.ctx.ui_edit('area_reading', a, { min_c: '' }).fields.min_c, /needed/);
-  assert.equal(env.ctx.ui_edit('area_reading', a, { min_c: '20.00', max_c: '22' }).code, 'NOTHING_CHANGED');
+  assert.equal(env.ctx.ui_edit('area_reading', a, { min_c: '20.0', max_c: '22' }).code, 'NOTHING_CHANGED');
   assert.equal(JSON.stringify(env.drive), snapshot);
 });
 
@@ -992,16 +992,16 @@ test('owner edit keeps the lock and the whole-file hash check: a busy lock, a sa
   const ev = rows(env, 'BLD-_pending.csv').pop();
   assert.equal(ev.event, 'write_check_failed');
   assert.equal(ev.result, 'old text restored');
-  assert.equal(JSON.stringify(ev).includes('19.00'), false);
+  assert.equal(JSON.stringify(ev).includes('19.0'), false);
   env.breakSetContent = false;
   assert.equal(env.ctx.ui_edit('area_reading', mid, { min_c: '17.5' }).ok, true);
-  assert.equal(rows(env, 'BLD-area_reading.csv')[1].min_c, '17.50');
+  assert.equal(rows(env, 'BLD-area_reading.csv')[1].min_c, '17.5');
 });
 
 test('owner edit leaves awkward neighbouring rows alone (quoted commas and line breaks, LF files, no final newline, BOM, blank lines)', () => {
   const env = standardEnv({ props: { OWNER_EDIT_ENABLED: 'true' } });
   const H = fx.AREA_READING_HEADER.join(',');
-  const rowLine = (id, note) => `${id},ten-test,area-t1,temperature,20.00,22.00,,2,,2026-10-15T07:00:00+01:00,Sam Staff,,,,,,,,${note}`;
+  const rowLine = (id, note) => `${id},ten-test,area-t1,temperature,20.0,22.0,2.0,,1,,2026-10-15T07:00:00+01:00,Sam Staff,,,,,,,,${note}`;
   const odd = [H, rowLine('rdg-1', '"fans on, doors ""open""\nand windows"'), '', rowLine('rdg-2', 'plain'), rowLine('rdg-3', '"line one\r\nline two"')];
   [['\r\n', true], ['\n', false], ['\r\n', false]].forEach(([eol, finalNl], i) => {
     let text = '﻿' + odd.join(eol) + (finalNl ? eol : '');
@@ -1019,7 +1019,7 @@ test('owner edit leaves awkward neighbouring rows alone (quoted commas and line 
     const recs = env.ctx.csvRecords_(next).records;
     assert.equal(recs.length, 3);
     assert.equal(recs[0].mitigation_note, 'fans on, doors "open"\nand windows');
-    assert.equal(recs[1].min_c, '15.00');
+    assert.equal(recs[1].min_c, '15.0');
     assert.equal(recs[1].mitigation_note, 'edited, with a comma');
     assert.equal(recs[2].mitigation_note, 'line one\r\nline two');
   });

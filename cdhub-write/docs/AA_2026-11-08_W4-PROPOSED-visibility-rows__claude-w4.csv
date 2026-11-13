@@ -1,0 +1,36 @@
+table_name,field_name,audience_id,visible,condition,redaction,reason
+area,*,aud-guest,yes,,,guest page: room list
+area,id,aud-guest,yes,,,guest page: room list
+area,code,aud-guest,yes,,,guest page: room list
+area,grouping,aud-guest,yes,,,guest page: room list
+qr_tag,*,aud-staff,yes,,,staff page: what a scan means
+qr_tag,tag,aud-staff,yes,,,staff page
+qr_tag,kind,aud-staff,yes,,,staff page
+qr_tag,ref_id,aud-staff,yes,,,staff page
+qr_tag,active,aud-staff,yes,,,staff page
+area_capacity,*,aud-staff,yes,,,staff page: room limits
+area_capacity,area_id,aud-staff,yes,,,staff page
+area_capacity,access_type,aud-staff,yes,,,staff page
+area_capacity,size_band,aud-staff,yes,,,staff page
+area_capacity,max_dogs,aud-staff,yes,,,staff page
+area_access,*,aud-staff,yes,,,staff page: flap setting
+area_access,area_id,aud-staff,yes,,,staff page
+area_access,access_type,aud-staff,yes,,,staff page
+litter,*,aud-staff,yes,,,staff page: litter QR
+litter,id,aud-staff,yes,,,staff page
+litter,dam_subject_id,aud-staff,yes,,,staff page
+capacity_setting,*,aud-staff,yes,,,staff page: over-limit behaviour
+capacity_setting,setting_key,aud-staff,yes,,,staff page
+capacity_setting,value,aud-staff,yes,,,staff page
+subject,size_band,aud-staff,yes,,,staff page: room limit by size
+subject,birth_litter_id,aud-staff,yes,,,staff page: litter QR
+check_type,*,aud-staff,yes,,,staff checks screen
+check_type,id,aud-staff,yes,,,staff checks screen
+check_type,type_key,aud-staff,yes,,,staff checks screen
+check_type,label,aud-staff,yes,,,staff checks screen
+check_type,target,aud-staff,yes,,,staff checks screen
+check_type,asks_item,aud-staff,yes,,,staff checks screen
+check_type,asks_amount,aud-staff,yes,,,staff checks screen
+check_type,amount_unit,aud-staff,yes,,,staff checks screen
+check_type,active,aud-staff,yes,,,staff checks screen
+check_type,effective_from,aud-staff,yes,,,staff checks screen

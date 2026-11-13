@@ -1,0 +1,3 @@
+id,tenant_id,band,age_from_days,age_to_days,min_temp,temp_unit_id,max_temp,basis,ruling_needed,note
+tb-a,ten-test,under four weeks,0,28,26.00,u-c,28.00,invented for tests,,
+tb-b,ten-test,four weeks and over,29,,10.00,u-c,26.00,invented for tests,,

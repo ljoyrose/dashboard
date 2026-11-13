@@ -1,0 +1,8 @@
+id,criterion_id,answer_match,points,gate_outcome,note
+p1,c-hips-gate,in:Excellent|Good,,pass,
+p2,c-hips-gate,any,,fail,
+p3,c-hips-pts,is:Excellent,15,,
+p4,c-hips-pts,is:Good,10,,
+p5,c-hips-pts,any,0,,
+p6,c-litters,range:1-6,5,,
+p7,c-litters,any,0,,

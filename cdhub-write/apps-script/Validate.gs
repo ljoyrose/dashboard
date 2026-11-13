@@ -9,7 +9,7 @@ function err_(code, message, extra) {
   return e;
 }
 
-var TEMP_RE_ = /^-?\d{1,2}(\.\d{1,2})?$/;
+var TEMP_RE_ = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
 var ID_RE_ = /^[A-Za-z0-9][A-Za-z0-9_.\-]{0,80}$/;
 var DATE_RE_ = /^\d{4}-\d{2}-\d{2}$/;
 var ISO_DT_RE_ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+\-]\d{2}:\d{2})$/;
@@ -27,12 +27,18 @@ function isRealDate_(s) {
  * Check browser input against a table spec.
  * @return {{clean:Object, errors:Object}} errors maps field name -> message.
  */
-function validateInput_(spec, fields, lookups, nowMs) {
+function validateInput_(spec, fields, lookups, nowMs, opts) {
   var errors = {}, clean = {};
   fields = fields || {};
   var name;
 
+  // "Save anyway" (overseer 12 Nov 2026): an unusual value (temperature outside TEMP_MIN..TEMP_MAX, a time more than
+  // PERIOD_MAX_AGE_HOURS ago) is a warning, not a stop. Any table takes confirm_unusual = yes; it is never a column.
+  var confirmed = String(fields.confirm_unusual == null ? '' : fields.confirm_unusual).trim() === 'yes', warn = false;
+  if (!Object.prototype.hasOwnProperty.call(spec.input, 'confirm_unusual') && fields.confirm_unusual != null &&
+      String(fields.confirm_unusual).trim() !== '' && !confirmed) errors.confirm_unusual = 'Not one of: yes.';
   for (name in fields) {
+    if (name === 'confirm_unusual') continue;
     if (Object.prototype.hasOwnProperty.call(fields, name) &&
         !Object.prototype.hasOwnProperty.call(spec.input, name)) {
       errors[name] = 'This is not a field you can set. The system fills it in.';
@@ -60,11 +66,12 @@ function validateInput_(spec, fields, lookups, nowMs) {
         break;
       case 'temp':
         if (!TEMP_RE_.test(v)) {
-          errors[name] = 'Type a temperature in degrees C with at most 2 decimals, e.g. 21.47.';
+          errors[name] = 'Type a temperature in degrees C with at most 1 decimal, e.g. 21.4.';
         } else {
           var n = parseFloat(v);
-          if (n < BLD.LIMITS.TEMP_MIN || n > BLD.LIMITS.TEMP_MAX) errors[name] = 'That is outside ' + BLD.LIMITS.TEMP_MIN + ' to ' + BLD.LIMITS.TEMP_MAX + ' C. Check the number.';
-          else clean[name] = n.toFixed(2);
+          if ((n < BLD.LIMITS.TEMP_MIN || n > BLD.LIMITS.TEMP_MAX) && !confirmed) {
+            errors[name] = 'Unusual: outside ' + BLD.LIMITS.TEMP_MIN + ' to ' + BLD.LIMITS.TEMP_MAX + ' C. Check the number, or save anyway.'; warn = true;
+          } else clean[name] = n.toFixed(1);
         }
         break;
       case 'bool':
@@ -86,7 +93,11 @@ function validateInput_(spec, fields, lookups, nowMs) {
         } else {
           var t = Date.parse(v);
           if (t > nowMs + 5 * 60000) errors[name] = 'That time is in the future.';
-          else if (t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) errors[name] = 'That is more than 7 days ago. Ask Lisa to add it.';
+          else if (opts && opts.oldestMs && t < opts.oldestMs) {
+            errors[name] = 'That is older than these records are kept (' + opts.keepYears + ' years).';   // retention: a stop
+          } else if (!(opts && opts.oldestMs) && t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000 && !confirmed) {
+            errors[name] = 'That is more than ' + Math.round(BLD.LIMITS.PERIOD_MAX_AGE_HOURS / 24) + ' days ago. Check the date, or save anyway.'; warn = true;
+          }
           else clean[name] = v;
         }
         break;
@@ -127,7 +138,8 @@ function validateInput_(spec, fields, lookups, nowMs) {
         errors[name] = 'Unknown field type.';
     }
   }
-  if (spec.checkRow) spec.checkRow(clean, errors);
+  if (spec.checkRow) spec.checkRow(clean, errors, lookups);
+  if (warn && !errors.confirm_unusual) errors.confirm_unusual = 'Save anyway?';   // the page shows a "Save anyway" button
   return { clean: clean, errors: errors };
 }
 

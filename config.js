@@ -25,6 +25,13 @@
       excludedDrives: EXCLUDED,
       sharedDriveAllowIds: []
     },
+    // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until Lisa presses "Allow personal bin
+    // actions". A file can be binned only if it starts ZZ_DELETE_DRIVE_ and has a ledger row whose surface is `surface`.
+    // dryRun true = the page lists what would be renamed or binned and changes nothing; switching it off is Lisa's call.
+    personalBin: {
+      surface: 'drive-personal',
+      dryRun: true
+    },
     // TidyUp Apps stage 5: one row per app outside Drive and Dropbox. status: 'bot-and-browser' | 'bot-capable' |
     // 'browser-only' | 'nothing'. how = the only tidy route allowed; never = API actions no bot may call for that app.
     // Archive or trash only, never a permanent delete. No emails or ids here. The Bin page lists these under Other apps.
@@ -58,13 +65,25 @@
       runLogFolderId: '',
       runLogName: 'RUN-LOG.csv'
     },
+    // Bin page Canva card (TidyUp Apps stage 1). The page never calls Canva. It reads stateFile from folderId (00 AI Commons >
+    // CHANGES), written by the CANVA-BIN bot, and writes ledger slips and CANVA-BIN-REQUEST_ files there. accounts are
+    // labels only (no emails). dryRun true = the card lists and changes nothing; switching it off is Lisa's call.
+    canvaBin: {
+      folderId: '11J2IuEGBT6fThCFD3UCN86J_9ZbiGhrF',
+      stateFile: 'CANVA-BIN-STATE.json',
+      accounts: ['main', 'book'],
+      dryRun: true
+    },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables',
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
       // Write targets for inline dashboard edits (chip and area saves)
       microchipFileId: '1GnL88Xtf0tlcXjFf_P2ML-Vfglz08-Ee',
-      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-'
+      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-',
+      // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
+      // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
+      saveScriptUrl: ''
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's
@@ -115,7 +134,7 @@
       listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
-      ideasRequestsFolderId: '', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
+      ideasRequestsFolderId: '1cd3vZwUYB0pNFUTQzSOMkYwuOeATG7Rv', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
       live: false
     },
     // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with Lisa's

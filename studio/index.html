@@ -26,7 +26,7 @@
      share them. Only Studio's own extras live here: its colour (--me), the column band and chip fills, the coloured-word set and
      the status colours on the dark frame. */
   :root { --me: var(--ljr-7); --bd: var(--line); --band: var(--card); --chip: transparent;
-    --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
+    --w2: #AF2420; --w3: #894C01; --w4: #695B01; --w5: #1C6A27; --w6: #01628E; --w7: #76459E;
     --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
   :root.look-cool { --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; }
   @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
@@ -42,7 +42,7 @@
   /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); } }
-  :root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
+  :root.sel-soft { --sel-bd: var(--house-press); --sel-fill: var(--hov); }   /* grey too (Lisa, 12 Nov 2026): no purple on hover or selected */
   html.text-lg body { zoom: 1.12; } html.text-xl body { zoom: 1.25; }
   html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 16px; }
   * { box-sizing: border-box; }
@@ -63,9 +63,9 @@
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: var(--fs-small); font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
-  /* One line rule (like Links and HubSpot): every edge is 1px; hover = selected = that same 1px edge turns ink (an outline laid exactly over it), so it darkens, never thickens or moves. Keyboard focus keeps the 2px ink ring. */
-  .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; }
-  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  /* Hover rule (Lisa, 12 Nov 2026): hover and tap = the pale grey fill, no line; selected = the same fill plus the 1px quiet grey line inside (never purple, never ink). Nothing moves. Keyboard focus keeps the ink line. */
+  .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
+  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { background:var(--hov); } }
   .n:empty { display: none; }
   /* Counts: the house count pill (../house.css, 30 x 22). Studio's counts wear an ink ring; "needs you" counts the rose ring + tint. */
   .cnt, .fbtn .n:not(:empty) { border-color: var(--ink); }
@@ -213,8 +213,8 @@
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } /* never the browser blue */
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-color: var(--ink) !important; }
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; } /* never the browser blue */
+  a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: var(--fs-small); padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
@@ -232,7 +232,10 @@
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
   .fsub { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
-  :root.look-cool .ch, :root.look-cool .tag, :root.look-cool .fbtn, :root.look-cool .pill { background: var(--chip); } /* in every state: hover and selected draw a line, never a different fill */
+  :root.look-cool .ch, :root.look-cool .tag, :root.look-cool .fbtn, :root.look-cool .pill { background: var(--chip); }
+  /* Hover and selected still show the pale grey fill in the cool look (12 Nov 2026). */
+  :root.look-cool :is(.ch, .fbtn, button.pill, a.pill).on { background: var(--sel-fill); }
+  @media (hover: hover) { :root.look-cool :is(.ch, .fbtn, button.pill, a.pill, button.tag, a.tag):hover { background: var(--hov); } }
   /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
   #lookMenu .lrow { display: flex; flex-direction: column; gap: 4px; }
@@ -257,7 +260,7 @@
   .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
   .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); position: relative; }
   .col-list .crow .ttl { font-weight: 600; font-size: var(--fs-head); }
-  .col-list .crow.sel { outline: 1px solid var(--sel-bd); outline-offset: -1px; }
+  .col-list .crow.sel { background: var(--sel-fill); outline: 1px solid var(--sel-bd); outline-offset: -1px; }
   /* An empty column shrinks to one short line; full columns keep the full height. */
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
@@ -284,10 +287,11 @@
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
   header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
   header .top > .pill .ti { color: var(--frame-ink); }
+  :root.look-cool header .top > .pill { background: transparent; } /* the cool look's chip fill must not reach the top bar: white words on it were 1.07:1 */
   header .top > .btn.main { border-color: var(--frame-ink); }
   header .top > .pill.ok { border-color: var(--frame-ok); } header .top > .pill.ok .ti { color: var(--frame-ok); }
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
-  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
+  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { background:var(--frame-hov); } } /* a quiet frame fill, no line (12 Nov 2026) */
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
   /* Phone top bar: the engine and budget pills stay on a desktop only (the one 56px row has no room); Look opens full width. */
   @media (max-width: 600px) {
@@ -370,11 +374,11 @@
   .ico, .lk { min-width: 36px; height: 36px; justify-content: center; }
   .chk li button, button.tag, a.tag { padding: 0 12px; height: auto; }
   .more { color: var(--ink); }
-  .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line and keep it on hover */
+  .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line; hover is the grey fill */
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
-  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; } }
-  /* Meaning-coloured buttons keep their colour on hover (the --hmc rule above, from ../house.css); icons keep it too. */
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { background:var(--hov); } }
+  /* Meaning-coloured buttons keep their icon colour; hover is the same grey fill as every control (../house.css, 12 Nov 2026). */
   .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
   .fbtn .n.wide { width: auto; padding: 0 6px; }
   .pthumb svg, .pthumb .pimg { border-radius: var(--radius); }
@@ -714,6 +718,7 @@
   function load() {
     if (!accessToken) return;
     if (OT.st !== 'loading') OT.st = 'idle'; // Refresh re-reads the Owned Tools tab too
+    if (!S) render();   // J34-F84: show "Reading…" while the first read runs, not the sign-in card again
     findFile(ST.logsFolderId, ST.stateFile).then(function (f) {
       if (!f) return null;
       return media(f.id).then(function (r) { return r.json(); });

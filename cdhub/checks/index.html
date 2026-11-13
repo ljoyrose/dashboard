@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Staff checks</title>
+<script src="../staff/look.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../staff/lib/bld-save.css">
+<link rel="stylesheet" href="../../tokens.css">
+<link rel="stylesheet" href="../../house.css">
+<link rel="stylesheet" href="../staff/staff.css">
+</head>
+<body>
+<main class="screen">
+  <a class="back" href="../staff/">Back to The Board</a>
+  <h1>Staff checks</h1>
+  <p id="note" class="sub" role="status"></p>
+  <form id="gate" hidden>
+    <label for="code">Your staff code</label>
+    <input id="code" class="inp" type="password" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button class="btn" type="submit">Open checks</button>
+  </form>
+  <div id="app"></div>
+</main>
+<script src="../staff/lib/bld-save.js"></script>
+<script src="../staff/lib/needs.js"></script>
+<script src="../staff/lib/occupancy.js"></script>
+<script src="checks.js"></script>
+<script>
+  // Uses what The Board already keeps on this phone: the save address and this person's code. ?t=feeding opens that check.
+  (function () {
+    var save = BLDSave.create(), type = new URLSearchParams(location.search).get('t') || '';
+    var gate = document.getElementById('gate'), note = document.getElementById('note'), device = '';
+    function open() {
+      gate.hidden = true; note.textContent = '';
+      return BLDChecks.mount(document.getElementById('app'), save, { type: type }).then(function (r) {
+        if (r && r.reason === 'read') { save.clearCode(); document.getElementById('code').value = ''; gate.hidden = false; }
+      });
+    }
+    if (!save.getScriptUrlSet()) {
+      note.textContent = '';
+      note.appendChild(document.createTextNode('This phone is not set up. Ask the hub owner or an admin, then set it up on '));
+      var a = document.createElement('a');
+      a.href = '../staff/';
+      a.textContent = 'The Board';
+      note.appendChild(a);
+      note.appendChild(document.createTextNode('.'));
+      return;
+    }
+    try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
+    gate.hidden = !!device;
+    if (device) { save.setCode(device, false); open(); }
+    gate.addEventListener('submit', function (ev) { ev.preventDefault(); save.setCode(document.getElementById('code').value.toUpperCase(), false); open(); });
+  })();
+</script>
+</body>
+</html>
