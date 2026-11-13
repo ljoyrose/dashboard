@@ -79,4 +79,18 @@ test('print: litter cards look like kennel cards and list only litters still on 
   // room sign: room jobs and how often
   await page.getByRole('button', { name: 'Room signs' }).click();
   await expect(page.locator('.rcard [data-k="jobs"] li')).toHaveText(['Daily cleandaily', 'Deep cleanweekly']);
+  // no address on any print-out (Lisa 13 Nov 2026): no printed text holds the site address, and the page margin is 0 so the
+  // browser has no room for its own header and footer (which print the page address)
+  const origin = new URL(page.url()).origin;
+  for (const b of ['Room signs', 'Dog kennel cards', 'Litter cards']) {
+    await page.emulateMedia({ media: 'screen' });
+    await page.getByRole('button', { name: b }).click();
+    await page.emulateMedia({ media: 'print' });
+    expect(await page.locator('.sheet').innerText()).not.toContain(origin);
+    expect(await page.locator('.sheet').innerText()).not.toMatch(/https?:|www\./);
+  }
+  const margins = await page.evaluate(() => [].concat(...[...document.styleSheets].map((sh) => { try { return [...sh.cssRules]; } catch (e) { return []; } }))
+    .flatMap((r) => (r.cssRules ? [...r.cssRules] : [r])).filter((r) => r.type === 6).map((r) => r.style.margin));
+  expect(margins.length).toBeGreaterThan(0);
+  for (const m of margins) expect(m).toMatch(/^0(px)?$/);
 });
