@@ -14,7 +14,7 @@ var VISIT_ = {
   TYPE_FILE: 'BLD-visit_type.csv',
   TYPE_COLUMNS: ['id', 'tenant_id', 'type_key', 'name', 'role_code', 'default_hours', 'max_hours', 'rights', 'lists', 'fields',
     'data_years', 'record_jobs', 'record_counts', 'email_code', 'needs_id_check', 'terms_id', 'active', 'effective_from',
-    'set_at', 'set_by', 'source'],
+    'set_at', 'set_by', 'source', 'grant_basis'],   // grant_basis: the visit's default basis (blank = voluntary)
   TAG_FILE: 'BLD-qr_tag.csv',
   TAG_NEED: ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
   CARD_KIND: 'visitor_card',
@@ -130,6 +130,8 @@ function sinkVisitTypeSave_(req) {
     var from = String(f.effective_from || '').trim() || today;
     if (!isRealDate_(from)) errors.effective_from = 'Use a real date as YYYY-MM-DD.';
     var source = dogcardText_(f.source, 'source', errors, 200);
+    var basis = String(f.grant_basis || '').trim();
+    if (basis) basis = visitLabelCode_(basis, 'grant_basis', 'voluntary', errors, 'grant_basis');
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     var read = visitRead_(VISIT_.TYPE_FILE, VISIT_.TYPE_COLUMNS), mine = visitMine_(read);
     var latest = '';
@@ -139,7 +141,7 @@ function sinkVisitTypeSave_(req) {
       type_key: key, name: name, role_code: role, default_hours: dh, max_hours: mh, rights: rights.join('|'), lists: lists.join('|'),
       fields: fields.join('|'), data_years: years ? String(+years) : '', record_jobs: jobs.join('|'), record_counts: counts.join('|'),
       email_code: email === 'true' ? 'true' : '', needs_id_check: '', terms_id: '', active: active, effective_from: from,
-      set_at: londonIso_(now), set_by: who.who, source: source || ('CD Hub, ' + who.who + ', ' + today)
+      set_at: londonIso_(now), set_by: who.who, source: source || ('CD Hub, ' + who.who + ', ' + today), grant_basis: basis === 'voluntary' ? '' : basis
     });
     return { status: 'saved', id: id, type_key: key, new_version: !!latest };
   });
@@ -290,7 +292,7 @@ function sinkVisitGive_(req) {
     var cardId = String(f.card_tag_id || '').trim();
     if (cardId && !ID_RE_.test(cardId)) errors.card_tag_id = 'Choose a card from the list.';
     var purpose = visitReason_(f, errors, true, 'purpose_text');
-    var basis = visitLabelCode_(f.grant_basis, 'grant_basis', 'voluntary', errors, 'grant_basis');
+    var basis = visitLabelCode_(f.grant_basis || type.grant_basis, 'grant_basis', 'voluntary', errors, 'grant_basis');
     var assurance = visitLabelCode_(f.identity_assurance, 'identity_assurance', 'none', errors, 'identity_assurance');
     var keep = String(f.retention_until || '').trim();
     if (keep && !isRealDate_(keep)) errors.retention_until = 'Use a real date as YYYY-MM-DD.';
