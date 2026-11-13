@@ -1,15 +1,15 @@
 /*!
  * ADMIN (More -> Admin), owner-only. Lisa, 12 Nov 2026: one visual place for every admin job.
  * Shown only to someone whose Google sign-in can read BLD-field_visibility.csv (staff and visitors use the staff
- * page with codes and never sign in here). Everything is READ from live rows; this page saves nothing and never
- * sees a code: codes are made and stopped by Lisa in the Apps Script editor or on the save script's owner page.
+ * page with codes and never sign in here). Everything is READ from live rows and never sees a code; only Visits
+ * (visits.js, loaded when its card opens) saves, through the save script with the owner's code: codes are made and stopped by Lisa in the Apps Script editor or on the save script's owner page.
  * No rule, limit or list of people lives here: who-sees-what comes from BLD-field_visibility + BLD-audience rows,
  * roles from BLD-role, links from BLD-inspect_link, rules from BLD-breeding_rule, record periods from
  * BLD-retention_setting. The future list (admin-future.json) is a list of jobs to build, not rules.
  */
 var AdminView = (function () {
   'use strict';
-  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv'];
+  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv', 'BLD-grant_type.csv', 'BLD-qr_tag.csv', 'BLD-delegation.csv', 'BLD-person_role.csv', 'BLD-grant_right.csv'];
   var S = { open: '', aud: '', cell: '', futureAll: false, future: null, futureErr: '', qr: false };
   var I = {   // Tabler outline paths, ours
     qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2',
@@ -36,7 +36,7 @@ var AdminView = (function () {
   var CARDS = [
     ['codes', 'Codes', 'key', 2, 'Codes'],
     ['phone', 'Set up a phone', 'qr', 5, 'Phones'], ['saving', 'This device', 'save', 5, 'Phones'],
-    ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
+    ['visits', 'Visits', 'inspect', 7, 'People'], ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
     ['inspect', 'Inspector link', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
     ['print', 'Print', 'print', 4, 'Tools'], ['rules', 'Rules & limits', 'rules', 3, 'Tools'],
     ['records', 'Records kept', 'records', 0, 'Tools'], ['health', 'System health', 'health', 5, 'Tools']
@@ -165,7 +165,27 @@ var AdminView = (function () {
   }
 
   /* ---- the cards ---- */
+  /* Visits: its code loads only when the card opens (byte budget) */
+  var visLoading = false;
+  function visits(v) {
+    if (typeof VisitView !== 'undefined') { VisitView.bind(v); if (S.tag) { VisitView.rescan(v, S.tag); S.tag = ''; } return true; }
+    if (!visLoading && typeof document !== 'undefined') {
+      visLoading = true;
+      var sc = document.createElement('script'); sc.src = 'visits.js';
+      sc.onload = function () { v.rerender(true); };
+      sc.onerror = function () { visLoading = false; S.visErr = 'Visits did not load. Try again.'; v.rerender(true); };
+      document.head.appendChild(sc);
+    }
+    return false;
+  }
+  /* #/admin?visit_tag=<tag>: the owner rescanned a visitor card while signed in here */
+  function query(q) {
+    var m = /(?:^|&)visit_tag=([^&]+)/.exec(q || ''); if (!m) return;
+    try { S.tag = decodeURIComponent(m[1]); } catch (e) { S.tag = m[1]; }
+    S.open = 'visits';
+  }
   function body(v, id) {
+    if (id === 'visits') return visits(v) ? VisitView.body(v) : '<p class="mut">' + (S.visErr || 'Loading…') + '</p>';
     var T = v.T, u = scriptUrl(), host = location.host;
     if (id === 'codes') {
       var C = rows(T, 'BLD-code_register.csv').filter(function (r) { return r.code_id; }), byCode = {};
@@ -277,6 +297,7 @@ var AdminView = (function () {
     if (id === 'phone') return u ? 'Show QR · ' + v.esc(location.host) : 'Needs a save address';
     if (id === 'saving') return v.sinkOn() ? 'Saving on ✓' : 'Saving off';
     if (id === 'staff') { var n = rows(v.T, 'BLD-role.csv').filter(function (r) { return r.code; }).length; return n ? n + ' roles' : 'Steps'; }
+    if (id === 'visits') return typeof VisitView !== 'undefined' ? VisitView.sub(v) : (v.hasTable('BLD-inspect_link.csv') ? 'Who is here' : 'Not set up');
     if (id === 'visitor') return 'Ends by itself';
     if (id === 'inspect') { var o = rows(v.T, 'BLD-inspect_link.csv').filter(function (r) { return String(r.ends || '').slice(0, 10) >= v.today; }).length; return o ? o + ' open' : 'None open'; }
     if (id === 'lost') return 'Stop a code';
@@ -365,5 +386,5 @@ var AdminView = (function () {
       if (d.admFold === 'map') S.mapShut = !e.target.open; else S.futureShut = !e.target.open;
     }, true);
   }
-  return { FILES: FILES, on: on, page: page, staffPage: staffPage, bind: bind, access: access, _state: S };
+  return { FILES: FILES, on: on, page: page, staffPage: staffPage, bind: bind, access: access, query: query, _state: S };
 }());
