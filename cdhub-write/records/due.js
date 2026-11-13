@@ -83,15 +83,37 @@
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
+  /* a visitor's record (taken_by visit:<link id>) is kept separate: it counts only when its counts_due stamp says true or, with no stamp,
+     when that visit's BLD-inspect_link row lists the job in record_counts */
+  function visitCounts(visits) {
+    var m = {};
+    (visits || []).forEach(function (v) { if (v && v.id) m[v.id] = listOf(v.record_counts); });
+    return m;
+  }
+  /** The visit a record was saved under: taken_by 'visit:<link id>' (or its visit_id / grant_id column); '' for staff. */
+  function visitOf(log) {
+    var by = String(log.taken_by || '');
+    return log.visit_id || log.grant_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');   // grant_id: the planned name for visit_id (schema Q-N2)
+  }
+  function counts(log, version, vm) {
+    var visit = visitOf(log);
+    if (!visit) return true;
+    var stamp = String(log.counts_due || '').toLowerCase();   // stamped on the row when it was saved: what the visit granted then
+    if (stamp === 'true' || stamp === 'false') return stamp === 'true';
+    var keys = vm[visit];
+    return !!keys && keys.indexOf(version.type_key) >= 0;
+  }
   /**
    * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
    * Add dogs: [{id, area_id}] (the dogs on site here) to show a whole-site job about dogs on a dog or room too, done once each of those dogs has a line.
    * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
+   * visits: BLD-inspect_link rows (optional). A visitor's record counts only if stamped counts_due true or, unstamped, if its visit lists the job in record_counts;
+   * with no visits given, every visitor record is left out.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */
-  function forTarget(types, logs, target, today) {
-    var byId = {};
+  function forTarget(types, logs, target, today, visits) {
+    var byId = {}, vm = visitCounts(visits);
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
@@ -99,6 +121,7 @@
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
       if (!version || log.outcome === 'not_done' || log.outcome === 'note' || log.outcome === 'part_done') return;   // a note, or part done, is never a done
+      if (!counts(log, version, vm)) return;
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
       if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
@@ -125,5 +148,5 @@
     });
   }
 
-  return { forTarget: forTarget, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

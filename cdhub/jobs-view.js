@@ -16,13 +16,13 @@
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
     var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
-    var key = v.today + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
+    var key = v.today + '|' + (v.visits || []).length + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
     var rows = {}, perDog = {};
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
       targets.forEach(function (t) {
-        Due.forTarget(v.types, logs, t, v.today).forEach(function (j) {
+        Due.forTarget(v.types, logs, t, v.today, v.visits).forEach(function (j) {
           if (t.area_id && perDog[j.type_key]) return;   // counted dog by dog instead
           var r = rows[j.type_key] = rows[j.type_key] || { key: j.type_key, label: j.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: '' };
           if (j.status === 'late') r.late++;
