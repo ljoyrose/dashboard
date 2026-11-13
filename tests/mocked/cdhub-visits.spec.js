@@ -6,12 +6,12 @@ const { tabClick } = require('../support/tabs');
 const sha = (t) => 'sha256:' + require('crypto').createHash('sha256').update(t, 'utf8').digest('hex');
 const SINK = 'https://script.google.com/macros/s/PRETEND-visits/exec';
 const FV = 'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason\nfv-1,ten-x,area,*,aud-staff,yes,,,test,2026-10-16,x\n';
-const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz';
+const LINK_H = 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz,issued_by,delegation_id';
 const LINK = [LINK_H,
-  'il-old,ten-x,ic-1,Old style,2099-12-31,2026-11-01,test,,,,,,,,,,,,,,,,,,,',
-  'il-live,ten-x,ic-2,Pretend Inspector,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-1,view|review,subject,,,,,,,,,,,',
-  'il-soon,ten-x,ic-3,Pretend Vet,,2026-11-01,test,2098-05-01T09:00:00+01:00,2098-05-01T11:00:00+01:00,vt-1,,,,view,subject,,,,,,,,,,,',
-  'il-done,ten-x,ic-4,Pretend Ended,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-2,view,,,,,,,2021-01-01T10:00:00+00:00,owner,left,,,',
+  'il-old,ten-x,ic-1,Old style,2099-12-31,2026-11-01,test,,,,,,,,,,,,,,,,,,,,,',
+  'il-live,ten-x,ic-2,Pretend Inspector,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-1,view|review,subject,,,,,,,,,,,,,',
+  'il-soon,ten-x,ic-3,Pretend Vet,,2026-11-01,test,2098-05-01T09:00:00+01:00,2098-05-01T11:00:00+01:00,vt-1,,,,view,subject,,,,,,,,,,,,sc-a,dl-1',
+  'il-done,ten-x,ic-4,Pretend Ended,,2026-11-01,test,2020-01-01T09:00:00+00:00,2099-01-01T17:00:00+00:00,vt-1,,,qt-2,view,,,,,,,2021-01-01T10:00:00+00:00,owner,left,,,,,',
 ].join('\n') + '\n';
 const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source';
 const TYPES = [TYPE_H,
@@ -21,12 +21,12 @@ const TYPES = [TYPE_H,
 ].join('\n') + '\n';
 const TAGS = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by,fixed_type_id\nqt-1,ten-x,' + sha('VC1') + ',visitor_card,Visitor 1,yes,2026-11-01,test,\nqt-2,ten-x,' + sha('VC2') + ',visitor_card,Visitor 2,yes,2026-11-01,test,\nqt-3,ten-x,R1,area,area-1,yes,2026-11-01,test,\n';
 
-const DELEG = 'id,tenant_id,power,holder_person_id,holder_sign_in_id,parent_id,depth_left,from_at,to_at,visit_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes\n'
-  + 'dl-1,ten-x,give_visit,per-a,,,1,,,vt-1,6,view|review,,,,,yes,no,,,,,owner,2026-11-13,invented,\n'
-  + 'dl-2,ten-x,give_visit,per-b,,dl-1,0,,,vt-1,4,view,,,,,no,no,,,,,per-a,2026-11-13,invented,\n'
-  + 'dl-3,ten-x,give_visit,per-c,,,0,,,,,,,,,,no,no,2026-11-01T10:00:00+00:00,owner,left,keep,owner,2026-10-01,invented,\n'
-  + 'dl-4,ten-x,issue_code,per-c,,,0,,,,,,,,,,no,no,,,,,owner,2026-10-01,invented,\n';
-const PEOPLE = 'id,tenant_id,full_name,known_as\nper-a,ten-x,Pretend Manager,Manny\nper-b,ten-x,Pretend Deputy,\nper-c,ten-x,Pretend Gone,\n';
+const DELEG = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_at,to_at,visit_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes\n'
+  + 'dl-1,ten-x,give_visit,,sc-a,,,1,,,vt-1,6,view|review,,,,,yes,no,,,,,owner,2026-11-13,invented,\n'
+  + 'dl-2,ten-x,give_visit,,sc-b,,dl-1,0,,,vt-1,4,view,,,,,no,no,,,,,sc-a,2026-11-13,invented,\n'
+  + 'dl-3,ten-x,give_visit,,sc-c,,,0,,,,,,,,,,no,no,2026-11-01T10:00:00+00:00,owner,left,keep,owner,2026-10-01,invented,\n'
+  + 'dl-4,ten-x,issue_code,,sc-c,,,0,,,,,,,,,,no,no,,,,,owner,2026-10-01,invented,\n';
+const CODES = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\ncr-a,ten-x,sc-a,Manny,MANAGER,2026-10-01,,\ncr-b,ten-x,sc-b,Pretend Deputy,STAFF,2026-10-01,,\ncr-c,ten-x,sc-c,Pretend Gone,STAFF,2026-10-01,,\n';
 
 function world({ types = true } = {}) {
   const d = buildWorld();
@@ -36,7 +36,7 @@ function world({ types = true } = {}) {
   if (types) put('v-type', 'BLD-visit_type.csv', TYPES);
   put('v-tag', 'BLD-qr_tag.csv', TAGS);
   put('v-deleg', 'BLD-delegation.csv', DELEG);
-  d.files.find((x) => x.name === 'BLD-person.csv' && (x.parents || []).includes(IDS.bld)).content = PEOPLE;
+  put('v-codes', 'BLD-code_register.csv', CODES);
   return d;
 }
 const test = base.extend({ world: async ({}, use) => use(world()) });
@@ -196,13 +196,39 @@ test.describe('CD Hub Visits: who can give visits', () => {
     const f = page.locator('form[data-vis-form="deleg"]');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('#adm-visits [role="status"]')).toContainText('Pick who');
-    await f.locator('[name="holder"]').selectOption('per-c');
+    await f.locator('[name="holder"]').selectOption('sc-c');
     await f.locator('[name="d_types"][value="vt-1"]').check();
     await f.locator('[name="d_rights"][value="view"]').check();
     await f.locator('[name="max_hours"]').fill('3');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('.vis-row[data-vis-deleg="dl-new"] .adm-ok')).toBeVisible();
-    expect(bodies[0]).toMatchObject({ action: 'delegation_give', fields: { power: 'give_visit', holder_person_id: 'per-c', visit_type_ids: 'vt-1', rights: 'view', max_hours: '3', depth_left: '0', end_others: 'no' } });
+    expect(bodies[0]).toMatchObject({ action: 'delegation_give', fields: { power: 'give_visit', holder_code_id: 'sc-c', visit_type_ids: 'vt-1', rights: 'view', max_hours: '3', depth_left: '0', end_others: 'no' } });
+  });
+});
+
+test.describe('CD Hub Visits: who gave what', () => {
+  test('per person: what they can give (with the chain back to you) and what they gave; filters; End now from a row', async ({ page }) => {
+    await open(page);
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', ended_at: '2026-11-13T12:00:00+00:00' } }));
+    await visits(page);
+    await page.locator('[data-vis-mode="gave"]').click();
+    const manny = page.locator('[data-vis-who="sc-a"]');
+    await expect(manny).toContainText('Give visits');
+    await expect(manny).toContainText('from You → Manny');
+    await expect(manny).toContainText('Pretend Vet');
+    await expect(manny).toContainText('Pretend Deputy: Give visits');   // Manny passed it on
+    await expect(page.locator('[data-vis-who="-"]')).toContainText('Pretend Inspector');   // owner's own visits
+    await expect(page.locator('[data-vis-who="sc-b"]')).toContainText('from You → Manny → Pretend Deputy');
+    await page.locator('form[data-vis-form="gavef"] [name="who"]').selectOption('sc-a');
+    await expect(page.locator('[data-vis-who]')).toHaveCount(1);
+    await page.locator('form[data-vis-form="gavef"] [name="kind"]').selectOption('visit');
+    await expect(manny).not.toContainText('Pretend Deputy: Give visits');
+    await manny.locator('[data-vis-end="il-soon"]').click();
+    await page.locator('form[data-vis-form="end"] [name="reason"]').fill('Not needed');
+    await page.locator('form[data-vis-form="end"] button[type="submit"]').click();
+    await expect(page.locator('#adm-visits [role="status"]')).toHaveText('Ended ✓');
+    expect(bodies[0]).toMatchObject({ action: 'visit_end', fields: { link_id: 'il-soon' } });
+    await expect(manny).toContainText('ended');
   });
 });
 

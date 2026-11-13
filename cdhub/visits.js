@@ -122,16 +122,24 @@ var VisitView = (function () {
       record_counts: all('counts').filter(function (k) { return has(jobsT, k); }).join('|'), email_code: all('email').length ? 'yes' : '' };
   }
 
+  function endForm(v, id) {
+    return '<form class="vis-f" data-vis-form="end"><input type="hidden" name="link_id" value="' + v.esc(id) + '"><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
+      + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>End now</button> <button type="button" class="cb" data-vis-end="">Back</button></p></form>';
+  }
+  function dendForm(v, id) {
+    return '<form class="vis-f" data-vis-form="dend"><input type="hidden" name="id" value="' + v.esc(id) + '"><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
+      + '<fieldset class="vis-chips"><legend>What they gave under it</legend><label><input type="radio" name="end_issued" value="keep" checked> Keep</label><label><input type="radio" name="end_issued" value="end"> End now too</label></fieldset>'
+      + '<p class="mut">Anyone they passed it on to loses it too.</p><p><button type="submit" class="btn">End</button> <button type="button" class="cb" data-vis-dend="">Back</button></p></form>';
+  }
   function listHtml(v, L, now, kind) {
     var T = types(v.T, v.today), C = cards(v.T);
     return L.map(function (r) {
       var w = win(r), t = byId(T, r.visit_type_id), c = byId(C, r.card_tag_id), ok = S.ok === r.id ? ' <span class="adm-ok" aria-label="saved">✓</span>' : '';
       var span = kind === 'live' ? 'until ' + (new Date(w.e).toDateString() === new Date(now).toDateString() ? hm(w.e) : when(w.e)) : when(w.s) + ' to ' + when(w.e);
       var h = '<div class="vis-row" data-vis-link="' + v.esc(r.id) + '"><b>' + v.esc(r.visitor_name ? r.visitor_name + (r.organisation ? ', ' + r.organisation : '') : (r.label || r.id)) + ok + '</b><span class="vis-when">' + v.esc(span)
-        + (t ? ' · ' + v.esc(t.name) : '') + (r.delegation_id && r.issued_by ? ' · by ' + v.esc(person(v.T, r.issued_by)) : '') + (c ? ' · ' + v.esc(c.ref_id || c.tag) : (r.card_tag_id ? '' : ' · link')) + '</span>'
+        + (t ? ' · ' + v.esc(t.name) : '') + (by(r.issued_by) ? ' · by ' + v.esc(person(v.T, r.issued_by)) : '') + (c ? ' · ' + v.esc(c.ref_id || c.tag) : (r.card_tag_id ? '' : ' · link')) + '</span>'
         + '<button type="button" class="cb" data-vis-ext="' + v.esc(r.id) + '">Extend</button><button type="button" class="cb" data-vis-end="' + v.esc(r.id) + '">' + (kind === 'live' ? 'End now' : 'Cancel') + '</button></div>';
-      if (S.end === r.id) h += '<form class="vis-f" data-vis-form="end"><input type="hidden" name="link_id" value="' + v.esc(r.id) + '"><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
-        + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>End now</button> <button type="button" class="cb" data-vis-end="">Back</button></p></form>';
+      if (S.end === r.id) h += endForm(v, r.id);
       if (S.ext === r.id) h += '<form class="vis-f" data-vis-form="ext"><input type="hidden" name="link_id" value="' + v.esc(r.id) + '"><div class="vis-two"><label>New end DD/MM/YY<input type="text" name="d" inputmode="numeric" value="' + v.esc(when(w.e).slice(0, 8)) + '"></label>'
         + '<label>HH:MM<input type="text" name="t" inputmode="numeric" value="' + v.esc(hm(w.e)) + '"></label></div><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
         + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>Extend</button> <button type="button" class="cb" data-vis-ext="">Back</button></p></form>';
@@ -191,7 +199,13 @@ var VisitView = (function () {
   /* WHO CAN GIVE VISITS (Lisa 13 Nov): giving access is a power of its own (BLD-delegation, power give_visit). No role
      carries it; only the owner confers it, with its own limits and how many layers it may be passed on. The server
      enforces "never more than the giver holds"; this list only shows the rows. */
-  function person(T, id) { var p = byId(rows(T, 'BLD-person.csv'), id); return p ? (p.known_as || p.full_name || id) : (id || ''); }
+  function person(T, id) {
+    if (!id || id === 'owner') return 'You';
+    var c = (T['BLD-code_register.csv'] || []).filter(function (r) { return r.code_id === id; })[0]; if (c) return c.who || id;   /* staff code: the holder survives a reset */
+    var p = byId(rows(T, 'BLD-person.csv'), id); return p ? (p.known_as || p.full_name || id) : id;
+  }
+  function hk(r) { return r.holder_code_id || r.holder_person_id || ''; }   /* the server keys a holder on their code */
+  function by(x) { return !x || x === 'owner' ? '' : x; }
   function dlive(r, now) { return !r.ended_at && (!r.to_at || Date.parse(r.to_at) > now) && (!r.from_at || Date.parse(r.from_at) <= now); }
   function limits(v, r) {
     var T = types(v.T, v.today), x = [];
@@ -213,21 +227,20 @@ var VisitView = (function () {
     return '<p class="mut">Only people listed here can give visits. A role alone never can.</p>'
       + (D.length ? D.map(function (r) {
         var ok = S.ok === r.id ? ' <span class="adm-ok" aria-label="saved">✓</span>' : '';
-        var h = '<div class="vis-row" data-vis-deleg="' + v.esc(r.id) + '"><b>' + v.esc(person(v.T, r.holder_person_id)) + ok + '</b><span class="vis-when">' + v.esc(limits(v, r))
-          + (r.parent_id ? ' · via ' + v.esc(person(v.T, (byId(rows(v.T, 'BLD-delegation.csv'), r.parent_id) || {}).holder_person_id)) : '') + '</span>'
+        var h = '<div class="vis-row" data-vis-deleg="' + v.esc(r.id) + '"><b>' + v.esc(person(v.T, hk(r))) + ok + '</b><span class="vis-when">' + v.esc(limits(v, r))
+          + (r.parent_id ? ' · via ' + v.esc(person(v.T, hk(byId(rows(v.T, 'BLD-delegation.csv'), r.parent_id) || {}))) : '') + '</span>'
           + '<button type="button" class="cb" data-vis-dend="' + v.esc(r.id) + '">End</button></div>';
-        if (S.dend === r.id) h += '<form class="vis-f" data-vis-form="dend"><input type="hidden" name="id" value="' + v.esc(r.id) + '"><label>Reason<input type="text" name="reason" required autocomplete="off"></label>'
-          + '<fieldset class="vis-chips"><legend>Visits they gave</legend><label><input type="radio" name="end_issued" value="keep" checked> Keep</label><label><input type="radio" name="end_issued" value="end"> End them now</label></fieldset>'
-          + '<p class="mut">Anyone they passed it on to loses it too.</p><p><button type="submit" class="btn">End</button> <button type="button" class="cb" data-vis-dend="">Back</button></p></form>';
+        if (S.dend === r.id) h += dendForm(v, r.id);
         return h;
       }).join('') : '<p class="mut">No one yet.</p>')
       + '<p><button type="button" class="btn" data-vis-dnew="1">Let someone give visits</button> <button type="button" class="cb" data-vis-mode="">Back</button></p>';
   }
   function delegForm(v) {
-    var d = S.d, P = rows(v.T, 'BLD-person.csv'), T = types(v.T, v.today), A = rows(v.T, 'BLD-area.csv'), R = pipe(d.rights), Ty = pipe(d.visit_type_ids), Ar = pipe(d.area_ids);
+    var d = S.d, P = (v.T['BLD-code_register.csv'] || []).filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }), T = types(v.T, v.today), A = rows(v.T, 'BLD-area.csv'), R = pipe(d.rights), Ty = pipe(d.visit_type_ids), Ar = pipe(d.area_ids);
     var tick = function (name, val, on, label) { return '<label><input type="checkbox" name="' + name + '" value="' + v.esc(val) + '"' + (on ? ' checked' : '') + '> ' + label + '</label>'; };
     return '<form class="vis-f" data-vis-form="deleg">'
-      + '<label>Who<select name="holder"><option value="">–</option>' + P.map(function (p) { return '<option value="' + v.esc(p.id) + '"' + (p.id === d.holder ? ' selected' : '') + '>' + v.esc(p.known_as || p.full_name || p.id) + '</option>'; }).join('') + '</select></label>'
+      + '<label>Who<select name="holder"><option value="">–</option>' + P.map(function (p) { return '<option value="' + v.esc(p.code_id) + '"' + (p.code_id === d.holder ? ' selected' : '') + '>' + v.esc((p.who || p.code_id) + (p.role ? ' (' + p.role + ')' : '')) + '</option>'; }).join('') + '</select></label>'
+      + (P.length ? '' : '<p class="mut">No one has a code yet: give them one first.</p>')
       + '<fieldset class="vis-ticks"><legend>Types they may give (none ticked = any)</legend>' + T.map(function (t) { return tick('d_types', t.id, has(Ty, t.id), v.esc(t.name)); }).join('') + '</fieldset>'
       + '<fieldset class="vis-ticks"><legend>Rights they may hand out (none ticked = any)</legend>' + RIGHTS.map(function (x) { return tick('d_rights', x[0], has(R, x[0]), x[1]); }).join('') + '</fieldset>'
       + (A.length ? '<fieldset class="vis-ticks"><legend>Rooms (none ticked = all)</legend>' + A.map(function (a) { return tick('d_areas', a.id, has(Ar, a.id), v.esc(a.code || a.id)); }).join('') + '</fieldset>' : '')
@@ -242,7 +255,7 @@ var VisitView = (function () {
   async function saveDeleg(v, form) {
     var el = form.elements, all = function (n) { return Array.prototype.filter.call(form.querySelectorAll('[name="' + n + '"]'), function (i) { return i.checked; }).map(function (i) { return i.value; }).join('|'); };
     if (!el.holder.value) return 'Pick who.';
-    var F = { power: 'give_visit', holder_person_id: el.holder.value, parent_id: '', depth_left: String(Math.max(0, parseInt(el.depth_left.value, 10) || 0)), from_at: '', to_at: '',
+    var F = { power: 'give_visit', holder_person_id: '', holder_code_id: el.holder.value, parent_id: '', depth_left: String(Math.max(0, parseInt(el.depth_left.value, 10) || 0)), from_at: '', to_at: '',
       visit_type_ids: all('d_types'), max_hours: el.max_hours.value, rights: all('d_rights'), lists: '', fields: '', area_ids: all('d_areas'), subject_ids: '',
       end_others: el.end_others.checked ? 'yes' : 'no', extend_others: el.extend_others.checked ? 'yes' : 'no', source: el.source.value.trim() };
     if (el.td.value || el.tt.value) { var e = parse(el.td.value, el.tt.value || '23:59'); if (!e) return 'Type the end as DD/MM/YY and HH:MM.'; if (e <= new Date()) return 'That time has passed.'; F.to_at = iso(e); }
@@ -267,6 +280,61 @@ var VisitView = (function () {
     return '';
   }
 
+  /* WHO GAVE WHAT (Lisa 13 Nov: "I can see who has given what from my admin screen?"). Owner-only, from rows:
+     powers held (BLD-delegation, any power) with the chain back to the owner, and everything each person gave:
+     visits (inspect_link.issued_by = the giver's code_id or 'owner'), codes (code_register.issued_by when the column exists, else the owner),
+     roles (person_role.granted_by). Blank issuer = the owner ("You"). */
+  var KINDS = [['', 'All'], ['visit', 'Visits'], ['code', 'Codes'], ['role', 'Roles'], ['power', 'Powers']];
+  var POWER = { give_visit: 'Give visits', issue_code: 'Give codes', issue_device: 'Set up phones', give_role: 'Give roles' };
+  function chain(v, r) {
+    var D = rows(v.T, 'BLD-delegation.csv'), out = [person(v.T, hk(r))], seen = {};
+    for (var p = byId(D, r.parent_id); p && !seen[p.id]; p = byId(D, p.parent_id)) { seen[p.id] = 1; out.unshift(person(v.T, hk(p))); }
+    out.unshift('You'); return out.join(' → ');
+  }
+  function given(v) {
+    var now = Date.now(), out = [];
+    rows(v.T, 'BLD-inspect_link.csv').forEach(function (r) { var w = win(r); out.push({ kind: 'visit', by: by(r.issued_by), at: w.s, what: r.visitor_name || r.label || r.id, live: state(r, now) !== 'ended', id: r.id, end: 'visit' }); });
+    rows(v.T, 'BLD-code_register.csv').forEach(function (r) { out.push({ kind: 'code', by: by(r.issued_by), at: Date.parse(r.from_date) || 0, what: (r.who || '') + ' ' + (r.role || ''), live: !r.to_date || r.to_date >= v.today, id: r.id }); });
+    rows(v.T, 'BLD-person_role.csv').forEach(function (r) { out.push({ kind: 'role', by: by(r.granted_by), at: Date.parse(r.started_on) || 0, what: person(v.T, r.person_id) + ' ' + (r.role_code || ''), live: !r.ended_on || r.ended_on >= v.today, id: r.id }); });
+    rows(v.T, 'BLD-delegation.csv').forEach(function (r) { var p = byId(rows(v.T, 'BLD-delegation.csv'), r.parent_id);
+      out.push({ kind: 'power', by: p ? hk(p) : '', at: Date.parse(r.from_at || r.conferred_at) || 0, what: person(v.T, hk(r)) + ': ' + (POWER[r.power] || r.power), live: dlive(r, now), id: r.id, end: 'deleg' }); });
+    return out;
+  }
+  function gaveHtml(v) {
+    var g = S.g || (S.g = { who: '', kind: '', from: '' }), all = given(v), from = g.from ? parse(g.from, '00:00') : null;
+    var people = {}; all.forEach(function (x) { people[x.by] = 1; });
+    rows(v.T, 'BLD-delegation.csv').forEach(function (r) { people[hk(r)] = 1; });
+    var list = Object.keys(people).sort(function (a, b) { return a === '' ? -1 : b === '' ? 1 : person(v.T, a).localeCompare(person(v.T, b)); });
+    if (g.who !== '' && g.who !== '*') list = list.filter(function (p) { return p === g.who; });
+    var opt = function (val, label, on) { return '<option value="' + v.esc(val) + '"' + (on ? ' selected' : '') + '>' + v.esc(label) + '</option>'; };
+    var h = '<form class="vis-f vis-two" data-vis-form="gavef"><label>Person<select name="who">' + opt('*', 'Everyone', g.who === '' || g.who === '*')
+      + Object.keys(people).map(function (p) { return opt(p || '-', p ? person(v.T, p) : 'You', g.who === (p || '-')); }).join('') + '</select></label>'
+      + '<label>What<select name="kind">' + KINDS.map(function (k) { return opt(k[0], k[1], g.kind === k[0]); }).join('') + '</select></label>'
+      + '<label>From DD/MM/YY<input type="text" name="from" inputmode="numeric" placeholder="DD/MM/YY" value="' + v.esc(g.from) + '"></label></form>';
+    if (g.who === '-') list = [''];
+    var now = Date.now();
+    list.forEach(function (p) {
+      var held = rows(v.T, 'BLD-delegation.csv').filter(function (r) { return p && hk(r) === p; }).sort(function (a, b) { return (dlive(b, now) ? 1 : 0) - (dlive(a, now) ? 1 : 0); });
+      var gave = all.filter(function (x) { return x.by === p && (!g.kind || x.kind === g.kind) && (!from || x.at >= from.getTime()); })
+        .sort(function (a, b) { return (b.live ? 1 : 0) - (a.live ? 1 : 0) || b.at - a.at; });
+      if (!held.length && !gave.length) return;
+      h += '<div class="vis-sec" data-vis-who="' + v.esc(p || '-') + '"><h4>' + v.esc(p ? person(v.T, p) : 'You') + '</h4>';
+      if (held.length && (!g.kind || g.kind === 'power')) h += '<p class="mut">Can:</p>' + held.map(function (r) {
+        var live = dlive(r, now);
+        return '<div class="vis-row"><b>' + v.esc(POWER[r.power] || r.power) + '</b><span class="vis-when">' + v.esc(limits(v, r)) + ' · from ' + v.esc(chain(v, r)) + (live ? '' : ' · ended') + '</span>'
+          + (live ? '<button type="button" class="cb" data-vis-dend="' + v.esc(r.id) + '">End</button>' : '') + '</div>' + (S.dend === r.id ? dendForm(v, r.id) : '');
+      }).join('');
+      if (gave.length) h += '<p class="mut">Gave:</p>' + gave.map(function (x) {
+        return '<div class="vis-row"><b>' + v.esc(x.what) + '</b><span class="vis-when">' + v.esc((KINDS.filter(function (k) { return k[0] === x.kind; })[0] || ['', x.kind])[1]) + (x.at ? ' · ' + v.esc(when(x.at).slice(0, 8)) : '') + ' · ' + (x.live ? 'active' : 'ended') + '</span>'
+          + (x.live && x.end === 'visit' ? '<button type="button" class="cb" data-vis-end="' + v.esc(x.id) + '">End now</button>' : '')
+          + (x.live && x.end === 'deleg' ? '<button type="button" class="cb" data-vis-dend="' + v.esc(x.id) + '">End</button>' : '') + '</div>'
+          + (S.end === x.id && x.end === 'visit' ? endForm(v, x.id) : '') + (S.dend === x.id && x.end === 'deleg' ? dendForm(v, x.id) : '');
+      }).join('');
+      h += '</div>';
+    });
+    return h + '<p class="mut">Phones set up: coming. Only you see this page.</p><p><button type="button" class="cb" data-vis-mode="">Back</button></p>';
+  }
+
   function body(v) {
     var now = Date.now(), L = rows(v.T, 'BLD-inspect_link.csv');
     var live = L.filter(function (r) { return state(r, now) === 'live'; }).sort(function (a, b) { return win(a).e - win(b).e; });
@@ -277,8 +345,9 @@ var VisitView = (function () {
     if (S.mode === 'give') return msg + giveHtml(v);
     if (S.mode === 'types') return msg + typesHtml(v);
     if (S.mode === 'who') return msg + whoHtml(v);
+    if (S.mode === 'gave') return msg + gaveHtml(v);
     return msg + url
-      + '<p><button type="button" class="btn" data-vis-mode="give">Give a visit</button> <button type="button" class="cb" data-vis-mode="types">Visit types</button> <button type="button" class="cb" data-vis-mode="who">Who can give visits</button></p>'
+      + '<p><button type="button" class="btn" data-vis-mode="give">Give a visit</button> <button type="button" class="cb" data-vis-mode="types">Visit types</button> <button type="button" class="cb" data-vis-mode="who">Who can give visits</button> <button type="button" class="cb" data-vis-mode="gave">Who gave what</button></p>'
       + '<div class="vis-sec"><h4>Active now</h4>' + (live.length ? listHtml(v, live, now, 'live') : '<p class="mut">No one.</p>') + '</div>'
       + '<div class="vis-sec"><h4>Coming up</h4>' + (soon.length ? listHtml(v, soon, now, 'soon') : '<p class="mut">None.</p>') + '</div>'
       + (v.hasTable('BLD-visit_type.csv') ? '' : '<p class="mut">Visit types not set up yet.</p>');
@@ -395,6 +464,7 @@ var VisitView = (function () {
     });
     document.addEventListener('change', function (e) {
       var form = e.target.closest && e.target.closest('form[data-vis-form]'); if (!form) return;
+      if (form.dataset.visForm === 'gavef') { S.g = { who: form.elements.who.value, kind: form.elements.kind.value, from: form.elements.from.value.trim() }; S.end = ''; S.dend = ''; redraw(); return; }
       if (form.dataset.visForm === 'give') {
         var n = e.target.name;
         if (n === 'type') { keep(form); S.f.g = null; S.f.hours = ''; redraw(); }
@@ -408,7 +478,7 @@ var VisitView = (function () {
     document.addEventListener('submit', function (e) {
       var form = e.target.closest && e.target.closest('form[data-vis-form]'); if (!form) return;
       e.preventDefault();
-      if (S.busy) return;
+      if (S.busy || form.dataset.visForm === 'gavef') return;
       var vv = VisitView._v, k = form.dataset.visForm;
       S.busy = true;
       var btn = form.querySelector('[type=submit]'); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
