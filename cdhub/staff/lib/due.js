@@ -83,7 +83,8 @@
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
-  /* a visitor's record (visit_id) is kept separate: it counts only when that visit's BLD-inspect_link row lists the job in record_counts */
+  /* a visitor's record (visit_id) is kept separate: it counts only when its counts_due stamp says true or, with no stamp,
+     when that visit's BLD-inspect_link row lists the job in record_counts */
   function visitCounts(visits) {
     var m = {};
     (visits || []).forEach(function (v) { if (v && v.id) m[v.id] = listOf(v.record_counts); });
@@ -91,6 +92,8 @@
   }
   function counts(log, version, vm) {
     if (!log.visit_id) return true;
+    var stamp = String(log.counts_due || '').toLowerCase();   // stamped on the row when it was saved: what the visit granted then
+    if (stamp === 'true' || stamp === 'false') return stamp === 'true';
     var keys = vm[log.visit_id];
     return !!keys && keys.indexOf(version.type_key) >= 0;
   }
