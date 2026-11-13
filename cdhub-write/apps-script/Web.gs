@@ -130,8 +130,8 @@ function ui_inspectLinks() {
   try { requireAdmin_(); return { ok: true, result: { links: sinkInspectLinks_() } }; }
   catch (ex) { return errorBody_(ex); }
 }
-function ui_inspectStop(linkId) {
-  try { requireAdmin_(); return { ok: true, result: sinkInspectStop_(String(linkId), adminEmail_()) }; }
+function ui_inspectStop(linkId, reason) {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectStop_(String(linkId), adminEmail_(), reason) }; }
   catch (ex) { return errorBody_(ex); }
 }
 
