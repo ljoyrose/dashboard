@@ -97,6 +97,24 @@ function ui_revokeCode(codeId) {
   catch (ex) { return errorBody_(ex); }
 }
 
+/** Code admin (Codes.gs). Owner-only. Issue and reset return the new code ONCE, for this page to show; never logged. */
+function ui_issueCode(who, role) {
+  try { requireAdmin_(); return { ok: true, result: sinkIssueCode_(who, role, adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_renameCode(codeId, who) {
+  try { requireAdmin_(); return { ok: true, result: sinkRenameCode_(String(codeId), who, adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_resetCode(codeId) {
+  try { requireAdmin_(); return { ok: true, result: sinkResetCode_(String(codeId), adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_codeRegisterSync() {
+  try { requireAdmin_(); return { ok: true, result: sinkCodeRegisterSync_() }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
 /** Inspector links (Inspect.gs). Owner-only. Make returns the code ONCE for the page to show; it is never logged. */
 function ui_inspectChoices() {
   try { requireAdmin_(); return { ok: true, result: sinkInspectChoices_() }; }
