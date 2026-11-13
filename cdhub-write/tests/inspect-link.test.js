@@ -6,7 +6,7 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const H = {
-  link: 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,data_from_date,data_to_date',
+  link: 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,visit_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,rights,lists,record_jobs,record_counts,data_from_date,data_to_date,email_code,ended_at,ended_by,end_reason,id_checked_by,accompanied_by,tz',
   linkV1: 'id,tenant_id,code_id,label,ends,made_at,made_by',
   subj: 'id,tenant_id,link_id,subject_id,from_date,to_date',
   field: 'id,tenant_id,link_id,table_name,field_name,redaction',

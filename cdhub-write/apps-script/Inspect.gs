@@ -20,9 +20,12 @@ var ROLE_INSPECTOR = 'INSPECTOR';
 
 var INSPECT = {
   LINK_FILE: 'BLD-inspect_link.csv',
-  // V9 (13 Nov 2026, Lisa: "now for a specific time or scheduled date time from to"): starts_at/ends_at are London
-  // date-times; data_from_date/data_to_date are kept for the data period (not used yet). Old 7-column files still read.
-  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'starts_at', 'ends_at', 'data_from_date', 'data_to_date'],
+  // V9 (13 Nov 2026, Lisa: "now for a specific time or scheduled date time from to"; visits agreed with ADMIN in
+  // AA_VISIT-API_2026-11-13-2034): starts_at/ends_at are London date-times; the rest is what the visit actually got,
+  // copied from its visit type at give time (Visit.gs). Blank slots: id_checked_by, accompanied_by, tz. Old 7-column files still read.
+  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by', 'starts_at', 'ends_at', 'visit_type_id', 'person_id',
+    'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'rights', 'lists', 'record_jobs', 'record_counts', 'data_from_date',
+    'data_to_date', 'email_code', 'ended_at', 'ended_by', 'end_reason', 'id_checked_by', 'accompanied_by', 'tz'],
   LINK_COLUMNS_V1: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'made_at', 'made_by'],
   SUBJECT_FILE: 'BLD-inspect_link_subject.csv',
   SUBJECT_COLUMNS: ['id', 'tenant_id', 'link_id', 'subject_id', 'from_date', 'to_date'],
@@ -339,7 +342,8 @@ function londonLocalMs_(s) {
 }
 
 /** Work out a window from the owner's request. Returns {startMs, endMs, starts_at, ends_at, later}. */
-function externalWindow_(spec, role, now, bad) {
+function externalWindow_(spec, role, now, bad, typeHours) {
+  typeHours = typeHours || {};
   var nowMs = now.getTime(), today = todayLondon_(now), startMs = nowMs, endMs, H = 3600000;
   var hours = spec.hours, until = String(spec.until || '').trim(), sa = String(spec.starts_at || '').trim(), ea = String(spec.ends_at || '').trim();
   var endsDay = String(spec.ends || '').trim();
@@ -353,8 +357,8 @@ function externalWindow_(spec, role, now, bad) {
     if (isNaN(endMs)) throw bad('until', 'Choose a time as HH:MM.');
     if (endMs <= nowMs) throw bad('until', 'That time has already passed today.');
   } else if (sa || ea) {
-    startMs = sa ? londonLocalMs_(sa) : nowMs;
-    endMs = londonLocalMs_(ea);
+    startMs = sa ? externalMs_(sa) : nowMs;
+    endMs = externalMs_(ea);
     if (isNaN(startMs)) throw bad('starts_at', 'Choose the date and time it opens.');
     if (isNaN(endMs)) throw bad('ends_at', 'Choose the date and time it ends.');
     if (startMs < nowMs) startMs = nowMs;                                  // a start already passed means from now
@@ -364,15 +368,29 @@ function externalWindow_(spec, role, now, bad) {
     if (endsDay < today) throw bad('ends', 'The last day cannot be in the past.');
     endMs = Date.parse(inspectEndOfDay_(endsDay));
   } else {
-    var def = externalRule_('default_hours', role, today);
+    var def = typeHours.default_hours > 0 ? typeHours.default_hours : externalRule_('default_hours', role, today);
     if (def === null) throw bad('ends_at', 'Choose when it ends.');
     endMs = nowMs + Math.round(def * H);
   }
-  var max = externalRule_('max_hours', role, today);
+  var max = externalMax_(role, today, typeHours.max_hours);
   if (max !== null && endMs - startMs > Math.round(max * H) + 60000) {
     throw bad(hours !== undefined && hours !== null && hours !== '' ? 'hours' : (until ? 'until' : (sa || ea ? 'ends_at' : (endsDay ? 'ends' : 'ends_at'))), 'This can last ' + max + ' hours at most (your rule for ' + String(role).toLowerCase() + ' visits).');
   }
   return { startMs: startMs, endMs: endMs, starts_at: londonIso_(new Date(startMs)), ends_at: londonIso_(new Date(endMs)), later: startMs > nowMs + 60000 };
+}
+
+/** The longest a window may last: the lower of the visit type's max_hours and the external.max_hours.<role> row, or null. */
+function externalMax_(role, day, typeMax) {
+  var rule = externalRule_('max_hours', role, day), t = Number(typeMax);
+  if (t > 0 && (rule === null || t < rule)) return t;
+  return rule;
+}
+
+/** A start or end time: London 'YYYY-MM-DDTHH:MM', or a full ISO time with its offset (as the hub sends). NaN if neither. */
+function externalMs_(s) {
+  s = String(s || '').trim();
+  if (ISO_DT_RE_.test(s)) return Date.parse(s);
+  return londonLocalMs_(s);
 }
 
 /** A code whose window has not opened yet? (starts_at in the future) */

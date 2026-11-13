@@ -43,6 +43,12 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
+    // visits (V9, Visit.gs; OWNER code, OFF until TABLE_ON_visit is true)
+    if (req && typeof req === 'object' && req.action === 'visit_type_save') return jsonOut_({ ok: true, result: sinkVisitTypeSave_(req) });
+    if (req && typeof req === 'object' && req.action === 'card_add') return jsonOut_({ ok: true, result: sinkCardAdd_(req) });
+    if (req && typeof req === 'object' && req.action === 'visit_give') return jsonOut_({ ok: true, result: sinkVisitGive_(req) });
+    if (req && typeof req === 'object' && req.action === 'visit_end') return jsonOut_({ ok: true, result: sinkVisitEnd_(req) });
+    if (req && typeof req === 'object' && req.action === 'visit_extend') return jsonOut_({ ok: true, result: sinkVisitExtend_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
