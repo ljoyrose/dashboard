@@ -479,7 +479,7 @@ var TABLES = {
       subject_id:    { type: 'ref', lookup: 'subject' },
       item:          { type: 'text' },
       amount:        { type: 'text' },
-      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note'], required: true },   // recorded = a report, such as an incident, with no pass or fail; note = a note added to a record already saved (13 Nov 2026), never counted as done
+      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note', 'part_done'], required: true },   // recorded = a report, such as an incident, with no pass or fail; note = a note added to a record already saved (13 Nov 2026), never counted as done; part_done = started, not finished (note required), not counted as done
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
@@ -487,12 +487,12 @@ var TABLES = {
       litter_id:     { type: 'ref', lookup: 'litter' },                             // 12 Nov 2026: a litter job (check_type target litter)
       note_for_id:   { type: 'text' }                                               // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item'], dupTimeCol: 'taken_at',
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item', 'outcome'], dupTimeCol: 'taken_at',   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors, lookups) {
-      if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
-        errors.note = 'Say briefly what the concern is or why it was not done.';
+      if ((row.outcome === 'concern' || row.outcome === 'not_done' || row.outcome === 'part_done') && row.note === '' && !errors.note) {
+        errors.note = row.outcome === 'part_done' ? 'Say briefly what is left to do.' : 'Say briefly what the concern is or why it was not done.';
       }
       // a note added to a record already saved (Lisa 13 Nov 2026: "in addition to done rather than instead")
       if (row.outcome === 'note') {

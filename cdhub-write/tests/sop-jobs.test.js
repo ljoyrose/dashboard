@@ -198,3 +198,17 @@ test('note: added to a record already saved, never a duplicate and never blockin
   assert.equal(bad({ note_for_id: n1.result.id }).fields.note_for_id, 'That record was not found.');   // not a note on a note
   assert.equal(bad({ outcome: 'ok' }).fields.note_for_id, 'Only a note can point at another record.');
 });
+
+test('after a done, the same job can be saved again as a concern, not done or part done (each needs a note); the same outcome twice is a repeat', () => {
+  const env = env0();
+  const id = typeId(env, 'pup_weigh', { target: 'litter' });
+  const f = (o) => Object.assign({ check_type_id: id, litter_id: 'ltr-1' }, o);
+  assert.equal(log(env, f({})).ok, true);
+  assert.equal(log(env, f({ outcome: 'concern' })).fields.note, 'Say briefly what the concern is or why it was not done.');
+  assert.equal(log(env, f({ outcome: 'concern', note: 'Runt off food' })).ok, true);
+  assert.equal(log(env, f({ outcome: 'part_done' })).fields.note, 'Say briefly what is left to do.');
+  assert.equal(log(env, f({ outcome: 'part_done', note: 'Two left to weigh' })).ok, true);
+  assert.equal(log(env, f({ outcome: 'not_done', note: 'Scales broken' })).ok, true);
+  assert.equal(log(env, f({})).code, 'DUPLICATE');
+  assert.equal(log(env, f({ outcome: 'concern', note: 'Again' })).code, 'DUPLICATE');
+});
