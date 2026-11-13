@@ -14,7 +14,7 @@
   else root.BLDDone = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  var WORD = { ok: 'Done', recorded: 'Done', concern: 'Concern noted', not_done: 'Not done noted' };
+  var WORD = { ok: 'Done', recorded: 'Done', concern: 'Concern noted', not_done: 'Not done noted', part_done: 'Part done' };
   var TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
   var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
@@ -50,8 +50,9 @@
 
   function mark(el, s) {
     if (!el) return;
-    el.classList.add('is-done'); el.classList.toggle('is-concern', !!s && (s.outcome === 'concern' || s.outcome === 'not_done'));
-    var n = set(el, s && (s.outcome === 'concern' || s.outcome === 'not_done') ? 'flag' : 'good', TICK, text(s));
+    el.classList.add('is-done'); var flag = !!s && (s.outcome === 'concern' || s.outcome === 'not_done' || s.outcome === 'part_done');
+    el.classList.toggle('is-concern', flag);
+    var n = set(el, flag ? 'flag' : 'good', TICK, text(s));
     if (s && s.note) { var p = el.ownerDocument.createElement('span'); p.className = 'done-note'; p.textContent = s.note; n.appendChild(p); }
     btn(el, true);
   }

@@ -10,7 +10,7 @@
   'use strict';
 
   var HOW = { scanned: 'opened from tag', tapped: 'tapped', typed: 'typed', site_tap: 'whole-site tap' };
-  var OUTCOME = { ok: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', note: 'note' };
+  var OUTCOME = { ok: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', note: 'note', part_done: 'part done' };
   var memo = null;
 
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */

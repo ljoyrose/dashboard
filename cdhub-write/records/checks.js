@@ -18,7 +18,7 @@
       subject_id: { type: 'text', label: 'Dog' },
       item: { type: 'text', label: 'What' },
       amount: { type: 'text', label: 'Amount' },
-      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note'], required: true, label: 'Outcome' },   // note = a note added to a job already done
+      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note', 'part_done'], required: true, label: 'Outcome' },   // note = a note added to a job already done
       note: { type: 'text', label: 'Note' },
       note_for_id: { type: 'text', label: 'Note for' }
     }
@@ -58,7 +58,7 @@
     if (a.item && !entry.item) e.item = 'This is needed.';
     if (a.amount && !entry.amount) e.amount = 'This is needed.';
     if (!entry.outcome) e.outcome = 'Choose one.';
-    if ((entry.outcome === 'concern' || entry.outcome === 'not_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
+    if ((entry.outcome === 'concern' || entry.outcome === 'not_done' || entry.outcome === 'part_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
     else if (entry.outcome === 'note' && !entry.note) e.note = 'Write the note.';
     else if (a.noteRequired && !entry.note) e.note = 'This is needed.';
     return e;

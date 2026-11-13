@@ -410,3 +410,20 @@ test('a save refused as a repeat says so once, in plain words', async ({ page })
   await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
   await expect(weigh.getByText('Saving...')).toHaveCount(0);
 });
+
+test('Part done needs a note, saves as part_done and shows on the card, not as done', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  await page.getByRole('button', { name: 'Problem: Ears' }).click();
+  await ears.getByRole('button', { name: 'Part done' }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('Say briefly');
+  expect(sent).toHaveLength(0);
+  await ears.getByLabel('Note').fill('Pretend: one ear only');
+  await ears.getByRole('button', { name: 'Part done' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add', fields: { outcome: 'part_done', note: 'Pretend: one ear only' } });
+  await expect(ears.locator('.done-line.flag')).toContainText('Part done');
+  await expect(ears.locator('.ds')).toHaveText('Due');
+});
