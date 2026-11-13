@@ -85,15 +85,27 @@
     out.sort(function (a, b) { return a.localeCompare(b); });
     return out.length ? h('div', { class: 'jobs', 'data-k': 'jobs' }, out.map(function (n) { return h('span', { class: 'job', text: n }); })) : null; }
   function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
+  /* Classification: the licence label from the latest occupancy row that has one (a move row leaves it blank) */
+  function classOf(s) { var r = BLDOccupancy.latestRow((T.occupancy || []).filter(function (o) { return o.classification; }), s.id); return r ? String(r.classification) : ''; }
+  /* Photo: the dog's photo cell holds a Drive file id (or a Drive link). The card shows Drive's own picture of it, which
+     loads for whoever is signed in to Google with access to the photos folder; otherwise the empty Photo box stays. */
+  function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
+    return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
+  function photoBox(s) {
+    var id = photoId(s.photo), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
+    if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
+      onerror: function () { box.textContent = 'Photo'; } }));
+    return box; }
   function dogCard(tag, it) {
-    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s);
+    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s), cls = classOf(s);
+    if (cls) rows.push(['Class', cls]);
     if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
       h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band ? h('small', { 'data-size': sizeKey(s.size_band) }, sizeLines(s.size_band)) : null]),
       h('div', { class: 'dbody' }, [
-        h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
+        h('div', { class: 'cside' }, [photoBox(s),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
         chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,
