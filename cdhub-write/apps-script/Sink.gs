@@ -28,6 +28,8 @@ function todayLondon_(d) { return Utilities.formatDate(d || new Date(), BLD.TZ, 
  * A missing or unreadable date means "queue" (the safe side). Everything else uses the table's own default.
  */
 function modeFor_(spec, now) {
+  // Lisa 12 Nov 2026: occupancy moves go straight in for every staff code. MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves.
+  if (spec && spec.key === 'occupancy') return 'direct';
   var m = prop_(BLD.PROP.MODE_PREFIX + spec.key);
   if (m === 'direct' || m === 'pending') return m;
   if (spec.movesQueue) {
@@ -427,6 +429,31 @@ function sinkPendingList_() {
     });
   });
   return out;
+}
+
+
+/** Apply waiting occupancy moves (not corrections, not occupancy_out) so queued room changes land without an approval step.
+ *  Safe to call often: already-applied items are skipped; a row already in the table is marked applied. */
+function applyWaitingOccupancyMoves_() {
+  if (!saveEnabled_()) return { applied: 0 };
+  var spec = TABLES.occupancy;
+  if (!spec || !tableOn_(spec)) return { applied: 0 };
+  var p;
+  try { p = loadPending_(); } catch (e) { return { applied: 0 }; }
+  if (!p || !p.records) return { applied: 0 };
+  var st = pendingState_(p.records), n = 0, ids = [], k;
+  for (k in st) if (Object.prototype.hasOwnProperty.call(st, k)) {
+    var s = st[k];
+    if (!s.waiting || !s.queued) continue;
+    if (s.queued.kind === 'correction' || s.queued.corrects_id) continue;
+    if (s.queued.target_file !== spec.file) continue;
+    ids.push(k);
+  }
+  ids.forEach(function (id) {
+    try { sinkDecide_(id, 'approve', '', 'script:apply-direct-occupancy'); n++; }
+    catch (e) { Logger.log('applyWaitingOccupancyMoves_ skipped ' + id + ': ' + (e.userMessage || e.message || e)); }
+  });
+  return { applied: n };
 }
 
 /** Approve or reject one queued item. Approval writes the row to the real table. */

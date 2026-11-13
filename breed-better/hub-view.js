@@ -352,7 +352,14 @@
       '.bb-tp{background:repeating-linear-gradient(45deg,var(--c) 0 2px,transparent 2px 6px);opacity:.6}',
       '.bb-tmark{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink)}',
       '.bb-three{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-small);color:var(--muted)}',
-      '.bb-vbox .bb-why{margin:0;color:var(--ink)}'
+      '.bb-vbox .bb-why{margin:0;color:var(--ink)}',
+      '.bb-sec{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}',
+      '.bb-sec .bb-sechd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);text-align:left}',
+      '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
+      '.bb-secbar{display:flex;flex-direction:column;gap:4px}.bb-secbar .bb-bar span{display:block;height:100%}',
+      '.bb-gates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}',
+      '.bb-gates li{display:flex;align-items:center;gap:8px;min-height:32px;border-top:1px solid var(--line);font-size:var(--fs-small)}.bb-gates li:first-child{border-top:0}',
+      '.bb-gl{flex:1;min-width:0}.bb-gw{color:var(--muted)}.bb-gates li[data-gate=fail] .bb-gw{color:var(--ljr-2-text)}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -369,6 +376,38 @@
     var r = compute(v).byId[id];
     if (!r) return '';
     return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing: trial scores, not yet signed off">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></button>';
+  }
+
+  /* The Breed Better logo, as drawn in Lisa's mock-up (12 Nov 2026). No logo file is in the repo, so the mock-up's own SVG is used. */
+  // the logo file sits beside this script (bb-logo.svg, drawn from the mock-up's own SVG: no logo file existed)
+  var LOGO_SRC = (function () { try { var c = document.currentScript && document.currentScript.src; return c ? c.replace(/[^/]*$/, '') + 'bb-logo.svg' : 'bb-logo.svg'; } catch (e) { return 'bb-logo.svg'; } }());
+  var LOGO = '<img class="bb-logo" src="' + LOGO_SRC + '" width="32" height="32" alt="Breed Better logo">';
+  var GATE_WORD = { pass: 'Passed', fail: 'Failed', unverified: 'Missing' };
+  var GATE_ICON = { pass: ICON.pass, fail: ICON.fail, unverified: 'M12 8v5 M12 16h.01 M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0' };
+
+  /** The Breed Better section on a dog card (Lisa, 12 Nov 2026): logo heading, verdict and Testing badges, score bar
+   *  against the target, the must-pass checks one per line, and a tap through to the dog's Breed Better page. */
+  function section(v, id) {
+    last = v; css();
+    var r = compute(v).byId[id];
+    if (!r) return '';
+    var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
+    var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
+    var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
+    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better">'
+      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc(r.words[verdictOf(r)]) + ', ' + esc(total(r)) + '. Testing: trial scores, not yet signed off. Open the detail">'
+      + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>'
+      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M9 6l6 6l-6 6', 16) + '</button>'
+      + (all ? '<div class="bb-secbar"><div class="bb-barw"><div class="bb-bar" role="img" aria-label="' + r.points_earned + ' of ' + all + ' points' + (hasT ? ', target ' + r.target : '') + '">'
+        + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[verdictOf(r)] + ')"></span></div>'
+        + (tp !== null ? '<span class="bb-tmark" style="left:' + tp.toFixed(1) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>'
+        + '<div class="bb-three"><span>' + r.points_earned + ' of ' + all + '</span>' + (hasT ? '<span>target ' + r.target + ' (' + Math.round(tp) + '%)</span>' : '') + '</div></div>' : '')
+      + (gates.length ? '<ul class="bb-gates">' + gates.map(function (l) {
+        var o = l.gate_outcome || 'unverified';
+        return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
+          + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
+      }).join('') + '</ul>' : '')
+      + '</section>';
   }
 
   /* typing or a new sort redraws the rows only, so the search box keeps focus */
@@ -404,5 +443,5 @@
   /** Open one animal's page next time the page is drawn: the hub's #/breed/<id> address. */
   function open(id) { state.dog = t(id); }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip, open: open, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { FILES: FILES, compute: compute, page: page, chip: chip, section: section, open: open, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
