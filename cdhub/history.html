@@ -498,9 +498,10 @@ function dayClass(isoDate){
   return'omild';
 }
 
-function ddmmyy(iso){ iso=String(iso||''); return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(2,4); }
+/* One date format everywhere (Lisa 13 Nov 2026): "2 Mar 2026"; stored dates stay ISO. */
+function dayWords(iso){ iso=String(iso||''); if(!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8,10),10)+' '+MONTHS[parseInt(iso.slice(5,7),10)-1]+' '+iso.slice(0,4); }
 function openDrill(isoDate){
-  el('d-title').textContent=ddmmyy(isoDate);
+  el('d-title').textContent=dayWords(isoDate);
   el('d-out').textContent=outsideLine(isoDate)||'No outside reading';
   var lines=dayRooms(isoDate).map(function(x){ return roomLine(x,true); });
   el('d-areas-inner').innerHTML=lines.join('');
@@ -521,7 +522,7 @@ function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
 function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')).replace(/^ZZ_/,''); }
 function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_area_id===aid&&l.to_area_id&&l.to_area_id!==aid) to=l.to_area_id; }); return to; }
 function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
-  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+ddmmyy(areaEnd(aid))+')'; }
+  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+dayWords(areaEnd(aid))+')'; }
 function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
 function thermoNeeded(aid,day){
   var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;
