@@ -45,6 +45,31 @@ function food(lateOrder = true) {
   return { valueRanges: [{ values: b.cards }, { values: orders }, { values: b.invoices }] };
 }
 // Pretend Sheets for Food (batchGet) and Marketplace, and the Apps and Studio state files in the pretend Drive.
+// Needs you hub cards: nothing moves on hover or focus, one icon x down the cards, a 3px line that curves with the card's corner
+// (the house rule in lines-and-counts.spec.js: a card's line follows its corner; only row shells keep a straight bar).
+async function steadyCards(page) {
+  const cards = page.locator('#needsToday .needhub');
+  const n = await cards.count();
+  expect(n).toBeGreaterThan(0);
+  const measure = (i) => cards.nth(i).evaluate((c) => {
+    const b = c.getBoundingClientRect(), ic = c.querySelector('.nhh .hico').getBoundingClientRect(), bar = getComputedStyle(c, '::before');
+    return { x: b.x + scrollX, y: b.y + scrollY, w: b.width, h: b.height, ix: ic.x + scrollX, barW: bar.borderLeftWidth, barR: parseFloat(bar.borderTopLeftRadius), hostR: parseFloat(getComputedStyle(c).borderTopLeftRadius) };
+  });
+  const xs = [];
+  for (let i = 0; i < n; i++) {
+    const before = await measure(i);
+    await cards.nth(i).locator('li').first().hover();
+    const hov = await measure(i);
+    await cards.nth(i).locator('a').first().focus();
+    const foc = await measure(i);
+    for (const [k, after] of [['hover', hov], ['focus', foc]]) for (const key of ['x', 'y', 'w', 'h', 'ix']) expect(Math.abs(after[key] - before[key]), `card ${i + 1} ${key} on ${k}`).toBeLessThanOrEqual(0.5);
+    expect(before.barW, `card ${i + 1} line`).toBe('3px');
+    expect(before.barR, `card ${i + 1} line curves with the corner`).toBeGreaterThanOrEqual(Math.max(8, before.hostR - 0.5));
+    xs.push(before.ix);
+  }
+  for (const x of xs) expect(Math.abs(x - xs[0]), 'one icon x down the cards').toBeLessThanOrEqual(0.5);
+}
+
 async function seed(page, guard, { foodAnswer = food(), market = true, apps = true, studio = true } = {}) {
   const rows = marketRows();
   await page.route(SHEETS, (route) => {
@@ -277,7 +302,7 @@ test.describe('Dashboard Main', () => {
     await seed(page, guard);
     await signIn(page);
     await expect(page.locator('#needsToday .needhub li').first()).toBeVisible();
-    await steadyRows(page, '#needsToday .needhub', '.nhh .hico');
+    await steadyCards(page);
     const row = page.locator('#needsToday .needhub li').first();
     const look = () => row.evaluate((l) => { const c = getComputedStyle(l), b = l.getBoundingClientRect(); return { bg: c.backgroundColor, ow: c.outlineStyle === 'none' ? '0px' : c.outlineWidth, x: b.x + scrollX, y: b.y + scrollY, w: b.width, h: b.height }; });
     await row.scrollIntoViewIfNeeded();
@@ -293,7 +318,7 @@ test.describe('Dashboard Main', () => {
     // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (Lisa, 2 Nov: the Projects tile).
     for (const hub of ['apps', 'food', 'money']) await numberGroup(page, '#hubTiles .hubtile[data-hub="' + hub + '"] a.hk', 'b');
     await page.setViewportSize({ width: 390, height: 844 });
-    await steadyRows(page, '#needsToday .needhub', '.nhh .hico');
+    await steadyCards(page);
   });
 
   test('Next wears the hub colour of the one thing it shows: its 3px line, icon and name', async ({ page, guard }) => {
