@@ -95,8 +95,10 @@ function waitingRows_(pendState, spec) {
 }
 
 function findDuplicate_(spec, clean, rows, nowMs, today) {
+  if (spec.dupSkip && spec.dupSkip(clean)) return null;          // e.g. a note added to a check already done
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i], same = true;
+    if (spec.dupSkip && spec.dupSkip(r)) continue;
     for (var k = 0; k < spec.dupKey.length; k++) {
       if ((r[spec.dupKey[k]] || '') !== (clean[spec.dupKey[k]] || '')) { same = false; break; }
     }
