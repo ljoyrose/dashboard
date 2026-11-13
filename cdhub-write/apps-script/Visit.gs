@@ -395,8 +395,8 @@ function sinkVisitGive_(req) {
       return [linkId + '-r' + (i + 1), tenant, linkId, r[0], r[1], r[2], fromDay, '', 'CD Hub, ' + who.who, who.who, fromDay, made, ''];
     }), RT);
     var label = name + (org ? ' - ' + org : '');
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), made_at: utcIso_(now),
-      made_by: who.who, usable_from: fromAt, usable_to: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), created_at: utcIso_(now),
+      set_by: who.who, usable_from: fromAt, usable_to: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '',
       issued_by: deleg ? who.id : 'owner', delegation_id: deleg ? deleg.row.id : '' };
@@ -481,7 +481,7 @@ function sinkVisitExtend_(req) {
     var L = visitLinkRead_(), g = visitCurrentRow_(L, linkId), rec = g.cur, nowMs = now.getTime();
     if (visitState_(rec, nowMs) === 'ended') throw err_('ALREADY_ENDED', 'That visit has already ended. Give a new one.');
     if (deleg && g.root.issued_by !== who.id && !deleg.limits.extend_others) throw err_('NOT_ALLOWED', 'You can only change visits you gave.');
-    var startMs = Date.parse(rec.usable_from || g.root.made_at || ''), endMs, H = 3600000;
+    var startMs = Date.parse(rec.usable_from || g.root.created_at || ''), endMs, H = 3600000;
     if (f.hours !== undefined && f.hours !== null && f.hours !== '') {
       var n = Number(f.hours);
       if (!(n > 0) || n > 100000) throw bad('hours', 'Choose how many hours.');
@@ -611,7 +611,7 @@ function sinkVisitOpen_(req) {
   if (state === 'ended') return { state: 'ended' };
   var grant = visitGrant_(g.root, todayLondon_(now));
   return {
-    state: state, grant_id: g.root, usable_from: r.usable_from || r.made_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
+    state: state, grant_id: g.root, usable_from: r.usable_from || r.created_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
     who: r.visitor_name || r.label, org: r.organisation || '', rights: grant.rights, lists: grant.lists,
     record_jobs: grant.rights.indexOf('record') >= 0 ? visitJobs_(Object.keys(grant.jobs), todayLondon_(now)) : [],
     review_words: grant.rights.indexOf('raise_finding') >= 0 ? visitReviewWords_() : []
