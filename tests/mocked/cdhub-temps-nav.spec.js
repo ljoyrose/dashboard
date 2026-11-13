@@ -16,11 +16,8 @@ const PRIMARY = [
 ];
 const MORE = [
   ['Compliance', './index.html#/compliance'],
-  ['Table map', './index.html#/shape'],
   ['The round', './index.html#/round'],
   ['Areas', './index.html#/areas'],
-  ['Litters', './index.html#/litters'],
-  ['Assocs', './index.html#/buyers'],
   ['Temps', './history.html'],
 ];
 

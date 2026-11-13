@@ -3949,18 +3949,19 @@ function bindCompliance(){
   }
  });
 }
-var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance};
-var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance']];
-var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','areas'],areas:['today','litters'],litters:['dogs','areas'],buyers:['dogs','map'],sops:['dogs','buyers'],compliance:['litters','dogs']};
+/* Assocs, Table map and Litters stay as pageBuyers, pageShape and pageLitters. They are unwired until those ids go back into PAGES, SECTIONS, NEXT and HubNav.MORE. Vet link stays unwired. */
+var PAGES={work:pageWork,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,sops:pageSops,compliance:pageCompliance};
+var SECTIONS=[['map','Live feed'],['work','Outstanding'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['sops','SOPs'],['compliance','Compliance']];
+var NEXT={work:['today','dogs'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['areas','today'],areas:['today','dogs'],sops:['dogs','today'],compliance:['dogs','today']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
 function bbV(){return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos};}
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
-if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; }
+if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','areas']; }
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
-if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); NEXT.enquiries=['litters','dogs']; }
+if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); NEXT.enquiries=['dogs','today']; }
 function extraMore(){
  var x=[];
  if(typeof BBHubView!=='undefined'&&bbOn()) x.push({id:'breed',label:'Breed Better',slot:'5',icon:'s-check'});
@@ -4252,15 +4253,10 @@ document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.
 
 DashKit.search.register(function(q){
  if(LOAD.state!=='ok') return [];
- var hit=DashKit.search.matches(q), out=[], byId=CD._byId||{};
+ var hit=DashKit.search.matches(q), out=[];
  (CD.dogs||[]).filter(function(d){ return hit([d.name,d.id,d.chip,d.breed].join(' ')); }).slice(0,12).forEach(function(d){
   out.push({group:'CD Hub dogs',slot:5,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
    act:function(){ go('dogs'); var b=document.getElementById('q'); if(b){ b.value=d.name||d.id; b.dispatchEvent(new Event('input')); } focusView(); }});
- });
- (CD.litters||[]).filter(function(l){ var dam=byId[l.dam_subject_id], sire=byId[l.sire_subject_id];
-   return hit([l.id,l.born_on,dam&&dam.name,sire&&sire.name].join(' ')); }).slice(0,8).forEach(function(l){
-  var dam=byId[l.dam_subject_id];
-  out.push({group:'CD Hub litters',slot:5,title:'Litter '+(l.born_on||l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
  });
  return out;
 });

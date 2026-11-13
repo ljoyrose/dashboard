@@ -617,7 +617,7 @@
     d = doc.createElement('dialog'); d.id = 'dashSearch'; d.setAttribute('aria-labelledby', 'dashSearchTitle');
     d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:1px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
     d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Search</h2>' +
-      '<label for="dashSearchBox" style="display:block;font-size:var(--fs-small)">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
+      '<label for="dashSearchBox" style="display:block;font-size:var(--fs-small)">Drive file names, Money to-dos and dates, CD Hub dogs (what this page has read)</label>' +
       '<input id="dashSearchBox" type="search" autocomplete="off" aria-describedby="dashSearchHint" style="width:100%;font-family:inherit;font-size:var(--fs-input,16px);padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
       '<p id="dashSearchHint" style="margin:4px 0;font-size:var(--fs-small)">Type at least 2 letters.</p><p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:var(--fs-small)"></p>' +
       '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit" class="house-close">Close</button></form>';

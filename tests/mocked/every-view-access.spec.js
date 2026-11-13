@@ -8,7 +8,7 @@ const AxeBuilder = require('@axe-core/playwright').default;
 
 const MAIN = ['map', 'readfirst', 'drive', 'drive/drv-alpha1', 'personal', 'usb', 'bin', 'changes/recent', 'changes/24h', 'changes/7d', 'changes/totals'];
 const MONEY = ['now', 'money', 'dates', 'todo', 'accountant', 'control', 'e/TESTCO', 'e/TESTPERS'];
-const CDHUB = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'buyers', 'sops'];
+const CDHUB = ['map', 'work', 'today', 'round', 'dogs', 'areas', 'sops'];
 
 // Known problems today: { 'page:view:scheme': { ruleId: most places allowed } }. Anything missing = 0 allowed.
 const KNOWN = require('./every-view-access.known.json');

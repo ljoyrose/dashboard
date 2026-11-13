@@ -34,7 +34,7 @@ const VIEWS = {
   marketplace: ['me', 'decide', 'do', 'stock'],
   studio: ['me', 'decide', 'line', 'tools'],
   factory: ['rooms', 'me', 'do', 'docs'],
-  cdhub: ['map', 'today', 'dogs', 'litters'],
+  cdhub: ['map', 'today', 'dogs', 'areas'],
   food: ['home', 'orders', 'invoices', 'products'],
   estate: ['home', 'shops', 'unchecked', 'access'],
 };

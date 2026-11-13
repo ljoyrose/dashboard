@@ -8,14 +8,15 @@
     { id: 'dogs', label: 'Dogs', slot: '5', icon: 't-paw' },
     { id: 'sops', label: 'SOPs', slot: '6', icon: 't-line' }
   ];
-  /* More, in the hub's order. Temps opens the temperature history page. */
+  /* More, in the hub's order. Temps opens the temperature history page.
+     Assocs, Table map and Litters stay off this list (hide only). Put these back into MORE to show them again:
+     { id: 'shape', label: 'Table map', slot: '0', icon: 't-main' }
+     { id: 'litters', label: 'Litters', slot: '7', icon: 't-paw' }
+     { id: 'buyers', label: 'Assocs', slot: '6', icon: 't-world' } */
   var MORE = [
     { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check' },
-    { id: 'shape', label: 'Table map', slot: '0', icon: 't-main' },
     { id: 'round', label: 'The round', slot: '4', icon: 's-repeat' },
     { id: 'areas', label: 'Areas', slot: '3', icon: 't-room' },
-    { id: 'litters', label: 'Litters', slot: '7', icon: 't-paw' },
-    { id: 'buyers', label: 'Assocs', slot: '6', icon: 't-world' },
     { id: 'temps', label: 'Temps', slot: '8', icon: 't-temp', href: './history.html' }
   ];
 

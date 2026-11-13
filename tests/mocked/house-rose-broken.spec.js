@@ -94,7 +94,7 @@ for (const scheme of ['light', 'dark']) {
     test('CD Hub Data checks: failed checks are the black badge, read out as "failed"', async ({ page }) => {
       await HUBS.cdhub.open(page);
       await page.locator('#nav [data-house-more]').click();
-      await page.locator('#houseMore button[data-go="shape"]').click();
+      await page.locator('#houseMore button[data-go="compliance"]').click();
       const c = page.locator('#checksCard h3 .cnt');
       await expect(c).toHaveText('6');
       await expect(c).toHaveClass(/\bbroken\b/);

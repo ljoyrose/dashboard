@@ -28,7 +28,7 @@ const current = (page) => page.evaluate(() => [...document.querySelectorAll('[ar
 
 // Hub, a view deeper than the first one, the view an unknown address should fall back to.
 const DEEP = [
-  ['cdhub', 'shape', 'map'],
+  ['cdhub', 'areas', 'map'],
   ['food', 'invoices', 'home'],
   ['marketplace', 'decide', 'me'],
   ['factory', 'decide', 'rooms'],
