@@ -22,8 +22,7 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
-  var GO = { 'BLD-fit_to_breed': 'dogs', 'BLD-litter': 'litters', 'BLD-health_screen': 'dogs', 'BLD-dna_result': 'dogs', 'BLD-subject_status': 'dogs' };
-  var state = { filter: '', dog: '', open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
+  var state = { filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -307,9 +306,35 @@
     var why = l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
     if (l.due_date && !l.due) why += ' \u00b7 due ' + esc(day(l.due_date));
     res += dueHtml(l);
-    var go = GO[l.evidence_table];
+    /* Open stays on this page. data-go would be caught by the hub and sent back to the dog list. */
+    var openBtn = l.criterion_id ? ' <button type="button" class="bb-src" data-bb-edit="' + esc(l.criterion_id) + '">Open</button>' : '';
     return '<div class="bb-line"><span class="bb-l">' + (l.kind === 'gate' ? star() : '') + esc(l.label_then) + '</span>' + res
-      + '<span class="bb-why">' + why + (go ? ' <button type="button" class="bb-src" data-go="' + go + '">Open</button>' : '') + '</span></div>';
+      + '<span class="bb-why">' + why + openBtn + '</span></div>';
+  }
+
+  /** Add or edit one check's result. Replaces the dog page until Back. */
+  function editHtml(v, r, criterionId) {
+    var esc = v.esc;
+    var line = (r.lines || []).filter(function (l) { return l.criterion_id === criterionId; })[0];
+    var crit = (v.T['BLD-score_criterion.csv'] || []).filter(function (c) { return c.id === criterionId; })[0];
+    if (!line && !crit) return '';
+    var label = (line && line.label_then) || (crit && t(crit.label)) || 'Result';
+    var answer = crit ? t(crit.answer_field) : '';
+    var date = crit ? t(crit.date_field) : '';
+    var match = crit ? t(crit.evidence_match) : '';
+    var have = line && t(line.answer_then);
+    var title = (have ? 'Edit' : 'Add') + ' result';
+    var ansLabel = answer ? answer.replace(/_/g, ' ') : 'Result';
+    var dateLabel = date ? date.replace(/_/g, ' ') : 'Date';
+    return '<section class="bb-edit" data-bb-edit-screen="' + esc(criterionId) + '" aria-label="' + esc(title + ': ' + label) + '">'
+      + '<button type="button" class="bb-f" data-bb-edit-back="1">Back</button>'
+      + '<h3 class="bb-h">' + esc(label) + '</h3>'
+      + '<p class="bb-pts">' + esc(title) + ' for ' + esc(r.name) + (match ? '. ' + esc(match) : '') + '</p>'
+      + '<form class="card" data-bb-result="1">'
+      + (date ? '<label class="bb-lab">' + esc(dateLabel) + '<input type="date" name="on" value="' + esc(line && line.date_then || '') + '"></label>' : '')
+      + (answer ? '<label class="bb-lab">' + esc(ansLabel) + '<input type="text" name="answer" value="' + esc(line && line.answer_then || '') + '" autocomplete="off"></label>' : '')
+      + '<button type="submit" class="bb-f">Save result</button>'
+      + '<p class="bb-pts" data-bb-edit-msg role="status"></p></form></section>';
   }
 
   /* ---- Calendar, More, My system and Archive (mock-up, 12 Nov 2026). Read only. ---- */
@@ -413,6 +438,11 @@
     if (!c.setUp) return '<p class="mut">Not set up yet.</p>';
     var err = c.error ? '<div class="card acc2"><p>' + v.esc(c.error) + '</p></div>' : '';
     var dog = state.dog && c.byId[state.dog];
+    if (dog && state.edit) {
+      var screen = editHtml(v, dog, state.edit);
+      if (screen) return err + screen;
+      state.edit = '';
+    }
     if (dog) return err + dogHtml(v, dog);
     words = c.words || VERDICT;
     var body = state.tab === 'cal' ? calHtml(v, c) : state.tab === 'more' ? moreHtml(c) : state.tab === 'archive' ? archiveHtml(v, c)
@@ -474,6 +504,8 @@
       '.bb-tab{font:inherit;font-size:var(--fs-small);color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:var(--radius);min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}',
       '.bb-tab:hover,.bb-tab:active{background:var(--hov)}.bb-tab[aria-current=page]{color:var(--ink);font-weight:600;background:var(--hov)}.bb-tab:focus-visible{border-color:var(--ink);outline:none}',
       '.bb-h{margin:0 0 4px;font-weight:600}',
+      '.bb-edit{display:flex;flex-direction:column;gap:8px;align-items:flex-start}',
+      '.bb-edit form{display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box}',
       '.bb-month{margin:12px 0}.bb-mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}',
       '.bb-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}.bb-wd{font-size:var(--fs-small);color:var(--muted)}',
       '.bb-day{position:relative;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--radius)}',
@@ -558,24 +590,49 @@
     });
     /* capture, so the chosen dog is set before the hub's own click handler opens the page */
     document.addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc]');
+      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
       if (!b) return;
-      if (b.hasAttribute('data-bb-dog')) { state.dog = b.getAttribute('data-bb-dog'); return; }
-      if (b.hasAttribute('data-bb-filter')) state.filter = b.getAttribute('data-bb-filter');
-      if (b.hasAttribute('data-bb-open')) state.dog = b.getAttribute('data-bb-open');
-      if (b.hasAttribute('data-bb-back')) state.dog = '';
-      if (b.hasAttribute('data-bb-tab')) { state.tab = b.getAttribute('data-bb-tab'); state.dog = ''; }
-      if (b.hasAttribute('data-bb-sex')) state.sex = b.getAttribute('data-bb-sex');
-      if (b.hasAttribute('data-bb-cal')) state.cal = b.getAttribute('data-bb-cal');
-      if (b.hasAttribute('data-bb-calc')) { var cv = b.getAttribute('data-bb-calc').split(':'); state.calc[cv[0]] = Number(cv[1]); }
-      if (b.hasAttribute('data-bb-month')) { state.month = b.getAttribute('data-bb-month'); state.cal = 'all'; }
+      if (b.hasAttribute('data-bb-dog')) { state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
+      if (b.hasAttribute('data-bb-edit')) {
+        e.preventDefault();
+        e.stopPropagation();
+        state.edit = b.getAttribute('data-bb-edit');
+        state.editPushed = true;
+        try { history.pushState({ bbEdit: 1 }, '', location.href); } catch (err) { state.editPushed = false; }
+      } else if (b.hasAttribute('data-bb-edit-back')) {
+        e.preventDefault();
+        e.stopPropagation();
+        var pushed = state.editPushed;
+        state.edit = '';
+        state.editPushed = false;
+        if (pushed) { history.back(); return; }
+      } else if (b.hasAttribute('data-bb-filter')) state.filter = b.getAttribute('data-bb-filter');
+      else if (b.hasAttribute('data-bb-open')) state.dog = b.getAttribute('data-bb-open');
+      else if (b.hasAttribute('data-bb-back')) { state.dog = ''; state.edit = ''; }
+      else if (b.hasAttribute('data-bb-tab')) { state.tab = b.getAttribute('data-bb-tab'); state.dog = ''; state.edit = ''; }
+      else if (b.hasAttribute('data-bb-sex')) state.sex = b.getAttribute('data-bb-sex');
+      else if (b.hasAttribute('data-bb-cal')) state.cal = b.getAttribute('data-bb-cal');
+      else if (b.hasAttribute('data-bb-calc')) { var cv = b.getAttribute('data-bb-calc').split(':'); state.calc[cv[0]] = Number(cv[1]); }
+      else if (b.hasAttribute('data-bb-month')) { state.month = b.getAttribute('data-bb-month'); state.cal = 'all'; }
       redraw();
     }, true);
+    document.addEventListener('submit', function (e) {
+      var f = e.target;
+      if (!f || !f.getAttribute || !f.hasAttribute('data-bb-result')) return;
+      e.preventDefault();
+      var msg = f.querySelector('[data-bb-edit-msg]');
+      if (msg) msg.textContent = 'The result is entered here. It is saved when this check\'s table is on the save script.';
+    }, true);
+    window.addEventListener('popstate', function () {
+      if (!state.editPushed) return;
+      state.edit = '';
+      state.editPushed = false;
+    });
   }
 
   /** Open one animal's page next time the page is drawn: the hub's #/breed/<id> address. */
-  function open(id) { state.dog = t(id); }
-  function setTab(k) { state.tab = k; state.dog = ''; }
+  function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
+  function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
   return { FILES: FILES, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
