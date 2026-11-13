@@ -1,5 +1,5 @@
-id,scheme_id,key,label,colour,sort_order,kind
-b-gate,s-test,gate,Gates,red,1,gate
-b-health,s-test,health,Health,orange,2,points
-b-breed,s-test,breeding,Breeding record,blue,3,points
-b-status,s-test,status,Status,black,4,status
+id,scheme_id,key,label,colour,sort_order,kind,icon_key,line_colour,icon_light,icon_dark
+b-gate,s-test,gate,Gates,red,1,gate,star,#ee4035,#ca362d,#f0625a
+b-health,s-test,health,Health,orange,2,points,heart,#f37736,#ae5526,#f37736
+b-breed,s-test,breeding,Breeding record,blue,3,points,,,,
+b-status,s-test,status,Status,black,4,status,,,,

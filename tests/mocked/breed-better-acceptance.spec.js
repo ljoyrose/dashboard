@@ -199,7 +199,8 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await screen.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog One');
-    await expect(page).toHaveURL(/#\/breed$/);
+    // each tab has its own address (owner's design, 13 Nov 2026): the dog's Score tab
+    await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
   });
 
   asOwner('S7 look: verdict pills and buttons are 1px lines with no fill; each section has a 3px colour line', async ({ page }) => {
@@ -261,9 +262,12 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
     await expect(card(page, 'Test Dog One').locator('.bb-chip')).toContainText('Testing');
   });
 
-  asOwner('S5.3 tapping the chip opens that dog\'s Breed Better detail', async ({ page }) => {
+  asOwner('S5.3 tapping the chip unfolds the checks; Open in Breed Better opens that dog\'s detail', async ({ page }) => {
     await openDogs(page);
+    // one line, folded by default (owner's design, 13 Nov 2026): the tap unfolds it in place
     await card(page, 'Test Dog Two').locator('.bb-chip').click();
+    await expect(card(page, 'Test Dog Two').locator('details.bb-secd')).toHaveAttribute('open', '');
+    await card(page, 'Test Dog Two').getByRole('button', { name: 'Open in Breed Better', exact: true }).click();
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
     await expect(page.locator('#bbRoot')).toContainText('Fail');

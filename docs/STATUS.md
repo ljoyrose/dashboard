@@ -13,6 +13,7 @@
 | PC-Personal and `RR_` | Decided 15 Oct: keep renaming matches (shared is the home). A test pins it | PR #15 |
 | Dependabot | 2 grouped PRs open (#13 tests tools, #14 actions), both green; never auto-merged | PR list |
 | Page problems known | Colour contrast, 10.5 px text on CD Hub, heading order (ratchet stops them getting worse) | `look-and-access.spec.js` |
+| Breed Better owner design (13 Nov 2026) | PR #526 open: five bottom tabs, Calendar, subtle look, section icons, Evidence, History, DNA panel, inspector layout. Live signed-in click-through pending | `tests/mocked/bb-design-click-through.spec.js`, `node --test tests/breed-better/*.test.js` |
 
 ## Open handoffs (grep-able)
 Open lines start `BOT:`; when done, change to `BOT-DONE:` and add the date. Find them all: `grep -rn "^BOT:" docs/`

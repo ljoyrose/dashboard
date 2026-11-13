@@ -22,7 +22,8 @@
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
-<script src="../breed-better/dna-kit.js"></script>
+<script src="../breed-better/dna-panel.js"></script>
+<script src="staff/lib/viewer-levels.js"></script>
 <script src="../breed-better/hub-view.js"></script>
 <script src="../enquiries/core.js"></script>
 <script src="../enquiries/reader.js"></script>
@@ -106,14 +107,15 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .card .card{box-shadow:none}
 
 
-.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{
+/* Breed Better buttons (class bb-...) carry their own look (breed-better/hub-view.js), so the house button rule skips them */
+.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not([class^="bb-"]):not([class*=" bb-"]),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
 @media (hover:hover){.filt select:hover, .fpanel select:hover {background:var(--hov);}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not([class^="bb-"]):not([class*=" bb-"]):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .tile.tl:hover,.ci:hover{border-color:var(--press)}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
@@ -127,7 +129,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
+@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not([class^="bb-"]):not([class*=" bb-"]),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -4198,7 +4200,7 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries')?full:id;
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='breed')?full:id;   /* breed: #/breed/<tab> and #/breed/score.<dog> stay in the address, so Back and reload keep the tab */
  if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
  window.scrollTo(0,0);
 }
