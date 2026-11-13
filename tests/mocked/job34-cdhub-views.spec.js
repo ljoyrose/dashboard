@@ -189,8 +189,7 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
     await mn.fill('18.2'); await mn.blur();
     await mx.fill('12.4'); await mx.blur();
     await expect(msg).toHaveAttribute('role', 'alert');
-    await expect(msg).toContainText('max (12.4) is lower than min (18.2)');
-    await expect(msg).toContainText('Not saved');
+    await expect(msg).toHaveText('The lowest reading cannot be higher than the highest reading.');
     await expect(mn).toHaveClass(/\bbad\b/);
     await expect(mx).toHaveClass(/\bbad\b/);
     expect(sent).toHaveLength(0);
@@ -209,7 +208,7 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
     await mn.fill('20'); await mn.blur();
     const mx = page.locator(`.tmax[data-area="${area}"][data-slot="pm"]`);
     await mx.fill('19.9'); await mx.blur();
-    await expect(page.locator(`.tmsg[data-area="${area}"][data-slot="pm"]`)).toContainText('is lower than min');
+    await expect(page.locator(`.tmsg[data-area="${area}"][data-slot="pm"]`)).toHaveText('The lowest reading cannot be higher than the highest reading.');
   });
 
   test('a saved reading with max below min fails the Room temperatures data check and is flagged on The round', async ({ page, guard }) => {

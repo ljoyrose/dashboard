@@ -15,6 +15,7 @@
 <script src="staff/lib/area-link.js"></script>
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/temp-pair.js"></script>
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
@@ -3154,10 +3155,10 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
  if(!have.at){ t[which]=c.val; if(el) el.value=c.val; }
  /* max lower than min = typed the wrong way round: say so loudly, mark both boxes, save nothing (Lisa, 7 Nov 2026) */
  var pair=document.querySelectorAll('.tmin[data-area="'+areaId+'"][data-slot="'+slot+'"], .tmax[data-area="'+areaId+'"][data-slot="'+slot+'"]');
- var sw=!have.at&&t.min!==''&&t.max!==''&&tempSwapped(t.min,t.max);
+ var sw=!have.at&&window.BLDTempPair&&window.BLDTempPair.swapped(t.min,t.max);
  Array.prototype.forEach.call(pair,function(b){ if(!sw&&b.classList.contains('swap')) b.classList.remove('bad'); b.classList.toggle('swap',sw); if(sw) b.classList.add('bad'); });
  if(msgEl){ msgEl.classList.toggle('swapalert',sw); if(sw) msgEl.setAttribute('role','alert'); else msgEl.removeAttribute('role'); }
- if(sw){ if(msgEl) msgEl.textContent='\u26a0 max ('+t.max+') is lower than min ('+t.min+'). Wrong way round? Check the thermometer and type them again. Not saved.'; return; }
+ if(sw){ if(msgEl) msgEl.textContent=window.BLDTempPair.message; return; }
  var startH=slot==='am'?'00':'12', ps=isoAt(date,startH);
  if(have.at){ if(msgEl) msgEl.textContent='already saved. Wrong? Tell Lisa \u2014 a saved reading is never changed here'; return; }
  if(t.min!==''&&t.max!==''&&Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon reading can be saved from 12:00':'That time has not arrived yet.'; return; }

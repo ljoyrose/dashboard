@@ -95,9 +95,9 @@ var TABLES = {
           errors[row.min_c === '' ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
         }
       }
-      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
-          parseFloat(row.min_c) > parseFloat(row.max_c)) {
-        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg_ = tempPairError_(row.min_c, row.max_c);
+        if (pairMsg_) errors.min_c = pairMsg_;
       }
       checkReadMethod_(row, errors);
     }
@@ -137,9 +137,9 @@ var TABLES = {
     dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.precision_dp = '1'; row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors) {
-      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
-          parseFloat(row.min_c) > parseFloat(row.max_c)) {
-        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg_ = tempPairError_(row.min_c, row.max_c);
+        if (pairMsg_) errors.min_c = pairMsg_;
       }
       checkReadMethod_(row, errors);
     }
@@ -175,9 +175,9 @@ var TABLES = {
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
       if (!errors.samples && row.samples !== '' && !/^\d{1,6}$/.test(row.samples)) errors.samples = 'Use a whole number.';
-      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
-          parseFloat(row.min_c) > parseFloat(row.max_c)) {
-        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg_ = tempPairError_(row.min_c, row.max_c);
+        if (pairMsg_) errors.min_c = pairMsg_;
       }
     }
   },
@@ -727,6 +727,14 @@ var TABLES = {
     }
   }
 };
+
+/** Lowest above highest. The same words on the round, the staff page and the owner edit. */
+function tempPairError_(min, max) {
+  if (min !== '' && max !== '' && parseFloat(min) > parseFloat(max)) {
+    return 'The lowest reading cannot be higher than the highest reading.';
+  }
+  return '';
+}
 
 /** A reading's camera fields: the "changed" flag only makes sense for a camera reading. */
 function checkReadMethod_(row, errors) {

@@ -311,11 +311,11 @@
     function check() {
       requestId = null;
       var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx));
-      var sw = !!(mx && mn && parseFloat(mn) > parseFloat(mx));
+      var pe = (window.BLDTempPair && mx && mn) ? window.BLDTempPair.error(mn, mx) : '';
       noteRow.hidden = !b;
-      [minIn, maxIn].forEach(function (i) { i.classList.toggle('swap', sw); });
+      [minIn, maxIn].forEach(function (i) { i.classList.toggle('swap', !!pe); });
       if ((maxIn.value && !mx) || (minIn.value && !mn)) setMsg(checkMsg, 'One decimal place, e.g. 18.5', 'bad');
-      else if (sw) setMsg(checkMsg, 'MIN is higher than MAX. Wrong way round?', 'bad');
+      else if (pe) setMsg(checkMsg, pe, 'bad');
       else if (b) setMsg(checkMsg, (b === 'low' ? 'Below' : 'Above') + ' the limit.', 'bad');
       else setMsg(checkMsg, '');
     }
@@ -324,7 +324,7 @@
       var empty = emptyIn.checked; none = empty && !maxIn.value.trim() && !minIn.value.trim();
       if (!none && (!mx || !mn)) { setMsg(msg, empty ? 'Type MAX and MIN, or leave both blank.' : 'Type MAX and MIN, one decimal place.', 'bad'); return; }
       if (sp === null) { setMsg(msg, 'Bed spot: one decimal place, or leave it empty.', 'bad'); return; }
-      if (!none && parseFloat(mn) > parseFloat(mx)) { setMsg(msg, 'MIN is higher than MAX. Check the screen.', 'bad'); return; }
+      if (!none && window.BLDTempPair && window.BLDTempPair.swapped(mn, mx)) { setMsg(msg, window.BLDTempPair.message, 'bad'); return; }
       var b = empty ? null : breach(lim, num(mn), num(mx));
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
