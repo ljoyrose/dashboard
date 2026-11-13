@@ -9,7 +9,7 @@
  */
 var AdminView = (function () {
   'use strict';
-  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv', 'BLD-visit_type.csv', 'BLD-qr_tag.csv', 'BLD-delegation.csv', 'BLD-person_role.csv'];
+  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv', 'BLD-visit_type.csv', 'BLD-qr_tag.csv', 'BLD-delegation.csv', 'BLD-person_role.csv', 'BLD-grant_right.csv'];
   var S = { open: '', aud: '', cell: '', futureAll: false, future: null, futureErr: '', qr: false };
   var I = {   // Tabler outline paths, ours
     qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2',

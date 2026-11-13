@@ -18,14 +18,14 @@ const LINK = [LINK_H,
 ].join('\n') + '\n';
 const TYPE_H = 'id,tenant_id,type_key,name,role_code,default_hours,max_hours,rights,lists,fields,data_years,record_jobs,record_counts,email_code,needs_id_check,terms_id,active,effective_from,set_at,set_by,source';
 const TYPES = [TYPE_H,
-  'vt-1,ten-x,inspector,Pretend Inspector type,,4,12,view|review,subject|microchip,,3,,,yes,,,yes,2026-01-01,,test,invented',
+  'vt-1,ten-x,inspector,Pretend Inspector type,,4,12,view|raise_finding,subject|microchip,,3,,,yes,,,yes,2026-01-01,,test,invented',
   'vt-0,ten-x,inspector,Older inspector,,2,6,view,subject,,3,,,,,,yes,2025-01-01,,test,invented',
   'vt-9,ten-x,later,Not yet,,1,2,view,,,,,,,,,yes,2099-01-01,,test,invented',
 ].join('\n') + '\n';
 const TAGS = 'id,tenant_id,tag,kind,ref_id,active,made_at,made_by,fixed_type_id\nqt-1,ten-x,' + sha('VC1') + ',visitor_card,Visitor 1,yes,2026-11-01,test,\nqt-2,ten-x,' + sha('VC2') + ',visitor_card,Visitor 2,yes,2026-11-01,test,\nqt-3,ten-x,R1,area,area-1,yes,2026-11-01,test,\n';
 
 const DELEG = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_at,to_at,visit_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,conferred_by,conferred_at,source,notes\n'
-  + 'dl-1,ten-x,give_visit,,sc-a,,,1,,,vt-1,6,view|review,,,,,yes,no,,,,,owner,2026-11-13,invented,\n'
+  + 'dl-1,ten-x,give_visit,,sc-a,,,1,,,vt-1,6,view|raise_finding,,,,,yes,no,,,,,owner,2026-11-13,invented,\n'
   + 'dl-2,ten-x,give_visit,,sc-b,,dl-1,0,,,vt-1,4,view,,,,,no,no,,,,,sc-a,2026-11-13,invented,\n'
   + 'dl-3,ten-x,give_visit,,sc-c,,,0,,,,,,,,,,no,no,2026-11-01T10:00:00+00:00,owner,left,keep,owner,2026-10-01,invented,\n'
   + 'dl-4,ten-x,issue_code,,sc-c,,,0,,,,,,,,,,no,no,,,,,owner,2026-10-01,invented,\n';
@@ -117,7 +117,7 @@ test.describe('CD Hub Visits', () => {
     await expect(page.locator('.vis-row[data-vis-link="il-new"] .adm-ok')).toBeVisible();
     const b = bodies[0];
     expect(b.action).toBe('visit_give');
-    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: 'voluntary', identity_assurance: 'none', rights: ['view', 'review'], lists: ['subject', 'microchip'], subject_ids: [] });
+    expect(b.fields).toMatchObject({ visit_type_id: 'vt-1', card_tag_id: 'qt-2', visitor_name: 'Pretend Person', organisation: 'Pretend Council', usable_from: '', hours: '3', purpose_text: 'Annual inspection', grant_basis: 'voluntary', identity_assurance: 'none', rights: ['view', 'raise_finding'], lists: ['subject', 'microchip'], subject_ids: [] });
   });
 
   test('Give a visit by link, scheduled: DD/MM/YY HH:MM, email code from the type; the link shows once', async ({ page }) => {
@@ -185,7 +185,7 @@ test.describe('CD Hub Visits: who can give visits', () => {
     const rowsL = page.locator('#adm-visits .vis-row');
     await expect(rowsL).toHaveCount(2);   // ended row and the code power are not listed
     await expect(rowsL.nth(0)).toContainText('Manny');
-    await expect(rowsL.nth(0)).toContainText('Pretend Inspector type · up to 6h · view, review');
+    await expect(rowsL.nth(0)).toContainText('Pretend Inspector type · up to 6h · View, Review');
     await expect(rowsL.nth(0)).toContainText('may pass on (1)');
     await expect(rowsL.nth(1)).toContainText('via Manny');
     await page.locator('[data-vis-dend="dl-1"]').click();
@@ -262,7 +262,7 @@ fresh.describe('CD Hub Visits: first use', () => {
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('#adm-visits .vis-row .adm-ok')).toBeVisible();
     expect(bodies[0].action).toBe('visit_type_save');
-    expect(bodies[0].fields).toMatchObject({ type_key: 'vet', name: 'Vet', default_hours: '2', max_hours: '6', rights: 'view|review|record', lists: 'subject|microchip|health_screen', active: 'yes' });
+    expect(bodies[0].fields).toMatchObject({ type_key: 'vet', name: 'Vet', default_hours: '2', max_hours: '6', rights: 'view|raise_finding|record', lists: 'subject|microchip|health_screen', active: 'yes' });
     expect(bodies[0].fields.effective_from).toMatch(/^\d{4}-\d\d-\d\d$/);
   });
 });

@@ -13,11 +13,18 @@ var VisitView = (function () {
   var S = { mode: '', end: '', ext: '', msg: '', ok: '', busy: false, url: '', f: null, t: null };
   /* what the visitor page can show today (inspect.js lists) and the rights it understands: capabilities, not rules */
   var LISTS = [['subject', 'Dogs'], ['microchip', 'Microchips'], ['subject_status', 'Status'], ['health_screen', 'Health tests'], ['fit_to_breed', 'Fit to breed'], ['litter', 'Litters'], ['check_log', 'Jobs done']];
-  var RIGHTS = [['view', 'View'], ['review', 'Review'], ['print', 'Print'], ['export', 'Export'], ['record', 'Record jobs']];
+  /* rights are BLD-grant_right rows (Regulatory-Core GrantRight); this list is only the fallback until that table is live */
+  var RIGHTS0 = [['view', 'View'], ['raise_finding', 'Review'], ['record', 'Record jobs'], ['print', 'Print'], ['export', 'Export']], RIGHTS = RIGHTS0;
+  function rlabel(code) { var x = RIGHTS.filter(function (r) { return r[0] === code; })[0]; return x ? x[1] : code; }
+  function rightsFrom(T) {
+    var R = (T['BLD-grant_right.csv'] || []).filter(function (r) { return r.grant_right_code && String(r.is_active).toLowerCase() !== 'false' && String(r.is_active).toLowerCase() !== 'no'; })
+      .sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0); });
+    RIGHTS = R.length ? R.map(function (r) { return [r.grant_right_code, r.grant_right_label || r.grant_right_code]; }) : RIGHTS0;
+  }
   /* first-use suggestions only: filled into the form, saved only if the owner presses Save */
   var SUGGEST = {
-    Inspector: { default_hours: '4', max_hours: '12', data_years: '3', rights: 'view|review', lists: 'subject|microchip|subject_status|health_screen|fit_to_breed|litter|check_log', email_code: 'yes' },
-    Vet: { default_hours: '2', max_hours: '8', data_years: '', rights: 'view|review|record', lists: 'subject|microchip|health_screen', email_code: '' },
+    Inspector: { default_hours: '4', max_hours: '12', data_years: '3', rights: 'view|raise_finding', lists: 'subject|microchip|subject_status|health_screen|fit_to_breed|litter|check_log', email_code: 'yes' },
+    Vet: { default_hours: '2', max_hours: '8', data_years: '', rights: 'view|raise_finding|record', lists: 'subject|microchip|health_screen', email_code: '' },
     Guest: { default_hours: '1', max_hours: '4', data_years: '', rights: 'view', lists: '', email_code: '' }
   };
 
@@ -104,6 +111,7 @@ var VisitView = (function () {
 
   /* grant picker: rights, lists, fields (per list), record jobs (+ counts toward due). g = the values; p = name prefix */
   function grant(v, g, p) {
+    rightsFrom(v.T);
     var R = pipe(g.rights), L = pipe(g.lists), F = pipe(g.fields), J = pipe(g.record_jobs), C = pipe(g.record_counts);
     var tick = function (name, val, on, label, extra) { return '<label><input type="checkbox" name="' + p + name + '" value="' + v.esc(val) + '"' + (on ? ' checked' : '') + (extra || '') + '> ' + label + '</label>'; };
     var h = '<fieldset class="vis-ticks"><legend>Can</legend>' + RIGHTS.map(function (x) { return tick('rights', x[0], has(R, x[0]), x[1]); }).join('') + '</fieldset>';
@@ -206,7 +214,7 @@ var VisitView = (function () {
   function typesHtml(v) {
     var T = types(v.T, v.today), roles = rows(v.T, 'BLD-role.csv').filter(function (r) { return r.code; });
     if (!S.t) return (T.length ? T.map(function (t) {
-      return '<div class="vis-row"><b>' + v.esc(t.name) + (S.ok === t.type_key ? ' <span class="adm-ok" aria-label="saved">✓</span>' : '') + '</b><span class="vis-when">' + v.esc((t.default_hours || '?') + 'h · ' + pipe(t.rights).join(', ')) + '</span>'
+      return '<div class="vis-row"><b>' + v.esc(t.name) + (S.ok === t.type_key ? ' <span class="adm-ok" aria-label="saved">✓</span>' : '') + '</b><span class="vis-when">' + v.esc((t.default_hours || '?') + 'h · ' + (rightsFrom(v.T), pipe(t.rights).map(rlabel).join(', '))) + '</span>'
         + '<button type="button" class="cb" data-vis-edit="' + v.esc(t.id) + '">Change</button></div>';
     }).join('') : '<p class="mut">None yet. Start from one, then change it:</p><p class="vis-chips">' + Object.keys(SUGGEST).map(function (k) { return '<button type="button" class="cb" data-vis-suggest="' + k + '">' + k + '</button>'; }).join(' ') + '</p>')
       + '<p><button type="button" class="btn" data-vis-edit="new">New type</button> <button type="button" class="cb" data-vis-mode="">Back</button></p>';
@@ -238,7 +246,7 @@ var VisitView = (function () {
     var T = types(v.T, v.today), x = [];
     x.push(pipe(r.visit_type_ids).length ? pipe(r.visit_type_ids).map(function (id) { var t = byId(T, id); return t ? t.name : id; }).join(', ') : 'any type');
     if (r.max_hours) x.push('up to ' + r.max_hours + 'h');
-    x.push(pipe(r.rights).length ? pipe(r.rights).join(', ') : 'any rights');
+    rightsFrom(v.T); x.push(pipe(r.rights).length ? pipe(r.rights).map(rlabel).join(', ') : 'any rights');
     if (pipe(r.area_ids).length) x.push(pipe(r.area_ids).length + ' rooms');
     if (pipe(r.subject_ids).length) x.push(pipe(r.subject_ids).length + ' dogs');
     if (r.end_others === 'yes') x.push('ends others');
@@ -263,6 +271,7 @@ var VisitView = (function () {
       + '<p><button type="button" class="btn" data-vis-dnew="1">Let someone give visits</button> <button type="button" class="cb" data-vis-mode="">Back</button></p>';
   }
   function delegForm(v) {
+    rightsFrom(v.T);
     var d = S.d, P = (v.T['BLD-code_register.csv'] || []).filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }), T = types(v.T, v.today), A = rows(v.T, 'BLD-area.csv'), R = pipe(d.rights), Ty = pipe(d.visit_type_ids), Ar = pipe(d.area_ids);
     var tick = function (name, val, on, label) { return '<label><input type="checkbox" name="' + name + '" value="' + v.esc(val) + '"' + (on ? ' checked' : '') + '> ' + label + '</label>'; };
     return '<form class="vis-f" data-vis-form="deleg">'
@@ -491,7 +500,7 @@ var VisitView = (function () {
       else if (d.visDend != null) S.dend = d.visDend;
       else if (d.visEnd != null) { S.end = d.visEnd; S.ext = ''; }
       else if (d.visExt != null) { S.ext = d.visExt; S.end = ''; }
-      else if (d.visEdit != null) S.t = d.visEdit === 'new' ? { rights: 'view|review' } : (d.visEdit ? Object.assign({}, byId(types(vv.T, vv.today), d.visEdit)) : null);
+      else if (d.visEdit != null) S.t = d.visEdit === 'new' ? { rights: 'view|raise_finding' } : (d.visEdit ? Object.assign({}, byId(types(vv.T, vv.today), d.visEdit)) : null);
       else if (d.visSuggest) S.t = Object.assign({ name: d.visSuggest }, SUGGEST[d.visSuggest]);
       else if (d.visUrl != null) S.url = '';
       redraw();
