@@ -143,5 +143,19 @@
     });
     return out;
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce };
+  /**
+   * How many places of the incoming dog's size are free in this room (including this dog). 0 = no space or over.
+   * The mix is judged as check() does: every dog counts as the largest size present after this dog would join.
+   */
+  function freePlaces(o) {
+    var add = o && o.add, cur = (o && o.dogs) || [];
+    if (!add) return { ok: false, free: 0, size: '', limit: null, count: cur.length };
+    var size = word(add.size) || '';
+    var sim = check({ areaId: o.areaId, access: o.access, capacity: o.capacity, dogs: cur.concat([add]), date: o.date });
+    var free = (sim.status === 'ok' && sim.limit !== null) ? (sim.limit - (sim.count - 1)) : 0;
+    if (free < 0) free = 0;
+    return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
+  }
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce, freePlaces: freePlaces };
+
 }));

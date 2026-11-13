@@ -35,6 +35,53 @@
    * No such row = dogs can be placed. The place still shows for temperatures; only the dog pickers leave it out.
    */
   function takesDogs(a, day, reqRows) { return !!a && !N.coversDay(reqRows, 'room.no_dogs', 'area', a.id, day || N.today(), { absentIs: false }); }
+  /**
+   * Overnight cabin (The round, overnight picker)? A day pen is marked by a BLD-requirement row with need_type
+   * room.no_overnight (target_table area), dated like every need row. No such row = overnight placement is allowed
+   * (if takesDogs is also true). Need type is a row value, never a room name in code.
+   */
+  function takesOvernight(a, day, reqRows) {
+    return takesDogs(a, day, reqRows) && !N.coversDay(reqRows, 'room.no_overnight', 'area', a.id, day || N.today(), { absentIs: false });
+  }
+  /**
+   * Occupancy record in force on `day` (includes a leave row): the latest moved_in on or before that day
+   * (a row with no moved_in ranks below any dated row; a tie goes to the later row in the file).
+   * Future moved_in is ignored. rowOn() then drops a stay whose moved_out is before the day, a leave, or a temporary off-site.
+   * dailyList uses recordOn so a future leave cannot hide a dog who is still here today.
+   */
+  function recordOn(rows, subjectId, day) {
+    day = String(day || '').slice(0, 10);
+    var best = null, bestKey = '', bestIdx = -1;
+    for (var i = 0; i < (rows || []).length; i++) {
+      var r = rows[i];
+      if (r.subject_id !== subjectId) continue;
+      var mi = String(r.moved_in || '').slice(0, 10);
+      if (mi && day && mi > day) continue;
+      var key = mi || '';
+      if (best === null || key > bestKey || (key === bestKey && i >= bestIdx)) { best = r; bestKey = key; bestIdx = i; }
+    }
+    return best;
+  }
+  function rowOn(rows, subjectId, day) {
+    var best = recordOn(rows, subjectId, day);
+    if (!best) return null;
+    var mo = String(best.moved_out || '').slice(0, 10);
+    if (mo && day && mo < day) return null;
+    if (!best.area_id || offSite(best)) return null;
+    if (String(best.off_site_kind || '').toLowerCase() === 'temporary') return null;
+    return best;
+  }
+  /** Subject ids recorded in `areaId` on `day` (dated occupancy, including dogs who have since left). */
+  function inArea(rows, areaId, day) {
+    var seen = {}, ids = [];
+    (rows || []).forEach(function (r) {
+      if (!r.subject_id || seen[r.subject_id]) return;
+      seen[r.subject_id] = 1;
+      var row = rowOn(rows, r.subject_id, day);
+      if (row && row.area_id === areaId) ids.push(r.subject_id);
+    });
+    return ids;
+  }
   /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
@@ -63,12 +110,25 @@
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
    * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
    */
+  /** One room name everywhere (Lisa 12 Nov 2026): the code, without a retired room's ZZ_ mark, and "Isolation" after the
+   *  isolation room (its use starts with "Isolation", e.g. H2). Matching is by id, never by this text. */
+  function roomName(a) {
+    var c = String((a && (a.code || a.id)) || '').replace(/^ZZ_/, '');
+    return /^\s*isolation\b/i.test(String((a && a.use) || '')) && !/isolation|\biso\b/i.test(c) ? c + ' Isolation' : c;
+  }
+  /** Room order (Lisa 12 Nov 2026): the area's own group_sort first, then its code in natural order (3B.4/5 before 3B.9/10).
+   *  No list in code: a new group or room sorts by its row. A room with no group_sort goes last. */
+  function byPlace(a, b) {
+    var x = a.sort || Infinity, y = b.sort || Infinity;
+    if (x !== y) return x < y ? -1 : 1;
+    return String(a.label).localeCompare(String(b.label), 'en', { numeric: true, sensitivity: 'base' });
+  }
   function dailyList(T, day) {
     T = T || {};
     day = day || N.today();
     var areas = (T.area || []).filter(function (a) { return inUse(a, day, T.requirement); }).map(function (a) {
-      return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0, dogs: takesDogs(a, day, T.requirement) };
-    });
+      return { id: a.id, label: roomName(a), group: a.grouping || '', sort: parseFloat(a.group_sort) || 0, dogs: takesDogs(a, day, T.requirement) };
+    }).sort(byPlace);
     var areaById = {};
     areas.forEach(function (a) { areaById[a.id] = a; });
     var state = {};
@@ -77,11 +137,13 @@
     (T.subject || []).forEach(function (s) {
       var st = state[s.id] !== undefined ? state[s.id].toLowerCase() : null;
       if (st !== null && GONE_STATE[st]) return;
-      var row = latestRow(T.occupancy, s.id);
+      var row = recordOn(T.occupancy, s.id, day);
       if (offSite(row)) return;
+      var mo = row ? String(row.moved_out || '').slice(0, 10) : '';
+      if (mo && day && mo < day) row = null;   // stay has ended and no later row
       if (!row && st === null) { skipped++; return; }
       var a = row && row.area_id ? areaById[row.area_id] : null;
-      var out = !!row && String(row.off_site_kind || '').toLowerCase() === 'temporary';   // latest row says Off-site: no room
+      var out = !!row && String(row.off_site_kind || '').toLowerCase() === 'temporary';   // in-force row says Off-site: no room
       dogs.push({
         id: s.id, label: s.name || s.id,
         areaId: a ? a.id : '', areaLabel: a ? a.label : '', known: !!a,
@@ -117,5 +179,5 @@
     });
   }
 
-  return { latestRow: latestRow, offSite: offSite, inUse: inUse, takesDogs: takesDogs, dailyList: dailyList, loadViaScript: loadViaScript };
+  return { roomName: roomName, latestRow: latestRow, recordOn: recordOn, rowOn: rowOn, inArea: inArea, offSite: offSite, inUse: inUse, takesDogs: takesDogs, takesOvernight: takesOvernight, dailyList: dailyList, loadViaScript: loadViaScript };
 }));

@@ -20,9 +20,8 @@
  *   STAFF_REGISTRY   JSON of hashed staff codes, managed by adminAddStaffCode().
  *   ALLOW_CREATE     'true' only while Lisa runs adminCreateEmptyTables().
  *   BACKUP_ON        'true' to let the optional daily backup copy run (see adminInstallDailyBackup).
- *   MOVES_QUEUE_UNTIL  last day (YYYY-MM-DD, London) on which a dog move goes to the approvals queue. After that
- *                    day moves go straight in. Run adminStartMovesQueue() on go-live day to set it to today + 14 days.
- *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
+ *   MOVES_QUEUE_UNTIL  kept for older deploys. Occupancy moves now always go straight in (Lisa 12 Nov 2026);
+ *                    this date and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
  *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
  *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as

@@ -48,3 +48,31 @@ test.describe('CD Hub: Compliance rules with no row are not set', () => {
     expect(Number(await page.locator('#brVal').getAttribute('max'))).toBeGreaterThanOrEqual(366);
   });
 });
+
+test.describe('CD Hub: estimated mating date uses the gestation row', () => {
+  test('no due-days row: a litter with no mating row is not checked and says not set', async ({ page, guard }) => {
+    put(guard.world, 'BLD-breeding_rule.csv', csv(RULE_H, ['b1,t,min_dam_age_months,12,2010-01-01,Pretend law,,,']));
+    await HUBS.cdhub.open(page, guard);
+    const r = await page.evaluate(() => {
+      T['BLD-subject.csv'] = [{ id: 'd-1', dob: '2024-01-01' }];
+      CD.litters = [{ id: 'l-1', dam_subject_id: 'd-1', dob: '2024-12-01' }];
+      const da = damAgeBreaches(); return { n: da.length, unest: da.unest, est: estMated('2024-12-01') };
+    });
+    expect(r).toEqual({ n: 0, unest: 1, est: null });
+  });
+
+  test('due-days row: mating estimated as birth minus the row in force on the mating date', async ({ page, guard }) => {
+    put(guard.world, 'BLD-breeding_rule.csv', csv(RULE_H, [
+      'b1,t,min_dam_age_months,12,2010-01-01,Pretend law,,,',
+      'g1,t,gestation.due_days,63,2010-01-01,Pretend vet,,,',
+      'g2,t,gestation.due_days,60,2024-10-01,Pretend vet,,,']));
+    await HUBS.cdhub.open(page, guard);
+    const r = await page.evaluate(() => {
+      T['BLD-subject.csv'] = [{ id: 'd-1', dob: '2024-01-01' }];
+      CD.litters = [{ id: 'l-1', dam_subject_id: 'd-1', dob: '2024-12-01' }];
+      const da = damAgeBreaches();
+      return { n: da.length, on: da[0] && da[0].on, est: da[0] && da[0].est, unest: da.unest, old: estMated('2020-06-01') };
+    });
+    expect(r).toEqual({ n: 1, on: '2024-10-02', est: true, unest: 0, old: '2020-03-30' });
+  });
+});
