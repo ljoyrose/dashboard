@@ -78,7 +78,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const f = page.locator('#wpanel form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('9.3');
     await f.locator('button[type=submit]').click();
-    await expect(f.locator('[data-weigh-msg]')).toHaveText('NOT saved \u2014 The save script has not been updated for this yet. Nothing was saved.');
+    await expect(f.locator('[data-weigh-msg]')).toHaveText('Not saved: The save script has not been updated for this yet. Nothing was saved.');
     await expect(page.locator('#wpanel tbody tr')).toHaveCount(3);
   });
 

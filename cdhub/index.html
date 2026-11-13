@@ -116,9 +116,10 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
 @media (hover:hover){.filt select:hover, .fpanel select:hover {background:var(--hov);}
 .btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
-.tile.tl:hover,.ci:hover{border-color:var(--press)}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
+.sv-line{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}.sv-ic{display:inline-flex}.sv-ic svg{width:16px;height:16px}
+.sv-line.good .sv-ic{color:var(--house-ok)}.sv-line.wait .sv-ic{color:var(--muted)}
 
 
 @media (hover:hover){.btn.yes:hover{background:var(--hov);}.btn.no:hover{background:var(--hov);}}
@@ -201,7 +202,6 @@ tr:last-child td{border-bottom:none}
 .mcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}
 .mcard h3{margin:0 0 4px;font-size:var(--fs-head);display:flex;align-items:center;gap:8px}
 .mcard h3 .ti{color:var(--muted)}
-@media (hover:hover){.mcard:hover h3 .ti{color:var(--hc,var(--muted))}}
 .mcard.nextc{border-color:var(--ink);background:linear-gradient(var(--ljr-6-tint),var(--ljr-6-tint)) var(--card)}
 .mcard.nextc .bline{font-size:var(--fs-small);font-weight:600;color:var(--muted)}
 .mcard.nextc .t{font-size:var(--fs-head);font-weight:600;margin:2px 0 4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
@@ -1467,27 +1467,27 @@ function checks(){
  var sw=CD.tempSwaps||[];
  out.push({k:'room temps',ok:!sw.length,
    msg:sw.length? sw.length+' reading'+(sw.length===1?' has':'s have')+' max lower than min (typed the wrong way round?): '
-     +sw.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+x.date+' '+x.min+'\u2013'+x.max; }).join(', ')+(sw.length>5?' \u2026':'')
+     +sw.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+x.min+'\u2013'+x.max; }).join(', ')+(sw.length>5?' \u2026':'')
      :'every saved reading has max at or above min'});
  var unset=breedRulesMissing().map(function(b){ return b[1].toLowerCase(); });
  var lg=litterGaps();
  out.push({k:'litter gap',ok:!lg.length,
    msg:!breedRuleRows('min_months_between_litters').length?'not checked: set the shortest time between litters on Compliance'
      :lg.length? lg.length+' litter'+(lg.length===1?' is':'s are')+' closer to the same dam’s last one than your rule allows (check the date or a duplicate): '
-     +lg.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' '+litDob(x.prev)+' → '+litDob(x.next)+(x.days===0?' (same day)':' ('+x.days+' days, rule '+x.months+' months)'); }).join(', ')+(lg.length>5?' …':'')
+     +lg.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' '+dmy(litDob(x.prev))+' → '+dmy(litDob(x.next))+(x.days===0?' (same day)':' ('+x.days+' days, rule '+x.months+' months)'); }).join(', ')+(lg.length>5?' …':'')
      :'every dam’s litters meet your rule on time between litters'});
  var da=damAgeBreaches();
  out.push({k:'dam age',ok:!da.length,
    msg:(!breedRuleRows('min_dam_age_months').length?'not checked: set the youngest age a bitch can be mated on Compliance'
      :da.length? da.length+' mating'+(da.length===1?' was':'s were')+' younger than your rule allows: '
-     +da.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' mated '+x.on+(x.est?' (estimated)':'')+', born '+x.dob+' (rule '+x.months+' months)'; }).join(', ')+(da.length>5?' …':'')
+     +da.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' mated '+dmy(x.on)+(x.est?' (estimated)':'')+', born '+dmy(x.dob)+' (rule '+x.months+' months)'; }).join(', ')+(da.length>5?' …':'')
      :'every mating meets your rule on the youngest age')
    +(breedRuleRows('min_dam_age_months').length&&da.unest?' · '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked: days from mating to due date not set':'')});
  var lc=litterCountBreaches();
  out.push({k:'litter count',ok:!lc.length,
    msg:!breedRuleRows('max_litters_per_dam').length?'not checked: set the most litters per bitch on Compliance'
      :lc.length? lc.length+' litter'+(lc.length===1?' takes a bitch':'s take bitches')+' past your most litters: '
-     +lc.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' litter '+x.n+' of '+x.max+' allowed ('+litDob(x.litter)+')'; }).join(', ')+(lc.length>5?' …':'')
+     +lc.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' litter '+x.n+' of '+x.max+' allowed ('+dmy(litDob(x.litter))+')'; }).join(', ')+(lc.length>5?' …':'')
      :'no bitch is over your most litters'});
  out.push({k:'breeding rules',ok:!unset.length,
    msg:unset.length? unset.length+' of 3 not set yet: '+unset.join(', ')+'. Set them on Compliance.':'all 3 set; litters and matings are checked against the version in force on their own date'});
@@ -1953,7 +1953,7 @@ async function placeDog(id,btn){
  if(rc.status==='over'&&!window.confirm(rc.message+' Place anyway?')){ msg.textContent='Not placed.'; return; }
  btn.disabled=true; msg.textContent='Saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:id,area_id:aid}); btn.disabled=false;
- msg.textContent=sinkMsg(r);
+ showSave(msg,sinkMsg(r));
  if(r.ok&&r.result&&r.result.status==='saved'){ var d=CD._byId[id], a=CD.areas.filter(function(x){ return x.id===aid; })[0];
   if(d){ d.area_id=aid; d.room=aid; d.where=a?a.code:aid; }
   var k=roundKey(date,aid), cur=ROUND[k]||(ROUND[k]={areaId:aid,date:date,access:''}); cur.subjects=ids;
@@ -2002,7 +2002,7 @@ async function appendListedRow(name, label, fields){
  }catch(e){ return {ok:false, message:'Not saved: the '+label+' could not be updated.'}; }
 }
 function finishListedSave(btn, result){
- if(result.ok){ btn.textContent='saved ✓'; var tr=btn.closest&&btn.closest('tr'); if(tr) tr.style.opacity='0.4'; return; }
+ if(result.ok){ btn.innerHTML=saveHtml('Saved '+hhmmNow()); var tr=btn.closest&&btn.closest('tr'); if(tr) tr.style.opacity='0.4'; return; }
  btn.textContent=result.message||'Not saved.'; btn.disabled=false;
 }
 async function saveChip(dogId,subjectId,chipVal,btn){
@@ -2043,9 +2043,9 @@ async function saveMed(evt,dogId,nameSlug,form){
   var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
   var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',
     {method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
-  if(res.ok){btn.textContent='saved ✓';btn.disabled=true;}
-  else{btn.textContent='error';btn.disabled=false;}
- }catch(e){btn.textContent='error';btn.disabled=false;}
+  if(res.ok){btn.innerHTML=saveHtml('Saved '+hhmmNow());btn.disabled=true;}
+  else{btn.textContent='Not saved: the medicines list could not be updated';btn.disabled=false;}
+ }catch(e){btn.textContent='Not saved: the connection failed';btn.disabled=false;}
  return false;
 }
 
@@ -2486,13 +2486,13 @@ document.addEventListener('submit',async function(ev){
   db.disabled=true; dm.textContent='Saving\u2026';
   if(any){
    var dr=await sinkAct('dog_details',send);
-   if(!dr.ok){ db.disabled=false; dm.textContent=sinkMsg(dr); return; }
+   if(!dr.ok){ db.disabled=false; showSave(dm,sinkMsg(dr)); return; }
    dd.name=now.name; dd.sex=now.sex; dd.dob=now.dob; dd.chip=now.chip_number; dd.neuter=now.neuter_status; dd.colourId=now.coat_colour_id;
    var cc=(CD.colour||{})[now.coat_colour_id]; dd.colour=cc?{name:cc.name,family:cc.base_family,hex:cc.swatch_hex,noseApplies:cc.nose_pigment_applies==='true'}:null;
   }
   if(sizeCh){
    var sr=await sinkPost('breeding_rule',{rule_key:'size_override.'+did,value:sizeWant||'weight',effective_from:todayLondon()});
-   if(!(sr.ok&&sr.result&&sr.result.status==='saved')){ db.disabled=false; dm.textContent=sinkMsg(sr); return; }
+   if(!(sr.ok&&sr.result&&sr.result.status==='saved')){ db.disabled=false; showSave(dm,sinkMsg(sr)); return; }
    (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(sr.result&&sr.result.id)||'',rule_key:'size_override.'+did,value:sizeWant||'weight',effective_from:todayLondon(),source:'',note:'',set_at:(sr.result&&sr.result.at)||''});
    if(typeof sizeFromWeight==='function') sizeFromWeight(dd);
   }
@@ -2505,10 +2505,10 @@ document.addEventListener('submit',async function(ev){
   btn.disabled=true; msg.textContent='Saving\u2026';
   var r=await sinkAct('weighing',{subject_id:id,performed_on:on,weight_kg:String(Math.round(n*100)/100),body_condition_score:bcs});
   btn.disabled=false;
-  if(!r.ok){ msg.textContent=sinkMsg(r); return; }
+  if(!r.ok){ showSave(msg,sinkMsg(r)); return; }
   var d=CD._byId[id]; if(d){ d.weights.push({on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':''}); d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
   drawDogs(); showWeights(id);
-  var m2=document.querySelector('[data-weigh-msg]'); if(m2) m2.textContent=sinkMsg(r);
+  var m2=document.querySelector('[data-weigh-msg]'); if(m2) showSave(m2,sinkMsg(r));
   return; }
  if(f.matches('[data-vax-form]')){ ev.preventDefault();
   var vid=f.getAttribute('data-vax-form'), vmsg=f.parentNode.querySelector('[data-vax-msg]'), vb=f.querySelector('button[type=submit]');
@@ -2520,7 +2520,7 @@ document.addEventListener('submit',async function(ev){
   vb.disabled=true; vmsg.textContent='Saving\u2026';
   var vr=await sinkAct('vaccination',{subject_id:vid,given_on:f.on.value,product:String(f.product.value).trim(),diseases_covered:covers,practice:String(f.vet.value||'').trim(),certificate_link:card});
   vb.disabled=false;
-  if(!vr.ok){ vmsg.textContent=sinkMsg(vr); return; }
+  if(!vr.ok){ showSave(vmsg,sinkMsg(vr)); return; }
   var vd=CD._byId[vid]; if(vd){ vd.vacc.push({id:(vr.result&&vr.result.id)||'',on:f.on.value,kind:'vaccination',product:String(f.product.value).trim(),covers:covers,vet:String(f.vet.value||'').trim(),card:card,titre:'',protective:'',due:'',dueSrc:''});
    vd.vacc.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); }
   drawDogs(); vaxReopen(vid,sinkMsg(vr)); }
@@ -2538,12 +2538,12 @@ document.addEventListener('click',async function(ev){
  if(!window.confirm('Remove the '+dmy(last.on)+' '+(last.product||'vaccination')+'? It stays in the sheet, marked removed, and you can add it again.')) return;
  b.disabled=true;
  var r=await sinkAct('vaccination_void',{subject_id:id,id:rid});
- if(!r.ok){ b.disabled=false; var m=b.closest('.dcs-bd'); m=m&&m.querySelector('[data-vax-msg]'); if(m) m.textContent=sinkMsg(r); return; }
- d.vacc.pop(); drawDogs(); vaxReopen(id,'Removed \u2713');
+ if(!r.ok){ b.disabled=false; var m=b.closest('.dcs-bd'); m=m&&m.querySelector('[data-vax-msg]'); if(m) showSave(m,sinkMsg(r)); return; }
+ d.vacc.pop(); drawDogs(); vaxReopen(id,'Removed '+hhmmNow());
 },true);
 function vaxReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
  var more=c.querySelector('details[data-k="more"]'), v=c.querySelector('details.vacc'); if(more) more.open=true; if(v) v.open=true;
- var m=c.querySelector('[data-vax-msg]'); if(m) m.textContent=text||''; }
+ var m=c.querySelector('[data-vax-msg]'); if(m) showSave(m,text); }
 function bindDogPhotos(){
  while(DOGPHOTO_URLS.length){ try{ URL.revokeObjectURL(DOGPHOTO_URLS.pop()); }catch(e){} }
  loadDogPhotos();
@@ -2617,7 +2617,7 @@ function drawDogs(){
           :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
            /* no room yet (pups too) or off site: Place opens the same cabin picker (Lisa 13 Nov 2026) */
            +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
-        +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+esc(CD._moved.text)+'</span>':'')
+        +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+saveHtml(CD._moved.text)+'</span>':'')
       +'</div>'
       +dogLinksHtml(d)
     +'</div>'
@@ -2836,7 +2836,7 @@ async function applyDogMove(dogId, toId, msgEl){
  if(!toId) return;
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:dogId,area_id:toId});
- if(!(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(r,'move'); return; }
+ if(!(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ if(msgEl) showSave(msgEl,sinkMsg(r,'move')); return; }
  var d=CD._byId[dogId], a=(CD.allAreas||CD.areas||[]).filter(function(x){ return x.id===toId; })[0];
  if(d){ d.area_id=toId; d.room=toId; d.where=a?a.code:toId; }
  var date=CD._roundDate||todayISO(), k=roundKey(date,toId), cur=ROUND[k]||(ROUND[k]={areaId:toId,date:date,access:''});
@@ -2845,13 +2845,13 @@ async function applyDogMove(dogId, toId, msgEl){
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  if(page==='round') CD._roundMsg={area:toId,text:sinkMsg(r,'move')};
  CD._moved={id:dogId,text:sinkMsg(r,'move')};   /* the dog card shows the tick after it redraws */
- if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ if(msgEl) showSave(msgEl,sinkMsg(r,'move'));
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
 async function applyDogOff(dogId, msgEl){
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy_out',{subject_id:dogId,off_site_kind:'temporary'});
- if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ if(msgEl) showSave(msgEl,sinkMsg(r,'move'));
  if(!(r.ok&&r.result&&r.result.status==='saved')) return;
  CD._moved={id:dogId,text:sinkMsg(r,'move')};
  var d=CD._byId[dogId], date=CD._roundDate||todayISO();
@@ -2872,12 +2872,12 @@ async function accessSave(aid,mode,msgEl){
  if(accessOf(aid)===mode){ if(msgEl) msgEl.textContent='Already set.'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var ar=await sinkPost('area_access',{area_id:aid,access_type:mode});
- if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(ar); return; }
+ if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) showSave(msgEl,sinkMsg(ar)); return; }
  ACCESS[aid]={area_id:aid,access_type:mode,at:(ar.result&&ar.result.at)||new Date().toISOString()};
  var rows=T['BLD-area_access.csv']||(T['BLD-area_access.csv']=[]);
  rows.push({id:(ar.result&&ar.result.id)||'',area_id:aid,access_type:mode,reason:''});
  CD.accessCsv[aid]=rows[rows.length-1];
- if(msgEl) msgEl.textContent=sinkMsg(ar);
+ if(msgEl) showSave(msgEl,sinkMsg(ar));
  go('areas',false);
 }
 
@@ -3245,7 +3245,7 @@ function pageRound(){
    +'<select class="radd" data-area="'+aid+'"><option value="">add a dog\u2026</option>'
    +roundPickOptions(dogs,sel,placed,aid)
    +'</select>'
-   +'<span class="mut rsave" data-area="'+aid+'">'+(flash&&flash.area===aid?esc(flash.text):'')+'</span>'
+   +'<span class="mut rsave" data-area="'+aid+'">'+(flash&&flash.area===aid?saveHtml(flash.text):'')+'</span>'
    +'</div>'
    +'<div class="chips" style="margin-bottom:4px">'
    +(sel.length?sel.map(function(sid){ var d=CD._byId[sid], seen=(r.seen||{})[sid];
@@ -3417,11 +3417,21 @@ async function sinkPost(table,fields){
  return sinkSend({table:table,action:'add',fields:fields});
 }
 function sinkMsg(r,kind){
- if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved \u2713':'saved \u2713';
- if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'moved \u2014 still waiting. Open Compliance, then Who has access, then the owner page.':'sent \u2014 waiting for approval';
+ if(r.ok&&r.result&&r.result.status==='saved') return (kind==='move'?'Moved ':'Saved ')+hhmmNow();
+ if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'Moved, still waiting. Open Compliance, then Who has access, then the owner page.':'Sent, waiting for approval';
  var f=r.fields?Object.keys(r.fields).map(function(k){ return r.fields[k]; }).join(' '):'';
- return 'NOT saved \u2014 '+(f||r.message||r.code||'error');
+ return 'Not saved: '+(f||r.message||r.code||'error');
 }
+/* Tick on every save (Lisa 12 Nov 2026), the staff app's BLDDone look: a tick line on the item once the save
+   script says saved, a clock while it waits, a plain "Not saved" line otherwise. The tick is an icon; the words stay ink. */
+function hhmmNow(){ return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit'}).format(new Date()); }
+var SV_TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>',
+    SV_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+function saveHtml(text){ text=String(text||''); if(!text) return '';
+ var k=/^(Saved|Moved|Removed)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
+ if(!k) return esc(text);
+ return '<span class="sv-line '+k+'" data-saved="'+k+'"><span class="sv-ic">'+(k==='good'?SV_TICK:k==='wait'?SV_CLOCK:'')+'</span><span>'+esc(text)+'</span></span>'; }
+function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
 /* a time on the round's date, with this device's offset, e.g. 2026-11-07T12:00:00+00:00 */
 function isoAt(dateISO,hh){ var d=new Date(dateISO+'T'+hh+':00:00'), off=-d.getTimezoneOffset(), sg=off<0?'-':'+'; off=Math.abs(off);
  return dateISO+'T'+hh+':00:00'+sg+('0'+Math.floor(off/60)).slice(-2)+':'+('0'+(off%60)).slice(-2); }
@@ -3452,7 +3462,7 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('area_reading',{area_id:areaId,min_c:t.min,max_c:t.max,period_start:ps});
  t.busy=false;
- if(msgEl) msgEl.textContent=sinkMsg(r);
+ if(msgEl) showSave(msgEl,sinkMsg(r));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   cur['t_'+slot]={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()}; delete TYPED[tk];
@@ -3474,7 +3484,7 @@ async function roomEmptySave(areaId,slot,msgEl){
  if(Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon can be marked from 12:00':'That time has not arrived yet.'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('area_reading',{area_id:areaId,room_empty:'yes',period_start:ps});
- if(msgEl) msgEl.textContent=sinkMsg(r);
+ if(msgEl) showSave(msgEl,sinkMsg(r));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   cur['t_'+slot]={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
@@ -3505,7 +3515,7 @@ async function roundSave(areaId,patch,msgEl,sel){
   if(accessOf(areaId)===mode){ if(msgEl) msgEl.textContent='Already set to '+(mode==='free'?'free access':'limited')+'.'; return; }
   if(msgEl) msgEl.textContent='saving\u2026';
   var ar=await sinkPost('area_access',{area_id:areaId,access_type:mode});
-  if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) msgEl.textContent=sinkMsg(ar); back(); return; }
+  if(!(ar.ok&&ar.result&&(ar.result.status==='saved'||ar.result.status==='queued'))){ if(msgEl) showSave(msgEl,sinkMsg(ar)); back(); return; }
   ACCESS[areaId]={area_id:areaId,access_type:mode,at:(ar.result&&ar.result.at)||new Date().toISOString()};
   var rows=T['BLD-area_access.csv']||(T['BLD-area_access.csv']=[]);
   rows.push({id:(ar.result&&ar.result.id)||'',area_id:areaId,access_type:mode,reason:''});
@@ -3517,7 +3527,7 @@ async function roundSave(areaId,patch,msgEl,sel){
  if(!patch.add){ if(msgEl) msgEl.textContent='To move a dog, add them to the cabin they moved to.'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
  var r=await sinkPost('occupancy',{subject_id:patch.add,area_id:areaId});
- if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ if(msgEl) showSave(msgEl,sinkMsg(r,'move'));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){ var d=CD._byId[patch.add]; if(d) d.area_id=areaId;
   var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   cur.subjects=(cur.subjects||CD.dogs.filter(function(x){ return x.area_id===areaId&&x.id!==patch.add; }).map(function(x){ return x.id; })).concat([patch.add]);
@@ -3865,9 +3875,9 @@ function compTempsHtml(){
 function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
- lg.forEach(function(x){ probs.push({who:x.dam,t:'Litters too close: '+(x.days===0?'same day':x.days+' days apart'),s:(x.prev.pairing||x.prev.id)+' ('+litDob(x.prev)+') → '+(x.next.pairing||x.next.id)+' ('+litDob(x.next)+'). Your rule: '+x.months+' months.'}); });
- da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+x.on+(x.est?' (estimated from the litter, no mating row)':'')+', born '+x.dob+'. Your rule: '+x.months+' months.'}); });
- lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+litDob(x.litter)+'). Your rule: '+x.max+'.'}); });
+ lg.forEach(function(x){ probs.push({who:x.dam,t:'Litters too close: '+(x.days===0?'same day':x.days+' days apart'),s:(x.prev.pairing||x.prev.id)+' ('+dmy(litDob(x.prev))+') → '+(x.next.pairing||x.next.id)+' ('+dmy(litDob(x.next))+'). Your rule: '+x.months+' months.'}); });
+ da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+dmy(x.on)+(x.est?' (estimated from the litter, no mating row)':'')+', born '+dmy(x.dob)+'. Your rule: '+x.months+' months.'}); });
+ lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+dmy(litDob(x.litter))+'). Your rule: '+x.max+'.'}); });
  var h='<h2>Compliance</h2><p class="sub">Data checks, breeding rules and room limits.</p>';
  var asAt=/^\d{4}-\d{2}-\d{2}$/.test(COMP.asAt)&&COMP.asAt<=today?COMP.asAt:today, past=asAt!==today;
  h+='<div class="frow" id="asAtRow"><label for="compAsAt">What was true on</label> <input id="compAsAt" type="date" max="'+today+'" value="'+asAt+'">'
@@ -4045,11 +4055,11 @@ function bindCompliance(){
   if(last&&last.effective_from>=from){ msg.textContent='This rule already has a version from '+dmy(last.effective_from)+'. A change must start after that date.'; return; }
   b.disabled=true; msg.textContent='saving…';
   var r=await sinkPost('breeding_rule',{rule_key:key,value:val,effective_from:from,source:src});
-  b.disabled=false; msg.textContent=sinkMsg(r);
+  b.disabled=false; showSave(msg,sinkMsg(r));
   if(r.ok&&r.result&&r.result.status==='saved'){
    (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.result.id||'',rule_key:key,value:String(+val),effective_from:from,source:src,set_at:r.result.at||''});
    CD._built=(CD._built||0)+1; go('compliance',false);
-   var m2=document.getElementById('brMsg'); if(m2) m2.textContent='saved ✓';
+   showSave(document.getElementById('brMsg'),'Saved '+hhmmNow());
   }
  });
 }

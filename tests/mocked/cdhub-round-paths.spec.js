@@ -142,7 +142,7 @@ test.describe('CD Hub: The round controls', () => {
 
     const flap = page.locator('.racc[data-area="area-1"]');
     await flap.selectOption('limited');
-    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('NOT saved — Could not reach the save script. Nothing is known to be saved.');
+    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('Not saved: Could not reach the save script. Nothing is known to be saved.');
     await expect(flap).toHaveValue('free');
 
     await page.locator('[data-move-dog="sub-test-dog-1"]').click();
@@ -153,7 +153,7 @@ test.describe('CD Hub: The round controls', () => {
     if (await dest.count()) {
       const to = await dest.first().getAttribute('data-move-to');
       await dest.first().click();
-      await expect(page.locator(`.rsave[data-area="${to}"]`).or(page.locator('.rsave[data-area="area-1"]')).first()).toContainText('NOT saved');
+      await expect(page.locator(`.rsave[data-area="${to}"]`).or(page.locator('.rsave[data-area="area-1"]')).first()).toContainText('Not saved');
     } else {
       await expect(mv).toContainText('No cabin has space');
     }
@@ -165,7 +165,7 @@ test.describe('CD Hub: The round controls', () => {
       localStorage.setItem('cdhub.sink.code', 'test-code-1');
     });
     await page.locator('.racc[data-area="area-1"]').selectOption('limited');
-    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('saved ✓');
+    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText(/^Saved \d\d:\d\d$/);
     await expect(page.locator('.racc[data-area="area-1"]')).toHaveValue('limited');
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ table: 'area_access', action: 'add', fields: { area_id: 'area-1', access_type: 'limited' } });
