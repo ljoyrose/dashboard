@@ -30,6 +30,8 @@ The on-screen dog card is not changed. Print rules only, plus the light look dur
 
 - Chrome's own PDF output (the engine behind both Print and Save as PDF), A4, background graphics off (Chrome's default), desktop and phone (Pixel 5 size). Page counts prove no card was split.
 - Each PDF looked at by eye.
+- Full suite, desktop and phone: 2,105 passed. 8 page-size budget checks (Factory, Marketplace, Money, Studio) fail the same way on main without this change; not touched here.
+- Each new check fails on the old code (run to prove it).
 - Not checked: a live print from the signed-in hub with real rows (no sign-in or owner code here, and no real data may be used). Safari on Mac or iPhone (no Safari engine here). The layout uses inline blocks, not grid, and leaves a few mm spare per card, so Safari's own margins should not push cards to the next page, but that is unproven.
 
 ## For Lisa to check (one live print each)

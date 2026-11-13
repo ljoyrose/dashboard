@@ -43,7 +43,7 @@ test.describe('CD Hub print on A4', () => {
   });
 
   for (const per of [1, 2, 4]) {
-    test(`kennel cards, ${P.PER_LABEL[per]}: ${per} whole card${per > 1 ? 's' : ''} a page, nothing clipped, status line off the paper @regression`, async ({ page }) => {
+    test('kennel cards print whole, nothing clipped, status line off the paper: ' + P.PER_LABEL[per] + ' @regression', async ({ page }) => {
       await P.openCards(page);
       await page.getByRole('button', { name: P.PER_LABEL[per] }).click();
       await expect(page.locator('.sheet')).toHaveClass(new RegExp('\\bper' + per + '\\b'));
