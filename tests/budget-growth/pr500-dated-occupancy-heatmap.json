@@ -1,0 +1,5 @@
+{
+  "cdhub": 15000,
+  "studio": 500,
+  "why": "PR 500 (12 Nov 2026): dated occupancy and area history, heat-map missed vs outside-limit split, min/max swap flag; shared house/token load on every hub. CD Hub first load measured 581017 against 517200 + 10%; Studio 399939 against 363400 + 10%."
+}

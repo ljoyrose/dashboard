@@ -280,6 +280,15 @@ const siteEnv = () => { const env = env0(); return env; };
 const siteTap = (env, f, code) => save(env, req(env, { code: code || env.codes.staff, table: 'check_log', action: 'add_site', fields: f }));
 const allDogs = (env) => recs(env, 'BLD-subject.csv').map((r) => r.id).join('|');
 
+test('the save reply says who saved it, the same name as the row, so the tick on the item can show it', () => {
+  const env = siteEnv(); const id = addType(env, 'bowls2', { target: 'none', site_scope: 'one_line' });
+  const r = siteTap(env, { check_type_id: id, outcome: 'ok' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.ok(r.result.who);
+  assert.equal(r.result.who, rows[0].taken_by);
+});
+
 test('site tap: a job about a place stays one line, whoever is on site', () => {
   const env = siteEnv(); const id = addType(env, 'bowls', { target: 'none', site_scope: 'one_line' });
   const r = siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: allDogs(env) });
@@ -300,6 +309,16 @@ test('site tap: a job about dogs writes one line per dog, and isolation, off-sit
   assert.deepEqual(rows.map((x) => x.subject_id), ['sub-test-b']);
   assert.equal(rows[0].how_recorded, 'site_tap');
   assert.ok(rows[0].taken_by);
+});
+
+test('site tap: a whole-site job about dogs tapped from a dog scan keeps the real route, not site_tap', () => {
+  const env = siteEnv(); const id = addType(env, 'health_all', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
+  const r = siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b', how_recorded: 'scanned' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].how_recorded, 'scanned');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b', how_recorded: 'magic' }).code, 'INVALID');
 });
 
 test('room tap: a room job about dogs writes one line per ticked dog in that room, as scanned', () => {

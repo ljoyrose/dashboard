@@ -95,9 +95,9 @@ var TABLES = {
           errors[row.min_c === '' ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
         }
       }
-      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
-          parseFloat(row.min_c) > parseFloat(row.max_c)) {
-        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg_ = tempPairError_(row.min_c, row.max_c);
+        if (pairMsg_) errors.min_c = pairMsg_;
       }
       checkReadMethod_(row, errors);
     }
@@ -137,9 +137,9 @@ var TABLES = {
     dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.precision_dp = '1'; row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors) {
-      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
-          parseFloat(row.min_c) > parseFloat(row.max_c)) {
-        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg_ = tempPairError_(row.min_c, row.max_c);
+        if (pairMsg_) errors.min_c = pairMsg_;
       }
       checkReadMethod_(row, errors);
     }
@@ -175,9 +175,9 @@ var TABLES = {
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
       if (!errors.samples && row.samples !== '' && !/^\d{1,6}$/.test(row.samples)) errors.samples = 'Use a whole number.';
-      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
-          parseFloat(row.min_c) > parseFloat(row.max_c)) {
-        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg_ = tempPairError_(row.min_c, row.max_c);
+        if (pairMsg_) errors.min_c = pairMsg_;
       }
     }
   },
@@ -503,8 +503,8 @@ var TABLES = {
   // Where each dog is. LIVE table (BLD-occupancy.csv, header checked 15 Oct). EXISTING column names only.
   // A move APPENDS a new row (subject_id, area_id, moved_in = today). moved_out is NEVER written and no
   // existing row is ever edited: the current room is the row with the latest moved_in.
-  // Own switch (TABLE_ON_occupancy), OFF by default. Moves queue for Lisa for the first 14 days after go-live
-  // (MOVES_QUEUE_UNTIL), then go straight in; MODE_occupancy, if set, beats the date.
+  // Own switch (TABLE_ON_occupancy), OFF by default. Occupancy moves go straight in for every staff code
+  // (Lisa 12 Nov 2026). MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
   // There is no corrects_id column here, so a wrong room is fixed by moving the dog again.
   occupancy: {
     key: 'occupancy',
@@ -520,12 +520,12 @@ var TABLES = {
     perms: { add: ['OWNER', 'STAFF'], correct: [] },
     noCorrect: true,
     ownerEditable: true,
-    // moves queue for the first MOVES_QUEUE_DAYS days after go-live, then go straight in (modeFor_ in Sink.gs)
-    movesQueue: true,
+    // moves go straight in; MOVES_QUEUE_UNTIL is ignored for occupancy (modeFor_ in Sink.gs)
+    movesQueue: false,
     // fields ONLY the owner's in-place edit may also change (staff can never set these)
     ownerEdit: { moved_in: { type: 'date' }, moved_out: { type: 'date' } },
     alwaysPending: false,
-    defaultMode: 'pending',
+    defaultMode: 'direct',
     input: {
       subject_id: { type: 'ref', lookup: 'subject', required: true },
       area_id:    { type: 'ref', lookup: 'area', required: true },
@@ -672,8 +672,9 @@ var TABLES = {
     key: 'breeding_rule',
     file: 'BLD-breeding_rule.csv',
     idPrefix: 'brl',
-    columns: ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
-    proposedColumns: ['rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+    // to_date (Lisa 12 Nov 2026: every limit is a dated row): blank = no end; the last day the rule applies, inclusive.
+    columns: ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'],
+    proposedColumns: ['rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'to_date'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -686,6 +687,7 @@ var TABLES = {
       rule_key:       { type: 'text', required: true },
       value:          { type: 'text', required: true },
       effective_from: { type: 'date', required: true },
+      to_date:        { type: 'date' },
       source:         { type: 'text' },
       note:           { type: 'text' },
       // not a column: "yes" keeps a value outside the usual range (overseer 12 Nov 2026: a council may allow it)
@@ -695,6 +697,9 @@ var TABLES = {
     dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
+      if (row.to_date && row.effective_from && !errors.to_date && !errors.effective_from && row.to_date < row.effective_from) {
+        errors.to_date = 'The end date cannot be before the start date.';
+      }
       if (row.rule_key && !/^[a-z][a-z0-9_.\-]{1,99}$/.test(row.rule_key)) errors.rule_key = 'Use lower-case letters, numbers, dots, dashes and underscores, e.g. size_from_kg.medium.';
       var lim = BREEDING_RULE_LIMITS_[row.rule_key];
       if (lim && row.value !== '' && !errors.value) {
@@ -722,6 +727,14 @@ var TABLES = {
     }
   }
 };
+
+/** Lowest above highest. The same words on the round, the staff page and the owner edit. */
+function tempPairError_(min, max) {
+  if (min !== '' && max !== '' && parseFloat(min) > parseFloat(max)) {
+    return 'The lowest reading cannot be higher than the highest reading.';
+  }
+  return '';
+}
 
 /** A reading's camera fields: the "changed" flag only makes sense for a camera reading. */
 function checkReadMethod_(row, errors) {
@@ -856,7 +869,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE];
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_());   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
@@ -883,6 +896,9 @@ var READABLE = {
   area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
   area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
   litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // health results (12 Nov 2026, for inspector links; staff and owner still need visibility rows, none planned)
+  health_screen:   { file: 'BLD-health_screen.csv',   vis: 'health_screen',   authorCol: '',            dateCol: '' },
+  fit_to_breed:    { file: 'BLD-fit_to_breed.csv',    vis: 'fit_to_breed',    authorCol: '',            dateCol: '' },
   // 12 Nov 2026 (DOGCARD): the kennel print card shows Colour and Microchip. Read only as far as visibility rows
   // allow; the planned rows are for aud-admin (the owner) only.
   coat_colour:     { file: 'BLD-coat_colour.csv',     vis: 'coat_colour',     authorCol: '',            dateCol: '' },
@@ -896,5 +912,8 @@ var READABLE = {
   requirement:     { file: 'BLD-requirement.csv',     vis: 'requirement',     authorCol: 'set_by',      dateCol: 'set_on' },
   area_link:       { file: 'BLD-area_link.csv',       vis: 'area_link',       authorCol: 'set_by',      dateCol: 'set_on' },
   // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
-  capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
+  capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' },
+  // 12 Nov 2026 (Lisa): size is worked out from the latest weight, never kept as its own field. The room scan needs
+  // the weights to do that; read only as far as visibility rows allow (one row: table_name weight, staff, all rows).
+  weight:          { file: 'BLD-weight.csv',          vis: 'weight',          authorCol: '',            dateCol: 'performed_on' }
 };

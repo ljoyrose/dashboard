@@ -35,3 +35,23 @@ test('sizeCutoffs: a row past its to_date no longer counts', () => {
   assert.equal(C.sizeCutoffs(rules, '2026-03-01').large, 25);
   assert.equal(C.sizeCutoffs(rules, '2026-11-12').large, 20);
 });
+
+test('freePlaces: lists remaining places of the incoming size, and 0 when the room would be over', () => {
+  const cap = [
+    { area_id: 'r1', access_type: 'free', size_band: 'small', max_dogs: '3', from_date: '2026-01-01' },
+    { area_id: 'r1', access_type: 'free', size_band: 'medium', max_dogs: '2', from_date: '2026-01-01' }
+  ];
+  const empty = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [], add: { id: 'a', size: 'small' }, date: '2026-11-12' });
+  assert.equal(empty.ok, true);
+  assert.equal(empty.free, 3);
+  assert.equal(empty.size, 'small');
+  const one = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [{ id: 'x', size: 'small' }], add: { id: 'a', size: 'small' }, date: '2026-11-12' });
+  assert.equal(one.ok, true);
+  assert.equal(one.free, 2);
+  const med = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [{ id: 'x', size: 'small' }, { id: 'y', size: 'small' }], add: { id: 'a', size: 'medium' }, date: '2026-11-12' });
+  assert.equal(med.ok, false);
+  assert.equal(med.free, 0);
+  const medOk = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [{ id: 'x', size: 'small' }], add: { id: 'a', size: 'medium' }, date: '2026-11-12' });
+  assert.equal(medOk.ok, true);
+  assert.equal(medOk.free, 1);
+});

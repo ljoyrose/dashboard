@@ -35,6 +35,10 @@ async function setup(page) {
       return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: TABLES[b.table] || [], tables: TABLES, role: ROLE.v } } });
     }
     sent.push(b);
+    // STAFF PR 458: an unusual temperature is a warning the script gives; confirm_unusual = yes saves it
+    if (b.fields && parseFloat(b.fields.max_c) > 60 && b.fields.confirm_unusual !== 'yes') {
+      return route.fulfill({ headers: CORS, json: { ok: false, code: 'INVALID', message: 'Check the entry.', fields: { max_c: 'That is very high for a room.', confirm_unusual: 'Save anyway?' } } });
+    }
     return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length } } });
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-CODE-1', SCRIPT]);
@@ -206,6 +210,29 @@ test('year report: a new room includes readings from the old room linked into it
   } finally { TABLES.area_reading = []; delete TABLES.area_link; }
 });
 
+test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day, never today\'s', async ({ page }) => {
+  const keep = { b: TABLES.temperature_band, r: TABLES.area_reading };
+  TABLES.temperature_band = [
+    { id: 'tb-old', band: 'Rest', min_temp: '10', max_temp: '20', from_date: '', to_date: '2026-11-11' },
+    { id: 'tb-new', band: 'Rest', min_temp: '10', max_temp: '26', from_date: '2026-11-12', to_date: '' }
+  ];
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-new', period_start: '2026-11-11T00:00:00+00:00', taken_at: '2026-11-11T08:00:00Z', min_c: '12.0', max_c: '21.0' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', taken_at: '2026-11-12T08:00:00Z', min_c: '12.0', max_c: '22.0' }
+  ];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const rows = page.locator('.tg-tab').last().locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toHaveClass(/tg-br/);       // 11/11: 21.0 is over 20.0, the row in force that day
+    await expect(rows.nth(1)).not.toHaveClass(/tg-br/);   // 12/11: 22.0 is inside 26.0, the row in force that day
+  } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
+});
+
 test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
   ROLE.v = 'STAFF';
   try {
@@ -215,4 +242,90 @@ test('Year report and Sensor CSV show for an owner code only; a staff code sees 
     await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
   } finally { ROLE.v = 'OWNER'; }
+});
+
+test('an unusual temperature is the script\'s warning: the screen shows it with "Save anyway", which resends with confirm_unusual yes', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MAX').fill('65.0');
+  await page.getByLabel('MIN').fill('12.0');
+  await page.getByLabel('What was done').fill('Thermometer checked');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('That is very high for a room. Save anyway?')).toBeVisible();
+  expect(sent[0].fields.confirm_unusual).toBeUndefined();
+  await page.getByRole('button', { name: 'Save anyway' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1].fields).toMatchObject({ max_c: '65.0', min_c: '12.0', confirm_unusual: 'yes' });
+  await expect(page.getByText('Now press CLR')).toBeVisible();
+});
+
+const SHOTS = process.env.MINMAX_SHOTS_DIR || require('path').join(process.cwd(), 'test-results', 'minmax');
+function staffShot(name) {
+  const fs = require('fs');
+  const path = require('path');
+  fs.mkdirSync(SHOTS, { recursive: true });
+  return path.join(SHOTS, name);
+}
+
+const PAIR_MSG = 'The lowest reading cannot be higher than the highest reading.';
+
+test('min 22.0 and max 18.0 (min first) is flagged as the wrong way round and nothing is posted', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MIN').fill('22.0');
+  await page.getByLabel('MAX').fill('18.0');
+  const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
+  await expect(bad).toHaveCount(1);
+  await expect(page.getByLabel('MIN')).toHaveClass(/\bswap\b/);
+  await expect(page.getByLabel('MAX')).toHaveClass(/\bswap\b/);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(bad).toHaveCount(2);
+  expect(sent, 'staff must not POST a swapped min/max').toHaveLength(0);
+  await bad.last().scrollIntoViewIfNeeded();
+  await page.screenshot({ path: staffShot('staff-min-first.png'), fullPage: false });
+  require('fs').writeFileSync(staffShot('staff-min-first-posts.json'), JSON.stringify(sent, null, 2));
+});
+
+test('min 22.0 and max 18.0 (max first) is flagged as the wrong way round and nothing is posted', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MAX').fill('18.0');
+  await page.getByLabel('MIN').fill('22.0');
+  const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
+  await expect(bad).toHaveCount(1);
+  await expect(page.getByLabel('MIN')).toHaveClass(/\bswap\b/);
+  await expect(page.getByLabel('MAX')).toHaveClass(/\bswap\b/);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(bad).toHaveCount(2);
+  expect(sent, 'staff must not POST a swapped min/max (max typed first)').toHaveLength(0);
+  await page.screenshot({ path: staffShot('staff-max-first.png'), fullPage: false });
+  require('fs').writeFileSync(staffShot('staff-max-first-posts.json'), JSON.stringify(sent, null, 2));
+});
+
+test('year report: a saved reading with max lower than min is flagged, not counted as outside the limit', async ({ page }) => {
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', min_c: '22.0', max_c: '18.0' }
+  ];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const month = page.locator('.tg-tab').first().locator('tbody tr').first();
+    await expect(month.locator('td')).toHaveText(['11/26', '1', '22.0', '18.0', '0']);
+    const row = page.locator('.tg-tab').nth(1).locator('tbody tr').first();
+    await expect(row).toHaveClass(/tg-br/);
+    await expect(row).toContainText('max lower than min');
+    await expect(row).toContainText('22.0');
+    await expect(row).toContainText('18.0');
+    await row.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await page.screenshot({ path: staffShot('staff-year-report-swapped.png'), fullPage: false });
+  } finally { TABLES.area_reading = []; }
 });

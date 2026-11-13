@@ -147,6 +147,25 @@
       return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
     }
 
+    /** Same rule and words as tempPairError_ in Specs.gs. The shared file is loaded when this page has it. */
+    function pairLib() {
+      if (typeof module === 'object' && module.exports) {
+        var tries = ['./temp-pair.js', '../../cdhub/staff/lib/temp-pair.js'];
+        for (var i = 0; i < tries.length; i++) { try { return require(tries[i]); } catch (e0) { /* the other copy of this file */ } }
+      }
+      var g = typeof globalThis !== 'undefined' ? globalThis : (typeof self !== 'undefined' ? self : this);
+      return (g && g.BLDTempPair) || null;
+    }
+    function pairError(min, max) {
+      var lib = pairLib();
+      if (lib && lib.error) return lib.error(min, max);
+      var a = min === undefined || min === null ? '' : String(min).trim();
+      var b = max === undefined || max === null ? '' : String(max).trim();
+      var lo = parseFloat(a), hi = parseFloat(b);
+      if (a !== '' && b !== '' && !isNaN(lo) && !isNaN(hi) && lo > hi) return 'The lowest reading cannot be higher than the highest reading.';
+      return '';
+    }
+
     /** Check the fields on the page. */
     function validate(tableKey, fields) {
       var spec = TABLES[tableKey], errors = {};
@@ -189,10 +208,9 @@
           errors[blank('min_c') ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
         }
       }
-      if (!errors.min_c && !errors.max_c && fields.min_c !== undefined && fields.max_c !== undefined &&
-          String(fields.min_c).trim() !== '' && String(fields.max_c).trim() !== '' &&
-          parseFloat(fields.min_c) > parseFloat(fields.max_c)) {
-        errors.min_c = 'The lowest cannot be higher than the highest.';
+      if (!errors.min_c && !errors.max_c) {
+        var pairMsg = pairError(fields.min_c, fields.max_c);
+        if (pairMsg) errors.min_c = pairMsg;
       }
       return { ok: Object.keys(errors).length === 0, errors: errors };
     }

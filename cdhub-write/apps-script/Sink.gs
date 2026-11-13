@@ -28,6 +28,8 @@ function todayLondon_(d) { return Utilities.formatDate(d || new Date(), BLD.TZ, 
  * A missing or unreadable date means "queue" (the safe side). Everything else uses the table's own default.
  */
 function modeFor_(spec, now) {
+  // Lisa 12 Nov 2026: occupancy moves go straight in for every staff code. MOVES_QUEUE_UNTIL and MODE_occupancy are ignored for moves.
+  if (spec && spec.key === 'occupancy') return 'direct';
   var m = prop_(BLD.PROP.MODE_PREFIX + spec.key);
   if (m === 'direct' || m === 'pending') return m;
   if (spec.movesQueue) {
@@ -176,6 +178,7 @@ function sinkHandle_(req) {
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
   var who = authStaff_(req.code);
+  if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
 
   var asked = String(req.table || req.file || '');
   var spec = specFor_(asked);
@@ -218,7 +221,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (type.target !== 'none' && !room) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
-  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : 'site_tap' };
+  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : (f.how_recorded || 'site_tap') };  // the real route (scanned from a dog or room, tapped); site_tap only when none is sent
   if (room) fields.area_id = f.area_id;
   if (type.site_scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
@@ -260,7 +263,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   }
   try { store_appendMany_(spec.file, spec.columns, rows, target); }
   catch (e) { logWriteFailure_(e, spec, made[0].id, who.who, now); throw e; }
-  return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at };
+  return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at, who: who.who };
 }
 
 function sinkProcess_(spec, req, who, now, nowMs) {
@@ -343,7 +346,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
-    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '' };
+    var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
     if (form) out.answers = form.answers.length;
     return out;
   }
@@ -355,7 +358,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     kind: req.action === 'correct' ? 'correction' : 'new',
     row_id: rowId, corrects_id: correctsId, note: reason, payload_json: JSON.stringify(row), result: ''
   });
-  return { status: 'queued', table: spec.key, file: spec.file, id: rowId, pending_id: pid };
+  return { status: 'queued', table: spec.key, file: spec.file, id: rowId, pending_id: pid, who: who.who };
 }
 
 /**
@@ -426,6 +429,31 @@ function sinkPendingList_() {
     });
   });
   return out;
+}
+
+
+/** Apply waiting occupancy moves (not corrections, not occupancy_out) so queued room changes land without an approval step.
+ *  Safe to call often: already-applied items are skipped; a row already in the table is marked applied. */
+function applyWaitingOccupancyMoves_() {
+  if (!saveEnabled_()) return { applied: 0 };
+  var spec = TABLES.occupancy;
+  if (!spec || !tableOn_(spec)) return { applied: 0 };
+  var p;
+  try { p = loadPending_(); } catch (e) { return { applied: 0 }; }
+  if (!p || !p.records) return { applied: 0 };
+  var st = pendingState_(p.records), n = 0, ids = [], k;
+  for (k in st) if (Object.prototype.hasOwnProperty.call(st, k)) {
+    var s = st[k];
+    if (!s.waiting || !s.queued) continue;
+    if (s.queued.kind === 'correction' || s.queued.corrects_id) continue;
+    if (s.queued.target_file !== spec.file) continue;
+    ids.push(k);
+  }
+  ids.forEach(function (id) {
+    try { sinkDecide_(id, 'approve', '', 'script:apply-direct-occupancy'); n++; }
+    catch (e) { Logger.log('applyWaitingOccupancyMoves_ skipped ' + id + ': ' + (e.userMessage || e.message || e)); }
+  });
+  return { applied: n };
 }
 
 /** Approve or reject one queued item. Approval writes the row to the real table. */

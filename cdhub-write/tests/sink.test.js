@@ -102,7 +102,7 @@ test('rows of another tenant are not accepted as lookups', () => {
 test('a file that is not on the allow-list is refused, and no live table is touched', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   const snapshot = JSON.stringify(env.drive);
-  ['BLD-subject.csv', 'BLD-area.csv', 'BLD-field_visibility.csv', 'BLD-subject_status.csv', '../BLD-area_reading.csv', 'area_reading.csv ', '', 'constructor', '__proto__']
+  ['BLD-subject.csv', 'BLD-area.csv', 'BLD-field_visibility.csv', 'BLD-subject_status.csv', 'BLD-inspect_link.csv', 'BLD-inspect_access.csv', 'inspect_link', '../BLD-area_reading.csv', 'area_reading.csv ', '', 'constructor', '__proto__']
     .forEach((name) => {
       const r = save(env, req(env, { table: name }));
       assert.equal(r.ok, false, name);
@@ -116,7 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
-    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sensor_reading.csv', 'BLD-thermometer.csv']);
+    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sensor_reading.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
 });
 
 test('the exact file name is accepted as an alias for the table key', () => {
@@ -519,7 +519,7 @@ test('status check shows switches only: no codes, no ids, no data', () => {
   assert.ok(!s.includes(env.codes.staff) && !s.includes(fx.TENANT) && !s.includes('FOLDER-TEST'));
   assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'guest_reading', 'sensor_reading', 'thermometer', 'requirement', 'area_link', 'check_type', 'check_field', 'check_value', 'check_log', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule']);
   assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);        // occupancy, the daily check and breeding rules have their own switches, OFF
-  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'pending', 'pending', 'direct', 'direct', 'direct', 'direct']);   // temperature straight in, moves queue, the check log and the owner's rules straight in
+  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'pending', 'direct', 'direct', 'direct', 'direct']);   // temperature and occupancy moves straight in; occupancy_out still queues
   assert.equal(out.readEnabled, false);                                                    // reading is OFF by default
   assert.deepEqual(Array.from(out.proposed), ['staff']);
   // approval page is only for owners
@@ -641,15 +641,10 @@ test('occupancy input is checked: unknown dog or room, fields the system fills, 
   assert.equal(env.writes.length, 0);
 });
 
-test('occupancy in pending mode (its default): the move waits in the approvals queue and Lisa\'s approval appends the row', () => {
-  const env = standardEnv({ props: { TABLE_ON_occupancy: 'true' } });
-  const before = env.text('BLD-occupancy.csv');
+test('occupancy moves go straight in: MOVES_QUEUE_UNTIL and MODE_occupancy are ignored', () => {
+  const env = standardEnv({ props: { TABLE_ON_occupancy: 'true', MOVES_QUEUE_UNTIL: '2099-01-01', MODE_occupancy: 'pending' } });
   const r = move(env, 'sub-test-b', 'area-t2');
-  assert.equal(r.result.status, 'queued');
-  assert.equal(env.text('BLD-occupancy.csv'), before);
-  assert.match(move(env, 'sub-test-b', 'area-t2').fields.area_id, /has not moved/);       // a waiting move counts as the current room
-  env.email = 'owner@example.test';
-  assert.equal(env.ctx.ui_decide(r.result.pending_id, 'approve', '').ok, true);
+  assert.equal(r.result.status, 'saved');
   assert.equal(occTable(env).pop().subject_id, 'sub-test-b');
   assertAppendOnly(env);
 });

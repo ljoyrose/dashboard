@@ -26,10 +26,21 @@ function errorBody_(ex) {
 function doPost(e) {
   try {
     var body = (e && e.postData && e.postData.contents) || '';
-    if (body.length > BLD.LIMITS.MAX_BODY_CHARS) throw err_('BAD_REQUEST', 'That request was too large.');
+    if (body.length > BLD.LIMITS.MAX_PHOTO_CHARS) throw err_('BAD_REQUEST', 'That request was too large.');
+    // Only a dog photo may be larger than a normal save. The picture is base64, so the quoted action cannot appear inside it.
+    var big = body.length > BLD.LIMITS.MAX_BODY_CHARS;
+    if (big && body.indexOf('"dog_photo"') < 0) throw err_('BAD_REQUEST', 'That request was too large.');
     var req;
     try { req = JSON.parse(body); } catch (x) { throw err_('BAD_REQUEST', 'That request was not understood.'); }
+    if (big && (!req || req.action !== 'dog_photo')) throw err_('BAD_REQUEST', 'That request was too large.');
+    if (req && typeof req === 'object' && req.action === 'dog_photo') return jsonOut_({ ok: true, result: sinkDogPhoto_(req) });
     if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
+    // dog card saves (12 Nov 2026, draft; each OFF until TABLE_ON_weighing / TABLE_ON_vaccination is true)
+    if (req && typeof req === 'object' && req.action === 'weighing') return jsonOut_({ ok: true, result: sinkWeighing_(req) });
+    if (req && typeof req === 'object' && req.action === 'vaccination') return jsonOut_({ ok: true, result: sinkVaccination_(req) });
+    if (req && typeof req === 'object' && req.action === 'vaccination_void') return jsonOut_({ ok: true, result: sinkVaccinationVoid_(req) });
+    if (req && typeof req === 'object' && req.action === 'dog_details') return jsonOut_({ ok: true, result: sinkDogDetails_(req) });
+    try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
     return jsonOut_(errorBody_(ex));
@@ -40,6 +51,7 @@ function doPost(e) {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.page === 'approve') return approvePage_();
+  try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });
@@ -81,6 +93,24 @@ function ui_staffList() {
 /** Called from the approval page. Owner-only: switch a staff code off (kept in the list, refused from now on). */
 function ui_revokeCode(codeId) {
   try { requireAdmin_(); return { ok: true, result: sinkRevokeCode_(String(codeId), adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
+/** Inspector links (Inspect.gs). Owner-only. Make returns the code ONCE for the page to show; it is never logged. */
+function ui_inspectChoices() {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectChoices_() }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_inspectMake(spec) {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectMake_(spec, adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_inspectLinks() {
+  try { requireAdmin_(); return { ok: true, result: { links: sinkInspectLinks_() } }; }
+  catch (ex) { return errorBody_(ex); }
+}
+function ui_inspectStop(linkId) {
+  try { requireAdmin_(); return { ok: true, result: sinkInspectStop_(String(linkId), adminEmail_()) }; }
   catch (ex) { return errorBody_(ex); }
 }
 

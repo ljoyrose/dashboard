@@ -80,7 +80,10 @@
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
       // Write targets for inline dashboard edits (chip and area saves)
       microchipFileId: '1GnL88Xtf0tlcXjFf_P2ML-Vfglz08-Ee',
-      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-'
+      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-',
+      // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
+      // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
+      saveScriptUrl: ''
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's

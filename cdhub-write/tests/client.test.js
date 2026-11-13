@@ -77,7 +77,7 @@ test('page checks mirror the server and give plain messages', () => {
   assert.equal(s.validate('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24' }).ok, true);
   const e = s.validate('area_reading', { area_id: 'area-zz', min_c: '25', max_c: '20', spot_c: '1.234', mitigation_note: '=SUM(A1)' }).errors;
   assert.match(e.area_id, /Not found/);
-  assert.match(e.min_c, /lowest cannot be higher/);
+  assert.match(e.min_c, /The lowest reading cannot be higher than the highest reading/);
   assert.match(e.spot_c, /1 decimal/);
   assert.match(e.mitigation_note, /do not start with/);
   const none = mk(fakeServer());

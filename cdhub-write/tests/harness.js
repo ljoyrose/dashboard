@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Sink', 'Read', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -96,6 +96,7 @@ function makeEnv(opts = {}) {
       const bad = hit && (env.breakSetContent === true || (env.breakSetContent === 'once' && !env.brokeOnce && (env.brokeOnce = true)));
       f.content = bad ? s.slice(0, -1) : s;
     },
+    setTrashed(v) { f.trashed = !!v; return this; },
     makeCopy(name, dest) { env.copies.push({ from: f.title, name }); const c = { id: 'copy' + (++idc), title: name, content: f.content }; dest.files.push(c); return wrap(c); }
   });
   const subFolderObj = (sf) => ({
@@ -136,7 +137,23 @@ function makeEnv(opts = {}) {
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
     DriveApp: {
-      getFolderById: (id) => { if (id !== 'FOLDER-TEST') throw new Error('no folder'); return folder; },
+      getFolderById: (id) => {
+        if (id === 'FOLDER-TEST') return folder;
+        if (id && id === env.props.DOG_PHOTOS_FOLDER_ID) {
+          if (!env.photos) env.photos = [];
+          return {
+            createFile(blob) {
+              const name = blob && blob.getName ? blob.getName() : String(blob);
+              const bytes = blob && blob.getBytes ? Buffer.from(blob.getBytes()) : Buffer.alloc(0);
+              const f = { id: 'photo' + (++idc), title: name, content: '', bytes, mime: blob && blob.getContentType ? blob.getContentType() : '', parent: 'photos' };
+              env.photos.push(f);
+              env.created.push(name);
+              return wrap(f);
+            }
+          };
+        }
+        throw new Error('no folder');
+      },
       getFileById: (id) => { const f = env.drive.find((x) => x.id === id); if (!f) throw new Error('no file'); return wrap(f); }
     },
     SpreadsheetApp: {
@@ -156,6 +173,15 @@ function makeEnv(opts = {}) {
       DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
       computeDigest: (alg, str) => Array.from(crypto.createHash('sha256').update(String(str), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
       getUuid: () => crypto.randomUUID(),
+      base64Decode(s) {
+        const str = String(s || '');
+        if (!/^[A-Za-z0-9+/]+=*$/.test(str)) throw new Error('bad base64');
+        return Buffer.from(str, 'base64');
+      },
+      newBlob(data, mime, name) {
+        const bytes = Buffer.from(data);
+        return { getName: () => name, getContentType: () => mime, getBytes: () => bytes, getDataAsString: () => bytes.toString('utf8') };
+      },
       formatDate(d, tz, pattern) {
         const p = londonParts(d.getTime());
         if (pattern === 'yyyy-MM-dd') return `${p.y}-${p.mo}-${p.d}`;
