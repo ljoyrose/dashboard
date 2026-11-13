@@ -350,7 +350,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('.dcard .who b')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
     const one = page.locator('.dcard[data-dog="d1"]');
     await expect(one.locator('[data-k="Room"] dd')).toHaveText('Room A');
-    await expect(one.locator('[data-k="DOB"] dd')).toHaveText('05/01/22');
+    await expect(one.locator('[data-k="DOB"] dd')).toHaveText('5 Jan 2022');
     await expect(one).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
     await expect(one.locator('.band small')).toHaveText('Medium10–25 kg');

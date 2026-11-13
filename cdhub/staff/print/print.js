@@ -63,7 +63,9 @@
     var w = m[2].charAt(0).toUpperCase() + m[2].slice(1), kg = m[1].replace(/-/g, '\u2013').replace(/kg/i, ' kg').replace(/\s+/g, ' ').trim();
     return [w, h('br'), kg];
   }
-  function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1].slice(2) : ''; }
+  /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
   function sexIcon(sex) {
     var f = /^f/i.test(sex || ''), m = /^m/i.test(sex || '');
     if (!f && !m) return null;

@@ -1,5 +1,5 @@
 // Litter print card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band in the dam's size colour,
-// Born DD/MM/YY, Sire, Pups, Room, one large code. Only litters still here. Invented rows only.
+// Born 2 Mar 2026, Sire, Pups, Room, one large code. Only litters still here. Invented rows only.
 const { test, expect } = require('../fixtures/job34/load');
 
 test('print: litter cards look like kennel cards and list only litters still on site', async ({ page }) => {
@@ -10,7 +10,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
     area: [{ id: 'ar-a', code: 'Room A' }],
     requirement: [],
     subject: [
-      { id: 'dam1', name: 'Pretend Dam', sex: 'Female', size_band: '10-25kg (medium)' },
+      { id: 'dam1', name: 'Pretend Dam', sex: 'Female', size_band: '10-25kg (medium)', dob: '2021-03-02' },
       { id: 'sire1', name: 'Pretend Sire', sex: 'Male' },
       { id: 'p1', name: 'Pretend Pup A', birth_litter_id: 'lit-new' },
       { id: 'p2', name: 'Pretend Pup B', birth_litter_id: 'lit-new' },
@@ -57,7 +57,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await expect(card).toHaveCount(1);                                   // the old litter has no pup left on site
   await expect(card).toHaveAttribute('data-litter', 'lit-new');
   await expect(card.locator('.who b')).toHaveText('Litter of Pretend Dam');
-  await expect(card.locator('[data-k="born"]')).toHaveText('Born30/09/26');
+  await expect(card.locator('[data-k="born"]')).toHaveText('Born30 Sep 2026');
   await expect(card.locator('[data-k="Sire"] dd')).toHaveText('Pretend Sire');
   await expect(card.locator('[data-k="Pups"] dd')).toHaveText('2');
   await expect(card.locator('[data-k="Room"] dd')).toHaveText('Room A');
@@ -75,6 +75,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await expect(dam.locator('[data-k="BFFs:"] dd')).toHaveText('Pretend Pup A');   // BFFs from the link rows, read both ways
   // Lisa 13 Nov 2026: the print checks name, size, classification, microchip, photo, colour and DOB
   await expect(dam.locator('[data-k="Class"] dd')).toHaveText('Pretend Breeding Bitch');   // kept from the older row; the move row is blank
+  await expect(dam.locator('[data-k="DOB"] dd')).toHaveText('2 Mar 2021');   // one date format everywhere (Lisa 13 Nov 2026): never DD/MM/YY
   await expect(dam.locator('[data-k="photo"] img')).toHaveAttribute('src', /thumbnail\?id=FAKEphotoFileId123/);
   await expect(dam.locator('[data-k="jobs"] .job')).toHaveText(['Grooming', 'Weigh']);
   await expect(page.locator('.dcard[data-dog="sire1"] [data-k="chip"]')).toHaveCount(0);
