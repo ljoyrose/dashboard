@@ -2467,7 +2467,10 @@ function drawDogs(){
       +'<div class="meta">'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
         +(d.room&&!away?'<button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="'+esc(d.room)+'">'+esc(d.where)+'</button>'
-          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>')
+          :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
+           /* no room yet (pups too) or off site: Place opens the same cabin picker (Lisa 13 Nov 2026) */
+           +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
+        +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+esc(CD._moved.text)+'</span>':'')
       +'</div>'
     +'</div>'
   +'</div>'
@@ -2649,11 +2652,13 @@ function spaceCabins(fromId, dogId, date){
 }
 function movePickerHtml(fromId, dogId){
  var d=CD._byId[dogId], rooms=spaceCabins(fromId,dogId), size=d&&d.sizeWord?d.sizeWord:'dog';
- if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p><button type="button" class="cb" data-move-cancel>Close</button></div>';
+ /* Off-site: a new occupancy_out row, as on the staff page; only for a dog that is in a cabin now */
+ var offBtn=d&&d.room&&!d.off?'<button type="button" class="cb" data-move-off="'+esc(dogId)+'">Off-site</button>':'';
+ if(!rooms.length) return '<div class="movepick" data-move-panel><p class="mut">No cabin has space</p>'+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
  return '<div class="movepick" data-move-panel>'+rooms.map(function(x){
   return '<button type="button" class="mopt" data-move-to="'+esc(x.area.id)+'" data-move-dog="'+esc(dogId)+'">'
    +esc(x.area.code)+': '+x.free+' '+esc(x.size||size)+' free</button>';
- }).join('')+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
+ }).join('')+offBtn+'<button type="button" class="cb" data-move-cancel>Close</button><span class="mut" data-move-msg></span></div>';
 }
 function overPickerHtml(fromId){
  var date=CD._roundDate||todayISO(), who=inCabin(fromId,date);
@@ -2691,7 +2696,21 @@ async function applyDogMove(dogId, toId, msgEl){
  Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o!==cur&&o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==dogId; }); });
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  if(page==='round') CD._roundMsg={area:toId,text:sinkMsg(r,'move')};
+ CD._moved={id:dogId,text:sinkMsg(r,'move')};   /* the dog card shows the tick after it redraws */
  if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
+}
+async function applyDogOff(dogId, msgEl){
+ if(!sinkOn()){ if(msgEl) msgEl.textContent='NOT saved: saving is off on this device'; return; }
+ if(msgEl) msgEl.textContent='saving\u2026';
+ var r=await sinkPost('occupancy_out',{subject_id:dogId,off_site_kind:'temporary'});
+ if(msgEl) msgEl.textContent=sinkMsg(r,'move');
+ if(!(r.ok&&r.result&&r.result.status==='saved')) return;
+ CD._moved={id:dogId,text:sinkMsg(r,'move')};
+ var d=CD._byId[dogId], date=CD._roundDate||todayISO();
+ if(d){ d.area_id=''; d.room=''; d.off='temporary'; d.where='off site \u2014 temporary'; }
+ Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==dogId; }); });
+ var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
 function markSeen(areaId, sid, state){
@@ -3183,7 +3202,7 @@ async function sinkPost(table,fields){
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
 function sinkMsg(r,kind){
- if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved':'saved \u2713';
+ if(r.ok&&r.result&&r.result.status==='saved') return kind==='move'?'moved \u2713':'saved \u2713';
  if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'moved \u2014 still waiting. Open Compliance, then Who has access, then the owner page.':'sent \u2014 waiting for approval';
  var f=r.fields?Object.keys(r.fields).map(function(k){ return r.fields[k]; }).join(' '):'';
  return 'NOT saved \u2014 '+(f||r.message||r.code||'error');
@@ -4067,7 +4086,7 @@ function go(id,push){
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
- var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
+ var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
  if(!t) return;
  if(t.hasAttribute('data-move-cancel')){
   var h=t.closest('[data-move-host]'); if(h) h.innerHTML='';
@@ -4076,6 +4095,7 @@ document.addEventListener('click',function(e){
  }
  if(t.hasAttribute('data-over-move')){ openOverMove(t.getAttribute('data-over-move'), t); return; }
  if(t.hasAttribute('data-move-to')){ var msg=t.parentNode&&t.parentNode.querySelector('[data-move-msg]'); applyDogMove(t.getAttribute('data-move-dog'), t.getAttribute('data-move-to'), msg); return; }
+ if(t.hasAttribute('data-move-off')){ applyDogOff(t.getAttribute('data-move-off'), t.parentNode&&t.parentNode.querySelector('[data-move-msg]')); return; }
  if(t.hasAttribute('data-cabin-move')){ var did=t.getAttribute('data-cabin-move'), d=CD._byId[did]; openMovePicker((d&&d.area_id)||'', did, t); return; }
  if(t.hasAttribute('data-move-dog')){ openMovePicker(t.getAttribute('data-from')||'', t.getAttribute('data-move-dog'), t); return; }
  if(t.hasAttribute('data-here')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-here'), 'here'); return; }

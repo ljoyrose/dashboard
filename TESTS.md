@@ -106,6 +106,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
 - All ten sections open (Live feed, Outstanding, Table map, Today, The round, Dogs, Areas, Litters, Vet link, Buyers).
 - Dogs, cabins, litters and weights from the sample files join up correctly.
+- A dog or pup with no room has Place on its card; the cabin picker lists cabins with space (a pup with its dam counts once, against the dam's '+ pups' row) and Off-site for a dog in a cabin; a move is one occupancy or occupancy_out row through the save script and the card shows "moved ✓". (`tests/mocked/cdhub-dog-card-room.spec.js`)
 - The weighings panel shows date, weight, change and BCS only; the sheet's source column is not shown. (`tests/mocked/job34-cdhub-views.spec.js`)
 - Litter print cards look like kennel cards (band in the dam's size colour, Born DD/MM/YY, Sire, Pups, Room, one large code, 1, 2 or 4 per A4) and list only litters still on site. Kennel cards show Colour (coat lookup rows) and Microchip in threes; kennel cards, room signs and litter cards show the jobs in force from the job rows (kennel: by group; room and litter: job and how often). (`tests/mocked/cdhub-litter-print-card.spec.js`)
 - An Areas room card shows today's temperature in The round's words (one line per thermometer when a room has two or more), an out-of-range reading as a ring, the limit from the band rows, and a Temperature history link; a room with no thermometer has no line.
