@@ -2,6 +2,7 @@
  * BLDDone - one look, on every staff screen, for "the save script has this". Lisa: show a tick once received.
  *   BLDDone.mark(el, {outcome, at, who, extra})  a tick line on the card: "Done 14:32 · Sam" (or "Concern noted", "Not done noted"),
  *                                                 and the card's main button greys (it still works, for a second time that day)
+ *   BLDDone.saving(el)                            straight after the tap: "Saving..." and the button is off until the reply
  *   BLDDone.wait(el, text)                        sent but not received yet (no signal): a clock, never a tick
  *   BLDDone.fail(el, text)                        a red line; the button stays as it was
  *   BLDDone.clear(el)
@@ -33,7 +34,12 @@
     if (!n) { n = el.ownerDocument.createElement('p'); n.className = 'done-line'; n.setAttribute('role', 'status'); el.appendChild(n); }
     return n;
   }
-  function btn(el, grey) { var b = el.querySelector('[data-done-btn]'); if (b) b.classList.toggle('is-done', !!grey); }
+  function btn(el, grey, busy) {
+    var b = el.querySelector('[data-done-btn]');
+    if (!b) return;
+    b.classList.toggle('is-done', !!grey); b.disabled = !!busy;
+    if (busy) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+  }
   function set(el, cls, icon, words) {
     var n = line(el);
     n.className = 'done-line ' + cls;
@@ -48,9 +54,10 @@
     set(el, s && (s.outcome === 'concern' || s.outcome === 'not_done') ? 'flag' : 'good', TICK, text(s));
     btn(el, true);
   }
+  function saving(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'wait', CLOCK, words || 'Saving...'); btn(el, false, true); }
   function wait(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'wait', CLOCK, words || 'Waiting for signal'); btn(el, false); }
   function fail(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'bad', '', words || 'Not saved. Try again.'); btn(el, false); }
   function clear(el) { if (!el) return; el.classList.remove('is-done', 'is-concern'); var n = el.querySelector(':scope > .done-line'); if (n) n.remove(); btn(el, false); }
 
-  return { mark: mark, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
+  return { mark: mark, saving: saving, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
 }));

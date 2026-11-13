@@ -316,7 +316,36 @@ test('a tick only once received: Problem shows its result, a refusal shows a red
   });
   const nails = page.locator('[data-job="nails"]');
   await page.getByRole('button', { name: 'Done: Nails' }).click();
-  await expect(nails.locator('.done-line.bad')).toContainText('Not saved.');
+  await expect(nails.locator('.done-line.bad')).toContainText('Not saved: Pretend refusal.');
   await expect(page.getByRole('button', { name: 'Done: Nails' })).not.toHaveClass(/is-done/);
   expect(sent).toHaveLength(1);
+});
+
+test('every tap shows Saving straight away, with the button off until the reply', async ({ page }) => {
+  const sent = await setup(page);
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.route(SCRIPT, async (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    await held;
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'clg-held' } } });
+  });
+  const bowls = page.locator('[data-job="bowls"]');
+  await page.getByRole('button', { name: 'Yes, done: Bowls' }).click();
+  await expect(bowls.locator('.done-line')).toContainText('Saving...');
+  await expect(page.getByRole('button', { name: 'Yes, done: Bowls' })).toBeDisabled();
+  release();
+  await expect(bowls.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
+  expect(sent).toHaveLength(0);
+});
+
+test('a check the screen refuses before sending still shows on the card', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const walk = page.locator('[data-job="walk"]');
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(walk.locator('.done-line.bad')).toContainText('Tick a dog.');
 });

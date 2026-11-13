@@ -106,7 +106,13 @@
       function byLine(job) { var b = job.reset_by && byKey[job.reset_by]; return b && job.status === 'ok' ? ' · ' + b.label : ''; }
       function say(text, kind) { status.className = 'msg ' + (kind || ''); status.textContent = text; }
 
+      /* every tap shows something on the card: Saving..., then a tick or a plain red line (Lisa, 13 Nov) */
       function send(job, t, outcome, inputs, panelMsg, state) {
+        try { sendNow(job, t, outcome, inputs, panelMsg, state); }
+        catch (e) { BLDDone.fail(state.card, 'Not saved. Something went wrong on this screen; try again.'); if (window.console) console.error(e); }
+      }
+      function sendNow(job, t, outcome, inputs, panelMsg, state) {
+        function stop(text) { panelMsg.textContent = ''; BLDDone.fail(state.card, text); }   // on the card, so it shows even with the panel shut
         var entry = { check_type_id: t.id, outcome: outcome, how_recorded: how };
         if (target.subject_id) entry.subject_id = target.subject_id;
         if (target.area_id) entry.area_id = target.area_id;
@@ -117,27 +123,27 @@
         var check = Object.assign({}, entry);
         if (t.target === 'none') delete check.area_id;
         var bad = BLDChecks.checkEntry(t, check), first = Object.keys(bad)[0];
-        if (first) { panelMsg.className = 'msg bad'; panelMsg.textContent = bad[first]; return; }
+        if (first) { stop(bad[first]); return; }
         var values = {}, missing = '';
         (state.form || []).forEach(function (q) {
           var val = q.input.value.trim();
           if (val) values[q.field.field_key] = val; else if (!missing && String(q.field.required).toLowerCase() === 'true') missing = q.field.label;
         });
-        if (missing) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'This is needed: ' + missing + '.'; return; }
+        if (missing) { stop('This is needed: ' + missing + '.'); return; }
         var opts = { requestId: state.rid = state.rid || c.save.newRequestId() };
         if (Object.keys(values).length) opts.values = values;
         if (state.ticks) {
           var ticked = state.ticks.filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
-          if (!ticked.length) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'Tick a dog.'; return; }
+          if (!ticked.length) { stop('Tick a dog.'); return; }
           opts.action = 'add_site'; entry.dog_ids = ticked.join('|');
         } else if (BLDDue.perDogSite(t) && target.subject_id) { opts.action = 'add_site'; entry.dog_ids = target.subject_id; }
         if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; }
-        panelMsg.className = 'msg'; panelMsg.textContent = 'Saving...';
+        panelMsg.className = 'msg'; panelMsg.textContent = ''; BLDDone.saving(state.card);
         c.save.submit('check_log', entry, opts).then(function (r) {
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
             panelMsg.className = 'msg bad'; panelMsg.textContent = fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : r.message;
-            BLDDone.fail(state.card, 'Not saved.' + (fe ? '' : ' ' + (r.message || '')));
+            BLDDone.fail(state.card, 'Not saved: ' + (fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : (r.message || 'try again.')));
             if (r.code !== 'NETWORK') state.rid = null; return;
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
@@ -168,7 +174,7 @@
       function jobCard(job) {
         var t = byKey[job.type_key], a = BLDChecks.askedFields(t), dogJob = BLDDue.perDogSite(t), many = site || dogJob || BLDDue.perDogRoom(t), form = many ? [] : (formOf[t.type_key] || []);
         var needs = a.item || a.amount || a.noteRequired || form.length > 0 || (dogJob && site);   // a whole-site or per-dog tap has no form: the save script refuses one
-        var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null };
+        var panel = h('div', { class: 'job-panel', hidden: true }), panelMsg = h('p', { class: 'msg', role: 'status' }), inputs = {}, state = { rid: null, panel: panel };
         state.form = form.map(function (f) { var q = { field: f, input: question(f, function () { state.rid = null; }) }; panel.appendChild(q.input); return q; });
         function input(key, label) { inputs[key] = h('input', { class: 'inp', 'aria-label': label, placeholder: label, oninput: function () { state.rid = null; } }); panel.appendChild(inputs[key]); }
         if (a.item) input('item', t.item_label || 'What');
