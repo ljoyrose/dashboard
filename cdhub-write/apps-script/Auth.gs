@@ -144,7 +144,7 @@ function sinkRevokeCode_(codeId, adminEmail, reason) {
   return withLock_(function () { return revokeCodeCore_(codeId, adminEmail, reason); });
 }
 
-/** The revoke itself, for callers that already hold the lock (Visit.gs visit_end). */
+/** The revoke itself, for callers that already hold the lock (Visit.gs grant_end). */
 function revokeCodeCore_(codeId, adminEmail, reason) {
   var now = new Date(), id = String(codeId || '');
   if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code to switch off.');
