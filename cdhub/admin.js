@@ -163,7 +163,10 @@ var AdminView = (function () {
     var T = v.T, u = scriptUrl(), host = location.host;
     if (id === 'phone') {
       var link = u ? staffBase() + '#setup=' + encodeURIComponent(u) : '', qr = '';
-      if (S.qr && link) { try { qr = '<div class="adm-qr">' + BLDQr.svg(link, 'Phone set-up QR') + '<small>Show on screen. Do not pin up or photograph.</small></div>'; } catch (e) { qr = '<p class="mut">QR could not be drawn.</p>'; } }
+      if (S.qr && link && typeof BLDQr === 'undefined') {   // the QR drawer loads only when asked for (keeps the hub's first load small)
+        if (!document.getElementById('adm-qrjs')) { var sc = document.createElement('script'); sc.id = 'adm-qrjs'; sc.src = 'staff/lib/qr.js'; sc.onload = function () { v.rerender(); }; document.head.appendChild(sc); }
+        qr = '<p class="mut">Drawing\u2026</p>';
+      } else if (S.qr && link) { try { qr = '<div class="adm-qr">' + BLDQr.svg(link, 'Phone set-up QR') + '<small>Show on screen. Do not pin up or photograph.</small></div>'; } catch (e) { qr = '<p class="mut">QR could not be drawn.</p>'; } }
       return '<p>Sets up <b>' + v.esc(host) + '</b> only. Each address needs its own set-up.</p>'
         + (u ? '<p><button type="button" class="btn" data-adm-qr="1">' + icon('qr') + (S.qr ? ' Hide QR' : ' Show QR') + '</button></p>' + qr
           : '<p class="mut">No save address in this browser. <button type="button" class="cb" data-go="round">Set it up</button></p>')
