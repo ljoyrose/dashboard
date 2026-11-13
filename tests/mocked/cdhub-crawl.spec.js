@@ -2,8 +2,8 @@
 // 27-animal set (tests/fixtures/cdhub-27). Desktop and a 360px phone. It must find no LOOP, DEAD, ERROR, ESCAPE or
 // WORDING, and must have tapped at least 95% of the controls it could reach. It prints the number.
 //
-//   npx playwright test --project=mocked cdhub-crawl                 run it
-//   CLICK_MAP=1 npx playwright test --project=mocked cdhub-crawl     also rewrite docs/cdhub/CLICK-MAP.md
+//   npx playwright test --project=mocked cdhub-crawl     run it (it writes test-results/cdhub-crawl/*.json)
+//   node tools/cdhub-click-map/make.js                   turn those results into docs/cdhub/CLICK-MAP.md
 //
 // Nothing here signs in to Google or reads a real Drive. Saves go to a pretend save script.
 const fs = require('fs');
