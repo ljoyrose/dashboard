@@ -4,9 +4,9 @@
  * Scores are worked out when the page loads and carry a Testing label until the owner signs the scoring off.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./score.js'));
-  else root.BBHubView = factory(root.BreedBetterScore);
-}(typeof self !== 'undefined' ? self : this, function (Score) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./score.js'), require('./dna-kit.js'));
+  else root.BBHubView = factory(root.BreedBetterScore, root.BBDnaKit);
+}(typeof self !== 'undefined' ? self : this, function (Score, Dna) {
   'use strict';
 
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
@@ -23,7 +23,7 @@
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
   var GO = { 'BLD-fit_to_breed': 'dogs', 'BLD-litter': 'litters', 'BLD-health_screen': 'dogs', 'BLD-dna_result': 'dogs', 'BLD-subject_status': 'dogs' };
-  var state = { filter: '', dog: '', open: {}, q: '', sort: 'verdict' }, last = null, memo = null;
+  var state = { filter: '', dog: '', open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -48,13 +48,18 @@
     var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
     if (memo && memo.key === key) return memo;
-    var out = { key: key, results: [], byId: {}, error: '', setUp: !!(T['BLD-score_enrolment.csv'] || []).length };
+    var out = { key: key, results: [], byId: {}, error: '', ended: [], setUp: !!(T['BLD-score_enrolment.csv'] || []).length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var evidence = new Proxy({}, { get: function (o, name) { return T[name + '.csv']; } });
     (T['BLD-score_enrolment.csv'] || []).forEach(function (e) {
       /* enrolled from valid_from (live name) to to_date, both inclusive */
-      if (/^false$/i.test(t(e.is_active)) || (t(e.valid_from) && e.valid_from > v.today) || (t(e.to_date) && e.to_date < v.today)) return;
+      if (/^false$/i.test(t(e.is_active)) || (t(e.to_date) && e.to_date < v.today)) {
+        /* kept for the Archive: an enrolment that has ended, with its dates */
+        if (subjects[e.subject_id]) out.ended.push({ id: e.subject_id, name: t(subjects[e.subject_id].name), from: t(e.valid_from), to: t(e.to_date) });
+        return;
+      }
+      if (t(e.valid_from) && e.valid_from > v.today) return;
       var subject = subjects[e.subject_id];
       if (!subject) { out.error = 'An enrolled animal is not in the animal list: check BLD-score_enrolment.'; return; }
       /* the enrolment names one scheme; a later version of it (same name, species and breed) takes over on its own date */
@@ -181,7 +186,11 @@
   };
   function shownRows(c) {
     var f = state.filter, q = state.q.toLowerCase();
-    return c.results.filter(function (r) { return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1); })
+    var sx = state.sex;
+    return c.results.filter(function (r) {
+      var d = hubDog(last || {}, r.subject_id);
+      return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1) && (!sx || (d && t(d.sex) === sx));
+    })
       .sort(SORT_FN[state.sort] || SORT_FN.verdict);
   }
   function rowsHtml(v, c) {
@@ -207,7 +216,14 @@
       + '<label class="bb-lab">Sort<select id="bbSort" data-bb-sort="1">' + SORTS.map(function (o) {
         return '<option value="' + o[0] + '"' + (state.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select></label></div>';
-    return tools + h + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
+    /* sex: the words the hub holds, so another species' words show as they are */
+    var sexes = {};
+    c.results.forEach(function (r) { var d = hubDog(v, r.subject_id), x = d && t(d.sex); if (x) sexes[x] = (sexes[x] || 0) + 1; });
+    var sk = Object.keys(sexes).sort();
+    var sx = sk.length > 1 ? '<div class="bb-filt" role="group" aria-label="Filter by sex">' + [''].concat(sk).map(function (k) {
+      return '<button type="button" class="bb-f" data-bb-sex="' + esc(k) + '" aria-pressed="' + (state.sex === k) + '">' + esc(k || 'Any sex') + (k ? ' <span class="cnt">' + sexes[k] + '</span>' : '') + '</button>';
+    }).join('') + '</div>' : '';
+    return tools + h + sx + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
   }
 
   /** The animal's details from the hub, folded, as on the mock-up. Only what the hub holds is shown. */
@@ -258,6 +274,7 @@
     return '<button type="button" class="bb-f" data-bb-back="1">Back</button>'
       + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></div>'
       + infoHtml(v, r) + verdictHtml(r)
+      + (Dna ? Dna.card(v.T, r.subject_id, esc).replace('data-bb-band="__dna"', 'data-bb-band="__dna"' + (state.open.__dna ? ' open' : '')) : '')
       + bands.map(function (b) {
         var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
         if (!lines.length) return '';
@@ -295,12 +312,112 @@
       + '<span class="bb-why">' + why + (go ? ' <button type="button" class="bb-src" data-go="' + go + '">Open</button>' : '') + '</span></div>';
   }
 
+  /* ---- Calendar, More, My system and Archive (mock-up, 12 Nov 2026). Read only. ---- */
+  var TABS = [['dogs', 'Dogs', 'M9 6h11 M9 12h11 M9 18h11 M5 6v.01 M5 12v.01 M5 18v.01'],
+    ['cal', 'Calendar', 'M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z M16 3v4 M8 3v4 M4 11h16'],
+    ['more', 'More', 'M5 12l0 .01 M12 12l0 .01 M19 12l0 .01']];
+  function tabsHtml() {
+    var on = state.tab === 'system' || state.tab === 'archive' || state.tab === 'dna' ? 'more' : state.tab;
+    return '<nav class="bb-tabs" aria-label="Breed Better">' + TABS.map(function (x) {
+      return '<button type="button" class="bb-tab" data-bb-tab="' + x[0] + '"' + (on === x[0] ? ' aria-current="page"' : '') + '><span>' + ic(x[2], 18) + '</span>' + x[1] + '</button>';
+    }).join('') + '</nav>';
+  }
+  function addDays(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  /** Every dated next step across the enrolled animals: the due dates the rules already give each line. */
+  function dueItems(c) {
+    var out = [];
+    c.results.forEach(function (r) {
+      r.lines.forEach(function (l) { if (l.due_date) out.push({ id: r.subject_id, dog: r.name, check: l.label_then, date: l.due_date, due: l.due }); });
+    });
+    return out.sort(function (a, b) { return a.date.localeCompare(b.date) || a.dog.localeCompare(b.dog); });
+  }
+  function calHtml(v, c) {
+    var esc = v.esc, today = v.today, month = state.month || today.slice(0, 7);
+    var all = dueItems(c), soon = addDays(today, 30);
+    var modes = [['all', 'All'], ['overdue', 'Overdue'], ['next', 'Next 30 days']];
+    var pick = {
+      all: function (x) { return x.date.slice(0, 7) === month; },
+      overdue: function (x) { return x.date < today; },
+      next: function (x) { return x.date >= today && x.date <= soon; }
+    };
+    var n = {}; modes.forEach(function (m) { n[m[0]] = all.filter(m[0] === 'all' ? function () { return true; } : pick[m[0]]).length; });
+    var rows = all.filter(pick[state.cal] || pick.all);
+    var y = Number(month.slice(0, 4)), m = Number(month.slice(5, 7));
+    var first = new Date(Date.UTC(y, m - 1, 1)), lead = (first.getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    var has = {}; all.forEach(function (x) { if (x.date.slice(0, 7) === month) has[Number(x.date.slice(8, 10))] = (has[Number(x.date.slice(8, 10))] || 0) + 1; });
+    var cells = '';
+    for (var i = 0; i < lead; i++) cells += '<span></span>';
+    for (var d = 1; d <= days; d++) {
+      var iso = month + '-' + (d < 10 ? '0' : '') + d;
+      cells += '<span class="bb-day' + (iso === today ? ' bb-today' : '') + '" aria-label="' + day(iso) + (has[d] ? ', ' + has[d] + ' due' : '') + '">' + d + (has[d] ? '<i></i>' : '') + '</span>';
+    }
+    var prev = addDays(month + '-01', -1).slice(0, 7), next = addDays(month + '-28', 7).slice(0, 7);
+    return '<h3 class="bb-h">Calendar</h3><p class="bb-pts">' + n.next + ' due in the next 30 days. Dates come from each check\'s rules.</p>'
+      + '<div class="bb-filt" role="group" aria-label="Show">' + modes.map(function (x) {
+        return '<button type="button" class="bb-f" data-bb-cal="' + x[0] + '" aria-pressed="' + (state.cal === x[0]) + '">' + x[1] + ' <span class="cnt">' + n[x[0]] + '</span></button>';
+      }).join('') + '</div>'
+      + '<div class="card bb-month"><div class="bb-mhead"><button type="button" class="bb-f" data-bb-month="' + prev + '" aria-label="Previous month">' + ic('M15 6l-6 6l6 6', 18) + '</button>'
+      + '<span class="bb-strong">' + MON[m - 1] + ' ' + y + '</span><button type="button" class="bb-f" data-bb-month="' + next + '" aria-label="Next month">' + ic('M9 6l6 6l-6 6', 18) + '</button></div>'
+      + '<div class="bb-grid bb-wd"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div><div class="bb-grid">' + cells + '</div></div>'
+      + (rows.length ? rows.map(function (x) {
+        var late = x.date < today;
+        return '<button type="button" class="bb-dog bb-calrow" data-bb-open="' + esc(x.id) + '" style="--v:var(' + (late ? '--ljr-3-text' : '--line') + ')"><span class="bb-info"><span class="bb-l1"><span class="bb-name">' + esc(x.dog) + ', ' + esc(x.check) + '</span></span>'
+          + '<span class="bb-l2"><span>' + day(x.date) + '</span><span>' + (late ? 'Overdue' : 'Due') + '</span></span></span></button>';
+      }).join('') : '<p class="mut">Nothing here.</p>');
+  }
+  function moreHtml(c) {
+    return '<h3 class="bb-h">More</h3>'
+      + '<button type="button" class="bb-dog" data-bb-tab="system"><span class="bb-name">My system</span><span class="bb-pts">Sections, checks and points</span></button>'
+      + '<button type="button" class="bb-dog" data-bb-tab="archive"><span class="bb-name">Archive</span><span class="cnt">' + c.ended.length + '</span></button>'
+      + (Dna ? '<button type="button" class="bb-dog" data-bb-tab="dna"><span class="bb-name">DNA: probability per puppy</span><span class="bb-pts">Sire and dam, per test</span></button>' : '');
+  }
+  function backMore() { return '<button type="button" class="bb-f" data-bb-tab="more">' + ic('M15 6l-6 6l6 6', 18) + 'More</button>'; }
+  function archiveHtml(v, c) {
+    var esc = v.esc;
+    return backMore() + '<h3 class="bb-h">Archive</h3><p class="bb-pts">Animals whose scoring has ended. Their records stay.</p>'
+      + (c.ended.length ? c.ended.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (x) {
+        return '<div class="card bb-arch"><span class="bb-strong">' + esc(x.name) + '</span><span class="bb-pts">' + (x.from ? 'From ' + day(x.from) : '') + (x.to ? (x.from ? ', to ' : 'To ') + day(x.to) : '') + '</span></div>';
+      }).join('') : '<p class="mut">None.</p>');
+  }
+  /** The rules in force today, read only: sections, checks, must pass, answers and points, target, and where each rule came from. */
+  function systemHtml(v) {
+    var esc = v.esc, T = v.T, today = v.today, schemes = (T['BLD-score_scheme.csv'] || []);
+    var ids = {}; (T['BLD-score_enrolment.csv'] || []).forEach(function (e) { ids[e.scheme_id] = 1; });
+    var shown = schemes.filter(function (s) { return ids[s.id] && /^active$/i.test(t(s.status)) && (!t(s.to_date) || s.to_date >= today); });
+    if (!shown.length) return backMore() + '<p class="mut">No scheme in force today.</p>';
+    return backMore() + '<h3 class="bb-h">My system</h3><p class="bb-pts">Read only. A star means must pass. Rules today; past records keep the rules of their own date.</p>'
+      + shown.map(function (sc) {
+        var bands = (T['BLD-score_band.csv'] || []).filter(function (b) { return b.scheme_id === sc.id && t(b.kind); })
+          .sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
+        var crit = (T['BLD-score_criterion.csv'] || []).filter(function (x) { return x.scheme_id === sc.id && Score.inForce(x, today); });
+        var pts = T['BLD-score_point.csv'] || [];
+        return '<div class="card"><span class="bb-strong">' + esc(t(sc.name) || 'Scheme') + (t(sc.breed) ? ', ' + esc(sc.breed) : '') + (t(sc.version) ? ', version ' + esc(sc.version) : '') + '</span>'
+          + '<p class="bb-pts">' + (t(sc.target_points) ? 'Target ' + esc(sc.target_points) + (t(sc.target_is) ? ' (' + esc(sc.target_is) + ')' : '') + '. ' : '') + (t(sc.source) ? 'Source: ' + esc(sc.source) : '') + '</p>'
+          + bands.map(function (b) {
+            var cs = crit.filter(function (x) { return x.band_id === b.id; });
+            if (!cs.length) return '';
+            return '<details class="card bb-band bb-c-' + esc(t(b.colour)) + '" data-bb-band="sys-' + esc(b.id) + '"' + (state.open['sys-' + b.id] ? ' open' : '') + '><summary>' + esc(b.label) + ' <span class="cnt">' + cs.length + '</span></summary>'
+              + cs.map(function (x) {
+                var rows = pts.filter(function (p) { return p.criterion_id === x.id && Score.inForce(p, today); });
+                return '<div class="bb-line"><span class="bb-l">' + (t(b.kind) === 'gate' ? star() : '') + esc(x.label) + '</span>'
+                  + '<span class="bb-why">' + rows.map(function (p) {
+                    return esc(t(p.answer_match)) + ': ' + (t(p.gate_outcome) ? esc((words[t(p.gate_outcome)] || p.gate_outcome)) : esc(t(p.points)) + ' points');
+                  }).join(' \u00b7 ') + (t(x.valid_months) ? ' \u00b7 lasts ' + esc(x.valid_months) + ' months' : '') + (t(x.authority) ? ' \u00b7 ' + esc(x.authority) : '') + '</span></div>';
+              }).join('') + '</details>';
+          }).join('') + '</div>';
+      }).join('');
+  }
+
   function inner(v) {
     var c = compute(v);
     if (!c.setUp) return '<p class="mut">Not set up yet.</p>';
     var err = c.error ? '<div class="card acc2"><p>' + v.esc(c.error) + '</p></div>' : '';
     var dog = state.dog && c.byId[state.dog];
-    return err + (dog ? dogHtml(v, dog) : listHtml(v, c));
+    if (dog) return err + dogHtml(v, dog);
+    words = c.words || VERDICT;
+    var body = state.tab === 'cal' ? calHtml(v, c) : state.tab === 'more' ? moreHtml(c) : state.tab === 'archive' ? archiveHtml(v, c)
+      : state.tab === 'system' ? systemHtml(v) : state.tab === 'dna' && Dna ? backMore() + Dna.key() + Dna.calc(v.T, state.calc, v.esc) : listHtml(v, c);
+    return err + tabsHtml() + body;
   }
 
   function css() {
@@ -352,8 +469,25 @@
       '.bb-tp{background:repeating-linear-gradient(45deg,var(--c) 0 2px,transparent 2px 6px);opacity:.6}',
       '.bb-tmark{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink)}',
       '.bb-three{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-small);color:var(--muted)}',
-      '.bb-vbox .bb-why{margin:0;color:var(--ink)}'
-    ].join('');
+      '.bb-vbox .bb-why{margin:0;color:var(--ink)}',
+      '.bb-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 12px}',
+      '.bb-tab{font:inherit;font-size:var(--fs-small);color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:var(--radius);min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}',
+      '.bb-tab:hover,.bb-tab:active{background:var(--hov)}.bb-tab[aria-current=page]{color:var(--ink);font-weight:600;background:var(--hov)}.bb-tab:focus-visible{border-color:var(--ink);outline:none}',
+      '.bb-h{margin:0 0 4px;font-weight:600}',
+      '.bb-month{margin:12px 0}.bb-mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}',
+      '.bb-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}.bb-wd{font-size:var(--fs-small);color:var(--muted)}',
+      '.bb-day{position:relative;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:var(--radius)}',
+      '.bb-day i{width:6px;height:6px;border-radius:50%;background:var(--ljr-6);margin-top:2px}.bb-today{border:1px solid var(--ink)}',
+      '.bb-calrow .bb-name{white-space:normal}',
+      '.bb-arch{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}',
+      '.bb-sec{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}',
+      '.bb-sec .bb-sechd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);text-align:left}',
+      '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
+      '.bb-secbar{display:flex;flex-direction:column;gap:4px}.bb-secbar .bb-bar span{display:block;height:100%}',
+      '.bb-gates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}',
+      '.bb-gates li{display:flex;align-items:center;gap:8px;min-height:32px;border-top:1px solid var(--line);font-size:var(--fs-small)}.bb-gates li:first-child{border-top:0}',
+      '.bb-gl{flex:1;min-width:0}.bb-gw{color:var(--muted)}.bb-gates li[data-gate=fail] .bb-gw{color:var(--ljr-2-text)}'
+    ].join('') + (Dna ? Dna.css() : '');
     document.head.appendChild(s);
   }
 
@@ -369,6 +503,38 @@
     var r = compute(v).byId[id];
     if (!r) return '';
     return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing: trial scores, not yet signed off">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></button>';
+  }
+
+  /* The Breed Better logo, as drawn in Lisa's mock-up (12 Nov 2026). No logo file is in the repo, so the mock-up's own SVG is used. */
+  // the logo file sits beside this script (bb-logo.svg, drawn from the mock-up's own SVG: no logo file existed)
+  var LOGO_SRC = (function () { try { var c = document.currentScript && document.currentScript.src; return c ? c.replace(/[^/]*$/, '') + 'bb-logo.svg' : 'bb-logo.svg'; } catch (e) { return 'bb-logo.svg'; } }());
+  var LOGO = '<img class="bb-logo" src="' + LOGO_SRC + '" width="32" height="32" alt="Breed Better logo">';
+  var GATE_WORD = { pass: 'Passed', fail: 'Failed', unverified: 'Missing' };
+  var GATE_ICON = { pass: ICON.pass, fail: ICON.fail, unverified: 'M12 8v5 M12 16h.01 M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0' };
+
+  /** The Breed Better section on a dog card (Lisa, 12 Nov 2026): logo heading, verdict and Testing badges, score bar
+   *  against the target, the must-pass checks one per line, and a tap through to the dog's Breed Better page. */
+  function section(v, id) {
+    last = v; css();
+    var r = compute(v).byId[id];
+    if (!r) return '';
+    var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
+    var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
+    var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
+    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better">'
+      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc(r.words[verdictOf(r)]) + ', ' + esc(total(r)) + '. Testing: trial scores, not yet signed off. Open the detail">'
+      + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>'
+      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M9 6l6 6l-6 6', 16) + '</button>'
+      + (all ? '<div class="bb-secbar"><div class="bb-barw"><div class="bb-bar" role="img" aria-label="' + r.points_earned + ' of ' + all + ' points' + (hasT ? ', target ' + r.target : '') + '">'
+        + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[verdictOf(r)] + ')"></span></div>'
+        + (tp !== null ? '<span class="bb-tmark" style="left:' + tp.toFixed(1) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>'
+        + '<div class="bb-three"><span>' + r.points_earned + ' of ' + all + '</span>' + (hasT ? '<span>target ' + r.target + ' (' + Math.round(tp) + '%)</span>' : '') + '</div></div>' : '')
+      + (gates.length ? '<ul class="bb-gates">' + gates.map(function (l) {
+        var o = l.gate_outcome || 'unverified';
+        return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
+          + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
+      }).join('') + '</ul>' : '')
+      + '</section>';
   }
 
   /* typing or a new sort redraws the rows only, so the search box keeps focus */
@@ -388,21 +554,28 @@
     });
     document.addEventListener('change', function (e) {
       if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-bb-sort')) { state.sort = e.target.value; redrawRows(); }
+      if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-bb-calc-test')) { state.calc = { code: e.target.value }; redraw(); }
     });
     /* capture, so the chosen dog is set before the hub's own click handler opens the page */
     document.addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back]');
+      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc]');
       if (!b) return;
       if (b.hasAttribute('data-bb-dog')) { state.dog = b.getAttribute('data-bb-dog'); return; }
       if (b.hasAttribute('data-bb-filter')) state.filter = b.getAttribute('data-bb-filter');
       if (b.hasAttribute('data-bb-open')) state.dog = b.getAttribute('data-bb-open');
       if (b.hasAttribute('data-bb-back')) state.dog = '';
+      if (b.hasAttribute('data-bb-tab')) { state.tab = b.getAttribute('data-bb-tab'); state.dog = ''; }
+      if (b.hasAttribute('data-bb-sex')) state.sex = b.getAttribute('data-bb-sex');
+      if (b.hasAttribute('data-bb-cal')) state.cal = b.getAttribute('data-bb-cal');
+      if (b.hasAttribute('data-bb-calc')) { var cv = b.getAttribute('data-bb-calc').split(':'); state.calc[cv[0]] = Number(cv[1]); }
+      if (b.hasAttribute('data-bb-month')) { state.month = b.getAttribute('data-bb-month'); state.cal = 'all'; }
       redraw();
     }, true);
   }
 
   /** Open one animal's page next time the page is drawn: the hub's #/breed/<id> address. */
   function open(id) { state.dog = t(id); }
+  function setTab(k) { state.tab = k; state.dog = ''; }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip, open: open, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { FILES: FILES, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));

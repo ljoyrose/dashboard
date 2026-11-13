@@ -66,7 +66,7 @@ function adminAssignCodeIds() {
  */
 function adminStartMovesQueue() {
   setProp_(BLD.PROP.MOVES_QUEUE_UNTIL, addDays_(todayLondon_(), BLD.LIMITS.MOVES_QUEUE_DAYS - 1));   // 14 days counting today
-  Logger.log('Dog moves go to the approvals queue up to and including ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ', then straight in (unless MODE_occupancy is set).');
+  Logger.log('Occupancy moves go straight in. MOVES_QUEUE_UNTIL was set to ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ' but is ignored for moves.');
 }
 
 /**
@@ -108,7 +108,7 @@ function adminCheckSetup() {
   Object.keys(TABLES).forEach(function (k) {
     Logger.log('--   table ' + k + ': ' + (tableOn_(TABLES[k]) ? 'ON' : 'off') + ', mode ' + modeFor_(TABLES[k]));
   });
-  Logger.log('--   dog moves: ' + (prop_(BLD.PROP.MOVES_QUEUE_UNTIL) ? ('queue up to and including ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ', then straight in') : 'always queue (MOVES_QUEUE_UNTIL not set; run adminStartMovesQueue on go-live day)'));
+  Logger.log('--   dog moves: straight in (MOVES_QUEUE_UNTIL is ignored for occupancy)');
   var noId = Object.keys(registry_()).filter(function (h) { return !registry_()[h].id; }).length;
   if (noId) Logger.log('FIX  ' + noId + ' staff code(s) have no public id yet (run adminAssignCodeIds)');
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));

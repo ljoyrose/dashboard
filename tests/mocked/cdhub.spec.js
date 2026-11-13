@@ -108,6 +108,48 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await expect(page.locator('#boot')).toHaveCount(0);
   });
 
+  test('boot hangs about 15s then shows Retry @regression', async ({ page }) => {
+    test.setTimeout(25_000);
+    await page.clock.install();
+    let hold = true;
+    const waiting = [];
+    await page.route('https://www.googleapis.com/drive/v3/**', async (route) => {
+      if (hold) { waiting.push(route); return; }
+      return route.fallback();
+    });
+    await page.goto('cdhub/');
+    await page.clock.runFor(2000);
+    await expect(page.locator('#signinbtn')).toBeEnabled();
+    await page.locator('#signinbtn').click();
+    await page.clock.runFor(200);
+    const boot = page.locator('#boot');
+    await expect(boot.locator('.bootline')).toHaveText('Getting things ready…');
+    await page.clock.fastForward(15_000);
+    await expect(boot.locator('.bootline')).toHaveText('Taking longer than usual');
+    await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+    const again = page.waitForRequest(/googleapis\.com\/drive\/v3\/files\?/);
+    await page.getByRole('button', { name: 'Retry' }).click();
+    await again;
+    hold = false;
+    await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
+    await expect(page.locator('#livepill')).toContainText('live');
+    await expect(page.locator('#boot')).toHaveCount(0);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(8);   // main's 11, minus Assocs, Table map and Litters
+  });
+
+  test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
+    allowedConsole.push(/status of 403/);
+    guard.world.failFor = 'alt=media';
+    guard.world.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal' };
+    await page.goto('cdhub/');
+    await page.locator('#signinbtn').click();
+    await expect(page.locator('#boot')).toHaveCount(0);
+    await expect(page.locator('#main')).toContainText('The records could not be read');
+    await expect(page.locator('#main')).toContainText('Google refused access');
+    await expect(page.locator('#main')).not.toContainText('Getting things ready');
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  });
+
   test('the sample CSVs are parsed into the right things on the Dogs page', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
@@ -158,12 +200,13 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('eight sections are in the bar: five tabs, then three under More (Assocs, Table map, Litters and Vet link hidden); Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('eight sections are in the bar: five tabs, then three under More, plus the Temps link (Assocs, Table map, Litters and Vet link hidden); Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('#nav button[data-go]')).toHaveCount(8);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
     await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(3);
+    await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
@@ -176,7 +219,7 @@ test.describe('CD Hub: navigation', () => {
     const hiddenGo = page.locator('#nav button[data-go="buyers"], #nav button[data-go="shape"], #nav button[data-go="litters"], #nav button[data-go="vet"]');
     await expect(hiddenGo).toHaveCount(0);
     await page.locator('nav.house-tabs [data-house-more]').click();
-    await expect(page.locator('#houseMore button .htl')).toHaveText(['Compliance', 'The round', 'Areas']);
+    await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'The round', 'Areas', 'Temps']);
     const words = await page.locator('#nav').innerText();
     for (const word of ['Assocs', 'Table map', 'Litters', 'Vet link']) expect(words).not.toContain(word);
   });
@@ -845,7 +888,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.locator('#dsort').selectOption('name');
     expect(await page.locator('.dc .nm').allInnerTexts()).toEqual(['Test Dog One', 'Test Dog Two', 'Test Pup One']);
     const card = page.locator('.dc').first();
-    await expect(card.locator('.nl')).toContainText('Bitch');
+    await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
     expect([ph.width, ph.height]).toEqual([72, 72]);
     await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');

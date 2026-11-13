@@ -61,7 +61,7 @@ test.describe('CD Hub dog photos', () => {
     await expect(broken.locator('img.dogphoto')).toBeHidden();
   });
 
-  test('each card has a photo button that opens a file input accepting images, including the camera', async ({ page, guard }) => {
+  test('each card has a photo button that opens a file input accepting images, camera or library', async ({ page, guard }) => {
     await openDogs(page, guard);
     const shown = card(page, 'Pretend One');
     const empty = card(page, 'Pretend Two');
@@ -70,7 +70,8 @@ test.describe('CD Hub dog photos', () => {
     for (const c of [shown, empty]) {
       const input = c.locator('input[type="file"]');
       await expect(input).toHaveAttribute('accept', 'image/*');
-      await expect(input).toHaveAttribute('capture', '');
+      // no capture attribute: a phone offers both Take Photo and Photo Library (Lisa, 12 Nov 2026)
+      expect(await input.getAttribute('capture')).toBeNull();
     }
     const chooser = page.waitForEvent('filechooser');
     await empty.locator('label.dogphoto-btn').click();
@@ -96,10 +97,11 @@ test.describe('CD Hub dog photos', () => {
     const png = path.join(os.tmpdir(), 'pretend-dog-photo.png');
     fs.writeFileSync(png, PNG);
     await card(page, 'Pretend Two').locator('input[type="file"]').setInputFiles(png);
+    await page.locator('[data-crop-use]').click();
     await expect(card(page, 'Pretend Two').locator('img.dogphoto')).toHaveAttribute('data-photo-id', 'drv-photo-new');
     expect(body.action).toBe('dog_photo');
     expect(body.fields.subject_id).toBe('sub-x2');
-    expect(body.fields.mime).toMatch(/^image\//);
+    expect(body.fields.mime).toBe('image/jpeg');
     expect(body.fields.image_base64.length).toBeGreaterThan(20);
     expect(JSON.stringify(body)).not.toContain('FOLDER');
     await expect(card(page, 'Pretend One').locator('img.dogphoto')).toHaveAttribute('data-photo-id', 'drv-photo-pretend');
@@ -119,6 +121,7 @@ test.describe('CD Hub dog photos', () => {
     fs.writeFileSync(png, PNG);
     const two = card(page, 'Pretend Two');
     await two.locator('input[type="file"]').setInputFiles(png);
+    await page.locator('[data-crop-use]').click();
     await expect(two.locator('[data-photo-msg]')).toHaveText('Dog photos are not set up yet.');
     await expect(two.locator('img.dogphoto')).toHaveCount(0);
     await expect(two.locator('[data-paw]')).toBeVisible();

@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#2C2C2A">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
+<script src="hub-nav.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/capacity.js"></script>
@@ -32,7 +33,7 @@
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:60px}
+.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:140px}
 .hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
@@ -42,7 +43,7 @@ h1,h2,h3,b,strong{font-weight:600}
 .btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media(hover:hover){header .btn:hover{background:var(--frame-hov);}}
-@media(max-width:544px){.btn{min-height:44px}header.top{position:static}#view-d .rscroll{display:none}}   /* a phone shows the room cards only (quality review 12 Nov) */
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}#view-d .rscroll{display:none}.wrap{padding-bottom:170px}}   /* a phone shows the room cards only (quality review 12 Nov) */
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
 .bootline{margin:14px 0 0;color:var(--ink);font-weight:400}
 .bootmark{display:inline-flex;color:var(--ink)}
@@ -96,14 +97,15 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .mn{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin-bottom:6px}
 .dg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .dh{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px;user-select:none}
-.d{width:100%;aspect-ratio:1;border-radius:3px;border:none;font-size:0;background:var(--soft);cursor:default}
+.d{width:100%;aspect-ratio:1;border-radius:var(--radius);border:none;font-size:0;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);cursor:default}
 .d:not(.empty):not(.future):not(.nd){cursor:pointer}
 @media(hover:hover){.d:not(.empty):not(.future):not(.nd):hover{transform:scale(1.35);z-index:2;position:relative}}
-.d.empty{background:transparent}
-.d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
-.d.unknown,.sd.unknown{background:var(--soft);border:1px dashed var(--line)}
-.d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 1px var(--ljr-5-text)}.d.warn{background:var(--ljr-3)}.d.nolimit{background:var(--soft);border:1px dashed var(--line)}
-.d.ocool{background:var(--ljr-6-tint)}.d.omild{background:var(--card);border:1px solid var(--line)}.d.owarm{background:var(--ljr-4-tint)}
+.d.empty{background:transparent;box-shadow:none}
+.d.future{background:var(--paper);border:1px solid var(--line);box-shadow:none;opacity:.35}
+.d.unknown,.sd.unknown{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+/* In limit: green from the heat palette, with a frame so a month of in-limit days is not a pale wash. Outside limit: solid orange. Missed: the same orange as a frame on a light cell, never a brown fill. */
+.d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.d.warn{background:var(--ljr-3);box-shadow:none}.d.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.d.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+.d.ocool{background:var(--ljr-6-tint);box-shadow:none}.d.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.d.owarm{background:var(--ljr-4-tint);box-shadow:none}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
 
 /* Strip view */
@@ -111,12 +113,12 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .srow{display:flex;align-items:center;gap:6px}
 .slbl{font-size:10px;color:var(--muted);width:24px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
 .sdays{display:flex;gap:1px;flex:1;overflow-x:auto;padding-bottom:1px}
-.sd{height:14px;min-width:3px;flex:1;border-radius:2px;cursor:default;background:var(--soft)}
+.sd{height:14px;min-width:3px;flex:1;border-radius:var(--radius);cursor:default;background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .sd:not(.future):not(.nd){cursor:pointer}
 @media(hover:hover){.sd:not(.future):not(.nd):hover{transform:scaleY(1.5);z-index:2}}
-.sd.allok{background:var(--ljr-5-tint)}.sd.warn{background:var(--ljr-3)}.sd.nolimit{background:var(--soft)}
-.sd.ocool{background:var(--ljr-6-tint)}.sd.omild{background:var(--card);border:1px solid var(--line)}.sd.owarm{background:var(--ljr-4-tint)}
-.sd.future{background:var(--paper);border:1px solid var(--line);opacity:.3;cursor:default}
+.sd.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.sd.warn{background:var(--ljr-3);box-shadow:none}.sd.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.sd.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+.sd.ocool{background:var(--ljr-6-tint);box-shadow:none}.sd.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.sd.owarm{background:var(--ljr-4-tint);box-shadow:none}
+.sd.future{background:var(--paper);border:1px solid var(--line);box-shadow:none;opacity:.3;cursor:default}
 .smlbls{display:flex;gap:1px;padding-left:30px;margin-bottom:3px}
 .sml{flex:1;font-size:9px;color:var(--muted);text-align:center}
 
@@ -135,20 +137,23 @@ button.mitem{display:block;width:100%;text-align:left;font:inherit;color:inherit
 .chev{font-size:14px;color:var(--muted)}
 
 /* Drill panel */
-#drill{display:none;position:fixed;top:0;right:0;width:min(320px,100vw);height:100%;background:var(--card);border-left:1px solid var(--line);z-index:100;padding:16px;overflow-y:auto;box-shadow:var(--shadow)}
+#drill{display:none;position:fixed;top:12px;right:12px;width:min(320px,calc(100vw - 24px));height:calc(100% - 24px);background:var(--card);border:1px solid var(--line);border-radius:var(--radius);z-index:100;padding:16px;overflow-y:auto;box-shadow:var(--shadow)}
 #drill.open{display:block}
-.dclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0;min-width:44px;min-height:44px}
-.dtitle{font-size:var(--fs-head);font-weight:600;margin:0 0 2px;clear:right}
+.dclose{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0;min-width:44px;min-height:44px}
+.dtitle{font-size:var(--fs-head);font-weight:600;margin:0 0 12px;clear:right}
 .dsub{font-size:var(--fs-small);color:var(--muted);margin:0 0 14px}
+.dblock{border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;margin:0 0 12px;background:var(--card)}
+.dblock:last-child{margin-bottom:0}
 .dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
 .dr:last-child{border-bottom:none}
-.dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:14px 0 2px;letter-spacing:.04em}
-/* Calm by rule (Lisa 11 Nov): no red anywhere; orange (.warn) only for a reading outside its limit or a missed needed one. */
+.dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:0 0 6px;letter-spacing:.04em}
+/* Solid orange text (.warn) = outside the limit. A framed chip (.miss) = a needed reading was missed. No red, no brown fill. */
 .warn{color:var(--ljr-3-text);font-weight:600}
+span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(--radius);padding:0 6px;background:var(--card);color:var(--ljr-3-text);font-weight:600}
 .tick{color:var(--ljr-5-text)}
 .due{color:var(--muted)}
-.rl{padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small);font-variant-numeric:tabular-nums}
-.rl:last-child{border-bottom:none}
+.rl{padding:8px 10px;margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius);font-size:var(--fs-small);font-variant-numeric:tabular-nums;background:var(--card)}
+.rl:last-child{margin-bottom:0}
 .rl b{font-weight:600}
 .rl .note{display:block;margin-top:2px}
 .oline{font-size:var(--fs-small);font-variant-numeric:tabular-nums;margin:0}
@@ -180,13 +185,17 @@ button.mitem{display:block;width:100%;text-align:left;font:inherit;color:inherit
 <aside id="drill" role="complementary" aria-label="Day detail">
   <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
   <p class="dtitle" id="d-title">—</p>
-  <p class="dsec">Outside</p>
-  <p class="oline" id="d-out">—</p>
-  <div id="d-areas" style="display:none">
+  <section class="dblock">
+    <p class="dsec">Outside</p>
+    <p class="oline" id="d-out">—</p>
+  </section>
+  <section class="dblock" id="d-areas" style="display:none">
     <p class="dsec">Indoors °C</p>
     <div id="d-areas-inner"></div>
-  </div>
+  </section>
 </aside>
+<nav id="nav" class="house-tabs" aria-label="Sections"></nav>
+<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});</script>
 
 <script>
 /* ---- config ---- */
@@ -263,15 +272,25 @@ function readDriveFile(f){
    BAND = today's adult row, for the key. */
 var BANDS=[], BAND=null, SUBJ_DOB={}, OCC_BY_DOG={};
 function num(v){ if(v===''||v==null) return null; var n=parseFloat(v); return isNaN(n)?null:n; }
+/* ISO first; otherwise a D/M/Y date (Drive / sheet export). Used so a past day still matches its readings and limits. */
+function isoDay(v){
+  var s=String(v==null?'':v).trim(), m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(!m) return '';
+  var y=m[3].length===2?'20'+m[3]:m[3], mo=('0'+m[2]).slice(-2), d=('0'+m[1]).slice(-2);
+  return y+'-'+mo+'-'+d;
+}
+function readingWhen(at){
+  var s=String(at||'').trim(), day=isoDay(s), tm=s.match(/[T ](\d{1,2}):/), hr=tm?parseInt(tm[1],10):NaN;
+  return {day:day, slot:(isNaN(hr)||hr<12)?'am':'pm'};
+}
 function daysBetween(a,b){ var x=Date.parse(a+'T00:00:00Z'), y=Date.parse(b+'T00:00:00Z'); return isNaN(x)||isNaN(y)?null:Math.round((y-x)/86400000); }
 /* the room a dog was in on a day: its occupancy row with the latest moved_in on or before the day (rows are never
    edited; a move adds a row), unless that row's moved_out is before the day */
 function roomOfDog(sid,day){
-  var best=null;
-  (OCC_BY_DOG[sid]||[]).forEach(function(r){ var mi=String(r.moved_in||'').slice(0,10); if(mi&&mi>day) return; if(!best||mi>=String(best.moved_in||'').slice(0,10)) best=r; });
-  if(!best) return '';
-  var mo=String(best.moved_out||'').slice(0,10);
-  return mo&&mo<day?'':best.area_id;
+  var O=window.BLDOccupancy, row=O&&O.rowOn?O.rowOn(OCC_BY_DOG[sid]||[],sid,day):null;
+  return row&&row.area_id?row.area_id:'';
 }
 var YOUNG_CACHE={};
 function youngestIn(aid,day){
@@ -290,8 +309,17 @@ function youngestCalc(aid,day){
   return young;
 }
 function bandOn(day,aid){
-  day=String(day||'').slice(0,10);
+  day=isoDay(day)||String(day||'').slice(0,10);
   var on=BLDCapacity.inForce(BANDS,day);
+  /* A limit whose from_date is later than this day (typed in after the reading) still colours it, unless a row already in force covers the same room and age. A puppy row in force must not leave July adult days with no band: those cells stay a pale empty colour. */
+  BANDS.forEach(function(b){
+    if(on.indexOf(b)>=0) return;
+    var f=isoDay(b.from_date), t=isoDay(b.to_date);
+    if(!f||f<=day) return;
+    if(t&&day>t) return;
+    var covered=on.some(function(o){ return String(o.area_id||'')===String(b.area_id||'')&&o.age_from===b.age_from&&o.age_to===b.age_to; });
+    if(!covered) on.push(b);
+  });
   var own=aid?on.filter(function(b){ return b.area_id===aid; }):[];
   var rows=own.length?own:on.filter(function(b){ return !b.area_id; });
   if(!rows.length) return null;
@@ -305,9 +333,11 @@ function bandOn(day,aid){
   fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
   return fits[0]||null;
 }
+function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
 function tempCls(min,max,day,aid){
   var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR,aid);
   if(isNaN(lo)&&isNaN(hi))return'';
+  if(tempSwapped(min,max))return'swap';   /* max lower than min: typed the wrong way round, checked before hot/cold */
   if(!B)return'unknown';
   if(!isNaN(lo)&&lo<B.min)return'cold';
   if(!isNaN(hi)&&hi>B.max)return'hot';
@@ -321,7 +351,7 @@ async function loadBand(){
     parseCSV(await readDriveFile(f)).forEach(function(r){
       var lo=num(r.min_temp),hi=num(r.max_temp);
       if(lo!==null&&hi!==null)BANDS.push({min:lo,max:hi,age_from:num(r.age_from_days),age_to:num(r.age_to_days),area_id:r.area_id||'',
-        from_date:String(r.from_date||'').slice(0,10),to_date:String(r.to_date||'').slice(0,10)});
+        from_date:isoDay(r.from_date),to_date:isoDay(r.to_date)});
     });
     BAND=bandOn(TODAY_STR);
   }catch(e){console.warn('Temperature limits load failed:',e);}
@@ -329,7 +359,7 @@ async function loadBand(){
 async function loadDogs(){
   SUBJ_DOB={}; OCC_BY_DOG={}; YOUNG_CACHE={};
   (await optionalCsv('BLD-subject.csv')).forEach(function(r){ var d=String(r.dob||'').slice(0,10); if(r.id&&/^\d{4}-\d{2}-\d{2}$/.test(d)) SUBJ_DOB[r.id]=d; });
-  (await optionalCsv('BLD-occupancy.csv')).forEach(function(r){ if(r.subject_id&&r.area_id) (OCC_BY_DOG[r.subject_id]||(OCC_BY_DOG[r.subject_id]=[])).push(r); });
+  (await optionalCsv('BLD-occupancy.csv')).forEach(function(r){ if(r.subject_id) (OCC_BY_DOG[r.subject_id]||(OCC_BY_DOG[r.subject_id]=[])).push(r); });   /* include leave rows so rowOn can end a stay */
 }
 async function optionalCsv(name){
   try{ var f=await findDriveFile(name); return f?parseCSV(await readDriveFile(f)):[]; }
@@ -349,8 +379,8 @@ async function loadAreaData(){
       if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
-        var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
-        var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
+        var at=String(r.period_start||r.taken_at||''), when=readingWhen(at); if(!r.area_id||!when.day)return;   /* period_start: a reading typed later belongs to its own slot */
+        var date=when.day,slot=when.slot;
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         var u=unitFor(r.area_id,r.thermometer_id);
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
@@ -487,8 +517,11 @@ var YEAR=2026;
    after its end day, shown as "3A.1 (retired 11/11/26)", and its past readings still show. */
 function areaEnd(aid){ var N=window.BLDNeeds; return N?N.endDay(REQ,'room.in_use','area',aid):''; }
 function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
-function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
-function areaName(aid){ return areaCode(aid)+(isRetired(aid)?' (retired '+ddmmyy(areaEnd(aid))+')':''); }
+/* Lisa 12 Nov 2026: a retired room shows its own name without the ZZ_ filing mark, and the room it became (BLD-area_link). */
+function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')).replace(/^ZZ_/,''); }
+function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_area_id===aid&&l.to_area_id&&l.to_area_id!==aid) to=l.to_area_id; }); return to; }
+function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
+  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+ddmmyy(areaEnd(aid))+')'; }
 function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
 function thermoNeeded(aid,day){
   var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;
@@ -547,10 +580,10 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* Room empty (Lisa 11 Nov 2026) = no dog present, a flag on the slot's reading. With no reading the slot is covered
    ('empty', never missed). Outside the limit while empty is flagged with "Room empty" but never counted as outside
    ('eout'). */
-function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'; }
+function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
+    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':cls==='swap'?'swap':'out';
     if(t.empty&&k==='out') k='eout';
     return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }
@@ -572,24 +605,26 @@ function dayRooms(day){
   });
 }
 function daySummary(day){
-  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0};
+  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0,swap:0};
   dayRooms(day).forEach(function(x){ [x.am,x.pm].forEach(function(s){ if(s.k in n) n[s.k]++; if(isRead(s.k)) n.read++; }); });
   return n;
 }
 function indoorDayClass(day){
   if(day>TODAY_STR) return 'future';
   var n=daySummary(day);
-  if(n.out||n.miss) return 'warn';
+  if(n.out||n.swap) return 'warn';   /* a reading outside the limit (or min/max swapped) beats a miss on the same day */
+  if(n.miss) return 'miss';
   if(!n.read) return 'nd';
   if(n.nolimit) return 'nolimit';
   return 'allok';
 }
 function slotHtml(label,s){
   if(s.k==='none') return '';
-  if(s.k==='miss') return '<span class="warn">'+label+' missed</span>';
+  if(s.k==='miss') return '<span class="warn miss">'+label+' missed</span>';
   if(s.k==='due') return '<span class="due">'+label+' due</span>';
   if(s.k==='empty') return '<span class="due">'+label+' empty</span>';
   var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
+  if(s.k==='swap') return '<span class="warn">'+esc(txt)+' · max lower than min</span>';
   if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
@@ -598,8 +633,9 @@ function slotHtml(label,s){
 function roomLine(x,withNotes){
   var parts=[slotHtml('AM',x.am),slotHtml('PM',x.pm)].filter(Boolean);
   var notes='';
-  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if(p[1].k==='out') notes+='<span class="note warn">'+p[0]+' what was done: '+esc(p[1].note||'not recorded')+'</span>'; });
-  return '<div class="rl"><b>'+esc(x.name)+'</b> · '+parts.join(' · ')+notes+'</div>';
+  var name=withNotes?String(x.name||'').replace(/ \(from [^)]+\)$/,''):x.name;
+  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if(p[1].k==='out'&&p[1].note) notes+='<span class="note warn">'+p[0]+' what was done: '+esc(p[1].note)+'</span>'; });
+  return '<div class="rl"><b>'+esc(name)+'</b> · '+parts.join(' · ')+notes+'</div>';
 }
 function outsideLine(day){
   var r=DAYS[day]; if(!r) return '';
@@ -607,7 +643,7 @@ function outsideLine(day){
   return (hi||'–')+' / '+(lo||'–')+' °C'+(rain!==''?', rain '+rain+' mm':'');
 }
 function stateWord(cls){
-  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',allok:'In limit',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
+  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
 function monthCal(y, classOf, kind){
   var md=mdays(y);
@@ -662,7 +698,7 @@ function buildMonthCards(y){
   var cards=[];
   MONTHS.forEach(function(mn,mi){
     if(ds(y,mi,1)>TODAY_STR) return;
-    var t={in:0,out:0,nolimit:0,miss:0,read:0}, hi=null, lo=null;
+    var t={in:0,out:0,nolimit:0,miss:0,read:0,swap:0}, hi=null, lo=null;
     for(var d=1;d<=mdn[mi];d++){
       var date=ds(y,mi,d);
       if(date>TODAY_STR) continue;
@@ -675,12 +711,13 @@ function buildMonthCards(y){
         if(!isNaN(mn2)&&(lo==null||mn2<lo.v)) lo={v:mn2,name:x.name};
       }); });
     }
-    var h='<button type="button" class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'" onclick="openMonth('+(mi+1)+')"><span class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span>'
-      +(t.in+t.out?'<span class="mitem-pct">'+Math.round(100*t.in/(t.in+t.out+t.miss))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
+    var h='<button type="button" class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'" data-swap="'+t.swap+'" onclick="openMonth('+(mi+1)+')"><span class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span>'
+      +(t.in+t.out+t.swap?'<span class="mitem-pct">'+Math.round(100*t.in/(t.in+t.out+t.miss+t.swap))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
     if(!t.read&&!t.miss) h+='<span>No readings</span>';
     else{
       h+='<span>'+t.in+' in limit</span>';
       h+='<span'+(t.out?' class="warn"':'')+'>'+t.out+' outside</span>';
+      if(t.swap) h+='<span class="warn">'+t.swap+' max lower than min</span>';
       h+='<span'+(t.miss?' class="warn"':'')+'>'+t.miss+' missed</span>';
       if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';
       if(lo) h+='<span>Low '+dpIndoor(lo.v)+' '+esc(lo.name)+'</span>';
@@ -695,7 +732,7 @@ function buildRound(dateStr){
   var tiles='<div class="rtiles">'+rooms.map(function(x){
     return '<div class="rtile"><div class="rn">'+esc(x.name)+'</div><div class="rs">'+slotHtml('AM',x.am)+'</div><div class="rs">'+slotHtml('PM',x.pm)+'</div></div>';
   }).join('')+'</div>';
-  var cell=function(s,v){ return '<td'+(s.k==='out'||s.k==='eout'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
+  var cell=function(s,v){ return '<td'+(s.k==='out'||s.k==='eout'||s.k==='swap'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
   var rows=rooms.map(function(x){ return '<tr><td class="nm">'+esc(x.name)+'</td>'+cell(x.am,x.am.lo)+cell(x.am,x.am.hi)+cell(x.pm,x.pm.lo)+cell(x.pm,x.pm.hi)+'</tr>'; }).join('');
   var table=rooms.length
     ?'<div class="rscroll" tabindex="0" role="region" aria-label="Indoor temperatures in degrees C"><table class="rtable"><thead><tr><th>Room</th><th>AM min</th><th>AM max</th><th>PM min</th><th>PM max</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
@@ -736,9 +773,10 @@ function setYear(y){
 function legend(){
   var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
   return '<div class="legend">'
-    +'<div class="leg">'+sq('background:var(--ljr-5-tint);border:1px solid var(--ljr-5-text)')+'In limit</div>'
-    +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit or missed</div>'
-    +'<div class="leg">'+sq('background:var(--soft);border:1px solid var(--line)')+'No readings</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)')+'In limit</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit</div>'
+    +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)')+'Missed</div>'
+    +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 1px var(--line)')+'No readings</div>'
     +'<div class="leg">Outside: '+sq('background:var(--ljr-6-tint)')+(BAND?'below '+BAND.min:'cool')+' '+sq('background:var(--ljr-4-tint)')+(BAND?'above '+BAND.max:'warm')+'</div>'
     +'</div>';
 }
