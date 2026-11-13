@@ -27,10 +27,11 @@
     },
     // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until Lisa presses "Allow personal bin
     // actions". A file can be binned only if it starts ZZ_DELETE_DRIVE_ and has a ledger row whose surface is `surface`.
-    // dryRun true = the page lists what would be renamed or binned and changes nothing; switching it off is Lisa's call.
+    // dryRun true = the page lists what would be renamed or binned and changes nothing. Lisa switched it off on 13 Nov 2026.
+    // Its Rename step writes each renamed exact copy's ledger row itself (surface below), so those files become binnable.
     personalBin: {
       surface: 'drive-personal',
-      dryRun: true
+      dryRun: false
     },
     // TidyUp Apps stage 5: one row per app outside Drive and Dropbox. status: 'bot-and-browser' | 'bot-capable' |
     // 'browser-only' | 'nothing'. how = the only tidy route allowed; never = API actions no bot may call for that app.
