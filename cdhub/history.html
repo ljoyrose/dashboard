@@ -652,7 +652,8 @@ function monthCal(y, classOf, kind){
     for(var i=0;i<firstDow;i++) h+='<span class="d empty"></span>';
     for(var d=1;d<=md[mi];d++){
       var date=ds(y,mi,d), cls=classOf(date), today=date===TODAY_STR, word=stateWord(cls);
-      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+      /* a day with nothing to open (a later day, or no readings) is not offered as a button: it used to be one that did nothing */
+      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
       h+='<button type="button" class="d '+cls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'></button>';
     }
