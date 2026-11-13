@@ -3987,7 +3987,7 @@ if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); NEXT.enquiries=['litters','dogs']; }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
+function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,send:sinkSend,msg:sinkMsg,rerender:function(){ if(document.getElementById('admFuture')){ var y=window.scrollY; go('admin',false); window.scrollTo(0,y); } }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']); NEXT.admin=['map','work'];
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); NEXT.staff=['admin','map']; }
 function extraMore(){
@@ -4057,7 +4057,9 @@ function focusView(){
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
  pill();
- var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
+ var full=String(id||''), qi=full.indexOf('?');
+ if(qi>0){ if(full.slice(0,qi)==='admin'&&typeof AdminView!=='undefined') AdminView.query(full.slice(qi+1)); full=id=full.slice(0,qi); }   /* #/admin?visit_tag= (visitor card rescan) */
+ var sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
  if(id!=='compliance') REHEARSAL=null;   /* leaving Compliance ends a rehearsal: nothing kept (H-04) */
