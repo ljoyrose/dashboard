@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-estate-2026-10-30-v6">
+<meta name="build" content="ljr-estate-2026-11-13-v7">
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
@@ -26,6 +26,7 @@
 <script src="add.js"></script>
 <script src="shop.js"></script>
 <script src="keywords.js"></script>
+<script src="traffic.js"></script>
 <script src="views.js"></script>
 <script src="mail.js"></script>
 <script src="status.js"></script>
@@ -116,9 +117,27 @@
   input.txtin { font: inherit; font-size: var(--fs-body); padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
   input.txtin:focus { border-color: var(--ink); }
   .queued { font-size: var(--fs-small); margin: 0; }
+  /* Traffic this month (13 Nov 2026): a light-framed bar, amber from 80%, red from 95%. No upgrade prompt. */
+  .traffic { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .tline { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-width: 0; }
+  .tbar { display: inline-block; flex: 0 1 140px; min-width: 80px; height: 8px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: transparent; }
+  .tbar > i { display: block; height: 100%; border-radius: var(--radius); background: var(--green); }
+  .tbar[data-level="amber"] > i { background: var(--amber); }
+  .tbar[data-level="red"] > i { background: var(--rose); }
+  .tmeta { font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; }
+  details.tdet > summary { cursor: pointer; font-size: var(--fs-small); font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; gap: 6px; list-style: none; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 10px; }
+  details.tdet > summary::-webkit-details-marker { display: none; }
+  details.tdet > summary::after { content: "+"; }
+  details.tdet[open] > summary::after { content: "\2212"; }
+  details.tdet dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 8px 0 0; font-size: var(--fs-small); }
+  details.tdet dt { color: var(--muted); }
+  details.tdet dd { margin: 0; overflow-wrap: anywhere; }
+  details.tdet ol { margin: 6px 0 0; padding-left: 20px; font-size: var(--fs-small); }
+  details.tdet .lisa { margin: 8px 0 0; font-size: var(--fs-small); font-weight: 600; }
   @media (max-width: 544px) {
     .btn, .chip, select.txtin, input.txtin, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
+    details.tdet > summary { min-height: 44px; }
   }
   #view :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   header :focus-visible:not(.house-menu *) { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
@@ -162,7 +181,7 @@
 <script>
 (function () {
   'use strict';
-  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews, AL = window.EstateAlerts;
+  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, TR = window.EstateTraffic, V = window.EstateViews, AL = window.EstateAlerts;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
   var VIEWS = ['home', 'all', 'look', 'unchecked', 'shops', 'access', 'client'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
@@ -174,9 +193,17 @@
     { key: 'app.example.test', kind: 'app', company: 'Example Ltd', client: 'Client A', url_or_domain: 'https://app.example.test', platform: 'Example app builder', live_status: 'blocked to scripts', http_code: '403', source: 'example' },
     { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
   ];
+  // Invented traffic for the example rows: 80% amber, 0%, 96% red, and one site with no stats. Shown with the example rows only.
+  var EXAMPLE_TRAFFIC = [
+    { key: 'example.com', source: 'Example CDN', period: thisMonth(), visits: '1860', used_gb: '8.0', quota_gb: '10', updated_uk: ukStamp(-3), note: 'example' },
+    { key: 'shop.example.org', source: 'Example analytics', period: thisMonth(), visits: '0', used_gb: '0', quota_gb: '10', updated_uk: ukStamp(-5), note: 'example' },
+    { key: 'app.example.test', source: 'Example CDN', period: thisMonth(), visits: '5120', used_gb: '9.6', quota_gb: '10', updated_uk: ukStamp(-2), note: 'example' }
+  ];
   var token = null, rows = [], loaded = false, readProblem = '', view = 'home', filters = {}, example = !ES.sheetId;
-  var extra = { Shops: [], Keywords: [] }, extraMissing = { Shops: true, Keywords: true };
+  var extra = { Shops: [], Keywords: [], Traffic: [] }, extraMissing = { Shops: true, Keywords: true, Traffic: true }, trafficProblem = '';
   var addOpen = false, addMsg = '', addBusy = false, addDraft = { input: '', company: '', brand: '', client: '', kind: '' }, pendingWrite = null;
+  function thisMonth() { return TR.ukMonth(new Date()); }
+  function ukStamp(h) { var d = new Date(Date.now() + h * 3600e3); return d.toLocaleString('en-GB', { timeZone: 'Europe/London', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ''); }
   function day(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -186,7 +213,7 @@
 
   /* ---------- reading ---------- */
   function load() {
-    if (example && token) { rows = EXAMPLE.slice(); loaded = true; banner('Example rows: sheet not set up yet.', true); return render(); }
+    if (example && token) { rows = EXAMPLE.slice(); extra.Traffic = EXAMPLE_TRAFFIC.slice(); extraMissing.Traffic = false; loaded = true; banner('Example rows: sheet not set up yet.', true); return render(); }
     if (!token) { loaded = false; if (example) banner('Example rows after sign-in: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent.', true); return render(); }
     R.read({ sheetId: ES.sheetId, token: token }).then(function (out) {
       if (out.state === 'signed-out' || /sign-in expired/.test(out.problems[0] || '')) { token = null; DashAuth.markExpired(); }
@@ -197,13 +224,19 @@
     });
   }
 
-  // Optional tabs the engine (or Lisa by hand) fills: Shops (free listings report per shop), Keywords (manual rows).
+  // Optional tabs the engine (or Lisa by hand) fills: Shops (free listings report per shop), Keywords (manual rows),
+  // Traffic (visits and CDN use this month, per site key). A missing or bad Traffic tab = every site "stats not connected".
   function loadExtra() {
     var o = { sheetId: ES.sheetId, token: token };
     R.tabs(o).then(function (have) {
-      ['Shops', 'Keywords'].forEach(function (tab) {
+      ['Shops', 'Keywords', 'Traffic'].forEach(function (tab) {
         if (have.indexOf(tab) === -1) { extra[tab] = []; extraMissing[tab] = true; return; }
-        R.readTab(o, tab).then(function (r) { extra[tab] = r.rows || []; extraMissing[tab] = !r.ok || r.missing; render(); });
+        R.readTab(o, tab).then(function (r) {
+          var got = r.rows || [];
+          if (tab === 'Traffic' && got.length) { var hc = TR.checkHeader(Object.keys(got[0])); trafficProblem = hc.ok ? '' : hc.problems.join('. '); if (!hc.ok) got = []; }
+          if (tab === 'Traffic' && !r.ok && r.problem) trafficProblem = r.problem;
+          extra[tab] = got; extraMissing[tab] = !r.ok || r.missing; render();
+        });
       });
       render();
     });
@@ -281,7 +314,34 @@
       check('Search Console', r.gsc_verified) + check('Merchant Center', r.merchant_center) + check('GA4', r.ga4) + check('Tag Manager', r.gtm) + check('Meta pixel', r.meta_pixel) +
       check('Feed', r.feed) + check('Keywords', r.keywords_tracked) + check('Access', r.access_note) + check('Flag', r.flag, true) +
       (mail.length ? '<span class="badge no"><b>Email</b>' + esc(mail.join(', ')) + '</span>' : '') +
-      '</div>' + (r.checked_uk ? '<span class="m">Checked ' + esc(r.checked_uk) + '</span>' : '') + '</div>';
+      '</div>' + (view !== 'client' && TR.isSite(r) ? trafficBlock(r) : '') + (r.checked_uk ? '<span class="m">Checked ' + esc(r.checked_uk) + '</span>' : '') + '</div>';
+  }
+  // Traffic this month for one site: use against quota (number, % and bar), visits, period, source, last updated, and a
+  // details fold. No stats: "Traffic stats not connected" and the Lisa-only setup step. Free plans stay free: no upgrade words.
+  function trafficBlock(r) {
+    var t = TR.trafficFor(r, extra.Traffic, today()), id = 'tr-' + String(r.key).replace(/[^a-z0-9]+/gi, '-');
+    var steps = function (s) { return '<p class="lisa">Lisa-only step' + (s.property ? ' (Script Property ' + esc(s.property) + ')' : ' (typed by hand)') + '</p><ol data-tr-steps>' + s.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'; };
+    if (!t.connected) {
+      return '<div class="traffic" data-traffic="' + esc(r.key) + '" data-level="none"><div class="tline"><span class="badge" data-tr="none"><b>Traffic</b>stats not connected</span></div>' +
+        '<details class="tdet" data-tr-details><summary aria-controls="' + id + '">Traffic details</summary><div id="' + id + '"><dl>' +
+        '<dt>Status</dt><dd>Stats not connected' + (trafficProblem ? ': ' + esc(trafficProblem) : extraMissing.Traffic ? ': no Traffic tab yet' : '') + '</dd><dt>Source</dt><dd>' + esc(t.source) + '</dd></dl>' + steps(t.setup) + '</div></details></div>';
+    }
+    var cls = t.level === 'red' ? ' no' : t.level === 'amber' ? ' soon' : '', pct = t.pct === null ? null : Math.max(0, Math.min(100, t.pct));
+    var bar = pct === null ? '' : '<span class="tbar" data-level="' + t.level + '" role="img" aria-label="' + pct + '% of the monthly quota used"><i style="width:' + pct + '%"></i></span>';
+    var meta = [t.period_word + (t.period && !t.current ? ' (not this month)' : ''), t.source, (t.stale ? 'stale: ' : 'updated ') + (t.updated || 'no date')];
+    return '<div class="traffic" data-traffic="' + esc(r.key) + '" data-level="' + t.level + '"' + (pct !== null ? ' data-pct="' + t.pct + '"' : '') + '><div class="tline">' +
+      '<span class="badge' + cls + '" data-tr="use"><b>Use</b>' + esc(t.use_word) + '</span>' + bar +
+      '<span class="badge" data-tr="visits"><b>Visits</b>' + esc(t.visits_word) + '</span></div>' +
+      '<span class="tmeta" data-tr="meta">' + esc(meta.join(' · ')) + '</span>' +
+      '<details class="tdet" data-tr-details><summary aria-controls="' + id + '">Traffic details</summary><div id="' + id + '"><dl>' +
+      '<dt>Period</dt><dd>' + esc(t.period_word) + (t.period && !t.current ? ' (not this month)' : '') + '</dd>' +
+      '<dt>Visits</dt><dd>' + esc(t.visits_word) + '</dd>' +
+      '<dt>Used</dt><dd>' + esc(t.used_gb === null ? 'not reported' : TR.gbWord(t.used_gb)) + '</dd>' +
+      '<dt>Quota</dt><dd>' + esc(t.quota_gb === null ? 'not given' : TR.gbWord(t.quota_gb) + ' a month') + '</dd>' +
+      '<dt>Used %</dt><dd>' + (pct === null ? 'no quota given' : t.pct + '%' + (t.level !== 'ok' ? ' · ' + esc(TR.LEVEL_WORD[t.level]) : '')) + '</dd>' +
+      '<dt>Last updated</dt><dd>' + esc(t.updated || 'no date') + (t.stale ? ' (stale: over ' + TR.STALE_DAYS + ' days)' : '') + '</dd>' +
+      '<dt>Source</dt><dd>' + esc(t.source) + '</dd>' + (t.note ? '<dt>Note</dt><dd>' + esc(t.note) + '</dd>' : '') + '</dl>' +
+      (t.visits === null || t.used_gb === null ? steps(t.setup) : '') + '</div></details></div>';
   }
   // Add: paste a web address or a bare domain, pick who it belongs to. The page drops one request file for the engine,
   // which scans it (DNS, SSL, live, tags, and email for a bare domain) and writes one row with source "Add".
