@@ -162,3 +162,9 @@ test('a whole-site job about dogs: shown on each dog and room it covers, done on
   const old = Object.assign(line('d2'), { taken_at: '2026-02-27T09:00:00Z' });
   assert.equal(one({ dogs }, [line('d1'), old]).days_late, 2);
 });
+
+test('a note added to a done job never counts as a second done', () => {
+  const types = [T('bowls', 'none', '1')];
+  const logs = [{ id: 'n1', check_type_id: 'cty-bowls-1', outcome: 'note', note: 'x', note_for_id: 'gone', taken_at: '2026-03-02T09:00:00Z' }];
+  assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
+});

@@ -98,7 +98,7 @@
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
-      if (!version || log.outcome === 'not_done') return;
+      if (!version || log.outcome === 'not_done' || log.outcome === 'note') return;   // a note on a done job is never a second done
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
       if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }

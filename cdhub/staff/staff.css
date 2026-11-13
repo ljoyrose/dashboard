@@ -50,3 +50,4 @@ textarea.inp{padding:10px 14px}
 .btn.is-done{background:var(--paper);color:var(--muted);border-color:var(--line)}
 .job-all{margin-bottom:4px}
 .done-line{flex-wrap:wrap}.done-note{flex-basis:100%;padding-left:26px;color:var(--ink);font-weight:400}
+.done-note{white-space:pre-line}
