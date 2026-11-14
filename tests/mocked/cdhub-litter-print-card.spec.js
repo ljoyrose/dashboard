@@ -45,6 +45,9 @@ test('print: litter cards look like kennel cards and list only litters still on 
   };
   tables.subject[0].coat_colour_id = 'cc-1'; tables.subject[0].coat_pattern_id = 'cp-1';
   tables.subject[0].photo = 'FAKEphotoFileId123';
+  // the main photo is the 'main' link row in force; the old photo cell is only the fallback (Lisa 13 Nov 2026)
+  tables.files = [{ id: 'fil-1', kind: 'photo', drive_file_id: 'FAKEmainFromLink9' }];
+  tables.links = [{ id: 'lnk-1', from_table: 'subjects', from_id: 'dam1', to_table: 'files', to_id: 'fil-1', role: 'main', from_date: '2026-01-01', to_date: '' }];
   await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }));
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
@@ -76,7 +79,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   // Lisa 13 Nov 2026: the print checks name, size, classification, microchip, photo, colour and DOB
   await expect(dam.locator('[data-k="Class"] dd')).toHaveText('Pretend Breeding Bitch');   // kept from the older row; the move row is blank
   await expect(dam.locator('[data-k="DOB"] dd')).toHaveText('2 Mar 2021');   // one date format everywhere (Lisa 13 Nov 2026): never DD/MM/YY
-  await expect(dam.locator('[data-k="photo"] img')).toHaveAttribute('src', /thumbnail\?id=FAKEphotoFileId123/);
+  await expect(dam.locator('[data-k="photo"] img')).toHaveAttribute('src', /thumbnail\?id=FAKEmainFromLink9/);
   await expect(dam.locator('[data-k="jobs"] .job')).toHaveText(['Grooming', 'Weigh']);
   await expect(page.locator('.dcard[data-dog="sire1"] [data-k="chip"]')).toHaveCount(0);
   // room sign: room jobs and how often
