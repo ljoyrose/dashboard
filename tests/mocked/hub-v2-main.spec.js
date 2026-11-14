@@ -1,5 +1,5 @@
 // Hub V2 on the main dashboard (25 Oct 2026, same layout as Marketplace): a bar at the bottom. Since Lisa's tab picks (2 Nov 2026)
-// it is Main and More, with Drives, Bin and Changes under More. Home opens with "Needs you: N", three big tiles and ONE most urgent card.
+// it is Main and More, with Drives, Bin and Changes under More. Home opens with "Needs you: N" and folded hub colour cards.
 const { test, expect } = require('../support/test');
 const { tabClick, tabTo } = require('../support/tabs');
 
@@ -40,7 +40,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     }
   });
 
-  test('Home opens with Needs you: N, no tiles that repeat a tab, then one urgent card; the Dashboard tab carries the count', async ({ page }) => {
+  test('Home opens with Needs you: N, no tiles that repeat a tab, then folded hub cards; the Dashboard tab carries the count', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const top = page.locator('#view > #homeTop');
@@ -50,7 +50,11 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     if (total) await expect(page.locator('#n-map')).toHaveText(String(total));
     await expect(top.locator('a.hometile')).toHaveCount(0);
     await expect(top.locator('#urgentOne')).toHaveCount(1);
-    if (total) await expect(top.locator('#urgentOne a.btn')).toHaveAttribute('href', /.+/);
+    if (total) {
+      await expect(top.locator('#urgentOne details[data-need-card]').first()).toBeVisible();
+      await expect(top.locator('#urgentOne details[open]')).toHaveCount(0);
+      expect(await top.locator('#urgentOne').innerText()).not.toMatch(/Overdue\s+\d+\s+day/i);
+    }
   });
 
   test('the More tab is gone: #/more opens the Dashboard, where every hub has one tile (Main hub tiles) that opens its own tab', async ({ page }) => {

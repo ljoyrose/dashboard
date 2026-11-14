@@ -476,8 +476,9 @@
   .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
   .needs li.house-lbar[class], ol.hrows > li { --house-lbar-out: 0px; display: flex; gap: 8px; align-items: center; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
   ol.hrows .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  /* Projects tile: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (Lisa, 2 Nov). */
-  .hubtile[data-hub="projects"].house-lbar::before { border-left-color: transparent; background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)) border-box;
+  /* Projects tile and its Needs you / Next card: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (Lisa, 2 Nov). */
+  .hubtile[data-hub="projects"].house-lbar::before,
+  .hubpick[data-hub="projects"].house-lbar::before { border-left-color: transparent; background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)) border-box;
     -webkit-mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
@@ -518,7 +519,7 @@
   body { padding-bottom: 96px; }
   /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
   #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
-  /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
+  /* Home: Needs you: N, then Next and Needs you as folded hub colour cards. */
   .needsline { font-size: var(--fs-figure); font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
   #homeTop { display: flex; flex-direction: column; gap: 12px; }
@@ -608,8 +609,17 @@
   /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). The screen title keeps no box. */
   html body :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
-  /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
+  /* Home: Needs you line with its urgency split, then Next and Needs you as hub colour cards (10 Nov 2026).
+     Each card starts folded: the hub's line and icon, its name and a count. The rows stay inside until she opens that colour.
+     No fill: the card stays the house card; colour is the 3px line and the icon only. */
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .hubpicks { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .hubpick { margin: 0; }
+  details.hubpick.fold > summary { min-height: 36px; }
+  details.hubpick.fold > summary h3 { flex: 1 1 auto; min-width: 0; }
+  details.hubpick.fold:not([open]) > .fbody { display: none; }
+  details.hubpick.fold > .fbody { margin-top: 0; }
+  @media (max-width: 600px) { details.hubpick.fold > summary { min-height: 44px; } }
   .needsline { font-size: var(--fs-figure); font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
   .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
@@ -2742,9 +2752,9 @@
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
   }
 
-  // ---- Needs you (at most 5 rows, Lisa's pick): the most urgent across all hubs, late first, then due soon, then waiting.
-  // Read-only: built from what this page and each hub's own lists already hold (HubRead, the script at the top). ----
-  var NEEDS_MAX = 5;
+  // ---- Needs you: one folded colour card per hub, in the hub order on this page (Projects, Web, then Money, …).
+  // Read-only: built from what this page and each hub's own lists already hold (HubRead, the script at the top).
+  // Overdue money is a Money card. It is not pulled to the top, and the card starts folded so the account lines stay shut. ----
   function withEnt(ent, text) { text = String(text || ''); ent = String(ent || '').split(';')[0]; return ent && text.indexOf(ent + ':') !== 0 ? ent + ': ' + text : text; }
   function needsToday() {
     var MC = window.MoneyCore, out = [], d = S.money.data;
@@ -2776,18 +2786,40 @@
   // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
   function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
+  // A row with no hub (a failed read, the Bin) sits on Dashboard, after the hubs.
+  function needHubOf(x) { return (x.hub && HUB[x.hub]) ? HUB[x.hub] : HUB.dash; }
+  function needGroups(items) {
+    var by = {}, order = HUBS.map(function (h) { return h.key; });
+    order.push('dash');
+    items.forEach(function (x) {
+      var k = needHubOf(x).key;
+      if (!by[k]) by[k] = [];
+      by[k].push(x);
+    });
+    return order.filter(function (k) { return by[k] && by[k].length; }).map(function (k) { return { hub: HUB[k], items: by[k] }; });
+  }
+  // which is "next" or "needs": the same cards, remembered separately, both starting folded (FOLD, same as the Bin folds).
+  function needCards(which, groups) {
+    if (!groups.length) return '';
+    return '<div class="hubpicks needs" data-need-cards="' + which + '">' + groups.map(function (g) {
+      var key = which + '-' + g.hub.key, n = g.items.length, late = g.items.some(isLateNeed);
+      var open = !!FOLD[key];
+      return '<details class="card house-lbar hubpick fold" data-fold="' + key + '" data-need-card="' + which + '" data-hub="' + g.hub.key + '"' + hubStyle(g.hub) + (open ? ' open' : '') + '>' +
+        '<summary aria-label="' + esc(g.hub.name) + ', ' + n + '"><h3>' + hubIcon(g.hub) + '<span>' + esc(g.hub.name) + '</span></h3>' +
+        '<span class="cnt' + (late ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span></summary>' +
+        '<div class="fbody"><ol>' + g.items.map(needRow).join('') + '</ol></div></details>';
+    }).join('') + '</div>';
+  }
   function needsPanel() {
     if (!signedIn) return '';
-    var all = needsToday(), items = all.slice(0, NEEDS_MAX), reading = firstRead();
+    var all = needsToday(), reading = firstRead();
     var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you</h3>' +
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
-    h += '<ol>' + items.map(needRow).join('') + '</ol>';
-    if (all.length > items.length) h += '<a class="needsmore" data-needs-more href="#/do">+' + (all.length - items.length) + ' more</a>'; // plain "+N more" link to Do (Lisa, 2 Nov)
-    return h + '</section>';
+    return h + needCards('needs', needGroups(all)) + '</section>';
   }
 
-  // Home opens with what needs you: the count, then the ONE most urgent thing. No tiles repeat a tab (stage 2c).
+  // Home opens with the count, then Next as folded hub colour cards. No tiles repeat a tab (stage 2c).
   // The 3 groups of Needs you: urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
   var NEED_GROUPS = [
     { key: 'urgent', kind: 'risk', word: 'urgent', has: function (x) { return x.kind === 'risk'; } },
@@ -2811,6 +2843,7 @@
     var all = needsToday(), n = all.length, reading = firstRead();
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
     // Each pill opens Do showing exactly what it counts (Lisa, 2 Nov: every piece of info opens what it counts).
+    // The count and the pills stay here. They do not open a money row on this page.
     var split = NEED_GROUPS.map(function (g) {
       var c = all.filter(g.has).length;
       return c ? '<a class="cnt wide k-' + g.kind + '" href="#/do/' + g.key + '" data-group="' + g.key + '">' + c + ' ' + g.word + '</a>' : '';
@@ -2818,19 +2851,15 @@
     var h = '<section id="homeTop" aria-label="Next"><div class="needsrow"><p class="needsline">Needs you: ' + (reading ? '…' : n ? n : '<span class="zero">0</span>') + '</p>' +
       (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>';
     if (n) {
-      var x = all[0];
-      // Next: the one thing to do now, with one button. White card, 1px ink edge.
-      h += '<div class="card urgent nextcard" id="urgentOne"><div class="cardhead"><h3>Next</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
-        '<p class="what">' + esc(x.text) + '</p>' +
-        '<div class="actions"><a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
-        (n > 1 ? '<a class="hint more" href="#/do">+' + (n - 1) + ' more</a>' : '') + '</div></div>';
+      // Next: the same hub colour cards as Needs you, in hub order, each folded. Not one overdue money row.
+      h += '<div class="card" id="urgentOne"><div class="cardhead"><h3 id="nextTitle">Next</h3></div>' + needCards('next', needGroups(all)) + '</div>';
     } else if (!reading) {
       h += '<div class="card urgent okstate" id="urgentOne"><span class="okring" aria-hidden="true">✓</span><div><h3>Nothing needs you</h3><p class="hint">All clear right now. New things show here when Drive or Money changes.</p></div></div>';
     }
     return h + '</section>';
   }
   function viewMap() {
-    // Main: what needs you first (homeTop: the count and the Next card), then Needs you (5 rows), then the hub tiles.
+    // Main: the count, then Next and Needs you as folded hub colour cards, then the hub tiles.
     var html = homeTop() + needsPanel() + hubTiles();
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
