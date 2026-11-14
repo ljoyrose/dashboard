@@ -60,12 +60,8 @@
     return open(password, checkRow).then(function (t) { return t === CHECK_TEXT; }, function (e) { if (e && e.code === 'WRONG_PASSWORD') return false; throw e; });
   }
 
-  /* Does a typed code match the hash the sign-in keeps? SHA-256 of salt + ":" + code, as the save script does (Auth.gs). */
-  function hashMatches(code, salt, hash) {
-    return subtle().digest('SHA-256', utf8(String(salt) + ':' + String(code).trim())).then(function (d) {
-      return !!hash && hex(d) === String(hash).toLowerCase();
-    });
-  }
+  /* A typed existing code is checked by the save script (code_check, like a sign-in: ok or no only). The hash and
+     its salt never come to the browser: staff codes are short, so they could be guessed offline (OV11, 14 Nov 2026). */
 
   /* One unlocked spell. The password is held only inside it and dropped on lock: after idleMs with no use, on
      lock(), and when the page is hidden. show() opens one row at a time. */
@@ -87,7 +83,7 @@
     };
   }
 
-  var api = { ITER: ITER, KDF: KDF, CHECK_ID: CHECK_ID, IDLE_MS: IDLE_MS, seal: seal, open: open, makeCheck: makeCheck, checkPassword: checkPassword, hashMatches: hashMatches, session: session };
+  var api = { ITER: ITER, KDF: KDF, CHECK_ID: CHECK_ID, IDLE_MS: IDLE_MS, seal: seal, open: open, makeCheck: makeCheck, checkPassword: checkPassword, session: session };
   root.BLDVault = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
