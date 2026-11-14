@@ -543,6 +543,104 @@ var TABLES = {
     }
   },
 
+  // ---------------------------------------------------------------- readings
+  // 14 Nov 2026 (Lisa READINGS = B; TEMPS plan AA_TEMPS_2026-11-14-0033 §1; ITEMS item tests): ONE record for any
+  // measured value. What is measured is an owner row (BLD-reading_kinds: label, unit); limits are dated owner rows
+  // (BLD-reading_limits), so a past reading is judged by the limit then. An out-of-limit value is NEVER refused
+  // (readings are evidence): in_range is worked out here from the limit row, never trusted from the page.
+  // An item test (PAT, extinguisher...) saves its check_log row first, then one readings row per measured step with
+  // check_log_id and request_id <test request_id>-r<n>, so a resend is safe. NEW table, own switch, OFF by default.
+  // Room / guest / sensor readings move here in the rename sitting (TEMPS); their columns are in the header already.
+  readings: {
+    key: 'readings',
+    file: 'BLD-readings.csv',
+    idPrefix: 'rdg',
+    columns: ['id', 'tenant_id', 'kind_id', 'area_id', 'item_id', 'subject_id', 'check_log_id', 'value_min', 'value_max', 'value',
+              'unit_id', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'source', 'how_entered', 'read_method', 'samples',
+              'device_label', 'area_empty', 'limit_id', 'in_range', 'corrects_id', 'note', 'mitigation_note', 'sign_in_id',
+              'import_batch_id', 'camera_value_changed', 'reset_after_reading', 'set_by', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'kind_id', 'area_id', 'item_id', 'subject_id', 'check_log_id', 'value_min', 'value_max', 'value',
+              'unit_id', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'source', 'how_entered', 'read_method', 'samples',
+              'device_label', 'area_empty', 'limit_id', 'in_range', 'corrects_id', 'note', 'mitigation_note', 'sign_in_id',
+              'import_batch_id', 'camera_value_changed', 'reset_after_reading', 'set_by', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [
+      { name: 'reading_kinds', file: 'BLD-reading_kinds.csv', idCol: 'id', valCol: 'unit_id' },
+      { name: 'limit_kind', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'kind_id' },
+      { name: 'limit_low', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'low' },
+      { name: 'limit_high', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'high' },
+      { name: 'limit_from', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'from_date' },
+      { name: 'limit_to', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'to_date' },
+      { name: 'check_log_item', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'item_id' },
+      { name: 'items', file: 'BLD-items.csv', idCol: 'id' },
+      { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,   // a correction is a new row with corrects_id, never an edit
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      kind_id:      { type: 'ref', lookup: 'reading_kinds', required: true },
+      item_id:      { type: 'ref', lookup: 'items' },
+      check_log_id: { type: 'ref', lookup: 'check_log_item' },
+      area_id:      { type: 'ref', lookup: 'area' },
+      subject_id:   { type: 'ref', lookup: 'subject' },
+      value:        { type: 'number' },
+      value_min:    { type: 'number' },
+      value_max:    { type: 'number' },
+      unit_id:      { type: 'text' },                    // copied from the kind; a different unit is refused
+      precision_dp: { type: 'count' },
+      limit_id:     { type: 'ref', lookup: 'limit_kind' },
+      in_range:     { type: 'text' },                    // ignored: worked out here from limit_id
+      taken_at:     { type: 'datetime' },                // the test or reading time; stored in UTC (S4.2); blank = now
+      source:       { type: 'enum', values: ['staff', 'guest', 'import', 'sensor'] },
+      how_entered:  { type: 'enum', values: ['typed', 'camera', 'photo', 'paper', 'file'] },   // owner-only display
+      note:         { type: 'text' },
+      corrects_id:  { type: 'text' }
+    },
+    dupKey: ['kind_id', 'item_id', 'check_log_id', 'area_id', 'subject_id', 'taken_at'], dupTimeCol: null,   // a resend of the same step is a DUPLICATE (duplicate_of = the saved row)
+    stamp: function (row, ctx) {
+      var utc = new Date(Date.parse(ctx.nowIso)).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      if (!row.taken_at) row.taken_at = utc;
+      row.created_at = utc;
+      row.taken_by = ctx.who;
+      row.set_by = ctx.whoId || ctx.who;
+    },
+    checkRow: function (row, errors, lookups) {
+      if (row.taken_at && !errors.taken_at) row.taken_at = new Date(Date.parse(row.taken_at)).toISOString().replace(/\.\d{3}Z$/, 'Z');   // S4.2: UTC, before the duplicate check
+      if (row.value === '' && (row.value_min === '' || row.value_max === '') && !errors.value) errors.value = 'Type the value.';
+      if (row.value_min !== '' && row.value_max !== '' && +row.value_max < +row.value_min && !errors.value_max) errors.value_max = 'The highest cannot be below the lowest.';
+      if (!row.item_id && !row.area_id && !row.subject_id && !errors.item_id) errors.item_id = 'Say what this reading is for.';
+      // the kind's unit is the reading's unit
+      var unit = lookups && lookups.reading_kinds ? lookups.reading_kinds[row.kind_id] : undefined;
+      if (typeof unit === 'string' && !errors.unit_id) {
+        if (row.unit_id && row.unit_id !== unit) errors.unit_id = 'That is not the unit for this kind of reading.';
+        else row.unit_id = unit;
+      }
+      // a test's step: the test must be on the same item
+      if (row.check_log_id && !errors.check_log_id && lookups && lookups.check_log_item) {
+        var on = lookups.check_log_item[row.check_log_id];
+        if (typeof on === 'string' && row.item_id && on !== row.item_id) errors.check_log_id = 'That test is on a different item.';
+        else if (typeof on === 'string' && !row.item_id) row.item_id = on;
+      }
+      // in range: from the limit row in force on the reading's own day, never from the page
+      row.in_range = '';
+      if (row.limit_id && !errors.limit_id && lookups && lookups.limit_kind) {
+        var lk = lookups.limit_kind[row.limit_id];
+        var day = (row.taken_at || new Date().toISOString()).slice(0, 10);
+        var from = lookups.limit_from[row.limit_id], to = lookups.limit_to[row.limit_id];
+        if (lk !== row.kind_id) errors.limit_id = 'That limit is for a different kind of reading.';
+        else if ((typeof from === 'string' && from > day) || (typeof to === 'string' && to < day)) errors.limit_id = 'That limit was not in force on the reading\'s date.';
+        else if (row.value !== '') {
+          var lo = lookups.limit_low[row.limit_id], hi = lookups.limit_high[row.limit_id], v = +row.value;
+          row.in_range = ((typeof lo !== 'string' || v >= +lo) && (typeof hi !== 'string' || v <= +hi)) ? 'true' : 'false';
+        }
+      }
+      if (row.corrects_id && !ID_RE_.test(row.corrects_id) && !errors.corrects_id) errors.corrects_id = 'That is not a valid id.';
+    }
+  },
+
   // ---------------------------------------------------------------- items
   // 14 Nov 2026 (ITEMS, decision 13 Nov option A): the owner's numbered list of physical things that get tested or
   // checked (plug-in appliances, fire extinguishers, smoke alarms, thermometers...). Any industry: what a thing is
