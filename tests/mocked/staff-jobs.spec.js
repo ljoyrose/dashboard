@@ -466,3 +466,29 @@ test('Earlier (late entry) saves the real day and time, ticks the card with that
   await expect(ears.locator('.done-line.good')).toContainText('07:30');
   await expect(ears.locator('.done-line.good')).toContainText(/\d{1,2} [A-Z][a-z]{2}/);
 });
+
+test('Earlier, several days: a row per room per day, each judged and saved for its own day, each ticks', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const day = (n) => london(new Date(Date.now() - n * 86400000));
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await page.getByLabel('Job').selectOption('clean');
+  await page.getByLabel('First day').fill(day(2));
+  await page.getByLabel('Days').selectOption('7');
+  await page.getByRole('button', { name: 'Show' }).click();
+  const rows = page.locator('.job-row');
+  await expect(rows).toHaveCount(3);   // two days ago, yesterday, today: never a future day
+  await page.getByRole('button', { name: 'Done all' }).click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent.map((b) => london(new Date(b.fields.happened_at)))).toEqual([day(2), day(1), day(0)]);
+  sent.forEach((b) => expect(b).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-clean', area_id: 'area-1', outcome: 'ok' } }));
+  await expect(rows.locator('.done-line.good')).toHaveCount(3);
+  // a whole-site job saves as a whole-site row
+  await page.getByLabel('Job').selectOption('bowls');
+  await page.getByLabel('Days').selectOption('1');
+  await page.getByRole('button', { name: 'Show' }).click();
+  await rows.first().getByRole('button', { name: /^Done:/ }).click();
+  await expect.poll(() => sent.length).toBe(4);
+  expect(sent[3]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-bowls' } });
+});
