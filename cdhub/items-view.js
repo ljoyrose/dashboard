@@ -476,5 +476,28 @@
     });
   }
 
-  return { FILES: FILES, current: current, inUse: inUse, placeOn: placeOn, testsFor: testsFor, fieldsOn: fieldsOn, inLimit: inLimit, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
+  /** Compliance fold: per kind, how many items are in date, due soon, overdue (failed and expired count as overdue), as at a day.
+   *  Each number opens the Items page on that filter; each kind names the SOP its tests follow. */
+  function complianceHtml(v, fold, on) {
+    var e = v.esc, all = list(v.T, on).filter(function (x) { return !x.archived; }), m = {}, bad = 0;
+    if (!rows(v.T, 'BLD-items.csv').length) return '';
+    all.forEach(function (x) {
+      var k = m[x.kind] = m[x.kind] || { kind: x.kind, ok: 0, soon: 0, due: 0, sops: {} };
+      if (x.s.st === 'ok') k.ok++; else if (x.s.st === 'soon') k.soon++; else if (x.s.st !== 'none') { k.due++; bad++; }
+      x.s.lines.forEach(function (l) { if (l.sop) k.sops[l.sop] = 1; });
+    });
+    var ks = Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return a.due - b.due || a.soon - b.soon || a.kind.localeCompare(b.kind); });
+    var n = function (x, cls, f) { return '<td>' + (x ? '<a href="#/items" data-itm-go="' + f + '"><span class="pill ' + cls + '">' + x + '</span></a>' : '<span class="mut">0</span>') + '</td>'; };
+    return '<section class="card" id="compItems"><details class="compfold" data-fold="items"' + (fold ? fold('items') : ' open') + '><summary><h3>Items' + (bad ? ' <span class="pill no">' + bad + '</span>' : '') + '</h3></summary>'
+      + '<p class="mut">As at ' + e(v.dmy(on)) + '. From the last pass, the test interval and expiry dates.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>kind</th><th>SOP</th><th>in date</th><th>due soon</th><th>overdue</th></tr></thead><tbody>'
+      + ks.map(function (k) { return '<tr data-kind="' + e(k.kind) + '"><td><b>' + e(k.kind) + '</b></td><td class="mut">' + (Object.keys(k.sops).map(function (s) { return '<a href="#/sops/' + encodeURIComponent(s) + '">' + e(s) + '</a>'; }).join(', ') || '—') + '</td>' + n(k.ok, 'ok', 'ok') + n(k.soon, 'w', 'soon') + n(k.due, 'no', 'due') + '</tr>'; }).join('')
+      + '</tbody></table></div></details></section>';
+  }
+
+  if (typeof document !== 'undefined') document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('[data-itm-go]');
+    if (a) { S.filter = a.getAttribute('data-itm-go'); S.open = ''; S.form = ''; }
+  }, true);
+
+  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, testsFor: testsFor, fieldsOn: fieldsOn, inLimit: inLimit, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
 }));

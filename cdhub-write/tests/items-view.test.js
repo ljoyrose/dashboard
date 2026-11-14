@@ -78,3 +78,14 @@ test('CSV: one line per item and test with readings; formulas are made safe', ()
   assert.match(out, /earth_bond=0\.09/);
   assert.match(out, /"'=HYPERLINK\(\)"/);
 });
+
+test('Compliance fold: per kind in date / due soon / overdue, SOP named, archived left out', () => {
+  const T = T0(); T['BLD-check_type.csv'][0].sop = 'Electrical safety';
+  const v = { T, esc: (x) => String(x), dmy: (x) => x };
+  const h = V.complianceHtml(v, null, ON);
+  assert.match(h, /Plug-in Class I/);
+  assert.match(h, /Electrical safety/);
+  assert.match(h, /data-itm-go="due"><span class="pill no">1/);
+  assert.match(h, /data-itm-go="soon"><span class="pill w">1/);
+  assert.equal(V.complianceHtml({ T: {}, esc: String, dmy: String }, null, ON), '');
+});
