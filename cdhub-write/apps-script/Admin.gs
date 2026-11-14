@@ -115,6 +115,7 @@ function adminCheckSetup() {
   Logger.log('--   dog photos: ' + (prop_(BLD.PROP.DOG_PHOTOS_FOLDER) ? 'folder id is set in Script Properties' : 'not set (create a Shared Drive folder and set DOG_PHOTOS_FOLDER_ID)'));
   Logger.log('--   OWNER_EDIT_ENABLED is ' + (ownerEditEnabled_() ? 'TRUE (the owner page can overwrite an entry in place; no record of the old value is kept)' : 'not true (owner edit is OFF)'));
   Logger.log('--   READ_ENABLED is ' + (readEnabled_() ? 'TRUE (staff codes can read what the permissions file allows)' : 'not true (staff cannot read)'));
+  Logger.log('--   Time zone: ' + (tzNotSet_() ? 'Time zone not set (BLD-locale has no time_zone in force; using the script setting ' + tzOn_() + ')' : tzOn_()));
   try {
     var pv = store_read_(BLD.VISIBILITY_FILE, false);
     Logger.log(pv ? ('OK   ' + BLD.VISIBILITY_FILE + ' found (' + pv.records.length + ' rows). The script only reads it.') : ('--   ' + BLD.VISIBILITY_FILE + ' not found: reading will refuse everything'));
