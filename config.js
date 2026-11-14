@@ -106,6 +106,17 @@
       ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
     },
+    // Tech section (Dashboard > More > Tech, TECH-HUB-1): one tile per paid tool, read with Lisa's sign-in from the same tools tab
+    // as studio.ownedTools above (no second sheet, no second id), once per page load, by header name. Until the tab has the Tech
+    // columns the page shows invented Example tiles. devHostingSlot: the Dev and hosting group's colour slot (0-8). TBC, Lisa's
+    // decision: this one value moves every Dev and hosting tile. freshDays: a row older than this shows "Not updated since".
+    // requestsFolderId: where Add tech drops one TECH-ROW-REQUEST_ file for the engine to append the row. Empty = Add tech says
+    // "Not saved" and sends nothing (the engine has no tech-row handler yet).
+    tech: {
+      devHostingSlot: 6,
+      freshDays: 35,
+      requestsFolderId: ''
+    },
     // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
     // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until Lisa installs the engine:
     // until then the page shows invented example rows and sends nothing. Read only: nothing here changes DNS or a site.
