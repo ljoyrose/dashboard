@@ -23,6 +23,8 @@ test.describe('Codes vault: sealing in the browser', () => {
     expect(r.json).not.toContain(PW);
     expect(r.row.kdf).toBe('PBKDF2-SHA256/AES-GCM-256');
     expect(+r.row.kdf_iter).toBeGreaterThanOrEqual(600000);
+    // every field passes the save's start-of-cell guard (no = + - @ first): hex, not base64
+    for (const k of ['cipher', 'iv', 'salt']) expect(r.row[k]).toMatch(/^[0-9a-f]+$/);
   });
 
   test('every entry gets its own salt and IV', async ({ page }) => {
@@ -38,7 +40,7 @@ test.describe('Codes vault: sealing in the browser', () => {
     await lib(page);
     const r = await page.evaluate(async ([pw, code]) => {
       const row = await BLDVault.seal(pw, 'sc-abcdef', code), why = async (p, x) => { try { await BLDVault.open(p, x); return 'opened'; } catch (e) { return e.code; } };
-      const flip = Object.assign({}, row, { cipher: row.cipher.slice(0, -4) + (row.cipher.slice(-4) === 'AAAA' ? 'BBBB' : 'AAAA') });
+      const flip = Object.assign({}, row, { cipher: row.cipher.slice(0, -1) + (row.cipher.slice(-1) === '0' ? '1' : '0') });
       return {
         wrong: await why('not-the-password', row),
         changed: await why(pw, flip),

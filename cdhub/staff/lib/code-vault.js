@@ -18,8 +18,9 @@
   }
   function verr(code, msg) { var e = new Error(msg); e.code = code; return e; }
   function rand(n) { var b = new Uint8Array(n); root.crypto.getRandomValues(b); return b; }
-  function b64(bytes) { var s = ''; bytes = new Uint8Array(bytes); for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return root.btoa(s); }
-  function unb64(s) { var t = root.atob(String(s || '')), b = new Uint8Array(t.length); for (var i = 0; i < t.length; i++) b[i] = t.charCodeAt(i); return b; }
+  /* hex, not base64: base64 can start with + or -, which the save refuses at the start of a cell (formula guard) */
+  function hex(bytes) { return Array.prototype.map.call(new Uint8Array(bytes), function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }
+  function unhex(s) { s = String(s || ''); if (!/^([0-9a-f]{2})*$/.test(s)) return new Uint8Array(0); var b = new Uint8Array(s.length / 2); for (var i = 0; i < b.length; i++) b[i] = parseInt(s.substr(i * 2, 2), 16); return b; }
   function utf8(s) { return new TextEncoder().encode(String(s)); }
 
   function key(password, salt, iter) {
@@ -37,7 +38,7 @@
     return key(password, salt, ITER).then(function (k) {
       return subtle().encrypt({ name: 'AES-GCM', iv: iv, additionalData: utf8(codeId) }, k, utf8(plain));
     }).then(function (ct) {
-      return { code_id: String(codeId), cipher: b64(ct), iv: b64(iv), salt: b64(salt), kdf: KDF, kdf_iter: String(ITER) };
+      return { code_id: String(codeId), cipher: hex(ct), iv: hex(iv), salt: hex(salt), kdf: KDF, kdf_iter: String(ITER) };
     });
   }
 
@@ -46,8 +47,8 @@
     if (!row || !row.cipher) return Promise.reject(verr('NO_ROW', 'Nothing kept for this code.'));
     var iter = parseInt(row.kdf_iter, 10);
     if (row.kdf !== KDF || !(iter >= MIN_ITER)) return Promise.reject(verr('WEAK_ROW', 'This entry was not sealed the vault’s way. Add the code again.'));
-    return key(password, unb64(row.salt), iter).then(function (k) {
-      return subtle().decrypt({ name: 'AES-GCM', iv: unb64(row.iv), additionalData: utf8(row.code_id) }, k, unb64(row.cipher));
+    return key(password, unhex(row.salt), iter).then(function (k) {
+      return subtle().decrypt({ name: 'AES-GCM', iv: unhex(row.iv), additionalData: utf8(row.code_id) }, k, unhex(row.cipher));
     }).then(function (pt) { return new TextDecoder().decode(pt); }, function (e) {
       if (e && e.code) throw e;
       throw verr('WRONG_PASSWORD', 'Wrong password.');
@@ -62,8 +63,7 @@
   /* Does a typed code match the hash the sign-in keeps? SHA-256 of salt + ":" + code, as the save script does (Auth.gs). */
   function hashMatches(code, salt, hash) {
     return subtle().digest('SHA-256', utf8(String(salt) + ':' + String(code).trim())).then(function (d) {
-      var h = Array.prototype.map.call(new Uint8Array(d), function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join('');
-      return !!hash && h === String(hash).toLowerCase();
+      return !!hash && hex(d) === String(hash).toLowerCase();
     });
   }
 
