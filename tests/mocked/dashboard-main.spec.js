@@ -45,6 +45,31 @@ function food(lateOrder = true) {
   return { valueRanges: [{ values: b.cards }, { values: orders }, { values: b.invoices }] };
 }
 // Pretend Sheets for Food (batchGet) and Marketplace, and the Apps and Studio state files in the pretend Drive.
+// Needs you hub cards: nothing moves on hover or focus, one icon x down the cards, a 3px line that curves with the card's corner
+// (the house rule in lines-and-counts.spec.js: a card's line follows its corner; only row shells keep a straight bar).
+async function steadyCards(page) {
+  const cards = page.locator('#needsToday .needhub');
+  const n = await cards.count();
+  expect(n).toBeGreaterThan(0);
+  const measure = (i) => cards.nth(i).evaluate((c) => {
+    const b = c.getBoundingClientRect(), ic = c.querySelector('.nhh .hico').getBoundingClientRect(), bar = getComputedStyle(c, '::before');
+    return { x: b.x + scrollX, y: b.y + scrollY, w: b.width, h: b.height, ix: ic.x + scrollX, barW: bar.borderLeftWidth, barR: parseFloat(bar.borderTopLeftRadius), hostR: parseFloat(getComputedStyle(c).borderTopLeftRadius) };
+  });
+  const xs = [];
+  for (let i = 0; i < n; i++) {
+    const before = await measure(i);
+    await cards.nth(i).locator('li').first().hover();
+    const hov = await measure(i);
+    await cards.nth(i).locator('a').first().focus();
+    const foc = await measure(i);
+    for (const [k, after] of [['hover', hov], ['focus', foc]]) for (const key of ['x', 'y', 'w', 'h', 'ix']) expect(Math.abs(after[key] - before[key]), `card ${i + 1} ${key} on ${k}`).toBeLessThanOrEqual(0.5);
+    expect(before.barW, `card ${i + 1} line`).toBe('3px');
+    expect(before.barR, `card ${i + 1} line curves with the corner`).toBeGreaterThanOrEqual(Math.max(8, before.hostR - 0.5));
+    xs.push(before.ix);
+  }
+  for (const x of xs) expect(Math.abs(x - xs[0]), 'one icon x down the cards').toBeLessThanOrEqual(0.5);
+}
+
 async function seed(page, guard, { foodAnswer = food(), market = true, apps = true, studio = true } = {}) {
   const rows = marketRows();
   await page.route(SHEETS, (route) => {
@@ -244,31 +269,70 @@ test.describe('Dashboard Main', () => {
     await xmlTab.close();
   });
 
-  test('Needs you: at most 5 rows across the hubs, late first, then due soon, then waiting; each row has its hub icon and line', async ({ page, guard }) => {
+  test('Needs you: at most 5 rows, most urgent first, in hub colour cards; each card has its hub icon, 3px line and count', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
-    const rows = page.locator('#needsToday ol > li');
+    const cards = page.locator('#needsToday .needhub');
+    const rows = page.locator('#needsToday .needhub ol > li');
     await expect(rows).toHaveCount(5);
-    const got = await rows.evaluateAll((ls) => ls.map((l) => ({ k: (l.className.match(/n-(risk|fin|ops|bin)/) || [])[1], hub: l.getAttribute('data-hub'), icon: !!l.querySelector('svg.hico use'), line: getComputedStyle(l, '::before').borderLeftWidth })));
+    const got = await cards.evaluateAll((cs) => cs.map((c) => ({
+      hub: c.getAttribute('data-hub'), icon: !!c.querySelector('.nhh svg.hico use'), line: getComputedStyle(c, '::before').borderLeftWidth,
+      n: Number(c.querySelector('.nhh .cnt').textContent),
+      rows: [...c.querySelectorAll('ol > li')].map((l) => ({ k: (l.className.match(/n-(risk|fin|ops|bin)/) || [])[1], hub: l.getAttribute('data-hub'), rowIcon: !!l.querySelector('svg.hico') })),
+    })));
     const rank = { risk: 0, fin: 1, ops: 2, bin: 3 };
-    for (let i = 1; i < got.length; i++) expect(rank[got[i].k]).toBeGreaterThanOrEqual(rank[got[i - 1].k]);
-    for (const g of got) { expect(g.icon).toBe(true); expect(g.line).toBe('3px'); expect(g.hub).toBeTruthy(); }
-    expect(new Set(got.map((g) => g.hub)).size, 'rows come from more than one hub').toBeGreaterThan(1);
-    expect(got[0].k).toBe('risk');
+    // One card per hub; the cards keep the urgency order of their first row, and rows keep it inside a card.
+    expect(new Set(got.map((g) => g.hub)).size, 'one card per hub').toBe(got.length);
+    expect(got.length, 'rows come from more than one hub').toBeGreaterThan(1);
+    for (let i = 1; i < got.length; i++) expect(rank[got[i].rows[0].k]).toBeGreaterThanOrEqual(rank[got[i - 1].rows[0].k]);
+    for (const g of got) {
+      expect(g.icon, g.hub + ' icon').toBe(true);
+      expect(g.line, g.hub + ' line').toBe('3px');
+      expect(g.n, g.hub + ' count covers its rows').toBeGreaterThanOrEqual(g.rows.length);
+      for (let i = 1; i < g.rows.length; i++) expect(rank[g.rows[i].k]).toBeGreaterThanOrEqual(rank[g.rows[i - 1].k]);
+      for (const r of g.rows) { expect(r.hub).toBe(g.hub); expect(r.rowIcon, 'the icon is on the card, not repeated on each row').toBe(false); }
+    }
+    expect(got[0].rows[0].k).toBe('risk');
     await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText(/^\+\d+ more$/);
     await expect(page.locator('#needsToday a[data-needs-more]')).toHaveAttribute('href', '#/do');
     await expect(page.locator('#needsToday')).not.toContainText('Open Do');
   });
 
-  test('Needs you rows never jump: the same box and icon x on hover and focus, one left edge, a straight 3px bar', async ({ page, guard }) => {
+  test('Needs you cards and rows never jump; a row has no fill at rest, the pale grey fill on hover and no hover line (12 Nov look)', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
-    await expect(page.locator('#needsToday li').first()).toBeVisible();
-    await steadyRows(page, '#needsToday ol > li', '.hico');
+    await expect(page.locator('#needsToday .needhub li').first()).toBeVisible();
+    await steadyCards(page);
+    const row = page.locator('#needsToday .needhub li').first();
+    const look = () => row.evaluate((l) => { const c = getComputedStyle(l), b = l.getBoundingClientRect(); return { bg: c.backgroundColor, ow: c.outlineStyle === 'none' ? '0px' : c.outlineWidth, x: b.x + scrollX, y: b.y + scrollY, w: b.width, h: b.height }; });
+    await row.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    const rest = await look();
+    expect(rest.bg, 'no fill at rest').toBe('rgba(0, 0, 0, 0)');
+    expect(rest.ow).toBe('0px');
+    await row.hover();
+    const hov = await look();
+    expect(hov.bg, 'pale grey fill on hover').not.toBe('rgba(0, 0, 0, 0)');
+    expect(hov.ow, 'no hover line').toBe('0px');
+    for (const k of ['x', 'y', 'w', 'h']) expect(Math.abs(hov[k] - rest[k]), k).toBeLessThanOrEqual(0.5);
     // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (Lisa, 2 Nov: the Projects tile).
     for (const hub of ['apps', 'food', 'money']) await numberGroup(page, '#hubTiles .hubtile[data-hub="' + hub + '"] a.hk', 'b');
     await page.setViewportSize({ width: 390, height: 844 });
-    await steadyRows(page, '#needsToday ol > li', '.hico');
+    await steadyCards(page);
+  });
+
+  test('Next wears the hub colour of the one thing it shows: its 3px line, icon and name', async ({ page, guard }) => {
+    await seed(page, guard);
+    await signIn(page);
+    const next = page.locator('#urgentOne');
+    await expect(next.locator('h3')).toHaveText('Next');
+    const first = page.locator('#needsToday .needhub').first();
+    const hub = await first.getAttribute('data-hub');
+    await expect(next).toHaveAttribute('data-hub', hub);
+    await expect(next.locator('.nexthub')).toHaveText(await first.locator('.nhh .nhn').textContent());
+    await expect(next.locator('.nexthub svg.hico use')).toHaveCount(1);
+    expect(await next.evaluate((e) => getComputedStyle(e, '::before').borderLeftWidth)).toBe('3px');
+    await expect(next.locator('a.btn')).toHaveCount(1);
   });
 
   test('the big hub buttons and "You are here" are gone; the top bar says Dashboard', async ({ page, guard }) => {
