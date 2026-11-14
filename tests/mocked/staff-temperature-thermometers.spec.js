@@ -103,7 +103,7 @@ test('year report: a room with two thermometers can be opened whole or per therm
   ];
   await setup(page, t);
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Year report' }).click();
+  await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
   await expect(page.getByLabel('Room').locator('option')).toContainText(['H5/6 (all)', 'H5/6 · H5', 'H5/6 · H6', 'S1']);
   await page.getByLabel('Room').selectOption({ label: 'H5/6 · H6' });
   await page.getByRole('button', { name: 'Open report' }).click();
