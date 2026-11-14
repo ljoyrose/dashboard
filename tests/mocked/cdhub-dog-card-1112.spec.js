@@ -195,7 +195,8 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.locator('#sinkoff').click();
     expect(await page.evaluate(() => sinkOn())).toBe(false);   // switching off here wins over the staff page's set-up
     await expect(page.locator('#sinkcard')).toContainText('The save address is already on this phone');
-    await expect(page.locator('#sinkurl')).toBeHidden();
+    // 13 Nov 2026: the address box shows the kept address (filled), it is no longer hidden.
+    await expect(page.locator('#sinkurl')).toHaveValue(/PRETENDSCRIPT/);
     await page.locator('#sinkcode').fill('pretend-code-2');
     await page.locator('#sinkon').click();
     expect(await page.evaluate(() => [sinkOn(), localStorage.getItem('cdhub.sink.code')])).toEqual([true, 'pretend-code-2']);
