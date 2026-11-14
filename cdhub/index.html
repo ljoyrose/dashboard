@@ -21,6 +21,7 @@
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="staff/lib/links.js"></script>
+<script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
 <script src="../breed-better/score.js"></script>
 <script src="../breed-better/dna-kit.js"></script>
@@ -309,6 +310,13 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dogphoto-btn{justify-content:center;padding:0 8px}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
+/* gallery (Lisa 13 Nov 2026): small square thumbnails, files and links as plain links */
+.glist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.glist .gi{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);max-width:100%}
+.gph{display:block;width:88px;height:88px;border-radius:8px;overflow:hidden;background:var(--line)}
+.gph img{width:100%;height:100%;object-fit:cover;display:block}
+.gph img.off{visibility:hidden}
+.gal-ended{margin-top:8px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
 .pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
@@ -514,8 +522,9 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv','BLD-area_link.csv','BLD-status_label.csv','BLD-inspection.csv','BLD-credential.csv','BLD-credential_version.csv',
  'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-WANT.push('BLD-subject_link.csv');   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
-var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
+WANT.push('BLD-subject_link.csv');
+WANT.push('BLD-links.csv','BLD-link_kinds.csv','BLD-files.csv');   /* main photo + gallery (Lisa 13 Nov 2026): one file store, link rows (decision C); absent until Lisa creates them */   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
+var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-link_kinds.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 /* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
    screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
 var LATER={};
@@ -2328,7 +2337,9 @@ function dogPhotoBytes(img,id){
  }).catch(function(){ pawDogPhoto(img); });
 }
 function loadDogPhotos(){
- Array.prototype.forEach.call(document.querySelectorAll('img.dogphoto[data-photo-id]'), function(img){
+ Array.prototype.forEach.call(document.querySelectorAll('img.dogphoto[data-photo-id]'), loadPhotoImg);
+}
+function loadPhotoImg(img){
   var id=img.getAttribute('data-photo-id');
   if(!id||!TOKEN){ pawDogPhoto(img); return; }
   img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
@@ -2341,8 +2352,35 @@ function loadDogPhotos(){
    if(link&&/^https:\/\//i.test(link)){ img.src=link; return; }
    dogPhotoBytes(img,id);
   }).catch(function(){ dogPhotoBytes(img,id); });
- });
 }
+/* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
+function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-link_kinds.csv']||[],'subjects',d.id,todayISO()); }
+function galleryItem(f,mainId){
+ var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
+ var cap='<span class="mut">'+esc(when)+'</span>'+(main?' <span class="pill" data-k="main">Main</span>':'');
+ if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
+  var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
+  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
+ var id=dogPhotoId(f.drive_file_id); if(!id) return '';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer"></span>'+cap+'</li>';
+ return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
+}
+function galleryHtml(d,ph){
+ if(!ph.gallery.length&&!ph.ended.length) return '';
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos';
+ return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
+  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId); }).join('')+'</ul>':'<span class="mut">None now</span>')
+  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,''); }).join('')+'</ul></details>':'')
+  +'</div></details>';
+}
+/* gallery pictures load only when that gallery is opened (one Drive call each) */
+document.addEventListener('toggle',function(e){
+ var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
+ Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
+  if(img.closest('details')!==el) return;   /* an ended list loads only when it is opened itself */
+  img.setAttribute('data-photo-id',img.getAttribute('data-gal-id')); loadPhotoImg(img);
+ });
+},true);
 function photoMsg(inp,text){
  var card=inp&&inp.closest?inp.closest('article'):null;
  var m=card&&card.querySelector('[data-photo-msg]');
@@ -2586,7 +2624,7 @@ function drawDogs(){
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
    var szC=d.sizeWord&&CD.sizeColour?CD.sizeColour[d.sizeWord]:'';
-   var pic=dogPhotoId(d.photo);
+   var ph=dogPhotos(d), pic=(ph.main&&dogPhotoId(ph.main.drive_file_id))||dogPhotoId(d.photo);
    h+='<article class="dc '+cls+(d.sizeWord?' sz':'')+'"'+(d.sizeWord?' data-size="'+esc(d.sizeWord)+'" data-size-from="'+esc(d.sizeFrom)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')+' data-dog="'+esc(d.id)+'">'
 
   +'<div class="dc-top">'
@@ -2626,6 +2664,7 @@ function drawDogs(){
   +'<div data-dog-edit-host hidden></div>'
 
   +'<div class="dc-sects">'
+    +galleryHtml(d,ph)
 
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
