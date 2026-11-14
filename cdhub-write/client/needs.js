@@ -37,6 +37,6 @@
     return last;
   }
   /** Today in London as YYYY-MM-DD. */
-  function today(now) { return new Date(now || Date.now()).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); }
+  function today(now) { return new Date(now || Date.now()).toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); }
   return { coversDay: coversDay, endDay: endDay, today: today };
 }));

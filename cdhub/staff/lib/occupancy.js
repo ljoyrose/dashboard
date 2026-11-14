@@ -15,7 +15,7 @@
 }(typeof self !== 'undefined' ? self : this, function (N) {
   'use strict';
   // needs.js missing on a page: every room counts as in use (never hides a room by mistake)
-  N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
+  N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
   // Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
   var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };

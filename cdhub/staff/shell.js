@@ -116,7 +116,7 @@
   function refresh() { dataP = null; return data(); }
   function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
 
-  var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
+  var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
   /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
   function showMe() {
@@ -206,7 +206,7 @@
     clearScreen(); setTabs('home'); delete ctx.reportFor;
     screen.appendChild(h('h1', { text: 'The Board' }));
     data().then(showMe);   // the first read tells us whose code this is
-    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep') }));
+    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep') }));
     var list = h('div', { class: 'cards' });
     modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
       list.appendChild(h('button', { class: 'card go', type: 'button', 'data-module': m.id, onclick: function () { go('m/' + m.id); } }, [

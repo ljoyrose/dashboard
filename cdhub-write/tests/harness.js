@@ -127,7 +127,8 @@ function makeEnv(opts = {}) {
     }) },
     CacheService: { getScriptCache: () => ({
       get: (k) => (k in env.cache ? env.cache[k] : null),
-      put: (k, v) => { env.cache[k] = String(v); }
+      put: (k, v) => { env.cache[k] = String(v); },
+      remove: (k) => { delete env.cache[k]; }
     }) },
     ScriptApp: {
       getProjectTriggers: () => env.triggers,
@@ -135,7 +136,7 @@ function makeEnv(opts = {}) {
       newTrigger: (fn) => ({ timeBased() { return this; }, everyDays() { return this; }, atHour() { return this; }, create() { const t = { getHandlerFunction: () => fn }; env.triggers.push(t); return t; } })
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
-    Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
+    Session: { getActiveUser: () => ({ getEmail: () => env.email }), getScriptTimeZone: () => 'Europe/London' },   // the project setting
     DriveApp: {
       getFolderById: (id) => {
         if (id === 'FOLDER-TEST') return folder;

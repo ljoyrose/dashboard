@@ -116,6 +116,12 @@
           var t = {};
           (j.tables || []).forEach(function (x) { t[x.key] = { on: !!x.on, mode: x.mode, file: x.file }; });
           status = { checked: true, reachable: true, saveEnabled: !!j.saveEnabled, readEnabled: !!j.readEnabled, tables: t, proposed: j.proposed || [], version: j.version || '' };
+          // the tenant's time zone from its locale row (14 Nov 2026): screens show days and times in it.
+          // Until the first status check the pages use London, the only tenant's zone today.
+          if (typeof j.timeZone === 'string' && /^[A-Za-z]+(\/[A-Za-z0-9_+\-]+){1,2}$|^UTC$/.test(j.timeZone)) {
+            status.timeZone = j.timeZone;
+            if (typeof self !== 'undefined') self.BLD_TZ = j.timeZone;
+          }
           return status;
         })
         .catch(function () {
@@ -369,6 +375,7 @@
       name: function () { return lastName; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
+      timeZone: function () { return status.timeZone || ''; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,

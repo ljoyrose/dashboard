@@ -22,7 +22,7 @@
   function hhmm(at) {
     var d = at ? new Date(at) : new Date();
     if (isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(d);
+    return new Intl.DateTimeFormat('en-GB', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), hour: '2-digit', minute: '2-digit' }).format(d);
   }
   /** "Done 14:32 · Sam" */
   function text(s) {

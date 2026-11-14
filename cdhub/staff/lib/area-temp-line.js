@@ -29,7 +29,7 @@
   function dp(n) { return n === null ? '–' : n.toFixed(1); }
   function day(v) { var s = String(v || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
   function slotOf(r) { var at = String(r.period_start || r.taken_at || ''), hr = parseInt(at.slice(11, 13), 10); return isNaN(hr) || hr < 12 ? 'am' : 'pm'; }
-  function londonHour() { return parseInt(new Date().toLocaleString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false }), 10); }
+  function londonHour() { return parseInt(new Date().toLocaleString('en-GB', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), hour: '2-digit', hour12: false }), 10); }
 
   /** The limit in force on day d (YYYY-MM-DD; blank = every row): the room's own rows first, else the general rows;
    *  by the youngest dog's age when rows have ages; the later from_date first. */
