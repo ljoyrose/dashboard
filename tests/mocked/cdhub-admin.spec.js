@@ -110,6 +110,8 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('Admin tables keep their column widths as rows load, show all and redraw (house-table)', async ({ page }) => {
     await open(page);
     await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
+    // a page scrollbar (Linux, Windows) takes width from every 100% table when the list grows: hold it on, so only the rows change
+    await page.addStyleTag({ content: 'html{overflow-y:scroll}' });
     await tabClick(page, '#nav button[data-go="admin"]');
     await expect(page.locator('#admFuture .adm-future tbody tr').first()).toBeVisible();
     const widths = () => page.locator('#admFuture table.house-table thead th').evaluateAll((hs) => hs.map((h) => Math.round(h.getBoundingClientRect().width)));
@@ -136,8 +138,8 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(row).toBeVisible();
     expect(await page.locator('#admFuture thead').evaluate((e) => getComputedStyle(e).display)).toBe('none');
     expect(await row.locator('td').first().evaluate((e) => [getComputedStyle(e).display, getComputedStyle(e, '::before').content])).toEqual(['grid', '"Job"']);
-    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
-    expect(sw).toBeLessThanOrEqual(375);
+    const fit = await page.locator('#admFuture .adm-future').evaluate((e) => e.scrollWidth <= e.clientWidth);
+    expect(fit).toBe(true);
   });
 
   asOwner('Staff in More lists every staff page; owner links open Admin on the right card', async ({ page }) => {
