@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -152,6 +152,16 @@ function makeEnv(opts = {}) {
             }
           };
         }
+        if (id && id === env.props.FILES_FOLDER_ID) {
+          if (!env.stored) env.stored = [];
+          return {
+            createFile(blob) {
+              const f = { id: 'stored' + (++idc), title: blob.getName(), content: '', bytes: Buffer.from(blob.getBytes()), mime: blob.getContentType(), parent: 'files' };
+              env.stored.push(f); env.drive.push(f); env.created.push(f.title);
+              return wrap(f);
+            }
+          };
+        }
         throw new Error('no folder');
       },
       getFileById: (id) => { const f = env.drive.find((x) => x.id === id); if (!f) throw new Error('no file'); return wrap(f); }
@@ -171,7 +181,7 @@ function makeEnv(opts = {}) {
     },
     Utilities: {
       DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
-      computeDigest: (alg, str) => Array.from(crypto.createHash('sha256').update(String(str), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
+      computeDigest: (alg, str) => Array.from(crypto.createHash('sha256').update(Buffer.isBuffer(str) ? str : String(str), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
       getUuid: () => crypto.randomUUID(),
       base64Decode(s) {
         const str = String(s || '');
@@ -184,6 +194,11 @@ function makeEnv(opts = {}) {
       },
       formatDate(d, tz, pattern) {
         const p = londonParts(d.getTime());
+        if (tz === 'UTC') {
+          const u = new Date(d.getTime()).toISOString();
+          if (pattern === "yyyy-MM-dd'T'HH:mm:ss'Z'") return u.slice(0, 19) + 'Z';
+          if (pattern === 'yyyyMMdd-HHmmss') return u.slice(0, 10).replace(/-/g, '') + '-' + u.slice(11, 19).replace(/:/g, '');
+        }
         if (pattern === 'yyyy-MM-dd') return `${p.y}-${p.mo}-${p.d}`;
         if (pattern === 'yyyyMMdd-HHmmss') return `${p.y}${p.mo}${p.d}-${p.h}${p.mi}${p.s}`;
         if (pattern === "yyyy-MM-dd'T'HH:mm:ssXXX") return `${p.y}-${p.mo}-${p.d}T${p.h}:${p.mi}:${p.s}${p.off}`;
