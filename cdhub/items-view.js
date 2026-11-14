@@ -6,7 +6,7 @@
  * BLD-item_kinds rows, tests are BLD-check_type rows (target item, item_kind), measured values are BLD-readings rows
  * (kind from BLD-reading_kinds, linked to the test by a links row reading_for_job; judged by the BLD-reading_limits row in
  * force on the day: TEMPS, OV11 14 Nov), other answers are BLD-check_field / BLD-check_value rows, the room is a shared
- * BLD-links row (link_kind_key placed_in; STAFF owns links and its link_add / link_end saves), proof photos and
+ * BLD-links row (role placed_in, set by rule rows link_kind.<role>; STAFF owns links and its link_add / link_end saves), proof photos and
  * certificates are BLD-files rows joined by links (evidence, certificate, main; DOGCARD's file_add), in use / archived is
  * a BLD-requirement row (need_type item.in_use), "due soon" is the rule row items.due_soon_days. Status is worked out on
  * read, never stored.
@@ -59,10 +59,10 @@
     return { yes: false, row: last };
   }
 
-  /* Shared links (STAFF): from_table/from_id -> to_table/to_id, link_kind_key, from_date/to_date. Table words are
+  /* Shared links (STAFF, PR 563): from_table/from_id -> to_table/to_id, role, from_date/to_date. Table words are
      compared without a plural s, so check_log and check_logs are the same table until the rename sitting. */
   function tbl(x) { return t(x).replace(/s$/, ''); }
-  function lk(l) { return t(l.link_kind_key || l.role); }
+  function lk(l) { return t(l.role); }
   function live(l, on) { return t(l.from_date) <= on && (!t(l.to_date) || t(l.to_date) >= on); }
   function linksFrom(T, fromTable, fromId, kinds, on) {
     return rows(T, LINKS).filter(function (l) {
@@ -427,8 +427,8 @@
     });
   }
   /* Shared saves, each behind its own switch on the save script (off until Lisa's yes):
-     link_add / link_end (STAFF), file_add (DOGCARD: stores the file and writes the files row plus one link in one
-     action), readings (TEMPS). The request shapes below are the ones proposed to them on 14 Nov. */
+     link_add (STAFF), file_add (DOGCARD, PR 567: stores the file and writes the files row; the link is a separate
+     link_add), readings (TEMPS; STAFF builds the save). Shapes as agreed with them on 14 Nov. */
   function act(v, action, fields, file, row) {
     if (!v.sinkSend) return Promise.resolve({ ok: false, message: 'Saving is not set up on this device.' });
     return v.sinkSend({ action: action, fields: fields }).then(function (r) {
@@ -437,23 +437,25 @@
     });
   }
   function linkAdd(v, f) { return act(v, 'link_add', f, LINKS, function () { return f; }); }
-  /** Send the chosen photo or PDF (or the typed link) and join it to a record. Resolves null when there is nothing to send. */
+  /** Send the chosen photo or PDF (or the typed link), then join it to a record: file_add (DOGCARD, PR 567) stores the
+      file and returns its files id; link_add (STAFF) joins it. Two calls: if the link fails the file waits unlinked and
+      sending again re-uses it (same bytes = same id). Resolves null when there is nothing to send. */
   function fileAdd(v, form, d, fromTable, fromId, kindKey) {
     var el = form.querySelector('input[type=file][name=file]'), file = el && el.files && el.files[0];
-    var link = { link_from_table: fromTable, link_from_id: fromId, link_kind_key: kindKey };
-    var keep = function (res) {
-      (v.T['BLD-files.csv'] = v.T['BLD-files.csv'] || []).push({ id: res.file_id || res.id, drive_file_id: res.drive_file_id || '', url: res.url || d.link || '', mime: res.mime || '' });
-      (v.T[LINKS] = v.T[LINKS] || []).push({ id: res.link_id || '', from_table: fromTable, from_id: fromId, to_table: 'files', to_id: res.file_id || res.id, link_kind_key: kindKey, from_date: v.today });
-    };
-    var send = function (fields) { return v.sinkSend({ action: 'file_add', fields: Object.assign(fields, link) }).then(function (r) { if (r && r.ok && r.result) keep(r.result); return r; }); };
     if (!file && !d.link) return Promise.resolve(null);
     if (!v.sinkSend) return Promise.resolve({ ok: false, message: 'Saving is not set up on this device.' });
-    if (!file) return /^https:\/\//.test(d.link) ? send({ kind: 'link', url: d.link, source: 'link' }) : Promise.resolve({ ok: false, message: 'A link starts with https://' });
+    var join = function (r) {
+      if (!r || !r.ok || !r.result || !r.result.id) return r || { ok: false };
+      var res = r.result;
+      if (!rows(v.T, 'BLD-files.csv').some(function (f) { return f.id === res.id; })) (v.T['BLD-files.csv'] = v.T['BLD-files.csv'] || []).push({ id: res.id, drive_file_id: res.drive_file_id || '', url: d.link || '', mime: res.mime || (file ? file.type : '') });
+      return linkAdd(v, { from_table: fromTable, from_id: fromId, to_table: 'files', to_id: res.id, role: kindKey, from_date: v.today });
+    };
+    if (!file) return /^https:\/\//.test(d.link) ? v.sinkSend({ action: 'file_add', fields: { kind: 'link', url: d.link, source: 'link' } }).then(join) : Promise.resolve({ ok: false, message: 'A link starts with https://' });
     return readFile(file).then(function (f) {
       if (f.b64.length > 1800000) throw new Error('That file is too large. Use a smaller photo or PDF.');
       S.msg = 'Sending the file…'; v.redraw();
-      return send({ kind: f.mime === 'application/pdf' ? 'upload' : 'photo', mime: f.mime, file_base64: f.b64, name: file.name || '', source: el.hasAttribute('capture') ? 'camera' : 'upload' });
-    });
+      return v.sinkSend({ action: 'file_add', fields: { kind: f.mime === 'application/pdf' ? 'upload' : 'photo', mime: f.mime, data_base64: f.b64, name: file.name || '', taken_on: d.on || v.today, source: el.hasAttribute('capture') ? 'camera' : 'upload' } });
+    }).then(join);
   }
   function why(r) { if (!r) return 'Not saved.'; if (r instanceof Error) return r.message; if (r.fields) return Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' '); return r.message || 'Not saved.'; }
   /** After the main row saved: run the follow-on saves; the item still gets its tick, any that failed are named. */
@@ -485,7 +487,7 @@
     S.busy = true; S.msg = 'Saving…'; v.redraw();
     var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'note'];
     var pick = function () { var f = {}; ITEM.forEach(function (k) { if (d[k]) f[k] = d[k]; }); return f; };
-    var place = function (id, area, from, why2) { return linkAdd(v, { from_table: 'items', from_id: id, to_table: 'areas', to_id: area, link_kind_key: PLACE, from_date: from, source: why2 }); };
+    var place = function (id, area, from, why2) { return linkAdd(v, { from_table: 'items', from_id: id, to_table: 'areas', to_id: area, role: PLACE, from_date: from, source: why2 }); };
     if (kind === 'add') {
       post(v, 'items', pick()).then(function (r) {
         if (!r || !r.ok) return fail(r);
@@ -504,7 +506,8 @@
       // one link_add: placed_in allows one at a time, so the save ends the old room the day before (STAFF, PR 563)
       place(S.open, d.area_id, d.from_date, 'Moved on the Items page').then(function (r2) {
         if (!r2 || !r2.ok) return fail(r2);
-        if (old) old.to_date = addDays(d.from_date, -1);
+        var ended = (r2.result && r2.result.ended) || (old ? [old.id] : []);
+        rows(v.T, LINKS).forEach(function (l) { if (ended.indexOf(l.id) >= 0 && !t(l.to_date)) l.to_date = addDays(d.from_date, -1); });
         done(S.open, 'Saved.');
       }, fail);
     } else if (kind === 'archive') {
@@ -535,7 +538,15 @@
         if (!r || !r.ok) return fail(r);
         var logId = r.result.id;
         Object.keys(values).forEach(function (k) { (v.T['BLD-check_value.csv'] = v.T['BLD-check_value.csv'] || []).push({ check_log_id: logId, field_key: k, value: values[k] }); });
-        reads.forEach(function (x, n) { x.rid = rid + '-r' + (n + 1); x.fields = { kind_id: x.kind_id, item_id: S.open, check_log_id: logId, value: x.value, taken_at: at, how_entered: 'typed' }; });
+        var rk = {}; rows(v.T, 'BLD-reading_kinds.csv').forEach(function (k) { rk[k.id] = k; });
+        var itm = (list(v.T, v.today).filter(function (z) { return z.it.id === S.open; })[0] || {}).it || { id: S.open };
+        reads.forEach(function (x, n) {
+          var k = rk[x.kind_id] || {}, L = limitOn(v.T, x.kind_id, itm, d.on), inr = inLimit(L, x.value);
+          x.rid = rid + '-r' + (n + 1);
+          x.fields = { kind_id: x.kind_id, item_id: S.open, check_log_id: logId, value: x.value, unit_id: k.unit_id || '', precision_dp: k.precision_dp || '',
+            limit_id: (L && L.id) || '', in_range: inr === null ? '' : String(inr), taken_at: at, how_entered: 'typed', source: 'staff' };
+          if (v.who) x.fields.taken_by = v.who;
+        });
         S.testOn = '';
         return sendReads(v, logId, reads).then(function (left) {
           return fileAdd(v, form, d, 'check_logs', logId, d.file_kind === 'certificate' ? 'certificate' : 'evidence').then(function (r3) { return r3; }, function (x) { return x; }).then(function (r3) {
@@ -633,5 +644,5 @@
     if (a) { S.filter = a.getAttribute('data-itm-go'); S.open = ''; S.form = ''; }
   }, true);
 
-  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, _sendReads: sendReads, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
+  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, _sendReads: sendReads, _fileAdd: fileAdd, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
 }));

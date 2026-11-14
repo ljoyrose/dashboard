@@ -20,7 +20,7 @@ test.describe('CD Hub: items', () => {
     addTable(guard.world, 'BLD-reading_kinds.csv', csv('id,tenant_id,kind_key,label,unit_id,value_shape,precision_dp,source,set_by,set_on', ['r1,t,pretend_earth,Pretend earth,Ω,single,2,x,o,2026-01-01']));
     addTable(guard.world, 'BLD-reading_limits.csv', csv('id,tenant_id,kind_id,scope_table,scope_id,low,high,label,from_date,to_date,source,set_by,set_on', ['m1,t,r1,,,,0.1,,2020-01-01,,x,o,2026-01-01']));
     addTable(guard.world, 'BLD-readings.csv', csv('id,tenant_id,kind_id,area_id,item_id,subject_id,check_log_id,value_min,value_max,value,unit_id,taken_at,in_range', ['g1,t,r1,,i1,,l1,,,0.2,Ω,2020-05-28T12:00:00Z,']));
-    addTable(guard.world, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,to_table,to_id,link_kind_key,sort,note,from_date,to_date,source,set_by,set_on,created_at,updated_at', ['n1,t,reading_kinds,r1,check_types,pretend_pat,reading_for_job,,,2020-01-01,,x,o,2026-01-01,,']));
+    addTable(guard.world, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,created_at,updated_at', ['n1,t,reading_kinds,r1,reading_for_job,check_types,pretend_pat,2020-01-01,,x,o,2026-01-01,,,,']));
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => { location.hash = '#/items'; });
     const rowsIn = page.locator('#itmPage .itm-row');

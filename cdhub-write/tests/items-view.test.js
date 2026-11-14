@@ -31,11 +31,11 @@ const T0 = () => ({
   ],
   'BLD-check_value.csv': [{ check_log_id: 'clg-1', field_key: 'visual', value: 'Pass' }],
   'BLD-links.csv': [
-    { id: 'lnk-1', from_table: 'items', from_id: 'itm-1', link_kind_key: 'placed_in', to_table: 'areas', to_id: 'area-1', from_date: '2025-05-28', to_date: '2026-10-31' },
-    { id: 'lnk-2', from_table: 'items', from_id: 'itm-1', link_kind_key: 'placed_in', to_table: 'areas', to_id: 'area-2', from_date: '2026-11-01' },
-    { id: 'lnk-3', from_table: 'reading_kinds', from_id: 'rkd-1', link_kind_key: 'reading_for_job', to_table: 'check_types', to_id: 'pat_class_1', from_date: '2025-01-01' },
-    { id: 'lnk-4', from_table: 'reading_kinds', from_id: 'rkd-2', link_kind_key: 'reading_for_job', to_table: 'check_types', to_id: 'cty-1', from_date: '2025-01-01' },
-    { id: 'lnk-5', from_table: 'check_logs', from_id: 'clg-1', link_kind_key: 'certificate', to_table: 'files', to_id: 'fil-1', from_date: '2025-05-28' }
+    { id: 'lnk-1', from_table: 'items', from_id: 'itm-1', role: 'placed_in', to_table: 'areas', to_id: 'area-1', from_date: '2025-05-28', to_date: '2026-10-31' },
+    { id: 'lnk-2', from_table: 'items', from_id: 'itm-1', role: 'placed_in', to_table: 'areas', to_id: 'area-2', from_date: '2026-11-01' },
+    { id: 'lnk-3', from_table: 'reading_kinds', from_id: 'rkd-1', role: 'reading_for_job', to_table: 'check_types', to_id: 'pat_class_1', from_date: '2025-01-01' },
+    { id: 'lnk-4', from_table: 'reading_kinds', from_id: 'rkd-2', role: 'reading_for_job', to_table: 'check_types', to_id: 'cty-1', from_date: '2025-01-01' },
+    { id: 'lnk-5', from_table: 'check_logs', from_id: 'clg-1', role: 'certificate', to_table: 'files', to_id: 'fil-1', from_date: '2025-05-28' }
   ],
   'BLD-area.csv': [{ id: 'area-1', code: 'Kitchen' }, { id: 'area-2', code: 'Staff room' }],
   'BLD-breeding_rule.csv': [{ rule_key: 'items.due_soon_days', value: '30', effective_from: '2026-01-01' }],
@@ -130,4 +130,16 @@ test('readings after a test: each row has its own <test>-r<n> reference; Retry r
   assert.deepEqual(sent, ['itmabc123-r1', 'itmabc123-r2', 'itmabc123-r2'], 'never the test row, never r1 again');
   assert.equal(V._state.retry['clg-9'], undefined);
   assert.equal(v.T['BLD-readings.csv'].length, 2);
+});
+
+test('evidence: file_add first (no link fields), then link_add joins the returned files id to the test', async () => {
+  const sent = [];
+  const v = { T: {}, today: '2026-11-14', redraw() {}, sinkSend: (b) => { sent.push(b); return Promise.resolve(b.action === 'file_add' ? { ok: true, result: { status: 'saved', id: 'fil-1', drive_file_id: 'd1' } } : { ok: true, result: { id: 'lnk-1' } }); } };
+  const form = { querySelector: () => null };
+  const r = await V._fileAdd(v, form, { link: 'https://example.org/cert.pdf' }, 'check_logs', 'clg-1', 'certificate');
+  assert.equal(r.ok, true);
+  assert.deepEqual(sent.map((b) => b.action), ['file_add', 'link_add']);
+  assert.deepEqual(sent[0].fields, { kind: 'link', url: 'https://example.org/cert.pdf', source: 'link' });
+  assert.deepEqual([sent[1].fields.from_table, sent[1].fields.from_id, sent[1].fields.to_table, sent[1].fields.to_id, sent[1].fields.role], ['check_logs', 'clg-1', 'files', 'fil-1', 'certificate']);
+  assert.equal((await V._fileAdd(v, form, {}, 'items', 'itm-1', 'main')), null, 'nothing chosen, nothing sent');
 });
