@@ -425,3 +425,7 @@ table.house-table .num { text-align: right; font-variant-numeric: tabular-nums; 
   table.house-table tbody th[scope="row"]::before { content: none; }
   table.house-table .num { text-align: left; }
 }
+
+/* Paragraph text is justified (Lisa 14 Nov 2026: "i prefer justified text"). :where() keeps this at zero weight, so any
+   page rule (a centred note, a table cell, a button) still wins; the last line of a paragraph stays left. */
+:where(p) { text-align: justify; hyphens: auto; }

@@ -76,14 +76,14 @@
       var inner = n ? '<span class="pill ' + cls + '">' + n + '</span>' : '<span class="mut">0</span>';
       return '<td data-n="' + k + '">' + (href ? '<a href="' + e(href) + '" aria-label="' + n + ' ' + k + ', open ' + e(r.sop) + '">' + inner + '</a>' : inner) + '</td>';
     }
-    h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
+    h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
         var done = r.as_needed && !r.ok ? '<td data-n="done"><span class="mut">as needed</span></td>' : cell(r, r.ok, 'ok', 'done');
         return '<tr data-job="' + e(r.key) + '"><td class="mut">' + sop + '</td><td><b>' + e(r.label) + '</b></td>' + done + cell(r, r.due, 'w', 'due') + cell(r, r.late, 'no', 'late')
           + '<td class="mut">' + e(r.last_done ? v.dmy(r.last_done) : '—') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
-    h += '<h4>By licence source</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>source</th><th>jobs</th><th>due</th><th>late</th></tr></thead><tbody>'
+    h += '<h4>By licence source</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>source</th><th>jobs</th><th>due</th><th>late</th></tr></thead><tbody>'
       + bySource(rows).sort(function (a, b) { return a.late - b.late || a.due - b.due || String(a.source).localeCompare(String(b.source)); }).map(function (s) {
         function n(x, cls) { return '<td>' + (x ? '<span class="pill ' + cls + '">' + x + '</span>' : '<span class="mut">0</span>') + '</td>'; }
         return '<tr data-source="' + e(s.source) + '"><td>' + e(s.source || 'No source entered') + '</td><td>' + s.jobs + '</td>' + n(s.due, 'w') + n(s.late, 'no') + '</tr>';

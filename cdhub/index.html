@@ -1819,7 +1819,7 @@ function pageToday(){
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
    /* kit: animal */
    return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
-    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due</th><th>window</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
+    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due</th><th>window</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
     +w.map(function(x){
       if(x.unknown) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill no">mating date not recorded</span> '+esc(x.matings)+' mating row(s), no date \u2014 no due date can be computed</td></tr>';
       if(x.unset) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill w">not set</span> gestation timings \u2014 add them in Compliance</td></tr>';
@@ -1916,7 +1916,7 @@ function showList(key){
  var list=listFor(key);
  var areaName={}; CD.areas.forEach(function(a){ areaName[a.id]=a.code; });
  var h='<div class="card"><h4>'+esc(capFirst(LISTNAME[key]||key))+cntPill(list.length)+'</h4>'
-  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>colour</th><th>where (location)</th><th></th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>colour</th><th>where (location)</th><th></th></tr></thead><tbody>';
  list.slice().sort(function(a,b){return (a.name||'')<(b.name||'')?-1:1;}).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
   h+='<tr><td><b>'+esc(d.name)+'</b></td>'
@@ -2082,7 +2082,7 @@ function medBanner(){
  var rows=medRows(ask), when=medWhen(ask,rows);
  var h='<section class="card" id="medAnswer"><h3>Medicine'+(when?' in '+esc(when):'')+'</h3>';
  if(!rows.length) return h+'<p style="margin-bottom:0">No medicine recorded'+(ask.month?' in '+esc(UKMON[ask.month-1]):'')+'.</p></section>';
- h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>Date</th><th>Dog</th><th>Medicine</th><th>Dose</th><th>Route</th></tr></thead><tbody>'
+ h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>Date</th><th>Dog</th><th>Medicine</th><th>Dose</th><th>Route</th></tr></thead><tbody>'
   +rows.map(function(r){
     var on=String(r.given_on).slice(0,10), dog=CD._byId[r.subject_id], unnamed=medUnnamed(r.product,r.ruling_needed);
     return '<tr data-med="'+esc(r.subject_id||'')+'"><td>'+esc(dmy(on))+'</td><td><b>'+esc(dog?dog.name:nameOf(r.subject_id))+'</b>'
@@ -2154,7 +2154,7 @@ function showWeights(id){
  if(!d.weights.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no weighings</h4>'+wForm(d)+'</div>'; return; }
  var h='<div class="card"><h4>'+esc(d.name)+': weighings'+cntPill(d.weights.length)+'</h4>'
   +(d.weights.length>1?'<div class="wgraph-box">'+wGraph(d.weights)+'</div>':'')
-  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th></tr></thead><tbody>';
  for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
   var dl=pv?(w.kg-pv.kg):null;
   h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
@@ -2171,7 +2171,7 @@ function showTreats(id){
  var t=d.treats||[];
  if(!t.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no treatments recorded</h4></div>'; return; }
  var h='<div class="card"><h4>'+esc(d.name)+': treatments'+cntPill(t.length)+'</h4>'
-  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
  for(var i=t.length-1;i>=0;i--){ var r=t[i];
   var unk=/NOT STATED/.test(r.product||'');
   h+='<tr><td>'+esc(dmy(r.on))+'</td>'
@@ -2951,7 +2951,7 @@ function pageAreas(){
    {
     var modes = cur ? [cur] : ['free','limited'], bands=bandsFor(a.id);
     if(!bands.length) h+='<p data-nolimits="'+esc(a.id)+'"><span class="pill no">no limits recorded</span></p>';
-    else h+=limitChips(a.id,cur)+'<details class="allfig"><summary>All figures</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+bands.map(function(b){return '<th title="'+esc(b)+'">'+esc(bandLabel(b))+'</th>';}).join('')+'</tr></thead><tbody>'
+    else h+=limitChips(a.id,cur)+'<details class="allfig"><summary>All figures</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>flap</th>'+bands.map(function(b){return '<th title="'+esc(b)+'">'+esc(bandLabel(b))+'</th>';}).join('')+'</tr></thead><tbody>'
      +modes.map(function(mo){
         return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
          +bands.map(function(b){ var v=capFor(a.id,b,mo);
@@ -2981,7 +2981,7 @@ function pageLitters(){
    groups:[['Date of birth',fsel('ld','Date of birth','<option value="y">has a DOB</option><option value="n">missing a DOB</option>')],
     ['Year',fsel('ly','Year','')],['Status',fsel('ls','Status','')],['Dam',fsel('lm','Dam','')],['Sire',fsel('lp','Sire','')],
     ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
- +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
 function litterPups(){
@@ -3041,7 +3041,7 @@ function pageBuyers(){
  if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects yet</h4>'
   +'</div>';
  h+='<h3><span class="dot" style="background:var(--p2)"></span>Associations</h3>'
- +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
  +'<th>breeders listed</th><th>directory</th></tr></thead><tbody>';
  live.slice().sort(function(a,b){ return (b.recognises_cobberdog==='true')-(a.recognises_cobberdog==='true') || (a.acronym<b.acronym?-1:1); })
   .forEach(function(a){
@@ -3058,7 +3058,7 @@ function pageBuyers(){
   +'<p style="margin-bottom:0" class="mut">'+dead.map(function(a){return esc(a.acronym)+' \u2014 '+esc(a.note);}).join('<br>')+'</p></div>';
  h+='<h3><span class="dot" style="background:var(--p3)"></span>Getting a dog there</h3>'
  +'<p class="mut">Every sale abroad is a commercial export, even with no money.</p>'
- +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
  CD.exportRoutes.forEach(function(e){
   var cls=e.difficulty==='LOW'?'ok':(e.difficulty==='HIGH'?'no':'w');
   h+='<tr><td>'+flag(e.country_iso)+' <b>'+esc(e.country)+'</b></td>'
@@ -3077,7 +3077,7 @@ function pageBuyers(){
       ['MDBA number',fsel('bmd','MDBA number','<option value="y">has one</option><option value="n">none found</option>')],
       ['Email',fsel('bem','Email','<option value="y">has an email</option><option value="n">no email</option>')],
       ['Reachable by',fsel('bch','Reachable by',['whatsapp','email','website form','none found'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join(''))]]})
-   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
+   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
    +'<th>appetite</th><th>contact</th><th>why them</th></tr></thead><tbody id="brows"></tbody></table></div>';
  }
  return h;
@@ -3173,7 +3173,7 @@ function keptReadings(date){
    return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
   +(rows.length
-    ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
+    ?'<table class="kt house-table"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
       +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
       +'</tbody></table>'
     :'<p class="mut">No readings for '+esc(dmy(date))+'.</p>')
@@ -3559,7 +3559,7 @@ function pageWork(){
   rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */
   h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
-   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
+   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      var ask=g[0]==='BLOCKED'?medAsk(r):null, found=ask?medRows(ask):null;
      var tail=g[0]==='DONE'?(r.evidence||''):(r.blocked_on||r.note||'');
@@ -3679,12 +3679,12 @@ function pageShape(){
   +'<p class="note">Who points at whom · rows · <b>how full each link is</b> (a join can be almost empty).</p>'
   +'<div class="card map">'+svg+'</div>'
   +'<div class="card acc2"><h4>Joins that exist but are nearly empty'+cntPill(thin.length)+'</h4>'
-  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
+  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
   +thin.map(function(e){return '<tr><td>'+esc(e.from)+'</td><td class="mut">'+esc(e.col)+'</td><td>'+esc(e.to)+'</td><td><span class="pill no">'+e.pct+'%</span> '+e.filled+' of '+e.of+'</td></tr>';}).join('')
   +'</tbody></table></div></div>'
   +'<div class="card acc4"><h4>tenant_id is on every table and is deliberately not drawn</h4><p style="margin-bottom:0">All '+Object.keys(N).length+' tables carry it at 100%, so drawing it would add a line to every box and say nothing. It is a band across the whole picture, not a relationship. <b>And one tenant in the data never proves isolation</b> — that needs a second tenant.</p></div>'
   +'<div class="card acc7"><h4>Tables other tables point at that do not exist</h4>'
-  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
+  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
   +GHOSTS.map(function(x){return '<tr><td><b>'+esc(x[0])+'</b></td><td><span class="pill no">'+x[1]+' tables</span></td><td class="mut">'+esc(x[2])+'</td></tr>';}).join('')
   +'</tbody></table></div></div>'
   +(loose.length?'<div class="card"><h4>Loaded but joined to nothing'+cntPill(loose.length)+'</h4><p style="margin-bottom:0" class="mut">'+loose.map(esc).join(', ')+'</p></div>':'');
@@ -3901,7 +3901,7 @@ function pageCompliance(){
   +'<p><a href="#/areas">Open Areas</a></p>');
  h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
- h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
+ h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table class="house-table"><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
   +BREED_RULES.concat(SETTING_RULES).map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
     +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+(cur&&hideSource(cur.source)?esc(hideSource(cur.source)):'—')+'</td>'
