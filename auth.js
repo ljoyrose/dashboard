@@ -82,6 +82,12 @@
     } catch (e) {}
   }
 
+  // Tells THIS tab that its saved sign-in changed (the browser's 'storage' event only reaches the other tabs).
+  // The private settings loader in config.js listens for it. Nothing is passed along: listeners read DashAuth themselves.
+  function notify() {
+    try { global.dispatchEvent(new Event('dash-auth-change')); } catch (e) {}
+  }
+
   /** Saves the access token, its expiry (ms since epoch) and granted scope for every tab, then updates the signed-out gate. */
   function save(token, expiresAt, scope) {
     try {
@@ -92,12 +98,14 @@
       }));
     } catch (e) {}
     gate();
+    notify();
   }
 
   /** Removes the saved sign-in (signs out every tab), then updates the signed-out gate. */
   function clear() {
     try { store.removeItem(KEY); } catch (e) {}
     gate();
+    notify();
   }
 
   // Another tab signed in, refreshed or signed out. fn(data) gets the new saved sign-in, or null when it was cleared.
