@@ -440,7 +440,7 @@
             + '<td>' + e(rec ? rec.values.map(function (val) { return val.field_key + ' ' + val.value; }).join(', ') : '') + '</td><td>' + (rec && rec.photo ? '<a href="' + e(fileHref(rec.photo)) + '">file</a>' : '') + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table>';
-    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:3px 5px;text-align:left;vertical-align:top}th{background:#eee}@media print{a{color:#000}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
+    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
     w.document.close();
   }
 
