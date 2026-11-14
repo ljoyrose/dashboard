@@ -4,8 +4,8 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');
 
-const LINKS_H = 'id,tenant_id,from_table,from_id,to_table,to_id,link_kind_key,sort,note,from_date,to_date,source,set_by,set_on,created_at,updated_at';
-const KINDS_H = 'id,tenant_id,kind_key,label,reverse_label,from_tables,to_tables,max_per_from,who_may,from_date,to_date,source,set_by,set_on,created_at,updated_at';
+const LINKS_H = 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,created_at,updated_at';
+const RULE_H = 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date';
 let n = 0;
 
 function env(props) {
@@ -16,10 +16,13 @@ function env(props) {
   if (f.length) { f[0].content = subj; f[0].sheet = undefined; } else e.addFile('BLD-subject.csv', subj);
   e.addFile('BLD-files.csv', 'id,tenant_id,name\r\nfil-1,' + t + ',one.jpg\r\nfil-2,' + t + ',two.jpg\r\n');
   e.addFile('BLD-links.csv', LINKS_H + '\r\n');
-  e.addFile('BLD-link_kinds.csv', [KINDS_H,
-    `lk-1,${t},gallery,Photos,Photo of,subject,files,,STAFF,2026-01-01,,test,,,,`,
-    `lk-2,${t},main,Main photo,Main photo of,subject,files,1,,2026-01-01,,test,,,,`,
-    `lk-3,${t},old,Old,Old,,,,,2026-01-01,2026-02-01,test,,,,`].join('\r\n') + '\r\n');
+  const rules = [RULE_H,
+    `r1,${t},link_kind.gallery,Photos,2026-01-01,test,,,,`, `r2,${t},link_kind.gallery.from_tables,subject,2026-01-01,test,,,,`,
+    `r3,${t},link_kind.gallery.to_tables,files,2026-01-01,test,,,,`, `r4,${t},link_kind.gallery.who_may,STAFF,2026-01-01,test,,,,`,
+    `r5,${t},link_kind.main,Main photo,2026-01-01,test,,,,`, `r6,${t},link_kind.main.to_tables,files,2026-01-01,test,,,,`,
+    `r7,${t},link_kind.main.max_per_from,1,2026-01-01,test,,,,`, `r8,${t},link_kind.old,Old,2026-01-01,test,,,,2026-02-01`].join('\r\n') + '\r\n';
+  const br = e.file('BLD-breeding_rule.csv');
+  if (br.length) { br[0].content = rules; br[0].sheet = undefined; } else e.addFile('BLD-breeding_rule.csv', rules);
   return e;
 }
 function post(e, action, fields, code) {
@@ -28,9 +31,9 @@ function post(e, action, fields, code) {
   return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
 }
 const rows = (e) => e.file('BLD-links.csv')[0].content.trim().split(/\r?\n/).slice(1).map((l) => l.split(','));
-const g = (from_id, to_id, kind) => ({ from_table: 'subject', from_id, to_table: 'files', to_id, link_kind_key: kind || 'gallery', source: 'test' });
+const g = (from_id, to_id, kind) => ({ from_table: 'subject', from_id, to_table: 'files', to_id, role: kind || 'gallery', source: 'test' });
 
-test('link_add: behind its own switch; kind from link_kinds rows in force; who_may is the kind row\'s setting', () => {
+test('link_add: behind its own switch; role from link_kind rule rows in force; who_may is the owner\'s rule row', () => {
   const off = env({ TABLE_ON_links: '' });
   assert.equal(post(off, 'link_add', g('sub-test-a', 'fil-1'), off.codes.owner).code, 'TABLE_OFF');
   const e = env();
@@ -38,7 +41,8 @@ test('link_add: behind its own switch; kind from link_kinds rows in force; who_m
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.match(r.result.id, /^lnk/);
   const row = rows(e)[0];
-  assert.deepEqual(row.slice(2, 11), ['subject', 'sub-test-a', 'files', 'fil-1', 'gallery', '2', '', '2026-11-14', '']);
+  assert.deepEqual(row.slice(2, 9), ['subject', 'sub-test-a', 'gallery', 'files', 'fil-1', '2026-11-14', '']);
+  assert.equal(row[12], '2');
   assert.match(row[14], /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);   // created_at in UTC
   assert.equal(post(e, 'link_add', g('sub-test-a', 'fil-2', 'main')).code, 'NOT_ALLOWED');   // blank who_may = owner only
   assert.equal(post(e, 'link_add', g('sub-test-a', 'fil-2', 'old'), e.codes.owner).code, 'INVALID');
@@ -56,13 +60,13 @@ test('link_add: max_per_from 1 (main) ends the old main in the same save; link_e
   assert.deepEqual(b.result.ended, [a.result.id]);
   const rs = rows(e);
   assert.equal(rs.length, 2);
-  assert.equal(rs[0][10], '2026-11-09');
+  assert.equal(rs[0][8], '2026-11-09');
   assert.match(rs[0][15], /Z$/);
-  assert.equal(rs[1][10], '');
+  assert.equal(rs[1][8], '');
   assert.equal(post(e, 'link_end', { id: b.result.id }).code, 'NOT_ALLOWED');
   assert.equal(post(e, 'link_end', { id: b.result.id, to_date: '2026-11-09' }, e.codes.owner).code, 'INVALID');
   const end = post(e, 'link_end', { id: b.result.id, to_date: '2026-11-12' }, e.codes.owner);
   assert.equal(end.ok, true, JSON.stringify(end));
-  assert.equal(rows(e)[1][10], '2026-11-12');
+  assert.equal(rows(e)[1][8], '2026-11-12');
   assert.equal(post(e, 'link_end', { id: b.result.id }, e.codes.owner).code, 'NOT_ALLOWED');
 });

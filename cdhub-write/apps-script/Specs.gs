@@ -1065,7 +1065,5 @@ var READABLE = {
   weight:          { file: 'BLD-weight.csv',          vis: 'weight',          authorCol: '',            dateCol: 'performed_on' },
   // 13 Nov 2026 (DOGCARD): BFFs / Fren. links between two dogs; read only as far as visibility rows allow
   subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' },
-  // 14 Nov 2026 (Lisa decision C): record-to-record links and their kinds (owner rows); read only as far as visibility rows allow
-  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' },
-  link_kinds:      { file: 'BLD-link_kinds.csv',      vis: 'link_kinds',      authorCol: 'set_by',      dateCol: 'set_on' }
+  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' }
 };

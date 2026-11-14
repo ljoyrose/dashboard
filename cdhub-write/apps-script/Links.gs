@@ -2,22 +2,24 @@
  * Record-to-record links (14 Nov 2026, DRAFT; Lisa decision C, 13 Nov: one link table, shown on both sides,
  * addable from either side; free tags are links of a kind that carries no rule meaning).
  *
- *   action 'link_add'  adds one BLD-links row: from_table/from_id -> to_table/to_id with a link_kind_key.
+ *   action 'link_add'  adds one BLD-links row: from_table/from_id -> to_table/to_id with a role.
  *   action 'link_end'  ends one row by filling its to_date (blank = today). Never deletes, never edits anything else.
  *
  * Table names are the file stems (BLD-<table>.csv), so after the plural rename they follow the files. Both records
- * must exist in their files. The kind is a BLD-link_kinds row in force today (owner rows, none fixed here):
- *   from_tables / to_tables  pipes of allowed table names; blank = any
- *   max_per_from             blank = no limit; e.g. 1 for "main" - adding a new one ends the oldest open one in the same save
- *   who_may                  pipes of roles (OWNER, STAFF, ...) or person:<code id>; blank = OWNER only (starting default)
+ * must exist in their files. The role is an owner rule row in BLD-breeding_rule (one rule list), in force today:
+ *   link_kind.<role>               the words people see (e.g. "Placed in"); no row = the role cannot be used
+ *   link_kind.<role>.from_tables   pipes of allowed table names; no row = any      (same for .to_tables)
+ *   link_kind.<role>.max_per_from  e.g. 1 for "main" - adding a new one ends the oldest open one in the same save
+ *   link_kind.<role>.who_may       pipes of roles (OWNER, STAFF, ...) or person:<code id>; no row = OWNER only
+ * One links table: the spec is ITEMS' TABLES.links (PR 568); the owner's generic add path writes the same file.
  * A second open row with the same from, to and kind is refused as DUPLICATE.
  * Rows follow STANDARD S4: from_date/to_date, source, set_by, set_on, created_at/updated_at (UTC).
  * Switch: TABLE_ON_links, OFF until Lisa says go.
  */
 var LINKS_ = {
-  file: 'BLD-links.csv', kinds: 'BLD-link_kinds.csv', on: 'links', idPrefix: 'lnk',
-  need: ['id', 'tenant_id', 'from_table', 'from_id', 'to_table', 'to_id', 'link_kind_key', 'sort', 'note',
-    'from_date', 'to_date', 'source', 'set_by', 'set_on', 'created_at', 'updated_at']
+  file: 'BLD-links.csv', on: 'links', idPrefix: 'lnk',
+  need: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source',
+    'set_by', 'set_on', 'sort', 'note', 'created_at', 'updated_at']
 };
 var LINK_TABLE_RE_ = /^[a-z][a-z0-9_]{0,40}$/;
 
@@ -25,16 +27,20 @@ function linksOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + LINKS_.on) === 'tr
 function linksFiles_() { return linksOn_() ? [LINKS_.file] : []; }
 function linksUtc_(d) { return new Date(d.getTime()).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
 
-/** The kind rows in force on `day`, by kind_key (latest from_date wins). */
+/** The roles in force on `day` from link_kind.<role>[.<setting>] rule rows: { role: {label, from_tables, ...} }. */
 function linkKindsInForce_(day) {
-  var read = store_read_(LINKS_.kinds, false), out = {}, tenant = prop_(BLD.PROP.TENANT_ID);
-  if (!read) return out;
-  read.records.forEach(function (r) {
-    var key = String(r.kind_key || '').trim(), from = String(r.from_date || ''), to = String(r.to_date || '');
-    if (!key || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
+  var out = {}, best = {}, rules = store_read_('BLD-breeding_rule.csv', false), tenant = prop_(BLD.PROP.TENANT_ID);
+  if (!rules) return out;
+  rules.records.forEach(function (r) {
+    var m = /^link_kind\.([a-z][a-z0-9_]{0,39})(?:\.(from_tables|to_tables|max_per_from|who_may))?$/.exec(String(r.rule_key || ''));
+    if (!m || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
+    var from = String(r.effective_from || ''), to = String(r.to_date || ''), k = m[1] + '.' + (m[2] || 'label');
     if (!from || from > day || (to && to < day)) return;
-    if (!out[key] || from >= String(out[key].from_date || '')) out[key] = r;
+    if (best[k] !== undefined && from < best[k]) return;
+    best[k] = from;
+    (out[m[1]] = out[m[1]] || {})[m[2] || 'label'] = String(r.value || '').trim();
   });
+  Object.keys(out).forEach(function (k) { if (!out[k].label) delete out[k]; });
   return out;
 }
 
@@ -81,7 +87,7 @@ function sinkLinkAdd_(req) {
     var errors = {}, today = todayLondon_(now), tenant = prop_(BLD.PROP.TENANT_ID);
     var ft = String(f.from_table || '').trim(), fid = String(f.from_id || '').trim();
     var tt = String(f.to_table || '').trim(), tid = String(f.to_id || '').trim();
-    var key = String(f.link_kind_key || '').trim(), from = String(f.from_date || '').trim() || today;
+    var key = String(f.role || '').trim(), from = String(f.from_date || '').trim() || today;
     var sort = String(f.sort == null ? '' : f.sort).trim();
     if (!LINK_TABLE_RE_.test(ft)) errors.from_table = 'Say which list this is from.';
     if (!LINK_TABLE_RE_.test(tt)) errors.to_table = 'Say which list this links to.';
@@ -91,7 +97,7 @@ function sinkLinkAdd_(req) {
     if (!isRealDate_(from)) errors.from_date = 'Use a real date as YYYY-MM-DD.';
     if (sort && !/^\d{1,6}$/.test(sort)) errors.sort = 'Use a whole number.';
     var kinds = linkKindsInForce_(today), kind = kinds[key];
-    if (!kind) errors.link_kind_key = Object.keys(kinds).length ? 'Choose a kind of link on the list.' : 'No kinds of link are set up yet (BLD-link_kinds).';
+    if (!kind) errors.role = Object.keys(kinds).length ? 'Choose a kind of link on the list.' : 'No kinds of link are set up yet (link_kind rows).';
     var note = dogcardText_(f.note, 'note', errors, 500), source = dogcardText_(f.source, 'source', errors, 200);
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
@@ -102,7 +108,7 @@ function sinkLinkAdd_(req) {
 
     var read = linksRead_(), mine = function (r) { return !tenant || !r.tenant_id || r.tenant_id === tenant; };
     var open = read.records.map(function (r, i) { return { r: r, i: i }; }).filter(function (x) {
-      return mine(x.r) && x.r.from_table === ft && x.r.from_id === fid && x.r.link_kind_key === key && linkOpen_(x.r, from);
+      return mine(x.r) && x.r.from_table === ft && x.r.from_id === fid && x.r.role === key && linkOpen_(x.r, from);
     });
     var clash = open.filter(function (x) { return x.r.to_table === tt && x.r.to_id === tid; })[0];
     if (clash) throw err_('DUPLICATE', 'That link is already there.', { duplicate_of: clash.r.id });
@@ -127,11 +133,11 @@ function sinkLinkAdd_(req) {
     var ids = {}; read.records.forEach(function (r) { ids[r.id] = 1; });
     var id = newId_(LINKS_.idPrefix, now);
     while (ids[id]) id = newId_(LINKS_.idPrefix, now);
-    var v = { id: id, tenant_id: tenant, from_table: ft, from_id: fid, to_table: tt, to_id: tid, link_kind_key: key,
+    var v = { id: id, tenant_id: tenant, from_table: ft, from_id: fid, to_table: tt, to_id: tid, role: key,
       sort: sort, note: note, from_date: from, to_date: '', source: source || ('CD Hub, ' + who.who),
       set_by: who.id || who.who, set_on: today, created_at: stamp, updated_at: '' };
     store_append_(LINKS_.file, read.header, read.header.map(function (h) { return v[h] == null ? '' : String(v[h]); }), read);
-    return { status: 'saved', id: id, link_kind_key: key, ended: ended };
+    return { status: 'saved', id: id, role: key, ended: ended };
   });
 }
 
@@ -143,7 +149,7 @@ function sinkLinkEnd_(req) {
     var read = linksRead_(), tenant = prop_(BLD.PROP.TENANT_ID), idx = -1;
     read.records.forEach(function (r, i) { if (r.id === rowId && (!tenant || !r.tenant_id || r.tenant_id === tenant)) idx = i; });
     if (idx < 0) throw err_('NOT_FOUND', 'That link was not found.');
-    var rec = read.records[idx], kind = linkKindsInForce_(today)[rec.link_kind_key] || {};
+    var rec = read.records[idx], kind = linkKindsInForce_(today)[rec.role] || {};
     if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
     if (String(rec.to_date || '')) throw err_('NOT_ALLOWED', 'That link has already ended.');
     if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });

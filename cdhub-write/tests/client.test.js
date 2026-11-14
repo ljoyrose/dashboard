@@ -149,7 +149,7 @@ test('linkAdd / linkEnd: send link_add / link_end with the code and a request re
   const s = mk(srv, { scriptUrl: GOOD_URL });
   assert.equal((await s.linkAdd({ from_table: 'subject' })).code, 'NO_CODE');
   s.setCode('X');
-  await s.linkAdd({ from_table: 'subject', from_id: 'sub-1', to_table: 'files', to_id: 'fil-1', link_kind_key: 'gallery' }, 'req-link-0001');
+  await s.linkAdd({ from_table: 'subject', from_id: 'sub-1', to_table: 'files', to_id: 'fil-1', role: 'gallery' }, 'req-link-0001');
   await s.linkEnd({ id: 'lnk-1' });
   const bodies = srv.calls.filter((c) => c.init.method === 'POST').map((c) => JSON.parse(c.init.body));
   assert.equal(bodies[0].action, 'link_add'); assert.equal(bodies[0].request_id, 'req-link-0001'); assert.equal(bodies[0].fields.to_id, 'fil-1');

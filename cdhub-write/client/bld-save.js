@@ -289,7 +289,7 @@
         return { ok: false, code: 'NETWORK', requestId: body.request_id, message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.' };
       });
     }
-    /** Record-to-record links (14 Nov 2026): {from_table, from_id, to_table, to_id, link_kind_key, sort?, note?, from_date?}. */
+    /** Record-to-record links (14 Nov 2026): {from_table, from_id, role, to_table, to_id, sort?, note?, from_date?}. */
     function linkAdd(fields, requestId) { return act('link_add', fields, requestId); }
     /** End one link: {id, to_date?} (blank = today). */
     function linkEnd(fields, requestId) { return act('link_end', fields, requestId); }
