@@ -160,6 +160,35 @@ class T(unittest.TestCase):
         self.r.write("t.js", "a = '1SAMPLE" + "0" * 26 + "'; b = '" + FAKE_ID + "x" * 11 + "'\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
         r2 = Repo(); r2.write("t.js", "a = '1sample" + "0" * 26 + "'\n"); self.assertIn("DRIVE", fails(r2.run("--staged")))
 
+    # --- invented fixtures: fine in test and fixture files only; real-looking values still fail there (+) ---
+    def test_invented_fixtures_in_test_files_are_fine(self):
+        text = ("mail buyer" + AT + "supplier.example and a" + AT + "example.org and b" + AT + "shop.example.net and c" + AT + "host.test\n"
+                + "call 0" + "1234 567890 or 0" + "113 000 0000 or +44 " + "1234 567890\n"
+                + "u = 'https://docs.google" + ".com/spreadsheets/d/TEST" + "9" * 24 + "/edit'\n"
+                + "v = 'https://drive.google" + ".com/thumbnail?id=1" + "Ab" * 16 + "'; w = '1" + "EXAMPLE" + "q" * 25 + "'\n"
+                + "x = 'https://drive.google" + ".com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz'\n")
+        for path in ["tests/mocked/a.spec.js", "tests/fixtures/rows.csv", "tools/x/test_thing.py", "hub/fixtures/sample.json", "x/y.test.js"]:
+            r = Repo(); r.write(path, text); self.assertEqual(r.run("--staged").returncode, 0, path)
+
+    def test_same_invented_values_outside_test_files_still_fail(self):
+        cases = [("buyer" + AT + "supplier.example", "EMAIL"), ("call 0" + "1234 567890", "PHONE"), ("call 0" + "113 000 0000", "PHONE"),
+                 ("u = 'https://docs.google" + ".com/spreadsheets/d/TEST" + "9" * 24 + "/edit'", "DRIVE"), ("id = '1" + "Ab" * 16 + "'", "DRIVE"),
+                 ("x = 'https://drive.google" + ".com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz'", "DRIVE")]
+        for text, rule in cases:
+            for path in ["page.js", "docs/notes.md", "studio/index.html", "contests/a.js"]:
+                r = Repo(); r.write(path, text + "\n"); self.assertIn(rule, fails(r.run("--staged")), path + " " + rule)
+
+    def test_real_looking_values_in_test_files_still_fail(self):
+        cases = [("someone" + AT + "realshop.co.uk", "EMAIL"), ("a" + AT + "notexample.com", "EMAIL"), ("a" + AT + "example.com.evil.io", "EMAIL"),
+                 ("call 0" + "7400 123456", "PHONE"), ("call 0" + "1234 567891", "PHONE"), ("call 0" + "7911 123456", "PHONE"),
+                 ("id = '" + ID_SHAPE + "'", "DRIVE"), ("u = 'https://docs.google" + ".com/document/d/" + ID_SHAPE + "/view'", "DRIVE"),
+                 ("id = '1test" + "aB3dE5" * 4 + "wxyz'", "DRIVE"), ("note " + T1, "DENY")]
+        for text, rule in cases:
+            r = Repo(); r.write("tests/mocked/a.spec.js", text + "\n"); self.assertIn(rule, fails(r.run("--staged")), text[:12] + " " + rule)
+        # History mode sees the same thing: a real-looking value added to a test file in an old commit is still found.
+        r = Repo(); r.write("tests/a.spec.js", "id = '" + ID_SHAPE + "'; mail buyer" + AT + "supplier.example\n"); r.commit("x")
+        p = r.run("--history"); self.assertIn("DRIVE=1", p.stdout); self.assertIn("EMAIL=0", p.stdout)
+
     # --- report mode (+) ---
     def test_report_mode_counts_only_on_screen(self):
         self.r.write("docs/a.md", f"{T1} {MOBILE} someone" + AT + "mail.example.org\n")
