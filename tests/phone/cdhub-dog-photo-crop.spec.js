@@ -15,7 +15,7 @@ test.describe('Phone: dog photo crop', () => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     const big = await bigPhoto(page, 2400, 1600);
-    const input = page.locator('#rows article.dc input[type="file"]');
+    const input = page.locator('#rows article.dc input[data-photo-src="upload"]');
 
     // first: no drag
     await input.setInputFiles(big.file);
@@ -44,5 +44,18 @@ test.describe('Phone: dog photo crop', () => {
       expect(await jpegSize(page, b.fields.image_base64)).toEqual([800, 800]);
     }
     expect(bodies[1].fields.image_base64).not.toBe(bodies[0].fields.image_base64);
+  });
+
+  test('on a phone the photo is big, Take photo opens the camera app (capture), and the Dogs page does not scroll sideways', async ({ page, guard }) => {
+    await openOneDog(page, guard);
+    const ph = await page.locator('#rows article.dc .ph').boundingBox();
+    expect(ph.width).toBeGreaterThanOrEqual(104);
+    const chooser = page.waitForEvent('filechooser');
+    await page.locator('#rows article.dc label[data-photo-take]').tap();
+    const opened = await chooser;
+    expect(await opened.element().getAttribute('capture')).toBe('environment');
+    await expect(page.locator('.pcam')).toHaveCount(0);   // no page camera on a phone: the phone's own camera opens
+    for (const b of await page.locator('#rows article.dc label.dogphoto-btn').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   });
 });
