@@ -1,4 +1,4 @@
-// Main photo + gallery on the dog card (Lisa 13 Nov 2026): files rows owned through dated link rows (decision C).
+// Main photo + gallery on the dog card (Lisa 13 Nov 2026): files rows owned through dated link rows (decision C, column role).
 // The main photo is the 'main' link in force; the old photo cell is only the fallback. Invented rows only.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
@@ -28,7 +28,7 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
     'fil-3,t,upload,DRIVEcertFile003,,application/pdf,Pretend cert.pdf,,2026-07-01,,upload,owner,2026-07-01T10:00:00Z',
     'fil-4,t,link,,https://example.org/pretend-video,,,,2026-08-01,,link,owner,2026-08-01T10:00:00Z',
     'fil-5,t,photo,DRIVEendedPho005,,image/jpeg,,,2025-02-01,,camera,owner,2025-02-01T10:00:00Z']));
-  put(w, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,to_table,to_id,link_kind_key,sort,note,from_date,to_date,source,set_by,set_on', [
+  put(w, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,to_table,to_id,role,sort,note,from_date,to_date,source,set_by,set_on', [
     'l1,t,subjects,sub-g1,files,fil-1,gallery,,,2026-06-01,,dog card,owner,2026-06-01T10:00:00Z',
     'l2,t,subjects,sub-g1,files,fil-2,gallery,,,2025-01-01,,dog card,owner,2025-01-01T10:00:00Z',
     'l3,t,subjects,sub-g1,files,fil-3,gallery,,,2026-07-01,,dog card,owner,2026-07-01T10:00:00Z',
@@ -36,8 +36,8 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
     'l5,t,subjects,sub-g1,files,fil-5,gallery,,,2025-02-01,2026-03-01,dog card,owner,2025-02-01T10:00:00Z',
     'm1,t,subjects,sub-g1,files,fil-2,main,,,2025-01-01,2026-06-01,dog card,owner,2025-01-01T10:00:00Z',
     'm2,t,subjects,sub-g1,files,fil-1,main,,,2026-06-01,,dog card,owner,2026-06-01T11:00:00Z']));
-  put(w, 'BLD-link_kinds.csv', csv('id,tenant_id,kind_key,label,reverse_label,from_tables,to_tables,max_per_from,from_date,to_date,source', [
-    'k1,t,gallery,Photos,,subjects,files,,2026-01-01,,Pretend', 'k2,t,main,Main photo,,subjects,files,1,2026-01-01,,Pretend']));
+  put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date', [
+    'k1,t,link_kind.gallery,Photos,2026-01-01,Pretend,,,,', 'k2,t,link_kind.main,Main photo,2026-01-01,Pretend,,,,', 'k3,t,link_kind.main.max_per_from,1,2026-01-01,Pretend,,,,']));
   for (const id of ['DRIVEmainPhoto01', 'DRIVEoldPhoto002', 'OLDphotoCell002']) {
     w.file(id, id + '.png', '', { mimeType: 'image/png' });
     w.byId(id).thumbnailLink = 'https://example.com/pretend-' + id + '.png';

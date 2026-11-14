@@ -47,7 +47,7 @@ test('print: litter cards look like kennel cards and list only litters still on 
   tables.subject[0].photo = 'FAKEphotoFileId123';
   // the main photo is the 'main' link row in force; the old photo cell is only the fallback (Lisa 13 Nov 2026)
   tables.files = [{ id: 'fil-1', kind: 'photo', drive_file_id: 'FAKEmainFromLink9' }];
-  tables.links = [{ id: 'lnk-1', from_table: 'subjects', from_id: 'dam1', to_table: 'files', to_id: 'fil-1', link_kind_key: 'main', from_date: '2026-01-01', to_date: '' }];
+  tables.links = [{ id: 'lnk-1', from_table: 'subjects', from_id: 'dam1', to_table: 'files', to_id: 'fil-1', role: 'main', from_date: '2026-01-01', to_date: '' }];
   await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') }));
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });

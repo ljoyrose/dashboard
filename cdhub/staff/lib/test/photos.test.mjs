@@ -12,10 +12,11 @@ const files = [
   { id: 'f5', kind: 'photo', drive_file_id: 'DRIVEeeee5' }
 ];
 const kinds = [
-  { kind_key: 'gallery', label: 'Photos', from_date: '2026-01-01' },
-  { kind_key: 'main', label: 'Main photo', from_date: '2026-01-01' }
+  { rule_key: 'link_kind.gallery', value: 'Photos', effective_from: '2026-01-01' },
+  { rule_key: 'link_kind.main', value: 'Main photo', effective_from: '2026-01-01' },
+  { rule_key: 'link_kind.main.max_per_from', value: '1', effective_from: '2026-01-01' }
 ];
-const L = (id, to, key, from, toDate, extra) => Object.assign({ id, from_table: 'subjects', from_id: 'dog-a', to_table: 'files', to_id: to, link_kind_key: key, from_date: from, to_date: toDate || '' }, extra || {});
+const L = (id, to, key, from, toDate, extra) => Object.assign({ id, from_table: 'subjects', from_id: 'dog-a', to_table: 'files', to_id: to, role: key, from_date: from, to_date: toDate || '' }, extra || {});
 const links = [
   L('l1', 'f1', 'gallery', '2025-01-01', '', { set_on: '2025-01-01T10:00:00Z' }),
   L('l2', 'f2', 'gallery', '2026-06-01', '', { set_on: '2026-06-01T10:00:00Z' }),
@@ -49,7 +50,7 @@ test('a numbered sort comes first, in number order', () => {
   assert.deepEqual(P.forRecord(sorted, files, kinds, 'subjects', 'dog-a', '2026-11-14').gallery.map((f) => f.id), ['f3', 'f1', 'f4', 'f2']);
 });
 
-test('no link kind rows: no label (the page uses its own fallback); unsafe link addresses are refused', () => {
+test('no link_kind rule rows: no label (the page uses its own fallback); unsafe link addresses are refused', () => {
   assert.equal(P.forRecord(links, files, [], 'subjects', 'dog-a', '2026-11-14').galleryLabel, '');
   assert.equal(P.safeUrl('https://example.org/a'), 'https://example.org/a');
   assert.equal(P.safeUrl('javascript:alert(1)'), '');

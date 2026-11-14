@@ -523,8 +523,8 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 WANT.push('BLD-subject_link.csv');
-WANT.push('BLD-links.csv','BLD-link_kinds.csv','BLD-files.csv');   /* main photo + gallery (Lisa 13 Nov 2026): one file store, link rows (decision C); absent until Lisa creates them */   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
-var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-link_kinds.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
+WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery (Lisa 13 Nov 2026): one file store, link rows (decision C); absent until Lisa creates them */   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
+var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 /* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
    screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
 var LATER={};
@@ -2354,7 +2354,7 @@ function loadPhotoImg(img){
   }).catch(function(){ dogPhotoBytes(img,id); });
 }
 /* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
-function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-link_kinds.csv']||[],'subjects',d.id,todayISO()); }
+function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subjects',d.id,todayISO()); }
 function galleryItem(f,mainId){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
  var cap='<span class="mut">'+esc(when)+'</span>'+(main?' <span class="pill" data-k="main">Main</span>':'');
