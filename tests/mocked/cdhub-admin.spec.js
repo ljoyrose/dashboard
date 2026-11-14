@@ -88,9 +88,9 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('the 3-year list shows, most frequent first', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
-    await expect(page.locator('#admFuture .adm-future li').first()).toContainText('Approve pending saves');
+    await expect(page.locator('#admFuture .adm-future tbody tr').first()).toContainText('Approve pending saves');
     await page.locator('[data-adm-future]').click();
-    await expect(page.locator('#admFuture .adm-future li')).toHaveCount(62);
+    await expect(page.locator('#admFuture .adm-future tbody tr')).toHaveCount(62);
   });
 
   asOwner('Codes is first: every code by name, role and dates, ended ones kept; remind means reset', async ({ page }) => {
@@ -105,6 +105,39 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(c).toContainText('30 Jun 2026');
     await expect(c).toContainText('ended');
     await expect(c).toContainText('Remind');
+  });
+
+  asOwner('Admin tables keep their column widths as rows load, show all and redraw (house-table)', async ({ page }) => {
+    await open(page);
+    await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
+    await tabClick(page, '#nav button[data-go="admin"]');
+    await expect(page.locator('#admFuture .adm-future tbody tr').first()).toBeVisible();
+    const widths = () => page.locator('#admFuture table.house-table thead th').evaluateAll((hs) => hs.map((h) => Math.round(h.getBoundingClientRect().width)));
+    const before = await widths();
+    expect(before.length).toBe(3);
+    await page.locator('[data-adm-future]').click();   // 8 rows to 62
+    await expect(page.locator('#admFuture .adm-future tbody tr')).toHaveCount(62);
+    expect(await widths()).toEqual(before);
+    await page.evaluate(() => { redrawAfterRead(); });   // the redraw after the later tables land
+    await expect(page.locator('#admFuture .adm-future tbody tr').first()).toBeVisible();
+    expect(await widths()).toEqual(before);
+    // a long row cannot push the columns about
+    await page.evaluate(() => { const tb = document.querySelector('#admFuture tbody'); const tr = tb.rows[0].cloneNode(true); tr.cells[0].textContent = 'x'.repeat(300); tb.appendChild(tr); });
+    expect(await widths()).toEqual(before);
+    await page.locator('[data-adm-open="codes"]').click();
+    await expect(page.locator('#adm-codes table.house-table td[data-label="Who"]').first()).toContainText('Test Person');
+  });
+
+  asOwner('on a phone, Admin table rows read as label / value lines', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await open(page);
+    await tabClick(page, '#nav button[data-go="admin"]');
+    const row = page.locator('#admFuture .adm-future tbody tr').first();
+    await expect(row).toBeVisible();
+    expect(await page.locator('#admFuture thead').evaluate((e) => getComputedStyle(e).display)).toBe('none');
+    expect(await row.locator('td').first().evaluate((e) => [getComputedStyle(e).display, getComputedStyle(e, '::before').content])).toEqual(['grid', '"Job"']);
+    const fit = await page.locator('#admFuture .adm-future').evaluate((e) => e.scrollWidth <= e.clientWidth);
+    expect(fit).toBe(true);
   });
 
   asOwner('Staff in More lists every staff page; owner links open Admin on the right card', async ({ page }) => {

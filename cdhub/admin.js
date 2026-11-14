@@ -73,8 +73,8 @@ var AdminView = (function () {
       '.adm-key{display:flex;align-items:center;gap:4px;flex-wrap:wrap;color:var(--muted);font-size:var(--fs-small)}.adm-key .ti{width:16px;height:16px}',
       '.adm-why{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}.adm-why ul{margin:6px 0 0;padding-left:18px}.adm-why li{margin:3px 0}',
       '.adm-later{margin-top:8px}',
-      '.adm-future{list-style:none;margin:0;padding:0}.adm-future li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}.adm-future li:last-child{border:0}',
-      '.adm-future span{flex:1}.adm-future em{font-style:normal;color:var(--muted);font-size:var(--fs-small)}'
+      '.adm-codes,.adm-future{margin:0 0 10px}',
+      '.adm-map table.house-table th,.adm-map table.house-table td{text-align:center}.adm-map table.house-table tbody th{text-align:left}'
     ].join('\n');
     document.head.appendChild(st);
   }());
@@ -129,7 +129,7 @@ var AdminView = (function () {
   function mapHtml(v) {
     var m = access(v.T, v.today), live = m.auds.filter(function (a) { return a.live; }), later = m.auds.filter(function (a) { return !a.live; });
     var grid = function (auds) {
-      return '<div class="scroll adm-map" tabindex="0" role="group" aria-label="Who sees what, scroll sideways for more"><table><thead><tr><th>List</th>'
+      return '<div class="scroll adm-map" tabindex="0" role="group" aria-label="Who sees what, scroll sideways for more"><table class="house-table"><thead><tr><th data-w="12">List</th>'
         + auds.map(function (a) { return '<th><button type="button" class="adm-aud' + (S.aud === a.id ? ' sel' : '') + '" data-adm-aud="' + v.esc(a.id) + '">' + v.esc(audName(v.T, a.id)) + '</button></th>'; }).join('')
         + '</tr></thead><tbody>' + m.tables.filter(function (t) { return auds.some(function (a) { return m.cell[t + '|' + a.id]; }); }).map(function (t) {
           return '<tr><th scope="row">' + v.esc(tblName(t)) + '</th>' + auds.map(function (a) {
@@ -176,12 +176,13 @@ var AdminView = (function () {
         return { r: last, live: live, n: sp.length };
       }).sort(function (a, b) { return (b.live - a.live) || (String(a.r.who) < String(b.r.who) ? -1 : 1); });
       var roleName = {}; rows(T, 'BLD-role.csv').forEach(function (r) { if (r.code) roleName[r.code] = r.name || r.code; });
-      return (v.hasTable('BLD-code_register.csv') ? (list.length ? '<ul class="adm-list adm-codes">' + list.map(function (x) {
+      return (v.hasTable('BLD-code_register.csv') ? (list.length ? '<div class="scroll adm-codes" tabindex="0" role="group" aria-label="Codes"><table class="house-table"><thead><tr>'
+        + '<th data-w="3"><span class="sr">live</span></th><th data-w="12">Who</th><th data-w="8">Role</th><th data-w="8">From</th><th data-w="8">To</th><th data-w="10">Code</th></tr></thead><tbody>' + list.map(function (x) {
         var r = x.r;
-        return '<li>' + mark(x.live) + ' <b>' + v.esc(r.who || r.code_id) + '</b> <span class="pill">' + v.esc(roleName[r.role] || r.role || '') + '</span>'
-          + ' <span class="dpill">' + v.esc(v.dmy(String(r.from_date || '').slice(0, 10))) + '</span>\u2013' + (r.to_date ? '<span class="dpill' + (x.live ? '' : ' late') + '">' + v.esc(v.dmy(String(r.to_date).slice(0, 10))) + '</span>' : 'now')
-          + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') + ' <span class="mut">' + v.esc(r.code_id) + '</span></li>';
-      }).join('') + '</ul>' : '<p class="mut">Empty. On the owner page press <b>Fill the code register</b> once; your codes then list here.</p>')
+        return '<tr><td>' + mark(x.live) + '</td><td><b>' + v.esc(r.who || r.code_id) + '</b></td><td>' + v.esc(roleName[r.role] || r.role || '') + '</td>'
+          + '<td>' + v.esc(v.dmy(String(r.from_date || '').slice(0, 10))) + '</td><td>' + (r.to_date ? v.esc(v.dmy(String(r.to_date).slice(0, 10))) + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') : 'now') + '</td>'
+          + '<td class="mut">' + v.esc(r.code_id) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<p class="mut">Empty. On the owner page press <b>Fill the code register</b> once; your codes then list here.</p>')
         : '<p class="mut">The list shows here after the next save-script update. Until then it is on the owner page.</p>')
         + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + '</p>'
         + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
@@ -298,9 +299,9 @@ var AdminView = (function () {
     var tag = function (e) { return e === 'yes' ? '<span class="adm-ok">✓ here</span>' : (e === 'part' ? '<span class="pill">part</span>' : '<span class="mut">coming</span>'); };
     return '<section class="card adm-line l0" id="admFuture"><details class="compfold" data-adm-fold="future"' + (S.futureShut ? '' : ' open') + '><summary><h3>' + icon('future', 'c0') + 'Next 3 years' + (J.length ? ' <span class="cnt wide">' + J.length + '</span>' : '') + '</h3></summary>'
       + (S.futureErr ? '<p class="mut">' + v.esc(S.futureErr) + '</p>' : (!J.length ? '<p class="mut">Loading…</p>'
-        : '<ul class="adm-future">' + shown.map(function (j) {
-          return '<li><span>' + v.esc(j.job) + '</span><em>' + v.esc(j.often) + '</em>' + tag(j.exists) + '</li>';
-        }).join('') + '</ul>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
+        : '<div class="scroll adm-future" tabindex="0" role="group" aria-label="Next 3 years"><table class="house-table"><thead><tr><th data-w="20">Job</th><th data-w="9">How often</th><th data-w="7">Here</th></tr></thead><tbody>' + shown.map(function (j) {
+          return '<tr><td>' + v.esc(j.job) + '</td><td class="mut">' + v.esc(j.often) + '</td><td>' + tag(j.exists) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
       + '<p class="mut">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
   }
 
