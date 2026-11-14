@@ -26,8 +26,8 @@ const NEED = [
 ];
 const areas = areaRows(RAW, NEED, '2026-11-12');
 
-test('a room whose room.in_use rows have ended reads "(retired DD/MM/YY)" and sorts last; no ZZ_ name check', () => {
-  assert.deepEqual(areas.map((a) => a.label), ['3A.1/2', '3A.3/4/5', '3A corridor', 'Field 1', '3A.2/3 (retired 11/11/26)']);
+test('a room whose room.in_use rows have ended reads "(retired 11 Nov 2026)" and sorts last; no ZZ_ name check', () => {
+  assert.deepEqual(areas.map((a) => a.label), ['3A.1/2', '3A.3/4/5', '3A corridor', 'Field 1', '3A.2/3 (retired 11 Nov 2026)']);
   assert.equal(areaRows(RAW, NEED, '2026-11-11').find((a) => a.id === 'old').label, '3A.2/3');
   assert.equal(areaRows([{ id: 'z', code: 'ZZ_old' }], [], '2026-11-12')[0].label, 'ZZ_old');
 });
