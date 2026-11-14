@@ -123,11 +123,11 @@ test('site code: only what is due, bowls one line, a dog job lists every dog tic
   await expect(page.locator('[data-job="toys"]')).toBeVisible();
 });
 
-test('Report is on every screen and carries the dog just scanned', async ({ page }) => {
+test('Problem (was Report) is on every screen and carries the dog just scanned', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.getByRole('heading', { name: 'Pretend A' })).toBeVisible();
-  await page.locator('#tabs').getByRole('button', { name: 'Report' }).click();
+  await page.locator('#tabs').getByRole('button', { name: 'Problem' }).click();
   await expect(page.getByLabel('Dog')).toHaveValue('dog-1');
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByText('Say what happened.')).toBeVisible();
