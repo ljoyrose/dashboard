@@ -123,11 +123,11 @@ test('site code: only what is due, bowls one line, a dog job lists every dog tic
   await expect(page.locator('[data-job="toys"]')).toBeVisible();
 });
 
-test('Report is on every screen and carries the dog just scanned', async ({ page }) => {
+test('Problem (was Report) is on every screen and carries the dog just scanned', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.getByRole('heading', { name: 'Pretend A' })).toBeVisible();
-  await page.locator('#tabs').getByRole('button', { name: 'Report' }).click();
+  await page.locator('#tabs').getByRole('button', { name: 'Problem' }).click();
   await expect(page.getByLabel('Dog')).toHaveValue('dog-1');
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByText('Say what happened.')).toBeVisible();
@@ -441,14 +441,15 @@ test('with past records readable there is no warning', async ({ page }) => {
   await expect(page.locator('[data-no-history]')).toHaveCount(0);
 });
 
-test('From paper saves the real day and time, ticks the card with that day, and refuses a future day', async ({ page }) => {
+test('Earlier (late entry) saves the real day and time, ticks the card with that day, and refuses a future day', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await page.locator('[data-group="Grooming"]').click();
   const ears = page.locator('[data-job="ears"]');
   const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
   const yesterday = london(new Date(Date.now() - 86400000)), tomorrow = london(new Date(Date.now() + 86400000));
-  await page.getByRole('button', { name: 'From paper: Ears' }).click();
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await expect(page.getByText('From paper')).toHaveCount(0);
   // a future day is refused on the phone, before anything is sent
   await ears.getByLabel('Day done').evaluate((el, v) => { el.removeAttribute('max'); el.value = v; }, tomorrow);
   await ears.getByRole('button', { name: 'Done: Ears' }).click();

@@ -381,9 +381,9 @@ function externalNotYet_(entry) {
   return !isNaN(s) && new Date().getTime() < s;
 }
 
-/** 'DD/MM/YY HH:MM' London, for messages. */
+/** '2 Mar 2026 14:05' London, for messages (one date format everywhere, Lisa 13 Nov 2026; never DD/MM/YY). */
 function externalShow_(iso) {
   var ms = Date.parse(iso || ''); if (isNaN(ms)) return '';
-  var t = londonIso_(new Date(ms));
-  return t.slice(8, 10) + '/' + t.slice(5, 7) + '/' + t.slice(2, 4) + ' ' + t.slice(11, 16);
+  var t = londonIso_(new Date(ms)), mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return (+t.slice(8, 10)) + ' ' + mon[+t.slice(5, 7) - 1] + ' ' + t.slice(0, 4) + ' ' + t.slice(11, 16);
 }

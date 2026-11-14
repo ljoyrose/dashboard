@@ -42,7 +42,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(dog(page).locator('[data-k="wgraph"]').first()).toBeVisible();
     await dog(page).locator('details.wtc > summary').click();
     const g = page.locator('#wpanel svg.wgraph');
-    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 01/01/26 to 8.9 kg on 12/03/26');
+    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 1 Jan 2026 to 8.9 kg on 12 Mar 2026');
     await expect(g.locator('circle')).toHaveCount(3);
     await expect(page.locator('#wpanel thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);   // no source column
     await expect(page.locator('#wpanel')).not.toContainText('Pretend source');
@@ -78,7 +78,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const f = page.locator('#wpanel form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('9.3');
     await f.locator('button[type=submit]').click();
-    await expect(f.locator('[data-weigh-msg]')).toHaveText('NOT saved \u2014 The save script has not been updated for this yet. Nothing was saved.');
+    await expect(f.locator('[data-weigh-msg]')).toHaveText('Not saved: The save script has not been updated for this yet. Nothing was saved.');
     await expect(page.locator('#wpanel tbody tr')).toHaveCount(3);
   });
 
@@ -214,7 +214,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await page.evaluate(() => licenceBar({ adults: new Array(27), bitches: new Array(25), active: new Array(25), studs: new Array(2) }))).toContain('lbok');
   });
 
-  test('a saved reading shows at once in the count and Kept readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
+  test('a saved reading shows at once in the count and Readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
     await page.evaluate(() => go('round'));

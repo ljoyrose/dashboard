@@ -142,7 +142,7 @@
           entry.note_for_id = noteFor.id;
         }
         var paper = state.paper && state.paper.date.value ? state.paper : null;
-        if (paper) {   // From paper: the real day, judged by the job as it was set up on that day
+        if (paper) {   // Earlier: the real day, judged by the job as it was set up on that day
           var day = paper.date.value;
           if (day > today) { stop('Pick today or an earlier day.'); return; }
           var then = BLDDue.jobsInForce(types, day).filter(function (x) { return x.type_key === t.type_key; })[0];
@@ -250,7 +250,7 @@
           h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } }),
           h('button', { class: 'btn quiet', type: 'button', text: 'Part done', onclick: function () { send(job, t, 'part_done', inputs, panelMsg, state); } })   // needs a note; not counted as done
         ]));
-        /* From paper (Lisa 13 Nov, option B): the day and time it was really done, then any button saves for that day */
+        /* Earlier (Lisa 13 Nov, option B): the day and time it was really done, then any button saves for that day */
         var paperRow = h('div', { class: 'job-paper', hidden: true }, [
           h('input', { class: 'inp', type: 'date', max: today, 'aria-label': 'Day done', onchange: function () { state.rid = null; } }),
           h('input', { class: 'inp', type: 'time', 'aria-label': 'Time done (optional)', onchange: function () { state.rid = null; } })
@@ -268,7 +268,11 @@
         ]);
         var kids = roomList ? [head, roomList] : [head];
         if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem/Note?', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
-        kids.push(h('button', { class: 'job-prob job-paper-btn', type: 'button', text: 'From paper', 'aria-label': 'From paper: ' + job.label, onclick: function () { panel.hidden = false; paperRow.hidden = false; if (a.outcome) problems.hidden = false; } }));
+        /* "Earlier" + plus icon (Lisa 13/11, AA_BLD-SCHEMA §14): one word for any late entry, from paper, an app or memory */
+        var earlier = h('button', { class: 'job-prob job-paper-btn', type: 'button', 'aria-label': 'Earlier: ' + job.label, onclick: function () { panel.hidden = false; paperRow.hidden = false; if (a.outcome) problems.hidden = false; } });
+        earlier.innerHTML = '<svg class="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+        earlier.appendChild(document.createTextNode('Earlier'));
+        kids.push(earlier);
         kids.push(panel);
         var card = state.card = h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);
         showDone(card, t.type_key, dogIds);
@@ -345,10 +349,10 @@
           if (r.code !== 'NETWORK') rid = null;
         });
       } });
-      [h('h2', { text: type.label || 'Report' }), dog, room, note, btn, msg].forEach(function (n) { host.appendChild(n); });
+      [h('h2', { text: type.label || 'Problem' }), dog, room, note, btn, msg].forEach(function (n) { host.appendChild(n); });
     });
   }
 
   StaffPage.register({ id: 'jobs', title: 'Jobs', icon: ctx0.icons.dogs, order: 5, open: open });
-  StaffPage.register({ id: 'report', title: 'Report', hidden: true, open: openReport });
+  StaffPage.register({ id: 'report', title: 'Problem', hidden: true, open: openReport });
 }());

@@ -27,12 +27,12 @@ function doPost(e) {
   try {
     var body = (e && e.postData && e.postData.contents) || '';
     if (body.length > BLD.LIMITS.MAX_PHOTO_CHARS) throw err_('BAD_REQUEST', 'That request was too large.');
-    // Only a dog photo may be larger than a normal save. The picture is base64, so the quoted action cannot appear inside it.
+    // Only a dog photo or a stored file may be larger than a normal save. The bytes are base64, so the quoted action cannot appear inside them.
     var big = body.length > BLD.LIMITS.MAX_BODY_CHARS;
-    if (big && body.indexOf('"dog_photo"') < 0) throw err_('BAD_REQUEST', 'That request was too large.');
+    if (big && body.indexOf('"dog_photo"') < 0 && body.indexOf('"file_add"') < 0) throw err_('BAD_REQUEST', 'That request was too large.');
     var req;
     try { req = JSON.parse(body); } catch (x) { throw err_('BAD_REQUEST', 'That request was not understood.'); }
-    if (big && (!req || req.action !== 'dog_photo')) throw err_('BAD_REQUEST', 'That request was too large.');
+    if (big && (!req || (req.action !== 'dog_photo' && req.action !== 'file_add'))) throw err_('BAD_REQUEST', 'That request was too large.');
     if (req && typeof req === 'object' && req.action === 'dog_photo') return jsonOut_({ ok: true, result: sinkDogPhoto_(req) });
     if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
     // dog card saves (12 Nov 2026, draft; each OFF until TABLE_ON_weighing / TABLE_ON_vaccination is true)
@@ -43,6 +43,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
+    if (req && typeof req === 'object' && req.action === 'file_add') return jsonOut_({ ok: true, result: sinkFileAdd_(req) });   // one file store (14 Nov 2026), OFF until TABLE_ON_files
     // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
     if (req && typeof req === 'object' && req.action === 'link_end') return jsonOut_({ ok: true, result: sinkLinkEnd_(req) });

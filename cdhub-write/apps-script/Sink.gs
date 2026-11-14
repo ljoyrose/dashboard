@@ -380,6 +380,9 @@ function formAnswers_(req, clean, tenant, today, needPending, errors) {
   if (errors.check_type_id) return null;
   var type = store_read_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === clean.check_type_id && r.tenant_id === tenant; })[0];
   var fRead = store_read_(TABLES.check_field.file, false);
+  // the questions in force on the record's own day (an Earlier entry is judged by the form and limits of its day, 14 Nov 2026)
+  var happened = String(clean.happened_at || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(happened) && happened < today) today = happened;
   var now = {};
   if (type && fRead) fRead.records.forEach(function (r) {
     if (r.tenant_id !== tenant || r.type_key !== type.type_key || !r.effective_from || r.effective_from > today) return;

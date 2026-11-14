@@ -69,7 +69,7 @@ test('saveChip and saveArea write the folder file and refuse when it is missing 
 
   const chipMark = guard.world.calls.length;
   const chip = await runSave(page, 'chip');
-  expect(chip).toEqual({ text: 'saved ✓', disabled: true });
+  expect(chip.text).toMatch(/^Saved \d\d:\d\d$/); expect(chip.disabled).toBe(true);
   expect(writes).toHaveLength(1);
   expect(writes[0].kind).toBe('sheet');
   expect(writes[0].url).toContain('/spreadsheets/bld-chip-live/values/A1:append');
@@ -81,7 +81,7 @@ test('saveChip and saveArea write the folder file and refuse when it is missing 
 
   const areaMark = guard.world.calls.length;
   const area = await runSave(page, 'area');
-  expect(area).toEqual({ text: 'saved ✓', disabled: true });
+  expect(area.text).toMatch(/^Saved \d\d:\d\d$/); expect(area.disabled).toBe(true);
   expect(writes).toHaveLength(2);
   expect(writes[1].kind).toBe('sheet');
   expect(writes[1].url).toContain('/spreadsheets/' + occ.id + '/values/A1:append');
@@ -152,7 +152,7 @@ test('a csv occupancy file is updated at the id the folder listed', async ({ pag
   await plantSentinels(page);
   const mark = guard.world.calls.length;
   const area = await runSave(page, 'area');
-  expect(area).toEqual({ text: 'saved ✓', disabled: true });
+  expect(area.text).toMatch(/^Saved \d\d:\d\d$/); expect(area.disabled).toBe(true);
   expect(writes).toHaveLength(1);
   expect(writes[0].kind).toBe('upload');
   expect(writes[0].url).toContain('/files/' + encodeURIComponent(occ.id) + '?uploadType=multipart');

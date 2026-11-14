@@ -12,7 +12,7 @@
   var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
   var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'lib/area-link.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
   var ICONS = {
-    report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg>',
+    report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0z"/><path d="M12 16h.01"/></svg>',   // Tabler alert-triangle (Problem tab)
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
     scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M4 12h16"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
@@ -133,7 +133,7 @@
   function setTabs(cur) {
     showMe();
     tabs.hidden = false; tabs.textContent = '';
-    [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['m/report', 'Report', 'report'], ['device', 'Phone', 'gear']].forEach(function (t) {
+    [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['m/report', 'Problem', 'report'], ['device', 'Phone', 'gear']].forEach(function (t) {
       tabs.appendChild(h('button', { type: 'button', 'aria-current': cur === t[0] ? 'page' : false, onclick: function () { go(t[0]); } }, [h('span', { class: 'ring', html: ICONS[t[2]] }), t[1]]));
     });
   }
@@ -206,7 +206,7 @@
     clearScreen(); setTabs('home'); delete ctx.reportFor;
     screen.appendChild(h('h1', { text: 'The Board' }));
     data().then(showMe);   // the first read tells us whose code this is
-    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) }));
+    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep') }));
     var list = h('div', { class: 'cards' });
     modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
       list.appendChild(h('button', { class: 'card go', type: 'button', 'data-module': m.id, onclick: function () { go('m/' + m.id); } }, [

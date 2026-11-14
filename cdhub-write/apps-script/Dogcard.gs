@@ -36,7 +36,7 @@ function dogcardFiles_() {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_create.on) === 'true') {
     [DOGCARD_.subject_create.file, CHIP_FILE_, STATUS_FILE_].forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); });
   }
-  return out.concat(subjectLinkFiles_());
+  return out.concat(subjectLinkFiles_(), typeof filesStoreFiles_ === 'function' ? filesStoreFiles_() : []);
 }
 
 function dogcardText_(v, name, errors, max) {
