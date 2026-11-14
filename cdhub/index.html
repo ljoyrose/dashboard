@@ -299,7 +299,8 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
+#medAnswer [data-med-open]{white-space:nowrap}
+.dc{scroll-margin-top:72px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
 .ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
@@ -2084,13 +2085,26 @@ function medBanner(){
  h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>Date</th><th>Dog</th><th>Medicine</th><th>Dose</th><th>Route</th></tr></thead><tbody>'
   +rows.map(function(r){
     var on=String(r.given_on).slice(0,10), dog=CD._byId[r.subject_id], unnamed=medUnnamed(r.product,r.ruling_needed);
-    return '<tr data-med="'+esc(r.subject_id||'')+'"><td>'+esc(dmy(on))+'</td><td><b>'+esc(dog?dog.name:nameOf(r.subject_id))+'</b>'
-     +(dog?'':' <span class="mut">not on the current list</span>')+'</td><td>'
+    /* a row opens that dog's medicines: the name is the button, a tap anywhere on the row presses it (Lisa 12 Nov 2026: rows could not be tapped) */
+    return '<tr data-med="'+esc(r.subject_id||'')+'"'+(dog?' data-open-row':'')+'><td>'+esc(dmy(on))+'</td><td>'
+     +(dog?'<button type="button" class="btn house-open" data-med-open="'+esc(dog.id)+'" aria-label="'+esc('Open '+dog.name+': medicines')+'">'+esc(dog.name)+'</button>'
+          :'<b>'+esc(nameOf(r.subject_id))+'</b> <span class="mut">not on the current list</span>')+'</td><td>'
      +(unnamed?'<span class="pill no">Not named</span>':'<b>'+esc(r.product)+'</b>')+'</td><td>'+esc(r.dose_volume||'\u2014')+'</td><td>'+esc(r.route||'\u2014')+'</td></tr>';
   }).join('')
   +'</tbody></table></div></section>';
  return h;
 }
+/* One dog picked from the medicine table: its card is kept in the list whatever the filters say, its medicines are opened and the page moves to it. */
+function openMedDog(id){
+ if(!CD._byId||!CD._byId[id]) return;
+ MEDDOG=id; drawDogs();
+ var card=document.querySelector('.dc[data-dog="'+CSS.escape(id)+'"]'); if(!card) return;
+ var det=card.querySelector('details.meds'), sum=det&&det.querySelector('summary');
+ if(det) det.open=true;
+ if(card.scrollIntoView) card.scrollIntoView({block:'start'});
+ if(sum) sum.focus({preventScroll:true});
+}
+document.addEventListener('click',function(e){ var m=e.target.closest&&e.target.closest('[data-med-open]'); if(m) openMedDog(m.getAttribute('data-med-open')); });
 function focusMedDog(){
  var ask=medFocusAsk(); if(!ask) return;
  var ids={};
@@ -2185,7 +2199,7 @@ function showTreats(id){
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='';
+var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='';   /* MEDDOG: the dog picked from the medicine table */
 /* one size band to its colour key (small, medium, large) */
 var SIZE_WORD={small:'Toy/Mini',medium:'Medium',large:'Standard'};
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
@@ -2557,6 +2571,7 @@ function drawDogs(){
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
  var list=CD.dogs.filter(function(d){
   if(DOGFOCUS) return d.id===DOGFOCUS;   /* opened from a room card: just this dog */
+  if(MEDDOG&&d.id===MEDDOG) return true;   /* picked from the medicine table: shown even when a filter would hide it */
   var sc=statusOf(d).code;
   if(!fst && !(/^active$/i.test(d.state||'') && (sc==='BI'||sc==='ST'||sc==='PU'))) return false; // default list: active dogs on site (breeding dogs and puppies); the Status filter shows the rest
   if(fs==='__none'){ if(d.sex) return false; } else if(fs&&d.sex!==fs) return false;
@@ -4174,7 +4189,7 @@ function go(id,push){
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
  if(!PAGES[id]) id='map';
- DOGFOCUS=(id==='dogs'&&sub&&!medGo)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:'';
+ DOGFOCUS=(id==='dogs'&&sub&&!medGo)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:''; MEDDOG='';
  if(id==='sops'&&sub) SOP.open=sub;   /* opened from a Compliance number: that SOP, unfolded */
  if(medGo) CD._medGo={month:{jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}[sub], token:sub};
  else if(id==='dogs') CD._medGo=null;
