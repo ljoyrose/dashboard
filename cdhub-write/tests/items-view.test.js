@@ -149,3 +149,14 @@ test('readings: a resend that comes back DUPLICATE counts as saved', async () =>
   assert.equal(await V._sendReads(v, 'clg-7', [{ rid: 'itmxyz789-r1', fields: { kind_id: 'rkd-1', check_log_id: 'clg-7', value: '0.1' } }]), 0);
   assert.equal(V._state.retry['clg-7'], undefined);
 });
+
+test('numbers: a decimal comma is read as a point; junk is not a number', () => {
+  assert.equal(V.num('0,09'), '0.09');
+  assert.equal(V.num(' 19.99 '), '19.99');
+  assert.equal(V.num('1 000'), '1000');
+  assert.equal(V.num('0.1.2'), '');
+  assert.equal(V.num('abc'), '');
+  assert.equal(V.inLimit({ high: '0.1' }, '0,09'), true);
+  assert.equal(V.inLimit({ high: '0.1' }, '0,2'), false);
+  assert.equal(V.inLimit({ high: '0.1' }, '1e5'), null);
+});

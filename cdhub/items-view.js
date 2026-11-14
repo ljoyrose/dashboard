@@ -25,7 +25,7 @@
   // order best to worst (Lisa 9 Nov): filters and sorts run All, In date ... Overdue, Archived last
   var RANK = { ok: 0, none: 1, soon: 2, due: 3, fail: 4, expired: 5 };
   var WORD = { ok: 'In date', none: 'No test set', soon: 'Due soon', due: 'Overdue', fail: 'Failed', expired: 'Expired' };
-  var PILL = { ok: 'ok', none: '', soon: 'w', due: 'no', fail: 'no', expired: 'no' };
+  var PILL = { ok: 'itm-g', none: '', soon: 'w', due: 'no', fail: 'no', expired: 'no' };
   var S = { filter: 'all', q: '', open: '', form: '', msg: '', busy: false, ticks: {}, retry: {} };
 
   function rows(T, f) { return (T && T[f]) || []; }
@@ -35,6 +35,12 @@
     return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2);
   }
   function day(x) { return t(x).slice(0, 10); }
+  /** A typed number as stored: a decimal comma (0,09: much of Europe) becomes a point; spaces go. '' if not a number. */
+  function num(x) {
+    var s0 = t(x).replace(/\s/g, '');
+    if (/^-?\d+,\d+$/.test(s0)) s0 = s0.replace(',', '.');
+    return /^-?(\d+\.?\d*|\.\d+)$/.test(s0) ? s0 : '';
+  }
 
   /** Items as the owner sees them now: one per first row id, showing its latest change. */
   function current(T) {
@@ -134,7 +140,7 @@
   /** Is a number inside a limit row (low / high, either blank)? null = no limit or not a number. */
   function inLimit(f, v) {
     f = f || {};
-    var n = parseFloat(v), lo = t(f.low), hi = t(f.high);
+    var n = num(v) === '' ? NaN : parseFloat(num(v)), lo = t(f.low), hi = t(f.high);
     if (isNaN(n) || (lo === '' && hi === '')) return null;
     return (lo === '' || n >= parseFloat(lo)) && (hi === '' || n <= parseFloat(hi));
   }
@@ -200,7 +206,8 @@
     if (exp) est = exp < on ? 'expired' : (soon !== null && addDays(on, soon) >= exp ? 'soon' : 'ok');
     var worst = lines.map(function (l) { return l.st; }).concat(est ? [est] : []).reduce(function (a, b) { return RANK[b] > RANK[a] ? b : a; }, lines.length || est ? 'ok' : 'none');
     var nexts = lines.map(function (l) { return l.next; }).concat(exp ? [exp] : []).filter(Boolean).sort();
-    return { st: worst, lines: lines, next: nexts[0] || '', expiry: est };
+    var never = lines.some(function (l) { return !l.last && l.st === 'due'; });
+    return { st: worst, lines: lines, next: nexts[0] || '', never: never, expiry: est };
   }
 
   /** Every item with its kind, room, use and status on a day, best to worst. */
@@ -269,7 +276,9 @@
       '.itm-btns{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.itm-btns .btn{display:inline-flex;gap:6px;align-items:center}',
       '.itm-form{display:grid;gap:8px;max-width:520px;margin:8px 0}.itm-form label{display:grid;gap:2px;font-size:var(--fs-small);color:var(--muted)}.itm-form input,.itm-form select{min-height:40px;color:var(--ink)}',
       '.itm-lim{font-size:var(--fs-small)}.itm-lim.ok{color:var(--ljr-5-icon)}.itm-lim.no{color:var(--ljr-2-icon);font-weight:600}',
-      '.itm-tick{color:var(--ljr-5-icon);font-weight:600}'
+      '.itm-tick{color:var(--ljr-5-icon);font-weight:600}.pill.itm-g{border-color:var(--ljr-5-text)}',
+      '.itm-row{flex-wrap:wrap}.itm-row>span:nth-child(2){flex:1 1 140px}.itm-row span.mut{flex:1 1 160px}.itm-row .pill{margin-left:auto}',
+      '.itm-form input[type=file]{min-height:44px;padding:6px 0}'
     ].join('\n');
     document.head.appendChild(st);
   }());
@@ -300,7 +309,7 @@
       h += '<details class="compfold" open><summary><h3>' + e(k) + ' <span class="mut">' + xs.length + '</span>' + (bad ? ' <span class="pill no">' + bad + '</span>' : '') + '</h3></summary>'
         + xs.map(function (x) {
           return '<button type="button" class="itm-row" data-itm-open="' + e(x.it.id) + '"><b>' + e(x.it.item_no) + '</b><span>' + e(x.it.name) + (x.it.size ? ' · ' + e(x.it.size) : '') + '</span>'
-            + '<span class="mut">' + e(x.place || 'no room') + (x.s.next ? ' · next ' + e(v.dmy(x.s.next)) : '') + '</span>'
+            + '<span class="mut">' + e(x.place || 'no room') + (x.s.never ? ' · never tested' : x.s.next ? ' · next ' + e(v.dmy(x.s.next)) : '') + '</span>'
             + (x.archived ? '<span class="pill">Archived</span>' : pill(x.s.st)) + (S.ticks[x.it.id] ? '<span class="itm-tick" aria-label="saved">' + ic('tick') + '</span>' : '') + '</button>';
         }).join('') + '</details>';
     });
@@ -343,7 +352,7 @@
       + '<p>' + ic('place') + ' ' + e(x.place || 'No room') + (x.placeRow ? ' <span class="mut">since ' + e(v.dmy(x.placeRow.from_date)) + '</span>' : '') + '</p>'
       + (it.made_on || it.expires_on ? '<p class="mut">' + (it.made_on ? 'Made ' + e(v.dmy(it.made_on)) + ' ' : '') + (it.expires_on ? 'Expiry ' + e(v.dmy(it.expires_on)) : '') + '</p>' : '')
       + (pics.length || it.photo ? '<p><a href="' + e(pics.length ? pics[pics.length - 1].href : fileHref(it.photo)) + '" target="_blank" rel="noopener">Photo</a></p>' : '')
-      + (x.archived && x.useRow ? '<p class="mut">Archived ' + e(v.dmy(x.useRow.to_date)) + (x.useRow.source ? ': ' + e(x.useRow.source) : '') + '</p>' : '')
+      + (x.archived && x.useRow ? '<p class="mut">Last in use ' + e(v.dmy(x.useRow.to_date)) + (x.useRow.source ? ': ' + e(x.useRow.source) : '') + '</p>' : '')
       + (S.msg ? '<p role="status">' + e(S.msg) + '</p>' : '');
     if (!x.archived) {
       h += '<div class="itm-btns">' + x.s.lines.map(function (l) { return '<button type="button" class="btn" data-itm-form="test:' + e(l.key) + '">' + ic('test') + e(l.label) + '</button>'; }).join('')
@@ -353,7 +362,7 @@
     }
     if (S.form.indexOf('test:') === 0) h += testForm(v, it, S.form.slice(5));
     else if (S.form === 'move') h += '<form class="itm-form" data-itm-save="move"><label>Room<select name="area_id" required>' + areaOptions(v, x.placeRow ? x.placeRow.to_id : '') + '</select></label><label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
-    else if (S.form === 'archive') h += '<form class="itm-form" data-itm-save="archive"><label>Last day in use<input type="date" name="to_date" required value="' + e(v.today) + '"></label><label>Why<select name="why"><option>Dead</option><option>Failed test</option><option>Replaced</option><option>Gone</option><option>Other</option></select></label><label>Note<input name="note"></label><div class="itm-btns"><button type="submit" class="btn yes">Archive</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
+    else if (S.form === 'archive') h += '<form class="itm-form" data-itm-save="archive"><label>Out of use from<input type="date" name="out_on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label><label>Why<select name="why"><option>Dead</option><option>Failed test</option><option>Replaced</option><option>Gone</option><option>Other</option></select></label><label>Note<input name="note"></label><div class="itm-btns"><button type="submit" class="btn yes">Archive</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'edit') h += addForm(v, it);
     if (x.s.lines.length) {
       h += '<h3>Tests</h3><table><thead><tr><th>test</th><th>last</th><th>next</th><th></th></tr></thead><tbody>' + x.s.lines.map(function (l) {
@@ -361,7 +370,7 @@
       }).join('') + '</tbody></table>';
     }
     h += '<h3>Records</h3>' + (recs.length ? recs.map(function (r) {
-      return '<div class="dcs-row"><span class="mut">' + e(v.dmy(r.on)) + '</span><b>' + e(r.type.label) + '</b>' + (r.outcome === 'ok' ? '<span class="pill ok">Pass</span>' : r.outcome === 'concern' ? '<span class="pill no">Fail</span>' : '<span class="pill">' + e(r.outcome) + '</span>')
+      return '<div class="dcs-row"><span class="mut">' + e(v.dmy(r.on)) + '</span><b>' + e(r.type.label) + '</b>' + (r.outcome === 'ok' ? '<span class="pill itm-g">Pass</span>' : r.outcome === 'concern' ? '<span class="pill no">Fail</span>' : '<span class="pill">' + e(r.outcome) + '</span>')
         + r.values.map(function (val) { return '<span class="mut">' + e(val.label) + ' ' + e(val.value) + (val.unit ? ' ' + e(val.unit) : '') + (val.inr === false ? ' <b class="itm-lim no">outside</b>' : '') + '</span>'; }).join('')
         + (S.retry[r.id] ? '<b class="itm-lim no">Values not all saved</b><button type="button" class="btn" data-itm-retry="' + e(r.id) + '">Retry</button>' : '')
         + (r.note ? '<span class="mut">' + e(r.note) + '</span>' : '') + r.files.map(function (f) { return '<a href="' + e(f.href) + '" target="_blank" rel="noopener">' + e(f.label) + '</a>'; }).join('') + '</div>';
@@ -389,7 +398,7 @@
       + '<label>Result<select name="outcome" required><option value="ok">Pass</option><option value="concern">Fail</option></select></label>'
       + '<label>Who tested<input name="by" placeholder="e.g. G A Fire"></label>'
       + '<label>Evidence: photo or certificate (PDF)<input type="file" name="file" accept="image/*,application/pdf" capture="environment"></label>'
-      + '<label>It is the certificate for this visit<select name="file_kind"><option value="evidence">No, a photo of this item</option><option value="certificate">Yes, certificate</option></select></label>'
+      + '<label>This file is<select name="file_kind"><option value="evidence">A photo</option><option value="certificate">The certificate</option></select></label>'
       + '<label>or a link to it<input name="link" placeholder="https://"></label>'
       + '<label>Note (needed for a Fail)<input name="note"></label>'
       + '<div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
@@ -482,7 +491,14 @@
     var kind = form.getAttribute('data-itm-save'), d = {};
     Array.prototype.forEach.call(form.elements, function (el) { if (el.name) d[el.name] = t(el.value); });
     var done = function (id, msg) { S.busy = false; S.form = ''; S.msg = msg; if (id) S.ticks[id] = true; v.redraw(); };
-    var fail = function (r) { S.busy = false; S.msg = why(r); v.redraw(); };
+    var hadFile = !!(form.querySelector('input[type=file]') && form.querySelector('input[type=file]').files && form.querySelector('input[type=file]').files.length);
+    // a refused save keeps what was typed (the page redraws from rows, so the answers are put back); a chosen file
+    // cannot be put back by a page, so it says so
+    var fail = function (r) {
+      S.busy = false; S.msg = why(r) + (hadFile ? ' Choose the file again.' : ''); v.redraw();
+      var nf = typeof document !== 'undefined' && document.querySelector('form[data-itm-save="' + kind + '"]');
+      if (nf) Array.prototype.forEach.call(nf.elements, function (el) { if (el.name && el.type !== 'file' && Object.prototype.hasOwnProperty.call(d, el.name)) el.value = d[el.name]; });
+    };
     if (S.busy) return;
     S.busy = true; S.msg = 'Saving…'; v.redraw();
     var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'note'];
@@ -512,9 +528,10 @@
       }, fail);
     } else if (kind === 'archive') {
       var y = list(v.T, v.today).filter(function (z) { return z.it.id === S.open; })[0];
-      var from = (y && y.useRow && y.useRow.from_date) || day(y && y.it.first_at) || d.to_date;
-      if (from > d.to_date) from = d.to_date;
-      post(v, 'requirement', { need_type: NEED, target_table: 'items', target_id: S.open, from_date: from, to_date: d.to_date, source: d.why + (d.note ? ': ' + d.note : '') })
+      var toDate = addDays(d.out_on, -1);   // the last day in use is the day before (dates are inclusive), so it leaves the list now
+      var from = (y && y.useRow && y.useRow.from_date) || day(y && y.it.first_at) || toDate;
+      if (from > toDate) from = toDate;
+      post(v, 'requirement', { need_type: NEED, target_table: 'items', target_id: S.open, from_date: from, to_date: toDate, source: d.why + (d.note ? ': ' + d.note : '') })
         .then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Archived.'); }, fail);
     } else if (kind === 'test') {
       var key = form.getAttribute('data-key'), ty = typeOn(v.T, key, d.on), values = {}, reads = [];
@@ -523,11 +540,11 @@
         if (d[k] === '') return;
         if (k.indexOf('v_') === 0) values[k.slice(2)] = d[k];
         else if (k.indexOf('r_') === 0) {
-          if (isNaN(parseFloat(d[k]))) return;
-          reads.push({ kind_id: k.slice(2), value: d[k] });
+          if (num(d[k]) === '') return;
+          reads.push({ kind_id: k.slice(2), value: num(d[k]) });
         }
       });
-      if (Object.keys(d).some(function (k) { return k.indexOf('r_') === 0 && d[k] !== '' && isNaN(parseFloat(d[k])); })) return fail({ message: 'Type each reading as a number, e.g. 0.09.' });
+      if (Object.keys(d).some(function (k) { return k.indexOf('r_') === 0 && d[k] !== '' && num(d[k]) === ''; })) return fail({ message: 'Type each reading as a number, e.g. 0.09.' });
       var at = d.on === v.today ? new Date().toISOString() : d.on + 'T12:00:00Z';
       var lf = { check_type_id: ty.id, item_id: S.open, outcome: d.outcome, happened_at: at, how_recorded: 'typed' };
       if (d.note || d.by) lf.note = [d.by ? 'by ' + d.by : '', d.note].filter(Boolean).join('. ');
@@ -617,7 +634,13 @@
     });
     main.addEventListener('change', function (ev) {
       var el = ev.target;
-      if (el.hasAttribute && el.hasAttribute('data-itm-teston')) { S.testOn = el.value; v.redraw(); }   // Earlier: the questions and limits of that day
+      if (el.hasAttribute && el.hasAttribute('data-itm-teston')) {
+        var f0 = el.form, keep = {};
+        if (f0) Array.prototype.forEach.call(f0.elements, function (x) { if (x.name && x.type !== 'file') keep[x.name] = x.value; });
+        S.testOn = el.value; v.redraw();
+        var nf = document.querySelector('form[data-itm-save="test"]');   // answers typed before the date change stay
+        if (nf) Array.prototype.forEach.call(nf.elements, function (x) { if (x.name && x.type !== 'file' && Object.prototype.hasOwnProperty.call(keep, x.name)) x.value = keep[x.name]; });
+      }   // Earlier: the questions and limits of that day
     });
   }
 
@@ -644,5 +667,5 @@
     if (a) { S.filter = a.getAttribute('data-itm-go'); S.open = ''; S.form = ''; }
   }, true);
 
-  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, _sendReads: sendReads, _fileAdd: fileAdd, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
+  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, _sendReads: sendReads, num: num, _fileAdd: fileAdd, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
 }));
