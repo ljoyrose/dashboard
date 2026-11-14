@@ -54,6 +54,18 @@
         note: { type: 'text', label: 'Note' }
       }
     },
+    code_vaults: {
+      // Codes vault (Lisa 14 Nov 2026): sealed in the browser (lib/code-vault.js). Hex and public ids only: never a code or the password.
+      label: 'Codes vault', file: 'BLD-code_vaults.csv',
+      fields: {
+        code_id: { type: 'text', required: true, label: 'Code' },
+        cipher: { type: 'text', required: true, label: 'Sealed code' },
+        iv: { type: 'text', required: true, label: 'IV' },
+        salt: { type: 'text', required: true, label: 'Salt' },
+        kdf: { type: 'text', required: true, label: 'Sealed with' },
+        kdf_iter: { type: 'text', required: true, label: 'Rounds' }
+      }
+    },
     staff: {
       label: 'Staff roster', file: 'BLD-staff.csv',
       fields: {

@@ -183,7 +183,7 @@ var AdminView = (function () {
           + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') + ' <span class="mut">' + v.esc(r.code_id) + '</span></li>';
       }).join('') + '</ul>' : '<p class="mut">Empty. On the owner page press <b>Fill the code register</b> once; your codes then list here.</p>')
         : '<p class="mut">The list shows here after the next save-script update. Until then it is on the owner page.</p>')
-        + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + '</p>'
+        + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + ' <a class="cb" href="' + v.esc(staffBase() + 'vault/') + '">Codes vault</a></p>'
         + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
         + '<p class="mut"><b>End</b> sets an end date. Nothing is deleted.</p>'
         + '<p class="mut">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
