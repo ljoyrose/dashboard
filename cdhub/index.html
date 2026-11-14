@@ -968,6 +968,9 @@ async function load(){
     LOAD.later=LOAD.laterCopy?'ok':'err'; LOAD.laterErr=r2.fail; if(LOAD.laterCopy) LOAD.stale=r2.fail; redrawAfterRead(); return;
   }
   later.forEach(function(t){ T[t]=r2.tables[t]; });
+  /* rows per table as this read found them, the same read as the manifest: the manifest check uses these only */
+  var rc={}; first.concat(later).forEach(function(t){ var rows=(r1.tables[t]||r2.tables[t]); rc[t.replace('BLD-','').replace('.csv','')]=rows?rows.length:0; });
+  LOAD.rowCounts=rc;
   LOAD.later='ok'; LOAD.laterCopy=false; LOAD.laterErr=''; LOAD.files=first.length+later.length;
   showTables(); redrawAfterRead();
   copyPut({at:storedAt,tables:T,notes:notes,files:LOAD.files,manifestLine:LOAD.manifestLine});
@@ -1449,11 +1452,14 @@ function litterCountBreaches(){
 function breedRulesMissing(){ return BREED_RULES.filter(function(b){ return !breedRuleRows(b[0]).length; }); }
 function checks(){
  var c=counts(), out=[];
- var man=CD.manifest||[], mism=[];
- man.forEach(function(r){ var live=CD.counts[r.table]; if(live!=null && +live < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
+ var man=CD.manifest||[], mism=[], rc=LOAD.rowCounts;
+ /* Judged only on a finished live read, counting the rows that read found (never the copy on this device, never
+    a half-finished read): the copy's rows and a newer manifest row come from different moments. */
+ if(!rc||LOAD.copy||LOAD.stale||LOAD.later!=='ok') out.push({k:'tables',ok:true,wait:true,msg:'Checking tables\u2026'});
+ else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
    msg:mism.length?mism.length+' tables have fewer rows than the manifest: '+mism.join(', ')
-     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')});
+     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')}); }
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
      :'law says '+c.bitches.length+', your list says '+c.active.length,list:'bitches'});
@@ -1515,7 +1521,7 @@ function checks(){
 function strip(){
  return '<div class="chk">'+checks().map(function(x){
 
-  if(!x.list) return '<span class="ci ci-s'+(x.ok?' ok':' bad')+'" title="'+esc(x.msg)+'"><i></i>'+esc(x.k)+'</span>';
+  if(!x.list) return '<span class="ci ci-s'+(x.wait?' wait':x.ok?' ok':' bad')+'" title="'+esc(x.msg)+'"><i></i>'+esc(x.k)+'</span>';
   return '<button type="button" class="ci'+(x.ok?' ok':' bad')+'" data-list="'+x.list+'" title="'+esc(x.msg)+'">'
    +'<i></i>'+esc(x.k)+'</button>'; }).join('')+'</div>';
 }
@@ -1766,8 +1772,8 @@ function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
  return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?DashKit.count.cls(bad,'failed').trim():'ok')+(bad?'<span class="sr"> failed</span>':'')+'</h3>'
   +all.map(function(x){
-   return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
-    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
+   return '<div class="mrow ckrow'+(x.wait?' wait':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.ok?'✓':'✗')+'</span>'
+    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
     +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
