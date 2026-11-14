@@ -40,6 +40,7 @@
       var v = attrs[k];
       if (k === 'text') e.textContent = v;
       else if (k === 'class') e.className = v;
+      else if (k === 'html') e.innerHTML = v;   // only the fixed ICON strings below, never data
       else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
       else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
     });
@@ -76,6 +77,13 @@
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
   }
+  /* Button icons (Lisa C, 14 Nov 2026): icon plus word, Tabler outline, grey at rest (.ic). */
+  var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  var ICON = {
+    plus: SVG + '<path d="M12 5v14M5 12h14"/></svg>',
+    page: SVG + '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 9h1M9 13h6M9 17h6"/></svg>',
+    upload: SVG + '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>'
+  };
   /* can(c, key): may this code use the feature named by key? One helper, so the rule can move to BLD-permission rows
      (People & access design) without touching each button. Today: owner codes only, from the role the save script
      reported on the last read (save.role(), STAFF PR 443); '' or any other role is no. The script still decides what is read. */
@@ -273,7 +281,7 @@
     var camBox = h('div'), camMsg = say('');
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
-    // An earlier reading is typed from the paper sheet or a photo: the thermometer no longer shows that day's numbers.
+    // An earlier reading comes from paper, a photo or an app (e.g. Govee): the thermometer no longer shows that day's numbers.
     if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn, typeBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
     if (table === 'area_reading') {
@@ -397,8 +405,8 @@
     var half = h('select', { class: 'inp', 'aria-label': 'Morning or afternoon' }, [h('option', { value: 'am', text: 'Morning' }), h('option', { value: 'pm', text: 'Afternoon' })]);
     var list = h('div'), msg = say('');
     host.textContent = '';
-    host.appendChild(h('h2', { text: 'Add earlier reading' }));
-    host.appendChild(h('p', { class: 'sub', text: 'Type a reading from the paper sheet or a photo for a past morning or afternoon.' }));
+    host.appendChild(h('h2', { text: 'Earlier reading' }));
+    host.appendChild(h('p', { class: 'sub', text: 'A reading for a past morning or afternoon: from paper, a photo or an app.' }));
     host.appendChild(h('div', { class: 'tg-row' }, [day, half]));
     host.appendChild(msg); host.appendChild(list);
     day.addEventListener('change', show); half.addEventListener('change', show);
@@ -534,7 +542,7 @@
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
     var label = h('input', { class: 'inp', type: 'text', maxlength: '60', placeholder: 'Sensor name (optional)', 'aria-label': 'Sensor name' });
     // CSV text only: no picture can be chosen here
-    var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'Readings file' });
+    var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'File to import' });
     var msg = say(''), out = h('div');
     host.appendChild(room); host.appendChild(label); host.appendChild(file); host.appendChild(msg); host.appendChild(out);
     var parsed = null;
@@ -587,7 +595,7 @@
   }
   function report(host, c, areas, bands, thermos, links) {
     host.textContent = '';
-    host.appendChild(h('h2', { text: 'Year report' }));
+    host.appendChild(h('h2', { text: 'Report' }));
     host.appendChild(h('p', { class: 'sub', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (o) { return h('option', { value: o.value, text: o.text }); })));
     var y = Number(londonParts().date.slice(0, 4)), year = h('select', { class: 'inp', 'aria-label': 'Year' }, [y, y - 1, y - 2].map(function (v) { return h('option', { value: String(v), text: String(v) }); }));
@@ -754,15 +762,15 @@
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
-      // Who may open the Year report or Load readings file is an owner setting (permission keys temps.year_report,
+      // Who may open Report or Import is an owner setting (permission keys temps.year_report,
       // temps.sensor_import), read through can(). Until BLD-permission is served, can() allows owner codes only.
       var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
-            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
-          mayReport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }) : null,
-          mayImport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Load readings file', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
+          h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back();
+            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
+          mayReport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }, [h0('span', { class: 'ic', html: ICON.page }), 'Report']) : null,
+          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null
         ].filter(Boolean));
       }
       var sub = h('div');
