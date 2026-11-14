@@ -118,3 +118,16 @@ test('Compliance fold: per kind in date / due soon / overdue, SOP named, archive
   assert.match(h, /data-itm-go="soon"><span class="pill w">1/);
   assert.equal(V.complianceHtml({ T: {}, esc: String, dmy: String }, null, ON), '');
 });
+
+test('readings after a test: each row has its own <test>-r<n> reference; Retry resends only the rows that failed', async () => {
+  const sent = [];
+  let failOnce = true;
+  const v = { T: {}, sinkSend: (b) => { sent.push(b.request_id); if (b.request_id.endsWith('-r2') && failOnce) { failOnce = false; return Promise.resolve({ ok: false, message: 'busy' }); } return Promise.resolve({ ok: true, result: { id: 'rdg-' + sent.length } }); } };
+  const reads = [1, 2].map((n) => ({ rid: 'itmabc123-r' + n, fields: { kind_id: 'rkd-' + n, check_log_id: 'clg-9', value: '1' } }));
+  assert.equal(await V._sendReads(v, 'clg-9', reads), 1);
+  assert.deepEqual(V._state.retry['clg-9'].map((x) => x.rid), ['itmabc123-r2']);
+  assert.equal(await V._sendReads(v, 'clg-9', V._state.retry['clg-9']), 0);
+  assert.deepEqual(sent, ['itmabc123-r1', 'itmabc123-r2', 'itmabc123-r2'], 'never the test row, never r1 again');
+  assert.equal(V._state.retry['clg-9'], undefined);
+  assert.equal(v.T['BLD-readings.csv'].length, 2);
+});

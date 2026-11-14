@@ -26,7 +26,7 @@
   var RANK = { ok: 0, none: 1, soon: 2, due: 3, fail: 4, expired: 5 };
   var WORD = { ok: 'In date', none: 'No test set', soon: 'Due soon', due: 'Overdue', fail: 'Failed', expired: 'Expired' };
   var PILL = { ok: 'ok', none: '', soon: 'w', due: 'no', fail: 'no', expired: 'no' };
-  var S = { filter: 'all', q: '', open: '', form: '', msg: '', busy: false, ticks: {} };
+  var S = { filter: 'all', q: '', open: '', form: '', msg: '', busy: false, ticks: {}, retry: {} };
 
   function rows(T, f) { return (T && T[f]) || []; }
   function t(x) { return String(x == null ? '' : x).trim(); }
@@ -62,10 +62,11 @@
   /* Shared links (STAFF): from_table/from_id -> to_table/to_id, link_kind_key, from_date/to_date. Table words are
      compared without a plural s, so check_log and check_logs are the same table until the rename sitting. */
   function tbl(x) { return t(x).replace(/s$/, ''); }
+  function lk(l) { return t(l.link_kind_key || l.role); }
   function live(l, on) { return t(l.from_date) <= on && (!t(l.to_date) || t(l.to_date) >= on); }
   function linksFrom(T, fromTable, fromId, kinds, on) {
     return rows(T, LINKS).filter(function (l) {
-      return tbl(l.from_table) === tbl(fromTable) && l.from_id === fromId && kinds.indexOf(t(l.link_kind_key)) >= 0 && (!on || live(l, on));
+      return tbl(l.from_table) === tbl(fromTable) && l.from_id === fromId && kinds.indexOf(lk(l)) >= 0 && (!on || live(l, on));
     }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0) || t(a.from_date).localeCompare(t(b.from_date)); });
   }
   /** The room on a day: the latest placed_in link starting on or before it; a to_date ends it. */
@@ -79,7 +80,7 @@
     var byId = {};
     rows(T, 'BLD-files.csv').forEach(function (f) { byId[f.id] = f; });
     return linksFrom(T, fromTable, fromId, kinds).filter(function (l) { return tbl(l.to_table) === 'file' && byId[l.to_id] && !t(l.to_date); })
-      .map(function (l) { var f = byId[l.to_id]; return { href: fileHref(f.drive_file_id || f.url), label: l.link_kind_key === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
+      .map(function (l) { var f = byId[l.to_id]; return { href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
   }
 
   /** Test rows in force on a day for an item kind: latest effective_from per type_key, active, target item. */
@@ -116,7 +117,7 @@
     ids[key] = 1;
     rows(T, 'BLD-reading_kinds.csv').forEach(function (k) { kinds[k.id] = k; });
     return rows(T, LINKS).filter(function (l) {
-      return tbl(l.from_table) === 'reading_kind' && t(l.link_kind_key) === 'reading_for_job' && tbl(l.to_table) === 'check_type' && ids[l.to_id] && live(l, on) && kinds[l.from_id];
+      return tbl(l.from_table) === 'reading_kind' && lk(l) === 'reading_for_job' && tbl(l.to_table) === 'check_type' && ids[l.to_id] && live(l, on) && kinds[l.from_id];
     }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0); }).map(function (l) { return kinds[l.from_id]; });
   }
   /** The reading_limits row in force on a day for a kind: the item's own row beats its kind's, which beats an unscoped one. */
@@ -362,6 +363,7 @@
     h += '<h3>Records</h3>' + (recs.length ? recs.map(function (r) {
       return '<div class="dcs-row"><span class="mut">' + e(v.dmy(r.on)) + '</span><b>' + e(r.type.label) + '</b>' + (r.outcome === 'ok' ? '<span class="pill ok">Pass</span>' : r.outcome === 'concern' ? '<span class="pill no">Fail</span>' : '<span class="pill">' + e(r.outcome) + '</span>')
         + r.values.map(function (val) { return '<span class="mut">' + e(val.label) + ' ' + e(val.value) + (val.unit ? ' ' + e(val.unit) : '') + (val.inr === false ? ' <b class="itm-lim no">outside</b>' : '') + '</span>'; }).join('')
+        + (S.retry[r.id] ? '<b class="itm-lim no">Values not all saved</b><button type="button" class="btn" data-itm-retry="' + e(r.id) + '">Retry</button>' : '')
         + (r.note ? '<span class="mut">' + e(r.note) + '</span>' : '') + r.files.map(function (f) { return '<a href="' + e(f.href) + '" target="_blank" rel="noopener">' + e(f.label) + '</a>'; }).join('') + '</div>';
     }).join('') : '<p class="mut">No records.</p>');
     return h + '</section>';
@@ -435,9 +437,6 @@
     });
   }
   function linkAdd(v, f) { return act(v, 'link_add', f, LINKS, function () { return f; }); }
-  function linkEnd(v, l, toDate) {
-    return act(v, 'link_end', { id: l.id, to_date: toDate }).then(function (r) { if (r && r.ok) l.to_date = toDate; return r; });
-  }
   /** Send the chosen photo or PDF (or the typed link) and join it to a record. Resolves null when there is nothing to send. */
   function fileAdd(v, form, d, fromTable, fromId, kindKey) {
     var el = form.querySelector('input[type=file][name=file]'), file = el && el.files && el.files[0];
@@ -462,6 +461,18 @@
     return Promise.all(steps.map(function (p) { return p.then(function (r) { return r; }, function (x) { return x; }); })).then(function (rs) {
       var bad = rs.filter(function (x) { return x && (x instanceof Error || x.ok === false); }).map(why);
       done(id, bad.length ? 'Saved. Not saved: ' + bad.join(' ') : 'Saved.');
+    });
+  }
+
+  /** Send readings rows for a saved test; each has its own request id (<test>-r<n>) so a resend is safe. Rows that
+      fail wait in S.retry for the Retry button, which resends only them, never the test row. Resolves the count left. */
+  function sendReads(v, logId, reads) {
+    return Promise.all(reads.map(function (x) {
+      return post(v, 'readings', x.fields, { request_id: x.rid }).then(function (r) { return r && r.ok ? null : x; }, function () { return x; });
+    })).then(function (rs) {
+      var left = rs.filter(Boolean);
+      if (left.length) S.retry[logId] = left; else delete S.retry[logId];
+      return left.length;
     });
   }
 
@@ -490,9 +501,11 @@
     } else if (kind === 'move') {
       var old = placeOn(v.T, S.open, v.today);
       if (old && d.from_date <= t(old.from_date)) return fail({ message: 'Pick a day after ' + v.dmy(old.from_date) + ', when it went to its current room.' });
-      (old && old.id ? linkEnd(v, old, addDays(d.from_date, -1)) : Promise.resolve({ ok: true })).then(function (r1) {
-        if (!r1 || !r1.ok) return fail(r1);
-        return place(S.open, d.area_id, d.from_date, 'Moved on the Items page').then(function (r2) { if (!r2 || !r2.ok) return fail(r2); done(S.open, 'Saved.'); });
+      // one link_add: placed_in allows one at a time, so the save ends the old room the day before (STAFF, PR 563)
+      place(S.open, d.area_id, d.from_date, 'Moved on the Items page').then(function (r2) {
+        if (!r2 || !r2.ok) return fail(r2);
+        if (old) old.to_date = addDays(d.from_date, -1);
+        done(S.open, 'Saved.');
       }, fail);
     } else if (kind === 'archive') {
       var y = list(v.T, v.today).filter(function (z) { return z.it.id === S.open; })[0];
@@ -517,14 +530,19 @@
       if (d.note || d.by) lf.note = [d.by ? 'by ' + d.by : '', d.note].filter(Boolean).join('. ');
       if (d.on < addDays(v.today, -7)) lf.confirm_unusual = 'yes';   // an Earlier entry: the owner chose the date
       if (d.outcome === 'concern' && !d.note) return fail({ message: 'Say briefly what failed.' });
-      post(v, 'check_log', lf, { values: values }).then(function (r) {
+      var rid = 'itm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      post(v, 'check_log', lf, { values: values, request_id: rid }).then(function (r) {
         if (!r || !r.ok) return fail(r);
         var logId = r.result.id;
         Object.keys(values).forEach(function (k) { (v.T['BLD-check_value.csv'] = v.T['BLD-check_value.csv'] || []).push({ check_log_id: logId, field_key: k, value: values[k] }); });
-        var steps = reads.map(function (x) { return post(v, 'readings', { kind_id: x.kind_id, item_id: S.open, check_log_id: logId, value: x.value, taken_at: at, how_entered: 'typed' }); });
-        steps.push(fileAdd(v, form, d, 'check_logs', logId, d.file_kind === 'certificate' ? 'certificate' : 'evidence'));
+        reads.forEach(function (x, n) { x.rid = rid + '-r' + (n + 1); x.fields = { kind_id: x.kind_id, item_id: S.open, check_log_id: logId, value: x.value, taken_at: at, how_entered: 'typed' }; });
         S.testOn = '';
-        return after(steps, S.open, done);
+        return sendReads(v, logId, reads).then(function (left) {
+          return fileAdd(v, form, d, 'check_logs', logId, d.file_kind === 'certificate' ? 'certificate' : 'evidence').then(function (r3) { return r3; }, function (x) { return x; }).then(function (r3) {
+            var fileBad = r3 && (r3 instanceof Error || r3.ok === false) ? ' File not saved: ' + why(r3) : '';
+            done(S.open, (left ? 'Test saved. Values not all saved.' : 'Saved.') + fileBad);
+          });
+        });
       }, fail);
     }
   }
@@ -558,12 +576,19 @@
     var cur = typeof getV === 'function' ? getV : function () { return getV; }, v = cur();
     ['click', 'submit', 'input', 'change'].forEach(function (k) { main.addEventListener(k, function () { v = cur(); }, true); });   // fresh rows each time (the hub swaps its tables on refresh)
     main.addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-itm-open],[data-itm-filter],[data-itm-form],[data-itm-report]');
+      var b = ev.target.closest && ev.target.closest('[data-itm-open],[data-itm-filter],[data-itm-form],[data-itm-report],[data-itm-retry]');
       if (!b || !main.contains(b)) return;
       if (b.hasAttribute('data-itm-open')) { S.open = b.getAttribute('data-itm-open'); S.form = ''; S.msg = ''; }
       else if (b.hasAttribute('data-itm-filter')) S.filter = b.getAttribute('data-itm-filter');
       else if (b.hasAttribute('data-itm-form')) { S.form = b.getAttribute('data-itm-form'); S.msg = ''; S.testOn = ''; }
       else if (b.hasAttribute('data-itm-report')) { report(v, b.getAttribute('data-itm-report')); return; }
+      else if (b.hasAttribute('data-itm-retry')) {
+        var logId = b.getAttribute('data-itm-retry');
+        if (S.busy || !S.retry[logId]) return;
+        S.busy = true; S.msg = 'Saving…'; v.redraw();
+        sendReads(v, logId, S.retry[logId]).then(function (left) { S.busy = false; S.msg = left ? 'Values not all saved.' : 'Saved.'; if (!left) S.ticks[S.open] = true; v.redraw(); });
+        return;
+      }
       v.redraw();
     });
     main.addEventListener('submit', function (ev) {
@@ -608,5 +633,5 @@
     if (a) { S.filter = a.getAttribute('data-itm-go'); S.open = ''; S.form = ''; }
   }, true);
 
-  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
+  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, _sendReads: sendReads, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
 }));
