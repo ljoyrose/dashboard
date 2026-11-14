@@ -25,6 +25,7 @@ async function setup(page, o) {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'code_vaults', on: true, mode: 'direct' }] } });
     const b = JSON.parse(route.request().postData());
     posts.push(route.request().postData());
+    if (b.action === 'code_check') return route.fulfill({ headers: CORS, json: { ok: true, result: { match: b.code_id === 'sc-bbbbbb' && b.typed === 'OTHERCODE4' } } });
     if (b.action === 'read') {
       if (b.table === 'code_vaults' && o.vault === null) return route.fulfill({ headers: CORS, json: { ok: false, code: 'FILE_NOT_ALLOWED', message: 'not known' } });
       if (b.table === 'permission' && !o.perm) return route.fulfill({ headers: CORS, json: { ok: false, code: 'FILE_NOT_ALLOWED', message: 'not known' } });
@@ -78,6 +79,34 @@ test.describe('Codes vault page', () => {
     await expect(page.locator('#vPw')).toBeVisible();
     await expect(page.locator('#screen')).toContainText('Locked after a minute unused.');
     expect(posts.filter((p) => p.includes(PW) || p.includes(CODE))).toEqual([]);
+  });
+
+  test('add an existing code: checked by the script first, a wrong one is never kept, the right one is kept sealed', async ({ page }) => {
+    const rows = await sealed(page);
+    const posts = await setup(page, { vault: rows });
+    await page.goto('cdhub/staff/vault/');
+    await page.locator('#vPw').fill(PW);
+    await page.getByRole('button', { name: 'Open' }).click();
+    await page.locator('#vWho').selectOption('sc-bbbbbb');
+    await page.locator('#vCode').fill('TYPOCODE44');
+    await page.getByRole('button', { name: 'Check and keep' }).click();
+    await expect(page.locator('#screen')).toContainText('That is not Another Pretend\u2019s code. Nothing kept.');
+    await expect(page.locator('#vCode')).toHaveValue('');
+    expect(posts.map((p) => JSON.parse(p)).filter((b) => b.action === 'add')).toEqual([]);
+    await page.locator('#vWho').selectOption('sc-bbbbbb');
+    await page.locator('#vCode').fill('OTHERCODE4');
+    await page.getByRole('button', { name: 'Check and keep' }).click();
+    await expect(page.locator('#screen')).toContainText('\u2713 Kept: Another Pretend');
+    await expect(page.locator('tr', { hasText: 'Another Pretend' }).getByRole('button', { name: 'Show' })).toBeVisible();
+    const bodies = posts.map((p) => JSON.parse(p));
+    const add = bodies.filter((b) => b.action === 'add');
+    expect(add.length).toBe(1);
+    expect(add[0].fields.code_id).toBe('sc-bbbbbb');
+    // the typed code goes only to the check, never into a save; the password goes nowhere
+    expect(posts.filter((p) => p.includes('OTHERCODE4')).map((p) => JSON.parse(p).action)).toEqual(['code_check']);
+    expect(posts.filter((p) => p.includes(PW))).toEqual([]);
+    await page.locator('tr', { hasText: 'Another Pretend' }).getByRole('button', { name: 'Show' }).click();
+    await expect(page.locator('#vShown')).toHaveText('sc-bbbbbb: OTHERCODE4');
   });
 
   test('Lock now locks at once', async ({ page }) => {

@@ -758,6 +758,44 @@ var TABLES = {
     checkRow: function () {}
   },
 
+  // ---------------------------------------------------------------- code_vaults
+  // Codes vault (Lisa 14 Nov 2026, option B). Each code is sealed in the browser (staff/lib/code-vault.js) with the
+  // admins' shared vault password: this table holds only hex and the public code id, never a code or the password.
+  // code_id 'vault-check' is the password check row. A new seal for the same code is a new row; the newest open row counts.
+  // NEW table: Lisa creates BLD-code_vaults.csv (header row only); own switch TABLE_ON_code_vaults, OFF by default.
+  // Who may: OWNER codes today; BLD-permission rows (code_vault / open) once the script serves them (Grace: a person row).
+  code_vaults: {
+    key: 'code_vaults',
+    file: 'BLD-code_vaults.csv',
+    idPrefix: 'cv',
+    columns: ['id', 'tenant_id', 'code_id', 'cipher', 'iv', 'salt', 'kdf', 'kdf_iter', 'from_date', 'to_date', 'set_by', 'set_on'],
+    proposedColumns: ['code_id', 'cipher', 'iv', 'salt', 'kdf', 'kdf_iter', 'from_date', 'to_date', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      code_id:  { type: 'text', required: true },
+      cipher:   { type: 'text', required: true },
+      iv:       { type: 'text', required: true },
+      salt:     { type: 'text', required: true },
+      kdf:      { type: 'text', required: true },
+      kdf_iter: { type: 'text', required: true }
+    },
+    dupKey: ['cipher'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.from_date = String(ctx.nowIso).slice(0, 10); row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!/^(sc-[a-z0-9]{6}|vault-check)$/.test(row.code_id || '')) errors.code_id = 'Say which code.';
+      ['cipher', 'iv', 'salt'].forEach(function (k) { if (!/^([0-9a-f]{2})+$/.test(row[k] || '')) errors[k] = 'Only sealed text can be kept.'; });
+      if ((row.iv || '').length !== 24) errors.iv = 'Only sealed text can be kept.';
+      if ((row.salt || '').length < 32) errors.salt = 'Only sealed text can be kept.';
+      if (row.kdf !== 'PBKDF2-SHA256/AES-GCM-256') errors.kdf = 'Only sealed text can be kept.';
+      if (!(parseInt(row.kdf_iter, 10) >= 600000)) errors.kdf_iter = 'Only sealed text can be kept.';
+    }
+  },
+
   // ---------------------------------------------------------------- occupancy_check
   // The daily "All the rest unmoved" confirmation (Lisa 16 Oct, S02-1). ONE row per tap: who confirmed, when,
   // and the list of dogs confirmed where they were last recorded. Moves are separate: they still append
@@ -1147,6 +1185,7 @@ var READABLE = {
   occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' },
   breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' },
   code_register:   { file: 'BLD-code_register.csv',   vis: 'code_register',   authorCol: '',            dateCol: '' },   // who has a code: never a code or hash
+  code_vaults:     { file: 'BLD-code_vaults.csv',     vis: 'code_vaults',     authorCol: '',            dateCol: '' },   // sealed hex only (vault page); aud-admin rows only
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
   check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
   check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' },

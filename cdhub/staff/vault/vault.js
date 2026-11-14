@@ -96,14 +96,46 @@
             return '<tr><td>' + esc(r.who) + '</td><td>' + esc(r.role) + '</td><td>' + esc(r.code_id) + '</td><td>' + esc(day(r.from_date)) + '</td><td>'
               + (kept ? '<button type="button" class="cb" data-v="show" data-id="' + esc(r.code_id) + '">Show</button>' : 'Not kept yet') + '</td></tr>';
           }).join('') + '</tbody></table>' : '<p>No codes in the register yet.</p>')
+        + addHtml(list)
         + (S.msg ? '<p role="status">' + esc(S.msg) + '</p>' : '');
     }
     screen.innerHTML = h;
   }
 
+  /* Add existing code: Lisa or Grace types or pastes a code from her current list. The save script checks it against
+     that person's sign-in (ok or no only) before it is sealed, so a typo is never kept. */
+  function addHtml(list) {
+    var todo = list.filter(function (r) { return !sealedFor(r.code_id); });
+    if (!todo.length) return '';
+    return '<form id="vAdd" autocomplete="off"><h2>Add an existing code</h2>'
+      + '<p><label>Whose <select id="vWho" required><option value="">Pick</option>' + todo.map(function (r) { return '<option value="' + esc(r.code_id) + '">' + esc(r.who) + ' (' + esc(r.code_id) + ')</option>'; }).join('') + '</select></label></p>'
+      + '<p><label>Their code <input type="password" id="vCode" autocomplete="off" spellcheck="false" required></label></p>'
+      + '<p><button type="submit" class="btn"' + (S.busy ? ' disabled' : '') + '>Check and keep</button></p></form>';
+  }
+  function addExisting() {
+    var id = document.getElementById('vWho').value, inp = document.getElementById('vCode'), typed = inp.value;
+    inp.value = '';
+    var who = (codes().filter(function (r) { return r.code_id === id; })[0] || {}).who || id;
+    if (!id || !typed) { S.msg = 'Pick the person and type their code.'; return draw(); }
+    S.busy = true; S.msg = 'Checking\u2026'; draw();
+    save.codeCheck(id, typed).then(function (c) {
+      if (!c.ok) { S.busy = false; S.msg = 'Not checked: ' + (c.message || 'try again.'); return draw(); }
+      if (!c.match) { S.busy = false; S.msg = 'That is not ' + who + '\u2019s code. Nothing kept.'; return draw(); }
+      return S.sess.seal(id, typed).then(function (row) {
+        typed = '';
+        return save.submit('code_vaults', row).then(function (r) {
+          S.busy = false;
+          if (!r.ok) { S.msg = 'Not saved: ' + (r.message || 'try again.'); return draw(); }
+          S.vault.push(row); S.msg = '\u2713 Kept: ' + who; draw();
+        });
+      });
+    }).catch(function () { S.busy = false; S.msg = 'Not saved: try again.'; draw(); });
+  }
+
   screen.addEventListener('submit', function (e) {
     e.preventDefault();
     if (S.busy) return;
+    if (e.target.id === 'vAdd') return addExisting();
     if (e.target.id === 'vFirst') {
       var a = document.getElementById('vP1').value, b = document.getElementById('vP2').value;
       document.getElementById('vP1').value = ''; document.getElementById('vP2').value = '';

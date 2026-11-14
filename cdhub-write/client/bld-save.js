@@ -307,6 +307,20 @@
      * Read the lists the daily location check needs. area, subject and occupancy are required;
      * subject_status is optional (the check still works without it). Resolves {ok, tables} or {ok:false, message}.
      */
+    /* Codes vault: is this typed code the one held for this public id? Sent once, like a sign-in; the reply is
+       { ok, match } only. The script never logs or echoes it; misses count towards the sign-in limit. */
+    function codeCheck(codeId, typed) {
+      if (!scriptUrl || !doFetch) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'The save script is not set up on this device.' });
+      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      return withTimeout(doFetch(scriptUrl, {
+        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ v: 1, action: 'code_check', code: getCode(), code_id: codeId, typed: typed })
+      })).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok && j.result) return { ok: true, match: j.result.match === true };
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
+      }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
+    }
+
     function readMany(keys, optional) {
       var out = {}, optionalSet = {};
       (optional || ['subject_status']).forEach(function (k) { optionalSet[k] = true; });
@@ -360,7 +374,7 @@
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
       loadConfigFromDrive: loadConfigFromDrive,
-      read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
+      read: read, readMany: readMany, codeCheck: codeCheck, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 
