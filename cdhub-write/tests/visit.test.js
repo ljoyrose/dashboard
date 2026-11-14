@@ -97,7 +97,7 @@ test('card_add: a fixed visit type needs the fixed_type_id column and a real typ
 });
 
 // ---- Part B: grant_give / grant_end / grant_extend (London clock in tests: 15/10/26 23:30 BST)
-const LINK_H = 'id,tenant_id,code_id,label,ends,created_at,set_by,usable_from,usable_to,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,updated_at';
+const LINK_H = 'id,tenant_id,code_id,label,ends,created_at,set_by,from_at,to_at,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,updated_at';
 function benv(props, linkHeader) {
   const e = env(props, TAG_H + ',fixed_type_id');
   e.addFile('BLD-inspect_link.csv', (linkHeader || LINK_H) + '\r\n');
@@ -124,8 +124,8 @@ test('grant_give (link): rows, code once, window from hours, capped by the type;
   const r = give(e, { grant_type_id: t });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.match(r.result.code, /^[A-Z2-9]{16}$/);
-  assert.equal(r.result.usable_from, '2026-10-15T22:30:00Z');
-  assert.equal(r.result.usable_to, '2026-10-16T01:30:00Z');
+  assert.equal(r.result.from_at, '2026-10-15T22:30:00Z');
+  assert.equal(r.result.to_at, '2026-10-16T01:30:00Z');
   const L = links(e).filter((x) => x.id === r.result.grant_id)[0];
   assert.equal(L.visitor_name, 'Pat Example');
   assert.equal(L.organisation, 'Council');
@@ -152,7 +152,7 @@ test('grant_give: refuses an old link header, a switched-off type, and fields of
   const t = typeId(e);
   assert.equal(give(e, { grant_type_id: t, fields: ['score_x.total'] }).code, 'INVALID');
   assert.equal(give(e, { grant_type_id: t, person_name: '' }).code, 'INVALID');
-  assert.equal(give(e, { grant_type_id: t, hours: '', usable_from: '', usable_to: '2026-10-15T19:00:00Z' }).code, 'INVALID');   // a past end
+  assert.equal(give(e, { grant_type_id: t, hours: '', from_at: '', to_at: '2026-10-15T19:00:00Z' }).code, 'INVALID');   // a past end
   assert.equal(give(e, { grant_type_id: t, grant_basis: 'court_order' }).code, 'INVALID');   // not a grant_basis row yet
   const sl = 'code,label,match,source,group,level\r\nstatutory_duty,Statutory duty,,test,grant_basis,\r\n';
   const f = e.file('BLD-status_label.csv');
@@ -196,7 +196,7 @@ test('grant_end: needs a reason; kills a link code at once; a NEW row revokes it
   assert.equal(L.supersedes_id, id);
   assert.equal(L.end_reason, 'Inspection finished');
   assert.equal(L.ended_at, '2026-10-15T22:30:00Z');
-  assert.equal(L.usable_to, '2026-10-16T01:30:00Z');
+  assert.equal(L.to_at, '2026-10-16T01:30:00Z');
   assert.throws(() => e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }));
   assert.equal(post(e, 'grant_end', { grant_id: id, reason: 'again' }).code, 'ALREADY_ENDED');
   assert.equal(post(e, 'grant_end', { grant_id: 'ilk-nope', reason: 'x' }).code, 'NOT_FOUND');
@@ -209,9 +209,9 @@ test('grant_extend: moves the end on the row and the code; capped by the type; n
   assert.equal(post(e, 'grant_extend', { grant_id: id, hours: '5' }).code, 'INVALID');   // reason needed
   const x = post(e, 'grant_extend', { grant_id: id, hours: '5', reason: 'Running late' });
   assert.equal(x.ok, true, JSON.stringify(x));
-  assert.equal(x.result.usable_to, '2026-10-16T03:30:00Z');
-  assert.equal(current(e, id).usable_to, '2026-10-16T03:30:00Z');
-  assert.equal(links(e)[0].usable_to, '2026-10-16T01:30:00Z');   // the first row keeps what was first granted
+  assert.equal(x.result.to_at, '2026-10-16T03:30:00Z');
+  assert.equal(current(e, id).to_at, '2026-10-16T03:30:00Z');
+  assert.equal(links(e)[0].to_at, '2026-10-16T01:30:00Z');   // the first row keeps what was first granted
   e.nowMs += 4 * 3600000;   // after the first end, before the new one
   assert.equal(e.ctx.sinkRead_({ v: 1, action: 'read', code: r.result.code, table: 'subject' }).rows.length, 1);
   assert.equal(post(e, 'grant_extend', { grant_id: id, hours: '100', reason: 'x' }).code, 'INVALID');
@@ -230,7 +230,7 @@ test('grant_open (card): free card shows nothing; a scheduled visit says when it
   assert.deepEqual(open(e, { t: add.tag }).result, { state: 'free' });
   assert.equal(open(e, { t: 'vc' + 'a'.repeat(26) }).code, 'BAD_CODE');
   assert.equal(open(e, { t: 'nonsense' }).code, 'BAD_CODE');
-  const g = give(e, { grant_type_id: t, card_tag_id: add.tag_id, hours: '', usable_from: '2026-10-16T09:00', usable_to: '2026-10-16T12:00' });
+  const g = give(e, { grant_type_id: t, card_tag_id: add.tag_id, hours: '', from_at: '2026-10-16T09:00', to_at: '2026-10-16T12:00' });
   assert.equal(g.ok, true, JSON.stringify(g));
   const soon = open(e, { t: add.tag }).result;
   assert.equal(soon.state, 'opens');
