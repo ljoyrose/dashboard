@@ -1619,7 +1619,7 @@ function goBtn(x,text){
  var t=text||(x.med?'Show the record':'Open'), lab=t+': '+x.title;
  if(x.med) return '<button type="button" class="btn house-open" data-go="dogs/'+esc(x.med)+'" aria-label="'+esc(lab)+'">Show the record</button>';
  if(x.list) return '<button type="button" class="btn ci house-open" data-list="'+esc(x.list)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
- if(x.anchor) return '<button type="button" class="btn house-open" data-jump="'+esc(x.anchor)+'" aria-label="'+esc(lab)+'">Show</button>';
+ if(x.anchor) return '<button type="button" class="btn house-open" data-jump="'+esc(x.anchor)+'" aria-label="'+esc('Show: '+x.title)+'">Show</button>';
  return '<button type="button" class="btn house-open" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
 }
 function needRow(x,hide){
@@ -1638,7 +1638,7 @@ function needsCard(){
 function onSiteCard(){
  var c=counts();
 
- var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+': '+v+'. Open the list"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></a>'; };
+ var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+(s?' '+s:'')+' '+v+'. Open the list"><span class="t">'+t+(s?' <small>'+s+'</small>':'')+'</span> <span class="v">'+v+'</span></a>'; };
  return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><a class="big house-go" href="#/today" data-golist="here" aria-label="On site: '+c.here.length+'. Open the list">'+c.here.length+'</a></div>'
   +row('Adults',c.adults.length,'','adults')+row(adultMonths()===null?'Puppies (adult age not set)':'Under '+adultMonths()+' months',c.pups.length,'','pups')
@@ -2779,7 +2779,7 @@ function dogMoveChip(d, fromId, sid){
  var col=(typeof colourLabel==='function'?colourLabel(d):'')||'';
  return '<button type="button" class="dchip" data-move-dog="'+esc(d.id)+'" data-from="'+esc(fromId||'')+'"'
   +(d.sizeWord?' data-size="'+esc(d.sizeWord)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')
-  +' aria-label="Move '+esc(d.name||d.id)+'">'+esc(d.name||d.id)+(col?' <span class="mut">'+esc(col)+'</span>':'')+'</button>';
+  +' aria-label="'+esc((d.name||d.id)+(col?' '+col:''))+', move">'+esc(d.name||d.id)+(col?' <span class="mut">'+esc(col)+'</span>':'')+'</button>';
 }
 function dogFact(id){
  var d=CD._byId[id]||{}, dam='';

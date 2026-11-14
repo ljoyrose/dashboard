@@ -442,13 +442,13 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs" id="tabs" aria-label="Sections">
-  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="nMe"></span></a>
-  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="nDecide"></span></a>
-  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="nDo"></span></a>
-  <a class="ht" data-slot="7" href="#/line" data-nav="line"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-line"/></svg></span><span class="htl">Line</span><span class="n" id="nLine"></span></a>
+  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span> <span class="n" id="nMe"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span> <span class="n" id="nDecide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span> <span class="n" id="nDo"></span></a>
+  <a class="ht" data-slot="7" href="#/line" data-nav="line"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-line"/></svg></span><span class="htl">Line</span> <span class="n" id="nLine"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
-      <a href="#/kits" data-nav="kits" data-slot="5"><i class="ti ti-box" aria-hidden="true"></i><span class="htl">Kits</span><span class="n" id="nKits"></span></a>
+      <a href="#/kits" data-nav="kits" data-slot="5"><i class="ti ti-box" aria-hidden="true"></i><span class="htl">Kits</span> <span class="n" id="nKits"></span></a>
     </div>
   </div>
 </nav>
@@ -1293,7 +1293,7 @@
     var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
     var n = { need: live.filter(function (a) { return needOf(a); }).length, ok: live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length, over: live.filter(lateOf).length };
     return '<div class="pills" data-melinks>' + [['need', 'Needs you'], ['over', 'Overdue'], ['ok', 'On track']].map(function (x) {
-      return '<a class="pill" href="#/me/' + x[0] + '" data-melink="' + x[0] + '" aria-label="' + x[1] + ': ' + n[x[0]] + '. Open the list">' + x[1] + ' ' + (x[0] === 'over' && n.over ? '<span class="cnt need">' + n.over + '</span>' : cnt(n[x[0]])) + '</a>'; }).join('') + '</div>';
+      return '<a class="pill" href="#/me/' + x[0] + '" data-melink="' + x[0] + '" aria-label="' + x[1] + ' ' + n[x[0]] + '. Open the list">' + x[1] + ' ' + (x[0] === 'over' && n.over ? '<span class="cnt need">' + n.over + '</span>' : cnt(n[x[0]])) + '</a>'; }).join('') + '</div>';
   }
   function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
   function vDo() {

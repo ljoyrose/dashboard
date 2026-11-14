@@ -299,7 +299,7 @@ test.describe('GA Hub page', () => {
     const tiles = page.locator('#view .growth .tile');
     await expect(tiles.nth(0)).toContainText('Orders, last 30 days4up 2 on the 30 days before');
     await expect(tiles.nth(0).locator('.v')).not.toHaveClass(/red/);
-    await expect(tiles.nth(1)).toContainText('Repeat orders75%');   // 3 of 4 from customers on their 2nd order or more
+    await expect(tiles.nth(1)).toContainText('Repeat orders 75%');   // 3 of 4 from customers on their 2nd order or more
     await expect(tiles.nth(2)).toContainText('Subscriptions50%');
     expect(writes).toHaveLength(0);
   });
@@ -376,7 +376,7 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .tile').nth(0)).toContainText('£50.42');
     await expect(page.locator('#view .tile').nth(1)).toContainText('1');
     await expect(page.locator('#view .tiles')).toContainText('Direct debit');
-    await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FILE000000000000000000001/view');
+    await expect(page.locator('#view a[aria-label="PDF of SI-1000001"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/' + 'FILE000000000000000000001' + '/view');
   });
 
   // VAT invoices (engine v1.15): numbers, order numbers, status chips and an Open button built from the sheet's file id. Every value is invented.
@@ -410,7 +410,7 @@ test.describe('GA Hub page', () => {
     await sheets(page, book());
     await open(page, '#/invoices');
     await expect(page.locator('#view')).toContainText('VAT invoices are off');
-    await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toBeVisible();
+    await expect(page.locator('#view a[aria-label="PDF of SI-1000001"]')).toBeVisible();
   });
   // Commercial invoices (engine v1.15 module, orders sent outside the UK) share the vat_inv_* columns, with inv_doc = COMMERCIAL. Invented values only.
   test('Invoices: commercial invoices show a Commercial badge; saved = waiting for the GA SI number, drafted = draft to GA', async ({ page }) => {

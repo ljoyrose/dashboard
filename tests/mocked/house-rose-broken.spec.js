@@ -50,9 +50,9 @@ for (const scheme of ['light', 'dark']) {
       await page.setViewportSize({ width: 390, height: 844 });
       await home(page);
       const nums = page.locator('#hubTiles .hubtile[data-hub="projects"] a.hk');
-      await expect(nums).toHaveText(['3Stuck', '2Waiting', '2Running']);
+      await expect(nums).toHaveText(['3 Stuck', '2 Waiting', '2 Running']);
       await expect(nums.nth(0).locator('b')).toHaveClass('broken');
-      await expect(nums.nth(0)).toHaveAttribute('aria-label', 'Projects, Stuck: 3 stuck');
+      await expect(nums.nth(0)).toHaveAttribute('aria-label', '3 Stuck stuck, Projects');
       await expect(nums.locator('b.need')).toHaveCount(0);
       await expect(nums.nth(1).locator('b.broken')).toHaveCount(0);
       await expect(nums.nth(2).locator('b.broken')).toHaveCount(0);
@@ -70,7 +70,7 @@ for (const scheme of ['light', 'dark']) {
         await estate(page);
         const down = page.locator('[data-hm="nums"] a.hm-n[data-k="Down"]');
         await expect(down.locator('.hm-v')).toHaveClass(/\bbroken\b/);
-        await expect(down).toHaveAttribute('aria-label', /^Down: \d+ down\. Open the list$/);
+        await expect(down).toHaveAttribute('aria-label', /^\d+ Down down\. Open the list$/);
         for (const k of ['Expiring', 'Live']) await expect(page.locator(`[data-hm="nums"] a.hm-n[data-k="${k}"] .hm-v`)).not.toHaveClass(/\b(broken|need)\b/);
         const v = await down.locator('.hm-v').evaluate(look());
         expect([v.bg, v.ink, v.line]).toEqual([...BLACK[scheme], BLACK[scheme][0]]);
@@ -80,7 +80,7 @@ for (const scheme of ['light', 'dark']) {
         // The Do tab: black, its name says "down" (a phone shows the black dot).
         const tab = page.locator('nav.house-tabs a[data-nav="look"]');
         await expect(tab.locator('.n')).toHaveClass(/\bbroken\b/);
-        await expect(tab).toHaveAttribute('aria-label', /^Do, \d+ down$/);
+        await expect(tab).toHaveAttribute('aria-label', /^Do \d+ down$/);
         expect((await tab.locator('.n').evaluate(look())).bg).toBe(BLACK[scheme][0]);
         // The tiles on All: Down black; Live grey.
         await page.evaluate(() => { location.hash = '#/all'; });

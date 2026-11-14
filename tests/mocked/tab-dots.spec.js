@@ -1,10 +1,10 @@
 // Bottom-tab counts and tab size (Lisa's pick b, 2 Nov 2026: "use b not different sized rectangles ... same size ideally square").
 //  - Phone (390): a tab's count is a DOT, not a number: 8px, just off the icon's top-right corner, rose = late or due today,
 //    grey = waiting, no dot when 0. Every tab on the bar is the same width (no tab widens for its count) and as close to square
-//    as fits: height >= width - 2px, never under 56px high. The tab's name still says the number ("Do, 3 waiting").
+//    as fits: height >= width - 2px, never under 56px high. The tab's name still says the number ("Do 3 waiting").
 //  - Laptop (1280): the 14px number in its 24px ring stays as it was; tabs are equal width there too.
 //  - Phone words (Lisa, 2 Nov 2026): Money's "Accountant" shows as "Acct" and Marketplace's "New Stock" as "Stock" on a phone, so
-//    every phone tab is one square size; laptops keep the full words. The tab's name keeps the full word ("Accountant, 3 waiting").
+//    every phone tab is one square size; laptops keep the full words. The tab's name keeps the full word ("Accountant 3 waiting").
 // On all 8 pages. Pretend Google, Drive and Sheets; every row is invented.
 const { test, expect } = require('../support/test');
 const { HUBS, setLook } = require('../support/hubs');
@@ -85,7 +85,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect(t.n.l - t.icon.r, `${hub} ${t.word}: ...right beside it`).toBeLessThanOrEqual(3);
       expect(Math.abs(t.n.t - t.icon.t), `${hub} ${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
       expect(t.n.r, `${hub} ${t.word}: inside the tab`).toBeLessThanOrEqual(t.w);
-      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full}, ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
+      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full} ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
       if (t.n.broken) expect(t.n.why, `${hub} ${t.word}: a black count says what is broken`).toMatch(/^(down|expired|stuck|failed)$/);
     }
     expect(dots, `${hub}: the sample data shows at least one tab count`).toBeGreaterThan(0);
@@ -102,11 +102,11 @@ for (const [hub, H] of Object.entries(ALL)) {
     const word = await tab.locator(':scope > .htl').evaluate((w) => (w.querySelector(':scope > .htl-long') || w).textContent.trim());
     const set = (text, need) => dot.evaluate((n, [t, l]) => { n.textContent = t; n.classList.toggle('need', l); }, [text, need]);
     await set('3', false);
-    await expect(tab).toHaveAttribute('aria-label', `${word}, 3 waiting`);
+    await expect(tab).toHaveAttribute('aria-label', `${word} 3 waiting`);
     await expect(dot).toHaveCSS('background-color', GREY);
     await expect(dot).toBeVisible();
     await set('1', true);
-    await expect(tab).toHaveAttribute('aria-label', `${word}, 1 late`);
+    await expect(tab).toHaveAttribute('aria-label', `${word} 1 late`);
     await expect(dot).toHaveCSS('background-color', ROSE);
     await set('', true);
     await expect(tab).toHaveAttribute('aria-label', word);
@@ -131,7 +131,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       if (!t.n.broken) expect(t.n.ring, `${hub} ${t.word}: rose ring = late, grey ring = waiting`).toBe(t.n.need ? ROSE : GREY);
       expect(t.w - t.n.r, `${hub} ${t.word}: in the tab's top-right corner`).toBeLessThan(5);
       expect(t.n.t, `${hub} ${t.word}: in the tab's top-right corner`).toBeLessThan(5);
-      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full}, ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
+      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full} ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
       if (t.n.broken) expect(t.n.why, `${hub} ${t.word}: a black count says what is broken`).toMatch(/^(down|expired|stuck|failed)$/);
     }
     expect(rings, `${hub}: the sample data shows at least one tab count`).toBeGreaterThan(0);
@@ -163,7 +163,7 @@ for (const [hub, [full, short]] of Object.entries(SHORT)) {
     expect(tab, `${hub}: the ${full} tab is on the bar`).toBeTruthy();
     expect(tab.word, `${hub}: the phone word`).toBe(short);
     expect(tab.wordFits, `${hub}: ${short} is whole`).toBe(true);
-    expect(tab.name, `${hub}: the name keeps the full word`).toMatch(new RegExp('^' + full + '(, \\d+ (late|waiting))?$'));
+    expect(tab.name, `${hub}: the name keeps the full word`).toMatch(new RegExp('^(' + full + '( \\d+ (late|waiting))?|' + short + '( \\d+ (late|waiting))? \\(' + full + '\\))$'));   // the name starts with the visible word
     for (const t of tabs) {
       expect(Math.abs(t.w - tabs[0].w), `${hub} ${t.word}: the same width as every other tab (${t.w} vs ${tabs[0].w})`).toBeLessThanOrEqual(1);
       expect(t.h, `${hub} ${t.word}: square (${t.w} x ${t.h})`).toBeGreaterThanOrEqual(t.w - 2);

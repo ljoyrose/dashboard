@@ -145,7 +145,7 @@ for (const [hub, H] of Object.entries(ALL)) {
     await expect(menu).toBeVisible();
     const items = menu.locator(':scope > a, :scope > button');
     // A view may carry its count after the word (e.g. "Kits1"): the word itself must match exactly.
-    await expect(items).toHaveText(PLAN[hub].more.concat(PLAN[hub].out || []).map((w) => new RegExp('^' + w + '\\d*$')));
+    await expect(items).toHaveText(PLAN[hub].more.concat(PLAN[hub].out || []).map((w) => new RegExp('^' + w + '\\s*\\d*$')));
     // A link out of the site (not a view) opens a new tab and so never shows "where you are".
     for (const w of PLAN[hub].out || []) await expect(menu.locator(':scope > a', { hasText: w })).toHaveAttribute('target', '_blank');
     // Each view in the menu takes its own colour in its icon on hover (grey only for slot 0).
