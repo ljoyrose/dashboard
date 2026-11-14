@@ -268,7 +268,8 @@
       + '<label>Make<input name="make" value="' + e(it.make || '') + '"></label><label>Model<input name="model" value="' + e(it.model || '') + '"></label>'
       + '<label>Serial<input name="serial_no" value="' + e(it.serial_no || '') + '"></label>'
       + '<label>Made<input type="date" name="made_on" value="' + e(it.made_on || '') + '"></label><label>Expiry<input type="date" name="expires_on" value="' + e(it.expires_on || '') + '"></label>'
-      + '<label>Photo (Drive link or file id)<input name="photo" value="' + e(it.photo || '') + '"></label>'
+      + '<label>Photo<input type="file" name="file" accept="image/*" capture="environment"></label>'
+      + '<label>or a link to it<input name="photo" value="' + e(it.photo || '') + '" placeholder="Drive link"></label>'
       + '<label>Note<input name="note" value="' + e(it.note || '') + '"></label>'
       + '<div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
   }
@@ -324,7 +325,8 @@
       }).join('')
       + '<label>Result<select name="outcome" required><option value="ok">Pass</option><option value="concern">Fail</option></select></label>'
       + '<label>Who tested<input name="by" placeholder="e.g. G A Fire"></label>'
-      + '<label>Evidence: photo or certificate (Drive link or file id)<input name="photo"></label>'
+      + '<label>Evidence: photo or certificate (PDF)<input type="file" name="file" accept="image/*,application/pdf" capture="environment"></label>'
+      + '<label>or a link to it<input name="photo" placeholder="Drive link"></label>'
       + '<label>Note (needed for a Fail)<input name="note"></label>'
       + '<div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
   }
@@ -342,20 +344,49 @@
       return r;
     });
   }
+  /** A photo is shrunk to 1600px JPEG on the device; a PDF goes as it is. Resolves {mime, b64} or null. */
+  function readFile(file) {
+    if (!file) return Promise.resolve(null);
+    var asB64 = function (blob) { return new Promise(function (ok, no) { var fr = new FileReader(); fr.onload = function () { ok(String(fr.result).split(',')[1] || ''); }; fr.onerror = no; fr.readAsDataURL(blob); }); };
+    if (file.type === 'application/pdf') return asB64(file).then(function (b) { return { mime: 'application/pdf', b64: b }; });
+    if (!/^image\//.test(file.type)) return Promise.reject(new Error('Choose a photo or a PDF.'));
+    return new Promise(function (ok, no) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        ok({ mime: 'image/jpeg', b64: c.toDataURL('image/jpeg', 0.8).split(',')[1] });
+      };
+      img.onerror = function () { no(new Error('That photo could not be read.')); };
+      img.src = url;
+    });
+  }
+  /** Upload the chosen file first (Evidence.gs); resolves the file id, the typed link, or ''. */
+  function evidence(v, form, forTable, forId, link) {
+    var el = form.querySelector('input[type=file][name=file]'), file = el && el.files && el.files[0];
+    if (!file) return Promise.resolve(link || '');
+    if (!v.sinkSend) return Promise.reject(new Error('Saving is not set up on this device.'));
+    return readFile(file).then(function (f) {
+      if (f.b64.length > 1800000) throw new Error('That file is too large. Use a smaller photo or PDF.');
+      S.msg = 'Sending the file…'; v.redraw();
+      return v.sinkSend({ action: 'evidence_file', fields: { mime: f.mime, file_base64: f.b64, for_table: forTable, for_id: forId || '' } });
+    }).then(function (r) { if (!r || !r.ok) throw new Error(why(r)); return r.result.file_id; });
+  }
   function why(r) { if (!r) return 'Not saved.'; if (r.fields) return Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' '); return r.message || 'Not saved.'; }
 
   function onSave(v, form) {
     var kind = form.getAttribute('data-itm-save'), d = {};
     Array.prototype.forEach.call(form.elements, function (el) { if (el.name) d[el.name] = t(el.value); });
     var done = function (id, msg) { S.busy = false; S.form = ''; S.msg = msg; if (id) S.ticks[id] = true; v.redraw(); };
-    var fail = function (r) { S.busy = false; S.msg = why(r); v.redraw(); };
+    var fail = function (r) { S.busy = false; S.msg = r instanceof Error ? r.message : why(r); v.redraw(); };
     if (S.busy) return;
     S.busy = true; S.msg = 'Saving…'; v.redraw();
     var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note'];
     var pick = function () { var f = {}; ITEM.forEach(function (k) { if (d[k]) f[k] = d[k]; }); return f; };
+    var up = function (forTable, forId) { return evidence(v, form, forTable, forId, d.photo).then(function (id) { if (id) d.photo = id; }); };
     if (kind === 'add') {
-      var f = pick();
-      post(v, 'items', f).then(function (r) {
+      up('items', '').then(function () { var f = pick(); return post(v, 'items', f); }).then(function (r) {
         if (!r || !r.ok) return fail(r);
         var id = r.result.id, steps = [];
         if (d.area_id) steps.push(post(v, 'links', { from_table: 'items', from_id: id, role: PLACE, to_table: 'areas', to_id: d.area_id, from_date: d.from_date || v.today, source: 'Added on the Items page' }));
@@ -363,8 +394,7 @@
         return Promise.all(steps).then(function (rs) { var bad = rs.filter(function (x) { return !x || !x.ok; })[0]; done(id, bad ? 'Item saved. ' + why(bad) : 'Saved.'); });
       }, fail);
     } else if (kind === 'edit') {
-      var g = pick(); g.corrects_id = S.open;
-      post(v, 'items', g).then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Saved.'); }, fail);
+      up('items', S.open).then(function () { var g = pick(); g.corrects_id = S.open; return post(v, 'items', g); }).then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Saved.'); }, fail);
     } else if (kind === 'move') {
       post(v, 'links', { from_table: 'items', from_id: S.open, role: PLACE, to_table: 'areas', to_id: d.area_id, from_date: d.from_date, source: 'Moved on the Items page' }).then(function (r2) { if (!r2 || !r2.ok) return fail(r2); done(S.open, 'Saved.'); }, fail);
     } else if (kind === 'archive') {
@@ -380,9 +410,9 @@
       var at = d.on === v.today ? new Date().toISOString() : d.on + 'T12:00:00Z';
       var lf = { check_type_id: ty.id, item_id: S.open, outcome: d.outcome, happened_at: at, how_recorded: 'typed' };
       if (d.note || d.by) lf.note = [d.by ? 'by ' + d.by : '', d.note].filter(Boolean).join('. ');
-      if (d.photo) lf.photo = d.photo;
       if (d.on < addDays(v.today, -7)) lf.confirm_unusual = 'yes';   // an Earlier entry: the owner chose the date
-      post(v, 'check_log', lf, { values: values }).then(function (r) {
+      if (d.outcome === 'concern' && !d.note) return fail({ message: 'Say briefly what failed.' });
+      up('check_log', S.open).then(function () { if (d.photo) lf.photo = d.photo; return post(v, 'check_log', lf, { values: values }); }).then(function (r) {
         if (!r || !r.ok) return fail(r);
         Object.keys(values).forEach(function (k) { (v.T['BLD-check_value.csv'] = v.T['BLD-check_value.csv'] || []).push({ check_log_id: r.result.id, field_key: k, value: values[k] }); });
         S.testOn = ''; done(S.open, 'Saved.');

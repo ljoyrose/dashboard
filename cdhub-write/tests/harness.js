@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Evidence', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -139,7 +139,7 @@ function makeEnv(opts = {}) {
     DriveApp: {
       getFolderById: (id) => {
         if (id === 'FOLDER-TEST') return folder;
-        if (id && id === env.props.DOG_PHOTOS_FOLDER_ID) {
+        if (id && (id === env.props.DOG_PHOTOS_FOLDER_ID || id === env.props.EVIDENCE_FOLDER_ID)) {
           if (!env.photos) env.photos = [];
           return {
             createFile(blob) {

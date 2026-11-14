@@ -23,6 +23,7 @@
  *   MOVES_QUEUE_UNTIL  kept for older deploys. Occupancy moves now always go straight in (Lisa 12 Nov 2026);
  *                    this date and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
  *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
+ *   EVIDENCE_FOLDER_ID    Shared Drive folder id for evidence photos and PDF certificates (Evidence.gs). Missing = refused.
  *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
  *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
@@ -49,6 +50,7 @@ var BLD = {
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
     DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID',
+    EVIDENCE_FOLDER: 'EVIDENCE_FOLDER_ID',   // 14 Nov 2026 (ITEMS): Shared Drive folder for evidence photos and PDFs (Evidence.gs)
     INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
     INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
   },
