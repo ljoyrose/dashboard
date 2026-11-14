@@ -33,6 +33,7 @@
 <script src="../enquiries/examples.js"></script>
 <script src="enquiries-view.js"></script>
 <script src="admin.js"></script>
+<script src="items-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -542,7 +543,8 @@ function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTION
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
 if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
-var LATER_PAGES={dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
+if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
+var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
@@ -3961,6 +3963,7 @@ function pageCompliance(){
   +'<p><a href="#/areas">Open Areas</a></p>');
  h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
+ if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
   +BREED_RULES.concat(SETTING_RULES).map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
@@ -4141,8 +4144,12 @@ if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnqui
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']); NEXT.admin=['map','work'];
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); NEXT.staff=['admin','map']; }
+/* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports */
+function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
+if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(itmV()); }; SECTIONS.push(['items','Items']); NEXT.items=['compliance','sops']; }
 function extraMore(){
  var x=[];
+ if(typeof CDItems!=='undefined') x.push({id:'items',label:'Items',slot:'2',icon:'t-clipboard'});
  if(typeof BBHubView!=='undefined'&&bbOn()) x.push({id:'breed',label:'Breed Better',slot:'5',icon:'s-check'});
  if(typeof CDEnquiries!=='undefined') x.push({id:'enquiries',label:'Enquiries',slot:'3',icon:'t-world'});
  if(typeof AdminView!=='undefined'&&AdminView.on(T)) x.push({id:'admin',label:'Admin',slot:'8',icon:'t-user'});
@@ -4260,6 +4267,7 @@ function go(id,push){
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
+ if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');

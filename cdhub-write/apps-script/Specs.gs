@@ -387,8 +387,8 @@ var TABLES = {
     key: 'check_field',
     file: 'BLD-check_field.csv',
     idPrefix: 'cfd',
-    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
-    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
+    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
     computedColumns: [],
     lookups: [{ name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'type_key' }],
     perms: { add: ['OWNER'], correct: [] },
@@ -404,13 +404,7 @@ var TABLES = {
       required:       { type: 'bool', dflt: 'false' },
       sort:           { type: 'count' },                                             // order on the screen
       active:         { type: 'bool', dflt: 'true' },
-      effective_from: { type: 'date', required: true },
-      // 14 Nov 2026 (ITEMS): a number question's unit and limits. Limits are dated by effective_from and carry a source,
-      // so an old answer is judged by the row in force on its own date. Blank = no limit. Shown, never used to refuse a save.
-      unit:           { type: 'text' },
-      limit_low:      { type: 'text' },
-      limit_high:     { type: 'text' },
-      source:         { type: 'text' }
+      effective_from: { type: 'date', required: true }
     },
     dupKey: ['type_key', 'field_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -426,13 +420,6 @@ var TABLES = {
         else if (list.length > 30) errors.choices = 'Keep it to 30 answers or fewer.';
         else row.choices = list.join('|');
       }
-      ['limit_low', 'limit_high'].forEach(function (k) {
-        if (errors[k] || row[k] === '') return;
-        if (row.kind !== 'number') errors[k] = 'Only a number question has limits.';
-        else if (!/^-?\d{1,7}(\.\d{1,3})?$/.test(row[k])) errors[k] = 'Type a number, e.g. 0.1.';
-      });
-      if (!errors.limit_low && !errors.limit_high && row.limit_low !== '' && row.limit_high !== '' && parseFloat(row.limit_low) > parseFloat(row.limit_high)) errors.limit_high = 'The upper limit cannot be below the lower one.';
-      if (!errors.unit && row.unit !== '' && row.kind !== 'number') errors.unit = 'Only a number question has a unit.';
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.field_key || errors.effective_from) return;

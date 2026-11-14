@@ -447,7 +447,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
   });
 
   test('after a failed read, Try again reads the folder again and the tables load', async ({ page, guard, allowedConsole }) => {
@@ -460,7 +460,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     guard.world.failWith = null;
     await page.locator('#main button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
   });
 });
 

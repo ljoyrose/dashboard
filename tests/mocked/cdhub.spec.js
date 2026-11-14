@@ -137,7 +137,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -201,12 +201,13 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('eleven sections are in the bar (Table map and Assocs open by link): five tabs, then the rest under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('twelve sections are in the bar (Table map and Assocs open by link): five tabs, then the rest under More (Items added 14 Nov); Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
+    await expect(page.locator('#nav .house-more button[data-go="items"]')).toHaveCount(1);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
