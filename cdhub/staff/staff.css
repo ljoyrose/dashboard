@@ -54,3 +54,5 @@ textarea.inp{padding:10px 14px}
 .job-all{margin-bottom:4px}
 .done-line{flex-wrap:wrap}.done-note{flex-basis:100%;padding-left:26px;color:var(--ink);font-weight:400}
 .done-note{white-space:pre-line}
+.job-paper-btn{margin-left:16px}
+.job-paper:not([hidden]){display:flex;gap:8px;margin-bottom:8px}

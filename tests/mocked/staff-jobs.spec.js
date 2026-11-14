@@ -440,3 +440,28 @@ test('with past records readable there is no warning', async ({ page }) => {
   await expect(page.locator('[data-job="bowls"]')).toBeVisible();
   await expect(page.locator('[data-no-history]')).toHaveCount(0);
 });
+
+test('From paper saves the real day and time, ticks the card with that day, and refuses a future day', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const yesterday = london(new Date(Date.now() - 86400000)), tomorrow = london(new Date(Date.now() + 86400000));
+  await page.getByRole('button', { name: 'From paper: Ears' }).click();
+  // a future day is refused on the phone, before anything is sent
+  await ears.getByLabel('Day done').evaluate((el, v) => { el.removeAttribute('max'); el.value = v; }, tomorrow);
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('earlier day');
+  expect(sent).toHaveLength(0);
+  await ears.getByLabel('Day done').fill(yesterday);
+  await ears.getByLabel('Time done (optional)').fill('07:30');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  const f = sent[0].fields;
+  expect(f.how_recorded).not.toBe('scanned');
+  expect(london(new Date(f.happened_at))).toBe(yesterday);
+  expect(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(new Date(f.happened_at))).toBe('07:30');
+  await expect(ears.locator('.done-line.good')).toContainText('07:30');
+  await expect(ears.locator('.done-line.good')).toContainText(/\d{1,2} [A-Z][a-z]{2}/);
+});
