@@ -9,7 +9,6 @@ const signIn = async (page) => {
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
   await page.waitForFunction(() => window.LOAD && LOAD.state === 'ok' && LOAD.later === 'ok' && !LOAD.copy);
-  await page.addStyleTag({ content: 'html{overflow-y:scroll}' });   // a page scrollbar coming and going is not a column moving
 };
 const widths = (page, sel) => page.locator(sel + ' thead th').evaluateAll((hs) => hs.map((h) => Math.round(h.getBoundingClientRect().width)));
 
