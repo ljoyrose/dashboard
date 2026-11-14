@@ -90,7 +90,8 @@ async function roomAndPhoto(page, guard, code, shots) {
   await card.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
   await enterCode(page, code);
-  await expect(card.locator('[data-k="moved"]')).toHaveText('moved ✓');
+  await expect(card.locator('[data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
+  await expect(card.locator('[data-k="moved"] .sv-line.good svg')).toHaveCount(1);   // the tick on the item (tick on every save)
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ table: 'occupancy', action: 'add', code, fields: { subject_id: 'sub-test-pup-1', area_id: 'area-1' } });
   expect(sent[0].code).toBe(code);
@@ -130,7 +131,7 @@ test('an invalid staff code is refused and nothing is saved @regression', async 
   await card.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
   await enterCode(page, 'not-a-real-code');
-  await expect(page.locator('[data-move-msg]')).toHaveText('NOT saved — That staff code was not recognised.');
+  await expect(page.locator('[data-move-msg]')).toHaveText('Not saved: That staff code was not recognised.');
   await expect(card.locator('[data-k="moved"]')).toHaveCount(0);
   expect(sent).toHaveLength(1);
   expect(sent[0].code).toBe('not-a-real-code');
@@ -145,7 +146,7 @@ test('an accepted staff code is kept on this device and not asked again in a new
   await card.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
   await enterCode(page, 'river-staff-441');
-  await expect(card.locator('[data-k="moved"]')).toHaveText('moved ✓');
+  await expect(card.locator('[data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
   expect(await page.evaluate(() => localStorage.getItem('cdhub.staff.code'))).toBe('river-staff-441');
 
   await page.evaluate(() => sessionStorage.clear());
@@ -156,7 +157,7 @@ test('an accepted staff code is kept on this device and not asked again in a new
   const again = page.locator('.dc[data-dog="sub-test-pup-1"]');
   await again.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
-  await expect(again.locator('[data-k="moved"]')).toHaveText('moved ✓');
+  await expect(again.locator('[data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
   await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
   expect(sent).toHaveLength(2);
   expect(sent[1].code).toBe('river-staff-441');
@@ -168,6 +169,6 @@ test('a refused staff code is not kept on this device', async ({ page, guard }) 
   await card.getByRole('button', { name: 'Place' }).click();
   await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
   await enterCode(page, 'not-a-real-code');
-  await expect(page.locator('[data-move-msg]')).toHaveText('NOT saved — That staff code was not recognised.');
+  await expect(page.locator('[data-move-msg]')).toHaveText('Not saved: That staff code was not recognised.');
   expect(await page.evaluate(() => localStorage.getItem('cdhub.staff.code'))).toBeNull();
 });
