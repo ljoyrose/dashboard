@@ -15,16 +15,18 @@ const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'c
 const VALUE_H = ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'];
 const ITEM_H = ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'];
 const KIND_H = ['id', 'tenant_id', 'kind_key', 'label', 'source', 'set_by', 'set_on'];
+const LINK_H = ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'];
 const NOW = Date.UTC(2026, 10, 14, 10, 0, 0);
 
 const env0 = () => {
-  const env = standardEnv({ nowMs: NOW, props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', TABLE_ON_check_field: 'true', TABLE_ON_check_value: 'true', TABLE_ON_items: 'true', TABLE_ON_item_kinds: 'true' } });
+  const env = standardEnv({ nowMs: NOW, props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', TABLE_ON_check_field: 'true', TABLE_ON_check_value: 'true', TABLE_ON_items: 'true', TABLE_ON_item_kinds: 'true', TABLE_ON_links: 'true' } });
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_H));
   env.addFile('BLD-check_log.csv', fx.headerOnly(LOG_H));
   env.addFile('BLD-check_field.csv', fx.headerOnly(FIELD_H));
   env.addFile('BLD-check_value.csv', fx.headerOnly(VALUE_H));
   env.addFile('BLD-items.csv', fx.headerOnly(ITEM_H));
   env.addFile('BLD-item_kinds.csv', fx.headerOnly(KIND_H));
+  env.addFile('BLD-links.csv', fx.headerOnly(LINK_H));
   return env;
 };
 const recs = (env, title) => { const f = env.file(title)[0];
@@ -140,4 +142,23 @@ test('items: an extinguisher keeps its size, made and expiry dates; expiry canno
 test('qr_tag: a tag can open an item', () => {
   const env = env0();
   assert.ok(env.ctx.TABLES.qr_tag.input.kind.values.includes('item'));
+});
+
+test('links: an item is placed in one room at a time; a move ends the old row first', () => {
+  const { env, kettle } = setup();
+  const place = (to, from, extra) => owner(env, 'links', Object.assign({ from_table: 'items', from_id: kettle, role: 'placed_in', to_table: 'areas', to_id: to, from_date: from, source: 'PAT certificate 28 May 2025' }, extra || {}));
+  ok(place('area-t1', '2025-05-28', { to_date: '2026-11-13' }));
+  const clash = place('area-t2', '2026-11-01');
+  assert.equal(clash.ok, false);
+  assert.match(JSON.stringify(clash), /still in another place/);
+  ok(place('area-t2', '2026-11-14'));
+  assert.equal(recs(env, 'BLD-links.csv').length, 2);
+});
+
+test('links: any record to any record with an owner role word; bad words and self links refused', () => {
+  const { env, kettle, pat } = setup();
+  ok(owner(env, 'links', { from_table: 'check_types', from_id: pat, role: 'governed_by', to_table: 'sops', to_id: 'electrical-safety', from_date: '2025-01-01' }));
+  assert.match(JSON.stringify(owner(env, 'links', { from_table: 'Items!', from_id: kettle, role: 'x', to_table: 'areas', to_id: 'a', from_date: '2025-01-01' })), /lower-case/);
+  assert.match(JSON.stringify(owner(env, 'links', { from_table: 'items', from_id: kettle, role: 'same_as', to_table: 'items', to_id: kettle, from_date: '2025-01-01' })), /cannot link to itself/);
+  assert.equal(save(env, req(env, { code: env.codes.staff, table: 'links', fields: { from_table: 'items', from_id: kettle, role: 'placed_in', to_table: 'areas', to_id: 'area-t1', from_date: '2025-01-01' } })).ok, false);
 });

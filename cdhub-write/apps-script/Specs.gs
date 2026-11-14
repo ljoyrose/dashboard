@@ -624,6 +624,61 @@ var TABLES = {
     }
   },
 
+  // ---------------------------------------------------------------- links
+  // 14 Nov 2026 (ITEMS; LINKS decided C by Lisa 13 Nov 23:38): one neutral record-to-record link. From one row to
+  // another, with a role word the owner sets (rows, never code), dated from_date / to_date (S4.15) with a source.
+  // First uses: an item's room (items -> areas, role placed_in; a move = end the old row, add a new one), an item or
+  // test to the SOP it follows (governed_by) and to the requirement it meets (meets). Shown on both sides. To end one,
+  // fill in to_date; never deleted. Existing subject_link / area_link / governed_by keep their files until the rename sitting.
+  links: {
+    key: 'links',
+    file: 'BLD-links.csv',
+    idPrefix: 'lnk',
+    columns: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    ownerEditable: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      from_table: { type: 'text', required: true },   // e.g. items
+      from_id:    { type: 'text', required: true },
+      role:       { type: 'text', required: true },   // e.g. placed_in, governed_by, meets (the words people see are rule rows link_kind.<role>)
+      to_table:   { type: 'text', required: true },   // e.g. areas (live file BLD-area), sops, requirements
+      to_id:      { type: 'text', required: true },
+      from_date:  { type: 'date', required: true },
+      to_date:    { type: 'date' },                   // blank = no end
+      source:     { type: 'text' }                    // why: a certificate, a licence condition, the owner's decision
+    },
+    dupKey: ['from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      ['from_table', 'to_table', 'role'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row[k])) errors[k] = 'Use lower-case letters, numbers and underscores, e.g. placed_in.';
+      });
+      ['from_id', 'to_id'].forEach(function (k) {
+        if (!errors[k] && row[k] !== '' && !/^[A-Za-z0-9_.\-]{1,60}$/.test(row[k])) errors[k] = 'That is not a valid id.';
+      });
+      if (!errors.to_id && row.from_table === row.to_table && row.from_id === row.to_id && row.from_id) errors.to_id = 'A record cannot link to itself.';
+      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+    },
+    // one room at a time: a new placed_in row for an item may not start inside another open placed_in row for it
+    checkAgainst: function (clean, records, errors) {
+      if (clean.role !== 'placed_in' || errors.from_date) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.role !== 'placed_in' || r.from_table !== clean.from_table || r.from_id !== clean.from_id) continue;
+        if ((r.from_date || '') <= clean.from_date && (!r.to_date || r.to_date >= clean.from_date)) {
+          errors.from_date = 'It is still in another place on that day. End that one first (fill in its end date).';
+          return;
+        }
+      }
+    }
+  },
+
   // ---------------------------------------------------------------- occupancy
   // Where each dog is. LIVE table (BLD-occupancy.csv, header checked 15 Oct). EXISTING column names only.
   // A move APPENDS a new row (subject_id, area_id, moved_in = today). moved_out is NEVER written and no
@@ -1180,5 +1235,6 @@ var READABLE = {
   subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' },
   // 14 Nov 2026 (ITEMS): the item list and its kinds, read only as far as visibility rows allow (staff phones read items to open an item's tests)
   items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
-  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' }
+  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' },
+  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' }
 };
