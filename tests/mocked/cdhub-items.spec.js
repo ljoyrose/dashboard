@@ -14,9 +14,13 @@ test.describe('CD Hub: items', () => {
       ['c1,t,pretend_pat,Pretend PAT,item,true,2020-01-01,365,pretend_plug', 'c2,t,pretend_svc,Pretend service,item,true,2020-01-01,3650,pretend_ext']));
     addTable(guard.world, 'BLD-check_log.csv', csv('id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded,litter_id,note_for_id,item_id',
       ['l1,t,c1,,,,,ok,2020-05-28T12:00:00Z,,,o,,,typed,,,i1', 'l2,t,c2,,,,,ok,2024-05-28T12:00:00Z,,,o,,,typed,,,i2']));
-    addTable(guard.world, 'BLD-check_field.csv', csv('id,tenant_id,type_key,field_key,label,kind,choices,required,sort,active,effective_from,set_at,set_by,unit,limit_low,limit_high,source',
-      ['f1,t,pretend_pat,earth,Pretend earth,number,,false,1,true,2020-01-01,,,Ω,,0.1,x']));
-    addTable(guard.world, 'BLD-check_value.csv', csv('id,tenant_id,check_log_id,check_field_id,field_key,value', ['v1,t,l1,f1,earth,0.2']));
+    addTable(guard.world, 'BLD-check_field.csv', csv('id,tenant_id,type_key,field_key,label,kind,choices,required,sort,active,effective_from,set_at,set_by',
+      ['f1,t,pretend_pat,look,Pretend look,choice,Pass|Fail,false,1,true,2020-01-01,,']));
+    addTable(guard.world, 'BLD-check_value.csv', csv('id,tenant_id,check_log_id,check_field_id,field_key,value', ['v1,t,l1,f1,look,Pass']));
+    addTable(guard.world, 'BLD-reading_kinds.csv', csv('id,tenant_id,kind_key,label,unit_id,value_shape,precision_dp,source,set_by,set_on', ['r1,t,pretend_earth,Pretend earth,Ω,single,2,x,o,2026-01-01']));
+    addTable(guard.world, 'BLD-reading_limits.csv', csv('id,tenant_id,kind_id,scope_table,scope_id,low,high,label,from_date,to_date,source,set_by,set_on', ['m1,t,r1,,,,0.1,,2020-01-01,,x,o,2026-01-01']));
+    addTable(guard.world, 'BLD-readings.csv', csv('id,tenant_id,kind_id,area_id,item_id,subject_id,check_log_id,value_min,value_max,value,unit_id,taken_at,in_range', ['g1,t,r1,,i1,,l1,,,0.2,Ω,2020-05-28T12:00:00Z,']));
+    addTable(guard.world, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,to_table,to_id,link_kind_key,sort,note,from_date,to_date,source,set_by,set_on,created_at,updated_at', ['n1,t,reading_kinds,r1,check_types,pretend_pat,reading_for_job,,,2020-01-01,,x,o,2026-01-01,,']));
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => { location.hash = '#/items'; });
     const rowsIn = page.locator('#itmPage .itm-row');
@@ -30,7 +34,7 @@ test.describe('CD Hub: items', () => {
     await expect(page.locator('#itmCard')).toContainText('outside');  // 0.2 Ω above the 0.1 limit
     await expect(page.locator('#itmCard [data-itm-form="archive"]')).toBeVisible();
     await page.locator('#itmCard [data-itm-form="test:pretend_pat"]').click();
-    await page.locator('[name="v_earth"]').fill('0.09');
+    await page.locator('[name="r_r1"]').fill('0.09');
     await expect(page.locator('.itm-lim.ok')).toHaveText('inside limit');
   });
 });

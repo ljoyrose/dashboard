@@ -387,8 +387,8 @@ var TABLES = {
     key: 'check_field',
     file: 'BLD-check_field.csv',
     idPrefix: 'cfd',
-    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
-    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
+    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
     computedColumns: [],
     lookups: [{ name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'type_key' }],
     perms: { add: ['OWNER'], correct: [] },
@@ -404,13 +404,7 @@ var TABLES = {
       required:       { type: 'bool', dflt: 'false' },
       sort:           { type: 'count' },                                             // order on the screen
       active:         { type: 'bool', dflt: 'true' },
-      effective_from: { type: 'date', required: true },
-      // 14 Nov 2026 (ITEMS): a number question's unit and limits. Limits are dated by effective_from and carry a source,
-      // so an old answer is judged by the row in force on its own date. Blank = no limit. Shown, never used to refuse a save.
-      unit:           { type: 'text' },
-      limit_low:      { type: 'text' },
-      limit_high:     { type: 'text' },
-      source:         { type: 'text' }
+      effective_from: { type: 'date', required: true }
     },
     dupKey: ['type_key', 'field_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -426,13 +420,6 @@ var TABLES = {
         else if (list.length > 30) errors.choices = 'Keep it to 30 answers or fewer.';
         else row.choices = list.join('|');
       }
-      ['limit_low', 'limit_high'].forEach(function (k) {
-        if (errors[k] || row[k] === '') return;
-        if (row.kind !== 'number') errors[k] = 'Only a number question has limits.';
-        else if (!/^-?\d{1,7}(\.\d{1,3})?$/.test(row[k])) errors[k] = 'Type a number, e.g. 0.1.';
-      });
-      if (!errors.limit_low && !errors.limit_high && row.limit_low !== '' && row.limit_high !== '' && parseFloat(row.limit_low) > parseFloat(row.limit_high)) errors.limit_high = 'The upper limit cannot be below the lower one.';
-      if (!errors.unit && row.unit !== '' && row.kind !== 'number') errors.unit = 'Only a number question has a unit.';
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.field_key || errors.effective_from) return;
@@ -621,61 +608,6 @@ var TABLES = {
     stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
       if (!errors.kind_key && row.kind_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.kind_key)) errors.kind_key = 'Use lower-case letters, numbers and underscores, e.g. extinguisher_co2.';
-    }
-  },
-
-  // ---------------------------------------------------------------- links
-  // 14 Nov 2026 (ITEMS; LINKS decided C by Lisa 13 Nov 23:38): one neutral record-to-record link. From one row to
-  // another, with a role word the owner sets (rows, never code), dated from_date / to_date (S4.15) with a source.
-  // First uses: an item's room (items -> areas, role placed_in; a move = a new row from a later day, latest wins), an item or
-  // test to the SOP it follows (governed_by) and to the requirement it meets (meets). Shown on both sides. To end one,
-  // fill in to_date; never deleted. Existing subject_link / area_link / governed_by keep their files until the rename sitting.
-  links: {
-    key: 'links',
-    file: 'BLD-links.csv',
-    idPrefix: 'lnk',
-    columns: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
-    proposedColumns: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
-    computedColumns: [],
-    lookups: [],
-    perms: { add: ['OWNER'], correct: [] },
-    noCorrect: true,
-    ownerEditable: true,
-    alwaysPending: false,
-    defaultMode: 'direct',
-    input: {
-      from_table: { type: 'text', required: true },   // e.g. items
-      from_id:    { type: 'text', required: true },
-      role:       { type: 'text', required: true },   // e.g. placed_in, governed_by, meets (the words people see are rule rows link_kind.<role>)
-      to_table:   { type: 'text', required: true },   // e.g. areas (live file BLD-area), sops, requirements
-      to_id:      { type: 'text', required: true },
-      from_date:  { type: 'date', required: true },
-      to_date:    { type: 'date' },                   // blank = no end
-      source:     { type: 'text' }                    // why: a certificate, a licence condition, the owner's decision
-    },
-    dupKey: ['from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date'], dupTimeCol: null,
-    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
-    checkRow: function (row, errors) {
-      ['from_table', 'to_table', 'role'].forEach(function (k) {
-        if (!errors[k] && row[k] !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row[k])) errors[k] = 'Use lower-case letters, numbers and underscores, e.g. placed_in.';
-      });
-      ['from_id', 'to_id'].forEach(function (k) {
-        if (!errors[k] && row[k] !== '' && !/^[A-Za-z0-9_.\-]{1,60}$/.test(row[k])) errors[k] = 'That is not a valid id.';
-      });
-      if (!errors.to_id && row.from_table === row.to_table && row.from_id === row.to_id && row.from_id) errors.to_id = 'A record cannot link to itself.';
-      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
-    },
-    // one room at a time: a move is a NEW placed_in row from a later date; the latest row starting on or before a day
-    // is the room that day (the earlier row stays, so history keeps the old room). Never two rows from the same day.
-    checkAgainst: function (clean, records, errors) {
-      if (clean.role !== 'placed_in' || errors.from_date) return;
-      for (var i = 0; i < records.length; i++) {
-        var r = records[i];
-        if (r.role === 'placed_in' && r.from_table === clean.from_table && r.from_id === clean.from_id && (r.from_date || '') === clean.from_date) {
-          errors.from_date = 'It already has a place from that day. Use a later day for a move.';
-          return;
-        }
-      }
     }
   },
 
@@ -1235,6 +1167,5 @@ var READABLE = {
   subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' },
   // 14 Nov 2026 (ITEMS): the item list and its kinds, read only as far as visibility rows allow (staff phones read items to open an item's tests)
   items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
-  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' },
-  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' }
+  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' }
 };

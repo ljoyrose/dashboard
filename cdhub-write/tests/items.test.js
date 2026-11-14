@@ -1,8 +1,9 @@
 'use strict';
 /**
  * 14 Nov 2026, ITEMS (item checks brick, decision 13 Nov option A): BLD-items and BLD-item_kinds, item tests as
- * check_type rows (target item, item_kind), check_log.item_id, number questions with unit and dated limits, and a
+ * check_type rows (target item, item_kind), check_log.item_id, and a
  * form judged by the questions in force on the record's own day (an Earlier entry).
+ * Measured values (earth bond, insulation, leakage) are readings rows (TEMPS), not check_field limits (OV11, 14 Nov).
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -11,22 +12,20 @@ const fx = require('./fixtures');
 
 const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'];
-const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'];
+const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'];
 const VALUE_H = ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'];
 const ITEM_H = ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'];
 const KIND_H = ['id', 'tenant_id', 'kind_key', 'label', 'source', 'set_by', 'set_on'];
-const LINK_H = ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'];
 const NOW = Date.UTC(2026, 10, 14, 10, 0, 0);
 
 const env0 = () => {
-  const env = standardEnv({ nowMs: NOW, props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', TABLE_ON_check_field: 'true', TABLE_ON_check_value: 'true', TABLE_ON_items: 'true', TABLE_ON_item_kinds: 'true', TABLE_ON_links: 'true' } });
+  const env = standardEnv({ nowMs: NOW, props: { TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', TABLE_ON_check_field: 'true', TABLE_ON_check_value: 'true', TABLE_ON_items: 'true', TABLE_ON_item_kinds: 'true' } });
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_H));
   env.addFile('BLD-check_log.csv', fx.headerOnly(LOG_H));
   env.addFile('BLD-check_field.csv', fx.headerOnly(FIELD_H));
   env.addFile('BLD-check_value.csv', fx.headerOnly(VALUE_H));
   env.addFile('BLD-items.csv', fx.headerOnly(ITEM_H));
   env.addFile('BLD-item_kinds.csv', fx.headerOnly(KIND_H));
-  env.addFile('BLD-links.csv', fx.headerOnly(LINK_H));
   return env;
 };
 const recs = (env, title) => { const f = env.file(title)[0];
@@ -101,22 +100,9 @@ test('check_log: the same item twice is a repeat; two items are not', () => {
   assert.equal(one(kettle).ok, false, 'the same item again is a repeat');
 });
 
-test('check_field: a number question has a unit and limits; limits need numbers in order; others have none', () => {
-  const { env } = setup();
-  const f = (extra) => owner(env, 'check_field', Object.assign({ type_key: 'pat_class_1', field_key: 'earth_bond', label: 'Earth bond', kind: 'number', effective_from: '2025-01-01' }, extra));
-  assert.match(JSON.stringify(f({ limit_high: 'low' })), /Type a number/);
-  assert.match(JSON.stringify(f({ limit_low: '5', limit_high: '1' })), /cannot be below/);
-  assert.match(JSON.stringify(f({ kind: 'text', unit: 'Ω' })), /Only a number question has a unit/);
-  ok(f({ unit: 'Ω', limit_high: '0.1', source: 'G A Fire certificate 28 May 2025' }));
-  const row = recs(env, 'BLD-check_field.csv')[0];
-  assert.equal(row.unit, 'Ω');
-  assert.equal(row.limit_high, '0.1');
-  assert.equal(row.source, 'G A Fire certificate 28 May 2025');
-});
-
 test('forms: an Earlier entry is judged by the questions in force on its own day', () => {
   const { env, kettle, pat } = setup();
-  ok(owner(env, 'check_field', { type_key: 'pat_class_1', field_key: 'insulation', label: 'Insulation', kind: 'number', unit: 'MΩ', limit_low: '1', effective_from: '2025-01-01' }));
+  ok(owner(env, 'check_field', { type_key: 'pat_class_1', field_key: 'insulation', label: 'Insulation', kind: 'number', effective_from: '2025-01-01' }));
   ok(owner(env, 'check_field', { type_key: 'pat_class_1', field_key: 'rcd_trip', label: 'RCD trip', kind: 'number', required: 'true', effective_from: '2026-06-01' }));
   // 28 May 2025: the RCD question did not exist yet, so it is not needed
   const old = save(env, req(env, { code: env.codes.owner, table: 'check_log', fields: { check_type_id: pat, item_id: kettle, outcome: 'ok', happened_at: '2025-05-28T11:00:00Z', confirm_unusual: 'yes' }, values: { insulation: '19.99' } }));
@@ -142,23 +128,4 @@ test('items: an extinguisher keeps its size, made and expiry dates; expiry canno
 test('qr_tag: a tag can open an item', () => {
   const env = env0();
   assert.ok(env.ctx.TABLES.qr_tag.input.kind.values.includes('item'));
-});
-
-test('links: a move is a new placed_in row from a later day; two from the same day are refused', () => {
-  const { env, kettle } = setup();
-  const place = (to, from, extra) => owner(env, 'links', Object.assign({ from_table: 'items', from_id: kettle, role: 'placed_in', to_table: 'areas', to_id: to, from_date: from, source: 'PAT certificate 28 May 2025' }, extra || {}));
-  ok(place('area-t1', '2025-05-28'));
-  const clash = place('area-t2', '2025-05-28');
-  assert.equal(clash.ok, false);
-  assert.match(JSON.stringify(clash), /already has a place from that day/);
-  ok(place('area-t2', '2026-11-14'));
-  assert.equal(recs(env, 'BLD-links.csv').length, 2);
-});
-
-test('links: any record to any record with an owner role word; bad words and self links refused', () => {
-  const { env, kettle, pat } = setup();
-  ok(owner(env, 'links', { from_table: 'check_types', from_id: pat, role: 'governed_by', to_table: 'sops', to_id: 'electrical-safety', from_date: '2025-01-01' }));
-  assert.match(JSON.stringify(owner(env, 'links', { from_table: 'Items!', from_id: kettle, role: 'x', to_table: 'areas', to_id: 'a', from_date: '2025-01-01' })), /lower-case/);
-  assert.match(JSON.stringify(owner(env, 'links', { from_table: 'items', from_id: kettle, role: 'same_as', to_table: 'items', to_id: kettle, from_date: '2025-01-01' })), /cannot link to itself/);
-  assert.equal(save(env, req(env, { code: env.codes.staff, table: 'links', fields: { from_table: 'items', from_id: kettle, role: 'placed_in', to_table: 'areas', to_id: 'area-t1', from_date: '2025-01-01' } })).ok, false);
 });

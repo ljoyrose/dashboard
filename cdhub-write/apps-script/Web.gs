@@ -29,11 +29,10 @@ function doPost(e) {
     if (body.length > BLD.LIMITS.MAX_PHOTO_CHARS) throw err_('BAD_REQUEST', 'That request was too large.');
     // Only a dog photo may be larger than a normal save. The picture is base64, so the quoted action cannot appear inside it.
     var big = body.length > BLD.LIMITS.MAX_BODY_CHARS;
-    if (big && body.indexOf('"dog_photo"') < 0 && body.indexOf('"evidence_file"') < 0) throw err_('BAD_REQUEST', 'That request was too large.');
+    if (big && body.indexOf('"dog_photo"') < 0) throw err_('BAD_REQUEST', 'That request was too large.');
     var req;
     try { req = JSON.parse(body); } catch (x) { throw err_('BAD_REQUEST', 'That request was not understood.'); }
-    if (big && (!req || (req.action !== 'dog_photo' && req.action !== 'evidence_file'))) throw err_('BAD_REQUEST', 'That request was too large.');
-    if (req && typeof req === 'object' && req.action === 'evidence_file') return jsonOut_({ ok: true, result: sinkEvidenceFile_(req) });
+    if (big && (!req || req.action !== 'dog_photo')) throw err_('BAD_REQUEST', 'That request was too large.');
     if (req && typeof req === 'object' && req.action === 'dog_photo') return jsonOut_({ ok: true, result: sinkDogPhoto_(req) });
     if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
     // dog card saves (12 Nov 2026, draft; each OFF until TABLE_ON_weighing / TABLE_ON_vaccination is true)

@@ -3,9 +3,13 @@
  * The owner's numbered list of things that get tested (plug-in appliances, fire extinguishers, smoke alarms,
  * thermometers...): add, move room, archive (dead or failed), record a test with readings and evidence, and export
  * a report (CSV, or a print page saved as PDF). Nothing here names a kind, a test, a limit or an interval: kinds are
- * BLD-item_kinds rows, tests are BLD-check_type rows (target item, item_kind), readings are BLD-check_field rows (unit,
- * limits, dated), the room is a BLD-links row (role placed_in), in use / archived is a BLD-requirement row (need_type
- * item.in_use), "due soon" is the rule row items.due_soon_days. Status is worked out on read, never stored.
+ * BLD-item_kinds rows, tests are BLD-check_type rows (target item, item_kind), measured values are BLD-readings rows
+ * (kind from BLD-reading_kinds, linked to the test by a links row reading_for_job; judged by the BLD-reading_limits row in
+ * force on the day: TEMPS, OV11 14 Nov), other answers are BLD-check_field / BLD-check_value rows, the room is a shared
+ * BLD-links row (link_kind_key placed_in; STAFF owns links and its link_add / link_end saves), proof photos and
+ * certificates are BLD-files rows joined by links (evidence, certificate, main; DOGCARD's file_add), in use / archived is
+ * a BLD-requirement row (need_type item.in_use), "due soon" is the rule row items.due_soon_days. Status is worked out on
+ * read, never stored.
  * Works in a browser (window.CDItems) and in Node (module.exports) so the maths can be tested.
  */
 (function (root, factory) {
@@ -14,8 +18,10 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var FILES = ['BLD-items.csv', 'BLD-item_kinds.csv', 'BLD-links.csv', 'BLD-check_field.csv', 'BLD-check_value.csv'];
-  var NEED = 'item.in_use', PLACE = 'placed_in';
+  var FILES = ['BLD-items.csv', 'BLD-item_kinds.csv', 'BLD-links.csv', 'BLD-check_field.csv', 'BLD-check_value.csv',
+    'BLD-readings.csv', 'BLD-reading_kinds.csv', 'BLD-reading_limits.csv', 'BLD-files.csv'];
+  var NEED = 'item.in_use', PLACE = 'placed_in', LINKS = 'BLD-links.csv';
+  var PLACES = [PLACE, 'item_placed_in'];   // one of the two survives when STAFF and TEMPS settle the kind row
   // order best to worst (Lisa 9 Nov): filters and sorts run All, In date ... Overdue, Archived last
   var RANK = { ok: 0, none: 1, soon: 2, due: 3, fail: 4, expired: 5 };
   var WORD = { ok: 'In date', none: 'No test set', soon: 'Due soon', due: 'Overdue', fail: 'Failed', expired: 'Expired' };
@@ -53,12 +59,27 @@
     return { yes: false, row: last };
   }
 
-  /** The room on a day: the latest placed_in row starting on or before it (a move is a new row); a to_date ends it. */
+  /* Shared links (STAFF): from_table/from_id -> to_table/to_id, link_kind_key, from_date/to_date. Table words are
+     compared without a plural s, so check_log and check_logs are the same table until the rename sitting. */
+  function tbl(x) { return t(x).replace(/s$/, ''); }
+  function live(l, on) { return t(l.from_date) <= on && (!t(l.to_date) || t(l.to_date) >= on); }
+  function linksFrom(T, fromTable, fromId, kinds, on) {
+    return rows(T, LINKS).filter(function (l) {
+      return tbl(l.from_table) === tbl(fromTable) && l.from_id === fromId && kinds.indexOf(t(l.link_kind_key)) >= 0 && (!on || live(l, on));
+    }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0) || t(a.from_date).localeCompare(t(b.from_date)); });
+  }
+  /** The room on a day: the latest placed_in link starting on or before it; a to_date ends it. */
   function placeOn(T, id, on) {
-    var r = rows(T, 'BLD-links.csv').filter(function (l) {
-      return l.from_table === 'items' && l.from_id === id && l.role === PLACE && t(l.from_date) <= on;
-    }).sort(function (a, b) { return t(b.from_date).localeCompare(t(a.from_date)); })[0];
-    return r && (!t(r.to_date) || t(r.to_date) >= on) ? r : null;
+    var r = linksFrom(T, 'items', id, PLACES).filter(function (l) { return t(l.from_date) <= on; })
+      .sort(function (a, b) { return t(b.from_date).localeCompare(t(a.from_date)); })[0];
+    return r && live(r, on) ? r : null;
+  }
+  /** Files joined to a record by the given link kinds (newest last), as {href, label}. */
+  function filesFor(T, fromTable, fromId, kinds) {
+    var byId = {};
+    rows(T, 'BLD-files.csv').forEach(function (f) { byId[f.id] = f; });
+    return linksFrom(T, fromTable, fromId, kinds).filter(function (l) { return tbl(l.to_table) === 'file' && byId[l.to_id] && !t(l.to_date); })
+      .map(function (l) { var f = byId[l.to_id]; return { href: fileHref(f.drive_file_id || f.url), label: l.link_kind_key === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
   }
 
   /** Test rows in force on a day for an item kind: latest effective_from per type_key, active, target item. */
@@ -88,21 +109,58 @@
     return Object.keys(now).map(function (k) { return now[k]; }).filter(function (r) { return r.active !== 'false'; })
       .sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0) || t(a.label).localeCompare(t(b.label)); });
   }
-  /** Is a number inside the field's limits? null = no limit set or not a number. */
+  /** Reading kinds a test measures: reading_kinds rows linked to it (reading_for_job, to the type_key or any of its row ids). */
+  function readingKindsFor(T, key, on) {
+    var ids = {}, kinds = {};
+    rows(T, 'BLD-check_type.csv').forEach(function (r) { if (r.type_key === key) ids[r.id] = 1; });
+    ids[key] = 1;
+    rows(T, 'BLD-reading_kinds.csv').forEach(function (k) { kinds[k.id] = k; });
+    return rows(T, LINKS).filter(function (l) {
+      return tbl(l.from_table) === 'reading_kind' && t(l.link_kind_key) === 'reading_for_job' && tbl(l.to_table) === 'check_type' && ids[l.to_id] && live(l, on) && kinds[l.from_id];
+    }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0); }).map(function (l) { return kinds[l.from_id]; });
+  }
+  /** The reading_limits row in force on a day for a kind: the item's own row beats its kind's, which beats an unscoped one. */
+  function limitOn(T, kindId, it, on) {
+    var best = null, bestRank = -1;
+    rows(T, 'BLD-reading_limits.csv').forEach(function (r) {
+      if (r.kind_id !== kindId || !t(r.from_date) || r.from_date > on || (t(r.to_date) && r.to_date < on)) return;
+      var st = tbl(r.scope_table), rank = !st ? 0 : st === 'item_kind' && it && (r.scope_id === it.kind_key) ? 1 : st === 'item' && it && r.scope_id === it.id ? 2 : -1;
+      if (rank < 0) return;
+      if (rank > bestRank || (rank === bestRank && r.from_date > best.from_date)) { best = r; bestRank = rank; }
+    });
+    return best;
+  }
+  /** Is a number inside a limit row (low / high, either blank)? null = no limit or not a number. */
   function inLimit(f, v) {
-    var n = parseFloat(v), lo = t(f.limit_low), hi = t(f.limit_high);
+    f = f || {};
+    var n = parseFloat(v), lo = t(f.low), hi = t(f.high);
     if (isNaN(n) || (lo === '' && hi === '')) return null;
     return (lo === '' || n >= parseFloat(lo)) && (hi === '' || n <= parseFloat(hi));
   }
 
-  /** Records for one item, newest first; a corrected record gives way to its correction. */
-  function records(T, id) {
-    var byType = {}, replaced = {}, vals = {};
+  /** Records for one item, newest first; a corrected record gives way to its correction. Each record's values are its
+      check_value answers and its readings rows, as {key, label, value, unit, inr} (inr false = outside the limit). */
+  function records(T, id, kindKey) {
+    var byType = {}, replaced = {}, vals = {}, rds = {}, rkind = {}, it = { id: id, kind_key: kindKey || '' };
     rows(T, 'BLD-check_type.csv').forEach(function (r) { byType[r.id] = r; });
     rows(T, 'BLD-check_log.csv').forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
     rows(T, 'BLD-check_value.csv').forEach(function (v) { (vals[v.check_log_id] = vals[v.check_log_id] || []).push(v); });
+    rows(T, 'BLD-reading_kinds.csv').forEach(function (k) { rkind[k.id] = k; });
+    var rrep = {}; rows(T, 'BLD-readings.csv').forEach(function (r) { if (r.corrects_id) rrep[r.corrects_id] = true; });
+    rows(T, 'BLD-readings.csv').forEach(function (r) { if (t(r.check_log_id) && !rrep[r.id]) (rds[r.check_log_id] = rds[r.check_log_id] || []).push(r); });
     return rows(T, 'BLD-check_log.csv').filter(function (l) { return l.item_id === id && !replaced[l.id] && byType[l.check_type_id]; })
-      .map(function (l) { var ty = byType[l.check_type_id]; return { id: l.id, on: day(l.happened_at || l.taken_at), type: ty, outcome: l.outcome, note: l.note || '', by: l.taken_by || '', photo: l.photo || '', values: vals[l.id] || [] }; })
+      .map(function (l) {
+        var ty = byType[l.check_type_id], on = day(l.happened_at || l.taken_at), fs = {};
+        fieldsOn(T, ty.type_key, on).forEach(function (f) { fs[f.field_key] = f; });
+        var values = (vals[l.id] || []).map(function (v) { return { key: v.field_key, label: (fs[v.field_key] || {}).label || v.field_key, value: v.value, unit: '', inr: null }; })
+          .concat((rds[l.id] || []).map(function (r) {
+            var k = rkind[r.kind_id] || {}, inr = r.in_range === 'false' ? false : r.in_range === 'true' ? true : inLimit(limitOn(T, r.kind_id, it, on), r.value);
+            return { key: k.kind_key || r.kind_id, label: k.label || k.kind_key || 'Reading', value: r.value, unit: r.unit_id || k.unit_id || '', inr: inr };
+          }));
+        var files = filesFor(T, 'check_logs', l.id, ['evidence', 'certificate']);
+        if (t(l.photo)) files.unshift({ href: fileHref(l.photo), label: 'Evidence' });
+        return { id: l.id, on: on, type: ty, outcome: l.outcome, note: l.note || '', by: l.taken_by || '', files: files, values: values };
+      })
       .sort(function (a, b) { return b.on.localeCompare(a.on); });
   }
 
@@ -122,7 +180,7 @@
 
   /** Status of one item on a day: worst of each test and the expiry date. */
   function status(T, it, on) {
-    var soon = dueSoonDays(T, on), recs = records(T, it.id), lines = [];
+    var soon = dueSoonDays(T, on), recs = records(T, it.id, it.kind_key), lines = [];
     testsFor(T, it.kind_key, on).forEach(function (ty) {
       var mine = recs.filter(function (r) { return r.type.type_key === ty.type_key && r.outcome !== 'note'; });
       var last = mine[0], pass = mine.filter(function (r) { return r.outcome === 'ok'; })[0];
@@ -180,8 +238,8 @@
       var base = [x.it.item_no, x.it.name, x.kind, x.place, x.it.size, x.it.made_on, x.it.expires_on, WORD[x.s.st], x.archived ? 'yes' : ''];
       var lines = x.s.lines.length ? x.s.lines : [null];
       lines.forEach(function (l) {
-        var rec = l ? records(T, x.it.id).filter(function (r) { return r.type.type_key === l.key; })[0] : null;
-        var rd = rec ? rec.values.map(function (v) { return v.field_key + '=' + v.value; }).join('; ') : '';
+        var rec = l ? records(T, x.it.id, x.it.kind_key).filter(function (r) { return r.type.type_key === l.key; })[0] : null;
+        var rd = rec ? rec.values.map(function (v) { return v.key + '=' + v.value + (v.unit ? ' ' + v.unit : '') + (v.inr === false ? ' (outside)' : ''); }).join('; ') : '';
         out.push(base.concat(l ? [l.label, l.last, l.next, WORD[l.st], rd] : ['', '', '', '', '']).map(q).join(','));
       });
     });
@@ -269,7 +327,7 @@
       + '<label>Serial<input name="serial_no" value="' + e(it.serial_no || '') + '"></label>'
       + '<label>Made<input type="date" name="made_on" value="' + e(it.made_on || '') + '"></label><label>Expiry<input type="date" name="expires_on" value="' + e(it.expires_on || '') + '"></label>'
       + '<label>Photo<input type="file" name="file" accept="image/*" capture="environment"></label>'
-      + '<label>or a link to it<input name="photo" value="' + e(it.photo || '') + '" placeholder="Drive link"></label>'
+      + '<label>or a link to it<input name="link" placeholder="https://"></label>'
       + '<label>Note<input name="note" value="' + e(it.note || '') + '"></label>'
       + '<div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
   }
@@ -277,13 +335,13 @@
   function cardHtml(v, x) {
     var e = v.esc;
     if (!x) { S.open = ''; return page(v); }
-    var it = x.it, recs = records(v.T, it.id);
+    var it = x.it, recs = records(v.T, it.id, it.kind_key), pics = filesFor(v.T, 'items', it.id, ['main']);
     var h = '<section class="card" id="itmCard"><p><button type="button" class="btn" data-itm-open="">Items</button></p>'
       + '<h2 class="adm-h">' + ic('item', 'c2') + e(it.item_no) + ' ' + e(it.name) + ' ' + (x.archived ? '<span class="pill">Archived</span>' : pill(x.s.st)) + (S.ticks[it.id] ? ' <span class="itm-tick" aria-label="saved">' + ic('tick') + '</span>' : '') + '</h2>'
       + '<p class="mut">' + [x.kind, it.size, it.make, it.model, it.serial_no ? 'serial ' + it.serial_no : ''].filter(Boolean).map(e).join(' · ') + '</p>'
       + '<p>' + ic('place') + ' ' + e(x.place || 'No room') + (x.placeRow ? ' <span class="mut">since ' + e(v.dmy(x.placeRow.from_date)) + '</span>' : '') + '</p>'
       + (it.made_on || it.expires_on ? '<p class="mut">' + (it.made_on ? 'Made ' + e(v.dmy(it.made_on)) + ' ' : '') + (it.expires_on ? 'Expiry ' + e(v.dmy(it.expires_on)) : '') + '</p>' : '')
-      + (it.photo ? '<p><a href="' + e(fileHref(it.photo)) + '" target="_blank" rel="noopener">Photo</a></p>' : '')
+      + (pics.length || it.photo ? '<p><a href="' + e(pics.length ? pics[pics.length - 1].href : fileHref(it.photo)) + '" target="_blank" rel="noopener">Photo</a></p>' : '')
       + (x.archived && x.useRow ? '<p class="mut">Archived ' + e(v.dmy(x.useRow.to_date)) + (x.useRow.source ? ': ' + e(x.useRow.source) : '') + '</p>' : '')
       + (S.msg ? '<p role="status">' + e(S.msg) + '</p>' : '');
     if (!x.archived) {
@@ -302,10 +360,9 @@
       }).join('') + '</tbody></table>';
     }
     h += '<h3>Records</h3>' + (recs.length ? recs.map(function (r) {
-      var fs = {}; fieldsOn(v.T, r.type.type_key, r.on).forEach(function (f) { fs[f.field_key] = f; });
       return '<div class="dcs-row"><span class="mut">' + e(v.dmy(r.on)) + '</span><b>' + e(r.type.label) + '</b>' + (r.outcome === 'ok' ? '<span class="pill ok">Pass</span>' : r.outcome === 'concern' ? '<span class="pill no">Fail</span>' : '<span class="pill">' + e(r.outcome) + '</span>')
-        + r.values.map(function (val) { var f = fs[val.field_key] || {}, lim = inLimit(f, val.value); return '<span class="mut">' + e(f.label || val.field_key) + ' ' + e(val.value) + (f.unit ? ' ' + e(f.unit) : '') + (lim === false ? ' <b class="itm-lim no">outside</b>' : '') + '</span>'; }).join('')
-        + (r.note ? '<span class="mut">' + e(r.note) + '</span>' : '') + (r.photo ? '<a href="' + e(fileHref(r.photo)) + '" target="_blank" rel="noopener">Evidence</a>' : '') + '</div>';
+        + r.values.map(function (val) { return '<span class="mut">' + e(val.label) + ' ' + e(val.value) + (val.unit ? ' ' + e(val.unit) : '') + (val.inr === false ? ' <b class="itm-lim no">outside</b>' : '') + '</span>'; }).join('')
+        + (r.note ? '<span class="mut">' + e(r.note) + '</span>' : '') + r.files.map(function (f) { return '<a href="' + e(f.href) + '" target="_blank" rel="noopener">' + e(f.label) + '</a>'; }).join('') + '</div>';
     }).join('') : '<p class="mut">No records.</p>');
     return h + '</section>';
   }
@@ -313,20 +370,25 @@
   function fileHref(p) { p = t(p); if (/^https:\/\//.test(p)) return p; return /^[A-Za-z0-9_\-]{20,}$/.test(p) ? 'https://drive.google.com/file/d/' + p + '/view' : '#'; }
 
   function testForm(v, it, key) {
-    var e = v.esc, on = S.testOn || v.today, fs = fieldsOn(v.T, key, on), ty = typeOn(v.T, key, on) || {};
+    var e = v.esc, on = S.testOn || v.today, fs = fieldsOn(v.T, key, on), ty = typeOn(v.T, key, on) || {}, rks = readingKindsFor(v.T, key, on);
     return '<form class="itm-form" data-itm-save="test" data-key="' + e(key) + '"><h3>' + e(ty.label || key) + '</h3>'
       + '<label>Date<input type="date" name="on" required value="' + e(on) + '" max="' + e(v.today) + '" data-itm-teston></label>'
+      + rks.map(function (k) {
+        var L = limitOn(v.T, k.id, it, on) || {}, lim = [t(L.low) ? '≥ ' + L.low : '', t(L.high) ? '≤ ' + L.high : ''].filter(Boolean).join(' ');
+        return '<label>' + e(k.label || k.kind_key) + (k.unit_id ? ' (' + e(k.unit_id) + ')' : '') + (lim ? ' <span class="mut">' + e(lim) + '</span>' : '')
+          + '<input name="r_' + e(k.id) + '" inputmode="decimal" data-itm-num data-lo="' + e(L.low || '') + '" data-hi="' + e(L.high || '') + '"><span class="itm-lim" aria-live="polite"></span></label>';
+      }).join('')
       + fs.map(function (f) {
-        var lim = [t(f.limit_low) ? '≥ ' + f.limit_low : '', t(f.limit_high) ? '≤ ' + f.limit_high : ''].filter(Boolean).join(' ');
         var input = f.kind === 'choice' ? '<select name="v_' + e(f.field_key) + '"' + (f.required === 'true' ? ' required' : '') + '><option value=""></option>' + String(f.choices || '').split('|').map(function (c) { return '<option>' + e(c) + '</option>'; }).join('') + '</select>'
           : f.kind === 'yesno' ? '<select name="v_' + e(f.field_key) + '"><option value=""></option><option>yes</option><option>no</option></select>'
-          : '<input name="v_' + e(f.field_key) + '"' + (f.kind === 'number' ? ' inputmode="decimal" data-itm-num data-lo="' + e(f.limit_low || '') + '" data-hi="' + e(f.limit_high || '') + '"' : f.kind === 'date' ? ' type="date"' : '') + (f.required === 'true' ? ' required' : '') + '>';
-        return '<label>' + e(f.label) + (f.unit ? ' (' + e(f.unit) + ')' : '') + (lim ? ' <span class="mut">' + e(lim) + '</span>' : '') + input + '<span class="itm-lim" aria-live="polite"></span></label>';
+          : '<input name="v_' + e(f.field_key) + '"' + (f.kind === 'number' ? ' inputmode="decimal"' : f.kind === 'date' ? ' type="date"' : '') + (f.required === 'true' ? ' required' : '') + '>';
+        return '<label>' + e(f.label) + input + '</label>';
       }).join('')
       + '<label>Result<select name="outcome" required><option value="ok">Pass</option><option value="concern">Fail</option></select></label>'
       + '<label>Who tested<input name="by" placeholder="e.g. G A Fire"></label>'
       + '<label>Evidence: photo or certificate (PDF)<input type="file" name="file" accept="image/*,application/pdf" capture="environment"></label>'
-      + '<label>or a link to it<input name="photo" placeholder="Drive link"></label>'
+      + '<label>It is the certificate for this visit<select name="file_kind"><option value="evidence">No, a photo of this item</option><option value="certificate">Yes, certificate</option></select></label>'
+      + '<label>or a link to it<input name="link" placeholder="https://"></label>'
       + '<label>Note (needed for a Fail)<input name="note"></label>'
       + '<div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
   }
@@ -362,41 +424,76 @@
       img.src = url;
     });
   }
-  /** Upload the chosen file first (Evidence.gs); resolves the file id, the typed link, or ''. */
-  function evidence(v, form, forTable, forId, link) {
+  /* Shared saves, each behind its own switch on the save script (off until Lisa's yes):
+     link_add / link_end (STAFF), file_add (DOGCARD: stores the file and writes the files row plus one link in one
+     action), readings (TEMPS). The request shapes below are the ones proposed to them on 14 Nov. */
+  function act(v, action, fields, file, row) {
+    if (!v.sinkSend) return Promise.resolve({ ok: false, message: 'Saving is not set up on this device.' });
+    return v.sinkSend({ action: action, fields: fields }).then(function (r) {
+      if (r && r.ok && r.result && file && row) (v.T[file] = v.T[file] || []).push(Object.assign({ id: r.result.id || '' }, row(r.result)));
+      return r;
+    });
+  }
+  function linkAdd(v, f) { return act(v, 'link_add', f, LINKS, function () { return f; }); }
+  function linkEnd(v, l, toDate) {
+    return act(v, 'link_end', { id: l.id, to_date: toDate }).then(function (r) { if (r && r.ok) l.to_date = toDate; return r; });
+  }
+  /** Send the chosen photo or PDF (or the typed link) and join it to a record. Resolves null when there is nothing to send. */
+  function fileAdd(v, form, d, fromTable, fromId, kindKey) {
     var el = form.querySelector('input[type=file][name=file]'), file = el && el.files && el.files[0];
-    if (!file) return Promise.resolve(link || '');
-    if (!v.sinkSend) return Promise.reject(new Error('Saving is not set up on this device.'));
+    var link = { link_from_table: fromTable, link_from_id: fromId, link_kind_key: kindKey };
+    var keep = function (res) {
+      (v.T['BLD-files.csv'] = v.T['BLD-files.csv'] || []).push({ id: res.file_id || res.id, drive_file_id: res.drive_file_id || '', url: res.url || d.link || '', mime: res.mime || '' });
+      (v.T[LINKS] = v.T[LINKS] || []).push({ id: res.link_id || '', from_table: fromTable, from_id: fromId, to_table: 'files', to_id: res.file_id || res.id, link_kind_key: kindKey, from_date: v.today });
+    };
+    var send = function (fields) { return v.sinkSend({ action: 'file_add', fields: Object.assign(fields, link) }).then(function (r) { if (r && r.ok && r.result) keep(r.result); return r; }); };
+    if (!file && !d.link) return Promise.resolve(null);
+    if (!v.sinkSend) return Promise.resolve({ ok: false, message: 'Saving is not set up on this device.' });
+    if (!file) return /^https:\/\//.test(d.link) ? send({ kind: 'link', url: d.link, source: 'link' }) : Promise.resolve({ ok: false, message: 'A link starts with https://' });
     return readFile(file).then(function (f) {
       if (f.b64.length > 1800000) throw new Error('That file is too large. Use a smaller photo or PDF.');
       S.msg = 'Sending the file…'; v.redraw();
-      return v.sinkSend({ action: 'evidence_file', fields: { mime: f.mime, file_base64: f.b64, for_table: forTable, for_id: forId || '' } });
-    }).then(function (r) { if (!r || !r.ok) throw new Error(why(r)); return r.result.file_id; });
+      return send({ kind: f.mime === 'application/pdf' ? 'upload' : 'photo', mime: f.mime, file_base64: f.b64, name: file.name || '', source: el.hasAttribute('capture') ? 'camera' : 'upload' });
+    });
   }
-  function why(r) { if (!r) return 'Not saved.'; if (r.fields) return Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' '); return r.message || 'Not saved.'; }
+  function why(r) { if (!r) return 'Not saved.'; if (r instanceof Error) return r.message; if (r.fields) return Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' '); return r.message || 'Not saved.'; }
+  /** After the main row saved: run the follow-on saves; the item still gets its tick, any that failed are named. */
+  function after(steps, id, done) {
+    return Promise.all(steps.map(function (p) { return p.then(function (r) { return r; }, function (x) { return x; }); })).then(function (rs) {
+      var bad = rs.filter(function (x) { return x && (x instanceof Error || x.ok === false); }).map(why);
+      done(id, bad.length ? 'Saved. Not saved: ' + bad.join(' ') : 'Saved.');
+    });
+  }
 
   function onSave(v, form) {
     var kind = form.getAttribute('data-itm-save'), d = {};
     Array.prototype.forEach.call(form.elements, function (el) { if (el.name) d[el.name] = t(el.value); });
     var done = function (id, msg) { S.busy = false; S.form = ''; S.msg = msg; if (id) S.ticks[id] = true; v.redraw(); };
-    var fail = function (r) { S.busy = false; S.msg = r instanceof Error ? r.message : why(r); v.redraw(); };
+    var fail = function (r) { S.busy = false; S.msg = why(r); v.redraw(); };
     if (S.busy) return;
     S.busy = true; S.msg = 'Saving…'; v.redraw();
-    var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note'];
+    var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'note'];
     var pick = function () { var f = {}; ITEM.forEach(function (k) { if (d[k]) f[k] = d[k]; }); return f; };
-    var up = function (forTable, forId) { return evidence(v, form, forTable, forId, d.photo).then(function (id) { if (id) d.photo = id; }); };
+    var place = function (id, area, from, why2) { return linkAdd(v, { from_table: 'items', from_id: id, to_table: 'areas', to_id: area, link_kind_key: PLACE, from_date: from, source: why2 }); };
     if (kind === 'add') {
-      up('items', '').then(function () { var f = pick(); return post(v, 'items', f); }).then(function (r) {
+      post(v, 'items', pick()).then(function (r) {
         if (!r || !r.ok) return fail(r);
         var id = r.result.id, steps = [];
-        if (d.area_id) steps.push(post(v, 'links', { from_table: 'items', from_id: id, role: PLACE, to_table: 'areas', to_id: d.area_id, from_date: d.from_date || v.today, source: 'Added on the Items page' }));
+        if (d.area_id) steps.push(place(id, d.area_id, d.from_date || v.today, 'Added on the Items page'));
         if (d.from_date) steps.push(post(v, 'requirement', { need_type: NEED, target_table: 'items', target_id: id, from_date: d.from_date, source: 'Added on the Items page' }));
-        return Promise.all(steps).then(function (rs) { var bad = rs.filter(function (x) { return !x || !x.ok; })[0]; done(id, bad ? 'Item saved. ' + why(bad) : 'Saved.'); });
+        steps.push(fileAdd(v, form, d, 'items', id, 'main'));
+        return after(steps, id, done);
       }, fail);
     } else if (kind === 'edit') {
-      up('items', S.open).then(function () { var g = pick(); g.corrects_id = S.open; return post(v, 'items', g); }).then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Saved.'); }, fail);
+      var g = pick(); g.corrects_id = S.open;
+      post(v, 'items', g).then(function (r) { if (!r || !r.ok) return fail(r); return after([fileAdd(v, form, d, 'items', S.open, 'main')], S.open, done); }, fail);
     } else if (kind === 'move') {
-      post(v, 'links', { from_table: 'items', from_id: S.open, role: PLACE, to_table: 'areas', to_id: d.area_id, from_date: d.from_date, source: 'Moved on the Items page' }).then(function (r2) { if (!r2 || !r2.ok) return fail(r2); done(S.open, 'Saved.'); }, fail);
+      var old = placeOn(v.T, S.open, v.today);
+      if (old && d.from_date <= t(old.from_date)) return fail({ message: 'Pick a day after ' + v.dmy(old.from_date) + ', when it went to its current room.' });
+      (old && old.id ? linkEnd(v, old, addDays(d.from_date, -1)) : Promise.resolve({ ok: true })).then(function (r1) {
+        if (!r1 || !r1.ok) return fail(r1);
+        return place(S.open, d.area_id, d.from_date, 'Moved on the Items page').then(function (r2) { if (!r2 || !r2.ok) return fail(r2); done(S.open, 'Saved.'); });
+      }, fail);
     } else if (kind === 'archive') {
       var y = list(v.T, v.today).filter(function (z) { return z.it.id === S.open; })[0];
       var from = (y && y.useRow && y.useRow.from_date) || day(y && y.it.first_at) || d.to_date;
@@ -404,18 +501,30 @@
       post(v, 'requirement', { need_type: NEED, target_table: 'items', target_id: S.open, from_date: from, to_date: d.to_date, source: d.why + (d.note ? ': ' + d.note : '') })
         .then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Archived.'); }, fail);
     } else if (kind === 'test') {
-      var key = form.getAttribute('data-key'), ty = typeOn(v.T, key, d.on), values = {};
+      var key = form.getAttribute('data-key'), ty = typeOn(v.T, key, d.on), values = {}, reads = [];
       if (!ty) return fail({ message: 'That test was not in force on that day.' });
-      Object.keys(d).forEach(function (k) { if (k.indexOf('v_') === 0 && d[k] !== '') values[k.slice(2)] = d[k]; });
+      Object.keys(d).forEach(function (k) {
+        if (d[k] === '') return;
+        if (k.indexOf('v_') === 0) values[k.slice(2)] = d[k];
+        else if (k.indexOf('r_') === 0) {
+          if (isNaN(parseFloat(d[k]))) return;
+          reads.push({ kind_id: k.slice(2), value: d[k] });
+        }
+      });
+      if (Object.keys(d).some(function (k) { return k.indexOf('r_') === 0 && d[k] !== '' && isNaN(parseFloat(d[k])); })) return fail({ message: 'Type each reading as a number, e.g. 0.09.' });
       var at = d.on === v.today ? new Date().toISOString() : d.on + 'T12:00:00Z';
       var lf = { check_type_id: ty.id, item_id: S.open, outcome: d.outcome, happened_at: at, how_recorded: 'typed' };
       if (d.note || d.by) lf.note = [d.by ? 'by ' + d.by : '', d.note].filter(Boolean).join('. ');
       if (d.on < addDays(v.today, -7)) lf.confirm_unusual = 'yes';   // an Earlier entry: the owner chose the date
       if (d.outcome === 'concern' && !d.note) return fail({ message: 'Say briefly what failed.' });
-      up('check_log', S.open).then(function () { if (d.photo) lf.photo = d.photo; return post(v, 'check_log', lf, { values: values }); }).then(function (r) {
+      post(v, 'check_log', lf, { values: values }).then(function (r) {
         if (!r || !r.ok) return fail(r);
-        Object.keys(values).forEach(function (k) { (v.T['BLD-check_value.csv'] = v.T['BLD-check_value.csv'] || []).push({ check_log_id: r.result.id, field_key: k, value: values[k] }); });
-        S.testOn = ''; done(S.open, 'Saved.');
+        var logId = r.result.id;
+        Object.keys(values).forEach(function (k) { (v.T['BLD-check_value.csv'] = v.T['BLD-check_value.csv'] || []).push({ check_log_id: logId, field_key: k, value: values[k] }); });
+        var steps = reads.map(function (x) { return post(v, 'readings', { kind_id: x.kind_id, item_id: S.open, check_log_id: logId, value: x.value, taken_at: at, how_entered: 'typed' }); });
+        steps.push(fileAdd(v, form, d, 'check_logs', logId, d.file_kind === 'certificate' ? 'certificate' : 'evidence'));
+        S.testOn = '';
+        return after(steps, S.open, done);
       }, fail);
     }
   }
@@ -434,10 +543,10 @@
       + xs.map(function (x) {
         var ls = x.s.lines.length ? x.s.lines : [null];
         return ls.map(function (l, i) {
-          var rec = l ? records(v.T, x.it.id).filter(function (r) { return r.type.type_key === l.key; })[0] : null;
+          var rec = l ? records(v.T, x.it.id, x.it.kind_key).filter(function (r) { return r.type.type_key === l.key; })[0] : null;
           return '<tr>' + (i ? '<td></td><td></td><td></td><td></td><td></td>' : '<td>' + e(x.it.item_no) + '</td><td>' + e(x.it.name) + (x.it.size ? ' ' + e(x.it.size) : '') + '</td><td>' + e(x.kind) + '</td><td>' + e(x.place) + '</td><td>' + e(x.it.expires_on ? v.dmy(x.it.expires_on) : '') + '</td>')
             + '<td>' + e(l ? l.label : '') + '</td><td>' + e(l && l.last ? v.dmy(l.last) : '') + '</td><td>' + e(l && l.next ? v.dmy(l.next) : '') + '</td><td>' + e(x.archived ? 'Archived' : WORD[l ? l.st : x.s.st]) + '</td>'
-            + '<td>' + e(rec ? rec.values.map(function (val) { return val.field_key + ' ' + val.value; }).join(', ') : '') + '</td><td>' + (rec && rec.photo ? '<a href="' + e(fileHref(rec.photo)) + '">file</a>' : '') + '</td></tr>';
+            + '<td>' + e(rec ? rec.values.map(function (val) { return val.label + ' ' + val.value + (val.unit ? ' ' + val.unit : '') + (val.inr === false ? ' (outside)' : ''); }).join(', ') : '') + '</td><td>' + (rec ? rec.files.map(function (f) { return '<a href="' + e(f.href) + '">' + e(f.label) + '</a>'; }).join(' ') : '') + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table>';
     w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
@@ -466,7 +575,7 @@
       var el = ev.target;
       if (el.hasAttribute && el.hasAttribute('data-itm-q')) { S.q = el.value; var pos = el.selectionStart; v.redraw(); var n = document.querySelector('[data-itm-q]'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } return; }
       if (el.hasAttribute && el.hasAttribute('data-itm-num')) {
-        var res = inLimit({ limit_low: el.getAttribute('data-lo'), limit_high: el.getAttribute('data-hi') }, el.value), out = el.parentNode.querySelector('.itm-lim');
+        var res = inLimit({ low: el.getAttribute('data-lo'), high: el.getAttribute('data-hi') }, el.value), out = el.parentNode.querySelector('.itm-lim');
         if (out) { out.className = 'itm-lim' + (res === true ? ' ok' : res === false ? ' no' : ''); out.textContent = res === true ? 'inside limit' : res === false ? 'outside limit' : ''; }
       }
     });
@@ -499,5 +608,5 @@
     if (a) { S.filter = a.getAttribute('data-itm-go'); S.open = ''; S.form = ''; }
   }, true);
 
-  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, testsFor: testsFor, fieldsOn: fieldsOn, inLimit: inLimit, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
+  return { FILES: FILES, complianceHtml: complianceHtml, current: current, inUse: inUse, placeOn: placeOn, filesFor: filesFor, testsFor: testsFor, fieldsOn: fieldsOn, readingKindsFor: readingKindsFor, limitOn: limitOn, inLimit: inLimit, records: records, status: status, list: list, csv: csv, page: page, bind: bind, open: function (id) { S.open = id || ''; S.form = ''; }, _state: S };
 }));
