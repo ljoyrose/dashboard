@@ -6,7 +6,7 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const H = {
-  link: 'id,tenant_id,code_id,label,ends,made_at,made_by,starts_at,ends_at,data_from_date,data_to_date',
+  link: 'id,tenant_id,code_id,label,ends,created_at,set_by,from_at,to_at,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,issued_by,delegation_id,updated_at',
   linkV1: 'id,tenant_id,code_id,label,ends,made_at,made_by',
   subj: 'id,tenant_id,link_id,subject_id,from_date,to_date',
   field: 'id,tenant_id,link_id,table_name,field_name,redaction',
@@ -261,9 +261,9 @@ test('window: now for N hours, until HH:MM today, or scheduled from-to; the link
   assert.equal(read(env, s.result.code, 'subject').ok, true);
   env.nowMs = env.ctx.londonLocalMs_(day + 'T13:31');
   assert.equal(read(env, s.result.code, 'subject').code, 'BAD_CODE');
-  // the link row keeps both times
+  // the link row keeps both times, stored in UTC (S4.2)
   const row = env.file('BLD-inspect_link.csv')[0].content;
-  assert.ok(row.includes(day + 'T09:00:00'));
+  assert.ok(row.includes(new Date(env.ctx.londonLocalMs_(day + 'T09:00')).toISOString().replace(/\.\d{3}Z$/, 'Z')));
 });
 
 test('window: refused when the end is before the start, too long for the rule row, or a time has passed; no rule row = the owner must say', () => {
@@ -292,5 +292,5 @@ test('window: an old 7-column link file still works for links from now, but cann
   assert.equal(a.ok, true, JSON.stringify(a));
   assert.equal(read(env, a.result.code, 'subject').ok, true);
   const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(env.nowMs)), 1);
-  assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('starts_at'), true);
+  assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('from_at'), true);
 });

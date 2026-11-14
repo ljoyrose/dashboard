@@ -142,7 +142,7 @@ function sinkVaccinationVoid_(req) {
     if (read.records[newest].id !== rowId) throw err_('NOT_ALLOWED', 'Only the most recent vaccination can be removed.');
     var rec = read.records[newest];
     var row = read.header.map(function (h) {
-      if (h === 'voided_on') return Utilities.formatDate(now, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
+      if (h === 'voided_on') return utcIso_(now);   // S4.2: UTC
       if (h === 'voided_by') return who.who;
       return rec[h] == null ? '' : String(rec[h]);
     });

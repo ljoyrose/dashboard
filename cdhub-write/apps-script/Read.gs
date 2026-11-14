@@ -120,7 +120,8 @@ function readFilter_(f, rd, header) {
 function sinkRead_(req) {
   var now = new Date(), nowMs = now.getTime();
   if (!readEnabled_()) throw err_('READ_OFF', 'Reading from the records is switched off.');
-  var who = authStaff_(req.code);                       // a bad code stops here and gets nothing
+  // a visitor card (Visit.gs) reads like an inspector link, only while its visit is live; a bad code or tag stops here
+  var who = req.t ? visitCardWho_(req.t, now) : authStaff_(req.code);
   if (who.role === ROLE_INSPECTOR) return inspectSinkRead_(req, who, now);   // Inspect.gs: only its own link rows, never this file's rules
 
   var key = typeof req.table === 'string' ? req.table : '';

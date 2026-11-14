@@ -141,28 +141,31 @@ function sinkStaffList_() {
 
 /** Switch one code off, by its public id. Owner only (the caller checks). */
 function sinkRevokeCode_(codeId, adminEmail, reason) {
-  return withLock_(function () {
-    var now = new Date(), id = String(codeId || '');
-    if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code to switch off.');
-    var reg = registry_(), hash = '', h;
-    for (h in reg) if (Object.prototype.hasOwnProperty.call(reg, h) && reg[h].id === id) { hash = h; break; }
-    if (!hash) throw err_('NOT_FOUND', 'That code was not found.');
-    if (reg[hash].active === false || reg[hash].revoked_at) throw err_('ALREADY_REVOKED', 'That code is already switched off.');
-    reg[hash].active = false;
-    reg[hash].revoked_at = londonIso_(now);
-    reg[hash].revoked_by = adminEmail;
-    if (reason) reg[hash].revoked_reason = String(reason).slice(0, 200);
-    setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));            // the code is dead from this line on
-    var logged = true;
-    try {
-      appendPendingEvent_({
-        event_id: newId_('evt', now), pending_id: 'rev-' + id, event: 'revoked', at: londonIso_(now), by: adminEmail, role: 'OWNER',
-        kind: 'code_revoke', row_id: id, note: reason ? 'ended now: ' + String(reason).slice(0, 200) : 'staff code switched off', result: 'revoked'
-      });
-    } catch (e) { logged = false; Logger.log('Revoked ' + id + ' but could not log it: ' + (e && e.message)); }
-    var mirrored = codeMirror_(id, reason ? 'ended now: ' + String(reason).slice(0, 100) : 'switched off by owner', null, now);   // Codes.gs: the hub's no-secrets list
-    return { status: 'revoked', id: id, who: reg[hash].who, logged: logged, mirrored: mirrored };
-  });
+  return withLock_(function () { return revokeCodeCore_(codeId, adminEmail, reason); });
+}
+
+/** The revoke itself, for callers that already hold the lock (Visit.gs grant_end). */
+function revokeCodeCore_(codeId, adminEmail, reason) {
+  var now = new Date(), id = String(codeId || '');
+  if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code to switch off.');
+  var reg = registry_(), hash = '', h;
+  for (h in reg) if (Object.prototype.hasOwnProperty.call(reg, h) && reg[h].id === id) { hash = h; break; }
+  if (!hash) throw err_('NOT_FOUND', 'That code was not found.');
+  if (reg[hash].active === false || reg[hash].revoked_at) throw err_('ALREADY_REVOKED', 'That code is already switched off.');
+  reg[hash].active = false;
+  reg[hash].revoked_at = londonIso_(now);
+  reg[hash].revoked_by = adminEmail;
+  if (reason) reg[hash].revoked_reason = String(reason).slice(0, 200);
+  setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));            // the code is dead from this line on
+  var logged = true;
+  try {
+    appendPendingEvent_({
+      event_id: newId_('evt', now), pending_id: 'rev-' + id, event: 'revoked', at: londonIso_(now), by: adminEmail, role: 'OWNER',
+      kind: 'code_revoke', row_id: id, note: reason ? 'ended now: ' + String(reason).slice(0, 200) : 'staff code switched off', result: 'revoked'
+    });
+  } catch (e) { logged = false; Logger.log('Revoked ' + id + ' but could not log it: ' + (e && e.message)); }
+  var mirrored = codeMirror_(id, reason ? 'ended now: ' + String(reason).slice(0, 100) : 'switched off by owner', null, now);   // Codes.gs: the hub's no-secrets list
+  return { status: 'revoked', id: id, who: reg[hash].who, logged: logged, mirrored: mirrored };
 }
 
 /**
