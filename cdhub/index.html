@@ -151,7 +151,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dpill.soon{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill:hover,.cnt:hover,.dpill:hover,.live:hover{outline:none}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0));flex:none;vertical-align:0}
-.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
+.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:pointer;vertical-align:middle}
+@media (hover:hover){.info:hover,#sopcard .sopgrp>summary:hover{background:var(--hov)}}   /* the house hover fill, on the two controls that had none */
+.infonote{display:block;margin:4px 0 8px;font-size:var(--fs-small);font-weight:400;color:var(--muted);max-width:74ch;white-space:normal}
 
 
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0 0 8px}
@@ -178,6 +180,8 @@ tr:last-child td{border-bottom:none}
 
 .filt,.srow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
 .rdate-out{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap}
+@media (max-width:389px){.rdate-out{flex-wrap:wrap}}   /* a 360px phone: the outside line drops under the date, the page never scrolls sideways */
+#brKey{max-width:100%}
 .rout{white-space:nowrap;font-size:var(--fs-small);color:var(--ink)}
 .filt input{min-width:190px}
 .fbar{position:relative;margin:0 0 12px}
@@ -476,6 +480,8 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs-link svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs-link .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs-link::after{content:'\203A';margin-left:auto;flex:0 0 auto}
+.dcs-nolink::after{content:none}
+.dcs-nolink,.dcs-nolink:hover{cursor:default;background:transparent}
 @media (hover:hover){.dcs-link:hover{background:var(--hov);}}
 .lims{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
 .pill.lim{border-width:2px}
@@ -1286,7 +1292,7 @@ function ruleAudit(){
   var open=0;
   for(var i=0;i<v.length;i++){
    var f=(v[i].effective_from||'').trim(), t=(v[i].effective_to||'').trim();
-   if(!f){ bad.push(k+' v'+(v[i].version||'?')+' has no effective_from'); continue; }
+   if(!f){ bad.push(k+' v'+(v[i].version||'?')+' has no start date'); continue; }
    if(!t) open++;
    if(t && t<f) bad.push(k+' v'+(v[i].version||'?')+' ends before it starts');
    if(i){ var pt=(v[i-1].effective_to||'').trim();
@@ -1660,7 +1666,7 @@ function littersCard(title){
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
 
- return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
+ return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span>'+(PAGES.litters?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
 }
 /* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
@@ -2058,13 +2064,16 @@ function fbar(o){
   +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'">Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
   +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
-  +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'">Clear filters</button></div></div>'
+  +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'" data-clear-all="'+o.q+'" disabled>Clear filters</button></div></div>'
   +(o.hidden||'')+'</div>';
 }
 function quiet(x){ return capFirst(String(x||'').toLowerCase()); }
 function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
 function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
+ /* Clear filters is off until a filter or a search word is set: a button that would change nothing is not offered */
+ var ca=document.querySelector('#fp-'+id+' [data-clear-all]'), cq=ca&&document.getElementById(ca.getAttribute('data-clear-all'));
+ if(ca) ca.disabled=!(cq&&cq.value)&&!ids.some(function(i){ var e=document.getElementById(i); return e&&e.value; });
  var on=ids.map(function(i){ var e=document.getElementById(i); if(!e||!e.value) return null;
    var t=e.tagName==='SELECT'?(e.options[e.selectedIndex]||{}).textContent:(e.dataset.ftext?e.dataset.ftext(e.value):e.value);
    if(i==='fst'){ var s=statusList().filter(function(x){return x[0]===e.value;})[0]; t=s?s[1]:e.value; }
@@ -2115,7 +2124,7 @@ function pageDogs(){
     ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
     /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
     ['Status','<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
-     +'<span class="info" tabindex="0" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
+     +'<span class="info" tabindex="0" role="button" aria-expanded="false" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
@@ -2279,10 +2288,11 @@ function vaxForm(d){
 /* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
 function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
  var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
- return '<div class="dcs litc"><a class="dcs-link" href="#/litters/'+esc(d.id)+'" data-dam-link="'+esc(d.id)+'">'
+ var on=!!PAGES.litters;   /* the Litters page switched off: the line stays as words, with no link that would open Main */
+ return '<div class="dcs litc">'+(on?'<a class="dcs-link" href="#/litters/'+esc(d.id)+'" data-dam-link="'+esc(d.id)+'">':'<span class="dcs-link dcs-nolink">')
   +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
   +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
-  +'</a></div>'; }
+  +(on?'</a>':'</span>')+'</div>'; }
 /* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
    (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
 /* BFFs / Fren. (Lisa 13 Nov 2026): dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
@@ -4196,7 +4206,7 @@ function go(id,push){
  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
  labelControls(main);
  levelHeadings(main);
- document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
+ document.getElementById('next').innerHTML=(NEXT[id]||[]).filter(function(n){return !!PAGES[n];}).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
@@ -4359,7 +4369,9 @@ document.addEventListener('click',function(e){
  var row=document.getElementById(j.dataset.jump);
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
-document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
+document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus();
+  /* the tabindex is only there to take the focus: left on, every section heading inside stops folding when tapped */
+  m.addEventListener('blur',function(){ m.removeAttribute('tabindex'); },{once:true}); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
  if(b.getAttribute('data-dogshow')){
@@ -4410,11 +4422,20 @@ render();
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
-      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.setAttribute('role', 'button'); s.setAttribute('aria-expanded', 'false'); s.textContent = 'i';
       var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h);
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
+  /* An (i) says its words when it is tapped or pressed: a title alone shows nothing on a phone. A second tap puts them away. */
+  function say(i) {
+    var n = i.nextElementSibling;
+    if (n && n.classList.contains('infonote')) { n.remove(); i.setAttribute('aria-expanded', 'false'); return; }
+    n = document.createElement('span'); n.className = 'infonote'; n.setAttribute('role', 'note'); n.textContent = i.title || '';
+    i.insertAdjacentElement('afterend', n); i.setAttribute('aria-expanded', 'true');
+  }
+  document.addEventListener('click', function (e) { var i = e.target.closest && e.target.closest('.info'); if (!i) return; e.preventDefault(); e.stopPropagation(); say(i); }, true);
+  document.addEventListener('keydown', function (e) { var i = e.target; if (!i.classList || !i.classList.contains('info') || (e.key !== 'Enter' && e.key !== ' ')) return; e.preventDefault(); say(i); });
   new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('DOMContentLoaded', calm); calm();
 })();
