@@ -206,7 +206,7 @@
     clearScreen(); setTabs('home'); delete ctx.reportFor;
     screen.appendChild(h('h1', { text: 'The Board' }));
     data().then(showMe);   // the first read tells us whose code this is
-    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) }));
+    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep') }));
     var list = h('div', { class: 'cards' });
     modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
       list.appendChild(h('button', { class: 'card go', type: 'button', 'data-module': m.id, onclick: function () { go('m/' + m.id); } }, [
