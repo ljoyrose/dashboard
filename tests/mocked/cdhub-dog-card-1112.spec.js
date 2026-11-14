@@ -214,7 +214,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await page.evaluate(() => licenceBar({ adults: new Array(27), bitches: new Array(25), active: new Array(25), studs: new Array(2) }))).toContain('lbok');
   });
 
-  test('a saved reading shows at once in the count and Kept readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
+  test('a saved reading shows at once in the count and Readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
     await page.evaluate(() => go('round'));

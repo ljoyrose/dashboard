@@ -262,7 +262,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .mrow .ic.soon{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
 .mrow .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
 .mrow .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}
-#kept-readings .kt{width:100%;border-collapse:collapse}#kept-readings th,#kept-readings td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--press)}
+#kept-readings h3{margin-top:0}#kept-readings .kt{width:100%;border-collapse:collapse}#kept-readings th,#kept-readings td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--press)}
 #kept-readings .ic{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--press)}
 #kept-readings .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}#kept-readings .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}#kept-readings .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
@@ -1818,7 +1818,7 @@ function pageToday(){
  +'<div class="mecards">'+onSiteCard()+tempsCard()+'</div>'
  +'<div class="tiles">'
  +tileGo('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','enter on The round','round')
- +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,'dogs not yet placed','','unplaced')
+ +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,dogWord(unplaced.length)+' not yet placed','','unplaced')
  +tileC('b6',c.here.length,'dogs here','','here')
  +(sr?tileC('b4',Math.ceil(c.adults.length/sr.ft)+' FT',(sr.pt?Math.ceil(c.adults.length/sr.pt)+' PT':'')+' staffing',esc('1 per '+sr.ft+(sr.pt?', or 1 per '+sr.pt:'')+' adults'+(sr.src&&hideSource(sr.src)?' ('+esc(hideSource(sr.src))+')':'')),'adults'):'')+'</div>'
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
@@ -3176,7 +3176,7 @@ function keptReadings(date){
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
  var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
    return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
- return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
+ return '<section class="card" id="kept-readings"><h3>Readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
       +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
@@ -3215,6 +3215,21 @@ function tempState(min,max,band){ var lo=parseFloat(min), hi=parseFloat(max); if
  if(tempSwapped(min,max)) return 'swap';   /* max lower than min: wrong way round, checked before hot/cold */
  if(!band) return 'unknown';
  if(!isNaN(lo)&&lo<band.min) return 'cold'; if(!isNaN(hi)&&hi>band.max) return 'hot'; return 'ok'; }
+/* "1 dog" / "2 dogs" (OV11 14 Nov: never "1 dogs"). */
+function dogWord(n){ return n===1?'dog':'dogs'; }
+/* Why a dog is on the "not yet placed" card (OV11 14 Nov, Joy in 4.3): its latest occupancy row points at a place
+   the round leaves out on this day. The reason comes from the need rows in force (room.no_dogs, room.no_overnight,
+   room.in_use), never from room names. Tapping the name opens the same capacity-checked "place in" list as a move. */
+function unplacedWhy(d,date){
+ var row=window.BLDOccupancy&&BLDOccupancy.rowOn?BLDOccupancy.rowOn(T['BLD-occupancy.csv']||[],d.id,date):null;
+ var aid=row?row.area_id:'', a=aid?(CD.allAreas||CD.areas||[]).filter(function(x){ return x.id===aid; })[0]:null;
+ if(!a) return {from:'',text:''};
+ var req=CD.req||[], code=a.code||a.id, why='';
+ if(!BLDOccupancy.inUse(a,date,req)) why='not in use';
+ else if(!BLDOccupancy.takesDogs(a,date,req)) why='no dogs';
+ else if(BLDOccupancy.takesOvernight&&!BLDOccupancy.takesOvernight(a,date,req)) why='day pen';
+ return {from:aid,text:'in '+code+(why?' ('+why+')':'')};
+}
 function pageRound(){
  var date=(CD._roundDate||todayISO());
  var w=walkList(), dogs=hereNow();
@@ -3228,10 +3243,11 @@ function pageRound(){
  +'<a class="btn" href="./history.html">Temperature history</a>'
  +'<span class="mut" id="rstat">'+(sinkOn()?(function(){ var rows=liveCabins(), n=rows.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length; return rows.length+' cabins \u00b7 '+n+' with a temperature'; })():'')+'</span></div>';
  h+=sinkCard();
- h+=keptReadings(date);   /* kept readings: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
+ h+=keptReadings(date);   /* readings for the day: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
  var unN=unplacedShown==='all'?unplaced.length:Math.min(unplaced.length, Math.max(40, unplacedShown));
- h+='<div class="card '+(unplaced.length?'acc2':'acc5')+'"><h4>'+(unplaced.length?unplaced.length+' dogs not yet placed':'Every dog on the premises is placed')+'</h4>'
-  +(unplaced.length?'<p style="margin-bottom:0" class="mut">'+unplaced.slice(0,unN).map(function(d){return esc(d.name);}).join(' \u00b7 ')+(unN<unplaced.length?' \u2026':'')+'</p>'
+ h+='<div class="card '+(unplaced.length?'acc2':'acc5')+'"><h4>'+(unplaced.length?unplaced.length+' '+dogWord(unplaced.length)+' not yet placed':'Every dog on the premises is placed')+'</h4>'
+  +(unplaced.length?'<div class="chips" style="margin-bottom:0">'+unplaced.slice(0,unN).map(function(d){ var w=unplacedWhy(d,date);
+      return '<span class="drow">'+dogMoveChip(d,w.from,d.id)+(w.text?' <span class="mut">\u00b7 '+esc(w.text)+'</span>':'')+'</span>'; }).join(' ')+(unN<unplaced.length?' \u2026':'')+'</div><div data-move-host=""></div>'
     +(unN<unplaced.length?'<p class="mut">Showing '+unN+' of '+unplaced.length+'.</p><button type="button" class="cb" data-unshow="more">Show more</button> <button type="button" class="cb" data-unshow="all">Show all</button>':''):'')+'</div>';
  w.forEach(function(c){
   var a=c.area, aid=a.id;
