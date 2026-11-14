@@ -604,7 +604,7 @@ var TABLES = {
       var utc = new Date(Date.parse(ctx.nowIso)).toISOString().replace(/\.\d{3}Z$/, 'Z');
       if (!row.taken_at) row.taken_at = utc;
       row.created_at = utc;
-      row.taken_by = ctx.who;
+      row.taken_by = ctx.whoId || ctx.who;   // always from the code, never the page
       row.set_by = ctx.whoId || ctx.who;
     },
     checkRow: function (row, errors, lookups) {
