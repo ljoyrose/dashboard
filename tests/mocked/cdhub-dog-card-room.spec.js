@@ -43,14 +43,14 @@ test('a pup with no room has Place on its card; Off-site and a move save through
   await expect(dest).toBeVisible();
   const to = 'area-1';
   await dest.click();
-  await expect(page.locator('.dc[data-dog="sub-test-pup-1"] [data-k="moved"]')).toHaveText('moved ✓');
+  await expect(page.locator('.dc[data-dog="sub-test-pup-1"] [data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ table: 'occupancy', action: 'add', fields: { subject_id: 'sub-test-pup-1', area_id: to } });
 
   const two = page.locator('.dc[data-dog="sub-test-dog-2"]');
   await two.locator('[data-cabin-move]').first().click();
   await page.locator('[data-move-panel] [data-move-off]').click();
-  await expect(page.locator('.dc[data-dog="sub-test-dog-2"] [data-k="moved"]')).toHaveText('moved ✓');
+  await expect(page.locator('.dc[data-dog="sub-test-dog-2"] [data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
   expect(sent).toHaveLength(2);
   expect(sent[1]).toMatchObject({ table: 'occupancy_out', fields: { subject_id: 'sub-test-dog-2', off_site_kind: 'temporary' } });
   await expect(page.locator('.dc[data-dog="sub-test-dog-2"]')).toContainText('off site');

@@ -255,7 +255,7 @@ test('window: now for N hours, until HH:MM today, or scheduled from-to; the link
   assert.equal(s.ok, true, JSON.stringify(s));
   const early = read(env, s.result.code, 'subject');
   assert.equal(early.code, 'NOT_YET');
-  assert.match(early.message, /^This link opens \d\d\/\d\d\/\d\d 09:00\.$/);
+  assert.match(early.message, /^This link opens \d{1,2} [A-Z][a-z]{2} \d{4} 09:00\.$/);
   assert.equal(env.ctx.sinkInspectLinks_().find((x) => x.id === s.result.link_id).state, 'scheduled');
   env.nowMs = env.ctx.londonLocalMs_(day + 'T09:01');
   assert.equal(read(env, s.result.code, 'subject').ok, true);

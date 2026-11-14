@@ -638,7 +638,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(rows.nth(1).locator('.dpill')).toHaveClass(/soon/);
     await expect(rows.nth(2).locator('.dpill')).toHaveCount(0);   // undated rows carry no date pill
     const due = iso(-66 + 63).split('-');
-    await expect(rows.nth(0).locator('.dpill')).toContainText(`${due[2]}/${due[1]}/${due[0].slice(2)}`);
+    await expect(rows.nth(0).locator('.dpill')).toContainText(`${+due[2]} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+due[1] - 1]} ${due[0]}`);
     const ring = (sel) => page.locator(sel).first().evaluate((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; });
     const late = await ring('#needsCard .dpill.late'), soon = await ring('#needsCard .dpill.soon');
     expect(late[0]).toBe('1px'); expect(late[1]).toBe(await page.evaluate(() => getComputedStyle(document.querySelector('.cnt.need')).borderTopColor));
@@ -978,11 +978,11 @@ test('CD Hub: gestation and adult age come from dated rows; no row = not set, ju
   expect([r.adult, r.pup, r.grown]).toEqual([6, true, true]);
 });
 
-test('CD Hub: The round shows a Kept readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
+test('CD Hub: The round shows a Readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
   await page.goto('cdhub/');
   await signIn(page);
   await openTab(page, 'round');
-  await expect(page.locator('#kept-readings h3')).toHaveText('Kept readings');
+  await expect(page.locator('#kept-readings h3')).toHaveText('Readings');
   await expect(page.locator('#arrive-reading')).toHaveCount(0);
   await page.locator('#rdate').fill('2026-01-15');
   await page.locator('#rdate').dispatchEvent('change');
@@ -1017,7 +1017,7 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
   expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
-test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are DD/MM/YY', () => {
+test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are "2 Mar 2026"', () => {
   test('Dogs, Litters and Do carry no "Arrives with Bloodline" boxes; Litters says its title once', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
@@ -1027,7 +1027,7 @@ test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates a
       await expect(page.locator('#main')).not.toContainText('BLD-WORK.csv');
     }
     await expect(page.locator('#main h3', { hasText: /^Litters/ })).toHaveCount(0);
-    expect(await page.evaluate(() => [dmy('2026-11-12'), plural(1, 'row'), plural(2, 'row')])).toEqual(['12/11/26', '1 row', '2 rows']);
+    expect(await page.evaluate(() => [dmy('2026-11-12'), plural(1, 'row'), plural(2, 'row')])).toEqual(['12 Nov 2026', '1 row', '2 rows']);
   });
 });
 

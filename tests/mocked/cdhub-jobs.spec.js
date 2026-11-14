@@ -20,14 +20,32 @@ const TYPES = csv(TYPE_H, [
 test.describe('CD Hub: jobs', () => {
   test('the manifest check warns only when a table has fewer rows than listed', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
-    const msg = (live, listed) => page.evaluate(([l, r]) => {
-      CD.counts.pretend = l; CD.manifest = [{ file: 'BLD-pretend.csv', table: 'pretend', rows: r }];
-      return checks().filter((c) => c.k === 'tables')[0];
-    }, [live, listed]);
+    await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+    const msg = (live, listed, copy) => page.evaluate(([l, r, c]) => {
+      LOAD.rowCounts = { pretend: l }; LOAD.copy = !!c; CD.manifest = [{ file: 'BLD-pretend.csv', table: 'pretend', rows: r }];
+      const x = checks().filter((k) => k.k === 'tables')[0]; LOAD.copy = false; return x;
+    }, [live, listed, copy]);
     expect((await msg(12, '10')).msg).not.toContain('fewer rows');
     const fewer = await msg(9, '10');
     expect(fewer.ok).toBe(false);
     expect(fewer.msg).toContain('1 tables have fewer rows than the manifest: pretend');
+    // the copy on this device can be older than the manifest: no warning while it shows
+    const onCopy = await msg(9, '10', true);
+    expect(onCopy.ok).toBe(true);
+    expect(onCopy.msg).toBe('Checking tables\u2026');
+  });
+
+  test('the manifest check counts the live read, not the rows on screen', async ({ page, guard }) => {
+    await HUBS.cdhub.open(page, guard);
+    await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
+    const x = await page.evaluate(() => {
+      const n = LOAD.rowCounts.subject;
+      CD.counts.subject = 0;   // what a copy or half read would show
+      CD.manifest = [{ file: 'BLD-subject.csv', table: 'subject', rows: String(n) }];
+      return checks().filter((k) => k.k === 'tables')[0];
+    });
+    expect(x.wait).toBeFalsy();
+    expect(x.msg).not.toContain('fewer rows');
   });
 
   test('no job files yet: the page still loads and says so', async ({ page, guard }) => {
