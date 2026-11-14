@@ -1,0 +1,15 @@
+{
+  "_note": "Header rows only, invented, matching the live BLD tables as read on 12 Nov 2026 (JOB BB-FIN.1). No values. Used by tests/breed-better/contract.test.js.",
+  "BLD-score_scheme.csv": ["id", "name", "species_id", "breed", "version", "effective_from", "status", "source", "target_points", "target_is", "verdict_words"],
+  "BLD-score_band.csv": ["id", "scheme_id", "key", "label", "colour", "sort_order", "kind", "points_in_band"],
+  "BLD-score_criterion.csv": ["id", "scheme_id", "band_id", "key", "label", "evidence_source", "subject_field", "evidence_match", "answer_field", "date_field", "reads", "applies_to", "valid_months", "when_missing", "guidance", "authority", "lapsed_affects_verdict", "due_soon_days", "age_weight"],
+  "BLD-score_point.csv": ["id", "criterion_id", "answer_match", "points", "gate_outcome", "note"],
+  "BLD-score_enrolment.csv": ["id", "tenant_id", "scheme_id", "subject_id", "valid_from", "is_active", "source"],
+  "BLD-score_judgement.csv": ["id", "tenant_id", "subject_id", "criterion_id", "answer", "judged_on", "judged_by", "note"],
+  "BLD-subject.csv": ["id", "tenant_id", "name", "species", "breed", "sex", "dob"],
+  "BLD-fit_to_breed.csv": ["id", "tenant_id", "subject_id", "assessed_on", "outcome", "clinical_finding", "conformation_meets", "history_finding", "bcs", "handling_finding", "conditions", "valid_until"],
+  "BLD-health_screen.csv": ["id", "tenant_id", "subject_id", "test", "grade", "tested_on"],
+  "BLD-dna_result.csv": ["id", "tenant_id", "subject_id", "result_as_reported", "tested_on"],
+  "BLD-litter.csv": ["id", "tenant_id", "dam_subject_id", "dob", "delivery_method", "stillborn"],
+  "BLD-subject_status.csv": ["id", "tenant_id", "subject_id", "state", "from_date", "to_date"]
+}
