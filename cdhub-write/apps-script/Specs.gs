@@ -292,9 +292,9 @@ var TABLES = {
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
     columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind'],
     proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'],
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -304,7 +304,7 @@ var TABLES = {
     input: {
       type_key:       { type: 'text', required: true },
       label:          { type: 'text', required: true },
-      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none', 'litter'], required: true },   // litter (12 Nov 2026): a litter's jobs, opened from its tag
+      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none', 'litter', 'item'], required: true },   // litter (12 Nov 2026): a litter's jobs, opened from its tag; item (14 Nov 2026, ITEMS): a test on one item (BLD-items)
       asks_item:      { type: 'bool', dflt: 'false' },
       asks_amount:    { type: 'bool', dflt: 'false' },
       item_label:     { type: 'text' },
@@ -324,7 +324,8 @@ var TABLES = {
       evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
       site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none or area: what one tap writes
       not_in_areas:   { type: 'text' },                                             // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
-      only_in_areas:  { type: 'text' }                                              // a room job for these rooms only (e.g. isolation), by |; blank = every room
+      only_in_areas:  { type: 'text' },                                             // a room job for these rooms only (e.g. isolation), by |; blank = every room
+      item_kind:      { type: 'text' }                                              // 14 Nov 2026 (ITEMS): target item only: the item_kinds.kind_key it tests; blank = every item
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -343,6 +344,10 @@ var TABLES = {
       if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none' && row.target !== 'area') errors.site_scope = 'Only for a whole-site or room check.';
       if (!errors.not_in_areas && row.target === 'none' && row.site_scope === 'per_dog' && row.not_in_areas === '') {
         errors.not_in_areas = 'List the isolation rooms this tap must never cover, separated by |, or type none.';
+      }
+      if (!errors.item_kind && row.item_kind !== '') {
+        if (row.target !== 'item') errors.item_kind = 'Only for an item test.';
+        else if (!/^[a-z][a-z0-9_]{1,39}$/.test(row.item_kind)) errors.item_kind = 'Use the kind\'s short name, e.g. appliance_class_1.';
       }
       if (!errors.only_in_areas && row.only_in_areas !== '') {
         var rooms = row.only_in_areas.split('|').map(function (a) { return a.trim(); }).filter(String);
@@ -382,8 +387,8 @@ var TABLES = {
     key: 'check_field',
     file: 'BLD-check_field.csv',
     idPrefix: 'cfd',
-    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
-    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
+    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
     computedColumns: [],
     lookups: [{ name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'type_key' }],
     perms: { add: ['OWNER'], correct: [] },
@@ -399,7 +404,13 @@ var TABLES = {
       required:       { type: 'bool', dflt: 'false' },
       sort:           { type: 'count' },                                             // order on the screen
       active:         { type: 'bool', dflt: 'true' },
-      effective_from: { type: 'date', required: true }
+      effective_from: { type: 'date', required: true },
+      // 14 Nov 2026 (ITEMS): a number question's unit and limits. Limits are dated by effective_from and carry a source,
+      // so an old answer is judged by the row in force on its own date. Blank = no limit. Shown, never used to refuse a save.
+      unit:           { type: 'text' },
+      limit_low:      { type: 'text' },
+      limit_high:     { type: 'text' },
+      source:         { type: 'text' }
     },
     dupKey: ['type_key', 'field_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -415,6 +426,13 @@ var TABLES = {
         else if (list.length > 30) errors.choices = 'Keep it to 30 answers or fewer.';
         else row.choices = list.join('|');
       }
+      ['limit_low', 'limit_high'].forEach(function (k) {
+        if (errors[k] || row[k] === '') return;
+        if (row.kind !== 'number') errors[k] = 'Only a number question has limits.';
+        else if (!/^-?\d{1,7}(\.\d{1,3})?$/.test(row[k])) errors[k] = 'Type a number, e.g. 0.1.';
+      });
+      if (!errors.limit_low && !errors.limit_high && row.limit_low !== '' && row.limit_high !== '' && parseFloat(row.limit_low) > parseFloat(row.limit_high)) errors.limit_high = 'The upper limit cannot be below the lower one.';
+      if (!errors.unit && row.unit !== '' && row.kind !== 'number') errors.unit = 'Only a number question has a unit.';
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.field_key || errors.effective_from) return;
@@ -458,9 +476,9 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
@@ -468,7 +486,10 @@ var TABLES = {
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
       { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
       { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' },
-      { name: 'check_log_outcome', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'outcome' }   // a note points at a saved record
+      { name: 'check_log_outcome', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'outcome' },   // a note points at a saved record
+      { name: 'check_type_target', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'target' },
+      { name: 'check_type_item_kind', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'item_kind' },
+      { name: 'items', file: 'BLD-items.csv', idCol: 'id', valCol: 'kind_key' }                 // 14 Nov 2026 (ITEMS): an item test names the item
     ],
     perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER'] },
     alwaysPending: false,
@@ -485,9 +506,10 @@ var TABLES = {
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
       how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] },      // scanned = opened from a tag: it says which screen, not that anyone was there
       litter_id:     { type: 'ref', lookup: 'litter' },                             // 12 Nov 2026: a litter job (check_type target litter)
-      note_for_id:   { type: 'text' }                                               // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
+      note_for_id:   { type: 'text' },                                              // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
+      item_id:       { type: 'ref', lookup: 'items' }                               // 14 Nov 2026 (ITEMS): the item an item test is on (check_type target item)
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item', 'outcome'], dupTimeCol: 'taken_at',   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors, lookups) {
@@ -503,11 +525,102 @@ var TABLES = {
       } else if (row.note_for_id && !errors.note_for_id) {
         errors.note_for_id = 'Only a note can point at another record.';
       }
+      // an item test (check_type target item, 14 Nov 2026): names one item, of the kind the test is for
+      var tgt = lookups && lookups.check_type_target ? lookups.check_type_target[row.check_type_id] : undefined;
+      if (tgt === 'item' && row.outcome !== 'note') {
+        if (!row.item_id && !errors.item_id) errors.item_id = 'Say which item.';
+        var wantKind = lookups.check_type_item_kind ? lookups.check_type_item_kind[row.check_type_id] : true;
+        var isKind = row.item_id && lookups.items ? lookups.items[row.item_id] : undefined;
+        if (!errors.item_id && typeof wantKind === 'string' && typeof isKind === 'string' && wantKind !== isKind) errors.item_id = 'This test is not for that kind of item.';
+      } else if (row.item_id && !errors.item_id && typeof tgt === 'string') {
+        errors.item_id = 'Only an item test names an item.';
+      }
       // a room job for some rooms only (check_type.only_in_areas): never saved for another room
       var only = lookups && lookups.check_type_only ? lookups.check_type_only[row.check_type_id] : true;
       if (!errors.area_id && row.area_id && typeof only === 'string' && only.split('|').indexOf(row.area_id) < 0) {
         errors.area_id = 'This job is not for this room.';
       }
+    }
+  },
+
+  // ---------------------------------------------------------------- items
+  // 14 Nov 2026 (ITEMS, decision 13 Nov option A): the owner's numbered list of physical things that get tested or
+  // checked (plug-in appliances, fire extinguishers, smoke alarms, thermometers...). Any industry: what a thing is
+  // comes from its kind row (BLD-item_kinds), never from code. A thing carries no dates and no room (S4.15): in use
+  // from/to is a BLD-requirement row (need_type item.in_use; archive = its to_date + reason), the room is a dated
+  // link row. A change (new name, number, kind) is a NEW row whose corrects_id is the item's first row id, so old
+  // records keep the old name; tests always point at the first row id. NEW table, own switch, OFF by default.
+  items: {
+    key: 'items',
+    file: 'BLD-items.csv',
+    idPrefix: 'itm',
+    columns: ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'],
+    proposedColumns: ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'],
+    computedColumns: [],
+    lookups: [
+      { name: 'item_kind_key', file: 'BLD-item_kinds.csv', idCol: 'kind_key' },
+      { name: 'items_first', file: 'BLD-items.csv', idCol: 'id', valCol: 'corrects_id' }
+    ],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,   // a change is a new row with corrects_id (sent as a field), never an edit
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      item_no:     { type: 'text', required: true },   // the owner's own number, e.g. 01 or EXT-02 (on the label and the contractor's sheet)
+      name:        { type: 'text', required: true },   // e.g. Kettle
+      kind_key:    { type: 'text', required: true },   // BLD-item_kinds.kind_key
+      make:        { type: 'text' },
+      model:       { type: 'text' },
+      serial_no:   { type: 'text' },
+      size:        { type: 'text' },                   // e.g. 2.2 kg, 6 L (Lisa 14 Nov: extinguisher type and size)
+      made_on:     { type: 'date' },                   // date of manufacture, from the label (a fact about the thing, not a period: S4.15 not engaged)
+      expires_on:  { type: 'date' },                   // the maker's end-of-life / expiry date from the label (Lisa 14 Nov: "expiry date")
+      photo:       { type: 'text' },                   // a file id from the photo save
+      note:        { type: 'text' },
+      corrects_id: { type: 'text' }                    // a change: the item's FIRST row id
+    },
+    dupKey: ['item_no', 'name', 'kind_key', 'corrects_id'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.created_at = ctx.nowIso; row.created_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors, lookups) {
+      if (!errors.made_on && !errors.expires_on && row.made_on && row.expires_on && row.expires_on < row.made_on) errors.expires_on = 'The expiry date cannot be before the date it was made.';
+      if (!errors.kind_key && row.kind_key !== '') {
+        if (!/^[a-z][a-z0-9_]{1,39}$/.test(row.kind_key)) errors.kind_key = 'Use the kind\'s short name, e.g. appliance_class_1.';
+        else if (lookups && lookups.item_kind_key && !lookups.item_kind_key[row.kind_key]) errors.kind_key = 'No kind with that name. Add it to the kinds first.';
+      }
+      if (!errors.corrects_id && row.corrects_id !== '') {
+        var first = lookups && lookups.items_first ? lookups.items_first[row.corrects_id] : undefined;
+        if (!ID_RE_.test(row.corrects_id)) errors.corrects_id = 'That is not a valid id.';
+        else if (lookups && lookups.items_first && first === undefined) errors.corrects_id = 'That item was not found.';
+        else if (typeof first === 'string') errors.corrects_id = 'Point at the item\'s first row, not a change.';
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- item_kinds
+  // 14 Nov 2026 (ITEMS): what kinds of item there are (owner rows, any industry): e.g. appliance_class_1 "Plug-in
+  // appliance, Class I", extinguisher_co2 "Fire extinguisher, CO2", thermometer. The tests for a kind are check_type
+  // rows (target item, item_kind). A change is a new row (latest set_on wins); old rows are kept. OWNER only, own switch, OFF.
+  item_kinds: {
+    key: 'item_kinds',
+    file: 'BLD-item_kinds.csv',
+    idPrefix: 'ikd',
+    columns: ['id', 'tenant_id', 'kind_key', 'label', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'kind_key', 'label', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      kind_key: { type: 'text', required: true },
+      label:    { type: 'text', required: true },
+      source:   { type: 'text' }
+    },
+    dupKey: ['kind_key', 'label'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.kind_key && row.kind_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.kind_key)) errors.kind_key = 'Use lower-case letters, numbers and underscores, e.g. extinguisher_co2.';
     }
   },
 
@@ -637,7 +750,7 @@ var TABLES = {
     defaultMode: 'direct',
     input: {
       tag:    { type: 'text', required: true },
-      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true },   // site = the one premises code
+      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true },   // site = the one premises code; item (14 Nov 2026) opens the item's tests
       ref_id: { type: 'text', required: true }
     },
     dupKey: ['tag'], dupTimeCol: null,
@@ -1064,5 +1177,8 @@ var READABLE = {
   // the weights to do that; read only as far as visibility rows allow (one row: table_name weight, staff, all rows).
   weight:          { file: 'BLD-weight.csv',          vis: 'weight',          authorCol: '',            dateCol: 'performed_on' },
   // 13 Nov 2026 (DOGCARD): BFFs / Fren. links between two dogs; read only as far as visibility rows allow
-  subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' }
+  subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' },
+  // 14 Nov 2026 (ITEMS): the item list and its kinds, read only as far as visibility rows allow (staff phones read items to open an item's tests)
+  items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
+  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' }
 };

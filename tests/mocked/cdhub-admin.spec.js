@@ -70,7 +70,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await map.locator('[data-adm-cell="area|aud-staff"]').first().click();
     const why = page.locator('#admMap .adm-why');
     await expect(why).toContainText('fv-t2');
-    await expect(why).toContainText('16/10/26');
+    await expect(why).toContainText('16 Oct 2026');
     await expect(why).not.toContainText('fv-t6');   // a row from a later date is not in force today
     await expect(page.locator('#admMap .adm-later')).toContainText('Website people');
   });
@@ -81,7 +81,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(page.locator('[data-adm-open="inspect"] small')).toHaveText('1 open');
     await page.locator('[data-adm-open="inspect"]').click();
     await expect(page.locator('#adm-inspect')).toContainText('Test visit');
-    await expect(page.locator('#adm-inspect')).toContainText('31/12/99');
+    await expect(page.locator('#adm-inspect')).toContainText('31 Dec 2099');
     await expect(page.locator('#adm-inspect')).toContainText('ended');
   });
 
@@ -100,9 +100,9 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await page.locator('[data-adm-open="codes"]').click();
     const c = page.locator('#adm-codes');
     await expect(c).toContainText('Test Person');
-    await expect(c).toContainText('01/10/26');
+    await expect(c).toContainText('1 Oct 2026');
     await expect(c).toContainText('Old Helper');
-    await expect(c).toContainText('30/06/26');
+    await expect(c).toContainText('30 Jun 2026');
     await expect(c).toContainText('ended');
     await expect(c).toContainText('Remind');
   });
