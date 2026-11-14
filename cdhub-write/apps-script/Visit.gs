@@ -226,12 +226,12 @@ function visitTypeById_(id) {
   return rows.filter(function (r) { return r.id === id; })[0] || null;
 }
 
-/** A visit's state from its CURRENT row: 'ended' (revoked or past usable_to), 'opens' (not yet) or 'live'. */
+/** A visit's state from its CURRENT row: 'ended' (revoked or past to_at), 'opens' (not yet) or 'live'. */
 function visitState_(r, nowMs) {
   if (String(r.ended_at || '')) return 'ended';
-  var end = Date.parse(r.usable_to || '') || Date.parse(inspectEndOfDay_(String(r.ends || '')));
+  var end = Date.parse(r.to_at || '') || Date.parse(inspectEndOfDay_(String(r.ends || '')));
   if (isNaN(end) || nowMs >= end) return 'ended';
-  var start = Date.parse(r.usable_from || '');
+  var start = Date.parse(r.from_at || '');
   return !isNaN(start) && nowMs < start ? 'opens' : 'live';
 }
 
@@ -338,9 +338,9 @@ function sinkVisitGive_(req) {
     if (lim) visitWithin_(lim, type, rights, lists, fieldRows, jobs);
     var capH = Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
     if (lim && lim.max_hours !== null && (capH === null || lim.max_hours < capH)) capH = lim.max_hours;
-    var win = externalWindow_({ hours: f.hours, starts_at: f.usable_from, ends_at: f.usable_to }, role, now, bad,
+    var win = externalWindow_({ hours: f.hours, starts_at: f.from_at, ends_at: f.to_at }, role, now, bad,
       { default_hours: Number(type.default_hours), max_hours: capH });
-    if (lim && lim.to_ms !== null && win.endMs > lim.to_ms) throw bad('usable_to', 'Your permission ends ' + externalShow_(londonIso_(new Date(lim.to_ms))) + '; the visit must end by then.');
+    if (lim && lim.to_ms !== null && win.endMs > lim.to_ms) throw bad('to_at', 'Your permission ends ' + externalShow_(londonIso_(new Date(lim.to_ms))) + '; the visit must end by then.');
 
     var subj = store_read_(READABLE.subject.file, true), known = {}, all = [];
     subj.records.forEach(function (r) { if (!r.tenant_id || r.tenant_id === tenant) { known[r.id] = true; all.push(r.id); } });
@@ -371,7 +371,7 @@ function sinkVisitGive_(req) {
       Object.keys(cur).forEach(function (root) {
         var r = cur[root];
         if (busy || r.card_tag_id !== cardId || visitState_(r, nowMs) === 'ended') return;
-        var s = Date.parse(r.usable_from || '') || 0, e = Date.parse(r.usable_to || '');
+        var s = Date.parse(r.from_at || '') || 0, e = Date.parse(r.to_at || '');
         if (s < win.endMs && win.startMs < e) busy = root;
       });
       if (busy) throw err_('CARD_IN_USE', 'That card already has a visit at that time. End it first or choose another card.', { duplicate_of: busy });
@@ -396,12 +396,12 @@ function sinkVisitGive_(req) {
     }), RT);
     var label = name + (org ? ' - ' + org : '');
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), created_at: utcIso_(now),
-      set_by: who.who, usable_from: fromAt, usable_to: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
+      set_by: who.who, from_at: fromAt, to_at: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '',
       issued_by: deleg ? who.id : 'owner', delegation_id: deleg ? deleg.row.id : '' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
-    var out = { status: 'saved', grant_id: linkId, person_id: personId, usable_from: fromAt, usable_to: toAt, dogs: subjects.length,
+    var out = { status: 'saved', grant_id: linkId, person_id: personId, from_at: fromAt, to_at: toAt, dogs: subjects.length,
       fields: fieldRows.length, email_sent: false };
     if (!cardId) {
       var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
@@ -481,23 +481,23 @@ function sinkVisitExtend_(req) {
     var L = visitLinkRead_(), g = visitCurrentRow_(L, linkId), rec = g.cur, nowMs = now.getTime();
     if (visitState_(rec, nowMs) === 'ended') throw err_('ALREADY_ENDED', 'That visit has already ended. Give a new one.');
     if (deleg && g.root.issued_by !== who.id && !deleg.limits.extend_others) throw err_('NOT_ALLOWED', 'You can only change visits you gave.');
-    var startMs = Date.parse(rec.usable_from || g.root.created_at || ''), endMs, H = 3600000;
+    var startMs = Date.parse(rec.from_at || g.root.created_at || ''), endMs, H = 3600000;
     if (f.hours !== undefined && f.hours !== null && f.hours !== '') {
       var n = Number(f.hours);
       if (!(n > 0) || n > 100000) throw bad('hours', 'Choose how many hours.');
       endMs = Math.max(nowMs, startMs) + Math.round(n * H);
     } else {
-      endMs = externalMs_(f.usable_to);
-      if (isNaN(endMs)) throw bad('usable_to', 'Choose the date and time it ends.');
+      endMs = externalMs_(f.to_at);
+      if (isNaN(endMs)) throw bad('to_at', 'Choose the date and time it ends.');
     }
-    if (endMs <= nowMs || endMs <= startMs) throw bad('usable_to', 'The end must be later than now and the start.');
+    if (endMs <= nowMs || endMs <= startMs) throw bad('to_at', 'The end must be later than now and the start.');
     var type = rec.grant_type_id ? visitTypeById_(rec.grant_type_id) : null;
     var role = (type && type.role_code) || ROLE_INSPECTOR;
     var tmax = type && Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
     if (deleg && deleg.limits.max_hours !== null && (tmax === null || deleg.limits.max_hours < tmax)) tmax = deleg.limits.max_hours;
-    if (deleg && deleg.limits.to_ms !== null && endMs > deleg.limits.to_ms) throw bad('usable_to', 'Your permission ends sooner than that.');
+    if (deleg && deleg.limits.to_ms !== null && endMs > deleg.limits.to_ms) throw bad('to_at', 'Your permission ends sooner than that.');
     var max = externalMax_(role, todayLondon_(now), tmax);
-    if (max !== null && endMs - startMs > Math.round(max * H) + 60000) throw bad('usable_to', 'This can last ' + max + ' hours at most.');
+    if (max !== null && endMs - startMs > Math.round(max * H) + 60000) throw bad('to_at', 'This can last ' + max + ' hours at most.');
     var endsAt = utcIso_(new Date(endMs));
     if (g.root.code_id) {
       var reg = registry_(), h, hit = false;
@@ -505,8 +505,8 @@ function sinkVisitExtend_(req) {
       if (!hit) throw err_('NOT_FOUND', 'That visit\'s code was not found.');
       setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
     }
-    var row = linkSupersede_(L, linkId, { usable_to: endsAt, ends: todayLondon_(new Date(endMs)) }, now);
-    return { status: 'saved', grant_id: row.id, root_id: linkId, usable_to: endsAt, logged: visitEvent_(now, who, 'visit_extended', linkId, 'to ' + endsAt + ': ' + reason) };
+    var row = linkSupersede_(L, linkId, { to_at: endsAt, ends: todayLondon_(new Date(endMs)) }, now);
+    return { status: 'saved', grant_id: row.id, root_id: linkId, to_at: endsAt, logged: visitEvent_(now, who, 'visit_extended', linkId, 'to ' + endsAt + ': ' + reason) };
   }, true);
 }
 
@@ -545,7 +545,7 @@ function visitForCard_(L, cardId, nowMs) {
     if (r.card_tag_id !== cardId) return;
     var st = visitState_(r, nowMs);
     if (st === 'live') live = { root: root, cur: r };
-    else if (st === 'opens' && (!next || String(r.usable_from) < String(next.cur.usable_from))) next = { root: root, cur: r };
+    else if (st === 'opens' && (!next || String(r.from_at) < String(next.cur.from_at))) next = { root: root, cur: r };
   });
   return live || next;
 }
@@ -555,8 +555,8 @@ function visitCardWho_(t, now) {
   var card = visitCard_(t), L = inspectRead_(INSPECT.LINK_FILE), nowMs = now.getTime();
   var g = visitForCard_(L, card.id, nowMs);
   if (!g) throw err_('WINDOW', 'This card has no visit right now.');
-  if (visitState_(g.cur, nowMs) !== 'live') throw err_('WINDOW', 'This card opens ' + externalShow_(g.cur.usable_from) + '.');
-  return { who: 'Visitor - ' + g.cur.label, role: ROLE_INSPECTOR, id: 'card:' + card.id, link_id: g.root, ends: g.cur.usable_to || '', card: true };
+  if (visitState_(g.cur, nowMs) !== 'live') throw err_('WINDOW', 'This card opens ' + externalShow_(g.cur.from_at) + '.');
+  return { who: 'Visitor - ' + g.cur.label, role: ROLE_INSPECTOR, id: 'card:' + card.id, link_id: g.root, ends: g.cur.to_at || '', card: true };
 }
 
 /** check_type rows in force today for these type_keys, picked columns only. */
@@ -611,7 +611,7 @@ function sinkVisitOpen_(req) {
   if (state === 'ended') return { state: 'ended' };
   var grant = visitGrant_(g.root, todayLondon_(now));
   return {
-    state: state, grant_id: g.root, usable_from: r.usable_from || r.created_at, usable_to: r.usable_to || inspectEndOfDay_(r.ends),
+    state: state, grant_id: g.root, from_at: r.from_at || r.created_at, to_at: r.to_at || inspectEndOfDay_(r.ends),
     who: r.visitor_name || r.label, org: r.organisation || '', rights: grant.rights, lists: grant.lists,
     record_jobs: grant.rights.indexOf('record') >= 0 ? visitJobs_(Object.keys(grant.jobs), todayLondon_(now)) : [],
     review_words: grant.rights.indexOf('raise_finding') >= 0 ? visitReviewWords_() : []

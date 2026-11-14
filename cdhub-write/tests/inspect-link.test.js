@@ -6,7 +6,7 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const H = {
-  link: 'id,tenant_id,code_id,label,ends,created_at,set_by,usable_from,usable_to,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,issued_by,delegation_id,updated_at',
+  link: 'id,tenant_id,code_id,label,ends,created_at,set_by,from_at,to_at,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,issued_by,delegation_id,updated_at',
   linkV1: 'id,tenant_id,code_id,label,ends,made_at,made_by',
   subj: 'id,tenant_id,link_id,subject_id,from_date,to_date',
   field: 'id,tenant_id,link_id,table_name,field_name,redaction',
@@ -292,5 +292,5 @@ test('window: an old 7-column link file still works for links from now, but cann
   assert.equal(a.ok, true, JSON.stringify(a));
   assert.equal(read(env, a.result.code, 'subject').ok, true);
   const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(env.nowMs)), 1);
-  assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('usable_from'), true);
+  assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('from_at'), true);
 });

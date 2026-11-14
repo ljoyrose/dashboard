@@ -20,14 +20,14 @@ var ROLE_INSPECTOR = 'INSPECTOR';
 
 var INSPECT = {
   LINK_FILE: 'BLD-inspect_link.csv',
-  // V9 (13 Nov 2026), named after the Regulatory-Core DisclosureGrant (map in AA_ACCESS_2026-11-13-1535): usable_from /
-  // usable_to are London date-times (Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
+  // V9 (13 Nov 2026), the Regulatory-Core DisclosureGrant (map in AA_ACCESS_2026-11-13-1535): from_at / to_at (S4.15
+  // addition 14 Nov, UTC; Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
   // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant.
   // issued_by = the code id that gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs).
   // Old 7-column files still read.
-  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'usable_from', 'usable_to', 'supersedes_id',
+  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'from_at', 'to_at', 'supersedes_id',
     'grant_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
     'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
     'end_reason', 'tz', 'issued_by', 'delegation_id', 'updated_at'],
@@ -296,7 +296,7 @@ function sinkInspectMake_(spec, adminEmail) {
     inspectRead_(INSPECT.ACCESS_FILE);   // the visit log must exist before a link can be opened
     var linkId = newId_('ilk', now), codeId = newCodeId_(), endsAt = win.ends_at, by = adminEmail || 'owner';
     var v1 = sameHeader_(L.header, INSPECT.LINK_COLUMNS_V1);
-    if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the usable_from and usable_to columns in BLD-inspect_link. Ask STAFF to add them.');
+    if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the from_at and to_at columns in BLD-inspect_link. Ask STAFF to add them.');
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, todayLondon_(new Date(win.startMs)), ends];
     }), S);
@@ -304,7 +304,7 @@ function sinkInspectMake_(spec, adminEmail) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by, made_at: utcIso_(now), made_by: by,
-      usable_from: utcIso_(new Date(win.startMs)), usable_to: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
+      from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
@@ -330,7 +330,7 @@ function sinkInspectLinks_() {
     else if (e && !guestExpired_(e)) state = externalNotYet_(e) ? 'scheduled' : 'active';
     else if (e) state = 'ended';
     return {
-      id: root.id, code_id: root.code_id, label: r.label, ends: r.ends, starts_at: r.usable_from || (e && e.starts_at) || root.created_at || root.made_at, ends_at: r.usable_to || r.ends,
+      id: root.id, code_id: root.code_id, label: r.label, ends: r.ends, starts_at: r.from_at || (e && e.starts_at) || root.created_at || root.made_at, ends_at: r.to_at || r.ends,
       made_at: root.created_at || root.made_at, made_by: root.set_by || root.made_by, state: state, stopped_at: stopped || r.ended_at || '', stop_reason: reason || r.end_reason || '',
       dogs: count(S, root.id), fields: count(F, root.id), visits: count(A, root.id)
     };
