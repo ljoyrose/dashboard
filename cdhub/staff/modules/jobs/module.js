@@ -349,10 +349,10 @@
           if (r.code !== 'NETWORK') rid = null;
         });
       } });
-      [h('h2', { text: type.label || 'Report' }), dog, room, note, btn, msg].forEach(function (n) { host.appendChild(n); });
+      [h('h2', { text: type.label || 'Problem' }), dog, room, note, btn, msg].forEach(function (n) { host.appendChild(n); });
     });
   }
 
   StaffPage.register({ id: 'jobs', title: 'Jobs', icon: ctx0.icons.dogs, order: 5, open: open });
-  StaffPage.register({ id: 'report', title: 'Report', hidden: true, open: openReport });
+  StaffPage.register({ id: 'report', title: 'Problem', hidden: true, open: openReport });
 }());
