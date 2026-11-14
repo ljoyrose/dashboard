@@ -470,7 +470,7 @@
       fail wait in S.retry for the Retry button, which resends only them, never the test row. Resolves the count left. */
   function sendReads(v, logId, reads) {
     return Promise.all(reads.map(function (x) {
-      return post(v, 'readings', x.fields, { request_id: x.rid }).then(function (r) { return r && r.ok ? null : x; }, function () { return x; });
+      return post(v, 'readings', x.fields, { request_id: x.rid }).then(function (r) { return r && (r.ok || r.code === 'DUPLICATE') ? null : x; }, function () { return x; });   // DUPLICATE = already saved (STAFF readings save)
     })).then(function (rs) {
       var left = rs.filter(Boolean);
       if (left.length) S.retry[logId] = left; else delete S.retry[logId];

@@ -143,3 +143,9 @@ test('evidence: file_add first (no link fields), then link_add joins the returne
   assert.deepEqual([sent[1].fields.from_table, sent[1].fields.from_id, sent[1].fields.to_table, sent[1].fields.to_id, sent[1].fields.role], ['check_logs', 'clg-1', 'files', 'fil-1', 'certificate']);
   assert.equal((await V._fileAdd(v, form, {}, 'items', 'itm-1', 'main')), null, 'nothing chosen, nothing sent');
 });
+
+test('readings: a resend that comes back DUPLICATE counts as saved', async () => {
+  const v = { T: {}, sinkSend: () => Promise.resolve({ ok: false, code: 'DUPLICATE', duplicate_of: 'rdg-1' }) };
+  assert.equal(await V._sendReads(v, 'clg-7', [{ rid: 'itmxyz789-r1', fields: { kind_id: 'rkd-1', check_log_id: 'clg-7', value: '0.1' } }]), 0);
+  assert.equal(V._state.retry['clg-7'], undefined);
+});
