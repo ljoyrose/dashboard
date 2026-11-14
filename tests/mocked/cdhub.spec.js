@@ -977,11 +977,11 @@ test('CD Hub: gestation and adult age come from dated rows; no row = not set, ju
   expect([r.adult, r.pup, r.grown]).toEqual([6, true, true]);
 });
 
-test('CD Hub: The round shows a Kept readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
+test('CD Hub: The round shows a Readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
   await page.goto('cdhub/');
   await signIn(page);
   await openTab(page, 'round');
-  await expect(page.locator('#kept-readings h3')).toHaveText('Kept readings');
+  await expect(page.locator('#kept-readings h3')).toHaveText('Readings');
   await expect(page.locator('#arrive-reading')).toHaveCount(0);
   await page.locator('#rdate').fill('2026-01-15');
   await page.locator('#rdate').dispatchEvent('change');
