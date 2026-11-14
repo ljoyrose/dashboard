@@ -57,3 +57,4 @@ textarea.inp{padding:10px 14px}
 .job-paper-btn{margin-left:16px}
 .job-paper:not([hidden]){display:flex;gap:8px;margin-bottom:8px}
 .job-paper-btn{display:inline-flex;align-items:center;gap:4px}.job-paper-btn .ic-plus{width:16px;height:16px}
+.job-earlier-all{margin-top:12px}.job-grid{margin-top:8px}
