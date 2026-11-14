@@ -42,7 +42,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(dog(page).locator('[data-k="wgraph"]').first()).toBeVisible();
     await dog(page).locator('details.wtc > summary').click();
     const g = page.locator('#wpanel svg.wgraph');
-    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 01/01/26 to 8.9 kg on 12/03/26');
+    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 1 Jan 2026 to 8.9 kg on 12 Mar 2026');
     await expect(g.locator('circle')).toHaveCount(3);
     await expect(page.locator('#wpanel thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);   // no source column
     await expect(page.locator('#wpanel')).not.toContainText('Pretend source');
@@ -78,7 +78,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const f = page.locator('#wpanel form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('9.3');
     await f.locator('button[type=submit]').click();
-    await expect(f.locator('[data-weigh-msg]')).toHaveText('NOT saved \u2014 The save script has not been updated for this yet. Nothing was saved.');
+    await expect(f.locator('[data-weigh-msg]')).toHaveText('Not saved: The save script has not been updated for this yet. Nothing was saved.');
     await expect(page.locator('#wpanel tbody tr')).toHaveCount(3);
   });
 

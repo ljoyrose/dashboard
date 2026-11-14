@@ -29,6 +29,7 @@
   /** 2026-03-02 -> "2 Mar 2026". Anything else is shown as it is. */
   function day(d) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d));
+    if (m && typeof BLDDates !== 'undefined') return BLDDates.long(t(d));   /* the one formatter (13 Nov 2026) */
     return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d);
   }
 
