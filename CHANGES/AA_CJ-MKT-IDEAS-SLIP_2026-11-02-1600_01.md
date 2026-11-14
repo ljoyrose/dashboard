@@ -58,3 +58,16 @@ OQ8 engine: merge the investigator result file (Steward).
 OQ9 Infinity plan: does it allow an Item created automation (only needed for wake option B).
 OQ10 how the investigator wakes: A daily pass (recommended), B Infinity web address, or C an email like the one Lisa mentioned for Grok (Lisa to say if that exists).
 New board column ids are not recorded here; the engine reads them from the board by name.
+
+## Update 12 Nov 2026 (engine access retried)
+21. GOOGLE/SCRIPT: Lisa approved retrying engine-repo access (option A). Access to ljoyrose/marketplace-engine WAS granted, but the repo is EMPTY (no branches, no files; checked through git and the GitHub API on 8 Nov and again on 12 Nov). So the three engine additions could not be implemented "there".
+22. Finding: the real Marketplace engine is a live Google Apps Script project, RR_MKT-ENGINE, in Drive. It was restored from a rescue backup on 8 Nov (about 03:45): backups RR_MKT-ENGINE_BACKUP_2026-11-08_v23_restore-v11.11.zip and RR_MKT-ENGINE_RESCUE_v11.11_2026-11-08.json are in the engine backups folder. The engine is about half a megabyte; the Drive tools can only dump a whole file into a session, so it was not read. Nothing in the engine was changed.
+23. Options put to Lisa (reply still needed): A2 put a copy of the engine into the GitHub repo once (download the v23 zip from Drive, upload it on github.com/ljoyrose/marketplace-engine, commit to main), then Claude implements the additions there as a PR for Steward to review (recommended); B2 Claude writes a stand-alone engine file blind from the contract; C Steward builds from the spec.
+24. Rules in force from Lisa on 12 Nov: no merges, no sends, no installs, no settings changes without her. This slip PR is opened and left unmerged.
+
+## Needs Lisa (one line each)
+1. Pick A2, B2 or C for the engine additions (A2 needs a one-off Chrome upload of the engine zip to the repo).
+2. How the investigator wakes (recommended: daily pass; or Infinity web address; or an email like Grok's if one exists).
+3. Rows for Steward's register RR_HO-STEWARD-LIVE.csv (a live Drive write to a shared file; steps will be given as Claude in Chrome instructions).
+4. Switching off test mode (marketplace.live in config.js) once the engine side works.
+5. One real product for the first investigator test.
