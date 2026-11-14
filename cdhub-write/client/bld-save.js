@@ -272,6 +272,29 @@
     }
 
     /**
+     * Send one named save that is not a table row (e.g. link_add, link_end). Same code, same no-double-save reference.
+     * Resolves (never rejects): {ok:true, ...result, message:'Saved.'} or {ok:false, code, message, fields}.
+     */
+    function act(action, fields, requestId) {
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
+      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
+      var body = { v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} };
+      return withTimeout(doFetch(scriptUrl, {
+        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
+      })).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+      }).catch(function () {
+        return { ok: false, code: 'NETWORK', requestId: body.request_id, message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.' };
+      });
+    }
+    /** Record-to-record links (14 Nov 2026): {from_table, from_id, to_table, to_id, link_kind_key, sort?, note?, from_date?}. */
+    function linkAdd(fields, requestId) { return act('link_add', fields, requestId); }
+    /** End one link: {id, to_date?} (blank = today). */
+    function linkEnd(fields, requestId) { return act('link_end', fields, requestId); }
+
+    /**
      * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
      * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
@@ -348,6 +371,7 @@
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
       loadConfigFromDrive: loadConfigFromDrive,
+      act: act, linkAdd: linkAdd, linkEnd: linkEnd,
       read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }

@@ -144,6 +144,18 @@ test('a correction carries the id it corrects and a reason', async () => {
   assert.equal(body.action, 'correct'); assert.equal(body.corrects_id, 'rdg-1'); assert.equal(body.reason, 'typo');
 });
 
+test('linkAdd / linkEnd: send link_add / link_end with the code and a request reference', async () => {
+  const srv = fakeServer();
+  const s = mk(srv, { scriptUrl: GOOD_URL });
+  assert.equal((await s.linkAdd({ from_table: 'subject' })).code, 'NO_CODE');
+  s.setCode('X');
+  await s.linkAdd({ from_table: 'subject', from_id: 'sub-1', to_table: 'files', to_id: 'fil-1', link_kind_key: 'gallery' }, 'req-link-0001');
+  await s.linkEnd({ id: 'lnk-1' });
+  const bodies = srv.calls.filter((c) => c.init.method === 'POST').map((c) => JSON.parse(c.init.body));
+  assert.equal(bodies[0].action, 'link_add'); assert.equal(bodies[0].request_id, 'req-link-0001'); assert.equal(bodies[0].fields.to_id, 'fil-1');
+  assert.equal(bodies[1].action, 'link_end'); assert.equal(bodies[1].fields.id, 'lnk-1'); assert.equal(bodies[1].code, 'X');
+});
+
 test('config file in Drive: only a clean, single, switched-on file with a real Script URL turns saving on', async () => {
   const run = async (list, cfg) => {
     const f = async (url) => (url.includes('alt=media') ? { json: async () => cfg } : { json: async () => ({ files: list }) });
