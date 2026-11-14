@@ -406,6 +406,10 @@ dialog button.house-close { box-sizing: border-box; display: inline-flex; align-
 dialog button.house-close:active { outline: var(--house-line) solid currentColor; outline-offset: calc(-1 * var(--house-line)); }
 dialog button.house-close:focus-visible { outline: var(--house-focus) solid currentColor; outline-offset: calc(-1 * var(--house-focus)); }
 
+/* The page keeps room for its scrollbar (Lisa 14 Nov 2026, no jumping columns): on Windows and Linux a scrollbar
+   that comes and goes would otherwise change the width of every page and table. */
+html { scrollbar-gutter: stable; }
+
 /* One table look for every app (Lisa 14 Nov 2026: "no jumping about on columns"). Add class="house-table";
    cdhub/staff/lib/tables.js sets the column widths once from the headers, so they never move as rows load, filter or fold.
    1px inside lines, no fills. Numbers right, even-width figures. On a phone each row becomes label / value lines. */

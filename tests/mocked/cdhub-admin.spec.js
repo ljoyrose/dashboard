@@ -110,8 +110,6 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('Admin tables keep their column widths as rows load, show all and redraw (house-table)', async ({ page }) => {
     await open(page);
     await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
-    // a page scrollbar (Linux, Windows) takes width from every 100% table when the list grows: hold it on, so only the rows change
-    await page.addStyleTag({ content: 'html{overflow-y:scroll}' });
     await tabClick(page, '#nav button[data-go="admin"]');
     await expect(page.locator('#admFuture .adm-future tbody tr').first()).toBeVisible();
     const widths = () => page.locator('#admFuture table.house-table thead th').evaluateAll((hs) => hs.map((h) => Math.round(h.getBoundingClientRect().width)));
