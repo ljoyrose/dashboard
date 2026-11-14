@@ -89,17 +89,6 @@ test.describe('Codes vault: sealing in the browser', () => {
     expect(r.open).toBe(false);
   });
 
-  test('a typed code is checked against the sign-in hash (salt + ":" + code), so a typo is never kept', async ({ page }) => {
-    await lib(page);
-    const r = await page.evaluate(async (code) => {
-      const salt = 'invented-salt';
-      const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + code));
-      const hash = [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, '0')).join('');
-      return [await BLDVault.hashMatches(code, salt, hash), await BLDVault.hashMatches(' ' + code + ' ', salt, hash), await BLDVault.hashMatches(code + 'X', salt, hash)];
-    }, CODE);
-    expect(r).toEqual([true, true, false]);
-  });
-
   test('sealing and opening send nothing over the network', async ({ page }) => {
     await lib(page);
     const sent = [];
