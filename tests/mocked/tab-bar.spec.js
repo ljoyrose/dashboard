@@ -28,7 +28,7 @@ const PLAN = {
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
   cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Compliance', 'The round', 'Areas', 'Litters', 'Staff', 'Temps', 'Enquiries'] },
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
-  estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov)
+  estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'DNS & Email', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov); DNS & Email: JOB 6.3 (12 Nov)
 };
 // phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
 // Each tab's colour (Lisa's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).
