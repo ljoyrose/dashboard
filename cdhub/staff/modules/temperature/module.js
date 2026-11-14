@@ -534,7 +534,7 @@
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
     var label = h('input', { class: 'inp', type: 'text', maxlength: '60', placeholder: 'Sensor name (optional)', 'aria-label': 'Sensor name' });
     // CSV text only: no picture can be chosen here
-    var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'Sensor CSV file' });
+    var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'Readings file' });
     var msg = say(''), out = h('div');
     host.appendChild(room); host.appendChild(label); host.appendChild(file); host.appendChild(msg); host.appendChild(out);
     var parsed = null;
@@ -754,7 +754,7 @@
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
-      // Who may open the Year report or the Sensor CSV import is an owner setting (permission keys temps.year_report,
+      // Who may open the Year report or Load readings file is an owner setting (permission keys temps.year_report,
       // temps.sensor_import), read through can(). Until BLD-permission is served, can() allows owner codes only.
       var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import');
       function tools() {
@@ -762,7 +762,7 @@
           h0('button', { class: 'btn quiet', type: 'button', text: 'Add earlier reading', onclick: function () { if (stop) stop(); stop = null; back();
             backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }),
           mayReport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }) : null,
-          mayImport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
+          mayImport ? h0('button', { class: 'btn quiet', type: 'button', text: 'Load readings file', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }) : null
         ].filter(Boolean));
       }
       var sub = h('div');

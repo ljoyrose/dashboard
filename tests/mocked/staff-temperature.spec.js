@@ -233,15 +233,18 @@ test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day,
   } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
 });
 
-test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
+test('Year report and Load readings file show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
   ROLE.v = 'STAFF';
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
     await expect(page.getByRole('button', { name: 'Add earlier reading' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Load readings file' })).toHaveCount(0);
   } finally { ROLE.v = 'OWNER'; }
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Load readings file' })).toBeVisible();
 });
 
 test('an unusual temperature is the script\'s warning: the screen shows it with "Save anyway", which resends with confirm_unusual yes', async ({ page }) => {
