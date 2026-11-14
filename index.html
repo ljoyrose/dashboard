@@ -2850,6 +2850,9 @@
     var open = '<section class="card slot7' + cardClass(p) + '" id="minsCard">';
     if (!d) return open + head + failNote(p) + foot;
     if (d.none) return open + head + '<p class="note">No minutes file yet. The collector has not written one.</p>' + foot;
+    // The old collector (engine 0.1) also counted the public repo, which GitHub does not charge, so its total reads far too high.
+    // A file with no engine field is shown as before; only a stated version below 0.2 is held back.
+    if (!d.example && st && typeof st.engine === 'string' && parseFloat(st.engine) < 0.2) return open + head + '<p class="note" data-mins-oldengine>Waiting for the collector update (v0.2). The old one counts the public repo, so its total is wrong.</p>' + foot;
     var v = minsView(st, Date.now()), lvl = { ok: ['ok', 'Under 75%'], amber: ['ops', 'Over 75%'], red: ['risk', 'Over 90%'] }[v.level];
     var chip = { success: ['ok', 'Passed'], failure: ['risk', 'Failed'], running: ['ops', 'Running'], cancelled: ['', 'Cancelled'], none: ['', 'No runs'] };
     var h = open + head;

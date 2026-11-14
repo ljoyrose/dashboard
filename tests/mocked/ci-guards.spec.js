@@ -171,9 +171,9 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
   test('every hub folder on main is copied and checked by pages.yml', () => {
     const wf = pages();
     const copied = /cp -r ([^\n]+) _site\//.exec(wf)[1].trim().split(/\s+/);
-    const hubs = fs.readdirSync(REPO, { withFileTypes: true })
-      .filter((d) => d.isDirectory() && !d.name.startsWith('.') && !['tests', 'tools', 'docs', 'node_modules', 'icons'].includes(d.name))
-      .filter((d) => fs.existsSync(path.join(REPO, d.name, 'index.html'))).map((d) => d.name);
+    // Tracked files only, so local leftovers (playwright-report/) never count as a hub.
+    const hubs = execFileSync('git', ['ls-files', '*/index.html'], { cwd: REPO, encoding: 'utf8' }).split('\n')
+      .map((f) => f.split('/')).filter((p) => p.length === 2 && !['tests', 'tools', 'docs', 'icons'].includes(p[0])).map((p) => p[0]);
     expect(hubs.length).toBeGreaterThan(5);
     const missing = hubs.filter((h) => !copied.includes(h) || !wf.includes(`test -f _site/${h}/index.html`));
     expect(missing, 'hub folders missing from pages.yml (cp line or test line)').toEqual([]);

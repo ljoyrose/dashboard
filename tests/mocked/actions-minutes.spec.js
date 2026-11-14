@@ -17,9 +17,11 @@ const state = (used, ageH = 3, extra = {}) => Object.assign({
   workflows: [{ repo: 'Alpha', label: 'Scan', minutes: used - 140, runs: 30 }, { repo: 'Alpha', label: 'Tests', minutes: 40, runs: 12 }, { repo: 'Beta', label: 'Sync', minutes: 100, runs: 9 }]
 }, extra);
 
+// Serve config.js with the folder id the test needs, whatever config.js holds today ('' = the example data).
+const withFolder = (page, id) => page.route(/\/config\.js$/, (route) => route.fulfill({ status: 200, contentType: 'text/javascript',
+  body: CONFIG.replace(/(actionsMinutes: \{\s*folderId: )'[^']*'/, `$1'${id}'`) }));
 async function withFile(page, guard, st) {
-  await page.route(/\/config\.js$/, (route) => route.fulfill({ status: 200, contentType: 'text/javascript',
-    body: CONFIG.replace(/actionsMinutes: \{\s*folderId: ''/, `actionsMinutes: {\n      folderId: '${FOLDER}'`) }));
+  await withFolder(page, FOLDER);
   if (st) guard.world.file('mins-json', 'ACTIONS-MINUTES.json', JSON.stringify(st), { parents: [FOLDER], driveId: null, mimeType: 'application/json' });
 }
 async function open(page) {
@@ -45,6 +47,7 @@ test.describe('Home: Actions minutes card', () => {
   test('empty folder id: invented example data with the Example tag, and no Drive read for the file', async ({ page, guard }) => {
     const asked = [];
     page.on('request', (r) => { if (/ACTIONS-MINUTES/.test(decodeURIComponent(r.url()))) asked.push(r.url()); });
+    await withFolder(page, '');
     const card = await open(page);
     await expect(card.locator('[data-example]')).toHaveText('Example');
     await expect(card.locator('[data-mins-used] .num')).toHaveText('1,240 / 2,000');
@@ -100,6 +103,21 @@ test.describe('Home: Actions minutes card', () => {
     const card = await open(page);
     await expect(card.locator('[data-mins-stale]')).toHaveText('Stale: 3 days old');
     await shot(card, 'stale');
+  });
+
+  test('collector still on engine 0.1: waits for the update, never a false red', async ({ page, guard }) => {
+    await withFile(page, guard, state(1900, 3, { engine: '0.1' })); // 95%: would be red if shown
+    const card = await open(page);
+    await expect(card.locator('[data-mins-oldengine]')).toHaveText('Waiting for the collector update (v0.2). The old one counts the public repo, so its total is wrong.');
+    await expect(card.locator('[data-mins-used], [data-mins-level], [data-mins-diet]')).toHaveCount(0);
+    await shot(card, 'old-engine');
+  });
+
+  test('collector on engine 0.2 shows its numbers', async ({ page, guard }) => {
+    await withFile(page, guard, state(210, 3, { engine: '0.2' }));
+    const card = await open(page);
+    await expect(card.locator('[data-mins-oldengine]')).toHaveCount(0);
+    await expect(card.locator('[data-mins-used]')).toContainText('210 / 2,000');
   });
 
   test('folder set but no file yet: a plain note, not a failure', async ({ page, guard }) => {
