@@ -83,7 +83,7 @@ test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is off the menus', async
   await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
   await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAttribute('data-slot', '6');
   await page.locator('nav.house-tabs [data-house-more]').click();
-  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'The round', 'Areas', 'Litters', 'Staff', 'Temps', 'Enquiries']);
+  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Compliance', 'The round', 'Areas', 'Litters', 'Staff', 'Temps', 'Items', 'Enquiries']);
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveText('Temps');
   await tabClick(page, '#nav button[data-go="sops"]');
   await expect(page).toHaveURL(/#\/sops$/);
