@@ -7,20 +7,22 @@ const { test, expect } = require('../support/test');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+// Menu option A (Lisa 14 Nov 2026): Main, the starting sections, then More with every other view in colour order.
 const PRIMARY = [
   ['Main', './index.html#/map'],
-  ['Do', './index.html#/work'],
-  ['Today', './index.html#/today'],
-  ['Dogs', './index.html#/dogs'],
-  ['SOPs', './index.html#/sops'],
+  ['Compliance', './index.html#/compliance'],
+  ['Ops', './index.html#/dogs'],
+  ['People', './index.html#/staff'],
 ];
 const MORE = [
-  ['Compliance', './index.html#/compliance'],
-  ['The round', './index.html#/round'],
-  ['Areas', './index.html#/areas'],
+  ['Today', './index.html#/today'],
+  ['Do', './index.html#/work'],
   ['Litters', './index.html#/litters'],
-  ['Staff', './index.html#/staff'],
+  ['Areas', './index.html#/areas'],
+  ['The round', './index.html#/round'],
+  ['SOPs', './index.html#/sops'],
   ['Temps', './history.html'],
+  ['Enquiries', './index.html#/enquiries'],
 ];
 
 test('one list draws hub buttons and history links, with Temps and without Breed Better', () => {
@@ -44,10 +46,8 @@ test('one list draws hub buttons and history links, with Temps and without Breed
   };
   vm.createContext(ctx);
   vm.runInContext(nav, ctx);
-  const labels = ctx.HubNav.MORE.map((m) => m.label);
-  expect(labels).toEqual(MORE.map((m) => m[0]));
-  expect(ctx.HubNav.MORE.find((m) => m.id === 'temps').href).toBe('./history.html');
-  const hub = ctx.HubNav.html({ counts: { map: 2 }, late: { map: true }, extraMore: [{ id: 'breed', label: 'Breed Better', slot: '5', icon: 's-check' }] });
+  expect(ctx.HubNav.VIEWS.temps.href).toBe('./history.html');
+  const hub = ctx.HubNav.html({ counts: { map: 2 }, late: { map: true }, has: () => true });
   const hist = ctx.HubNav.html({ links: 'href', current: 'temps' });
   const arch = ctx.HubNav.html({ links: 'href' });
   expect(hub).toContain('data-go="map"');
@@ -63,6 +63,7 @@ test('one list draws hub buttons and history links, with Temps and without Breed
     for (const [label, href] of PRIMARY.concat(MORE)) expect(html, label).toContain('href="' + href + '"');
   }
   expect(hist).toMatch(/href="\.\/history\.html"[^>]*aria-current="page"/);
+  expect(hist).toMatch(/data-section="ops"[^>]*aria-current="page"/);   // Temps sits in Ops
   expect(arch).not.toContain('aria-current');
 });
 
