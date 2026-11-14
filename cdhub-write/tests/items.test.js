@@ -144,13 +144,13 @@ test('qr_tag: a tag can open an item', () => {
   assert.ok(env.ctx.TABLES.qr_tag.input.kind.values.includes('item'));
 });
 
-test('links: an item is placed in one room at a time; a move ends the old row first', () => {
+test('links: a move is a new placed_in row from a later day; two from the same day are refused', () => {
   const { env, kettle } = setup();
   const place = (to, from, extra) => owner(env, 'links', Object.assign({ from_table: 'items', from_id: kettle, role: 'placed_in', to_table: 'areas', to_id: to, from_date: from, source: 'PAT certificate 28 May 2025' }, extra || {}));
-  ok(place('area-t1', '2025-05-28', { to_date: '2026-11-13' }));
-  const clash = place('area-t2', '2026-11-01');
+  ok(place('area-t1', '2025-05-28'));
+  const clash = place('area-t2', '2025-05-28');
   assert.equal(clash.ok, false);
-  assert.match(JSON.stringify(clash), /still in another place/);
+  assert.match(JSON.stringify(clash), /already has a place from that day/);
   ok(place('area-t2', '2026-11-14'));
   assert.equal(recs(env, 'BLD-links.csv').length, 2);
 });

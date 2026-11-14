@@ -627,7 +627,7 @@ var TABLES = {
   // ---------------------------------------------------------------- links
   // 14 Nov 2026 (ITEMS; LINKS decided C by Lisa 13 Nov 23:38): one neutral record-to-record link. From one row to
   // another, with a role word the owner sets (rows, never code), dated from_date / to_date (S4.15) with a source.
-  // First uses: an item's room (items -> areas, role placed_in; a move = end the old row, add a new one), an item or
+  // First uses: an item's room (items -> areas, role placed_in; a move = a new row from a later day, latest wins), an item or
   // test to the SOP it follows (governed_by) and to the requirement it meets (meets). Shown on both sides. To end one,
   // fill in to_date; never deleted. Existing subject_link / area_link / governed_by keep their files until the rename sitting.
   links: {
@@ -665,14 +665,14 @@ var TABLES = {
       if (!errors.to_id && row.from_table === row.to_table && row.from_id === row.to_id && row.from_id) errors.to_id = 'A record cannot link to itself.';
       if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
     },
-    // one room at a time: a new placed_in row for an item may not start inside another open placed_in row for it
+    // one room at a time: a move is a NEW placed_in row from a later date; the latest row starting on or before a day
+    // is the room that day (the earlier row stays, so history keeps the old room). Never two rows from the same day.
     checkAgainst: function (clean, records, errors) {
       if (clean.role !== 'placed_in' || errors.from_date) return;
       for (var i = 0; i < records.length; i++) {
         var r = records[i];
-        if (r.role !== 'placed_in' || r.from_table !== clean.from_table || r.from_id !== clean.from_id) continue;
-        if ((r.from_date || '') <= clean.from_date && (!r.to_date || r.to_date >= clean.from_date)) {
-          errors.from_date = 'It is still in another place on that day. End that one first (fill in its end date).';
+        if (r.role === 'placed_in' && r.from_table === clean.from_table && r.from_id === clean.from_id && (r.from_date || '') === clean.from_date) {
+          errors.from_date = 'It already has a place from that day. Use a later day for a move.';
           return;
         }
       }
