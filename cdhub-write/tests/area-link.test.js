@@ -163,7 +163,15 @@ test('record archive: the owner may by default; the row stays with an end date; 
 test('record delete: nobody by default, the owner included; with a row it removes the entry and the log keeps its last values', () => {
   const env = envE();
   assert.equal(call(env, 'sinkRecordDelete_', { code: env.codes.owner, reason: 'made in error' }).code, 'NOT_ALLOWED');
+  // inside its kept period (no retention row: the fallback years) a delete is refused; archive still works
+  const kept = envE({ perm: ['OWNER,,area_link,delete,yes,,,t,'] });
+  const k = call(kept, 'sinkRecordDelete_', { code: kept.codes.owner, reason: 'made in error' });
+  assert.equal(k.code, 'KEPT'); assert.equal(recs(kept).length, 1); assert.equal(audit(kept).length, 0);
+  assert.equal(call(kept, 'sinkRecordArchive_', { code: kept.codes.owner, to_date: '2026-11-20', reason: 'kept, ended' }).ok, true);
+  // an owner retention row of 1 year for the section, and a row from 2024: past its kept period, so it may go
   const d = envE({ perm: ['OWNER,,area_link,delete,yes,,,t,'] });
+  d.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,from_date,to_date,source', `rs-1,${fx.TENANT},area_link,1,,,owner`].join('\r\n') + '\r\n');
+  { const f = d.file('BLD-area_link.csv')[0]; f.content = f.content.replace(',2026-11-12,', ',2024-01-01,'); }
   link(d, d.codes.owner, { to_area_id: 'area-t3-1', source: 'second' });
   const id = recs(d)[0].id;
   assert.equal(call(d, 'sinkRecordDelete_', { code: d.codes.owner }).fields.reason.length > 0, true);

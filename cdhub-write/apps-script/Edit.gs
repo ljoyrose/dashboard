@@ -180,12 +180,33 @@ function sinkRecordDelete_(req) {
   var reason = editReason_(req, true, errors);
   editStop_(errors);
   return withLock_(function () {
-    var f = editFind_(s), a = editAuditRead_(), last = {}, k;
+    var f = editFind_(s);
+    editRetentionCheck_(s, f.cur);
+    var a = editAuditRead_(), last = {}, k;
     for (k in f.cur) if (Object.prototype.hasOwnProperty.call(f.cur, k) && k !== 'tenant_id') last[k] = f.cur[k];
     var aid = editAudit_(s, a, 'delete', last, null, reason);   // logged first: a removal is never unlogged
     store_removeRow_(s.spec.file, s.spec.columns, f.idx, f.t);
     return { status: 'deleted', table: s.spec.key, id: s.rowId, audit_id: aid, who: s.who.who };
   });
+}
+
+/**
+ * Retention (Lisa, OV11 15 Nov 2026): a row inside its kept period cannot be deleted; archive it instead. The kept
+ * period is the owner's BLD-retention_setting row for the section in force on the row's own date, else the fallback
+ * (retentionYears_). A row with no readable date of its own is treated as still kept (the safe side).
+ */
+function editRetentionCheck_(s, row) {
+  var section = s.spec.retentionSection || (s.spec.ageCap && s.spec.ageCap.retentionSection) || s.spec.key;
+  var cols = [(s.spec.ageCap || {}).field, 'taken_at', 'period_start', 'performed_on', 'given_on', 'from_date', 'set_on', 'created_at'];
+  var own = '';
+  for (var i = 0; i < cols.length && !own; i++) {
+    var v = cols[i] ? String(row[cols[i]] || '').slice(0, 10) : '';
+    if (isRealDate_(v)) own = v;
+  }
+  if (!own) throw err_('KEPT', 'This entry has no date of its own, so it is kept. Archive it instead.');
+  var years = retentionYears_(section, s.tenant, own);
+  var until = (parseInt(own.slice(0, 4), 10) + years) + own.slice(4);
+  if (s.day < until) throw err_('KEPT', 'This entry is kept until ' + until + ' (' + years + ' years). Archive it instead.', { kept_until: until });
 }
 
 /** Remove ONE record. Same safeguards as store_replaceRow_: allow-list, header, unchanged since read, read-back. */
