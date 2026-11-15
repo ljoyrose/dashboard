@@ -10,7 +10,7 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind'];
-const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'];
+const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'];
 const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'];
 const VALUE_H = ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'];
 const NOW = Date.UTC(2026, 10, 12, 10, 0, 0);
@@ -35,7 +35,7 @@ const log = (env, f, values, code) => save(env, req(env, Object.assign({ code: c
 test('litter: a check can target a litter; a litter job saves with litter_id, the last column, and the litter must exist', () => {
   const env = env0();
   const id = typeId(env, 'pup_weigh', { target: 'litter' });
-  assert.deepEqual(Array.from(env.ctx.TABLES.check_log.columns).slice(-3, -1), ['litter_id', 'note_for_id']);
+  assert.deepEqual(Array.from(env.ctx.TABLES.check_log.columns).slice(-4, -2), ['litter_id', 'note_for_id']);
   const r = log(env, { check_type_id: id, litter_id: 'ltr-1' });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(recs(env, 'BLD-check_log.csv')[0].litter_id, 'ltr-1');
@@ -209,6 +209,44 @@ test('after a done, the same job can be saved again as a concern, not done or pa
   assert.equal(log(env, f({ outcome: 'part_done' })).fields.note, 'Say briefly what is left to do.');
   assert.equal(log(env, f({ outcome: 'part_done', note: 'Two left to weigh' })).ok, true);
   assert.equal(log(env, f({ outcome: 'not_done', note: 'Scales broken' })).ok, true);
+  // 15 Nov 2026: a repeat only of the newest record, so done after not done is a new record
+  assert.equal(log(env, f({})).ok, true);
   assert.equal(log(env, f({})).code, 'DUPLICATE');
+  assert.equal(log(env, f({ outcome: 'concern', note: 'Again' })).ok, true);
   assert.equal(log(env, f({ outcome: 'concern', note: 'Again' })).code, 'DUPLICATE');
+});
+
+test('round toggle (15 Nov 2026): present, not here, present is three records; the same tap twice is a repeat; another dog is not', () => {
+  const env = env0();
+  const id = typeId(env, 'round.presence', { target: 'dog' });
+  const p = (item, dog) => log(env, { check_type_id: id, area_id: 'area-t1', subject_id: dog || 'sub-test-a', item, outcome: 'recorded' });
+  assert.equal(p('present').ok, true);
+  assert.equal(p('not here').ok, true);
+  assert.equal(p('present').ok, true);
+  assert.equal(p('present').code, 'DUPLICATE');
+  assert.equal(p('present', 'sub-test-b').ok, true);
+  assert.deepEqual(recs(env, 'BLD-check_log.csv').map((x) => x.item), ['present', 'not here', 'present', 'present']);
+});
+
+test('job names: only the reserved round. prefix may have a dot', () => {
+  const env = env0();
+  assert.equal(type(env, 'round.presence').ok, true);
+  ['other.presence', 'round.', 'round.round.x', '.presence', 'Round.presence'].forEach((k) => assert.equal(type(env, k).code, 'INVALID', k));
+});
+
+test('paper catch-up (14 Nov 2026): a week of one job for one room is seven records; time_given false is kept; paper is a way in', () => {
+  const env = env0();
+  const id = typeId(env, 'paper_week', { target: 'area' });
+  const days = ['2026-11-09', '2026-11-10', '2026-11-11'];
+  days.forEach((d) => {
+    const r = log(env, { check_type_id: id, area_id: 'area-t1', happened_at: d + 'T12:00:00Z', how_recorded: 'paper', time_given: 'false' });
+    assert.equal(r.ok, true, JSON.stringify(r));
+  });
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows.map((x) => x.time_given), ['false', 'false', 'false']);
+  assert.equal(rows[0].how_recorded, 'paper');
+  // the same day again is still a repeat
+  assert.equal(log(env, { check_type_id: id, area_id: 'area-t1', happened_at: '2026-11-10T15:00:00Z', how_recorded: 'paper' }).code, 'DUPLICATE');
+  assert.equal(log(env, { check_type_id: id, area_id: 'area-t1', happened_at: '2026-11-08T12:00:00Z', time_given: 'yes', confirm_unusual: 'true' }).code, 'INVALID');
 });
