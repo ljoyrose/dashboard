@@ -23,3 +23,20 @@ test('a read reply also says the caller\'s own name (the Welcome line), never an
   assert.ok(r(env.codes.staff).name.length > 0);
   assert.notEqual(r(env.codes.staff).name, r(env.codes.owner).name);
 });
+
+test('key_prefix=job. (15 Nov 2026, SOPJOBS S8): staff read only the job.* owner settings from breeding_rule', () => {
+  const env = standardEnv({ props: { READ_ENABLED: 'true' } });
+  const t = fx.TENANT;
+  const rules = env.file('BLD-breeding_rule.csv');
+  const text = ['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
+    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Lisa,,,,`, `br-2,${t},link_kind.main,Main photo,2026-01-01,t,,,,`,
+    `br-3,${t},file.who_may,STAFF,2026-01-01,t,,,,`].join('\r\n') + '\r\n';
+  if (rules.length) { rules[0].content = text; rules[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
+  const f = env.file('BLD-field_visibility.csv')[0];
+  f.content = f.content.replace(/\r?\n?$/, '\r\n') + [['*', 'key_prefix=job.'], ['rule_key', ''], ['value', ''], ['effective_from', ''], ['to_date', '']]
+    .map(([c, cond]) => `fv-x,${t},breeding_rule,${c},aud-staff,yes,${cond},,t,2026-11-15,t`).join('\r\n') + '\r\n';
+  const r = env.ctx.sinkRead_({ v: 1, action: 'read', code: env.codes.staff, table: 'breeding_rule' });
+  assert.deepEqual(Array.from(r.rows, (x) => x.rule_key), ['job.paper_default_time']);
+  assert.equal(r.rows[0].value, '12:00');
+  assert.equal(r.scope, 'the job.* rows');
+});
