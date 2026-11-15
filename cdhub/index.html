@@ -2200,6 +2200,31 @@ function fbar(o){
   +(o.hidden||'')+'</div>';
 }
 function quiet(x){ return capFirst(String(x||'').toLowerCase()); }
+/* Find and sort on a list that has no filter panel (Areas, Do). Lisa 15 Nov 2026: any list, any number of records.
+   Search hides the [data-find] items whose words do not match (a group with none left hides too) and says "n of N";
+   the sort is BLDSort's, offering only what the list holds. The words and the sort are kept while the page redraws. */
+var FIND={};
+function findRow(id,what,sortFields,sortVal){
+ var q=(FIND[id]||{}).q||'';
+ return '<div class="fbar" id="fb-'+id+'"><div class="srow">'
+  +'<label class="sbox srch"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg><input type="search" data-find-in="'+id+'" aria-label="Search '+esc(what)+'" placeholder="Search '+esc(what)+'" value="'+esc(q)+'"></label>'
+  +'<select class="sortsel" data-find-sort="'+id+'" aria-label="Sort">'+BLDSort.options(sortFields).map(function(x){ return '<option value="'+x[0]+'"'+(x[0]===sortVal?' selected':'')+'>Sort: '+esc(x[1])+'</option>'; }).join('')+'</select>'
+  +'<span class="mut" data-find-count="'+id+'"></span></div></div>';
+}
+function findSort(id,dflt){ var f=FIND[id]; return f&&f.sort!=null?f.sort:dflt; }
+function findApply(id){
+ var box=document.querySelector('[data-find-in="'+id+'"]'); if(!box) return;
+ var q=box.value.trim().toLowerCase().replace(/\s+/g,' '), items=document.querySelectorAll('[data-find-of="'+id+'"] [data-find]'), n=0;
+ (FIND[id]=FIND[id]||{}).q=box.value;
+ Array.prototype.forEach.call(items,function(el){ var ok=!q||el.textContent.toLowerCase().replace(/\s+/g,' ').indexOf(q)>=0;   /* the words as typed, together */
+  el.classList.toggle('hidden',!ok); if(ok) n++; });
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-of="'+id+'"] [data-find-group]'),function(g){
+  g.classList.toggle('hidden',!!q&&!g.querySelector('[data-find]:not(.hidden)')); });
+ var c=document.querySelector('[data-find-count="'+id+'"]'); if(c) c.textContent=q?n+' of '+items.length:'';
+}
+document.addEventListener('input',function(e){ var id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-find-in'); if(id) findApply(id); });
+document.addEventListener('change',function(e){ var id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-find-sort'); if(!id) return;
+ (FIND[id]=FIND[id]||{}).sort=e.target.value; go(SHOWN,false); var s=document.querySelector('[data-find-sort="'+id+'"]'); if(s) s.focus(); });
 function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
 function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
@@ -3227,7 +3252,8 @@ function pageAreas(){
  var occ=all.filter(function(a){ return inCabin(a.id,date).length; });
  var filt=AREAFOCUS, AFILT={nom2:1,nomode:1,occ:1,cabins:1};
  var shown=filt==='nom2'?noM2:filt==='nomode'?noMode:filt==='occ'?occ:(!filt||filt==='cabins')?all:all.filter(function(a){ return a.id===filt; });
- var fam={}; shown.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var asort=findSort('areas','');   /* As on file = grouped by building, as before; A to Z = one list by code */
+ var fam={}; shown.forEach(function(a){ var k=asort==='name'?'':familyOf(a); (fam[k]=fam[k]||[]).push(a); });
  var order=Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);});
  var N=all.length;
  function cbtn(go,n,lab,on){ return '<button type="button" data-go="'+go+'" aria-pressed="'+String(!!on)+'"><b>'+n+'</b>'+lab+'</button>'; }
@@ -3240,15 +3266,18 @@ function pageAreas(){
  +cbtn('areas/nomode',(N-noMode.length)+'/'+N,'have a mode',filt==='nomode')
  +cbtn('areas/occ',occ.length+'/'+N,'occupied',filt==='occ')
  +'</div>'
+ +findRow('areas','areas',{name:1},asort)+'<div data-find-of="areas">'
  ;
  order.forEach(function(f){
-  var rows=fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);});
-  h+='<h3><span class="dot" style="background:'+(f.charAt(0)==='H'?'var(--p5)':(f.charAt(0)==='3'?'var(--p6)':'var(--p3)'))+'"></span>'
+  var rows=asort==='name'?BLDSort.sort(fam[f],'name',{name:function(a){ return a.code; }})
+   :fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);});
+  h+='<div data-find-group>';
+  if(f) h+='<h3><span class="dot" style="background:'+(f.charAt(0)==='H'?'var(--p5)':(f.charAt(0)==='3'?'var(--p6)':'var(--p3)'))+'"></span>'
    +(FAMNAME[f]||f)+' <span class="mut" style="font-weight:400">'+rows.length+(rows.length===1?' cabin':' cabins')+'</span></h3>';
   rows.forEach(function(a){
    var cur=accessOf(a.id), who=inCabin(a.id,date);
    var m2=a.m2;
-   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'" id="room-'+esc(a.id)+'" data-room="'+esc(a.id)+'">'
+   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'" id="room-'+esc(a.id)+'" data-room="'+esc(a.id)+'" data-find>'
     +'<h4>'+esc(a.code)+' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
     +(cur?' <span class="pill '+(cur==='free'?'i':'w')+'">'+cur+'</span>':' <span class="pill no">flap?</span>')
     +(a.m2ok==='NO'?' <span class="pill w">m\u00b2 unconfirmed</span>':'')+'</h4>'
@@ -3279,8 +3308,8 @@ function pageAreas(){
         return r.status==='over'?' <button type="button" class="pill no" data-over-move="'+esc(a.id)+'">over its limit</button>':''; })()
      +'</div><div data-move-host="'+esc(a.id)+'"></div>';
    }
-   h+='</div>';});});
- return h;
+   h+='</div>';}); h+='</div>';});
+ return h+'</div>';
 }
 function pageLitters(){
  var withDob=CD.litters.filter(function(l){return l.dob;}).length;
@@ -3898,13 +3927,15 @@ function pageWork(){
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
+ var wsort=findSort('work','');   /* As on file = by area, as before */
  var h='<h2>Outstanding</h2>'+needsCard()
-  +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>';
+  +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>'
+  +findRow('work','to-dos',{name:1},wsort)+'<div data-find-of="work">';
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
-  rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
+  rows=wsort==='name'?BLDSort.sort(rows,'name',{name:function(r){ return r.item; }}):rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */
-  h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
+  h+='<div class="card '+g[1]+'" data-find-group><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      var ask=g[0]==='BLOCKED'?medAsk(r):null, found=ask?medRows(ask):null;
@@ -3914,12 +3945,12 @@ function pageWork(){
       if(!found.length) act='<br><span class="mut">No medicine recorded'+(ask.month?' in '+esc(UKMON[ask.month-1]):'')+'. Nothing to open.</span>';
       else act='<br><button type="button" class="btn" data-go="dogs/'+esc(ask.token)+'">Show the record</button>';
      }
-     return '<tr id="work-'+esc(r.id)+'"><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
+     return '<tr id="work-'+esc(r.id)+'" data-find><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
       +'<td>'+esc(r.item)+(r.note?'<br><span class="mut">'+esc(r.note)+'</span>':'')+act+'</td>'
       +'<td class="mut">'+esc(tail)+'</td></tr>'; }).join('')
    +'</tbody></table></div></div>';
  });
- return h;
+ return h+'</div>';
 }
 
 
@@ -4730,6 +4761,7 @@ function go(id,push){
  }
  /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });   /* kept words still hide what they hid */
  window.scrollTo(0,keepY);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
