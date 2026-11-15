@@ -343,6 +343,7 @@ test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 N
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18,5');
   await page.getByLabel('MIN').fill('12,0');
   await page.getByRole('button', { name: 'Save' }).click();
