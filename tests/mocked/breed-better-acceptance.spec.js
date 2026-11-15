@@ -274,10 +274,15 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
 // ---------------------------------------------------------------- missing data
 
 notEnrolled.describe('Breed Better acceptance: animal not enrolled', () => {
-  notEnrolled('S6.1 a dog that is not enrolled has no chip and is not listed', async ({ page }) => {
+  // Lisa, 15 Nov 2026: a dog that is not enrolled shows a folded "Not in Breed Better" section with Enrol, never a score
+  notEnrolled('S6.1 a dog that is not enrolled shows Not in Breed Better, no score, and is not listed', async ({ page }) => {
     await openDogs(page);
-    await expect(card(page, 'Test Pup One').locator('.bb-chip')).toHaveCount(0);
-    await expect(card(page, 'Test Dog One').locator('.bb-chip')).toHaveCount(1);
+    const out = card(page, 'Test Pup One').locator('section.bb-sec');
+    await expect(out).toHaveCount(1);
+    await expect(out).toHaveClass(/bb-out/);
+    await expect(out.locator('.bb-sechd')).toContainText('Not in Breed Better');
+    await expect(out.locator('.bb-secpts, .bb-bar')).toHaveCount(0);
+    await expect(card(page, 'Test Dog One').locator('section.bb-sec:not(.bb-out) .bb-secpts')).toHaveCount(1);
     await tabClick(page, '#nav button[data-go="breed"]');
     await expect(page.locator('#bbRoot')).not.toContainText('Test Pup One');
   });
