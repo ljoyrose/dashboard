@@ -61,13 +61,27 @@
   /* the dogs such a job covers here: target.dogs ([{id, area_id}]) less those in rooms it never covers (isolation) */
   function dogsFor(job, target) {
     var never = listOf(job.not_in_areas);
-    return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0; });
+    return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0 && inGroups(job, x.groups); });
+  }
+  /* only_groups: group keys by |, the only dogs a dog job belongs to (e.g. breeding dogs); blank = every dog. An owner row, dated by
+     effective_from like the rest of the job. groups = that dog's groups on the day (groupsOf); not given = the caller does not know, so the job shows */
+  function inGroups(job, groups) {
+    var only = listOf(job.only_groups);
+    if (!only.length || !groups) return true;
+    return only.some(function (k) { return groups.indexOf(k) >= 0; });
+  }
+  /** A dog's groups on `day`: BLD-links rows role member_of from the dog (subject/subjects) to a group, open on that day. */
+  function groupsOf(links, subjectId, day) {
+    return (links || []).filter(function (k) {
+      return k.role === 'member_of' && (k.from_table === 'subject' || k.from_table === 'subjects') && k.from_id === subjectId && k.to_table === 'group'
+        && (!k.from_date || k.from_date <= day) && (!k.to_date || k.to_date >= day);
+    }).map(function (k) { return k.to_id; });
   }
   function appliesTo(job, target) {
     var t = job.target;
     if (target.litter_id) return t === 'litter';
     if (perDogSite(job) && target.dogs) return dogsFor(job, target).length > 0;
-    if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea));
+    if (target.subject_id) return (t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea))) && inGroups(job, target.groups);
     if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
   }
@@ -148,5 +162,5 @@
     });
   }
 
-  return { forTarget: forTarget, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

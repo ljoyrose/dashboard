@@ -16,7 +16,7 @@
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
     var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
-    var key = v.today + '|' + (v.visits || []).length + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
+    var key = v.today + '|' + (v.visits || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
     var rows = {}, perDog = {};
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
@@ -32,10 +32,11 @@
         });
       });
     }
-    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '' }; }), v.logs);
+    var groups = function (d) { return Due.groupsOf(v.links, d.id, v.today); };
+    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
-    add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '' }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
+    add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {
       return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '', every_days: Due.everyDays(t.every_days) });
     }).sort(function (a, b) { return String(a.sop).localeCompare(String(b.sop)) || String(a.label).localeCompare(String(b.label)); });
