@@ -17,6 +17,7 @@ const PRIMARY = [
 const MORE = [
   ['Today', './index.html#/today'],
   ['Do', './index.html#/work'],
+  ['Items', './index.html#/items'],
   ['Litters', './index.html#/litters'],
   ['Areas', './index.html#/areas'],
   ['The round', './index.html#/round'],
