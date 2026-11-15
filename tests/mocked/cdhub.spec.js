@@ -137,7 +137,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);   // Items added 14 Nov 2026; Decide 15 Nov
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
