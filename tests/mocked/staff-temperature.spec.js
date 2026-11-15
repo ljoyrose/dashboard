@@ -263,13 +263,13 @@ test('Sensor CSV opens for an owner: room picker and file box; a sensor file is 
     ? route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }, { key: 'sensor_reading', on: true, mode: 'direct' }] } })
     : route.fallback()));
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Sensor CSV' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
   const room = page.getByLabel('Room');
   await expect(room.locator('option')).toHaveText(['Choose the room', '3A.1/2']);   // rooms in use today, one choice each
   await expect(room.locator('option').nth(1)).toHaveAttribute('value', 'area-new');   // a room id, so the save names a room
   await expect(page.getByLabel('Sensor name')).toBeVisible();
-  await page.getByLabel('Sensor CSV file').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
+  await page.getByLabel('File to import').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
     buffer: Buffer.from('Timestamp,Temperature_Celsius\n2026-11-10 08:00:00,12.0\n2026-11-10 15:00:00,18.5\n2026-11-11 09:00:00,13.0\n') });
   await expect(page.getByText('2 days.')).toBeVisible();
   const saveAll = page.getByRole('button', { name: 'Save 2 days' });
