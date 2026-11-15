@@ -36,7 +36,7 @@ const H = {
   vaccination: 'id,tenant_id,subject_id,event_kind,product,product_shorthand,diseases_covered,batch,batch_use_by,given_on,route,administered_by,practice,titre_result,titre_lab,titre_protective,next_due_on_card,next_due_source,certificate_media_id,source,ruling_needed,note,voided_on,voided_by',
   subject_link: 'id,tenant_id,subject_id,other_subject_id,kind,from_date,to_date,source,note,set_at,set_by',
   files: 'id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on,created_at,updated_at',
-  links: 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,created_at,updated_at',
+  links: 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,end_reason,created_at,updated_at',
   code_register: 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by'
 };
 
