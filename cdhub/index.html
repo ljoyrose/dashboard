@@ -1419,9 +1419,7 @@ var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','da
  ['staffing.adults_per_full_time','Adult dogs per full-time carer','dogs'],['staffing.adults_per_part_time','Adult dogs per part-time carer','dogs'],
  ['dog.adult_from_months','Age a dog counts as an adult','months'],
  ['gestation.due_days','Days from first mating to working due date','days'],['gestation.window_from_days','Whelping window opens (days from mating)','days'],
- ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days'],
- ['litters.recent_days','Days the Litters card looks back','days'],
- ['litters.jobs_days','Days a litter counts for jobs (from birth)','days']];
+ ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days']];
 /* Today's staffing tile: only from the owner's dated rows (Lisa 12 Nov: every limit is a dated row; no assumed ratio).
    The row in force on the day shown is used. Not set: no tile. */
 function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_per_full_time',iso), p=breedRule('staffing.adults_per_part_time',iso);
@@ -1444,11 +1442,15 @@ function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.
  y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
  return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+Math.min(d,last)).slice(-2); }
 function litDob(l){ return isoDay(l&&(l.dob||l.born_on)); }
-/* The litters whose jobs count on a day (SOP JOBS, 12 Nov 2026: a row decides, never code): born within the owner's
-   litters.jobs_days row in force that day. No row: no litter jobs counted. */
-function currentLitters(iso){
- var n=ruleNum('litters.jobs_days',iso); if(n===null) return [];
- return (CD.litters||[]).filter(function(l){ var b=litDob(l); return b&&b<=iso&&daysBetween(b,iso)<=n; });
+/* A puppy still here: born in a litter, not collected or deceased, not off site, and (when the owner's adult-age row is
+   set) under that age. A kept puppy stops counting once it is an adult. */
+function pupOnSite(d){ var c=statusOf(d).code; if(!d.birthLitter||c==='CL'||c==='DE'||d.off) return false;
+ var a=adultMonths(), m=months(d.dob); return a===null||m===null||m<a; }
+/* The current litters (SOP Puppy Handover: puppies stay until handed over; OV11 for Lisa 15 Nov 2026): a litter counts
+   while any of its puppies is still on site. No day count: nothing here is a number the SOP does not give. */
+function currentLitters(){
+ var on={}; (CD.dogs||[]).forEach(function(d){ if(pupOnSite(d)) on[d.birthLitter]=1; });
+ return (CD.litters||[]).filter(function(l){ return !!on[l.id]; });
 }
 function isoDay(v){ return /^\d{4}-\d{2}-\d{2}/.test(v||'')?v.slice(0,10):''; }
 /* born litters by dam, oldest first (a litter with no DOB - planned or missed - is not a litter born) */
@@ -1702,16 +1704,14 @@ function onSiteCard(){
   +row('Off site',c.offsite.length,'','offsite')
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
-/* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
+/* kit: animal (Litters card: pregnancies from the mating rows, and the current litters: any puppy still on site) */
 function littersCard(title){
- var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown&&!x.unset;}), rd=ruleNum('litters.recent_days',date);
- var recent=rd===null?[]:(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=rd; })
+ var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown&&!x.unset;}), recent=currentLitters()
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
  var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'+(title||'Litters')+cntPill(n)+'</h3>';
  h+=w.map(function(x){ var tone=x.day>x.g.due?'late':(x.day>=x.g.from?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of '+x.g.from+'\u2013'+x.g.to+' \u00b7 working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
- if(rd===null) h+='<p class="mut" data-unset="litters.recent_days"><span class="pill w">not set</span> Days the Litters card looks back</p>';
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
