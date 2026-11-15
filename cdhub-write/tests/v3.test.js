@@ -366,7 +366,7 @@ test('ONE tap with 150 dogs appends exactly ONE row: who (code id), when, the do
   assert.equal(lines(after).length, 2);                                          // header + ONE row
   assert.equal(env.writes.length, 1);
   const row = rows(env, 'BLD-occupancy_check.csv')[0];
-  assert.match(row.id, /^chk-20261015-233000-[a-z0-9]{4}$/);
+  assert.match(row.id, /^chk-[a-z2-9]{8}$/);
   assert.equal(row.tenant_id, fx.TENANT);
   assert.equal(row.confirmed_at, '2026-10-15T23:30:00+01:00');                  // ISO with offset, set by the script
   assert.equal(row.confirmed_by, env.ids.staff);                                 // the staff code id, not the name, not the code
