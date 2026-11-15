@@ -24,6 +24,8 @@
  *                    this date and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
  *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
  *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
+ *   FILES_FOLDER_ID  Shared Drive folder id for the one file store (photos, uploads; Lisa 13 Nov 2026). Never the tables
+ *                    folder. Missing = file_add of a photo or upload is refused; links still save.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
  *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
  *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
@@ -49,6 +51,7 @@ var BLD = {
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
     DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID',
+    FILES_FOLDER: 'FILES_FOLDER_ID',
     INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
     INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
   },
@@ -57,6 +60,7 @@ var BLD = {
     MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
     MAX_PHOTO_CHARS: 2500000, // whole dog-photo request (base64 picture included)
     MAX_PHOTO_B64: 1800000,   // the picture itself, after whitespace is removed
+    MAX_FILE_B64: 1800000,    // file_add: the platform request cap; the owner's file.max_bytes row sets the real limit
     MAX_TEXT_CHARS: 500,
     FAIL_WINDOW_SEC: 600,   // bad staff codes are counted for 10 minutes
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends

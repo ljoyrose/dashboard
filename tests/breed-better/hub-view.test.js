@@ -264,6 +264,15 @@ test('the dog page shows the DNA card from dna_result and dna_marker rows', () =
   assert.match(html, /bb-dna[\s\S]*1 Carrier[\s\S]*TESTR/);
 });
 
+test('Open on a check is the add/edit control, not a jump back to the dog list', () => {
+  View.open('a1');
+  const html = View.page({ T: tables(), today: '2026-06-01', esc });
+  View.open('');
+  assert.match(html, /data-bb-edit="c"[^>]*>Open</);
+  assert.doesNotMatch(html, /data-go="dogs"/);
+  assert.match(html, /data-bb-edit-screen|bb-line/);
+});
+
 test('More offers the per-puppy calculator', () => {
   const T = pointsTables();
   T['BLD-dna_marker.csv'] = [{ code: 'TESTR', name: 'Recessive example', inheritance_mode: 'autosomal recessive', copies_0: 'clear', copies_1: 'carrier', copies_2: 'affected' }];
@@ -271,4 +280,49 @@ test('More offers the per-puppy calculator', () => {
   const html = View.page({ T, today: '2026-08-10', esc });
   View.setTab('dogs');
   assert.match(html, /Probability per puppy[\s\S]*TESTR/);
+});
+
+test('a band colour may be a kit word or a #hex; anything else is the line grey', () => {
+  assert.equal(View.bandColour({ colour: 'Red' }), 'var(--ljr-2)');
+  assert.equal(View.bandColour({ colour: '#ee4035' }), '#ee4035');
+  assert.equal(View.bandColour({ colour: 'url(x)' }), 'var(--line)');
+  assert.equal(View.bandColour({}), 'var(--line)');
+});
+
+test('a section is coloured by its worst line: fail, then unverified, then below target, else pass', () => {
+  assert.equal(View.secResult([{ kind: 'gate', gate_outcome: 'pass' }, { kind: 'gate', gate_outcome: 'fail' }]), 'fail');
+  assert.equal(View.secResult([{ kind: 'gate', gate_outcome: 'pass' }, { kind: 'gate', gate_outcome: 'unverified' }]), 'unverified');
+  assert.equal(View.secResult([{ kind: 'points', points: '', points_max: 5 }]), 'unverified');
+  assert.equal(View.secResult([{ kind: 'points', points: 3, points_max: 5 }]), 'below_target');
+  assert.equal(View.secResult([{ kind: 'points', points: 5, points_max: 5 }]), 'pass');
+  assert.equal(View.secResult([{ kind: 'status', answer_then: 'Active' }]), '');
+});
+
+test('a section icon comes from the row icon cell, else its key, else a plain circle (must pass: the star)', () => {
+  const heart = View.secIcon({ key: 'health' });
+  assert.equal(View.secIcon({ key: 'anything', icon: 'heart' }), heart);
+  assert.notEqual(View.secIcon({ key: 'unknown_key' }), heart);
+  assert.equal(View.secIcon({ key: 'unknown_key', kind: 'gate' }), View.secIcon({ key: 'gate' }));
+});
+
+test('species words come from the scheme species row; with none, neutral words', () => {
+  const sp = { 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', species_id: 'sp-h' }],
+    'BLD-species.csv': [{ id: 'sp-h', common_name: 'Horse', plural_word: 'Horses' }] };
+  View.setTab('dogs');
+  const on = View.page({ T: tables(sp), today: '2026-06-12', esc });
+  assert.match(on, /Find a horse<input/);
+  assert.match(on, /<\/span>Horses<\/button>/);
+  const off = View.page({ T: tables(), today: '2026-06-13', esc });
+  assert.match(off, /">Find<input/);
+});
+
+test('the dog page has Back, Previous and Next in list order, and the logo header', () => {
+  View.setTab('dogs');
+  View.open('a1');
+  const html = View.page({ T: tables(), today: '2026-06-14', esc });
+  assert.match(html, /class="bb-top"><img class="bb-logo"/);
+  assert.match(html, /data-bb-open="" disabled>.*Previous/);
+  assert.match(html, /data-bb-open="a2" aria-label="Next: Beta">Next/);
+  assert.match(html, /1 of 2/);
+  View.open('');
 });
