@@ -1500,7 +1500,11 @@ function checks(){
    msg:c.nochip.length?c.nochip.length+' here have no chip recorded':'every dog here has one',list:'nochip'});
  out.push({k:'placed in an area',ok:!c.noarea.length,
    msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
- var sw=CD.tempSwaps||[];
+ var sw=CD.tempSwaps||[], ur=CD.tempUnread||[];
+ out.push({k:'room temps readable',ok:!ur.length,
+   msg:ur.length? ur.length+' reading'+(ur.length===1?' has':'s have')+' a min or max that is blank or not a number (e.g. 25,3): '
+     +ur.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+(x.min||'?')+'\u2013'+(x.max||'?'); }).join(', ')+(ur.length>5?' \u2026':'')
+     :'every saved reading has a number for min and max'});
  out.push({k:'room temps',ok:!sw.length,
    msg:sw.length? sw.length+' reading'+(sw.length===1?' has':'s have')+' max lower than min (typed the wrong way round?): '
      +sw.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+x.min+'\u2013'+x.max; }).join(', ')+(sw.length>5?' \u2026':'')
@@ -1701,7 +1705,7 @@ function littersCard(title){
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
 function outdoorBandWord(min,max){
  var st=tempState(min,max);
- return st==='cold'?'Cold':st==='hot'?'Hot':st==='swap'?'Check':st==='ok'?'OK':'';
+ return st==='cold'?'Cold':st==='hot'?'Hot':(st==='swap'||st==='unread')?'Check':st==='ok'?'OK':'';
 }
 function outdoorRainCue(v){
  if(v==null||String(v).trim()==='') return '';
@@ -1785,7 +1789,7 @@ function tempsCard(){
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
  var cold=0, hot=0, swap=0, unk=0, mt=0; A.forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
-   ['am','pm'].forEach(function(s){ var t=r['t_'+s], st=t&&(t.min||t.max)?tempState(t.min,t.max,bd):''; if(t&&t.empty&&st&&st!=='ok'&&st!=='unknown'){ mt++; return; } if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
+   ['am','pm'].forEach(function(s){ var t=r['t_'+s], st=t&&(t.min||t.max)?tempState(t.min,t.max,bd):''; if(t&&t.empty&&st&&st!=='ok'&&st!=='unknown'){ mt++; return; } if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap'||st==='unread') swap++; if(st==='unknown') unk++; }); });
  var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
@@ -3349,8 +3353,8 @@ function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
  var rows=areasOn(date).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
- var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
-   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
+ var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap'||st==='unread', ur=st==='unread', unk=st==='unknown'; if(sw) st='hot';
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(ur?' \u2014 Check: not a number':sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
@@ -3362,9 +3366,15 @@ function keptReadings(date){
 /* Room empty (Lisa, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
    and never counted as non-compliant. An empty mark with no reading counts as covered. */
 function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim()); }
-function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
+/* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25 (parseFloat
+   would). A reading with one side blank or not a number is state 'unread', shown and counted as a problem like a swap. */
+function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
+function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
+function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
 function foldAreaReadings(rows){
  CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
+  .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
+ CD.tempUnread=rows.filter(function(r){ return r.area_id&&!(roomEmpty(r)&&tempNum(r.min_c)===null&&tempNum(r.max_c)===null)&&tempUnreadable(r.min_c,r.max_c); })
   .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
  rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
   var at=String(r.period_start||r.taken_at||''); if(!r.area_id||at.length<10) return;   /* period_start = the slot the Round saved (Nov 2026) */
@@ -3386,6 +3396,7 @@ function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
  if(!ids.length) return generalBand(date);
  var f=bandFor(ids,date); return f&&bandReadable(f.b)?f.b:null; }
 function tempState(min,max,band){ var lo=parseFloat(min), hi=parseFloat(max); if(arguments.length<3) band=generalBand();
+ if(tempUnreadable(min,max)) return 'unread';   /* blank or text on one side: a problem, never hidden */
  if(isNaN(lo)&&isNaN(hi)) return '';
  if(tempSwapped(min,max)) return 'swap';   /* max lower than min: wrong way round, checked before hot/cold */
  if(!band) return 'unknown';
@@ -3634,14 +3645,15 @@ function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
 /* a time on the round's date, with this device's offset, e.g. 2026-11-07T12:00:00+00:00 */
 function isoAt(dateISO,hh){ var d=new Date(dateISO+'T'+hh+':00:00'), off=-d.getTimezoneOffset(), sg=off<0?'-':'+'; off=Math.abs(off);
  return dateISO+'T'+hh+':00:00'+sg+('0'+Math.floor(off/60)).slice(-2)+':'+('0'+(off%60)).slice(-2); }
-function temp1dp(v){ v=String(v==null?'':v).trim(); if(!v) return {ok:true,val:''};
+function temp1dp(v){ v=String(v==null?'':v).trim().replace(',','.'); if(!v) return {ok:true,val:''};   /* "25,3" = 25.3 (OV11 15 Nov 2026) */
+ if(!/^-?\d+(\.\d+)?$/.test(v)) return {ok:false,nan:true};
  if(!/^-?\d{1,2}(\.\d)?$/.test(v)) return {ok:false};
  var n=parseFloat(v); if(n<-30||n>60) return {ok:false};
  return {ok:true,val:n.toFixed(1)}; }
 var TYPED={};   /* min/max typed on this page but not yet saved as a pair: TYPED[date__area__slot]={min,max} */
 async function tempSave(areaId,slot,which,raw,el,msgEl){
  var c=temp1dp(raw);
- if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent='1 decimal place only, e.g. 18.5'; return; }
+ if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent=c.nan?'Not a number. Type e.g. 18.5':'1 decimal place only, e.g. 18.5'; return; }
  if(el&&el.classList) el.classList.remove('bad');
  var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), tk=k+'__'+slot;
  var have=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
@@ -4058,7 +4070,7 @@ function compTemps(win){   /* win: {n,set}; Urgent passes one day (today) so it 
 }
 function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
- var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
+ var word={cold:'too cold',hot:'too hot',swap:'max lower than min',unread:'not a number'};
  var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(x.from&&x.from.length?'<span class="mut" data-from> \u2014 from '+esc(x.from.join(', '))+'</span>':'')+(extra||'')+'</li>'; };
  if(!c.win.set) return compFold('compTemps','temps','Room temperatures','<p class="mut" data-window="unset" id="tempsUnset"><span class="pill w">not set</span> Days Compliance looks back \u00b7 <a href="#/compliance" data-change-window="compliance.look_back_days">set it</a>. Readings are not checked here until it is set.</p>'
   +'<p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');

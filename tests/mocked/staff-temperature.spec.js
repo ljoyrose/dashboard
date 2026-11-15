@@ -371,3 +371,15 @@ test('year report: a saved reading with max lower than min is flagged, not count
     await page.screenshot({ path: staffShot('staff-year-report-swapped.png'), fullPage: false });
   } finally { TABLES.area_reading = []; }
 });
+
+test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 Nov)', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MAX').fill('18,5');
+  await page.getByLabel('MIN').fill('12,0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { max_c: '18.5', min_c: '12.0' } });
+});
