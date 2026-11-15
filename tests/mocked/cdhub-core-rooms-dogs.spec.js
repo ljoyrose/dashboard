@@ -186,7 +186,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     expect(await not.evaluate((b) => getComputedStyle(b).opacity)).toBe('0.5');
     expect(await page.evaluate(() => window.__marker === document.querySelector('#main').firstElementChild)).toBe(true);   // no redraw
     expect(Math.abs((await page.evaluate(() => window.scrollY)) - y0)).toBeLessThan(2);
-    await expect(page.locator('.rsave[data-area="' + (await here.getAttribute('data-area')) + '"]')).toContainText('not saved yet');
+    await expect(page.locator('[data-hsave]').last()).toHaveText('noted on this page, not saved');   // no round.presence row: says so
     await not.click();
     await expect(not).toHaveAttribute('aria-pressed', 'true');
     await expect(here).toHaveAttribute('aria-pressed', 'false');
