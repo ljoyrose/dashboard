@@ -3521,7 +3521,7 @@ function tempVerdict(val,band){
 }
 /* ROUND SAVING. One new row on the save script. The script checks the staff code and records who saved.
    A code remembered in this tab is reused. A missing device set-up does not block a save. Room temperatures are 1 decimal place. */
-var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code';
+var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KEY='cdhub.save.url';   // save.url: an address read from Drive or that worked, kept on this device (15 Nov 2026)
 /* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" only clears
    the round card's copy. It does not stop a valid staff code. #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
@@ -3534,7 +3534,7 @@ function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) re
  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
 function sinkGet(k){ var v=sinkRaw(k); if(v) return v;
- if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||''; if(k===SINK_CODE_KEY&&!sinkRaw(SINK_OFF_KEY)) return sinkRaw('bld.device.code'); return ''; }
+ if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(sinkRaw(SINK_OFF_KEY)?'':sinkRaw(SAVE_KEEP_KEY))||''; if(k===SINK_CODE_KEY&&!sinkRaw(SINK_OFF_KEY)) return sinkRaw('bld.device.code'); return ''; }
 /* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
    in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
@@ -3548,11 +3548,12 @@ function saveUrlLoad(){
  }).then(function(txt){
   if(!txt) return '';
   var u=''; try{ u=String((JSON.parse(txt)||{}).url||'').trim(); }catch(e){ u=''; }
-  if(SINK_RE.test(u)){ CD.saveUrl=u; if(/^#\/round/.test(location.hash)) go('round',false); return u; }
+  if(SINK_RE.test(u)){ CD.saveUrl=u; keepSaveUrl(u); if(/^#\/round/.test(location.hash)) go('round',false); return u; }
   return '';
- }).catch(function(){ return ''; });
+ }).catch(function(){ return ''; }).then(function(u){ if(!u) CD.saveUrlPromise=null; return u; });   // nothing found: try again next time, never stuck for the visit
  return CD.saveUrlPromise;
 }
+function keepSaveUrl(u){ if(SINK_RE.test(u)&&!sinkRaw(SINK_OFF_KEY)) sinkSet(SAVE_KEEP_KEY,u); }
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!sinkGet(SINK_CODE_KEY); }
 function staffCodeNow(){
@@ -3619,7 +3620,7 @@ async function sinkSend(body){
  body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code;
  try{
   var j=await sinkFetch(body,g.url);
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok){ keepStaffCode(g.code); keepSaveUrl(g.url); }
   return j;
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
@@ -4554,7 +4555,7 @@ function go(id,push){
    if(!sinkGet(SINK_CODE_KEY)){ m.textContent='Type your staff code too.'; return; }
    if(!sinkSet(SINK_URL_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
    go('round',false); });
-  if(sOff) sOff.addEventListener('click',function(){ sinkSet(SINK_URL_KEY,''); sinkSet(SINK_CODE_KEY,''); sinkSet(SINK_OFF_KEY,'1'); go('round',false); });
+  if(sOff) sOff.addEventListener('click',function(){ sinkSet(SINK_URL_KEY,''); sinkSet(SINK_CODE_KEY,''); sinkSet(SAVE_KEEP_KEY,''); sinkSet(SINK_OFF_KEY,'1'); go('round',false); });
   Array.prototype.forEach.call(document.querySelectorAll('.tmin, .tmax'),function(el){
    var which=(el.className.indexOf('tmin')>=0)?'min':'max';
    var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]');
