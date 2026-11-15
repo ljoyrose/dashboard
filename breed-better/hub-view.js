@@ -748,17 +748,28 @@
 
   /* Back to where Lisa came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
      The hub pushes a real history entry for #/breed, so the phone's Back works too; this button does the same. */
+  /* History entry state is NAV's shape, { from: { hash, label, y, id } } (NAV, 15 Nov 2026), so this moves to HubNav.back
+     when that lands. A reload on #/breed keeps it; a cold link has none and shows no button. */
   function fromHtml(v) {
-    var f = state.from;
+    var f = state.from || fromHistory();
     if (!f) return '';
-    return '<button type="button" class="bb-f bb-ret" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.name || 'the dog card') + '</button>';
+    if (!state.from) state.from = f;
+    return '<button type="button" class="bb-f bb-ret hback" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.label || 'the dog card') + '</button>';
+  }
+  function fromHistory() {
+    var h = null;
+    try { h = history.state && history.state.from; } catch (err) { h = null; }
+    return h && h.hash && location.hash === '#/breed' ? { id: h.id, label: h.label, hash: h.hash, y: h.y, top: null } : null;
   }
   function cameFrom(b) {
     var card = b.closest && b.closest('article.dc'), id = b.getAttribute('data-bb-dog'), v = last || {};
     if (!card) { state.from = null; return; }
     var d = (v.dogs || {})[id] || {}, r = v.T ? compute(v).byId[id] || {} : {};
-    state.from = { dog: card.getAttribute('data-dog') || id, name: t(d.name) || t(r.name), hash: location.hash || '#/dogs', top: card.getBoundingClientRect().top, y: window.scrollY };
+    var from = { id: card.getAttribute('data-dog') || id, label: t(d.name) || t(r.name), hash: location.hash || '#/dogs', y: window.scrollY };
+    state.from = { id: from.id, label: from.label, hash: from.hash, y: from.y, top: card.getBoundingClientRect().top };
     state.tab = 'dogs';
+    /* the hub pushes #/breed on this same click; then its entry carries where we came from */
+    setTimeout(function () { try { if (location.hash === '#/breed') history.replaceState(Object.assign({}, history.state || {}, { from: from }), '', location.href); } catch (err) { /* no history: the button still works */ } }, 0);
   }
   function backToCard() {
     var f = state.from;
@@ -766,7 +777,7 @@
     if (location.hash !== f.hash) { if (location.hash !== '#/breed') state.from = null; return; }
     state.from = null;
     setTimeout(function () {   /* after the hub has drawn the page again */
-      var card = document.querySelector('article.dc[data-dog="' + (window.CSS && CSS.escape ? CSS.escape(f.dog) : f.dog) + '"]');
+      var card = f.top === null ? null : document.querySelector('article.dc[data-dog="' + (window.CSS && CSS.escape ? CSS.escape(f.id) : f.id) + '"]');
       window.scrollTo(0, card ? card.getBoundingClientRect().top + window.scrollY - f.top : f.y);
     }, 0);
   }
