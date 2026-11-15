@@ -13,9 +13,15 @@ const cards = (page) => page.locator('.hhome > [data-home]');
 const ids = (page) => cards(page).evaluateAll((els) => els.map((e) => e.dataset.home));
 
 test.describe('CD Hub Main: the home each person builds', () => {
-  test('no rows: the starter cards; each card has a count and See all to its own section', async ({ page, guard }) => {
+  test('no rows: the starter is the house Main; an added card has a count and See all to its own section', async ({ page, guard }) => {
     await open(page, guard);
-    expect(await ids(page)).toEqual(['needs', 'unplaced', 'round', 'litters']);
+    expect(await ids(page)).toEqual(['needs']);
+    await page.evaluate(() => {
+      T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([
+        { id: 'h0', rule_key: 'nav.home.OWNER.litters', value: '1', effective_from: '2020-01-01', source: 'Pretend' }]);
+      go('map', false);
+    });
+    expect(await ids(page)).toEqual(['litters']);
     const lit = page.locator('.hcard[data-home="litters"]');
     await expect(lit).toHaveAttribute('data-slot', '4');
     await expect(lit.locator('.hcnum')).toHaveText(/^\d+$/);
@@ -46,6 +52,9 @@ test.describe('CD Hub Main: the home each person builds', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'r' + bodies.length } }) });
     });
     await page.locator('[data-home-arrange]').click();
+    await page.locator('[data-home-add="unplaced"]').click();
+    await page.locator('[data-home-add="round"]').click();
+    await page.locator('[data-home-add="litters"]').click();
     await page.locator('[data-home-down="needs"]').click();
     await expect(page.locator('[data-home-down="needs"]')).toBeFocused();
     await page.locator('[data-home-off="round"]').click();

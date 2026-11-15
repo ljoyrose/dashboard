@@ -1873,7 +1873,7 @@ var HOME_CARDS={
  areas:{label:'Areas',view:'areas',all:'#/areas',n:function(){ return liveCabins().length; }},
  sops:{label:'SOPs',view:'sops',all:'#/sops',n:function(){ return SOP.rows?SOP.rows.length:'\u2026'; }}
 };
-var HOME_STARTER=['needs','unplaced','round','litters'];   /* the dog-breeding pack's starting Main; another pack brings its own */
+var HOME_STARTER=['needs'];   /* the pack's starting Main: the house Main (Next, Needs you, 3 numbers, Lisa 2 Nov 2026); more cards are each person's own */
 var HOME={edit:null,msg:''};
 function homeCards(){ var ids=Object.keys(HOME_CARDS).filter(function(id){ return navHas(HOME_CARDS[id].view); });
  return {ids:ids,on:HubNav.home({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',cards:ids,starter:HOME_STARTER})}; }
