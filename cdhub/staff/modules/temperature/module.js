@@ -51,7 +51,7 @@
   function setMsg(el, text, kind) { el.className = 'msg ' + (kind || ''); el.textContent = text || ''; }
   function num(v) { if (v === '' || v == null) return null; var n = parseFloat(v); return isNaN(n) ? null : n; }
   function oneDp(v) {
-    v = String(v == null ? '' : v).trim();
+    v = String(v == null ? '' : v).trim().replace(',', '.');   // "25,3" = 25.3 (OV11 15 Nov 2026)
     if (!/^-?\d{1,2}(\.\d)?$/.test(v)) return null;
     return parseFloat(v).toFixed(1);   // an unusual value is the save script's warning ("Save anyway?", STAFF PR 458), never a stop here
   }
@@ -539,7 +539,9 @@
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Sensor back-up import' }));
     host.appendChild(h('p', { class: 'sub', text: 'Govee CSV export. Kept as back-up beside the thermometer readings, never instead of them. One row per day: lowest and highest.' }));
-    var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
+    // One choice per room (no thermometer list): a sensor row is saved against the room, so the value must be a room id.
+    // (It named a thermometer list this function is not given, and the screen stopped at its title.)
+    var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, []).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
     var label = h('input', { class: 'inp', type: 'text', maxlength: '60', placeholder: 'Sensor name (optional)', 'aria-label': 'Sensor name' });
     // CSV text only: no picture can be chosen here
     var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'File to import' });
