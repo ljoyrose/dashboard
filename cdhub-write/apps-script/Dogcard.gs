@@ -334,7 +334,9 @@ function sinkSubjectCreate_(req) {
     dogcardAppend_({ file: STATUS_FILE_, need: ['id', 'subject_id', 'state', 'from_date'], idPrefix: 'sst' },
       { subject_id: id, state: activeWord, from_date: today, to_date: '', reason: 'added in ' + host });
     if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
-    return { status: 'saved', id: id };
+    // 15 Nov 2026 (BB): a pup gets its parents' open links of kinds the owner set to inherit at birth (e.g. a scheme)
+    var inherited = litterId ? linkInheritAtBirth_(id, litterId, dob, who, now) : [];
+    return inherited.length ? { status: 'saved', id: id, links: inherited } : { status: 'saved', id: id };
   });
 }
 

@@ -96,11 +96,13 @@ function makeEnv(opts = {}) {
       const bad = hit && (env.breakSetContent === true || (env.breakSetContent === 'once' && !env.brokeOnce && (env.brokeOnce = true)));
       f.content = bad ? s.slice(0, -1) : s;
     },
-    setTrashed(v) { f.trashed = !!v; return this; },
+    setTrashed(v) { if (f.failTrash) throw new Error('trash failed'); f.trashed = !!v; return this; },
+    isTrashed: () => !!f.trashed,
     makeCopy(name, dest) { env.copies.push({ from: f.title, name }); const c = { id: 'copy' + (++idc), title: name, content: f.content }; dest.files.push(c); return wrap(c); }
   });
   const subFolderObj = (sf) => ({
     files: sf.files,
+    getFiles() { const m = sf.files.map(wrap); let i = 0; return { hasNext: () => i < m.length, next: () => m[i++] }; },
     getFilesByName(t) { const m = sf.files.filter((f) => f.title === t).map(wrap); let i = 0; return { hasNext: () => i < m.length, next: () => m[i++] }; }
   });
   const folder = {

@@ -127,7 +127,9 @@ function adminCheckSetup() {
  * Copies each existing allow-listed file into a sub-folder BLD-backups, once a day, named
  * <file>.pre-daily-<YYYY-MM-DD>.bak (the pattern in the naming protocol, N-14). The copies are .bak
  * files in a sub-folder, so CD Hub (which reads .csv files in the main folder) never loads them.
- * Old copies pile up: tidying them is Lisa's call (the script will not delete or rename them).
+ * After each run, older <file>.pre-daily-<date>.bak copies go to Drive TRASH (setTrashed, never deleted for ever):
+ * the newest copy of each file is kept. Only that exact pattern is touched; BACKUP_*, BAK_*, *.pre-cdhub-core-* and
+ * anything else in BLD-backups are left alone (Lisa, 15 Nov 2026, card answer A).
  * ---------------------------------------------------------------------------------------------- */
 
 var BACKUP_FOLDER_NAME = 'BLD-backups';
@@ -147,6 +149,41 @@ function adminDailyBackup() {
     file.makeCopy(name, dest);
     Logger.log('Copied ' + title + ' to ' + BACKUP_FOLDER_NAME + '/' + name);
   });
+  backupTrashOld_(dest);
+}
+
+var PRE_DAILY_RE = /^(.+)\.pre-daily-(\d{4}-\d{2}-\d{2})\.bak$/;
+
+/**
+ * Moves older daily copies to Drive TRASH, keeping the newest copy of each live file. Exact pattern only.
+ * Returns { trashed: [names], kept: [names] }. A file whose copy could not be trashed is logged and kept.
+ */
+function backupTrashOld_(dest) {
+  var newest = {}, all = [], it = dest.getFiles();
+  while (it.hasNext()) {
+    var f = it.next();
+    if (f.isTrashed && f.isTrashed()) continue;
+    var m = PRE_DAILY_RE.exec(f.getName());
+    if (!m) continue;
+    all.push({ file: f, name: f.getName(), base: m[1], day: m[2] });
+    if (!newest[m[1]] || m[2] > newest[m[1]]) newest[m[1]] = m[2];
+  }
+  var out = { trashed: [], kept: [] };
+  all.forEach(function (c) {
+    if (c.day === newest[c.base]) { out.kept.push(c.name); return; }
+    try { c.file.setTrashed(true); out.trashed.push(c.name); }
+    catch (e) { out.kept.push(c.name); Logger.log('Could not move to trash (kept): ' + c.name); }
+  });
+  out.trashed.sort(); out.kept.sort();
+  Logger.log('Older daily copies moved to trash: ' + out.trashed.length + '. Kept: ' + out.kept.length + ' (' + out.kept.join(', ') + ').');
+  return out;
+}
+
+/** Run once by hand: the same tidy as after each nightly run, without copying anything. */
+function adminTrashOldDailyBackups() {
+  var it = store_folder_().getFoldersByName(BACKUP_FOLDER_NAME);
+  if (!it.hasNext()) { Logger.log('No ' + BACKUP_FOLDER_NAME + ' folder. Nothing to tidy.'); return { trashed: [], kept: [] }; }
+  return backupTrashOld_(it.next());
 }
 
 /** Run once to have the backup run every night about 03:00. Also set BACKUP_ON to true. */

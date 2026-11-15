@@ -302,6 +302,24 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(page.locator(`.card[data-area="${ids.hall}"]:not([data-temp-only])`)).toHaveCount(0);
   });
 
+  test('guard: the room temperatures sheet with its heading row moved (sorted or filtered) shows on Readings and Data checks (OV11 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    await page.evaluate(() => go('round'));
+    await expect(page.locator('[data-hdrbad]')).toHaveCount(0);
+    const r = await page.evaluate(() => {
+      const H = 'id,area_id,min_c,max_c,period_start,taken_at';
+      const sorted = parseCSV('r-1,area-a,12.0,18.0,2026-11-11T00:00:00Z,2026-11-11T08:00:00Z\n' + H + '\n');
+      const twice = parseCSV(H + '\nr-1,area-a,12.0,18.0,2026-11-11T00:00:00Z,2026-11-11T08:00:00Z\n' + H + '\n');
+      return { sorted: areaHeaderProblem(sorted), twice: areaHeaderProblem(twice), ok: areaHeaderProblem(parseCSV(H + '\nr-1,area-a,12.0,18.0,,\n')), sortedRows: sorted };
+    });
+    expect(r).toMatchObject({ sorted: 'row 1 is not the heading row', twice: 'a heading row is also lower down', ok: '' });
+    await page.evaluate((rows) => { T['BLD-area_reading.csv'] = rows; ROUND = {}; foldAreaReadings(rows); go('round', false); }, r.sortedRows);
+    await expect(page.locator('#kept-readings [data-hdrbad]')).toContainText('row 1 is not the heading row');
+    const line = await page.evaluate(() => checks().find((c) => c.k === 'room temps sheet'));
+    expect(line.ok).toBe(false);
+    expect(line.msg).toContain('never sort the sheet');
+  });
+
   test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     let fail = false;
