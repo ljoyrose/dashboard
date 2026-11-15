@@ -40,12 +40,11 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     await expect(dog(page).locator('[data-k="wgraph"] svg.spk')).toHaveCount(1);   // visible without opening anything
     await expect(dog(page).locator('[data-k="wgraph"]').first()).toBeVisible();
-    await dog(page).locator('details.wtc > summary').click();
-    const g = page.locator('#wpanel svg.wgraph');
+    await dog(page).locator('details.wtc > summary').click();   // opens in place (Lisa 15 Nov 2026), no panel at the top
+    const g = dog(page).locator('details.wtc svg.wgraph');
     await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 1 Jan 2026 to 8.9 kg on 12 Mar 2026');
     await expect(g.locator('circle')).toHaveCount(3);
-    await expect(page.locator('#wpanel thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);   // no source column
-    await expect(page.locator('#wpanel')).not.toContainText('Pretend source');
+    await expect(dog(page).locator('details.wtc')).not.toContainText('Pretend source');   // no source shown
   });
 
   test('Add weight: date defaults to today, kg and optional BCS, sent as action weighing; the new weight shows', async ({ page, guard }) => {
@@ -53,7 +52,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const bodies = await saves(page);
     await page.evaluate(() => go('dogs/sub-x1'));
     await dog(page).locator('details.wtc > summary').click();
-    const f = page.locator('#wpanel form[data-weigh-form]');
+    const f = dog(page).locator('details.wtc form[data-weigh-form]');
     const today = await page.evaluate(() => todayLondon());
     await expect(f.locator('input[name=on]')).toHaveValue(today);
     await f.locator('input[name=kg]').fill('999');
@@ -66,7 +65,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0].action).toBe('weighing');
     expect(bodies[0].fields).toEqual({ subject_id: 'sub-x1', performed_on: today, weight_kg: '9.25', body_condition_score: '6' });
-    await expect(page.locator('#wpanel tbody tr').first()).toContainText('9.25 kg');
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]').first()).toContainText('9.25 kg');
     await expect(dog(page).locator('[data-k="weight"]')).toContainText('9.25 kg');
   });
 
@@ -75,11 +74,11 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await saves(page, () => ({ ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }));
     await page.evaluate(() => go('dogs/sub-x1'));
     await dog(page).locator('details.wtc > summary').click();
-    const f = page.locator('#wpanel form[data-weigh-form]');
+    const f = dog(page).locator('details.wtc form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('9.3');
     await f.locator('button[type=submit]').click();
     await expect(f.locator('[data-weigh-msg]')).toHaveText('Not saved: The save script has not been updated for this yet. Nothing was saved.');
-    await expect(page.locator('#wpanel tbody tr')).toHaveCount(3);
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]')).toHaveCount(3);
   });
 
   test('vaccines: codes as words, removed rows hidden, card link, and Remove only on the newest', async ({ page, guard }) => {
@@ -147,7 +146,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const small = await frame();
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['small', 'small']);
     await card.locator('details.wtc > summary').click();
-    const f = page.locator('#wpanel form[data-weigh-form]');
+    const f = card.locator('details.wtc form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('12.5');
     await f.locator('button[type=submit]').click();
     await expect(card).toHaveAttribute('data-size', 'medium');
