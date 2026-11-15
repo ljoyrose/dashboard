@@ -21,7 +21,7 @@
 <script>
 (function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
  var r=document.documentElement,c=r.classList;
- c.toggle('look-cool',o.bg==='cool');c.toggle('sel-soft',o.sel==='soft');
+ c.toggle('look-cool',o.bg==='cool');c.toggle('sel-line',o.sel==='cline');c.toggle('sel-calm',o.sel==='calm');
  c.toggle('text-lg',o.text==='lg');c.toggle('text-xl',o.text==='xl');c.toggle('space-roomy',o.space==='roomy');
  if(o.mode==='light'||o.mode==='dark')r.setAttribute('data-theme',o.mode);})();
 </script>

@@ -42,7 +42,6 @@
   /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); } }
-  :root.sel-soft { --sel-bd: var(--house-press); --sel-fill: var(--hov); }   /* grey too (Lisa, 12 Nov 2026): no purple on hover or selected */
   html.text-lg body { zoom: 1.12; } html.text-xl body { zoom: 1.25; }
   html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 16px; }
   * { box-sizing: border-box; }
@@ -557,16 +556,16 @@
   function money(n) { return '£' + (Math.round((Number(n) || 0) * 100) / 100); }
 
   /* ---------- Look (header palette menu): one JSON in localStorage 'dash-look' so other hubs can read it later ----------
-   * { bg: warm|cool, sel: line|soft, words: dark|light, text: n|lg|xl, space: n|roomy, mode: device|light|dark }.
+   * { bg: warm|cool, sel: side|cline|calm, words: dark|light, text: n|lg|xl, space: n|roomy, mode: device|light|dark }.
    * Classes on <html>; stage colours, brand dots and the red "needs you" never change. */
-  var LOOKS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
+  var LOOKS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['side', 'Colour side line'], ['cline', 'Colour line'], ['calm', 'Calm']]],
     ['words', 'Coloured words', [['dark', 'Darker'], ['light', 'Lighter']]], ['text', 'Text', [['n', 'Normal'], ['lg', 'Larger'], ['xl', 'Largest']]],
     ['space', 'Spacing', [['n', 'Normal'], ['roomy', 'Roomy']]], ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
   var look = (function () { try { var o = JSON.parse(localStorage.getItem('dash-look') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
   function lookOf(k) { var l = LOOKS.filter(function (x) { return x[0] === k; })[0]; return l[2].some(function (x) { return x[0] === look[k]; }) ? look[k] : l[2][0][0]; }
   function applyLook() {
     var r = document.documentElement, c = r.classList, t = lookOf('text'), m = lookOf('mode');
-    c.toggle('look-cool', lookOf('bg') === 'cool'); c.toggle('sel-soft', lookOf('sel') === 'soft'); c.toggle('words-light', lookOf('words') === 'light');
+    c.toggle('look-cool', lookOf('bg') === 'cool'); c.toggle('sel-line', lookOf('sel') === 'cline'); c.toggle('sel-calm', lookOf('sel') === 'calm'); c.toggle('words-light', lookOf('words') === 'light');
     c.toggle('text-lg', t === 'lg'); c.toggle('text-xl', t === 'xl'); c.toggle('space-roomy', lookOf('space') === 'roomy');
     if (m === 'device') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', m);
   }

@@ -113,7 +113,7 @@ for (const [hub, H] of Object.entries(ALL)) {
     await look.click();
     await expect(look).toHaveAttribute('aria-expanded', 'true');
     const menu = page.locator('header [role="dialog"][aria-label="Look"]');
-    for (const w of ['Warm clear', 'Cool clear', 'Outline', 'Soft tint', 'Device', 'Light', 'Dark']) await expect(menu.getByRole('button', { name: w, exact: true })).toBeVisible();
+    for (const w of ['Warm clear', 'Cool clear', 'Colour side line', 'Colour line', 'Calm', 'Device', 'Light', 'Dark']) await expect(menu.getByRole('button', { name: w, exact: true })).toBeVisible();
     await menu.getByRole('button', { name: 'Cool clear', exact: true }).click();
     await expect(page.locator('html')).toHaveClass(/(^|\s)look-cool(\s|$)/);
     await page.locator('header [role="dialog"][aria-label="Look"]').getByRole('button', { name: 'Dark', exact: true }).click();

@@ -1661,10 +1661,10 @@ test.describe('Studio page', () => {
     expect(bg0).toBe('rgb(238, 232, 223)'); // Warm clear
     await page.locator('#lookBtn').click();
     await expect(page.locator('#lookMenu')).toBeVisible();
-    for (const [k, v] of [['bg', 'cool'], ['sel', 'soft'], ['words', 'light'], ['text', 'lg'], ['space', 'roomy']]) await page.locator(`#lookMenu [data-look="${k}"][data-val="${v}"]`).click();
+    for (const [k, v] of [['bg', 'cool'], ['sel', 'calm'], ['words', 'light'], ['text', 'lg'], ['space', 'roomy']]) await page.locator(`#lookMenu [data-look="${k}"][data-val="${v}"]`).click();
     await expect(page.locator('#lookMenu [data-look="bg"][data-val="cool"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(html).toHaveClass(/look-cool/);
-    await expect(html).toHaveClass(/sel-soft/);
+    await expect(html).toHaveClass(/sel-calm/);
     await expect(html).toHaveClass(/words-light/);
     await expect(html).toHaveClass(/text-lg/);
     await expect(html).toHaveClass(/space-roomy/);

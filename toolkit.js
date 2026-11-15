@@ -61,14 +61,14 @@
   }
 
   // ---- House look: follow the Look saved in Studio (localStorage 'dash-look', read only here; Studio's Look menu writes it) ----
-  // { bg: warm|cool, sel: line|soft, mode: device|light|dark } -> html.look-cool, html.sel-soft, [data-theme]. tokens.css and
+  // { bg: warm|cool, sel: side|cline|calm, mode: device|light|dark } -> html.look-cool, html.sel-line / html.sel-calm, [data-theme]. tokens.css and
   // house.css do the rest, so every hub follows one setting. Runs at once (this file loads in <head>) and when another tab changes it.
   function applyLook() {
     var doc = root.document; if (!doc) return;
     var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; }
     var r = doc.documentElement;
     r.classList.toggle('look-cool', o.bg === 'cool');
-    r.classList.toggle('sel-soft', o.sel === 'soft');
+    r.classList.toggle('sel-line', o.sel === 'cline'); r.classList.toggle('sel-calm', o.sel === 'calm');
     if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
   }
   applyLook();
@@ -132,7 +132,7 @@
   // ---- Look button + menu on every page (Lisa, 2 Nov): pages place <span class="lookwrap" data-house-look></span> in the top bar.
   // The menu offers what applyLook supports and saves it in 'dash-look', merged, so Studio's own keys (words, text, space) stay.
   // On a phone it also shows the read time and a Sign out item that presses the page's own Sign out (both leave the bar there).
-  var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
+  var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['side', 'Colour side line'], ['cline', 'Colour line'], ['calm', 'Calm']]],
     ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
   function readLook() { var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; } return typeof o === 'object' ? o : {}; }
   function lookVal(o, row) { return row[2].some(function (x) { return x[0] === o[row[0]]; }) ? o[row[0]] : row[2][0][0]; }
@@ -141,7 +141,7 @@
     try { root.localStorage.setItem('dash-look', JSON.stringify(o)); } catch (e) { /* private window: this page still changes */ }
     var r = root.document.documentElement;
     if (key === 'bg') r.classList.toggle('look-cool', val === 'cool');
-    else if (key === 'sel') r.classList.toggle('sel-soft', val === 'soft');
+    else if (key === 'sel') { r.classList.toggle('sel-line', val === 'cline'); r.classList.toggle('sel-calm', val === 'calm'); }
     else if (key === 'mode') { if (val === 'light' || val === 'dark') r.setAttribute('data-theme', val); else r.removeAttribute('data-theme'); }
   }
   // The page's own Sign out in the top bar, when it is there (signed in). Hidden only by the phone rule counts as there.

@@ -83,7 +83,7 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
 - **Look (clear board):** Line and Decide open as a board on a desktop (fixed columns per stage or decision, each scrolling inside itself,
   head and foot with "need you · £ AI", details on the right) and as a list on the phone (one column per screen if Board is picked,
   details under the card). The Board/List switch is kept per page. The palette button (Look) sets Background (Warm clear / Cool clear),
-  Selected (Outline / Soft tint), Coloured words, Text size, Spacing and Mode (Device / Light / Dark), kept in `localStorage['dash-look']`
+  Selected (Colour side line / Colour line / Calm), Coloured words, Text size, Spacing and Mode (Device / Light / Dark), kept in `localStorage['dash-look']`
   for the other hubs. No solid colour fills: every edge is 1px; hover and selected turn that edge ink, so nothing thickens or moves.
   Dark frame top and bottom (never black). The find bar is one row (Search · Filter · Sort); Filter opens a panel with every
   filter group, and active filters show as removable chips.

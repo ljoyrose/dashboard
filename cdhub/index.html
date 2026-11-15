@@ -38,7 +38,7 @@
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
 (function(){ var o={}; try{ o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{}; }catch(e){ o={}; }
  var r=document.documentElement, c=r.classList;
- c.toggle('look-cool',o.bg==='cool'); c.toggle('sel-soft',o.sel==='soft');
+ c.toggle('look-cool',o.bg==='cool'); c.toggle('sel-line',o.sel==='cline');c.toggle('sel-calm',o.sel==='calm');
  c.toggle('text-lg',o.text==='lg'); c.toggle('text-xl',o.text==='xl'); c.toggle('space-roomy',o.space==='roomy');
  if(o.mode==='light'||o.mode==='dark') r.setAttribute('data-theme',o.mode); })();
 </script>
@@ -63,7 +63,6 @@
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
 
  --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
-:root.sel-soft{--sel-fill:var(--hov);}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
 h1,h2,h3,h4,b,strong,th{font-weight:600}
