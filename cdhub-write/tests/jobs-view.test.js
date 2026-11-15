@@ -35,3 +35,42 @@ test('a whole-site job about dogs counts as done only once every dog has a line'
   assert.equal(V.summary(v([line('d1')]))[0].due, 1);
   assert.equal(V.summary(v([line('d1'), line('d2')]))[0].ok, 1);
 });
+
+test('the SOP card says how often each job is due, from its every_days row', () => {
+  assert.equal(V.everyWords(365), 'every 12 months');
+  assert.equal(V.everyWords(730), 'every 24 months');
+  assert.equal(V.everyWords(14), 'every 2 weeks');
+  assert.equal(V.everyWords(7), 'weekly');
+  assert.equal(V.everyWords(1), 'daily');
+  assert.equal(V.everyWords(10), 'every 10 days');
+  assert.equal(V.everyWords(null), 'as needed');
+  const v = { today: '2026-03-02', logs: [], litters: [], types: [Object.assign(T('fit_to_breed', 'dog', '365'), { sop: 'Mating and Retirement' })],
+    dogs: [{ id: 'd1', area_id: 'r1' }], areas: [], esc: (s) => String(s), dmy: (s) => s };
+  assert.match(V.sopHtml(v, 'Mating and Retirement'), /<b>fit_to_breed<\/b><span class="mut" data-every>every 12 months<\/span>/);
+});
+
+test('a record\'s linked file (e.g. a vet certificate) opens from the history; ended links and other records\' files do not show', () => {
+  const types = [Object.assign(T('fit_to_breed', 'dog', '365'), { sop: 'Mating and Retirement' })];
+  const logs = [
+    { id: 'c1', check_type_id: 'cty-fit_to_breed', subject_id: 'd1', outcome: 'ok', happened_at: '2026-08-13T12:00:00Z', time_given: 'false', how_recorded: 'import' },
+    { id: 'c2', check_type_id: 'cty-fit_to_breed', subject_id: 'd1', outcome: 'ok', happened_at: '2025-08-01T12:00:00Z' },
+  ];
+  const files = [{ id: 'f1', name: 'cert.pdf', drive_file_id: '1FAKEFILEIDFORTESTS00000000000aa' }, { id: 'f2', name: 'old.pdf', drive_file_id: '1FAKEOLDFILEIDFORTESTS000000000' }];
+  const links = [
+    { from_table: 'check_log', from_id: 'c1', role: 'certificate', to_table: 'files', to_id: 'f1', from_date: '2026-08-13', to_date: '' },
+    { from_table: 'check_log', from_id: 'c2', role: 'certificate', to_table: 'files', to_id: 'f2', from_date: '2025-08-01', to_date: '2026-01-01' },
+  ];
+  const v = { today: '2026-03-02', types, logs, links, files, dogs: [], areas: [] };
+  const rows = V.history(v, { subject_id: 'd1' });
+  assert.deepEqual(rows.map((r) => r.at), ['2026-08-13T12:00:00Z', '2025-08-01T12:00:00Z']);
+  assert.deepEqual(rows[0].files, [{ role: 'certificate', name: 'cert.pdf', url: 'https://drive.google.com/file/d/1FAKEFILEIDFORTESTS00000000000aa/view' }]);
+  assert.deepEqual(rows[1].files, []);
+  const html = V.historyHtml(Object.assign({ esc: (s) => String(s), dmy: (s) => s }, v), { subject_id: 'd1' }, '');
+  assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/1FAKEFILEIDFORTESTS00000000000aa\/view"[^>]*data-record-file[^>]*>certificate<\/a>/);
+  assert.match(html, /time not given/);
+});
+
+test('a history with no links or files still draws', () => {
+  const v = Object.assign({}, base, { logs });
+  assert.deepEqual(V.history(v, { litter_id: 'lit1' })[0].files, []);
+});

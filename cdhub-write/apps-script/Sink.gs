@@ -492,6 +492,11 @@ function applyWaitingOccupancyMoves_() {
     if (!s.waiting || !s.queued) continue;
     if (s.queued.kind === 'correction' || s.queued.corrects_id) continue;
     if (s.queued.target_file !== spec.file) continue;
+    // 15 Nov 2026 (J2 R2): occupancy_out shares the file. A move out (sold, deceased, off site) has no room and an
+    // off_site_kind; it always waits for the owner's approval and is never applied here.
+    var row = null;
+    try { row = JSON.parse(s.queued.payload_json || '{}'); } catch (e) { row = null; }
+    if (!row || String(row.off_site_kind || '') || !String(row.area_id || '')) continue;
     ids.push(k);
   }
   ids.forEach(function (id) {
@@ -523,6 +528,10 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
 
     var spec = specFor_(q.target_file);
     if (!spec) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+    // 15 Nov 2026 (J2 R5): an approval writes, so the same switches apply as to a save
+    if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off, so nothing was written.');
+    var fileOn = Object.keys(TABLES).some(function (key) { return TABLES[key].file === q.target_file && tableOn_(TABLES[key]); });
+    if (!fileOn) throw err_('TABLE_OFF', 'Saving to ' + q.target_file + ' is switched off, so nothing was written.');
     var tenant = prop_(BLD.PROP.TENANT_ID);
     var row;
     try { row = JSON.parse(q.payload_json); } catch (e) { throw err_('BAD_PAYLOAD', 'The queued item could not be read.'); }

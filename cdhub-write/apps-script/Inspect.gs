@@ -88,6 +88,38 @@ function inspectCovers_(r, day) {
   return (!from || from <= day) && (!to || day <= to);
 }
 
+/* 15 Nov 2026 (FTB): a list whose key is also a job (a check_type type_key, e.g. fit_to_breed) shows that job's saved records
+   as well as any rows in its own older file. Only these columns are made, so how a record was entered and who typed it stay
+   the owner's. valid_until = the day done + every_days on the job row the record was saved against (the rule then). */
+var INSPECT_JOB_COLUMNS = ['id', 'tenant_id', 'subject_id', 'done_on', 'outcome', 'note', 'valid_until'];
+
+function inspectJobRows_(key, tenant) {
+  var t = store_read_(READABLE.check_type.file, false), l = store_read_(READABLE.check_log.file, false);
+  if (!t || !l) return null;
+  var ver = {}, any = false;
+  t.records.forEach(function (r) { if ((!r.tenant_id || r.tenant_id === tenant) && r.type_key === key && r.id) { ver[r.id] = r; any = true; } });
+  if (!any) return null;
+  var replaced = {};
+  l.records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
+  return l.records.filter(function (r) {
+    return (!r.tenant_id || r.tenant_id === tenant) && ver[r.check_type_id] && r.subject_id && !replaced[r.id];
+  }).map(function (r) {
+    var at = String(r.happened_at || r.taken_at || ''), d = new Date(at), day = isNaN(d.getTime()) ? at.slice(0, 10) : todayLondon_(d);
+    var every = String(ver[r.check_type_id].every_days || '').trim(), until = '';
+    if (/^[0-9]+$/.test(every) && +every > 0 && isRealDate_(day)) until = new Date(Date.parse(day + 'T00:00:00Z') + (+every) * 86400000).toISOString().slice(0, 10);
+    return { id: r.id, tenant_id: r.tenant_id || tenant, subject_id: r.subject_id, done_on: day, outcome: r.outcome || '', note: r.note || '', valid_until: until };
+  });
+}
+
+/** The rows a list shows: its own file, plus the job's records when the key is also a job. null = neither exists. */
+function inspectListData_(key, tenant) {
+  var f = store_read_(READABLE[key].file, false), jobs = inspectJobRows_(key, tenant);
+  if (!jobs) return f;
+  var header = f ? f.header.slice() : [];
+  INSPECT_JOB_COLUMNS.forEach(function (c) { if (header.indexOf(c) < 0) header.push(c); });
+  return { header: header, records: (f ? f.records : []).concat(jobs) };
+}
+
 /**
  * An inspector's read. Called by sinkRead_ once the code is known to be a live INSPECTOR code.
  * Returns the same shape as a staff read, plus `ends` (the link's end, London time).
@@ -119,7 +151,7 @@ function inspectSinkRead_(req, who, now) {
   });
   var access = inspectRead_(INSPECT.ACCESS_FILE);
 
-  var data = store_read_(rd.file, false);
+  var data = inspectListData_(key, tenant);
   if (!data) throw err_('FILE_MISSING', 'That list does not exist yet.');
   var fields = data.header.filter(function (c) {
     return c !== 'tenant_id' && Object.prototype.hasOwnProperty.call(cols, c) && cols[c] !== null;
@@ -183,7 +215,7 @@ function sinkInspectChoices_() {
   var lists = {};
   Object.keys(INSPECT.LISTS).forEach(function (k) {
     if (!inspectListOk_(k)) return;
-    var f = store_read_(READABLE[k].file, false);
+    var f = inspectListData_(k, tenant);
     if (f) lists[k] = f.header.filter(function (c) { return c !== 'tenant_id'; });
   });
   return {
@@ -229,7 +261,7 @@ function sinkInspectMake_(spec, adminEmail) {
     if (!inspectListOk_(list)) throw bad('fields', 'A link cannot show that list.');
     var want = fields[list];
     if (!Array.isArray(want)) throw bad('fields', 'That field choice was not understood.');
-    var f = store_read_(READABLE[list].file, false);
+    var f = inspectListData_(list, tenant);
     if (!f) throw bad('fields', 'That list does not exist yet.');
     var done = {};
     want.forEach(function (w) {

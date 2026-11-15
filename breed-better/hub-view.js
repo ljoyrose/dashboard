@@ -22,7 +22,7 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
-  var state = { unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
+  var state = { from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', age: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -214,6 +214,32 @@
     var y = Math.floor(m / 12), mm = m % 12;
     return [y ? y + (y === 1 ? ' yr' : ' yrs') : '', mm || !y ? mm + (mm === 1 ? ' mth' : ' mths') : ''].filter(Boolean).join(' ');
   }
+  function months(dob, today) {
+    var a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(dob)), b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(today));
+    if (!a || !b) return null;
+    var m = (b[1] - a[1]) * 12 + (b[2] - a[2]) - (Number(b[3]) < Number(a[3]) ? 1 : 0);
+    return m < 0 ? null : m;
+  }
+  /* Age groups (Lisa's mock-up; OV11, 15 Nov 2026): owner rows in the shared rule list, never fixed. For each group key,
+     age_group.<key>.from_months, age_group.<key>.to_months and age_group.<key>.label, each dated (effective_from, to_date)
+     with a source. A group needs from_months; to_months blank = no upper end; an animal is in it when
+     from_months <= age in whole months < to_months. No rows: no filter. */
+  function ageGroups(T, today) {
+    var g = {}, re = /^age_group\.([a-z0-9_]+)\.(from_months|to_months|label)$/;
+    (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
+      var m = re.exec(t(r.rule_key)), from = t(r.effective_from), to = t(r.to_date);
+      if (!m || !from || from > today || (to && to < today)) return;
+      var x = g[m[1]] || (g[m[1]] = { key: m[1], at: {} });
+      if (x.at[m[2]] && x.at[m[2]] > from) return;   /* newest row in force wins */
+      x.at[m[2]] = from; x[m[2]] = t(r.value);
+    });
+    return Object.keys(g).map(function (k) {
+      var x = g[k], lo = x.from_months === undefined || x.from_months === '' ? NaN : Number(x.from_months), hi = x.to_months === undefined || x.to_months === '' ? Infinity : Number(x.to_months);
+      return { key: k, label: x.label || k.replace(/_/g, ' '), from: lo, to: hi };
+    }).filter(function (x) { return isFinite(x.from) && x.from >= 0 && !isNaN(x.to) && x.to > x.from; })
+      .sort(function (a, b) { return a.from - b.from || a.label.localeCompare(b.label); });
+  }
+  function inAge(grp, dob, today) { var m = months(dob, today); return m !== null && m >= grp.from && m < grp.to; }
   function subLine(v, r) {
     var d = hubDog(v, r.subject_id);
     return [d && t(d.sex), age(r.dob, v.today)].filter(Boolean).join(', ');
@@ -239,10 +265,11 @@
   };
   function shownRows(c) {
     var f = state.filter, q = state.q.toLowerCase();
-    var sx = state.sex;
+    var sx = state.sex, v = last || {}, ag = state.age && v.T ? ageGroups(v.T, v.today).filter(function (x) { return x.key === state.age; })[0] : null;
     return c.results.filter(function (r) {
-      var d = hubDog(last || {}, r.subject_id);
-      return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1) && (!sx || (d && t(d.sex) === sx));
+      var d = hubDog(v, r.subject_id);
+      return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1) && (!sx || (d && t(d.sex) === sx))
+        && (!ag || inAge(ag, r.dob, v.today));
     })
       .sort(SORT_FN[state.sort] || SORT_FN.verdict);
   }
@@ -300,7 +327,13 @@
     var sx = sk.length > 1 ? '<div class="bb-filt" role="group" aria-label="Filter by sex">' + [''].concat(sk).map(function (k) {
       return '<button type="button" class="bb-f" data-bb-sex="' + esc(k) + '" aria-pressed="' + (state.sex === k) + '">' + esc(k || 'Any sex') + (k ? ' <span class="cnt">' + sexes[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>' : '';
-    return tools + h + sx + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
+    /* age groups: only when the owner has rows for them */
+    var groups = ageGroups(v.T, v.today);
+    var ag = groups.length ? '<div class="bb-filt" role="group" aria-label="Filter by age">' + [{ key: '', label: 'Any age' }].concat(groups).map(function (g) {
+      var n = g.key ? c.results.filter(function (r) { return inAge(g, r.dob, v.today); }).length : 0;
+      return '<button type="button" class="bb-f" data-bb-age="' + esc(g.key) + '" aria-pressed="' + (state.age === g.key) + '">' + esc(g.label) + (g.key ? ' <span class="cnt">' + n + '</span>' : '') + '</button>';
+    }).join('') + '</div>' : '';
+    return tools + h + sx + ag + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
   }
 
   /** The animal's details from the hub, folded, as on the mock-up. Only what the hub holds is shown. */
@@ -579,7 +612,8 @@
       }).join('');
   }
 
-  function inner(v) {
+  function inner(v) { return fromHtml(v) + innerBody(v); }
+  function innerBody(v) {
     var c = compute(v);
     if (!c.setUp) return '<p class="mut">Not set up yet.</p>';
     var err = c.error ? '<div class="card acc2"><p>' + v.esc(c.error) + '</p></div>' : '';
@@ -677,6 +711,7 @@
       '.bb-auto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}',
       '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}',
       '.bb-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.bb-unf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}.bb-odds{margin:0;padding:0;list-style:none;display:grid;gap:4px}.bb-odds li{display:flex;flex-wrap:wrap;gap:4px 8px}.bb-arch{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
+      '.bb-sec{display:flex;flex-direction:column;gap:8px}.bb-misshd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-height:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;list-style:none}.bb-misshd::-webkit-details-marker{display:none}.bb-misshd>svg:last-child{margin-left:auto;transition:transform .15s}.bb-miss:not([open])>.bb-misshd>svg:last-child{transform:rotate(-90deg)}.bb-miss>.bb-gates{margin-top:6px}.bb-ret{margin-bottom:8px}',
       '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
       '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
       '.bb-secbar{display:flex;flex-direction:column;gap:4px}.bb-secbar .bb-bar span{display:block;height:100%}',
@@ -717,24 +752,67 @@
     var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
     var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
     var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
-    /* Folded by default (Lisa, 15 Nov 2026: "folded then click to open"); the heading keeps the verdict and the points in view.
-       Open or folded is remembered per dog on this device. */
-    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better"><details class="bb-secf" data-bb-sec="' + esc(id) + '"' + (secOpen(id) ? ' open' : '') + '>'
-      + '<summary class="bb-chip bb-sechd">'
+    /* Lisa, 15 Nov 2026 (later): the score is a normal part of the card and always shows; the must-pass list is folded
+       behind one line ("3 missing"), as it may grow long; open or folded is remembered per dog on this device.
+       A tap on the heading opens this dog's Breed Better entry; "Back to <dog>" there returns to this card. */
+    var cnt = { fail: 0, unverified: 0, pass: 0 }, k = verdictOf(r);
+    gates.forEach(function (l) { var o = l.gate_outcome || 'unverified'; cnt[o] = (cnt[o] || 0) + 1; });
+    var miss = [cnt.unverified ? cnt.unverified + ' missing' : '', cnt.fail ? cnt.fail + ' failed' : ''].filter(Boolean).join(' · ')
+      || 'All ' + gates.length + ' passed';
+    var acts = unenrolHtml(v, c.enrol[id]);
+    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better">'
+      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc((r.words && r.words[k]) || VERDICT[k] || '') + ', ' + total(r) + '. Testing. Open the Breed Better page">'
       + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>'
-      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M6 9l6 6l6 -6', 16) + '</summary><div class="bb-secbd">'
+      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M9 6l6 6l-6 6', 16) + '</button>'
       + (all ? '<div class="bb-secbar"><div class="bb-barw"><div class="bb-bar" role="img" aria-label="' + r.points_earned + ' of ' + all + ' points' + (hasT ? ', target ' + r.target : '') + '">'
-        + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[verdictOf(r)] + ')"></span></div>'
+        + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[k] + ')"></span></div>'
         + (tp !== null ? '<span class="bb-tmark" style="left:' + tp.toFixed(1) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>'
         + '<div class="bb-three"><span>' + r.points_earned + ' of ' + all + '</span>' + (hasT ? '<span>target ' + r.target + ' (' + Math.round(tp) + '%)</span>' : '') + '</div></div>' : '')
-      + (gates.length ? '<ul class="bb-gates">' + gates.map(function (l) {
-        var o = l.gate_outcome || 'unverified';
-        return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
-          + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
-      }).join('') + '</ul>' : '')
-      + '<span class="bb-acts"><button type="button" class="bb-secgo" data-go="breed" data-bb-dog="' + esc(id) + '">Open Breed Better page' + ic('M9 6l6 6l-6 6', 16) + '</button>'
-      + unenrolHtml(v, c.enrol[id]) + '</span>'
-      + '</div></details></section>';
+      + (gates.length ? '<details class="bb-secf bb-miss" data-bb-sec="' + esc(id) + '"' + (secOpen(id) ? ' open' : '') + '>'
+        + '<summary class="bb-misshd"><span class="bb-strong">Must pass</span><span class="bb-pts bb-misscnt">' + miss + '</span>' + ic('M6 9l6 6l6 -6', 16) + '</summary>'
+        + '<ul class="bb-gates">' + gates.map(function (l) {
+          var o = l.gate_outcome || 'unverified';
+          return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
+            + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
+        }).join('') + '</ul></details>' : '')
+      + (acts ? '<span class="bb-acts">' + acts + '</span>' : '')
+      + '</section>';
+  }
+
+  /* Back to where Lisa came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
+     The hub pushes a real history entry for #/breed, so the phone's Back works too; this button does the same. */
+  /* History entry state is NAV's shape, { from: { hash, label, y, id } } (NAV, 15 Nov 2026), so this moves to HubNav.back
+     when that lands. A reload on #/breed keeps it; a cold link has none and shows no button. */
+  function fromHtml(v) {
+    var f = state.from || fromHistory();
+    if (!f) return '';
+    if (!state.from) state.from = f;
+    return '<button type="button" class="bb-f bb-ret hback" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.label || 'the dog card') + '</button>';
+  }
+  function fromHistory() {
+    var h = null;
+    try { h = history.state && history.state.from; } catch (err) { h = null; }
+    return h && h.hash && location.hash === '#/breed' ? { id: h.id, label: h.label, hash: h.hash, y: h.y, top: null } : null;
+  }
+  function cameFrom(b) {
+    var card = b.closest && b.closest('article.dc'), id = b.getAttribute('data-bb-dog'), v = last || {};
+    if (!card) { state.from = null; return; }
+    var d = (v.dogs || {})[id] || {}, r = v.T ? compute(v).byId[id] || {} : {};
+    var from = { id: card.getAttribute('data-dog') || id, label: t(d.name) || t(r.name), hash: location.hash || '#/dogs', y: window.scrollY };
+    state.from = { id: from.id, label: from.label, hash: from.hash, y: from.y, top: card.getBoundingClientRect().top };
+    state.tab = 'dogs';
+    /* the hub pushes #/breed on this same click; then its entry carries where we came from */
+    setTimeout(function () { try { if (location.hash === '#/breed') history.replaceState(Object.assign({}, history.state || {}, { from: from }), '', location.href); } catch (err) { /* no history: the button still works */ } }, 0);
+  }
+  function backToCard() {
+    var f = state.from;
+    if (!f) return;
+    if (location.hash !== f.hash) { if (location.hash !== '#/breed') state.from = null; return; }
+    state.from = null;
+    setTimeout(function () {   /* after the hub has drawn the page again */
+      var card = f.top === null ? null : document.querySelector('article.dc[data-dog="' + (window.CSS && CSS.escape ? CSS.escape(f.id) : f.id) + '"]');
+      window.scrollTo(0, card ? card.getBoundingClientRect().top + window.scrollY - f.top : f.y);
+    }, 0);
   }
 
   /* ---- Enrol and un-enrol on every animal's card (Lisa, 15 Nov 2026). Saves go through the host: v.canWrite(),
@@ -868,9 +946,17 @@
     document.addEventListener('click', function (e) {
       var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto]');
       if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
-      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
+      var hubGo = e.target.closest && e.target.closest('[data-go]');
+      if (hubGo && !hubGo.hasAttribute('data-bb-dog') && !(hubGo.closest && hubGo.closest('#bbRoot'))) state.from = null;   /* left by the hub's own menu */
+      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-return],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-age],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
       if (!b) return;
-      if (b.hasAttribute('data-bb-dog')) { state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
+      if (b.hasAttribute('data-bb-dog')) { cameFrom(b); state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
+      if (b.hasAttribute('data-bb-return')) {
+        e.preventDefault(); e.stopPropagation();
+        var hs = history.state;
+        if (hs && hs.id === 'breed') history.back(); else if (state.from) location.hash = state.from.hash;
+        return;
+      }
       if (b.hasAttribute('data-bb-edit')) {
         e.preventDefault();
         e.stopPropagation();
@@ -889,6 +975,7 @@
       else if (b.hasAttribute('data-bb-back')) { state.dog = ''; state.edit = ''; }
       else if (b.hasAttribute('data-bb-tab')) { state.tab = b.getAttribute('data-bb-tab'); state.dog = ''; state.edit = ''; }
       else if (b.hasAttribute('data-bb-sex')) state.sex = b.getAttribute('data-bb-sex');
+      else if (b.hasAttribute('data-bb-age')) state.age = b.getAttribute('data-bb-age');
       else if (b.hasAttribute('data-bb-cal')) state.cal = b.getAttribute('data-bb-cal');
       else if (b.hasAttribute('data-bb-calc')) { var cv = b.getAttribute('data-bb-calc').split(':'); state.calc[cv[0]] = Number(cv[1]); }
       else if (b.hasAttribute('data-bb-month')) { state.month = b.getAttribute('data-bb-month'); state.cal = 'all'; }
@@ -901,6 +988,8 @@
       var msg = f.querySelector('[data-bb-edit-msg]');
       if (msg) msg.textContent = 'The result is entered here. It is saved when this check\'s table is on the save script.';
     }, true);
+    window.addEventListener('popstate', backToCard);
+    window.addEventListener('hashchange', backToCard);
     window.addEventListener('popstate', function () {
       if (!state.editPushed) return;
       state.edit = '';
@@ -912,5 +1001,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
