@@ -421,6 +421,13 @@ test('age groups come from dated owner rows; with none there is no age filter', 
   assert.doesNotMatch(none, /Filter by age/);
 });
 
+test('a held-back record shows the word it holds ("Preliminary") on the line, with Unverified', () => {
+  const html = View.lineHtml({ esc }, { kind: 'gate', criterion_id: 'hip', label_then: 'Hips', gate_outcome: 'unverified',
+    unknown_reason: 'not_accepted', held_then: 'preliminary', answer_then: 'Good', date_then: '2026-03-02' });
+  assert.match(html, /Preliminary: Good · 2 Mar 2026/);
+  assert.doesNotMatch(html, /Not accepted yet/);
+});
+
 test('with no age_group rows, the two age groups come from the existing adult-age rule (Lisa 15 Nov 2026: two in the SOP)', () => {
   const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'SOP' }, extra || {});
   const T = { 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '9', '2020-01-01'), R('dog.adult_from_months', '6', '2025-01-01'),

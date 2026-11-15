@@ -20,7 +20,7 @@
   var REASON = {
     no_source: 'Record type not set up yet', no_record: 'No record yet', not_judged: 'Not entered yet', expired: 'Out of date',
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
-    recorded_unverified: 'Recorded, cannot be scored yet'
+    recorded_unverified: 'Recorded, cannot be scored yet', not_accepted: 'Not accepted yet'
   };
   var state = { from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', age: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
@@ -436,6 +436,7 @@
     return '';
   }
 
+  function cap(s) { s = t(s); return s.charAt(0).toUpperCase() + s.slice(1); }
   function lineHtml(v, l, w) {
     var esc = v.esc, res;
     w = w || words;
@@ -445,7 +446,9 @@
     var when = l.date_then ? ' \u00b7 ' + esc(day(l.date_then)) : '';
     if (l.rules_then) when += ' \u00b7 rules then';
     if (l.weight !== undefined && l.weight < 1) when += ' \u00b7 at ' + l.age_months + ' months, ' + (l.weight === 0.5 ? 'half' : Math.round(l.weight * 100) + '%') + ' points';
-    var why = l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
+    /* a held-back record says what it holds, in the record's own word: "Preliminary" */
+    var why = l.unknown_reason === 'not_accepted' && l.held_then ? esc(cap(l.held_then)) + (l.answer_then ? ': ' + esc(l.answer_then) : '') + when
+      : l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
     if (l.due_date && !l.due) why += ' \u00b7 due ' + esc(day(l.due_date));
     res += dueHtml(l);
     /* Open stays on this page. data-go would be caught by the hub and sent back to the dog list. */
