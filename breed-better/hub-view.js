@@ -115,7 +115,39 @@
     var k = verdictOf(r);
     return '<span class="bb-vw">' + ic(ICON[k], 16, 'var(' + VTEXT[k] + ')') + r.words[k] + '</span>';
   }
-  function bandColour(b) { var k = BANDVAR[t(b.colour).toLowerCase()]; return k ? 'var(' + k + ')' : 'var(--line)'; }
+  /* a band's colour cell may hold a kit word (red, orange...) or a #hex; anything else draws in the line grey */
+  function bandColour(b) {
+    var c = t(b.colour), k = BANDVAR[c.toLowerCase()];
+    return k ? 'var(' + k + ')' : /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(c) ? c : 'var(--line)';
+  }
+  /* Section icons (Style, 12 Nov 2026). Drawing only: a band row's own icon cell wins (a name below); otherwise its key picks one;
+     a key not listed gets the plain circle. No rule lives here. */
+  var SECICON = {
+    target: 'M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0 M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0 M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0',
+    star: ICON.star,
+    heart: 'M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572',
+    stethoscope: 'M6 4h-1a2 2 0 0 0 -2 2v3.5a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1 M8 15a6 6 0 1 0 12 0v-3 M11 3v2 M6 3v2 M20 10m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0',
+    smile: 'M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0 M9 10h.01 M15 10h.01 M9.5 15a3.5 3.5 0 0 0 5 0',
+    family: 'M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0 M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2 M16 3.13a4 4 0 0 1 0 7.75 M21 21v-2a4 4 0 0 0 -3 -3.85',
+    dna: 'M14.828 14.828a4 4 0 1 0 -5.656 -5.656a4 4 0 0 0 5.656 5.656z M9.172 20.485a4 4 0 1 0 -5.657 -5.657 M14.828 3.515a4 4 0 0 0 5.657 5.657',
+    info: ICON.info,
+    circle: 'M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0'
+  };
+  var SECKEY = { programme: 'target', gate: 'star', gates: 'star', must_pass: 'star', health: 'heart', health_screening: 'heart',
+    fit_to_breed: 'stethoscope', ftb: 'stethoscope', temperament: 'smile', breeding: 'family', breeding_record: 'family', dna: 'dna', status: 'info' };
+  function secIcon(b) {
+    var own = t(b.icon).toLowerCase(), key = t(b.key).toLowerCase();
+    return SECICON[own] || SECICON[SECKEY[key]] || (b.kind === 'gate' ? SECICON.star : SECICON.circle);
+  }
+  /** One section's result for its colour: the worst of its lines. Status sections have none. */
+  function secResult(lines) {
+    var gates = lines.filter(function (l) { return l.kind === 'gate'; }), pts = lines.filter(function (l) { return l.kind !== 'gate' && l.kind !== 'status'; });
+    if (!gates.length && !pts.length) return '';
+    if (gates.some(function (l) { return l.gate_outcome === 'fail'; })) return 'fail';
+    if (gates.some(function (l) { return l.gate_outcome !== 'pass'; }) || pts.some(function (l) { return l.points === ''; })) return 'unverified';
+    var got = 0, max = 0; pts.forEach(function (l) { got += Number(l.points) || 0; max += Number(l.points_max) || 0; });
+    return got >= max ? 'pass' : 'below_target';
+  }
   /** Points bands in their own order, each with what it can give, what was earned and what is still to prove. */
   function bandStats(r) {
     return r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); })
@@ -200,8 +232,21 @@
       return '<button type="button" class="bb-dog" data-bb-open="' + esc(r.subject_id) + '" style="--v:var(' + VTEXT[k] + ')">' + photo(v, r)
         + '<span class="bb-info"><span class="bb-l1"><span class="bb-name">' + esc(r.name) + '</span><span class="bb-big" aria-hidden="true">' + r.points_earned + '</span></span>'
         + '<span class="bb-l2"><span>' + esc(subLine(v, r)) + '</span>' + vword(r) + '</span>'
-        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></span></button>';
+        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span>' + secsHtml(r) + '</span></button>';
     }).join('') : '<p class="mut">None.</p>';
+  }
+
+  /* the row's section icons: in the section colour when it has points (or its must-pass checks are met), grey when nothing yet */
+  function secsHtml(r) {
+    var bands = r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); }).filter(function (b) { return t(b.kind) !== 'status'; });
+    if (!bands.length) return '';
+    return '<span class="bb-secs">' + bands.map(function (b) {
+      var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
+      var on = lines.some(function (l) { return l.kind === 'gate' ? false : Number(l.points) > 0; })
+        || (lines.length && lines.every(function (l) { return l.kind !== 'gate' || l.gate_outcome === 'pass'; }) && lines.some(function (l) { return l.kind === 'gate'; }));
+      return '<i class="' + (on ? '' : 'off') + '" title="' + t(b.label).replace(/"/g, '') + (on ? '' : ', nothing yet') + '">'
+        + ic(secIcon(b), 15, on ? bandColour(b) : 'var(--line)') + '</i>';
+    }).join('') + '</span>';
   }
 
   function listHtml(v, c) {
@@ -278,7 +323,11 @@
       + bands.map(function (b) {
         var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
         if (!lines.length) return '';
-        return '<details class="card bb-band bb-c-' + esc(t(b.colour)) + '" data-bb-band="' + esc(b.id) + '"' + (state.open[b.id] ? ' open' : '') + '><summary>' + esc(b.label) + ' <span class="cnt">' + lines.length + '</span></summary>'
+        var res = secResult(lines);
+        return '<details class="card bb-band" style="--bb:' + bandColour(b) + '" data-bb-band="' + esc(b.id) + '"' + (state.open[b.id] ? ' open' : '') + '><summary>'
+          + '<span class="bb-sic">' + ic(secIcon(b), 18, bandColour(b)) + '</span>' + esc(b.label)
+          + (res ? ' <span class="bb-res" style="color:var(' + VTEXT[res] + ')">' + ic(ICON[res], 16, 'var(' + VTEXT[res] + ')') + esc((r.words || words)[res] || '') + '</span>' : '')
+          + ' <span class="cnt"' + (res ? ' style="border-color:var(' + VTEXT[res] + ')"' : '') + '>' + lines.length + '</span></summary>'
           + lines.map(function (l) { return lineHtml(v, l, r.words); }).join('') + '</details>';
       }).join('');
   }
@@ -422,7 +471,7 @@
           + bands.map(function (b) {
             var cs = crit.filter(function (x) { return x.band_id === b.id; });
             if (!cs.length) return '';
-            return '<details class="card bb-band bb-c-' + esc(t(b.colour)) + '" data-bb-band="sys-' + esc(b.id) + '"' + (state.open['sys-' + b.id] ? ' open' : '') + '><summary>' + esc(b.label) + ' <span class="cnt">' + cs.length + '</span></summary>'
+            return '<details class="card bb-band" style="--bb:' + bandColour(b) + '" data-bb-band="sys-' + esc(b.id) + '"' + (state.open['sys-' + b.id] ? ' open' : '') + '><summary>' + esc(b.label) + ' <span class="cnt">' + cs.length + '</span></summary>'
               + cs.map(function (x) {
                 var rows = pts.filter(function (p) { return p.criterion_id === x.id && Score.inForce(p, today); });
                 return '<div class="bb-line"><span class="bb-l">' + (t(b.kind) === 'gate' ? star() : '') + esc(x.label) + '</span>'
@@ -472,7 +521,10 @@
       '.bb-name{font-weight:500;flex:1 1 auto}.bb-pts,.bb-why{color:var(--muted);font-size:var(--fs-small)}',
       '.bb-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}.bb-head h3{margin:0;font-weight:500}',
       '.bb-band{border-left:3px solid var(--bb,var(--line))}.bb-band summary{cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;min-height:44px}',
-      '.bb-band summary .cnt{margin-left:auto}',
+      '.bb-band summary .cnt{margin-left:auto}.bb-band summary::-webkit-details-marker{display:none}.bb-band summary{list-style:none}',
+      '.bb-sic{width:30px;height:30px;flex:none;border:1px solid var(--line);border-radius:50%;display:inline-grid;place-items:center}',
+      '.bb-res{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-small);font-weight:500}',
+      '.bb-secs{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%}.bb-secs i{width:26px;height:26px;border:1px solid var(--line);border-radius:50%;display:inline-grid;place-items:center}',
       '.bb-c-red{--bb:var(--ljr-2)}.bb-c-orange{--bb:var(--ljr-3)}.bb-c-yellow{--bb:var(--ljr-4)}.bb-c-green{--bb:var(--ljr-5)}.bb-c-blue{--bb:var(--ljr-6)}.bb-c-purple{--bb:var(--ljr-7)}.bb-c-white{--bb:var(--line)}.bb-c-black{--bb:var(--ink)}',
       '.bb-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:8px 0}.bb-l{flex:1 1 60%}.bb-why{flex:1 1 100%}',
       '.bb-src{min-height:24px;padding:0 8px;font-size:var(--fs-small);color:var(--ink)}',
@@ -657,5 +709,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));

@@ -281,3 +281,26 @@ test('More offers the per-puppy calculator', () => {
   View.setTab('dogs');
   assert.match(html, /Probability per puppy[\s\S]*TESTR/);
 });
+
+test('a band colour may be a kit word or a #hex; anything else is the line grey', () => {
+  assert.equal(View.bandColour({ colour: 'Red' }), 'var(--ljr-2)');
+  assert.equal(View.bandColour({ colour: '#ee4035' }), '#ee4035');
+  assert.equal(View.bandColour({ colour: 'url(x)' }), 'var(--line)');
+  assert.equal(View.bandColour({}), 'var(--line)');
+});
+
+test('a section is coloured by its worst line: fail, then unverified, then below target, else pass', () => {
+  assert.equal(View.secResult([{ kind: 'gate', gate_outcome: 'pass' }, { kind: 'gate', gate_outcome: 'fail' }]), 'fail');
+  assert.equal(View.secResult([{ kind: 'gate', gate_outcome: 'pass' }, { kind: 'gate', gate_outcome: 'unverified' }]), 'unverified');
+  assert.equal(View.secResult([{ kind: 'points', points: '', points_max: 5 }]), 'unverified');
+  assert.equal(View.secResult([{ kind: 'points', points: 3, points_max: 5 }]), 'below_target');
+  assert.equal(View.secResult([{ kind: 'points', points: 5, points_max: 5 }]), 'pass');
+  assert.equal(View.secResult([{ kind: 'status', answer_then: 'Active' }]), '');
+});
+
+test('a section icon comes from the row icon cell, else its key, else a plain circle (must pass: the star)', () => {
+  const heart = View.secIcon({ key: 'health' });
+  assert.equal(View.secIcon({ key: 'anything', icon: 'heart' }), heart);
+  assert.notEqual(View.secIcon({ key: 'unknown_key' }), heart);
+  assert.equal(View.secIcon({ key: 'unknown_key', kind: 'gate' }), View.secIcon({ key: 'gate' }));
+});
