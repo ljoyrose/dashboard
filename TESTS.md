@@ -359,6 +359,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 15 Nov 2026 | CD Hub dog card said "could not reach the save script": the save address was held in memory only, and an empty first read was never tried again | "save address: an empty first read is tried again, and the found address is kept for the next visit @regression" (tests/mocked/cdhub-staff-code-save.spec.js) |
 | 15 Nov 2026 | CD Hub Find only found dogs and litters; a view, area or SOP name found nothing, so Lisa could not jump to anything by name | "CD Hub Find: a view name goes there; an …" |
 | 15 Nov 2026 | CD Hub: each page ended in a "Next: X →" button that guessed where you wanted to go, so reaching a section's other views took several taps | "chips at the top of a section reach each" |
+| 15 Nov 2026 | CD Hub Back left the app or landed at the top of the list instead of where you were, and detail pages had no visible way back | "into a record and back: the phone Back and" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

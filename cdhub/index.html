@@ -78,6 +78,8 @@ a{color:inherit;text-underline-offset:2px}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 
+
+.hbackrow{margin:12px 0 0}
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
 header h1 .dot{background:var(--ljr-5)}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
@@ -4447,7 +4449,7 @@ function navCurrent(id){
 }
 function go(id,push){
  var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
- pill(); SHOWN=String(id||''); chipsDraw('');
+ var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=String(id||''); chipsDraw('');
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
@@ -4623,8 +4625,14 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries')?full:id;
- if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops')?full:id;
+ if(push!==false && location.hash!=='#/'+at){
+  /* a real history entry that remembers where you came from and how far down (Back returns there) */
+  var pb=String(prevShown||'').split('/')[0];
+  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?label(pb):'',y:leaveY,state:{id:at}});
+ }
+ /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
+ if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
  window.scrollTo(0,keepY);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
@@ -4722,7 +4730,12 @@ DashKit.search.register(function(q){
  },function(){ return out; });
 });
 function followHash(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } }
-window.addEventListener('popstate',followHash);
+try{ history.scrollRestoration='manual'; }catch(e){}
+/* a plain link (#/...) also gets a Back step from the browser: note how far down this page was first */
+document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a[href^="#/"]'); if(!a) return;
+ try{ history.replaceState(Object.assign({},history.state||{},{y:window.scrollY}),''); }catch(x){} },true);
+/* Back: redraw the page, then return to where you were on it */
+window.addEventListener('popstate',function(e){ followHash(); var y=e.state&&e.state.y; if(y) window.scrollTo(0,y); });
 window.addEventListener('hashchange',followHash);
 render();
 </script>
