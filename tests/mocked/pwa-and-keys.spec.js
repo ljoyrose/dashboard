@@ -18,6 +18,8 @@ test.describe('Install on your phone', () => {
     for (const [url, pre] of [['./', ''], ['money/', '../'], ['cdhub/', '../']]) {
       await page.goto(url);
       await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', pre + 'manifest.webmanifest');
+      // Behind Cloudflare Access the manifest must be fetched with the sign-in cookie, or Android only makes a shortcut (15 Nov 2026).
+      await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'use-credentials');
       await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', pre + 'icons/icon.svg');
     }
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
