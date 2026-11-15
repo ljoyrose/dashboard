@@ -4635,19 +4635,42 @@ document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
  else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else auth.requestSilent(); } });
 
+/* Find (Lisa 15 Nov 2026, "ease of going to anything"): one box reaches every view, record and SOP the hub has read.
+   Groups are named from the view labels (HubNav.VIEWS), so a clone with other things gets its own words. */
+function findViews(hit){
+ var lay=navLayout(), out=[];
+ HubNav.SECTIONS.forEach(function(s){
+  if(s.id!=='main'&&!lay.on[s.id]) return;
+  s.views.forEach(function(id){ var v=HubNav.VIEWS[id];
+   if(!v||!navHas(id)||!hit(v.label+' '+s.label)) return;
+   out.push(v.href?{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,href:v.href}
+    :{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,act:function(){ go(id); focusView(); }});
+  });
+ });
+ return out;
+}
 DashKit.search.register(function(q){
  if(LOAD.state!=='ok') return [];
- var hit=DashKit.search.matches(q), out=[], byId=CD._byId||{};
+ var hit=DashKit.search.matches(q), out=findViews(hit), byId=CD._byId||{}, L=function(id){ return HubNav.VIEWS[id].label; };
  (CD.dogs||[]).filter(function(d){ return hit([d.name,d.id,d.chip,d.breed].join(' ')); }).slice(0,12).forEach(function(d){
-  out.push({group:'CD Hub dogs',slot:5,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
+  out.push({group:L('dogs'),slot:4,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
    act:function(){ go('dogs'); var b=document.getElementById('q'); if(b){ b.value=d.name||d.id; b.dispatchEvent(new Event('input')); } focusView(); }});
+ });
+ (CD.areas||[]).filter(function(a){ return hit([a.code,a.id,a.grouping].join(' ')); }).slice(0,12).forEach(function(a){
+  out.push({group:L('areas'),slot:4,title:a.code||a.id,sub:a.grouping||'',act:function(){ go('areas/'+encodeURIComponent(a.id)); focusView(); }});
  });
  (CD.litters||[]).filter(function(l){ var dam=byId[l.dam_subject_id], sire=byId[l.sire_subject_id];
    return hit([l.id,l.born_on,dam&&dam.name,sire&&sire.name].join(' ')); }).slice(0,8).forEach(function(l){
   var dam=byId[l.dam_subject_id];
-  out.push({group:'CD Hub litters',slot:5,title:'Litter '+(l.born_on||l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
+  out.push({group:L('litters'),slot:4,title:(l.born_on?ukDate(l.born_on):l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
  });
- return out;
+ /* SOPs come from a file read on first use: wait for it, and leave them out if it cannot be read. */
+ return Promise.resolve(sopStart()).then(function(){
+  (SOP.rows||[]).filter(function(r){ return hit([r.short_name,r.category,r.frequency].join(' ')); }).slice(0,8).forEach(function(r){
+   out.push({group:L('sops'),slot:4,title:r.short_name,sub:[r.frequency,r.category].filter(Boolean).join(' · '),act:function(){ go('sops/'+encodeURIComponent(r.short_name)); focusView(); }});
+  });
+  return out;
+ },function(){ return out; });
 });
 function followHash(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } }
 window.addEventListener('popstate',followHash);
