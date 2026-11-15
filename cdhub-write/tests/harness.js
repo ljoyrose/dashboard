@@ -60,14 +60,29 @@ function makeEnv(opts = {}) {
   env.sheetWrites = [];
   const lastRow = (f) => { for (let i = f.sheet.length - 1; i >= 0; i--) if ((f.sheet[i] || []).some((x) => x !== '')) return i + 1; return 0; };
   const lastCol = (f) => f.sheet.reduce((m, r) => { let c = 0; (r || []).forEach((x, j) => { if (x !== '') c = j + 1; }); return Math.max(m, c); }, 0);
-  const tabOf = (f) => ({
+  // London wall-clock text of a real date, as a Sheet in Europe/London shows yyyy-mm-dd hh:mm
+  const london = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map((x) => [x.type, x.value])); return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute; };
+  const shown = (v, fm) => {
+    if (v === undefined || v === null || v === '') return '';
+    if (v instanceof Date) return london(v);
+    if (typeof v === 'number') return fm === '0.0' ? v.toFixed(1) : fm === '0' ? v.toFixed(0) : String(v);
+    return String(v);
+  };
+  const tabOf = (f) => {
+    f.cfmt = f.cfmt || {};
+    const cell = (rr, cc) => (f.sheet[rr - 1] || [])[cc - 1];
+    return {
     getLastRow: () => lastRow(f), getLastColumn: () => lastCol(f), getMaxRows: () => Math.max(f.maxRows, f.sheet.length),
     insertRowsAfter: (after, n) => { f.maxRows = Math.max(f.maxRows, after + n); },
     deleteRow: (n) => { f.sheet.splice(n - 1, 1); },
     setName: (n) => { f.tabName = n; },
-    getRange: (r, c, nr, nc) => ({
-      getDisplayValues: () => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(((f.sheet[r - 1 + i] || [])[c - 1 + j]) || ''); out.push(row); } return out; },
-      setNumberFormat: (fm) => { for (let i = 0; i < nr; i++) f.fmt[r + i] = fm; },
+    getRange: (r, c, nr, nc) => { const grid = (fn) => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(fn(i, j)); out.push(row); } return out; }; return {
+      // cells may hold text, real numbers or real dates (as Sheets does); shown the way the cell's number format says
+      getDisplayValues: () => grid((i, j) => shown(cell(r + i, c + j), f.cfmt[(r + i) + ':' + (c + j)])),
+      getValues: () => grid((i, j) => { const v = cell(r + i, c + j); return v === undefined ? '' : v; }),
+      getNumberFormats: () => grid((i, j) => f.cfmt[(r + i) + ':' + (c + j)] || 'General'),
+      setNumberFormats: (fs) => { for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) f.cfmt[(r + i) + ':' + (c + j)] = fs[i][j]; },
+      setNumberFormat: (fm) => { for (let i = 0; i < nr; i++) { f.fmt[r + i] = fm; for (let j = 0; j < nc; j++) f.cfmt[(r + i) + ':' + (c + j)] = fm; } },
       clearContent: () => { for (let i = 0; i < nr; i++) if (f.sheet[r - 1 + i]) f.sheet[r - 1 + i] = f.sheet[r - 1 + i].map(() => ''); },
       setValues: (vals) => {
         env.sheetWrites.push({ title: f.title, row: r, vals });
@@ -76,12 +91,13 @@ function makeEnv(opts = {}) {
         for (let i = 0; i < nr; i++) {
           while (f.sheet.length < r + i) f.sheet.push([]);
           const row = f.sheet[r - 1 + i];
-          for (let j = 0; j < nc; j++) row[c - 1 + j] = String(vals[i][j]);
+          for (let j = 0; j < nc; j++) { const v = vals[i][j]; row[c - 1 + j] = (typeof v === 'number' || v instanceof Date) ? v : String(v); }
           if (bad && i === 0) row[c - 1] = row[c - 1] + 'X';
         }
       }
-    })
-  });
+    }; }
+    };
+  };
   env.tabOf = tabOf;
 
   const wrap = (f) => ({

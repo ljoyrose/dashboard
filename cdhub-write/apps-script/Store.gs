@@ -35,12 +35,63 @@ function store_findOne_(title) {
  *   - the first tab is the table; the header is row 1 with trailing empty cells dropped;
  *   - each row is read as the text shown in the cell (getDisplayValues), cut to the header's width;
  *   - `text` is those rows written out as CSV, so the same hash proves nothing changed while saving.
- * Writing adds ONE row under the last row, stored as plain text ("@") so Sheets never turns 18.5 into a number,
- * a date into its own format or a microchip number into 9.8E+14. The read-back check and the exact undo work the
+ * Writing adds ONE row under the last row, stored as plain text ("@") so Sheets never turns a microchip number into
+ * 9.8E+14 or a code into a date. EXCEPT the columns a table lists in sheetTypes (Specs.gs; Lisa 15 Nov 2026: "issues with
+ * text and numbers" in BLD-area_reading): those are written as real values, the same as the rows typed in by hand -
+ * a number as a number shown to 1 decimal place, a date and time as a real date shown as UK time (2026-11-12 21:53).
+ * Reading them back, a real date cell becomes London ISO text (2026-11-12T21:53:37+00:00), so every check that
+ * compares times or period_start reads old and new rows alike. The read-back check and the exact undo work the
  * same way as for a CSV: if the check fails, the added row is removed again (or, for an edit, the old values are
  * put back) and the result is checked by hash. Sheets also keeps its own version history.
  * ---------------------------------------------------------------------------------------------------------- */
 var SHEET_MIME_ = 'application/vnd.google-apps.spreadsheet';
+
+var SHEET_DT_FORMAT_ = 'yyyy-mm-dd hh:mm';
+var SHEET_NUM_FORMATS_ = { num1: '0.0', int: '0' };
+
+/** The sheetTypes of the table kept in `title` (Specs.gs), one entry per header column ('' = plain text). null = none. */
+function store_typesFor_(title, header) {
+  var spec = null;
+  if (typeof TABLES === 'object') Object.keys(TABLES).forEach(function (k) { if (TABLES[k].file === title && TABLES[k].sheetTypes) spec = TABLES[k]; });
+  if (!spec) return null;
+  return header.map(function (h) { return spec.sheetTypes[h] || ''; });
+}
+function store_isDate_(v) { return Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime()); }
+/** A real date cell as London ISO text with a +HH:MM offset (never 'Z'), the form the hub and the staff page send. */
+function store_isoOf_(d) {
+  return Utilities.formatDate(d, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX").replace(/Z$/, '+00:00');
+}
+/** One cell to write: {v, f}. A typed column gets a real number or date; anything that does not read as one stays text. */
+function store_typedCell_(v, t) {
+  var s = v === null || v === undefined ? '' : String(v);
+  if (!t || s === '') return { v: s, f: '@' };
+  if (SHEET_NUM_FORMATS_[t]) return /^-?\d+(\.\d+)?$/.test(s) ? { v: Number(s), f: SHEET_NUM_FORMATS_[t] } : { v: s, f: '@' };
+  if (t === 'datetime') {
+    var ms = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(s) ? Date.parse(s) : NaN;
+    return isNaN(ms) ? { v: s, f: '@' } : { v: new Date(ms), f: SHEET_DT_FORMAT_ };
+  }
+  return { v: s, f: '@' };
+}
+/** Rows of values -> {values, formats} for setValues / setNumberFormats. types null = all plain text, as before. */
+function store_typedRows_(rows, types) {
+  var out = { values: [], formats: [] };
+  rows.forEach(function (r) {
+    var vs = [], fs = [];
+    r.forEach(function (v, j) { var c = store_typedCell_(v, types ? types[j] : ''); vs.push(c.v); fs.push(c.f); });
+    out.values.push(vs); out.formats.push(fs);
+  });
+  return out;
+}
+/** Did the cells read back (getValues) hold what was written? Dates to the second, numbers exactly, text exactly. */
+function store_sameTyped_(got, want) {
+  for (var i = 0; i < want.length; i++) for (var j = 0; j < want[i].length; j++) {
+    var g = got[i][j], w = want[i][j];
+    if (store_isDate_(w)) { if (!store_isDate_(g) || Math.abs(g.getTime() - w.getTime()) >= 1000) return false; }
+    else if (typeof w === 'number') { if (Number(g) !== w || g === '') return false; }
+    else if (String(g === null || g === undefined ? '' : g) !== w) return false;
+  }
+  return true;
+}
 
 function store_isSheet_(file) { return !!(file && file.getMimeType && file.getMimeType() === SHEET_MIME_); }
 
@@ -68,14 +119,24 @@ function store_rowsText_(rows) { return rows.map(csvLine_).join('\r\n') + (rows.
 function store_readSheet_(file) {
   var sh = store_tab_(file), got = store_sheetRows_(sh);
   var header = got.rows.length ? got.rows[0] : [];
-  var records = got.rows.slice(1).map(function (r) {
+  var types = store_typesFor_(file.getName(), header), real = {};
+  // a real date cell in a datetime column is read as London ISO text (shown "2026-11-12 21:53"; read 2026-11-12T21:53:37+00:00)
+  if (types && got.rows.length > 1) types.forEach(function (t, j) {
+    if (t !== 'datetime') return;
+    var col = sh.getRange(1, j + 1, got.rowNums[got.rowNums.length - 1], 1).getValues();
+    real[j] = got.rowNums.map(function (n) { var v = (col[n - 1] || [])[0]; return store_isDate_(v) ? store_isoOf_(v) : null; });
+  });
+  var records = got.rows.slice(1).map(function (r, k) {
     var o = {};
-    for (var i = 0; i < header.length; i++) o[header[i]] = r[i] === undefined ? '' : r[i];
+    for (var i = 0; i < header.length; i++) o[header[i]] = real[i] && real[i][k + 1] !== null ? real[i][k + 1] : (r[i] === undefined ? '' : r[i]);
+    // a column kept unnamed ('') by the save system but named in the live header (variance_c): also read under '' so an
+    // edit writes it back unchanged instead of blank
+    for (i = 0; i < header.length; i++) if (HEADER_NAMED_BLANK_[header[i]] === true && header.indexOf('') < 0) o[''] = o[header[i]];
     return o;
   });
   var text = store_rowsText_(got.rows);
   return { file: file, kind: 'sheet', tab: sh, text: text, size: text.length, header: header, records: records,
-           rowNums: got.rowNums, width: got.width, lastRow: sh.getLastRow() };
+           rowNums: got.rowNums, width: got.width, lastRow: sh.getLastRow(), shown: got.rows, types: types };
 }
 
 /** Same as the CSV append, for a Sheet. `read` is store_readSheet_ taken inside the same lock. */
@@ -89,13 +150,20 @@ function store_appendSheet_(title, rowValues, read) {
   while (vals.length < w) vals.push('');
   var at = read.lastRow + 1;
   if (sh.getMaxRows() < at) sh.insertRowsAfter(sh.getMaxRows(), 1);
-  var rg = sh.getRange(at, 1, 1, w);
-  rg.setNumberFormat('@');
-  rg.setValues([vals]);
+  var rg = sh.getRange(at, 1, 1, w), typed = store_typedRows_([vals], read.types);
+  if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
+  rg.setValues(read.types ? typed.values : [vals]);
   SpreadsheetApp.flush();
-  var want = textHash_(read.text + csvLine_(vals) + '\r\n');
   var check = store_sheetRows_(sh);
-  if (textHash_(store_rowsText_(check.rows)) === want) return read.text + csvLine_(vals) + '\r\n';
+  if (!read.types) {
+    var want = textHash_(read.text + csvLine_(vals) + '\r\n');
+    if (textHash_(store_rowsText_(check.rows)) === want) return read.text + csvLine_(vals) + '\r\n';
+  } else if (check.rowNums[check.rowNums.length - 1] === at &&
+             textHash_(store_rowsText_(check.rows.slice(0, -1))) === beforeHash &&
+             store_sameTyped_(rg.getValues(), typed.values)) {
+    // every old row identical, and the new row holds exactly the numbers and dates sent
+    return read.text + csvLine_(check.rows[check.rows.length - 1]) + '\r\n';
+  }
   var restored = false;
   try {
     if (sh.getLastRow() === at) sh.deleteRow(at);
@@ -122,16 +190,23 @@ function store_replaceSheetRow_(title, index, rowValues, read) {
   var rowNum = read.rowNums[index + 1], w = read.width;
   var vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
   while (vals.length < w) vals.push('');
-  var rg = sh.getRange(rowNum, 1, 1, w), old = rg.getDisplayValues();
-  rg.setNumberFormat('@');
-  rg.setValues([vals]);
+  var rg = sh.getRange(rowNum, 1, 1, w), typed = store_typedRows_([vals], read.types);
+  var old = read.types ? rg.getValues() : rg.getDisplayValues(), oldFmt = read.types ? rg.getNumberFormats() : null;
+  if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
+  rg.setValues(read.types ? typed.values : [vals]);
   SpreadsheetApp.flush();
-  var rows = csvRecordsRows_(read);
-  rows[index + 1] = vals;
-  var want = textHash_(store_rowsText_(rows));
-  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === want) return store_rowsText_(rows);
+  var rows = (read.shown || csvRecordsRows_(read)).slice();
+  if (!read.types) {
+    rows[index + 1] = vals;
+    var want = textHash_(store_rowsText_(rows));
+    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === want) return store_rowsText_(rows);
+  } else {
+    var now = store_sheetRows_(sh).rows, others = now.slice(); others.splice(index + 1, 1); rows.splice(index + 1, 1);
+    if (now.length === read.shown.length && textHash_(store_rowsText_(others)) === textHash_(store_rowsText_(rows)) && store_sameTyped_(rg.getValues(), typed.values)) return store_rowsText_(now);
+  }
   var restored = false;
   try {
+    if (oldFmt) rg.setNumberFormats(oldFmt);
     rg.setValues(old); SpreadsheetApp.flush();
     restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
   } catch (e) { restored = false; }
@@ -160,9 +235,12 @@ function store_read_(title, must) {
   return { file: file, text: text, size: file.getSize(), header: parsed.header, records: parsed.records };
 }
 
+/* A column the save system keeps unnamed ('') may carry one of these names in the live header (Lisa named area_reading's
+   7th column variance_c on 15 Nov 2026). Either state is accepted; any other change still stops the save. */
+var HEADER_NAMED_BLANK_ = { variance_c: true };
 function sameHeader_(a, b) {
   if (a.length !== b.length) return false;
-  for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  for (var i = 0; i < a.length; i++) if (a[i] !== b[i] && !(b[i] === '' && HEADER_NAMED_BLANK_[a[i]] === true)) return false;
   return true;
 }
 
@@ -205,12 +283,18 @@ function store_appendManySheet_(title, rows, read) {
   var w = read.width, n = rows.length, at = read.lastRow + 1;
   var vals = rows.map(function (r) { var v = r.slice(0, w).map(function (x) { return x === null || x === undefined ? '' : String(x); }); while (v.length < w) v.push(''); return v; });
   if (sh.getMaxRows() < at + n - 1) sh.insertRowsAfter(sh.getMaxRows(), at + n - 1 - sh.getMaxRows());
-  var rg = sh.getRange(at, 1, n, w);
-  rg.setNumberFormat('@');
-  rg.setValues(vals);
+  var rg = sh.getRange(at, 1, n, w), typed = store_typedRows_(vals, read.types);
+  if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
+  rg.setValues(read.types ? typed.values : vals);
   SpreadsheetApp.flush();
-  var text = read.text + vals.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
-  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === textHash_(text)) return text;
+  if (!read.types) {
+    var text = read.text + vals.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
+    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === textHash_(text)) return text;
+  } else {
+    var chk = store_sheetRows_(sh);
+    if (chk.rowNums[chk.rowNums.length - 1] === at + n - 1 && textHash_(store_rowsText_(chk.rows.slice(0, chk.rows.length - n))) === beforeHash &&
+        store_sameTyped_(rg.getValues(), typed.values)) return store_rowsText_(chk.rows);
+  }
   var restored = false;
   try {
     for (var i = n - 1; i >= 0; i--) { if (sh.getLastRow() === at + i) sh.deleteRow(at + i); else sh.getRange(at + i, 1, 1, w).clearContent(); }
