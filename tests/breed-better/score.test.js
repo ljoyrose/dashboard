@@ -391,3 +391,16 @@ test('final only (Design Doc: "latest final result"): a preliminary record shows
   assert.equal(fin.gate_result, 'pass');
   assert.equal(run([ex('e5', 'eye', 'clear', '2026-01-01', 'final')]).lines.find((l) => l.criterion_id === 'hip').unknown_reason, 'no_record');
 });
+
+test('star lines, both kinds from rows alone (9 Nov 2026): "must reach a standard" and "must be done, any result"', () => {
+  const set = { scheme: { id: 's' }, bands: [band('g', 'gate')],
+    criteria: [crit('hip', 'g'), crit('check', 'g')],
+    points: [pt('1', 'hip', 'is:sound', '', 'pass'), pt('2', 'hip', 'any', '', 'fail'),   // standard: only "sound" passes
+      pt('3', 'check', 'any', '', 'pass')] };                                             // done: any recorded answer passes
+  const run = (rows) => score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: rows } }));
+  assert.equal(run([exam('e1', 'a1', 'hip', 'sound', '2026-01-01'), exam('e2', 'a1', 'check', 'poor', '2026-01-01')]).gate_result, 'pass');
+  assert.equal(run([exam('e1', 'a1', 'hip', 'poor', '2026-01-01'), exam('e2', 'a1', 'check', 'poor', '2026-01-01')]).gate_result, 'fail');
+  const missing = run([exam('e1', 'a1', 'hip', 'sound', '2026-01-01')]);
+  assert.equal(missing.gate_result, 'unverified');   // a star missing is Unverified, never Fail
+  assert.equal(missing.lines.find((l) => l.criterion_id === 'check').gate_outcome, 'unverified');
+});
