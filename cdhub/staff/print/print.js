@@ -142,16 +142,11 @@
   }
   function jobList(kinds) { var js = jobsFor(kinds); return js.length ? h('ul', { class: 'lst', 'data-k': 'jobs' }, js.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); })
     .map(function (j) { return h('li', {}, [j.label || j.type_key, h('span', { text: howOften(j) })]); })) : null; }
+  /* The room sign's limits: the flap setting and capacity rows in force today (from_date, the shared rule in capacity.js;
+     LD-SC audit 15 Nov 2026: this read effective_from, which area_access does not have). */
   function limitsOf(areaId) {
-    var acc = '', last = '';
-    (T.area_access || []).forEach(function (r) { if (r.area_id === areaId && String(r.effective_from || '') >= last) { last = String(r.effective_from || ''); acc = r.access_type; } });
-    var out = [];
-    (T.area_capacity || []).forEach(function (r) {
-      if (r.area_id !== areaId || r.access_type !== acc || /pups/i.test(r.size_band || '')) return;
-      var n = parseInt(r.max_dogs, 10); if (n > 0) out.push({ band: r.size_band, n: n });
-    });
-    var order = { small: 1, medium: 2, large: 3 };
-    return out.sort(function (a, b) { return (order[sizeKey(a.band)] || 9) - (order[sizeKey(b.band)] || 9); });
+    var day = BLDDue.londonDate(new Date().toISOString()), acc = BLDCapacity.accessOn(T.area_access || [], areaId, day);
+    return acc ? BLDCapacity.limitsOn(T.area_capacity || [], areaId, acc, day) : [];
   }
   function roomCard(tag, it) {
     var lim = limitsOf(it.id);
