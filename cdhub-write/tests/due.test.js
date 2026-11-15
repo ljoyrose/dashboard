@@ -203,3 +203,11 @@ test('round.* types are written by the Round itself and are never listed as jobs
   assert.ok(keys.includes('ears'));
   assert.ok(!keys.includes('round.presence'));
 });
+
+test('an item test (target item) is never a job: it is due per item on the Items page', () => {
+  const types = [
+    { id: 'c1', type_key: 'run', label: 'run', target: 'area', every_days: 1, active: 'true', effective_from: '2026-01-01' },
+    { id: 'c2', type_key: 'pat_class_1', label: 'PAT Class I', target: 'item', item_kind: 'appliance_class_1', every_days: 365, active: 'true', effective_from: '2025-01-01' }
+  ];
+  assert.deepEqual(D.jobsInForce(types, '2026-03-02').map((r) => r.type_key), ['run']);
+});

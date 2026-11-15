@@ -49,7 +49,7 @@ const RISK = {
   items: 'Owner list of items.',
   item_kinds: 'Owner list of item kinds.',
   occupancy: 'Room moves; always direct (MODE_occupancy and MOVES_QUEUE_UNTIL are ignored).',
-  occupancy_out: 'Queued, but the same file as occupancy: a plain GET or any save applies the waiting row (Risks found, R2).',
+  occupancy_out: 'Queued until the owner approves; never applied by a plain GET or a save (Risks found, R2, fixed).',
   area_access: 'Flap free/limited.',
   qr_tag: 'Owner list of QR tags.',
   occupancy_check: 'Append-only daily check.',
@@ -135,9 +135,9 @@ function rows() {
   out.push({ id: 'owner_edit', kind: 'owner page: edit in place', sw: 'OWNER_EDIT_ENABLED', dflt: 'off', live: UNKNOWN,
     writes: 'tables marked ownerEditable: ' + Object.keys(c.TABLES).filter((k) => c.TABLES[k].ownerEditable === true).join(', '), master: 'yes', needs: 'owner signed in',
     mode: 'in place', who: 'owner (Google account)', risk: 'Overwrites in place; no old value kept by the script.' });
-  out.push({ id: 'approve', kind: 'owner page: approve / reject', sw: 'none (the target table switch is not re-checked)', dflt: 'n/a', live: 'n/a',
+  out.push({ id: 'approve', kind: 'owner page: approve / reject', sw: 'SAVE_ENABLED and the target table TABLE_ON switch, checked on approve', dflt: 'n/a', live: 'n/a',
     writes: pend + ' event + the queued row\'s file', master: 'depends', needs: 'owner signed in', mode: 'from queue', who: 'owner (Google account)',
-    risk: 'Applies whatever was queued, to any allow-listed file (Risks found, R5).' });
+    risk: 'Refused while saving or the table switch is off (Risks found, R5, fixed).' });
   out.push({ id: 'inspector', kind: 'owner page: inspector links; inspector reads', sw: 'none (owner page; READ_ENABLED for the reads)', dflt: 'n/a', live: 'n/a',
     writes: c.inspectFiles_().join(', ') + '; STAFF_REGISTRY property', master: 'no', needs: 'INSPECT_PAGE_URL, INSPECT_SCRIPT_ID (not secret)', mode: 'direct',
     who: 'owner; each inspector read appends to BLD-inspect_access', risk: 'No TABLE_ON switch (Risks found, R5). A read is refused if its log row cannot be written.' });

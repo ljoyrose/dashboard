@@ -21,7 +21,7 @@
     { key: 'microchip', title: 'Microchip', dog: 'subject_id', date: '' },
     { key: 'subject_status', title: 'Status', dog: 'subject_id', date: 'from_date' },
     { key: 'health_screen', title: 'Health tests', dog: 'subject_id', date: 'tested_on' },
-    { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on' },
+    { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },   // done_on: a job record (15 Nov 2026)
     { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' }
   ];
   var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1 };
@@ -36,6 +36,8 @@
     if (s === 'dob') return 'DOB';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
+  /* the first date column a row has, of those named by | */
+  function dateOf(r, cols) { var c = String(cols || '').split('|').filter(function (k) { return r[k]; })[0]; return c ? r[c] : ''; }
   function isDateCol(c) { return /(^dob$|_on$|_date$|_until$|_at$)/.test(c); }
   function show(c, v) { return isDateCol(c) ? day(v) : String(v === undefined || v === null ? '' : v); }
 
@@ -61,7 +63,7 @@
         lists: LISTS.filter(function (L) { return res[L.key] && res[L.key].rows; }).map(function (L) {
           var fields = res[L.key].fields.filter(function (c) { return !HIDE[c]; });
           var rows = res[L.key].rows.filter(function (r) { return r[L.dog] === d.id; })
-            .sort(function (a, b) { return String(b[L.date] || '').localeCompare(String(a[L.date] || '')); });
+            .sort(function (a, b) { return String(dateOf(b, L.date)).localeCompare(String(dateOf(a, L.date))); });
           return { title: L.title, rows: rows.map(function (r) { return fields.map(function (c) { return { label: words(c), value: show(c, r[c]) }; }); }) };
         }).filter(function (l) { return l.rows.length; })
       };

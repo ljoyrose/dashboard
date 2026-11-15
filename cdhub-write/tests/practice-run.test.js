@@ -10,7 +10,7 @@
  *   (c) a staff read of the written list with no field_visibility rows returns nothing;
  *   (d) a wrong code and a missing code are refused and nothing is written.
  * Also: the side-effect-free status (?status=1), adminCountQueued (no writes), the staff table staying refused, and
- * finding R2 (a queued occupancy_out row is applied by applyWaitingOccupancyMoves_), asserted as the code is today.
+ * finding R2 (a queued occupancy_out row waits for the owner; fixed in PR 607).
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -313,23 +313,20 @@ test('adminCountQueued: counts waiting rows per file and state, and writes nothi
   assert.equal(c.total, 3);
   assert.equal(c.byFile['BLD-person.csv'], 2); assert.equal(c.byFile['BLD-occupancy.csv'], 1);
   assert.equal(c.byState.queued, 3);
-  assert.equal(c.moves, 1);   // the occupancy_out row: see R2
+  assert.equal(c.moves, 0);   // the occupancy_out row waits for the owner: see R2
 });
 
-// R2 (Risks found): occupancy_out is a pending table, but it shares BLD-occupancy.csv with occupancy, and
-// applyWaitingOccupancyMoves_ picks waiting rows by target_file only. So a queued "dog left" row is applied, without
-// the owner approving it, by the next plain GET or save while TABLE_ON_occupancy is on (it is ON live).
-// This asserts the code AS IT IS TODAY. Not fixed in this PR. When it is fixed, flip the last assertion.
-test('R2: a queued occupancy_out row is applied by applyWaitingOccupancyMoves_ (current behaviour, not fixed here)', () => {
+// R2 (Risks found, fixed in PR 607): occupancy_out shares BLD-occupancy.csv with occupancy, but
+// applyWaitingOccupancyMoves_ now skips rows that are not a room move, so a queued "dog left" row waits for the owner.
+test('R2: a queued occupancy_out row is not applied by a plain GET', () => {
   const env = fresh(['occupancy', 'occupancy_out']);
   const r = post(env, { table: 'occupancy_out', action: 'add', code: env.codes.staff, fields: { subject_id: 'sub-test-a', off_site_kind: 'sold' } });
   assert.equal(r.ok, true, JSON.stringify(r)); assert.equal(r.result.status, 'queued');
   const before = env.text('BLD-occupancy.csv');
   assert.ok(!before.includes(r.result.id));
   env.ctx.doGet({ parameter: {} });   // a plain status GET, no owner involved
-  const after = env.text('BLD-occupancy.csv');
-  assert.ok(after.includes(r.result.id), 'current behaviour: the out-move is applied without approval');
-  assert.ok(env.text(PEND).includes('script:apply-direct-occupancy'));
+  assert.equal(env.text('BLD-occupancy.csv'), before, 'the out-move waits for the owner');
+  assert.ok(!env.text(PEND).includes('script:apply-direct-occupancy'));
 });
 
 test('the inventory document table matches the code', () => {

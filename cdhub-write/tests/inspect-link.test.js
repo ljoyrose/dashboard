@@ -294,3 +294,40 @@ test('window: an old 7-column link file still works for links from now, but cann
   const day = env.ctx.addDays_(env.ctx.todayLondon_(new Date(env.nowMs)), 1);
   assert.equal(make(env, { ends: undefined, starts_at: day + 'T09:00', ends_at: day + 'T10:00' }).fields.starts_at.includes('starts_at'), true);
 });
+
+test('fit to breed: the job\'s saved records show with the old list, valid until the job\'s own every_days; owner-only columns never come', () => {
+  const env = setup();
+  env.addFile('BLD-fit_to_breed.csv', crlf(['id,tenant_id,subject_id,assessed_on,vet_name', `ftb-old,${fx.TENANT},sub-test-a,2025-07-01,Old Vet`]));
+  env.addFile('BLD-check_type.csv', crlf(['id,tenant_id,type_key,label,target,every_days,effective_from',
+    `cty-ftb-1,${fx.TENANT},fit_to_breed,Fit to breed,dog,365,2026-01-01`, `cty-other,${fx.TENANT},nails,Nails,dog,7,2026-01-01`]));
+  env.addFile('BLD-check_log.csv', crlf(['id,tenant_id,check_type_id,subject_id,outcome,happened_at,note,taken_at,taken_by,corrects_id,how_recorded,time_given',
+    `clg-1,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-13T12:00:00Z,Fit no conditions,2026-11-15T06:40:00Z,Owner,,import,false`,
+    `clg-2,${fx.TENANT},cty-ftb-1,sub-test-b,ok,2026-08-13T12:00:00Z,Other dog,2026-11-15T06:40:01Z,Owner,,import,false`,
+    `clg-3,${fx.TENANT},cty-other,sub-test-a,ok,2026-08-14T09:00:00Z,nails,2026-08-14T09:00:00Z,Staff,,tapped,`,
+    `clg-4,other-tenant,cty-ftb-1,sub-test-a,ok,2026-08-13T12:00:00Z,x,2026-08-13T12:00:00Z,x,,import,false`,
+    `clg-5,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-10T12:00:00Z,wrong day,2026-08-10T12:00:00Z,Owner,,import,false`,
+    `clg-6,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-11T12:00:00Z,corrected,2026-08-11T12:00:00Z,Owner,clg-5,import,false`]));
+  const choices = env.ctx.sinkInspectChoices_();
+  assert.deepEqual(Array.from(choices.lists.fit_to_breed), ['id', 'subject_id', 'assessed_on', 'vet_name', 'done_on', 'outcome', 'note', 'valid_until']);
+  assert.equal(make(env, { fields: { fit_to_breed: ['done_on', 'taken_by'] } }).code, 'INVALID');   // who typed it stays the owner's
+  assert.equal(make(env, { fields: { fit_to_breed: ['done_on', 'how_recorded'] } }).code, 'INVALID');
+  const m = make(env, { fields: { fit_to_breed: ['assessed_on', 'vet_name', 'done_on', 'outcome', 'note', 'valid_until'] } });
+  assert.equal(m.ok, true, JSON.stringify(m));
+  const r = read(env, m.result.code, 'fit_to_breed');
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = JSON.parse(JSON.stringify(r.result.rows));
+  assert.deepEqual(rows.map((x) => x.done_on || x.assessed_on).sort(), ['2025-07-01', '2026-08-11', '2026-08-13']);   // the old row, and only this dog's standing ftb records
+  const rec = rows.find((x) => x.done_on === '2026-08-13');
+  assert.deepEqual(rec, { subject_id: 'sub-test-a', assessed_on: '', vet_name: '', done_on: '2026-08-13', outcome: 'ok', note: 'Fit no conditions', valid_until: '2027-08-13' });
+  assert.equal(Object.prototype.hasOwnProperty.call(rec, 'taken_by'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(rec, 'how_recorded'), false);
+});
+
+test('fit to breed with no old file still shows the job\'s records', () => {
+  const env = setup();
+  env.addFile('BLD-check_type.csv', crlf(['id,tenant_id,type_key,label,target,every_days,effective_from', `cty-ftb-1,${fx.TENANT},fit_to_breed,Fit to breed,dog,,2026-01-01`]));
+  env.addFile('BLD-check_log.csv', crlf(['id,tenant_id,check_type_id,subject_id,outcome,happened_at,note,taken_at,corrects_id', `clg-1,${fx.TENANT},cty-ftb-1,sub-test-a,ok,2026-08-13T12:00:00Z,n,2026-11-15T06:40:00Z,`]));
+  const m = make(env, { fields: { fit_to_breed: ['done_on', 'valid_until'] } });
+  const r = read(env, m.result.code, 'fit_to_breed');
+  assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)), [{ subject_id: 'sub-test-a', done_on: '2026-08-13', valid_until: '' }]);   // as needed: no end shown
+});
