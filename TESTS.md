@@ -104,6 +104,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 
 **CD Hub**
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
+- Dated hiding in the save script's read (Lisa 15 Nov 2026, Q3): optional visibility columns row_id, role_code, from_date, to_date and source. A row_id row hides one record (field *) or one cell (sent blank), and can never show more; a dated row counts only from .. to, both days included; an unreadable date keeps a hide in force and a show out; role_code names the role when audience_id is blank; the person's and the role's hides both apply. With no new columns the read is unchanged. (`cdhub-write/tests/read-role.test.js`)
 - All ten sections open (Live feed, Outstanding, Table map, Today, The round, Dogs, Areas, Litters, Vet link, Buyers).
 - Dogs, cabins, litters and weights from the sample files join up correctly.
 - BFFs / Fren. (Lisa 13 Nov 2026): a dog card and its kennel print card show the dogs it likes to sleep with and the dogs it does not mix with, from dated BLD-subject_link rows read both ways (an ended link does not show); the words come from link_kind.* rule rows. No link file: nothing shows and the page still loads. (`tests/mocked/cdhub-dog-card-room.spec.js`, `tests/mocked/cdhub-litter-print-card.spec.js`, `cdhub/staff/lib/test/links.test.mjs`)
