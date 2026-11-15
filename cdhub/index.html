@@ -328,7 +328,17 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dogphoto-col{width:120px}
 .dogphoto-btns{display:flex;flex-direction:column;gap:6px}
 .dogphoto-btn{width:100%;box-sizing:border-box;white-space:nowrap}
-@media(max-width:400px){.ph{width:104px;height:104px}.dogphoto-col{width:104px}}
+/* Tighter card, phone first (Lisa, 15 Nov 2026: "wastes space and the photo is small"): on a phone the photo is the card's
+   full width, Take photo and Upload photo sit side by side under it, then the name; on wider screens the photo is bigger. */
+@media(max-width:600px){
+ .dc .dc-top{flex-direction:column;align-items:stretch;gap:8px;padding:12px 12px 6px}
+ .dogphoto-col{width:100%}
+ .ph{width:100%;height:auto;aspect-ratio:16/10;max-width:100%}
+ .ph .ti{width:56px;height:56px}
+ .dogphoto-btns{flex-direction:row}
+ .dogphoto-btn{flex:1 1 0;width:auto}
+}
+@media(min-width:601px){.ph{width:160px;height:160px}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
 .pcrop-edit input{width:100%}
 .pcrop-size{margin:0;font-size:var(--fs-small)}
@@ -1520,6 +1530,9 @@ function checks(){
  out.push({k:'placed in an area',ok:!c.noarea.length,
    msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
  var sw=CD.tempSwaps||[], ur=CD.tempUnread||[];
+ out.push({k:'room temps sheet',ok:!CD.tempHeaderBad,
+   msg:CD.tempHeaderBad?'the room temperatures sheet is out of order ('+CD.tempHeaderBad+'). Put the heading row back on row 1; use a filter view, never sort the sheet'
+     :'heading row is on row 1'});
  out.push({k:'room temps readable',ok:!ur.length,
    msg:ur.length? ur.length+' reading'+(ur.length===1?' has':'s have')+' a min or max that is blank or not a number (e.g. 25,3): '
      +ur.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+(x.min||'?')+'\u2013'+(x.max||'?'); }).join(', ')+(ur.length>5?' \u2026':'')
@@ -2183,7 +2196,7 @@ function fbar(o){
   +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><svg class="ti" aria-hidden="true"><use href="#i-adjustments-horizontal"/></svg>Filter<span class="fcount"></span></button>'
   +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'"'+(x[0]===o.sort[2]?' selected':'')+'>Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
-  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
+  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.filter(Boolean).map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
   +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'" data-clear-all="'+o.q+'" disabled>Clear filters</button></div></div>'
   +(o.hidden||'')+'</div>';
 }
@@ -2240,7 +2253,9 @@ function pageDogs(){
    hidden:'<input type="hidden" id="fst" value="" data-fname="Status">',
    groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
     ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
-    ['Age',fsel('fa','Age','<option value="p">under 6m</option><option value="j">6m to 12m</option><option value="a">1 to 7y</option><option value="o">7y+</option><option value="__none">no DOB</option>')],
+    /* Age: two groups from the owner's rule "Age a dog counts as an adult", the row in force today (Lisa 15 Nov 2026:
+       "there are only 2 in sops"); no rule = no Age filter */
+    adultMonths()===null?null:['Age',fsel('fa','Age','<option value="p">Puppy</option><option value="a">Adult</option><option value="__none">no DOB</option>')],
     ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
     /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
     ['Status','<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
@@ -2249,7 +2264,7 @@ function pageDogs(){
  /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
-function ageBand(m){ if(m===null) return '__none'; if(isPupM(m)) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
+function ageBand(m){ if(m===null) return '__none'; return isPupM(m)?'p':(isAdultM(m)?'a':''); }
 /* Edit the card header (Lisa, 12 Nov 2026): name, sex, date of birth, colour, entire/neutered, microchip. One save,
    action dog_details, owner code only, behind SAVE_ENABLED and TABLE_ON_dog_details. Size comes from weight unless an owner size_override row is set. */
 function dEditForm(d){
@@ -2477,9 +2492,15 @@ function loadPhotoImg(img){
 }
 /* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subjects',d.id,todayISO()); }
-function galleryItem(f,mainId){
+/* Show photo dates (Lisa 15 Nov 2026, J5): a per-person display setting, never a fixed rule. Rows in the shared settings list:
+   photos.show_dates.owner = this person's own choice (the hub is the owner's page), photos.show_dates = the owner's default
+   for everyone. Value 1 shows the date under each gallery photo, 0 hides it. The row in force today wins; no row = shown,
+   as before. Sorting never changes; only the label is hidden. */
+var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
+function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
+function galleryItem(f,mainId,dates){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
- var cap='<span class="mut">'+esc(when)+'</span>'+(main?' <span class="pill" data-k="main">Main</span>':'');
+ var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'');
  if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
@@ -2489,12 +2510,27 @@ function galleryItem(f,mainId){
 }
 function galleryHtml(d,ph){
  if(!ph.gallery.length&&!ph.ended.length) return '';
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos';
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,''); }).join('')+'</ul></details>':'')
+  +'<button type="button" class="btn quiet" data-photo-dates="'+(dates?'0':'1')+'" aria-pressed="'+(dates?'true':'false')+'">Dates '+(dates?'shown':'hidden')+'</button> <span class="mut" data-photo-dates-msg></span>'
+  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
+  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates); }).join('')+'</ul></details>':'')
   +'</div></details>';
 }
+/* Dates shown / hidden: saves this person's own row (photos.show_dates.owner) from today. One change a day: the settings
+   list keeps one row per key per day, so a second change today is refused with a plain message. */
+document.addEventListener('click',async function(ev){
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-photo-dates]'):null; if(!b) return;
+ var want=b.getAttribute('data-photo-dates'), msg=b.parentNode.querySelector('[data-photo-dates-msg]'), day=todayLondon();
+ b.disabled=true; if(msg) msg.textContent='Saving\u2026';
+ var r=await sinkPost('breeding_rule',{rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery'});
+ b.disabled=false;
+ if(!(r.ok&&r.result&&r.result.status==='saved')){ if(msg) msg.textContent=(r.fields&&r.fields.effective_from)?'Already changed today. Try again tomorrow.':sinkMsg(r); return; }
+ (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
+ var g=b.closest('details.gal'), open=g&&g.open; drawDogs();
+ var again=document.querySelector('details.gal[data-dog="'+(g?g.getAttribute('data-dog'):'')+'"]');
+ if(again&&open){ again.open=true; var m2=again.querySelector('[data-photo-dates-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+});
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
@@ -3448,6 +3484,7 @@ function keptReadings(date){
  var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap'||st==='unread', ur=st==='unread', unk=st==='unknown'; if(sw) st='hot';
    return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(ur?' \u2014 Check: not a number':sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Readings</h3>'
+  +(CD.tempHeaderBad?'<p class="kr late" role="alert" data-hdrbad>Room temperatures sheet out of order: '+esc(CD.tempHeaderBad)+'. Put the heading row back on row 1.</p>':'')
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
       +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
@@ -3462,8 +3499,16 @@ function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim());
    would). A reading with one side blank or not a number is state 'unread', shown and counted as a problem like a swap. */
 function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
 function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
+/* Header guard (TEMPS 15 Nov 2026): a sort or filter in the sheet moved the heading row off row 1 and saves stopped.
+   If row 1 is not the heading, or a heading row sits lower down, say so plainly instead of reading wrong columns. */
+function areaHeaderProblem(rows){ if(!rows||!rows.length) return '';
+ if(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])) return 'row 1 is not the heading row';
+ var n=rows.filter(function(r){ return r.id==='id'||r.area_id==='area_id'; }).length;
+ return n?'a heading row is also lower down':''; }
 function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
 function foldAreaReadings(rows){
+ CD.tempHeaderBad=areaHeaderProblem(rows);
+ rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
  CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
   .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
  CD.tempUnread=rows.filter(function(r){ return r.area_id&&!(roomEmpty(r)&&tempNum(r.min_c)===null&&tempNum(r.max_c)===null)&&tempUnreadable(r.min_c,r.max_c); })
@@ -4575,7 +4620,7 @@ function go(id,push){
    if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
    var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
   ['q','fs','fn','fa','fst','fc','ft','dsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
-  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';});
+  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';});
    Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){ x.setAttribute('aria-pressed',x.dataset.code===''?'true':'false'); }); drawDogs(); });
   drawDogs();
  }

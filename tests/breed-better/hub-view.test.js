@@ -420,3 +420,17 @@ test('age groups come from dated owner rows; with none there is no age filter', 
   const none = View.page({ T: tables({}), today: '2026-11-15', esc });
   assert.doesNotMatch(none, /Filter by age/);
 });
+
+test('with no age_group rows, the two age groups come from the existing adult-age rule (Lisa 15 Nov 2026: two in the SOP)', () => {
+  const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'SOP' }, extra || {});
+  const T = { 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '9', '2020-01-01'), R('dog.adult_from_months', '6', '2025-01-01'),
+    R('dog.adult_from_months', '12', '2027-01-01')] };
+  const g = View.ageGroups(T, '2026-11-15');
+  assert.deepEqual(g.map((x) => [x.key, x.label, x.from, x.to]), [['puppy', 'Puppy', 0, 6], ['adult', 'Adult', 6, Infinity]]);
+  assert.equal(View.inAge(g[0], '2026-05-16', '2026-11-15'), true);   // 5 months
+  assert.equal(View.inAge(g[1], '2026-05-15', '2026-11-15'), true);   // 6 months: adult
+  assert.deepEqual(View.ageGroups(T, '2024-06-01').map((x) => x.to), [9, Infinity]);   // the rule in force that day
+  const own = T['BLD-breeding_rule.csv'].concat([R('age_group.all.from_months', '0'), R('age_group.all.label', 'All ages')]);
+  assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': own }, '2026-11-15').map((x) => x.key), ['all']);   // owner's own groups win
+  assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '6', '2027-01-01')] }, '2026-11-15'), []);
+});

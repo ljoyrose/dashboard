@@ -857,12 +857,18 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
+    // Age groups come from the owner's adult-age rule (Lisa 15 Nov 2026: two in the SOP); no rule = no Age filter
+    await expect(page.locator('#fa')).toHaveCount(0);
+    await page.evaluate(() => { T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([{ id: 'ad', rule_key: 'dog.adult_from_months', value: '12', effective_from: '2010-01-01', source: 'Pretend SOP' }]); });
+    await openTab(page, 'round');
+    await openTab(page, 'dogs');
     await expect(page.locator('#fp-dogs')).toBeHidden();
     await page.locator('[data-fpanel="fp-dogs"]').click();
     await expect(page.locator('[data-fpanel="fp-dogs"]')).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#fa').selectOption('j');
+    expect(await page.locator('#fa option').allInnerTexts()).toEqual(['Any', 'Puppy', 'Adult', 'no DOB']);
+    await page.locator('#fa').selectOption('p');
     await expect(page.locator('#cnt')).toHaveText('1 of 3');
-    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: 6m to 12m/);
+    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: Puppy/);
     await expect(page.locator('[data-fpanel="fp-dogs"] .cnt')).toHaveText('1');
     await page.locator('#ach-dogs .achip').click();
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
@@ -878,7 +884,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([120, 120]);
+    expect([ph.width, ph.height]).toEqual([160, 160]);   // tighter card (15 Nov 2026): bigger photo on wide screens, full width on phones
     // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
     await expect(card.locator('.whor')).toHaveCount(1);
     await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
