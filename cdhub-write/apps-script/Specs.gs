@@ -330,7 +330,7 @@ var TABLES = {
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
-      if (!errors.type_key && row.type_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {
+      if (!errors.type_key && row.type_key !== '' && !/^(round\.)?[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {   // 15 Nov 2026 (TEMPS): one reserved prefix round. = the round's own records, never listed as a job
         errors.type_key = 'Use lower-case letters, numbers and underscores, e.g. feeding.';
       }
       if (!errors.every_days && row.every_days === '0') errors.every_days = 'Use 1 or more, or leave blank for as needed.';
@@ -387,8 +387,8 @@ var TABLES = {
     key: 'check_field',
     file: 'BLD-check_field.csv',
     idPrefix: 'cfd',
-    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
-    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'],
+    columns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
+    proposedColumns: ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'],
     computedColumns: [],
     lookups: [{ name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'type_key' }],
     perms: { add: ['OWNER'], correct: [] },
@@ -404,7 +404,13 @@ var TABLES = {
       required:       { type: 'bool', dflt: 'false' },
       sort:           { type: 'count' },                                             // order on the screen
       active:         { type: 'bool', dflt: 'true' },
-      effective_from: { type: 'date', required: true }
+      effective_from: { type: 'date', required: true },
+      // 14 Nov 2026 (ITEMS): a number question's unit and limits. Limits are dated by effective_from and carry a source,
+      // so an old answer is judged by the row in force on its own date. Blank = no limit. Shown, never used to refuse a save.
+      unit:           { type: 'text' },
+      limit_low:      { type: 'text' },
+      limit_high:     { type: 'text' },
+      source:         { type: 'text' }
     },
     dupKey: ['type_key', 'field_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -420,6 +426,13 @@ var TABLES = {
         else if (list.length > 30) errors.choices = 'Keep it to 30 answers or fewer.';
         else row.choices = list.join('|');
       }
+      ['limit_low', 'limit_high'].forEach(function (k) {
+        if (errors[k] || row[k] === '') return;
+        if (row.kind !== 'number') errors[k] = 'Only a number question has limits.';
+        else if (!/^-?\d{1,7}(\.\d{1,3})?$/.test(row[k])) errors[k] = 'Type a number, e.g. 0.1.';
+      });
+      if (!errors.limit_low && !errors.limit_high && row.limit_low !== '' && row.limit_high !== '' && parseFloat(row.limit_low) > parseFloat(row.limit_high)) errors.limit_high = 'The upper limit cannot be below the lower one.';
+      if (!errors.unit && row.unit !== '' && row.kind !== 'number') errors.unit = 'Only a number question has a unit.';
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.field_key || errors.effective_from) return;
@@ -463,9 +476,9 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
@@ -491,12 +504,15 @@ var TABLES = {
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
-      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] },      // scanned = opened from a tag: it says which screen, not that anyone was there
+      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap', 'paper', 'bulk', 'import'] },      // scanned = opened from a tag: it says which screen, not that anyone was there; paper / bulk / import = entered later from paper or a file (14 Nov 2026)
       litter_id:     { type: 'ref', lookup: 'litter' },                             // 12 Nov 2026: a litter job (check_type target litter)
       note_for_id:   { type: 'text' },                                              // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
-      item_id:       { type: 'ref', lookup: 'items' }                               // 14 Nov 2026 (ITEMS): the item an item test is on (check_type target item)
+      item_id:       { type: 'ref', lookup: 'items' },                              // 14 Nov 2026 (ITEMS): the item an item test is on (check_type target item)
+      time_given:    { type: 'enum', values: ['false'] }                           // 14 Nov 2026 (SOPJOBS S7): 'false' = the time is the owner's default (job.paper_default_time), not one written down; blank = given. Owner/admin-only (no staff visibility row)
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',
+    dupNewestBy: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id'],   // 15 Nov 2026: a repeat only of the newest record for the same job, room, dog (round toggle present, not here, present)
+    dupDateCols: ['happened_at'],   // S2: a different day written on paper is a different record   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors, lookups) {
@@ -1230,7 +1246,7 @@ var READABLE = {
   occupancy:       { file: 'BLD-occupancy.csv',       vis: 'occupancy',       authorCol: '',            dateCol: '' },
   area_reading:    { file: 'BLD-area_reading.csv',    vis: 'area_reading',    authorCol: 'taken_by',    dateCol: 'taken_at' },
   occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' },
-  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' },
+  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at', keyCol: 'rule_key' },   // keyCol: a key_prefix=job. row-rule shows only those settings
   code_register:   { file: 'BLD-code_register.csv',   vis: 'code_register',   authorCol: '',            dateCol: '' },   // who has a code: never a code or hash
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
   check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
