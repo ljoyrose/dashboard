@@ -102,6 +102,7 @@ function dupDay_(v) {
 
 function findDuplicate_(spec, clean, rows, nowMs, today) {
   if (spec.dupSkip && spec.dupSkip(clean)) return null;          // e.g. a note added to a check already done
+  if (spec.dupNewestBy) return newestDuplicate_(spec, clean, rows, nowMs);
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i], same = true;
     if (spec.dupSkip && spec.dupSkip(r)) continue;
@@ -120,6 +121,34 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
     if (!isNaN(t) && Math.abs(nowMs - t) < BLD.LIMITS.DUP_WINDOW_MIN * 60000) return r;
   }
   return null;
+}
+
+/**
+ * dupNewestBy (15 Nov 2026, TEMPS round toggle): a tap is a repeat only of the NEWEST record for the same thing
+ * (the dupNewestBy columns, same dupDateCols day) inside the window, and only when that newest record matches the
+ * whole dupKey. So present, not here, present saves three records; present, present is one record and a repeat.
+ */
+function newestDuplicate_(spec, clean, rows, nowMs) {
+  var best = null, bestT = -Infinity, k;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], same = true;
+    if (spec.dupSkip && spec.dupSkip(r)) continue;
+    for (k = 0; same && k < spec.dupNewestBy.length; k++) {
+      if ((r[spec.dupNewestBy[k]] || '') !== (clean[spec.dupNewestBy[k]] || '')) same = false;
+    }
+    for (k = 0; same && spec.dupDateCols && k < spec.dupDateCols.length; k++) {
+      if (dupDay_(r[spec.dupDateCols[k]]) !== dupDay_(clean[spec.dupDateCols[k]])) same = false;
+    }
+    if (!same) continue;
+    var t = Date.parse(r[spec.dupTimeCol]);
+    if (isNaN(t) || Math.abs(nowMs - t) >= BLD.LIMITS.DUP_WINDOW_MIN * 60000) continue;
+    if (t >= bestT) { best = r; bestT = t; }                     // ties: the later row in the file is newer
+  }
+  if (!best) return null;
+  for (k = 0; k < spec.dupKey.length; k++) {
+    if ((best[spec.dupKey[k]] || '') !== (clean[spec.dupKey[k]] || '')) return null;
+  }
+  return best;
 }
 
 /**

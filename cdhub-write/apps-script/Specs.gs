@@ -511,6 +511,7 @@ var TABLES = {
       time_given:    { type: 'enum', values: ['false'] }                           // 14 Nov 2026 (SOPJOBS S7): 'false' = the time is the owner's default (job.paper_default_time), not one written down; blank = given. Owner/admin-only (no staff visibility row)
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',
+    dupNewestBy: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id'],   // 15 Nov 2026: a repeat only of the newest record for the same job, room, dog (round toggle present, not here, present)
     dupDateCols: ['happened_at'],   // S2: a different day written on paper is a different record   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
