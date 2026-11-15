@@ -37,6 +37,8 @@ test('no weight: Add weight opens inside the card, no jump; the save ticks and t
   await expect(card.locator('details.wtc [data-weigh-msg] [data-saved="good"]')).toBeVisible();
   await expect(card.locator('details.wtc')).toHaveAttribute('open', '');
   await expect(card.locator('details.wtc [data-k="weight"] b')).toHaveText('2.35 kg');
+  expect(Math.abs((await page.evaluate(() => window.scrollY)) - y0)).toBeLessThan(200);   // the save leaves the page where it was
+  await expect(card.locator('details.wtc form[data-weigh-form] h4')).toHaveCount(0);   // a label, not a heading, on the card
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ action: 'weighing', fields: { subject_id: dogId, weight_kg: '2.35' } });
 });
