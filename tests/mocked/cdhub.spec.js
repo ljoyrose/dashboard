@@ -201,12 +201,15 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('eleven sections are in the bar (Table map and Assocs open by link): five tabs, then the rest under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
-    await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
+    const bar = page.locator('#nav > button.ht[data-section]');
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
+    const more = page.locator('#nav .house-more > [data-slot]');
+    expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
+    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
@@ -217,7 +220,7 @@ test.describe('CD Hub: navigation', () => {
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('#nav [data-go="buyers"], #nav [data-go="shape"]')).toHaveCount(0);
-    await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAccessibleName('SOPs');
+    await expect(page.locator('#nav .house-more button[data-go="sops"] .htl')).toHaveText('SOPs');
     await openView(page, 'shape');
     await expect(page.locator('#main')).not.toBeEmpty();
     await openView(page, 'buyers');
@@ -536,8 +539,9 @@ test.describe('CD Hub house look', () => {
       const sizes = await measure();
       expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Main').toEqual(expect.arrayContaining(['18']));
       // The tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): 24 x 24 whatever the font, the two digits on one line.
-      const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
-      expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 24, 24, '12px', 'nowrap', '14px']);
+      const tc = await page.locator('#nav button[data-section="main"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
+      expect(tc[0], 'the Main tab count holds Do (12) and Decide').toMatch(/^\d{2}$/);   // menu option A: Do sits inside Main
+      expect(tc.slice(1), 'the Main tab count' + (wide ? ' (wider font)' : '')).toEqual([24, 24, '12px', 'nowrap', '14px']);
       for (const x of sizes) expect(x.slice(1), `count ${x[0]}${wide ? ' (wider font)' : ''}`).toEqual([30, 24, '12px', 'nowrap', 'tabular-nums']);
     }
     const big = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = cntPill(123); document.querySelector('#main').appendChild(h); const r = h.firstChild.getBoundingClientRect(); return [r.width, r.height]; });
@@ -597,8 +601,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
     await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('7');   // + Breeding rules not set (8 Nov 2026)
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('7');
-    await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
+    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('8');   // Main holds Decide (7) and Do (1)
     // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
     await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
