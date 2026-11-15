@@ -21,6 +21,7 @@
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="staff/lib/date-words.js"></script>
+<script src="staff/lib/list-sort.js"></script>
 <script src="staff/lib/links.js"></script>
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
@@ -2068,11 +2069,14 @@ async function saveMed(evt,dogId,nameSlug,form){
 }
 
 /* foundation: list view filter row (one row: Search, Filter panel, Sort, removable chips). Used by Dogs, Litters and Buyers. */
+/* Sorts each list offers come from the fields it holds (BLDSort, Lisa 15 Nov 2026). A dog's status is a life stage, not a
+   result, so Dogs has no best-to-worst. Litters open youngest first, as before. */
+var DOG_SORT={dob:1,name:1}, LITTER_SORT={dob:1,name:1};
 function fbar(o){
  return '<div class="fbar" id="fb-'+o.id+'"><div class="srow">'
   +'<label class="sbox srch"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg><input id="'+o.q+'" type="search" aria-label="Search '+esc(o.what)+'" placeholder="Search '+esc(o.what)+'"></label>'
   +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><svg class="ti" aria-hidden="true"><use href="#i-adjustments-horizontal"/></svg>Filter<span class="fcount"></span></button>'
-  +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'">Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
+  +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'"'+(x[0]===o.sort[2]?' selected':'')+'>Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
   +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
   +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'">Clear filters</button></div></div>'
@@ -2124,7 +2128,7 @@ function pageDogs(){
  var miss=missVis.length, missGone=missAll.length-missVis.length;
  return '<h2>Dogs</h2>'
  +medBanner()
- +fbar({id:'dogs',what:'dogs',q:'q',count:'cnt',clear:'clr',sort:['dsort',[['','as on file'],['name','name A to Z'],['young','youngest first'],['old','oldest first']]],
+ +fbar({id:'dogs',what:'dogs',q:'q',count:'cnt',clear:'clr',sort:['dsort',BLDSort.options(DOG_SORT),BLDSort.byDefault(DOG_SORT)],
    hidden:'<input type="hidden" id="fst" value="" data-fname="Status">',
    groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
     ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
@@ -2615,8 +2619,7 @@ function drawDogs(){
   return ((d.name||'')+' '+(d.chip||'')).toLowerCase().indexOf(q)>=0; });
  var h='', dogN=dogShown==='all'?list.length:Math.min(list.length, Math.max(300, dogShown));
  var so=v('dsort');
- if(so==='name') list=list.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
- else if(so==='young'||so==='old') list=list.slice().sort(function(a,b){ var x=a.dob||'', y=b.dob||''; if(!x!==!y) return x?-1:1; return so==='young'?y.localeCompare(x):x.localeCompare(y); });
+ list=BLDSort.sort(list,so,{dob:function(d){return d.dob;},name:function(d){return d.name;}});
  /* foundation: record card (name line, title, 44x44 thumbnail, who-has-it ring). The rows inside are kit: animal. */
  list.slice(0,dogN).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
@@ -3023,7 +3026,7 @@ function pageLitters(){
  +'<div class="tiles">'+tile('b7',CD.litters.length,'litters','')
  +tile('b5',withDob,'born','')+tile('b2',CD.litters.length-withDob,'no DOB','planned, in progress, or did not take')
  +tile('b6',CD.matings.length,'matings recorded','including those that did not take')+'</div>'
- +fbar({id:'litters',what:'litters',q:'lq',count:'lcnt',clear:'lclr',sort:['lsort',[['','newest first'],['old','oldest first'],['pair','pairing A to Z']]],
+ +fbar({id:'litters',what:'litters',q:'lq',count:'lcnt',clear:'lclr',sort:['lsort',BLDSort.options(LITTER_SORT),'young'],
    groups:[['Date of birth',fsel('ld','Date of birth','<option value="y">has a DOB</option><option value="n">missing a DOB</option>')],
     ['Year',fsel('ly','Year','')],['Status',fsel('ls','Status','')],['Dam',fsel('lm','Dam','')],['Sire',fsel('lp','Sire','')],
     ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
@@ -3056,9 +3059,7 @@ function drawLitters(){
   if(!q) return true;
   return ((l.pairing||'')+' '+(l.raw_name||'')+' '+nameOf(l.dam_subject_id)+' '+nameOf(l.sire_subject_id)).toLowerCase().indexOf(q)>=0;});
  var so=v('lsort');
- if(so==='pair') list.sort(function(a,b){ return (a.pairing||'').localeCompare(b.pairing||''); });
- else if(so==='old') list.sort(function(a,b){ return (a.dob||'9')<(b.dob||'9')?-1:1; });
- else list.sort(function(a,b){return (b.dob||'')>(a.dob||'')?1:-1;});
+ list=BLDSort.sort(list,so,{dob:function(l){return l.dob;},name:function(l){return l.pairing;}});
  var gapOf={}; litterGaps().forEach(function(x){ gapOf[x.next.id]=x; gapOf[x.prev.id]=gapOf[x.prev.id]||x; });
  document.getElementById('lrows').innerHTML=list.map(function(l){
   var g=gapOf[l.id];
