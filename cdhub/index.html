@@ -2560,8 +2560,14 @@ document.addEventListener('submit',async function(ev){
   btn.disabled=false;
   if(!r.ok){ showSave(msg,sinkMsg(r)); return; }
   var d=CD._byId[id]; if(d){ d.weights.push({on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':''}); d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
+  var inCard=f.closest('details.wtc');
+  if(inCard){   /* saved from the dog card: redraw, keep this section open and the page where it was, tick in place */
+   var y=window.scrollY; drawDogs();
+   var sec=document.querySelector('details.wtc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]');
+   if(sec){ sec.open=true; var m3=sec.querySelector('[data-weigh-msg]'); if(m3) showSave(m3,sinkMsg(r)); }
+   window.scrollTo(0,y); return; }
   drawDogs(); showWeights(id);
-  var m2=document.querySelector('[data-weigh-msg]'); if(m2) showSave(m2,sinkMsg(r));
+  var m2=document.querySelector('#wpanel [data-weigh-msg]')||document.querySelector('[data-weigh-msg]'); if(m2) showSave(m2,sinkMsg(r));
   return; }
  if(f.matches('[data-vax-form]')){ ev.preventDefault();
   var vid=f.getAttribute('data-vax-form'), vmsg=f.parentNode.querySelector('[data-vax-msg]'), vb=f.querySelector('button[type=submit]');
@@ -2691,6 +2697,7 @@ function drawDogs(){
           +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+'</div>';
       }).join(''):'<span class="mut">No records</span>')
       +(d.weights.length>1?'<div class="dcs-row" style="margin-top:4px">'+wGraph(d.weights)+'</div>':'')
+      +wForm(d)   /* Add weight in place (Lisa, 15 Nov 2026): a tap opens this section, never a jump to the top */
     +'</div></details>'
 
     +'<details class="dcs meds"><summary>'
@@ -4339,6 +4346,7 @@ function go(id,push){
     drawDogs(); }); });
   document.getElementById('rows').addEventListener('click',function(ev){
    var el=ev.target&&ev.target.closest?ev.target.closest('.wtc'):null; if(!el||!el.dataset.dog) return;
+   if(el.tagName==='DETAILS') return;   /* the dog card's weight section opens in place, with its own Add weight */
    if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
    var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
   ['q','fs','fn','fa','fst','fc','ft','dsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
