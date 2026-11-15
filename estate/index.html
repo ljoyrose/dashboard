@@ -116,6 +116,16 @@
   input.txtin { font: inherit; font-size: var(--fs-body); padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
   input.txtin:focus { border-color: var(--ink); }
   .queued { font-size: var(--fs-small); margin: 0; }
+  /* DNS & Email cards (#/mail) */
+  .mailc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; overflow-wrap: anywhere; }
+  .mailc .m { font-size: var(--fs-small); color: var(--muted); margin: 0; }
+  .mfaults { margin: 0; padding-left: 20px; font-size: var(--fs-body); }
+  .mfix, .mmap { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-small); border-top: 1px solid var(--line); padding-top: 8px; }
+  .mfix p, .mmap p { margin: 0; }
+  .mmap p.flag { font-weight: 600; }
+  .mailc a.addr { text-decoration: none; border-radius: 12px; padding: 0 4px; margin: 0 -4px; }
+  @media (hover: hover) { .mailc a.addr:hover { background: var(--hov); } }
+  .mailc a.addr:active { background: var(--hov); }
   @media (max-width: 544px) {
     .btn, .chip, select.txtin, input.txtin, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
@@ -130,6 +140,7 @@
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></symbol>
   <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 </svg>
 <header class="house-head">
@@ -155,6 +166,7 @@
     <div class="house-more" id="houseMore" hidden>
       <a href="#/all" data-nav="all" data-slot="5"><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><span class="htl">All</span><span class="n" id="n-all"></span></a>
       <a href="#/unchecked" data-nav="unchecked" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span class="htl">Unchecked</span><span class="n" id="n-unchecked"></span></a>
+      <a href="#/mail" data-nav="mail" data-slot="2"><svg class="i" aria-hidden="true"><use href="#i-mail"/></svg><span class="htl">DNS &amp; Email</span><span class="n" id="n-mail"></span></a>
       <a href="#/access" data-nav="access" data-slot="3"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span class="htl">Access</span><span class="n" id="n-access"></span></a>
     </div>
   </div>
@@ -164,7 +176,7 @@
   'use strict';
   var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews, AL = window.EstateAlerts;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
-  var VIEWS = ['home', 'all', 'look', 'unchecked', 'shops', 'access', 'client'];
+  var VIEWS = ['home', 'all', 'look', 'unchecked', 'shops', 'access', 'client', 'mail'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
   // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
   var EXAMPLE = [
@@ -204,6 +216,15 @@
       ['Shops', 'Keywords'].forEach(function (tab) {
         if (have.indexOf(tab) === -1) { extra[tab] = []; extraMissing[tab] = true; return; }
         R.readTab(o, tab).then(function (r) { extra[tab] = r.rows || []; extraMissing[tab] = !r.ok || r.missing; render(); });
+      });
+      // Private mail tabs: read only, through the header contracts in mail.js. A changed header shows nothing from that tab.
+      [['Mail map', 'mailMapFromValues'], ['Mail switch', 'mailSwitchFromValues']].forEach(function (t) {
+        if (have.indexOf(t[0]) === -1) { mailTabs[t[0]] = { state: 'missing', rows: null, problem: '' }; return; }
+        R.readTab(o, t[0], true).then(function (r) {
+          if (!r.ok || r.missing) mailTabs[t[0]] = { state: r.missing ? 'missing' : 'error', rows: null, problem: r.problem || '' };
+          else { var c = M[t[1]](r.values); mailTabs[t[0]] = { state: c.ok ? 'ok' : 'bad-header', rows: c.ok ? c.rows : null, problem: c.problems.join('. ') }; }
+          render();
+        });
       });
       render();
     });
@@ -428,6 +449,7 @@
     if (view === 'access') return accessPage(E.applyFilters(rows, filters));
     if (view === 'client') return clientPage();
     if (view === 'shops') return '<p class="needs">Shops &amp; ads</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
+    if (view === 'mail') return mailPage(E.applyFilters(rows, filters));
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'All';
     var hint = view === 'unchecked' ? 'Not scanned yet.' : '';
     if (kk) hint = 'One property. <a href="' + esc(E.filterHash(view, filters)) + '">Show all</a>';
@@ -439,6 +461,38 @@
       h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
     });
     return h;
+  }
+  // DNS & Email (#/mail): one card per mail domain, faults first. Read only: the fix lines are Lisa-only DNS changes.
+  // #/mail?d=<domain> shows one domain, so the back button returns to the full list.
+  var mailTabs = { 'Mail map': { state: 'unread', rows: null, problem: '' }, 'Mail switch': { state: 'unread', rows: null, problem: '' } };
+  function domOf() { var m = /[?&]d=([^&]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]).toLowerCase() : ''; }
+  function tabLine(name) {
+    var t = mailTabs[name];
+    if (t.state === 'ok') return '';
+    var w = t.state === 'missing' ? 'not set up yet: Lisa OKs it first' : t.state === 'bad-header' ? t.problem : t.state === 'error' ? 'could not be read: ' + t.problem : 'not yet read';
+    return '<p class="hint" data-mail-tab="' + esc(name) + '" data-state="' + t.state + '">' + esc(name) + ' tab: ' + esc(w) + '.</p>';
+  }
+  function mailCards(list) { return M && M.domainCards ? M.domainCards(list, mailTabs['Mail map'].rows, mailTabs['Mail switch'].rows, today()) : []; }
+  function mailPage(list) {
+    var cards = mailCards(list), one = domOf(), all = esc(E.filterHash('mail', filters));
+    if (one) cards = cards.filter(function (c) { return c.domain === one; });
+    var bad = cards.filter(function (c) { return c.faults.length; }).length;
+    var h = '<p class="needs">DNS &amp; Email</p><p class="hint">' + (one ? 'One domain. <a href="' + all + '">Show all</a>' : 'Read only. Every fix here is a Lisa-only DNS change, made by hand.') + '</p>' +
+      tabLine('Mail map') + tabLine('Mail switch') + filterRow();
+    if (!cards.length) return h + '<div class="card" data-empty-one><p class="empty">' + (one ? 'Nothing here' : 'No mail domains yet.') + '</p></div>';
+    h += '<p class="grp">Domains<span class="sr"> · </span><span class="cnt" data-mail-faulty="' + bad + '">' + cards.length + '</span></p>';
+    return h + cards.map(function (c) {
+      var lv = { bad: ' no', soon: ' soon', ok: ' ok', unread: '' };
+      return '<div class="card mailc" data-mail-domain="' + esc(c.domain) + '" data-faults="' + c.faults.length + '">' +
+        '<div class="pline"><span class="badge st' + (c.faults.length ? ' no' : ' ok') + '">' + (c.faults.length ? c.faults.length + ' to fix' : 'All clear') + '</span>' +
+        (one ? '<span class="addr">' + esc(c.domain) + '</span>' : '<a class="addr" href="#/mail?d=' + encodeURIComponent(c.domain) + '">' + esc(c.domain) + '</a>') + '</div>' +
+        '<div class="badges">' + c.checks.map(function (k) { return '<span class="badge' + lv[k.level] + '" data-check="' + k.id + '" data-level="' + k.level + '"><b>' + k.name + '</b>' + esc(k.value) + '</span>'; }).join('') + '</div>' +
+        '<p class="m" data-switch="' + esc(c.progress.cls) + '"' + (c.progress.step ? ' data-step="' + c.progress.step + '"' : '') + '>Move to Workspace: ' + esc(c.progress.text) + '</p>' +
+        (c.faults.length ? '<ul class="mfaults">' + c.faults.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
+        (c.fix ? '<div class="mfix" data-fix><b>Lisa-only DNS change</b>' + c.fix.split('\n').map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '</div>' : '') +
+        (c.chains.length ? '<div class="mmap"><b>Mail map</b>' + c.chains.map(function (x) { return '<p class="' + (x.flag ? 'flag' : '') + '" data-hop="' + esc(x.address) + '">' + esc(x.text) + '</p>'; }).join('') + '</div>' : '') +
+        '</div>';
+    }).join('');
   }
   // The Do tab's count: broken (black) when a site is down, a domain has expired or email checks fail (broken wins), rose when a
   // domain expires within 7 days, otherwise grey (Lisa, 3 Nov 2026; ../toolkit.js DashKit.count). Its name says the word ("Do, 2 down").
@@ -456,6 +510,7 @@
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     var list = E.applyFilters(rows, filters), look = list.filter(needsLook).length, unc = list.filter(function (r) { return E.statusOf(r) === 'not checked'; }).length;
     $('tabs').classList.toggle('hidden', view === 'client');
+    $('n-mail').textContent = (M && M.domainCards ? mailCards(list).filter(function (c) { return c.faults.length; }).length : 0) || '';
     $('n-all').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; lookBadge(list); $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();

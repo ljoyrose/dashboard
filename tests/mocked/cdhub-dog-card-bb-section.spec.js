@@ -44,8 +44,9 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect(sec.locator('img.bb-logo')).toHaveAttribute('alt', 'Breed Better logo');
     await expect.poll(() => sec.locator('img.bb-logo').evaluate((i) => i.complete && i.naturalWidth > 0)).toBe(true);
     await expect(sec.locator('.bb-sect')).toHaveText('Breed Better');
-    await expect(sec.locator('.bb-chip')).toContainText('Fail');
-    await expect(sec.locator('.bb-chip')).toContainText('Testing');
+    await expect(sec.locator('.bb-sechd')).toContainText('Fail');
+    await expect(sec.locator('.bb-sechd')).toContainText('Testing');
+    await sec.locator('.bb-sechd').click();
     await expect(sec.locator('.bb-bar')).toHaveAttribute('aria-label', /^\d+ of \d+ points/);
     const gates = sec.locator('.bb-gates li');
     await expect(gates).toHaveCount(4);
@@ -56,9 +57,54 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect(card(page, 'Test Dog Two')).not.toContainText(/Unverified · 0 of/);
     const shots = process.env.DOGCARD_SHOTS;
     if (shots) { fs.mkdirSync(shots, { recursive: true }); await page.addStyleTag({ content: '#nav{display:none!important}' }); await card(page, 'Test Dog Two').screenshot({ path: path.join(shots, 'after-desktop.png') }); }
-    await sec.locator('.bb-chip').click();
+    await sec.locator('.bb-secgo').click();
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
+  });
+
+  test('folded at first with the verdict and points in view; a tap opens it, and open or folded is remembered', async ({ page }) => {
+    await openDogs(page);
+    const sec = () => card(page, 'Test Dog Two').locator('section.bb-sec');
+    await expect(sec().locator('details.bb-secf')).not.toHaveAttribute('open', '');
+    await expect(sec().locator('.bb-sechd')).toBeVisible();
+    await expect(sec().locator('.bb-secpts')).toHaveText(/\d+ of \d+/);
+    await expect(sec().locator('.bb-gates')).toBeHidden();
+    await sec().locator('.bb-sechd').click();
+    await expect(sec().locator('.bb-gates')).toBeVisible();
+    await page.reload();
+    await expect(page.locator('#main')).toContainText('Test Dog One');
+    await expect(sec().locator('.bb-gates')).toBeVisible();
+    await expect(card(page, 'Test Dog One').locator('details.bb-secf')).not.toHaveAttribute('open', '');
+    await sec().locator('.bb-sechd').click();
+    await expect(sec().locator('.bb-gates')).toBeHidden();
+    await page.reload();
+    await expect(page.locator('#main')).toContainText('Test Dog One');
+    await expect(sec().locator('.bb-gates')).toBeHidden();
+  });
+
+  test('dog card, Breed Better, Open on Fit to Breed lands on add/edit, and Back returns to that dog @regression', async ({ page }) => {
+    await openDogs(page);
+    await card(page, 'Test Dog Two').locator('section.bb-sec .bb-sechd').click();
+    await card(page, 'Test Dog Two').locator('section.bb-sec .bb-secgo').click();
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
+    const band = page.locator('details.bb-band', { hasText: 'Fit to Breed' });
+    await band.locator('summary').click();
+    await band.locator('.bb-line', { hasText: 'Fit to Breed' }).getByRole('button', { name: 'Open' }).click();
+    const screen = page.locator('[data-bb-edit-screen]');
+    await expect(screen).toBeVisible();
+    await expect(screen.locator('h3')).toHaveText('Fit to Breed');
+    await expect(screen).toContainText('Add result');
+    await expect(screen.locator('input[name="answer"]')).toBeVisible();
+    await expect(screen.locator('input[name="on"]')).toHaveAttribute('type', 'date');
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await expect(page).toHaveURL(/#\/breed$/);
+    await expect(page.locator('#rows')).toHaveCount(0);
+    await screen.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('[data-bb-edit-screen]')).toHaveCount(0);
+    await expect(page.locator('#bbRoot h3')).toContainText('Test Dog Two');
+    await expect(page.locator('#main h2')).toContainText('Breed Better');
+    await expect(page).toHaveURL(/#\/breed$/);
   });
 
   test('phone: the section fits a 390px screen and the tap target is at least 44px', async ({ page }) => {
@@ -68,7 +114,9 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     const b = await sec.boundingBox();
     expect(b.x).toBeGreaterThanOrEqual(0);
     expect(b.x + b.width).toBeLessThanOrEqual(391);
-    expect((await sec.locator('.bb-chip').boundingBox()).height).toBeGreaterThanOrEqual(44);
+    expect((await sec.locator('.bb-sechd').boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await sec.locator('.bb-sechd').click();
+    expect((await sec.locator('.bb-secgo').boundingBox()).height).toBeGreaterThanOrEqual(44);
     const shots = process.env.DOGCARD_SHOTS;
     if (shots) { fs.mkdirSync(shots, { recursive: true }); await page.addStyleTag({ content: '#nav{display:none!important}' }); await card(page, 'Test Dog One').screenshot({ path: path.join(shots, 'after-phone.png') }); }
   });

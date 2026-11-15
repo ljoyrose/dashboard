@@ -16,10 +16,11 @@ The camera is read live in the page (`getUserMedia`). Each frame is copied into 
 
 `reader.js`: seven-segment reader for the kennel's units (MAX top right, MIN bottom right, the tenths digit half height under the C sign). A number is only accepted when 3 frames in a row agree, every segment is clearly on or off, no digit is cut by the frame's edge, and MIN is not above MAX. Anything else is left for the person to type. Never a guess.
 
-## Year report and sensor back-up
+## Report and Import (owner) · Earlier (everyone)
 
-- **Year report**: pick a room and year. Every reading (staff, guest and sensor back-up; who or how a reading was taken is not shown), the lowest and highest by month, and each reading outside the limit with what was done. Print from the browser. Reads one room and one year at a time (the save script's `{area_id, from, to}` filter), so a year of twice-daily readings stays under the read limit.
-- **Sensor CSV**: a Govee export becomes one back-up row per day (lowest, highest) for the chosen room in `BLD-sensor_reading`. CSV only. Back-up rows are shown beside the thermometer readings, never instead of them.
+- **Earlier** (plus icon; was Add earlier reading): a reading for a past morning or afternoon, from paper, a photo or an app such as Govee.
+- **Report** (was Year report; page icon): pick a room and year. Every reading (staff, guest and sensor back-up; who or how a reading was taken is not shown), the lowest and highest by month, and each reading outside the limit with what was done. Print from the browser. Reads one room and one year at a time (the save script's `{area_id, from, to}` filter), so a year of twice-daily readings stays under the read limit.
+- **Import** (was Sensor CSV; upload icon; owner only): a Govee export becomes one back-up row per day (lowest, highest) for the chosen room in `BLD-sensor_reading`. CSV only. Back-up rows are shown beside the thermometer readings, never instead of them.
 
 ## Guest (inspector)
 

@@ -52,12 +52,12 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   const cards = page.locator('.cards .card .nm');
   await expect(cards).toHaveText(['3A.1/2']);
 
-  await page.getByRole('button', { name: 'Add earlier reading' }).click();
+  await page.locator('.tg-row').getByRole('button', { name: 'Earlier', exact: true }).click();
   await page.getByLabel('Day').fill('2026-11-10');
   await page.getByLabel('Day').dispatchEvent('change');
-  await expect(cards).toHaveText(['3A.2/3 (retired 11/11/26)']);
+  await expect(cards).toHaveText(['3A.2/3 (retired 11 Nov 2026)']);
   await cards.first().click();
-  await expect(page.getByText('Earlier reading · 10/11/26 Morning')).toBeVisible();
+  await expect(page.getByText('Earlier reading · 10 Nov 2026 Morning')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);
   await page.getByLabel('MAX').fill('18.5');
   await page.getByLabel('MIN').fill('12.0');
@@ -67,13 +67,13 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11/11/26)']);
+  await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11 Nov 2026)']);
 });
 
 test('an earlier reading cannot be for now or later: that is the round', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Add earlier reading' }).click();
+  await page.locator('.tg-row').getByRole('button', { name: 'Earlier', exact: true }).click();
   await page.getByLabel('Day').fill('2026-11-12');
   await page.getByLabel('Day').dispatchEvent('change');
   await expect(page.getByText('That is now or later: use the round.')).toBeVisible();
@@ -88,7 +88,7 @@ test('Lisa 11 Nov: how a reading was taken is saved only; the year report never 
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
-    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     await expect(page.locator('.tg-tab tbody tr')).not.toHaveCount(0);
@@ -100,7 +100,7 @@ test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", a
   const sent = await setup(page);
   await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));   // afternoon: this morning is now a missed slot
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Add earlier reading' }).click();
+  await page.locator('.tg-row').getByRole('button', { name: 'Earlier', exact: true }).click();
   await page.getByLabel('Day').fill('2026-11-12');
   await page.getByLabel('Day').dispatchEvent('change');
   await page.locator('.cards .card').first().click();
@@ -174,11 +174,11 @@ test('year report: an empty room\'s outside reading is flagged "Room empty" but 
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
-    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     const month = page.locator('.tg-tab').first().locator('tbody tr').first();
-    await expect(month.locator('td')).toHaveText(['11/26', '1', '8.0', '24.0', '0']);
+    await expect(month.locator('td')).toHaveText(['Nov 2026', '1', '8.0', '24.0', '0']);
     const rows = page.locator('.tg-tab').nth(1).locator('tbody tr');
     await expect(rows.first()).toHaveClass(/tg-br/);
     await expect(rows.first()).toContainText('Room empty');
@@ -199,7 +199,7 @@ test('year report: a new room includes readings from the old room linked into it
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
     await page.addScriptTag({ path: 'cdhub/staff/lib/area-link.js' });   // the staff shell loads it once STAFF adds it to FILES
-    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     const rows = page.locator('.tg-tab').nth(1).locator('tbody tr');
@@ -223,7 +223,7 @@ test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day,
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
-    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     const rows = page.locator('.tg-tab').last().locator('tbody tr');
@@ -233,15 +233,24 @@ test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day,
   } finally { TABLES.temperature_band = keep.b; TABLES.area_reading = keep.r; }
 });
 
-test('Year report and Sensor CSV show for an owner code only; a staff code sees the round and Add earlier reading', async ({ page }) => {
+test('Report and Import show for an owner code only; a staff code sees the round and Earlier', async ({ page }) => {
   ROLE.v = 'STAFF';
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
-    await expect(page.getByRole('button', { name: 'Add earlier reading' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
+    await expect(page.locator('.tg-row').getByRole('button', { name: 'Earlier', exact: true })).toBeVisible();
+    await expect(page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true })).toHaveCount(0);
+    await expect(page.locator('.tg-row').getByRole('button', { name: 'Import', exact: true })).toHaveCount(0);
   } finally { ROLE.v = 'OWNER'; }
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.reload();
+  await expect(page.locator('.tg-row').getByRole('button', { name: 'Import', exact: true })).toBeVisible();
+  // Lisa C (14 Nov): icon plus word, grey at rest
+  for (const name of ['Earlier', 'Report', 'Import']) {
+    const b = page.locator('.tg-row').getByRole('button', { name, exact: true });
+    await expect(b.locator('.ic svg')).toHaveCount(1);
+    expect(await b.locator('.ic').evaluate((e) => getComputedStyle(e).color)).toBe(await page.locator('.sub').first().evaluate((e) => getComputedStyle(e).color));
+  }
 });
 
 // Found by the click-crawl, 13 Nov 2026: Sensor CSV threw "thermos is not defined", so the owner got a title and nothing else.
@@ -348,11 +357,11 @@ test('year report: a saved reading with max lower than min is flagged, not count
   try {
     await setup(page);
     await page.goto('cdhub/staff/#m/temperature');
-    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
     await page.getByLabel('Room').selectOption('area-new');
     await page.getByRole('button', { name: 'Open report' }).click();
     const month = page.locator('.tg-tab').first().locator('tbody tr').first();
-    await expect(month.locator('td')).toHaveText(['11/26', '1', '22.0', '18.0', '0']);
+    await expect(month.locator('td')).toHaveText(['Nov 2026', '1', '22.0', '18.0', '0']);
     const row = page.locator('.tg-tab').nth(1).locator('tbody tr').first();
     await expect(row).toHaveClass(/tg-br/);
     await expect(row).toContainText('max lower than min');

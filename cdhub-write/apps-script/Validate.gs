@@ -101,6 +101,10 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
           else clean[name] = v;
         }
         break;
+      case 'number':   // any measured value (readings, 14 Nov 2026): no unit in the number, no range here (limits are rows)
+        if (!/^-?\d{1,9}(\.\d{1,6})?$/.test(v)) errors[name] = 'Type a number, e.g. 0.05 or 21.4.';
+        else clean[name] = v;
+        break;
       case 'count':
         if (!/^\d{1,3}$/.test(v)) errors[name] = 'Use a whole number from 0 to 999.';
         else clean[name] = String(parseInt(v, 10));

@@ -42,7 +42,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(dog(page).locator('[data-k="wgraph"]').first()).toBeVisible();
     await dog(page).locator('details.wtc > summary').click();
     const g = page.locator('#wpanel svg.wgraph');
-    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 01/01/26 to 8.9 kg on 12/03/26');
+    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 1 Jan 2026 to 8.9 kg on 12 Mar 2026');
     await expect(g.locator('circle')).toHaveCount(3);
     await expect(page.locator('#wpanel thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);   // no source column
     await expect(page.locator('#wpanel')).not.toContainText('Pretend source');
@@ -78,7 +78,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const f = page.locator('#wpanel form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('9.3');
     await f.locator('button[type=submit]').click();
-    await expect(f.locator('[data-weigh-msg]')).toHaveText('NOT saved \u2014 The save script has not been updated for this yet. Nothing was saved.');
+    await expect(f.locator('[data-weigh-msg]')).toHaveText('Not saved: The save script has not been updated for this yet. Nothing was saved.');
     await expect(page.locator('#wpanel tbody tr')).toHaveCount(3);
   });
 
@@ -214,7 +214,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await page.evaluate(() => licenceBar({ adults: new Array(27), bitches: new Array(25), active: new Array(25), studs: new Array(2) }))).toContain('lbok');
   });
 
-  test('a saved reading shows at once in the count and Kept readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
+  test('a saved reading shows at once in the count and Readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
     await page.evaluate(() => go('round'));
@@ -236,6 +236,32 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[1]).toMatchObject({ table: 'area_reading', fields: { area_id: area, room_empty: 'yes' } });
     expect(bodies[1].fields.min_c).toBeUndefined();
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
+  });
+
+  test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    let fail = false;
+    const bodies = await saves(page, () => (fail ? { ok: false, code: 'NETWORK', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
+    await page.evaluate(() => { T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-p', type_key: 'round.presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]); go('round'); });
+    const here = page.locator('button[data-here]').first();
+    const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');
+    const not = page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`), line = page.locator(`[data-hsave="${area}|${sid}"]`);
+    await here.click();
+    await expect(here).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'check_log', fields: { check_type_id: 'cty-p', area_id: area, subject_id: sid, item: 'present', outcome: 'recorded', how_recorded: 'tapped' } });
+    await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
+    await here.click();   // a second tap on the saved button sends nothing
+    await page.waitForTimeout(200); expect(bodies.length).toBe(1);
+    await page.evaluate(() => go('round', false));   // after a redraw (or reload) the saved row still shows pressed, with its tick
+    await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await expect(line.locator('[data-saved="good"]')).toHaveCount(1);
+    fail = true;
+    await not.click();
+    await expect.poll(() => bodies.length).toBe(2);
+    await expect(line).toContainText('Not saved');
+    await expect(not).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {

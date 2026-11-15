@@ -21,7 +21,7 @@ const RULES = {
       /taken by/i, /entered by/i, /Feels like/i, /Max °C/, /Min °C/, /\bactual\b/i, /source/i],
     roomLine: /^[^·]+ · (AM (\d+\.\d–\d+\.\d( ✓)?|missed|due))?( · )?(PM (\d+\.\d–\d+\.\d( ✓)?|missed|due))?/,
     outsideLine: /^-?\d+(\.\d)? \/ -?\d+(\.\d)? °C(, rain \d+(\.\d)? mm)?$/,
-    dayTitle: /^\d\d\/\d\d\/\d\d$/,   // DD/MM/YY
+    dayTitle: /^\d{1,2} [A-Z][a-z]{2} \d{4}$/,   // 2 Mar 2026
   },
   colour: {
     // Every colour on the page must be one of these house tokens (or transparent).
@@ -125,16 +125,16 @@ for (const size of RULES.layout.widths) {
 }
 
 // ------------------------------------------------------------------ INFORMATION
-test('information: one short line per room, a tick inside the limit, the unit once, outside as max / min and rain, DD/MM/YY', async ({ page, guard }) => {
+test('information: one short line per room, a tick inside the limit, the unit once, outside as max / min and rain, dates as 2 Mar 2026', async ({ page, guard }) => {
   await open(page, guard);
   await openDay(page, '2026-01-05');
   const drill = page.locator('#drill');
   await expect(drill.locator('#d-title')).toHaveText(RULES.words.dayTitle);
-  await expect(drill.locator('#d-title')).toHaveText('05/01/26');
+  await expect(drill.locator('#d-title')).toHaveText('5 Jan 2026');
   await expect(drill.locator('#d-out')).toHaveText('5.3 / -1.9 °C, rain 0 mm');
   await expect(drill.locator('#d-out')).toHaveText(RULES.words.outsideLine);
   const lines = drill.locator('.rl');
-  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 (retired 10/01/26) · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
+  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 (retired 10 Jan 2026) · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
   for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
