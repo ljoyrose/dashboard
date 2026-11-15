@@ -4359,7 +4359,7 @@ PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
 /* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
 function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin'}; }
-if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); NEXT.bin=['admin','map']; }
+if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
 function navHas(id){
  if(id==='temps') return true;
