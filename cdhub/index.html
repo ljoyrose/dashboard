@@ -78,6 +78,8 @@ a{color:inherit;text-underline-offset:2px}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 
+
+.hbackrow{margin:12px 0 0}
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
 header h1 .dot{background:var(--ljr-5)}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
@@ -103,6 +105,13 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 
 
 .card{margin:0 0 12px;box-shadow:var(--shadow)}
+.hhome .hcard{margin:0;display:flex;flex-direction:column;gap:8px}.hhome .hcard h3{margin:0}.hcnum{font-weight:600}
+.hctop{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}.hctop a,.hsee{color:var(--ink)}
+.hlist{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
+.hlist li{display:flex;align-items:center;gap:8px;padding-left:12px;box-shadow:inset 3px 0 0 var(--ljr-0)}
+.hlist li span{flex:1}.hadd{display:flex;flex-wrap:wrap;gap:8px}
+.hlist li[data-slot="0"]{box-shadow:inset 3px 0 0 var(--ljr-0)}.hlist li[data-slot="1"]{box-shadow:inset 3px 0 0 var(--ljr-1)}.hlist li[data-slot="2"]{box-shadow:inset 3px 0 0 var(--ljr-2)}.hlist li[data-slot="3"]{box-shadow:inset 3px 0 0 var(--ljr-3)}.hlist li[data-slot="4"]{box-shadow:inset 3px 0 0 var(--ljr-4)}.hlist li[data-slot="5"]{box-shadow:inset 3px 0 0 var(--ljr-5)}.hlist li[data-slot="6"]{box-shadow:inset 3px 0 0 var(--ljr-6)}.hlist li[data-slot="7"]{box-shadow:inset 3px 0 0 var(--ljr-7)}.hlist li[data-slot="8"]{box-shadow:inset 3px 0 0 var(--ljr-8)}
+
 .card.dash{border-style:dashed}
 .card h4,.card .hx4{margin:0 0 12px;font-size:var(--fs-head);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
 .card p{margin:0 0 8px;font-size:var(--fs-body)}.card p:last-child{margin-bottom:0}
@@ -319,7 +328,17 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dogphoto-col{width:120px}
 .dogphoto-btns{display:flex;flex-direction:column;gap:6px}
 .dogphoto-btn{width:100%;box-sizing:border-box;white-space:nowrap}
-@media(max-width:400px){.ph{width:104px;height:104px}.dogphoto-col{width:104px}}
+/* Tighter card, phone first (Lisa, 15 Nov 2026: "wastes space and the photo is small"): on a phone the photo is the card's
+   full width, Take photo and Upload photo sit side by side under it, then the name; on wider screens the photo is bigger. */
+@media(max-width:600px){
+ .dc .dc-top{flex-direction:column;align-items:stretch;gap:8px;padding:12px 12px 6px}
+ .dogphoto-col{width:100%}
+ .ph{width:100%;height:auto;aspect-ratio:16/10;max-width:100%}
+ .ph .ti{width:56px;height:56px}
+ .dogphoto-btns{flex-direction:row}
+ .dogphoto-btn{flex:1 1 0;width:auto}
+}
+@media(min-width:601px){.ph{width:160px;height:160px}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
 .pcrop-edit input{width:100%}
 .pcrop-size{margin:0;font-size:var(--fs-small)}
@@ -441,7 +460,15 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 
 .bar{height:8px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--radius);overflow:hidden;min-width:60px}
 .bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
-.next{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+/* Chip row (Lisa 15 Nov 2026): sticky under the top bar, scrolls sideways on a phone. The house chip, count and hover;
+   selected = the 3px section-colour side line (.house-lbar) and a tick, no fill (Lisa 15 Nov 2026). */
+.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+ margin:0;padding:10px 0;background:var(--bg);border-bottom:1px solid var(--line)}
+.hchips::-webkit-scrollbar{display:none}
+.hchips [data-slot="1"]{--sc:var(--ljr-1-edge)} .hchips [data-slot="2"]{--sc:var(--ljr-2)} .hchips [data-slot="3"]{--sc:var(--ljr-3)}
+.hchips [data-slot="4"]{--sc:var(--ljr-4-icon)} .hchips [data-slot="5"]{--sc:var(--ljr-5)} .hchips [data-slot="6"]{--sc:var(--ljr-6)}
+.hchips [data-slot="7"]{--sc:var(--ljr-7)} .hchips [data-slot="8"]{--sc:var(--ljr-8-icon)}
+.hchips .hchip{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0 14px;background:var(--card);white-space:nowrap}
 .cbs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
@@ -527,8 +554,8 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 <span class="lookwrap" data-house-look></span>
 <button type="button" class="btn house-ib hidden" id="cdSignout" data-signout="1" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
 </div></header>
-<div class="wrap house-page"><main id="main"><div class="boot" id="boot" role="status" aria-live="polite" aria-busy="true"><span class="bootmark" aria-hidden="true"><svg class="bootspin" viewBox="0 0 48 48" width="48" height="48"><circle class="botring" cx="24" cy="24" r="21"></circle><path class="boothouse" d="M15 33h18M16 33V22l8-6 8 6v11M21 33v-6h6v6"></path></svg></span><p class="bootline">Getting things ready&hellip;</p><div class="rows" id="bootrows"><span class="bootdots" aria-hidden="true"><i></i><i></i><i></i></span></div></div></main>
-<div class="next" id="next"></div></div>
+<div class="wrap house-page"><nav id="chips" class="hchips" aria-label="Views in this section" hidden></nav><main id="main"><div class="boot" id="boot" role="status" aria-live="polite" aria-busy="true"><span class="bootmark" aria-hidden="true"><svg class="bootspin" viewBox="0 0 48 48" width="48" height="48"><circle class="botring" cx="24" cy="24" r="21"></circle><path class="boothouse" d="M15 33h18M16 33V22l8-6 8 6v11M21 33v-6h6v6"></path></svg></span><p class="bootline">Getting things ready&hellip;</p><div class="rows" id="bootrows"><span class="bootdots" aria-hidden="true"><i></i><i></i><i></i></span></div></div></main>
+</div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
 
@@ -1843,9 +1870,68 @@ function mainNums(ok){
   {label:'Unplaced',value:ok?listFor('unplaced').length:null,href:'#/today/unplaced'},
   {label:'Bitches',value:ok?c.bitches.length:null,href:'#/today/bitches',late:ok&&c.bitches.length!==c.active.length}];
 }
-function pageMap(){
- return '<h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',rows:mainRows(),nums:mainNums(true),doHref:'#/work'});
+/* Main answers "what needs me today?" (OV11 15 Nov 2026). Each person builds their own: which cards, in what order, are
+   owner-setting rows nav.home.<ROLE>.<card> (place 1, 2, 3...; 0 = off), dated, with a source. No rows = the starter.
+   A card is a count or its top 3, then "See all" to the full list in its own section: Main never repeats a whole list. */
+var HOME_CARDS={
+ needs:{label:'Needs you',view:'work',draw:function(){ return DashKit.hubMain({hub:'cdhub',rows:mainRows(),nums:mainNums(true),doHref:'#/work'}); }},
+ unplaced:{label:'Not placed',view:'today',all:'#/today/unplaced',n:function(){ return listFor('unplaced').length; },
+  top:function(){ return listFor('unplaced').slice(0,3).map(function(d){ return {text:d.name||d.id,href:'#/today/unplaced'}; }); }},
+ round:{label:'The round',view:'round',all:'#/round',n:function(){ var A=liveCabins(), date=CD._roundDate||todayISO();
+  return A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length+' of '+A.length; }},
+ dogs:{label:'Dogs here',view:'dogs',all:'#/dogs',n:function(){ return counts().here.length; }},
+ litters:{label:'Litters',view:'litters',all:'#/litters',n:function(){ return (CD.litters||[]).length; },
+  top:function(){ return (CD.litters||[]).filter(function(l){ return l.dob; }).sort(function(a,b){ return String(b.dob).localeCompare(String(a.dob)); })
+   .slice(0,3).map(function(l){ return {text:(l.raw_name||l.id)+' \u00b7 '+dmy(l.dob),href:'#/litters'}; }); }},
+ areas:{label:'Areas',view:'areas',all:'#/areas',n:function(){ return liveCabins().length; }},
+ sops:{label:'SOPs',view:'sops',all:'#/sops',n:function(){ return SOP.rows?SOP.rows.length:'\u2026'; }}
+};
+var HOME_STARTER=['needs'];   /* the pack's starting Main: the house Main (Next, Needs you, 3 numbers, Lisa 2 Nov 2026); more cards are each person's own */
+var HOME={edit:null,msg:''};
+function homeCards(){ var ids=Object.keys(HOME_CARDS).filter(function(id){ return navHas(HOME_CARDS[id].view); });
+ return {ids:ids,on:HubNav.home({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',cards:ids,starter:HOME_STARTER})}; }
+function homeSlot(id){ var s=HubNav.sectionOf(HOME_CARDS[id].view); return s?s.slot:'0'; }
+function homeCard(id){ var c=HOME_CARDS[id];
+ if(c.draw) return '<div data-home="'+id+'">'+c.draw()+'</div>';
+ var top=c.top?c.top():[], n=c.n();
+ return '<section class="card house-lbar hcard" data-home="'+id+'" data-slot="'+homeSlot(id)+'" style="--sc:var(--ljr-'+homeSlot(id)+')">'
+  +'<h3 class="hm-head"><a class="house-go" href="'+c.all+'">'+esc(c.label)+'</a><span class="hcnum">'+esc(String(n))+'</span></h3>'
+  +(top.length?'<ul class="hctop">'+top.map(function(x){ return '<li><a href="'+x.href+'">'+esc(x.text)+'</a></li>'; }).join('')+'</ul>':'')
+  +'<a class="hsee" href="'+c.all+'">See all \u203a</a></section>'; }
+function homeEditHtml(ids){ var on=HOME.edit, off=ids.filter(function(id){ return on.indexOf(id)<0; });
+ return '<section class="card" id="homeEdit"><h3>Arrange Main</h3><ol class="hlist">'
+  +on.map(function(id,i){ var l=esc(HOME_CARDS[id].label);
+   return '<li data-slot="'+homeSlot(id)+'"><span>'+l+'</span>'
+    +'<button type="button" class="btn" data-home-up="'+id+'" aria-label="Move up: '+l+'"'+(i?'':' disabled')+'>\u2191</button>'
+    +'<button type="button" class="btn" data-home-down="'+id+'" aria-label="Move down: '+l+'"'+(i<on.length-1?'':' disabled')+'>\u2193</button>'
+    +'<button type="button" class="btn" data-home-off="'+id+'" aria-label="Take off: '+l+'">\u2715</button></li>'; }).join('')+'</ol>'
+  +(off.length?'<p class="hadd">'+off.map(function(id){ return '<button type="button" class="btn" data-home-add="'+id+'">+ '+esc(HOME_CARDS[id].label)+'</button>'; }).join('')+'</p>':'')
+  +'<p class="hm-go"><button type="button" class="btn" data-home-save>Save</button><button type="button" class="btn" data-home-cancel>Cancel</button>'
+  +'<span class="msg" id="homeMsg">'+saveHtml(HOME.msg)+'</span></p></section>'; }
+function pageMap(){ var h=homeCards();
+ return '<h2 class="sr">Main</h2>'
+  +(HOME.edit?homeEditHtml(h.ids):'<div class="hm hhome">'+h.on.map(homeCard).join('')+'</div>'
+   +(sinkOn()?'<p class="hm-go"><button type="button" class="btn" data-home-arrange>Arrange Main</button>'+(HOME.msg?' <span class="msg">'+saveHtml(HOME.msg)+'</span>':'')+'</p>':''));
 }
+/* Save = one dated row per card (place, or 0 = off), a new row from today; old rows stay for the past. */
+function homeSave(){ var h=homeCards(), on=HOME.edit, from=todayISO();
+ var rows=h.ids.map(function(id){ return {rule_key:'nav.home.OWNER.'+id,value:String(on.indexOf(id)+1),effective_from:from,source:'CD Hub, Arrange Main'}; });
+ HOME.msg='Saving';
+ return rows.reduce(function(p,r){ return p.then(function(){ return sinkPost('breeding_rule',r).then(function(j){
+   var s=bbSaved(j); (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:s.id,rule_key:r.rule_key,value:r.value,effective_from:from,source:r.source,to_date:''}); }); }); },Promise.resolve())
+  .then(function(){ HOME.edit=null; HOME.msg='Saved '+hhmmNow(); go('map',false); },
+   function(e){ HOME.msg='Not saved: '+(e&&e.message||'error'); showSave(document.getElementById('homeMsg'),HOME.msg); }); }
+document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-home-arrange],[data-home-up],[data-home-down],[data-home-off],[data-home-add],[data-home-save],[data-home-cancel]');
+ if(!t) return; var d=t.dataset, L=HOME.edit, id, i;
+ if('homeArrange' in d){ HOME.edit=homeCards().on.slice(); HOME.msg=''; }
+ else if('homeCancel' in d){ HOME.edit=null; HOME.msg=''; }
+ else if('homeSave' in d){ homeSave(); return; }
+ else if(L&&(id=d.homeUp||d.homeDown)){ i=L.indexOf(id); var j=d.homeUp?i-1:i+1; if(i<0||j<0||j>=L.length) return; L[i]=L[j]; L[j]=id; }
+ else if(L&&d.homeOff){ L.splice(L.indexOf(d.homeOff),1); }
+ else if(L&&d.homeAdd){ L.push(d.homeAdd); }
+ else return;
+ go('map',false);
+ var f=document.querySelector(d.homeUp?'[data-home-up="'+d.homeUp+'"]':d.homeDown?'[data-home-down="'+d.homeDown+'"]':'[data-home-save]'); if(f&&!f.disabled) f.focus(); });
 
 function pageToday(){
  var c=counts(), date=CD._roundDate||todayISO();
@@ -2109,7 +2195,7 @@ function fbar(o){
   +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><svg class="ti" aria-hidden="true"><use href="#i-adjustments-horizontal"/></svg>Filter<span class="fcount"></span></button>'
   +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'"'+(x[0]===o.sort[2]?' selected':'')+'>Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
-  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
+  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.filter(Boolean).map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
   +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'" data-clear-all="'+o.q+'" disabled>Clear filters</button></div></div>'
   +(o.hidden||'')+'</div>';
 }
@@ -2166,7 +2252,9 @@ function pageDogs(){
    hidden:'<input type="hidden" id="fst" value="" data-fname="Status">',
    groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
     ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
-    ['Age',fsel('fa','Age','<option value="p">under 6m</option><option value="j">6m to 12m</option><option value="a">1 to 7y</option><option value="o">7y+</option><option value="__none">no DOB</option>')],
+    /* Age: two groups from the owner's rule "Age a dog counts as an adult", the row in force today (Lisa 15 Nov 2026:
+       "there are only 2 in sops"); no rule = no Age filter */
+    adultMonths()===null?null:['Age',fsel('fa','Age','<option value="p">Puppy</option><option value="a">Adult</option><option value="__none">no DOB</option>')],
     ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
     /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
     ['Status','<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
@@ -2175,7 +2263,7 @@ function pageDogs(){
  /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
-function ageBand(m){ if(m===null) return '__none'; if(isPupM(m)) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
+function ageBand(m){ if(m===null) return '__none'; return isPupM(m)?'p':(isAdultM(m)?'a':''); }
 /* Edit the card header (Lisa, 12 Nov 2026): name, sex, date of birth, colour, entire/neutered, microchip. One save,
    action dog_details, owner code only, behind SAVE_ENABLED and TABLE_ON_dog_details. Size comes from weight unless an owner size_override row is set. */
 function dEditForm(d){
@@ -2403,9 +2491,15 @@ function loadPhotoImg(img){
 }
 /* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subjects',d.id,todayISO()); }
-function galleryItem(f,mainId){
+/* Show photo dates (Lisa 15 Nov 2026, J5): a per-person display setting, never a fixed rule. Rows in the shared settings list:
+   photos.show_dates.owner = this person's own choice (the hub is the owner's page), photos.show_dates = the owner's default
+   for everyone. Value 1 shows the date under each gallery photo, 0 hides it. The row in force today wins; no row = shown,
+   as before. Sorting never changes; only the label is hidden. */
+var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
+function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
+function galleryItem(f,mainId,dates){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
- var cap='<span class="mut">'+esc(when)+'</span>'+(main?' <span class="pill" data-k="main">Main</span>':'');
+ var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'');
  if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
@@ -2415,12 +2509,27 @@ function galleryItem(f,mainId){
 }
 function galleryHtml(d,ph){
  if(!ph.gallery.length&&!ph.ended.length) return '';
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos';
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,''); }).join('')+'</ul></details>':'')
+  +'<button type="button" class="btn quiet" data-photo-dates="'+(dates?'0':'1')+'" aria-pressed="'+(dates?'true':'false')+'">Dates '+(dates?'shown':'hidden')+'</button> <span class="mut" data-photo-dates-msg></span>'
+  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
+  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates); }).join('')+'</ul></details>':'')
   +'</div></details>';
 }
+/* Dates shown / hidden: saves this person's own row (photos.show_dates.owner) from today. One change a day: the settings
+   list keeps one row per key per day, so a second change today is refused with a plain message. */
+document.addEventListener('click',async function(ev){
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-photo-dates]'):null; if(!b) return;
+ var want=b.getAttribute('data-photo-dates'), msg=b.parentNode.querySelector('[data-photo-dates-msg]'), day=todayLondon();
+ b.disabled=true; if(msg) msg.textContent='Saving\u2026';
+ var r=await sinkPost('breeding_rule',{rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery'});
+ b.disabled=false;
+ if(!(r.ok&&r.result&&r.result.status==='saved')){ if(msg) msg.textContent=(r.fields&&r.fields.effective_from)?'Already changed today. Try again tomorrow.':sinkMsg(r); return; }
+ (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
+ var g=b.closest('details.gal'), open=g&&g.open; drawDogs();
+ var again=document.querySelector('details.gal[data-dog="'+(g?g.getAttribute('data-dog'):'')+'"]');
+ if(again&&open){ again.open=true; var m2=again.querySelector('[data-photo-dates-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+});
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
@@ -4305,7 +4414,6 @@ function bindCompliance(){
 }
 var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance};
 var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance']];
-var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','areas'],areas:['today','litters'],litters:['dogs','areas'],buyers:['dogs','map'],sops:['dogs','buyers'],compliance:['litters','dogs']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
@@ -4335,16 +4443,16 @@ function bbSaveScore(f){
    points_earned:f.points_earned,points_available:f.points_available,status:'saved',calculated_at:r.at||'',replaces_id:r.replaces_id||''}); }); }
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
-if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; }
+if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); }
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
-if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); NEXT.enquiries=['litters','dogs']; }
+if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']); NEXT.admin=['map','work'];
- PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); NEXT.staff=['admin','map']; }
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']);
+ PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
-if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(itmV()); }; SECTIONS.push(['items','Items']); NEXT.items=['compliance','sops']; }
+if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(itmV()); }; SECTIONS.push(['items','Items']); }
 /* Money and Ideas: sections Lisa named (14 Nov 2026) with nothing in them yet; shown only once the owner switches them on. */
 PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Money</h2><p class="mut">Nothing here yet.</p></section>'; };
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
@@ -4362,6 +4470,19 @@ function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
  return HubNav.html({counts:counts,late:late,has:navHas,layout:navLayout()});
+}
+/* The chip row at the top of the page (Lisa 15 Nov 2026): every view of the open section, one tap each, with counts.
+   It replaces the "Next: X" buttons that sat at the foot of the page. */
+function chipCounts(){
+ var nd=needsToday();
+ return {today:nd.length,work:(CD.work||[]).filter(function(r){return r.status==='BLOCKED'&&r.owner==='Lisa';}).length,
+  dogs:(CD.dogs||[]).filter(function(d){return !d.off;}).length,areas:(CD.areas||[]).length,litters:(CD.litters||[]).length,
+  sops:SOP.rows?SOP.rows.length:null};
+}
+function chipsDraw(id){
+ var el=document.getElementById('chips'), h=LOAD.state==='ok'?HubNav.chips({current:id,has:navHas,counts:chipCounts(),
+  late:{today:needsToday().some(function(x){return x.tone==='late';})}}):'';
+ el.innerHTML=h; el.hidden=!h;
 }
 function pill(){
  var p=document.getElementById('livepill');
@@ -4430,7 +4551,7 @@ function navCurrent(id){
 }
 function go(id,push){
  var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
- pill(); SHOWN=String(id||'');
+ var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=String(id||''); chipsDraw('');
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
@@ -4467,7 +4588,7 @@ function go(id,push){
    +(wait==='err'?'<p>These records could not be read. '+esc(LOAD.laterErr||'')+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
     :'<p class="mut">'+(wait==='live'?'Reading the live records. This page never shows the copy on this device.':'Getting these records ready…')+'</p>')+'</div>';
   navCurrent(id);
-  document.getElementById('next').innerHTML=''; return;
+  chipsDraw(id); return;
  }
  main.innerHTML=(LOAD.stale?'<p class="card acc4" role="status" style="margin-top:16px">Showing the copy on this device ('+esc(agoText(LOAD.storedAt))+'). The live read failed: '+esc(LOAD.stale)+'. <button data-reload="1">Try again</button></p>':'')+PAGES[id]();
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.bind(main, enqV());
@@ -4475,7 +4596,7 @@ function go(id,push){
  navCurrent(id);
  labelControls(main);
  levelHeadings(main);
- document.getElementById('next').innerHTML=(NEXT[id]||[]).filter(function(n){return !!PAGES[n];}).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
+ chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
@@ -4503,7 +4624,7 @@ function go(id,push){
    if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
    var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
   ['q','fs','fn','fa','fst','fc','ft','dsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
-  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';});
+  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';});
    Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){ x.setAttribute('aria-pressed',x.dataset.code===''?'true':'false'); }); drawDogs(); });
   drawDogs();
  }
@@ -4606,8 +4727,14 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries')?full:id;
- if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops')?full:id;
+ if(push!==false && location.hash!=='#/'+at){
+  /* a real history entry that remembers where you came from and how far down (Back returns there) */
+  var pb=String(prevShown||'').split('/')[0];
+  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?label(pb):'',y:leaveY,state:{id:at}});
+ }
+ /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
+ if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
  window.scrollTo(0,keepY);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
@@ -4705,7 +4832,12 @@ DashKit.search.register(function(q){
  },function(){ return out; });
 });
 function followHash(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } }
-window.addEventListener('popstate',followHash);
+try{ history.scrollRestoration='manual'; }catch(e){}
+/* a plain link (#/...) also gets a Back step from the browser: note how far down this page was first */
+document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a[href^="#/"]'); if(!a) return;
+ try{ history.replaceState(Object.assign({},history.state||{},{y:window.scrollY}),''); }catch(x){} },true);
+/* Back: redraw the page, then return to where you were on it */
+window.addEventListener('popstate',function(e){ followHash(); var y=e.state&&e.state.y; if(y) window.scrollTo(0,y); });
 window.addEventListener('hashchange',followHash);
 render();
 </script>

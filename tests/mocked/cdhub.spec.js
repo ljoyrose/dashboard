@@ -201,11 +201,11 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
-    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Records', 'People']);
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
@@ -225,17 +225,41 @@ test.describe('CD Hub: navigation', () => {
     await expect(page.locator('#main')).not.toBeEmpty();
     await openView(page, 'buyers');
     await expect(page.locator('#main h2')).toHaveText('Assocs');
-    await expect(page.locator('#next')).toContainText('Next: Dogs');
   });
 
-  test('the "Next:" buttons at the bottom lead to other sections', async ({ page }) => {
+  test('chips at the top of a section reach each of its views in one tap; no "Next:" buttons at the foot @regression', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await tabClick(page, '#nav button[data-go="today"]');
-    const next = page.locator('#next button[data-go]').first();
-    const target = await next.getAttribute('data-go');
-    await next.click();
-    await expect(page.locator(`#nav button[data-go="${target}"]`)).toHaveAttribute('aria-current', 'page');
+    await tabClick(page, '#nav button[data-go="dogs"]');
+    const chips = page.locator('#chips');
+    await expect(chips).toBeVisible();
+    await expect(chips.locator('.hchip .hcl')).toHaveText(['Dogs', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps']);
+    await expect(chips.locator('[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
+    await expect(chips.locator('[data-go="dogs"] .cnt')).toHaveText(/^\d+$/);
+    await chips.locator('[data-go="areas"]').click();
+    await expect(page.locator('#main h2').first()).toHaveText('Areas');
+    await expect(chips.locator('[data-go="areas"]')).toHaveAttribute('aria-current', 'page');
+    await expect(chips.locator('[data-go="dogs"]')).not.toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#next')).toHaveCount(0);
+    await expect(page.getByText(/^Next: /)).toHaveCount(0);
+    // Temps is its own page: its chip is a link there
+    await expect(chips.locator('a.hchip', { hasText: 'Temps' })).toHaveAttribute('href', './history.html');
+  });
+
+  test('the view a section opens on is an owner setting row per role or person, not code', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    const r = await page.evaluate(() => {
+      const row = (k, v) => ({ rule_key: k, value: String(v), effective_from: '2026-11-01' });
+      const has = () => true;
+      return {
+        none: HubNav.layout({ rows: [], role: 'OWNER', has }).first.ops,
+        role: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3)], role: 'OWNER', has }).first.ops,
+        person: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3), row('nav.first.person.p1.ops', 2)], role: 'OWNER', person: 'p1', has }).first.ops,
+        tab: HubNav.html({ layout: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3)], role: 'OWNER', has }), has }).includes('data-go="areas"')
+      };
+    });
+    expect(r).toEqual({ none: undefined, role: 'areas', person: 'litters', tab: true });
   });
 
   test('Reread reads the folder again', async ({ page, guard }) => {
@@ -473,7 +497,7 @@ test.describe('CD Hub house look', () => {
     const lines = new Set();
     for (const tab of ['map', 'today', 'round', 'dogs', 'litters', 'areas']) {
       await openTab(page, tab);
-      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible, #next button:visible');
+      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible');
       const n = await ctls.count();
       expect(n, tab).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
@@ -568,7 +592,7 @@ test.describe('CD Hub house look', () => {
       await openTab(page, tab);
       const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(over, '#/' + tab).toBeLessThanOrEqual(0);
-      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #chips .hchip, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
     // The top bar (Lisa's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
@@ -833,12 +857,18 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
+    // Age groups come from the owner's adult-age rule (Lisa 15 Nov 2026: two in the SOP); no rule = no Age filter
+    await expect(page.locator('#fa')).toHaveCount(0);
+    await page.evaluate(() => { T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([{ id: 'ad', rule_key: 'dog.adult_from_months', value: '12', effective_from: '2010-01-01', source: 'Pretend SOP' }]); });
+    await openTab(page, 'round');
+    await openTab(page, 'dogs');
     await expect(page.locator('#fp-dogs')).toBeHidden();
     await page.locator('[data-fpanel="fp-dogs"]').click();
     await expect(page.locator('[data-fpanel="fp-dogs"]')).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#fa').selectOption('j');
+    expect(await page.locator('#fa option').allInnerTexts()).toEqual(['Any', 'Puppy', 'Adult', 'no DOB']);
+    await page.locator('#fa').selectOption('p');
     await expect(page.locator('#cnt')).toHaveText('1 of 3');
-    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: 6m to 12m/);
+    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: Puppy/);
     await expect(page.locator('[data-fpanel="fp-dogs"] .cnt')).toHaveText('1');
     await page.locator('#ach-dogs .achip').click();
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
@@ -854,7 +884,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([120, 120]);
+    expect([ph.width, ph.height]).toEqual([160, 160]);   // tighter card (15 Nov 2026): bigger photo on wide screens, full width on phones
     // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
     await expect(card.locator('.whor')).toHaveCount(1);
     await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
