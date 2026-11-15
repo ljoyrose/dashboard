@@ -378,11 +378,12 @@ const setRx = (world, byId) => {
   f.content = [lines[0], ...rows].join('\n') + '\n';
   f.size = String(f.content.length);
 };
-const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes\n'
-  + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
-// Gestation timings are dated rows now (Lisa 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
+const MATINGS = (DUE = true) => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes\n'
+  + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,${DUE ? iso(-3) : ''},,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,${DUE ? iso(5) : ''},,,invented\n`;
+// The due date is the owner's entry on the mating (SOP Mating Plan). Window and alert are dated rows counted from it
+// (SOP Whelping: as the vet advises). Pretend values, pretend source.
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
-  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50']
+  + ['gestation.window_before_due_days,6', 'gestation.window_after_due_days,9', 'gestation.alert_before_due_days,13']
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
 const openTab = (page, id) => openView(page, id);
 // Walks every visible element and returns plain-English problems, one list per rule.
@@ -663,7 +664,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(rows.nth(1)).toContainText('Test Pup One in whelp');
     await expect(rows.nth(1).locator('.dpill')).toHaveClass(/soon/);
     await expect(rows.nth(2).locator('.dpill')).toHaveCount(0);   // undated rows carry no date pill
-    const due = iso(-66 + 63).split('-');
+    const due = iso(-3).split('-');
     await expect(rows.nth(0).locator('.dpill')).toContainText(`${+due[2]} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+due[1] - 1]} ${due[0]}`);
     const ring = (sel) => page.locator(sel).first().evaluate((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; });
     const late = await ring('#needsCard .dpill.late'), soon = await ring('#needsCard .dpill.soon');
@@ -964,7 +965,7 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
 
   test('an open mating added to the fixture file is found, from the parsed rows and from raw rows alike', async ({ page, guard }) => {
     const fixture = fs.readFileSync(path.join(FIX, 'bld', 'BLD-mating.csv'), 'utf8').trimEnd();
-    setFile(guard.world, 'BLD-mating.csv', fixture + `\nmat-test-2,sub-test-dog-1,sub-test-dog-2,${iso(-40)},1,natural,yes,,,,invented open mating\n`);
+    setFile(guard.world, 'BLD-mating.csv', fixture + `\nmat-test-2,sub-test-dog-1,sub-test-dog-2,${iso(-40)},1,natural,yes,${iso(23)},,,invented open mating\n`);
     GEST(guard.world);
     await page.goto('cdhub/');
     await signIn(page);
@@ -984,31 +985,33 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
   });
 });
 
-test('CD Hub: gestation and adult age come from dated rows; no row = not set, judged on the mating date', async ({ page, guard }) => {
-  setFile(guard.world, 'BLD-mating.csv', MATINGS());
+test('CD Hub: the due date is the entry on the mating; window and alert are dated rows from it; none = not set', async ({ page, guard }) => {
+  setFile(guard.world, 'BLD-mating.csv', MATINGS(false));
   await page.goto('cdhub/');
   await signIn(page);
-  // No gestation rows: no due date is invented, Today says not set.
+  // No due date entered: none is worked out from the mating date; Today says so.
   await openTab(page, 'today');
-  await expect(page.locator('#main')).toContainText('gestation timings');
-  await expect(page.locator('#main')).not.toContainText('working due (+63)');
+  await expect(page.locator('#main')).toContainText('due date — add it on the mating');
   const r = await page.evaluate(() => {
     const unset = inWhelp().map((x) => !!x.unset);
+    // An entered due date shows as it is; with no window rows the window is not set and nothing alerts.
+    CD.matings.forEach((m, i) => { m.due = addDays(todayISO(), i ? 5 : -3); });
+    const g = inWhelp().map((x) => ({ due: x.due, from: x.from, tone: x.tone, alertOn: x.alertOn }));
     // A rule that starts AFTER the mating does not apply to it; one in force on the mating date does.
     const m = inWhelp()[0].on;
     T['BLD-breeding_rule.csv'] = [
-      { id: 'a', rule_key: 'gestation.due_days', value: '60', effective_from: '2010-01-01', source: 'Old pretend' },
-      { id: 'b', rule_key: 'gestation.window_from_days', value: '55', effective_from: '2010-01-01', source: 'Old pretend' },
-      { id: 'c', rule_key: 'gestation.window_to_days', value: '70', effective_from: '2010-01-01', source: 'Old pretend' },
-      { id: 'd', rule_key: 'gestation.due_days', value: '65', effective_from: addDays(m, 1), source: 'New pretend' },
+      { id: 'a', rule_key: 'gestation.window_before_due_days', value: '6', effective_from: '2010-01-01', source: 'Old pretend' },
+      { id: 'b', rule_key: 'gestation.window_before_due_days', value: '2', effective_from: addDays(m, 1), source: 'New pretend' },
     ];
-    const g = inWhelp()[0];
+    const w = inWhelp().filter((x) => x.on === m)[0];
     const adultNone = adultMonths();
     T['BLD-breeding_rule.csv'].push({ id: 'e', rule_key: 'dog.adult_from_months', value: '6', effective_from: '2010-01-01', source: 'Pretend' });
-    return { unset, due: g.due, want: addDays(m, 60), adultNone, adult: adultMonths(), pup: isPupM(3), grown: isAdultM(7) };
+    return { unset, g, from: w.from, want: addDays(w.due, -6), adultNone, adult: adultMonths(), pup: isPupM(3), grown: isAdultM(7) };
   });
   expect(r.unset.every(Boolean)).toBe(true);
-  expect(r.due).toBe(r.want);
+  expect(r.g.every((x) => x.due && !x.from && x.alertOn === '')).toBe(true);
+  expect(r.g.map((x) => x.tone).sort()).toEqual(['', 'late']);
+  expect(r.from).toBe(r.want);
   expect(r.adultNone).toBeNull();
   expect([r.adult, r.pup, r.grown]).toEqual([6, true, true]);
 });

@@ -1395,7 +1395,7 @@ function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
 function inWhelp(onISO){
  var today=onISO||new Date().toISOString().slice(0,10), out=[], bydam={};
 
- (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
+ (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,due:m.due_from_this_mating||'',litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
   .forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
  Object.keys(bydam).forEach(function(dam){
   var ms=bydam[dam].slice().sort(function(a,b){return (a.on||'')<(b.on||'')?-1:1;});
@@ -1406,12 +1406,16 @@ function inWhelp(onISO){
   if(!first||!first.on){
     out.push({dog:d,dam:dam,matings:open.length,on:'',due:'',from:'',to:'',day:null,unknown:true});
     return; }
-  var day=daysBetween(first.on,today), g=gestOn(first.on);
+  var day=daysBetween(first.on,today);
   if(day===null||day<0) return;
-  if(!g){ out.push({dog:d,dam:dam,matings:open.length,on:first.on,due:'',from:'',to:'',day:day,unset:true}); return; }
-  if(day>g.to) return;
-  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,
-    due:addDays(first.on,g.due),from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
+  /* SOP Mating Plan: the due date is the owner's own entry on the mating row (due_from_this_mating), never worked out here */
+  var due=open.map(function(m){ return isoDay(m.due||m.due_from_this_mating); }).filter(Boolean)[0]||'';
+  if(!due){ out.push({dog:d,dam:dam,matings:open.length,on:first.on,due:'',from:'',to:'',day:day,unset:true}); return; }
+  var g=gestOn(first.on), from=g.before!==null?addDays(due,-g.before):'', to=g.after!==null?addDays(due,g.after):'';
+  if(to&&today>to) return;
+  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,due:due,from:from,to:to,day:day,
+    tone:today>due?'late':(from&&today>=from?'soon':''),
+    alertOn:g.alert!==null?addDays(due,-g.alert):'',
     sires:open.map(function(m){var x=CD._byId[m.sire];return x?x.name:(m.sire||'?');}),
     methods:open.map(function(m){return m.method||'not recorded';})});
  });
@@ -1428,8 +1432,8 @@ var BREED_RULES=[
 var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days'],['compliance.due_soon_days','Days ahead that count as due soon','days'],
  ['staffing.adults_per_full_time','Adult dogs per full-time carer','dogs'],['staffing.adults_per_part_time','Adult dogs per part-time carer','dogs'],
  ['dog.adult_from_months','Age a dog counts as an adult','months'],
- ['gestation.due_days','Days from first mating to working due date','days'],['gestation.window_from_days','Whelping window opens (days from mating)','days'],
- ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days']];
+ ['gestation.window_before_due_days','Whelping window opens (days before the due date)','days'],['gestation.window_after_due_days','Whelping window closes (days after the due date)','days'],
+ ['gestation.alert_before_due_days','Days before the due date to start alerting','days']];
 /* Today's staffing tile: only from the owner's dated rows (Lisa 12 Nov: every limit is a dated row; no assumed ratio).
    The row in force on the day shown is used. Not set: no tile. */
 function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_per_full_time',iso), p=breedRule('staffing.adults_per_part_time',iso);
@@ -1440,9 +1444,10 @@ function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(func
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
 /* A whole-number rule in force on a date, or null (not set). Lisa 12 Nov 2026: every limit is a dated row; no row = not set. */
 function ruleNum(key,iso){ var r=breedRule(key,iso), n=r?parseInt(r.value,10):NaN; return isNaN(n)?null:n; }
-/* Gestation timings in force on the MATING date: days to due, window from/to, alert day. null unless due and window are all set. */
-function gestOn(iso){ var g={due:ruleNum('gestation.due_days',iso),from:ruleNum('gestation.window_from_days',iso),to:ruleNum('gestation.window_to_days',iso),alert:ruleNum('gestation.alert_from_day',iso)};
- return (g.due!==null&&g.from!==null&&g.to!==null)?g:null; }
+/* Whelping timings in force on the MATING date, each counted from the entered due date (SOP Whelping: "as the vet advises").
+   Each is null until the owner adds its row: no default. */
+function gestOn(iso){ return {before:ruleNum('gestation.window_before_due_days',iso),after:ruleNum('gestation.window_after_due_days',iso),
+ alert:ruleNum('gestation.alert_before_due_days',iso)}; }
 /* The age (months) a dog counts as an adult, from dog.adult_from_months in force on the day; null = not set. */
 function adultMonths(iso){ return ruleNum('dog.adult_from_months',iso||todayISO()); }
 function isAdultM(m,iso){ var a=adultMonths(iso); return m!==null&&a!==null&&m>=a; }
@@ -1476,8 +1481,8 @@ function litterGaps(){
   }});
  return out;
 }
-/* A bitch mated younger than the rule allows. Uses the mating date; a born litter with no mating row estimates it as DOB minus gestation.due_days
-   (marked estimated). Lisa 12 Nov 2026: no row = not set, so with no due-days row those litters are counted as not checked (out.unest), never guessed. */
+/* A bitch mated younger than the rule allows. Uses the mating date. A born litter with no mating row has no mating date: it is
+   counted as not checked (out.unest), never estimated (SOP Mating Plan: no day count; OV11 for Lisa 15 Nov 2026). */
 function damAgeBreaches(){
  var dob={}; (T['BLD-subject.csv']||[]).forEach(function(r){ if(isoDay(r.dob)) dob[r.id]=isoDay(r.dob); });
  var out=[], hadMating={}; out.unest=0;
@@ -1485,14 +1490,9 @@ function damAgeBreaches(){
   if(!on||!dob[d]) return; var r=breedRule('min_dam_age_months',on); if(!r) return;
   if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:false,what:'mating '+(m.id||'')}); });
  (CD.litters||[]).forEach(function(l){ var b=litDob(l), d=l.dam_subject_id; if(!b||!dob[d]||hadMating[l.id]) return;
-  var on=estMated(b); if(!on){ out.unest++; return; } var r=breedRule('min_dam_age_months',on); if(!r) return;
-  if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:true,what:l.pairing||l.id}); });
+  out.unest++; });
  return out;
 }
-/* Estimated mating date for a born litter: DOB minus the due-days row. The row is read on the birth date, then again on the estimated mating date
-   (the rule in force when she was mated); null when no row is set. */
-function estMated(b){ var n=ruleNum('gestation.due_days',b); if(n===null) return null; var on=addDays(b,-n), n2=ruleNum('gestation.due_days',on);
- return (n2!==null&&n2!==n)?addDays(b,-n2):on; }
 /* The litter that takes a bitch past the most litters allowed (counted on the date that litter was born). */
 function litterCountBreaches(){
  var by=littersByDam(), out=[];
@@ -1543,9 +1543,9 @@ function checks(){
  out.push({k:'dam age',ok:!da.length,
    msg:(!breedRuleRows('min_dam_age_months').length?'not checked: set the youngest age a bitch can be mated on Compliance'
      :da.length? da.length+' mating'+(da.length===1?' was':'s were')+' younger than your rule allows: '
-     +da.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' mated '+dmy(x.on)+(x.est?' (estimated)':'')+', born '+dmy(x.dob)+' (rule '+x.months+' months)'; }).join(', ')+(da.length>5?' …':'')
+     +da.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' mated '+dmy(x.on)+', born '+dmy(x.dob)+' (rule '+x.months+' months)'; }).join(', ')+(da.length>5?' …':'')
      :'every mating meets your rule on the youngest age')
-   +(breedRuleRows('min_dam_age_months').length&&da.unest?' · '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked: days from mating to due date not set':'')});
+   +(breedRuleRows('min_dam_age_months').length&&da.unest?' · '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked (no mating date)':'')});
  var lc=litterCountBreaches();
  out.push({k:'litter count',ok:!lc.length,
    msg:!breedRuleRows('max_litters_per_dam').length?'not checked: set the most litters per bitch on Compliance'
@@ -1657,10 +1657,10 @@ function needsToday(){
  /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
-  if(x.unset){ out.push({title:x.dog.name+': gestation timings not set',sub:'Add the gestation rows in Compliance',go:'compliance',tone:'',kind:'kit'}); return; }
-  if(x.g.alert===null||x.day<x.g.alert) return;   /* no alert-day row: no alert */
-  out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
-   tone:x.day>x.g.due?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
+  if(x.unset){ out.push({title:x.dog.name+': due date not entered',sub:'Add it on the mating',go:'litters',tone:'',kind:'kit'}); return; }
+  if(!x.alertOn||date<x.alertOn) return;   /* no alert row: no alert */
+  out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+(x.from&&x.to?' · window '+dmy(x.from)+' to '+dmy(x.to):''),date:x.due,
+   tone:x.tone,go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
  areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id),date);
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
@@ -1720,8 +1720,8 @@ function littersCard(title){
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
  var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'+(title||'Litters')+cntPill(n)+'</h3>';
- h+=w.map(function(x){ var tone=x.day>x.g.due?'late':(x.day>=x.g.from?'soon':'');
-   return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of '+x.g.from+'\u2013'+x.g.to+' \u00b7 working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
+ h+=w.map(function(x){
+   return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' \u00b7 due</small></span>'+dpill(x.due,x.tone)+'</div>'; }).join('');
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
@@ -1884,15 +1884,15 @@ function pageToday(){
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
    /* kit: animal */
    return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
-    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due</th><th>window</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
+    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>due</th><th>window</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
     +w.map(function(x){
       if(x.unknown) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill no">mating date not recorded</span> '+esc(x.matings)+' mating row(s), no date \u2014 no due date can be computed</td></tr>';
-      if(x.unset) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill w">not set</span> gestation timings \u2014 add them in Compliance</td></tr>';
-      var close=x.day>=x.g.from;
+      if(x.unset) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill w">not set</span> due date \u2014 add it on the mating</td></tr>';
+      var close=!!x.tone;
       return '<tr><td><b>'+esc(x.dog.name)+'</b></td>'
        +'<td><span class="pill '+(close?'w':'i')+'">day '+x.day+'</span></td>'
        +'<td>'+esc(dmy(x.on))+'</td><td><b>'+esc(dmy(x.due))+'</b></td>'
-       +'<td class="mut">'+esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to))+' <small>(days '+x.g.from+'\u2013'+x.g.to+')</small></td>'
+       +'<td class="mut">'+(x.from&&x.to?esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to)):'<span class="pill w">not set</span>')+'</td>'
        +'<td class="mut">'+esc((x.sires||[]).join(', '))+' \u00b7 '+esc((x.methods||[]).join(', '))+'</td></tr>'; }).join('')
     +'</tbody></table></div>'
     +'</div>'; })()
@@ -4134,7 +4134,7 @@ function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
  lg.forEach(function(x){ probs.push({who:x.dam,t:'Litters too close: '+(x.days===0?'same day':x.days+' days apart'),s:(x.prev.pairing||x.prev.id)+' ('+dmy(litDob(x.prev))+') → '+(x.next.pairing||x.next.id)+' ('+dmy(litDob(x.next))+'). Your rule: '+x.months+' months.'}); });
- da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+dmy(x.on)+(x.est?' (estimated from the litter, no mating row)':'')+', born '+dmy(x.dob)+'. Your rule: '+x.months+' months.'}); });
+ da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+dmy(x.on)+', born '+dmy(x.dob)+'. Your rule: '+x.months+' months.'}); });
  lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+dmy(litDob(x.litter))+'). Your rule: '+x.max+'.'}); });
  var h='<h2>Compliance</h2><p class="sub">Data checks, breeding rules and room limits.</p>';
  var asAt=/^\d{4}-\d{2}-\d{2}$/.test(COMP.asAt)&&COMP.asAt<=today?COMP.asAt:today, past=asAt!==today;
@@ -4144,7 +4144,7 @@ function pageCompliance(){
  h+=compUrgentHtml(today)+compStateHtml(asAt)+compFindingsHtml(asAt)+compInspectionsHtml(asAt);
  h+=checksCard();
  var pb='';
- if(da.unest&&breedRuleRows('min_dam_age_months').length) pb+='<p id="damAgeUnest"><span class="pill w">not set</span> Days from mating to due date \u00b7 '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row not checked for the youngest age.</p>';
+ if(da.unest&&breedRuleRows('min_dam_age_months').length) pb+='<p id="damAgeUnest"><span class="pill w">not checked</span> '+da.unest+' litter'+(da.unest===1?'':'s')+' with no mating row: no mating date, so not checked for the youngest age.</p>';
  if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
  pb+=probs.length?'<ul class="notes" data-calm="off">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
