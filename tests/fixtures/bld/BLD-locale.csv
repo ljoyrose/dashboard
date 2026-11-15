@@ -1,0 +1,2 @@
+id,tenant_id,language_tag,time_zone,from_date,to_date,source
+loc-test,ten-test,en-GB,Europe/London,2020-01-01,,Invented for tests
