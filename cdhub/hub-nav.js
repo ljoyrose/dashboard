@@ -1,6 +1,6 @@
 /* CD Hub bottom bar (Lisa 14 Nov 2026, menu option A). The hub and the temperature pages both render from this list.
    Bar: Main (slot 1: Today, Do, Decide) · up to 3 sections chosen per role or person · More.
-   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Ops 4, People 5, Sales 6, Ideas 7; Settings 8 (holds Bin).
+   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Records 4 (id ops; Lisa named it 15 Nov 2026), People 5, Sales 6, Ideas 7; Settings 8 (holds Bin).
    Which sections are on and which sit on the bar are owner settings: dated rule rows (breeding_rule), never fixed here.
      nav.on.<section>                  1 on, 0 off
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
@@ -38,13 +38,13 @@
     { id: 'main', label: 'Main', slot: '1', icon: 't-main', go: 'map', views: ['map', 'today', 'work'] },
     { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check', go: 'compliance', views: ['compliance', 'items', 'breed'] },   /* Breed Better: a welfare and standards scheme, its own brick */
     { id: 'money', label: 'Money', slot: '3', icon: 't-money', go: 'money', views: [] },
-    { id: 'ops', label: 'Ops', slot: '4', icon: 't-box', go: 'dogs', views: ['dogs', 'litters', 'areas', 'round', 'sops', 'temps'] },
+    { id: 'ops', label: 'Records', slot: '4', icon: 't-box', go: 'dogs', views: ['dogs', 'litters', 'areas', 'round', 'sops', 'temps'] },
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
     { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin'] }
   ];
-  /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Ops · People · More. Proposed default, not a rule. */
+  /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
   var PICKABLE = ['compliance', 'money', 'ops', 'people', 'sales', 'ideas'];
   var MAX_TABS = 3;

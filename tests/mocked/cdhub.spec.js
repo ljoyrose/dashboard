@@ -201,11 +201,11 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
-    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Records', 'People']);
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
