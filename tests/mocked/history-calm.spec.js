@@ -531,3 +531,18 @@ test('audit: a saved min or max that is text (25,3) or blank is "Check: not a nu
   expect(r.slot).toMatchObject({ k: 'swap', unread: true, lo: '24.1', hi: '25,3' });
   expect(await page.evaluate((s) => slotHtml('AM', s), r.slot)).toContain('AM 24.1–25,3 · Check: not a number');
 });
+
+test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) shows a clear warning, never wrong columns (OV11 15 Nov)', async ({ page, guard }) => {
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard);
+  await expect(page.locator('[data-hdrbad]')).toHaveCount(0);   // the normal sheet: no warning
+  const lines = READINGS.trimEnd().split('\n');
+  put('BLD-area_reading.csv', [lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');   // sorted: a reading on row 1, heading on row 2
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await expect(page.locator('[data-hdrbad]')).toContainText('row 1 is not the heading row');
+  put('BLD-area_reading.csv', [lines[0], lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');   // heading on row 1 and again lower down
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
+});

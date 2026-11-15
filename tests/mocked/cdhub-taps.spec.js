@@ -84,12 +84,12 @@ test.describe('CD Hub: every small control answers a tap', () => {
     await page.evaluate(() => { delete PAGES.litters; go('today', false); });
     await expect(page.locator('#main [data-go="litters"]')).toHaveCount(0);
     await page.evaluate(() => go('dogs', false));
-    await expect(page.locator('#next [data-go="litters"]')).toHaveCount(0);
+    await expect(page.locator('#chips [data-go="litters"]')).toHaveCount(0);
     const line = page.locator('.dc[data-dog="sub-test-dog-1"] .litc');
     await expect(line).toContainText('1 litter');
     await expect(line.locator('a')).toHaveCount(0);
-    await expect(page.locator('#next button')).not.toHaveCount(0);
-    for (const b of await page.locator('#next [data-go]').all()) expect(await page.evaluate((id) => !!PAGES[id], await b.getAttribute('data-go'))).toBe(true);
+    await expect(page.locator('#chips .hchip')).not.toHaveCount(0);
+    for (const b of await page.locator('#chips [data-go]').all()) expect(await page.evaluate((id) => !!PAGES[id], await b.getAttribute('data-go'))).toBe(true);
     test.info().annotations.push({ type: 'note', description: wired ? 'Litters is still wired on this branch (PR 472 not merged): the test switched it off itself' : 'Litters is already switched off' });
   });
 
