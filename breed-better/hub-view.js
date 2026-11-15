@@ -22,7 +22,7 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
-  var state = { unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
+  var state = { from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -579,7 +579,8 @@
       }).join('');
   }
 
-  function inner(v) {
+  function inner(v) { return fromHtml(v) + innerBody(v); }
+  function innerBody(v) {
     var c = compute(v);
     if (!c.setUp) return '<p class="mut">Not set up yet.</p>';
     var err = c.error ? '<div class="card acc2"><p>' + v.esc(c.error) + '</p></div>' : '';
@@ -677,6 +678,7 @@
       '.bb-auto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}',
       '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}',
       '.bb-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.bb-unf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}.bb-odds{margin:0;padding:0;list-style:none;display:grid;gap:4px}.bb-odds li{display:flex;flex-wrap:wrap;gap:4px 8px}.bb-arch{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
+      '.bb-sec{display:flex;flex-direction:column;gap:8px}.bb-misshd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-height:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;list-style:none}.bb-misshd::-webkit-details-marker{display:none}.bb-misshd>svg:last-child{margin-left:auto;transition:transform .15s}.bb-miss:not([open])>.bb-misshd>svg:last-child{transform:rotate(-90deg)}.bb-miss>.bb-gates{margin-top:6px}.bb-ret{margin-bottom:8px}',
       '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
       '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
       '.bb-secbar{display:flex;flex-direction:column;gap:4px}.bb-secbar .bb-bar span{display:block;height:100%}',
@@ -717,24 +719,56 @@
     var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
     var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
     var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
-    /* Folded by default (Lisa, 15 Nov 2026: "folded then click to open"); the heading keeps the verdict and the points in view.
-       Open or folded is remembered per dog on this device. */
-    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better"><details class="bb-secf" data-bb-sec="' + esc(id) + '"' + (secOpen(id) ? ' open' : '') + '>'
-      + '<summary class="bb-chip bb-sechd">'
+    /* Lisa, 15 Nov 2026 (later): the score is a normal part of the card and always shows; the must-pass list is folded
+       behind one line ("3 missing"), as it may grow long; open or folded is remembered per dog on this device.
+       A tap on the heading opens this dog's Breed Better entry; "Back to <dog>" there returns to this card. */
+    var cnt = { fail: 0, unverified: 0, pass: 0 }, k = verdictOf(r);
+    gates.forEach(function (l) { var o = l.gate_outcome || 'unverified'; cnt[o] = (cnt[o] || 0) + 1; });
+    var miss = [cnt.unverified ? cnt.unverified + ' missing' : '', cnt.fail ? cnt.fail + ' failed' : ''].filter(Boolean).join(' · ')
+      || 'All ' + gates.length + ' passed';
+    var acts = unenrolHtml(v, c.enrol[id]);
+    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better">'
+      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc((r.words && r.words[k]) || VERDICT[k] || '') + ', ' + total(r) + '. Testing. Open the Breed Better page">'
       + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>'
-      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M6 9l6 6l6 -6', 16) + '</summary><div class="bb-secbd">'
+      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M9 6l6 6l-6 6', 16) + '</button>'
       + (all ? '<div class="bb-secbar"><div class="bb-barw"><div class="bb-bar" role="img" aria-label="' + r.points_earned + ' of ' + all + ' points' + (hasT ? ', target ' + r.target : '') + '">'
-        + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[verdictOf(r)] + ')"></span></div>'
+        + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[k] + ')"></span></div>'
         + (tp !== null ? '<span class="bb-tmark" style="left:' + tp.toFixed(1) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>'
         + '<div class="bb-three"><span>' + r.points_earned + ' of ' + all + '</span>' + (hasT ? '<span>target ' + r.target + ' (' + Math.round(tp) + '%)</span>' : '') + '</div></div>' : '')
-      + (gates.length ? '<ul class="bb-gates">' + gates.map(function (l) {
-        var o = l.gate_outcome || 'unverified';
-        return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
-          + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
-      }).join('') + '</ul>' : '')
-      + '<span class="bb-acts"><button type="button" class="bb-secgo" data-go="breed" data-bb-dog="' + esc(id) + '">Open Breed Better page' + ic('M9 6l6 6l-6 6', 16) + '</button>'
-      + unenrolHtml(v, c.enrol[id]) + '</span>'
-      + '</div></details></section>';
+      + (gates.length ? '<details class="bb-secf bb-miss" data-bb-sec="' + esc(id) + '"' + (secOpen(id) ? ' open' : '') + '>'
+        + '<summary class="bb-misshd"><span class="bb-strong">Must pass</span><span class="bb-pts bb-misscnt">' + miss + '</span>' + ic('M6 9l6 6l6 -6', 16) + '</summary>'
+        + '<ul class="bb-gates">' + gates.map(function (l) {
+          var o = l.gate_outcome || 'unverified';
+          return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
+            + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
+        }).join('') + '</ul></details>' : '')
+      + (acts ? '<span class="bb-acts">' + acts + '</span>' : '')
+      + '</section>';
+  }
+
+  /* Back to where Lisa came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
+     The hub pushes a real history entry for #/breed, so the phone's Back works too; this button does the same. */
+  function fromHtml(v) {
+    var f = state.from;
+    if (!f) return '';
+    return '<button type="button" class="bb-f bb-ret" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.name || 'the dog card') + '</button>';
+  }
+  function cameFrom(b) {
+    var card = b.closest && b.closest('article.dc'), id = b.getAttribute('data-bb-dog'), v = last || {};
+    if (!card) { state.from = null; return; }
+    var d = (v.dogs || {})[id] || {}, r = v.T ? compute(v).byId[id] || {} : {};
+    state.from = { dog: card.getAttribute('data-dog') || id, name: t(d.name) || t(r.name), hash: location.hash || '#/dogs', top: card.getBoundingClientRect().top, y: window.scrollY };
+    state.tab = 'dogs';
+  }
+  function backToCard() {
+    var f = state.from;
+    if (!f) return;
+    if (location.hash !== f.hash) { if (location.hash !== '#/breed') state.from = null; return; }
+    state.from = null;
+    setTimeout(function () {   /* after the hub has drawn the page again */
+      var card = document.querySelector('article.dc[data-dog="' + (window.CSS && CSS.escape ? CSS.escape(f.dog) : f.dog) + '"]');
+      window.scrollTo(0, card ? card.getBoundingClientRect().top + window.scrollY - f.top : f.y);
+    }, 0);
   }
 
   /* ---- Enrol and un-enrol on every animal's card (Lisa, 15 Nov 2026). Saves go through the host: v.canWrite(),
@@ -868,9 +902,17 @@
     document.addEventListener('click', function (e) {
       var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto]');
       if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
-      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
+      var hubGo = e.target.closest && e.target.closest('[data-go]');
+      if (hubGo && !hubGo.hasAttribute('data-bb-dog') && !(hubGo.closest && hubGo.closest('#bbRoot'))) state.from = null;   /* left by the hub's own menu */
+      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-return],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
       if (!b) return;
-      if (b.hasAttribute('data-bb-dog')) { state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
+      if (b.hasAttribute('data-bb-dog')) { cameFrom(b); state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
+      if (b.hasAttribute('data-bb-return')) {
+        e.preventDefault(); e.stopPropagation();
+        var hs = history.state;
+        if (hs && hs.id === 'breed') history.back(); else if (state.from) location.hash = state.from.hash;
+        return;
+      }
       if (b.hasAttribute('data-bb-edit')) {
         e.preventDefault();
         e.stopPropagation();
@@ -901,6 +943,8 @@
       var msg = f.querySelector('[data-bb-edit-msg]');
       if (msg) msg.textContent = 'The result is entered here. It is saved when this check\'s table is on the save script.';
     }, true);
+    window.addEventListener('popstate', backToCard);
+    window.addEventListener('hashchange', backToCard);
     window.addEventListener('popstate', function () {
       if (!state.editPushed) return;
       state.edit = '';
