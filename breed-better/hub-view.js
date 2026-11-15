@@ -514,7 +514,10 @@
       '.bb-calrow .bb-name{white-space:normal}',
       '.bb-arch{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}',
       '.bb-sec{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}',
-      '.bb-sec .bb-sechd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);text-align:left}',
+      '.bb-sec .bb-sechd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);border-radius:8px;text-align:left;cursor:pointer;list-style:none}',
+      '.bb-sec .bb-sechd::-webkit-details-marker{display:none}.bb-sec .bb-sechd:hover{background:var(--hov)}',
+      '.bb-secf>.bb-sechd>svg:last-child{transition:transform .15s}.bb-secf:not([open])>.bb-sechd>svg:last-child{transform:rotate(-90deg)}',
+      '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
       '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
       '.bb-secbar{display:flex;flex-direction:column;gap:4px}.bb-secbar .bb-bar span{display:block;height:100%}',
       '.bb-gates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}',
@@ -554,10 +557,12 @@
     var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
     var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
     var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
-    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better">'
-      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc(r.words[verdictOf(r)]) + ', ' + esc(total(r)) + '. Testing: trial scores, not yet signed off. Open the detail">'
+    /* Folded by default (Lisa, 15 Nov 2026: "folded then click to open"); the heading keeps the verdict and the points in view.
+       Open or folded is remembered per dog on this device. */
+    return '<section class="bb-sec" data-k="bb" aria-label="Breed Better"><details class="bb-secf" data-bb-sec="' + esc(id) + '"' + (secOpen(id) ? ' open' : '') + '>'
+      + '<summary class="bb-chip bb-sechd">'
       + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>'
-      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M9 6l6 6l-6 6', 16) + '</button>'
+      + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M6 9l6 6l6 -6', 16) + '</summary><div class="bb-secbd">'
       + (all ? '<div class="bb-secbar"><div class="bb-barw"><div class="bb-bar" role="img" aria-label="' + r.points_earned + ' of ' + all + ' points' + (hasT ? ', target ' + r.target : '') + '">'
         + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[verdictOf(r)] + ')"></span></div>'
         + (tp !== null ? '<span class="bb-tmark" style="left:' + tp.toFixed(1) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>'
@@ -567,7 +572,23 @@
         return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
           + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
       }).join('') + '</ul>' : '')
-      + '</section>';
+      + '<button type="button" class="bb-secgo" data-go="breed" data-bb-dog="' + esc(id) + '">Open Breed Better page' + ic('M9 6l6 6l-6 6', 16) + '</button>'
+      + '</div></details></section>';
+  }
+
+  /* remembered open sections: { animal id: 1 }, newest last, at most SEC_MAX; a private window simply forgets */
+  var SEC_KEY = 'bb-sec-open', SEC_MAX = 200, secMem = null;
+  function secStore() {
+    if (secMem) return secMem;
+    try { secMem = JSON.parse(localStorage.getItem(SEC_KEY) || '{}'); } catch (e) { secMem = {}; }
+    if (!secMem || typeof secMem !== 'object' || Array.isArray(secMem)) secMem = {};
+    return secMem;
+  }
+  function secOpen(id) { return typeof localStorage !== 'undefined' && !!secStore()[id]; }
+  function secSave(id, open) {
+    var m = secStore(); delete m[id]; if (open) m[id] = 1;
+    var ks = Object.keys(m); while (ks.length > SEC_MAX) delete m[ks.shift()];
+    try { localStorage.setItem(SEC_KEY, JSON.stringify(m)); } catch (e) { /* not kept; the fold still works now */ }
   }
 
   /* typing or a new sort redraws the rows only, so the search box keeps focus */
@@ -581,6 +602,7 @@
     document.addEventListener('toggle', function (e) {
       var d = e.target;
       if (d && d.getAttribute && d.hasAttribute('data-bb-band')) state.open[d.getAttribute('data-bb-band')] = d.open;
+      if (d && d.getAttribute && d.hasAttribute('data-bb-sec')) secSave(d.getAttribute('data-bb-sec'), d.open);
     }, true);
     document.addEventListener('input', function (e) {
       if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-bb-search')) { state.q = e.target.value.trim(); redrawRows(); }
