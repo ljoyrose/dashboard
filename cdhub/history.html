@@ -208,6 +208,7 @@ var TOKEN=null,TOKEN_EXP=0;
 var DAYS={};  /* ISO date -> row */
 var FOLDER_ID=window.DASH_CONFIG.cdhub.folderId;
 var DRIVE_API=window.DASH_CONFIG.urls.files;
+var AREA_HDR_BAD='';  /* set when the area_reading sheet's heading row is not on row 1 (sorted or filtered) */
 var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
@@ -381,6 +382,9 @@ async function loadAreaData(){
     if(rf){
       var txt=await readDriveFile(rf);
       var rows=parseCSV(txt);
+      AREA_HDR_BAD=(rows.length&&(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])))?'row 1 is not the heading row'
+        :rows.some(function(r){ return r.id==='id'||r.area_id==='area_id'; })?'a heading row is also lower down':'';
+      rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
       if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
@@ -791,7 +795,8 @@ function legend(){
 function renderPage(){
   ROUND_DATE=ROUND_DATE||TODAY_STR;
   el('main').innerHTML=
-    legend()
+    (AREA_HDR_BAD?'<p class="warn" role="alert" data-hdrbad>Room temperatures sheet out of order: '+esc(AREA_HDR_BAD)+'. Put the heading row back on row 1; use a filter view, never sort the sheet.</p>':'')
+    +legend()
     +'<div class="yr-row">'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
