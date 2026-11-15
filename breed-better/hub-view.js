@@ -826,19 +826,23 @@
   }
 
   /* Back to where Lisa came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
-     The hub pushes a real history entry for #/breed, so the phone's Back works too; this button does the same. */
-  /* History entry state is NAV's shape, { from: { hash, label, y, id } } (NAV, 15 Nov 2026), so this moves to HubNav.back
-     when that lands. A reload on #/breed keeps it; a cold link has none and shows no button. */
+     The hub pushes a real history entry for #/breed (HubNav.back, NAV #610), so the phone's Back works too; this button
+     is HubNav's own "\u2190 Back to <dog>" (data-hub-back: HubNav steps back). Only a dog card sets the dog (from.id);
+     the hub's menu leaves it blank, so no button then. A cold link has no entry and shows none. */
+  function nav() { return typeof window !== 'undefined' && window.HubNav && window.HubNav.back ? window.HubNav.back : null; }
   function fromHtml(v) {
     var f = state.from || fromHistory();
-    if (!f) return '';
+    if (!f || !f.id) return '';
     if (!state.from) state.from = f;
+    var inHistory = fromHistory();
+    /* the history entry is ours: HubNav's button and Back. Otherwise (no entry yet), the old way back by address. */
+    if (nav() && inHistory) return '<button type="button" class="cb hback bb-ret" data-hub-back>\u2190 Back to ' + v.esc(f.label || 'the dog card') + '</button>';
     return '<button type="button" class="bb-f bb-ret hback" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.label || 'the dog card') + '</button>';
   }
   function fromHistory() {
-    var h = null;
-    try { h = history.state && history.state.from; } catch (err) { h = null; }
-    return h && h.hash && location.hash === '#/breed' ? { id: h.id, label: h.label, hash: h.hash, y: h.y, top: null } : null;
+    var h = null, n = nav();
+    try { h = n ? n.from() : (history.state && history.state.from); } catch (err) { h = null; }
+    return h && h.hash && h.id && location.hash === '#/breed' ? { id: h.id, label: h.label, hash: h.hash, y: h.y, top: null } : null;
   }
   function cameFrom(b) {
     var card = b.closest && b.closest('article.dc'), id = b.getAttribute('data-bb-dog'), v = last || {};
