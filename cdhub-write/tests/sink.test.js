@@ -29,7 +29,7 @@ test('valid reading is appended as exactly one new row (direct mode)', () => {
   assert.equal(lines(after).length, 2);
   const row = rows(env, 'BLD-area_reading.csv')[0];
   assert.equal(row.id, r.result.id);
-  assert.match(row.id, /^rdg-20261015-233000-[a-z0-9]{4}$/); // London time
+  assert.match(row.id, /^rdg-[a-z2-9]{8}$/); // random, never a date or name (Q4)
   assert.equal(row.tenant_id, fx.TENANT);
   assert.equal(row.area_id, 'area-t1');
   assert.equal(row.reading_type, 'temperature');
@@ -633,7 +633,7 @@ test('a move APPENDS one new row (subject, room, moved_in = today); no existing 
   assert.ok(after.startsWith(before));
   assert.equal(lines(after).length, lines(before).length + 1);
   const row = occTable(env).pop();
-  assert.match(row.id, /^occ-20261015-233000-[a-z0-9]{4}$/);
+  assert.match(row.id, /^occ-[a-z2-9]{8}$/);
   assert.equal(row.tenant_id, fx.TENANT);
   assert.equal(row.subject_id, 'sub-test-b');
   assert.equal(row.area_id, 'area-t2');
