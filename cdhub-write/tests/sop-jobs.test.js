@@ -9,7 +9,7 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
-const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind'];
+const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind', 'only_groups'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'];
 const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'];
 const VALUE_H = ['id', 'tenant_id', 'check_log_id', 'check_field_id', 'field_key', 'value'];
@@ -167,7 +167,7 @@ test('forms: in pending mode a check with questions is refused rather than queue
 // ---- only_in_areas (12 Nov 2026): a room job for some rooms only, e.g. the isolation jobs
 test('only_in_areas: a room job for some rooms only; it is the last column; never saved for another room', () => {
   const env = env0();
-  assert.deepEqual(Array.from(env.ctx.TABLES.check_type.columns).slice(-3, -1), ['not_in_areas', 'only_in_areas']);
+  assert.deepEqual(Array.from(env.ctx.TABLES.check_type.columns).slice(-4, -2), ['not_in_areas', 'only_in_areas']);
   assert.match(type(env, 'iso_dog', { target: 'dog', only_in_areas: 'area-t2' }).fields.only_in_areas, /room job/);
   assert.match(type(env, 'iso_bad', { target: 'area', only_in_areas: 'area t2|' }).fields.only_in_areas, /room ids/);
   const iso = typeId(env, 'iso_clean', { target: 'area', only_in_areas: ' area-t2 | ' });

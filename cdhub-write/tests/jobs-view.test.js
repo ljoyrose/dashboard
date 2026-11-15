@@ -74,3 +74,12 @@ test('a history with no links or files still draws', () => {
   const v = Object.assign({}, base, { logs });
   assert.deepEqual(V.history(v, { litter_id: 'lit1' })[0].files, []);
 });
+
+test('Compliance counts a breeding-only job for breeding dogs only', () => {
+  const types = [Object.assign(T('fit_to_breed', 'dog', '365'), { only_groups: 'breeding' })];
+  const links = [{ role: 'member_of', from_table: 'subject', from_id: 'd1', to_table: 'group', to_id: 'breeding', from_date: '2026-01-01', to_date: '' }];
+  const v = { today: '2026-03-02', types, logs: [], links, litters: [], dogs: [{ id: 'd1', area_id: 'r1' }, { id: 'pup', area_id: 'r1' }], areas: [{ id: 'r1' }] };
+  const row = V.summary(v)[0];
+  assert.equal(row.due, 1);
+  assert.equal(row.late, 0);
+});
