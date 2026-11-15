@@ -28,7 +28,7 @@ const PEND = 'BLD-_pending.csv';
 const RULE_H = fx.BREEDING_RULE_HEADER.join(',');
 const H = {
   guest_reading: 'id,tenant_id,area_id,min_c,max_c,spot_c,precision_dp,period_start,taken_at,taken_by,read_method,camera_value_changed,mitigation_note,note',
-  check_type: 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit,note_label,note_required,asks_outcome,frequency,active,effective_from,source,note,set_at,set_by,every_days,group,includes,sop,evidence,site_scope,not_in_areas,only_in_areas,item_kind',
+  check_type: 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit,note_label,note_required,asks_outcome,frequency,active,effective_from,source,note,set_at,set_by,every_days,group,includes,sop,evidence,site_scope,not_in_areas,only_in_areas,item_kind,only_groups',
   check_field: 'id,tenant_id,type_key,field_key,label,kind,choices,required,sort,active,effective_from,set_at,set_by,unit,limit_low,limit_high,source',
   check_value: 'id,tenant_id,check_log_id,check_field_id,field_key,value',
   check_log: 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded,litter_id,note_for_id,item_id,time_given',
