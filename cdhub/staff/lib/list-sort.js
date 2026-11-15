@@ -2,7 +2,8 @@
  * BLDSort - one sort for every list (Dogs, Items, Litters, Staff...). Lisa 15 Nov 2026: "its cross industry - will youngest
  * appear on fire extinguishers?" A list only offers the sorts for fields it actually holds:
  *   status -> Best to worst (All, Pass ... Fail; never Fail first)   due  -> Due soonest
- *   made   -> Newest / Oldest (a made or bought date)                dob  -> Youngest / Oldest
+ *   expires -> Expires soonest                                        made -> Newest first / Oldest first (made, bought or into use)
+ *   dob    -> Youngest / Oldest
  *   name   -> A to Z                                                  always: As on file
  * Default: best to worst wherever there is a status, else due soonest, else A to Z, else as on file.
  * Pure functions; works in a browser (window.BLDSort) and in Node.
@@ -16,8 +17,9 @@
   var ALL = [
     ['best', 'Best to worst', 'status', 1],
     ['due', 'Due soonest', 'due', 1],
-    ['newest', 'Newest', 'made', -1],
-    ['oldest', 'Oldest', 'made', 1],
+    ['expires', 'Expires soonest', 'expires', 1],
+    ['newest', 'Newest first', 'made', -1],
+    ['oldest', 'Oldest first', 'made', 1],
     ['young', 'Youngest', 'dob', -1],
     ['old', 'Oldest', 'dob', 1],
     ['name', 'A to Z', 'name', 1],
@@ -36,7 +38,7 @@
     return '';
   }
   function day(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
-  /** A sorted copy. get: {status: row -> rank (0 = best), due/made/dob: row -> ISO date, name: row -> text}.
+  /** A sorted copy. get: {status: row -> rank (0 = best), due/expires/made/dob: row -> ISO date, name: row -> text}.
       Blanks go last whatever the direction; ties keep their file order. An id the list cannot offer leaves the order alone. */
   function sort(rows, id, get) {
     var o = null; for (var i = 0; i < ALL.length; i++) if (ALL[i][0] === (id || '')) o = ALL[i];
