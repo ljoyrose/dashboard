@@ -26,7 +26,7 @@ const nav = () => {
 const row = (k, v, from = '2026-01-01', to = '') => ({ rule_key: k, value: String(v), effective_from: from, to_date: to, source: 'Pretend setting' });
 
 test.describe('CD Hub menu: layout from rows', () => {
-  test('no nav rows: the starting layout Compliance, Ops, People, reported as not set', () => {
+  test('no nav rows: the starting layout Compliance, Records, People, reported as not set', () => {
     const L = nav().layout({ rows: [], iso: '2026-11-14', role: 'OWNER' });
     expect(L.tabs).toEqual(['compliance', 'ops', 'people']);
     expect(L.set).toBe(false);

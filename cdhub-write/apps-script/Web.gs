@@ -47,6 +47,10 @@ function doPost(e) {
     // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
     if (req && typeof req === 'object' && req.action === 'link_end') return jsonOut_({ ok: true, result: sinkLinkEnd_(req) });
+    // edit / archive / delete a saved row with a code, logged (Q1/Q2, 15 Nov 2026; Edit.gs). OFF until RECORD_EDIT_ON is true
+    if (req && typeof req === 'object' && req.action === 'record_edit') return jsonOut_({ ok: true, result: sinkRecordEdit_(req) });
+    if (req && typeof req === 'object' && req.action === 'record_archive') return jsonOut_({ ok: true, result: sinkRecordArchive_(req) });
+    if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
@@ -105,6 +109,7 @@ function switchesStatus_() {
   add({ name: BLD.PROP.DOG_PHOTOS_FOLDER, action: 'dog_photo (no switch of its own: SAVE_ENABLED and this folder id)', file: SUBJECT_FILE_, set: set(BLD.PROP.DOG_PHOTOS_FOLDER) });
   add({ name: BLD.PROP.FILES_FOLDER, action: 'file_add of a photo or upload', file: '', set: set(BLD.PROP.FILES_FOLDER) });
   add({ name: BLD.PROP.OWNER_EDIT_ENABLED, action: 'owner page: edit an entry in place', file: '', on: ownerEditEnabled_() });
+  add({ name: EDIT_.PROP, action: 'record_edit, record_archive, record_delete (logged)', file: EDIT_.AUDIT_FILE, on: editOn_() });
   add({ name: BLD.PROP.BACKUP_ON, action: 'nightly backup copy', file: '', on: on(BLD.PROP.BACKUP_ON) });
   add({ name: BLD.PROP.ALLOW_CREATE, action: 'adminCreateEmptyTables', file: '', on: on(BLD.PROP.ALLOW_CREATE) });
   add({ name: BLD.PROP.INSPECT_PAGE_URL, action: 'inspector links (address only)', file: '', set: set(BLD.PROP.INSPECT_PAGE_URL) });

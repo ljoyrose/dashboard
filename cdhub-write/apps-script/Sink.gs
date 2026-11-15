@@ -100,6 +100,16 @@ function dupDay_(v) {
   return isNaN(t) ? '' : todayLondon_(new Date(t));
 }
 
+/** Is key k the same on both rows? Text compared exactly; a column the table writes as a real date (sheetTypes datetime,
+ *  area_reading only) compared as the same instant, so 08:00:00+00:00 read back from a date cell equals what was sent. */
+function dupSame_(spec, k, a, b) {
+  var x = a[k] || '', y = b[k] || '';
+  if (x === y) return true;
+  if (!(spec.sheetTypes && spec.sheetTypes[k] === 'datetime') || !x || !y) return false;
+  var tx = Date.parse(x), ty = Date.parse(y);
+  return !isNaN(tx) && tx === ty;
+}
+
 function findDuplicate_(spec, clean, rows, nowMs, today) {
   if (spec.dupSkip && spec.dupSkip(clean)) return null;          // e.g. a note added to a check already done
   if (spec.dupNewestBy) return newestDuplicate_(spec, clean, rows, nowMs);
@@ -107,7 +117,7 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
     var r = rows[i], same = true;
     if (spec.dupSkip && spec.dupSkip(r)) continue;
     for (var k = 0; k < spec.dupKey.length; k++) {
-      if ((r[spec.dupKey[k]] || '') !== (clean[spec.dupKey[k]] || '')) { same = false; break; }
+      if (!dupSame_(spec, spec.dupKey[k], r, clean)) { same = false; break; }
     }
     // dupDateCols: these datetimes must fall on the same local day to be a repeat (paper catch-up: a week of one job
     // for one room, typed in one go, is seven records, not one record and six duplicates; SOPJOBS S2, 14 Nov 2026)
@@ -146,7 +156,7 @@ function newestDuplicate_(spec, clean, rows, nowMs) {
   }
   if (!best) return null;
   for (k = 0; k < spec.dupKey.length; k++) {
-    if ((best[spec.dupKey[k]] || '') !== (clean[spec.dupKey[k]] || '')) return null;
+    if (!dupSame_(spec, spec.dupKey[k], best, clean)) return null;
   }
   return best;
 }

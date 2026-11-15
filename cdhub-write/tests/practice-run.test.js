@@ -205,6 +205,7 @@ const MANUAL = {
   certificate_kinds: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
   certificates: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
   owner_edit: 'owner page (Google sign-in); covered by tests/sink.test.js and tests/area-link.test.js',
+  record_edit: 'edit / archive / delete with a code, OFF (RECORD_EDIT_ON); covered by tests/area-link.test.js',
   approve: 'owner page (Google sign-in); applies a queued row (tests/sink.test.js); R2 test below',
   inspector: 'owner page (Google sign-in) plus inspector reads; covered by tests/inspect-link.test.js',
   backup: 'editor timer; copies only, never the live files (tests/sink.test.js)',
