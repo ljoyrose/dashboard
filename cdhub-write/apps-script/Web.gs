@@ -47,6 +47,8 @@ function doPost(e) {
     // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
     if (req && typeof req === 'object' && req.action === 'link_end') return jsonOut_({ ok: true, result: sinkLinkEnd_(req) });
+    // saved dated scores (15 Nov 2026, BB; OFF until TABLE_ON_score_assessment is true)
+    if (req && typeof req === 'object' && req.action === 'score_save') return jsonOut_({ ok: true, result: sinkScoreSave_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
@@ -97,6 +99,7 @@ function switchesStatus_() {
     add({ name: n, action: actions[k] || k, file: DOGCARD_[k].file, on: on(n) });
   });
   add({ name: BLD.PROP.TABLE_ON_PREFIX + LINKS_.on, action: 'link_add, link_end', file: LINKS_.file, on: linksOn_() });
+  add({ name: BLD.PROP.TABLE_ON_PREFIX + SCORES_.on, action: 'score_save', file: SCORES_.file + ' + ' + SCORES_.lineFile, on: scoresOn_() });
   add({ name: BLD.PROP.TABLE_ON_PREFIX + CODE_REG.ON, action: 'owner page: code admin mirror', file: CODE_REG.FILE, on: codeRegisterOn_() });
   Object.keys(PROPOSED_TABLES).forEach(function (k) {
     var n = BLD.PROP.TABLE_ON_PREFIX + PROPOSED_TABLES[k].key;

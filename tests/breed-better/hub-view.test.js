@@ -434,3 +434,26 @@ test('with no age_group rows, the two age groups come from the existing adult-ag
   assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': own }, '2026-11-15').map((x) => x.key), ['all']);   // owner's own groups win
   assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '6', '2027-01-01')] }, '2026-11-15'), []);
 });
+
+test('Save score: shown only when the hub can save; sends what the page worked out today; shows the last saved one', async () => {
+  const T = tables({});
+  View.setTab('dogs');
+  const c = View.compute({ T, today: '2026-11-20', esc });
+  const r = c.results[0];
+  assert.ok(r, 'fixture has an enrolled animal');
+  View.open(r.subject_id);
+  assert.doesNotMatch(View.page({ T, today: '2026-11-20', esc }), /data-bb-score-save/);
+  let sent = null;
+  const v = { T, today: '2026-11-20', esc, canWrite: () => true, saveScore: (f) => { sent = f; return Promise.resolve(); } };
+  const html = View.page(v);
+  assert.match(html, /data-bb-score-save="[^"]+">Save score<\/button><span class="bb-pts">Not saved yet/);
+  T['BLD-score_assessment.csv'] = [{ id: 'sca-1', subject_id: r.subject_id, scheme_id: r.scheme_id, period: '2026-03-02', verdict: 'unverified', points_earned: '5', points_available: '25', calculated_at: '2026-03-02T10:00:00Z' }];
+  assert.match(View.page(v), /Last saved 2 Mar 2026, [^,]+, 5 of 25/);
+  assert.ok(View.FILES.indexOf('BLD-score_assessment.csv') >= 0);
+  const f = View.scoreFields(r);
+  assert.deepEqual([f.subject_id, f.scheme_id, f.period, f.lines.length], [r.subject_id, r.scheme_id, '2026-11-20', r.lines.length]);
+  assert.ok(['pass', 'below_target', 'unverified', 'fail'].includes(f.verdict));
+  assert.ok(f.lines.every((l) => l.criterion_id && typeof l.points === 'string'));
+  assert.equal(sent, null);   // nothing is sent until the button is pressed
+  View.open('');
+});

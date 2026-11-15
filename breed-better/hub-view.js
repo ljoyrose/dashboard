@@ -11,7 +11,9 @@
 
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
     /* evidence only Breed Better reads; the hub already loads health_screen, dna_result, litter and subject_status */
-    'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv'];
+    'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv',
+    /* saved dated scores (15 Nov 2026, draft names; written only when TABLE_ON_score_assessment is on) */
+    'BLD-score_assessment.csv'];
   /* default words; a scheme row can change any of them with verdict_words, e.g. "unverified=To prove" */
   var VERDICT = { pass: 'Pass', below_target: 'Below target', unverified: 'Unverified', fail: 'Fail' };
   var ORDER = ['pass', 'below_target', 'unverified', 'fail'];
@@ -410,7 +412,7 @@
       + '</div>';
     return nav
       + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></div>'
-      + infoHtml(v, r) + verdictHtml(r)
+      + infoHtml(v, r) + verdictHtml(r) + savedHtml(v, r)
       + (Dna ? Dna.card(v.T, r.subject_id, esc).replace('data-bb-band="__dna"', 'data-bb-band="__dna"' + (state.open.__dna ? ' open' : '')) : '')
       + bands.map(function (b) {
         var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
@@ -726,7 +728,7 @@
       '.bb-sec .bb-sechd::-webkit-details-marker{display:none}.bb-sec .bb-sechd:hover{background:none;outline:1px solid var(--hc,var(--ink));outline-offset:-1px}',
       '.bb-secf>.bb-sechd>svg:last-child{transition:transform .15s}.bb-secf:not([open])>.bb-sechd>svg:last-child{transform:rotate(-90deg)}',
       '.bb-auto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}',
-      '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}',
+      '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}.bb-saved{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}',
       '.bb-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.bb-unf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}.bb-odds{margin:0;padding:0;list-style:none;display:grid;gap:4px}.bb-odds li{display:flex;flex-wrap:wrap;gap:4px 8px}.bb-arch{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
       '.bb-sec{display:flex;flex-direction:column;gap:8px}.bb-misshd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-height:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;list-style:none}.bb-misshd::-webkit-details-marker{display:none}.bb-misshd>svg:last-child{margin-left:auto;transition:transform .15s}.bb-miss:not([open])>.bb-misshd>svg:last-child{transform:rotate(-90deg)}.bb-miss>.bb-gates{margin-top:6px}.bb-ret{margin-bottom:8px}',
       '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
@@ -864,6 +866,15 @@
       }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
       return true;
     }
+    if (b.hasAttribute('data-bb-score-save')) {
+      var r0 = compute(v).byId[b.getAttribute('data-bb-score-save')];
+      if (!r0) return true;
+      id = 'score:' + r0.subject_id; b.disabled = true;
+      Promise.resolve(v.saveScore(scoreFields(r0))).then(function () {
+        enrolMsg[id] = { ok: true, text: 'Saved ' + hhmm() }; refresh();
+      }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
+      return true;
+    }
     if (b.hasAttribute('data-bb-auto')) {
       var sid = b.getAttribute('data-bb-auto'), val = b.getAttribute('data-bb-auto-v');
       id = 'auto:' + sid; b.disabled = true;
@@ -891,6 +902,29 @@
       + '<button type="button" class="bb-f" data-bb-unenrol-go="' + esc(id) + '">Un-enrol</button><button type="button" class="bb-f" data-bb-unenrol-x="1">Cancel</button></span>' + msgHtml(id);
   }
   var NOSAVE = 'Saving is not set up yet.';
+  /* ---- Saved dated scores (15 Nov 2026, OV11 for Lisa; draft Stage 4 names). Scores are still worked out on load;
+     Save score keeps what this page says today, so a later rule or record change never rewrites the past. ---- */
+  function scoreFields(r) {
+    return { subject_id: r.subject_id, scheme_id: r.scheme_id, period: r.as_of, verdict: verdictOf(r),
+      points_earned: String(r.points_earned), points_available: String(r.points_available),
+      points_unverified: String(r.points_unverified || 0), unknown_count: String(r.unknown_count || 0),
+      lines: r.lines.map(function (l) {
+        return { criterion_id: l.criterion_id, label_then: l.label_then, evidence_table: l.evidence_table || '', evidence_record_id: l.evidence_id || '',
+          answer_then: l.answer_then || '', points: l.points === '' ? '' : String(l.points), points_max: l.points_max === '' || l.points_max === undefined ? '' : String(l.points_max),
+          gate_outcome: l.gate_outcome || '', unknown_reason: l.unknown_reason || '', judged_by: l.judged_by || '' };
+      }) };
+  }
+  function lastSaved(T, r) {
+    return (T['BLD-score_assessment.csv'] || []).filter(function (a) { return t(a.subject_id) === r.subject_id && t(a.scheme_id) === r.scheme_id; })
+      .sort(function (a, b) { return t(a.calculated_at).localeCompare(t(b.calculated_at)); }).pop() || null;
+  }
+  function savedHtml(v, r) {
+    if (!v.saveScore) return '';
+    var esc = v.esc, id = 'score:' + r.subject_id, a = lastSaved(v.T, r), can = !!(v.canWrite && v.canWrite());
+    return '<p class="bb-saved"><button type="button" class="bb-f" data-bb-score-save="' + esc(r.subject_id) + '"' + (can ? '' : ' disabled') + '>Save score</button>'
+      + '<span class="bb-pts">' + (a ? 'Last saved ' + esc(day(t(a.period))) + ', ' + esc(((r.words && r.words[t(a.verdict)]) || VERDICT[t(a.verdict)] || t(a.verdict))) + ', ' + esc(t(a.points_earned)) + ' of ' + esc(t(a.points_available)) : 'Not saved yet') + '</span>'
+      + (can ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + '</p>' + msgHtml(id);
+  }
   /* the scheme to enrol into: the one this animal was last in, else the one scheme in force today (newest if several) */
   function enrolScheme(v, c, id) {
     var was = c.ended.filter(function (x) { return x.id === id; })[0];
@@ -961,7 +995,7 @@
     });
     /* capture, so the chosen dog is set before the hub's own click handler opens the page */
     document.addEventListener('click', function (e) {
-      var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto]');
+      var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto],[data-bb-score-save]');
       if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
       var hubGo = e.target.closest && e.target.closest('[data-go]');
       if (hubGo && !hubGo.hasAttribute('data-bb-dog') && !(hubGo.closest && hubGo.closest('#bbRoot'))) state.from = null;   /* left by the hub's own menu */
@@ -1018,5 +1052,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { scoreFields: scoreFields, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));

@@ -138,6 +138,9 @@ function rows() {
   out.push({ id: 'approve', kind: 'owner page: approve / reject', sw: 'SAVE_ENABLED and the target table TABLE_ON switch, checked on approve', dflt: 'n/a', live: 'n/a',
     writes: pend + ' event + the queued row\'s file', master: 'depends', needs: 'owner signed in', mode: 'from queue', who: 'owner (Google account)',
     risk: 'Refused while saving or the table switch is off (Risks found, R5, fixed).' });
+  out.push({ id: 'score_save', kind: 'action score_save', sw: 'TABLE_ON_' + c.SCORES_.on, dflt: 'off', live: UNKNOWN, writes: c.SCORES_.file + ' + ' + c.SCORES_.lineFile,
+    master: 'no', needs: 'headers ' + c.SCORES_.need.length + ' + ' + c.SCORES_.lineNeed.length + ' cols (draft Stage 4 names)',
+    mode: 'direct', who: 'OWNER', risk: 'Append only: a new save adds a row that replaces_id the one before; lines written before the assessment.' });
   out.push({ id: 'inspector', kind: 'owner page: inspector links; inspector reads', sw: 'none (owner page; READ_ENABLED for the reads)', dflt: 'n/a', live: 'n/a',
     writes: c.inspectFiles_().join(', ') + '; STAFF_REGISTRY property', master: 'no', needs: 'INSPECT_PAGE_URL, INSPECT_SCRIPT_ID (not secret)', mode: 'direct',
     who: 'owner; each inspector read appends to BLD-inspect_access', risk: 'No TABLE_ON switch (Risks found, R5). A read is refused if its log row cannot be written.' });
