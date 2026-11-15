@@ -566,7 +566,7 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
-function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(todayISO()),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
@@ -1420,7 +1420,8 @@ var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','da
  ['dog.adult_from_months','Age a dog counts as an adult','months'],
  ['gestation.due_days','Days from first mating to working due date','days'],['gestation.window_from_days','Whelping window opens (days from mating)','days'],
  ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days'],
- ['litters.recent_days','Days the Litters card looks back','days']];
+ ['litters.recent_days','Days the Litters card looks back','days'],
+ ['litters.jobs_days','Days a litter counts for jobs (from birth)','days']];
 /* Today's staffing tile: only from the owner's dated rows (Lisa 12 Nov: every limit is a dated row; no assumed ratio).
    The row in force on the day shown is used. Not set: no tile. */
 function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_per_full_time',iso), p=breedRule('staffing.adults_per_part_time',iso);
@@ -1443,6 +1444,12 @@ function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.
  y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
  return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+Math.min(d,last)).slice(-2); }
 function litDob(l){ return isoDay(l&&(l.dob||l.born_on)); }
+/* The litters whose jobs count on a day (SOP JOBS, 12 Nov 2026: a row decides, never code): born within the owner's
+   litters.jobs_days row in force that day. No row: no litter jobs counted. */
+function currentLitters(iso){
+ var n=ruleNum('litters.jobs_days',iso); if(n===null) return [];
+ return (CD.litters||[]).filter(function(l){ var b=litDob(l); return b&&b<=iso&&daysBetween(b,iso)<=n; });
+}
 function isoDay(v){ return /^\d{4}-\d{2}-\d{2}/.test(v||'')?v.slice(0,10):''; }
 /* born litters by dam, oldest first (a litter with no DOB - planned or missed - is not a litter born) */
 function littersByDam(){ var by={}; (CD.litters||[]).forEach(function(l){ var d=litDob(l); if(l.dam_subject_id&&d) (by[l.dam_subject_id]=by[l.dam_subject_id]||[]).push(l); });
