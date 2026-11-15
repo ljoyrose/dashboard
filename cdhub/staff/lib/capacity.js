@@ -60,6 +60,27 @@
     return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
   }
 
+  /**
+   * Midpoint of a kg range typed in a size cell, e.g. "Mini 8-12kg" gives 10 and "Lge Mini/Sml Med 12-16kg" gives 14
+   * (Lisa 15 Nov 2026: with no weighing, use the breed size range midpoint). NaN when the text has no "a-b kg" range.
+   */
+  function rangeMidKg(text) {
+    var m = /(\d+(?:[.,]\d+)?)\s*(?:-|\u2013|to)\s*(\d+(?:[.,]\d+)?)\s*kg/i.exec(String(text == null ? '' : text));
+    if (!m) return NaN;
+    var a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[2].replace(',', '.'));
+    return a > 0 && b >= a ? (a + b) / 2 : NaN;
+  }
+  /**
+   * The size of one dog: the latest weighing against the cut-off rows, else the midpoint of the kg range in its size
+   * cell. { size: 'small'|'medium'|'large'|'', from: 'weight'|'range'|'', kg }. No cut-off rows: no size (never a fixed default).
+   */
+  function sizeOf(latestKg, sizeText, cut) {
+    var b = sizeFromKg(latestKg, cut);
+    if (b) return { size: b, from: 'weight', kg: parseFloat(latestKg) };
+    var mid = rangeMidKg(sizeText); b = sizeFromKg(mid, cut);
+    return b ? { size: b, from: 'range', kg: mid } : { size: '', from: '', kg: null };
+  }
+
   /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
   function accessOf(rows, areaId) {
     var a = '';
@@ -156,6 +177,6 @@
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce, freePlaces: freePlaces };
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces };
 
 }));
