@@ -152,11 +152,14 @@
     var live = s.views.filter(function (id) { return VIEWS[id] && has(id); });
     if (live.length < 2) return '';
     return live.map(function (id) {
-      var v = VIEWS[id], n = opts.counts && opts.counts[id], cur = opts.current === id ? ' aria-current="page"' : '';
-      var cnt = n || n === 0 ? ' <span class="hcn' + (opts.late && opts.late[id] && n ? ' late' : '') + '">' + esc(n) + '</span>' : '';
-      var inner = '<span class="hcl">' + esc(v.label) + '</span>' + cnt;
-      return v.href ? '<a class="hchip" href="' + esc(v.href) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</a>'
-        : '<button type="button" class="hchip" data-go="' + esc(id) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</button>';
+      /* the house chip (house.css 4, 5) and house count (.cnt; 0 writes nothing). Selected (Lisa 15 Nov 2026): the 3px section-colour
+         side line (.house-lbar, --sc from data-slot) and a tick; no fill. */
+      var v = VIEWS[id], n = opts.counts && opts.counts[id], on = opts.current === id;
+      var cls = 'chip hchip' + (on ? ' house-lbar' : ''), cur = on ? ' aria-current="page"' : '';
+      var cnt = n ? ' <span class="cnt' + (opts.late && opts.late[id] ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '">' + esc(n) + '</span>' : '';
+      var inner = (on ? '<span class="hck" aria-hidden="true">\u2713</span>' : '') + '<span class="hcl">' + esc(v.label) + '</span>' + cnt;
+      return v.href ? '<a class="' + cls + '" href="' + esc(v.href) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</a>'
+        : '<button type="button" class="' + cls + '" data-go="' + esc(id) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</button>';
     }).join('');
   }
 

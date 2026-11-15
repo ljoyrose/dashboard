@@ -441,22 +441,15 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 
 .bar{height:8px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--radius);overflow:hidden;min-width:60px}
 .bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
-/* Chip row (Lisa 15 Nov 2026): sticky under the top bar, scrolls sideways on a phone. House look: 1px line at rest,
-   hover = 1px line in the section colour, selected = 3px section-colour side line + tick. No fills. */
+/* Chip row (Lisa 15 Nov 2026): sticky under the top bar, scrolls sideways on a phone. The house chip, count and hover;
+   selected = the 3px section-colour side line (.house-lbar) and a tick, no fill (Lisa 15 Nov 2026). */
 .hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
  margin:0 calc(-1 * var(--house-gutter));padding:10px var(--house-gutter);background:var(--bg);border-bottom:1px solid var(--line)}
 .hchips::-webkit-scrollbar{display:none}
-.hchips [data-slot="1"]{--hc:var(--ljr-1-edge)} .hchips [data-slot="2"]{--hc:var(--ljr-2)} .hchips [data-slot="3"]{--hc:var(--ljr-3)}
-.hchips [data-slot="4"]{--hc:var(--ljr-4-icon)} .hchips [data-slot="5"]{--hc:var(--ljr-5)} .hchips [data-slot="6"]{--hc:var(--ljr-6)}
-.hchips [data-slot="7"]{--hc:var(--ljr-7)} .hchips [data-slot="8"]{--hc:var(--ljr-8-icon)}
-.hchips .hchip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:var(--radius,12px);
- background:transparent;color:var(--ink);font:inherit;font-size:var(--fs-small);font-weight:600;text-decoration:none;white-space:nowrap;cursor:pointer;box-shadow:none}
-@media (hover:hover){.hchips .hchip:hover{background:transparent;box-shadow:inset 0 0 0 1px var(--hc)}
- .hchips .hchip[aria-current="page"]:hover{box-shadow:inset 3px 0 0 var(--hc),inset 0 0 0 1px var(--hc)}}
-.hchips .hchip[aria-current="page"]{box-shadow:inset 3px 0 0 var(--hc)}
-.hchips .hchip[aria-current="page"]::before{content:"\2713";color:var(--ink)}
-.hchips .hcn{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border:1px solid var(--line);border-radius:var(--radius,12px);font-size:var(--fs-small);font-weight:400;font-variant-numeric:tabular-nums}
-.hchips .hcn.late{border-color:var(--ljr-2)}
+.hchips [data-slot="1"]{--sc:var(--ljr-1-edge)} .hchips [data-slot="2"]{--sc:var(--ljr-2)} .hchips [data-slot="3"]{--sc:var(--ljr-3)}
+.hchips [data-slot="4"]{--sc:var(--ljr-4-icon)} .hchips [data-slot="5"]{--sc:var(--ljr-5)} .hchips [data-slot="6"]{--sc:var(--ljr-6)}
+.hchips [data-slot="7"]{--sc:var(--ljr-7)} .hchips [data-slot="8"]{--sc:var(--ljr-8-icon)}
+.hchips .hchip{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0 14px;background:var(--card);white-space:nowrap}
 .cbs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}

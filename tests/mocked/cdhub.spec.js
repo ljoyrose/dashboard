@@ -235,7 +235,7 @@ test.describe('CD Hub: navigation', () => {
     await expect(chips).toBeVisible();
     await expect(chips.locator('.hchip .hcl')).toHaveText(['Dogs', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps']);
     await expect(chips.locator('[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
-    await expect(chips.locator('[data-go="dogs"] .hcn')).toHaveText(/^\d+$/);
+    await expect(chips.locator('[data-go="dogs"] .cnt')).toHaveText(/^\d+$/);
     await chips.locator('[data-go="areas"]').click();
     await expect(page.locator('#main h2').first()).toHaveText('Areas');
     await expect(chips.locator('[data-go="areas"]')).toHaveAttribute('aria-current', 'page');
