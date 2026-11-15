@@ -1502,6 +1502,9 @@ function checks(){
  out.push({k:'placed in an area',ok:!c.noarea.length,
    msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
  var sw=CD.tempSwaps||[], ur=CD.tempUnread||[];
+ out.push({k:'room temps sheet',ok:!CD.tempHeaderBad,
+   msg:CD.tempHeaderBad?'the room temperatures sheet is out of order ('+CD.tempHeaderBad+'). Put the heading row back on row 1; use a filter view, never sort the sheet'
+     :'heading row is on row 1'});
  out.push({k:'room temps readable',ok:!ur.length,
    msg:ur.length? ur.length+' reading'+(ur.length===1?' has':'s have')+' a min or max that is blank or not a number (e.g. 25,3): '
      +ur.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+(x.min||'?')+'\u2013'+(x.max||'?'); }).join(', ')+(ur.length>5?' \u2026':'')
@@ -3371,6 +3374,7 @@ function keptReadings(date){
  var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap'||st==='unread', ur=st==='unread', unk=st==='unknown'; if(sw) st='hot';
    return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(ur?' \u2014 Check: not a number':sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Readings</h3>'
+  +(CD.tempHeaderBad?'<p class="kr late" role="alert" data-hdrbad>Room temperatures sheet out of order: '+esc(CD.tempHeaderBad)+'. Put the heading row back on row 1.</p>':'')
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
       +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
@@ -3385,8 +3389,16 @@ function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim());
    would). A reading with one side blank or not a number is state 'unread', shown and counted as a problem like a swap. */
 function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
 function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
+/* Header guard (TEMPS 15 Nov 2026): a sort or filter in the sheet moved the heading row off row 1 and saves stopped.
+   If row 1 is not the heading, or a heading row sits lower down, say so plainly instead of reading wrong columns. */
+function areaHeaderProblem(rows){ if(!rows||!rows.length) return '';
+ if(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])) return 'row 1 is not the heading row';
+ var n=rows.filter(function(r){ return r.id==='id'||r.area_id==='area_id'; }).length;
+ return n?'a heading row is also lower down':''; }
 function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
 function foldAreaReadings(rows){
+ CD.tempHeaderBad=areaHeaderProblem(rows);
+ rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
  CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
   .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
  CD.tempUnread=rows.filter(function(r){ return r.area_id&&!(roomEmpty(r)&&tempNum(r.min_c)===null&&tempNum(r.max_c)===null)&&tempUnreadable(r.min_c,r.max_c); })
