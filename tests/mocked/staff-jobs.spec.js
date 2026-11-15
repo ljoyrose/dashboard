@@ -492,3 +492,12 @@ test('Earlier, several days: a row per room per day, each judged and saved for i
   await expect.poll(() => sent.length).toBe(4);
   expect(sent[3]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-bowls' } });
 });
+
+test('check types starting round. belong to The round and never show as jobs, nor in Earlier', async ({ page }) => {
+  await setup(page, { check_type: TYPES.concat([J('round.presence', 'Pretend round row', 'none', { every_days: '1' })]) });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-job="round.presence"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await expect(page.getByLabel('Job').locator('option[value="round.presence"]')).toHaveCount(0);
+});

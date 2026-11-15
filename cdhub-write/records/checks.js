@@ -33,7 +33,7 @@
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
     return Object.keys(best).map(function (k) { return best[k]; })
-      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter'; })   // litter jobs open from a litter card's code
+      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter' && String(r.type_key).indexOf('round.') !== 0; })   // litter jobs open from a litter card's code; round.* rows are written by the Round itself, never a job
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
   }
 

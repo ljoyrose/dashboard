@@ -238,6 +238,32 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
   });
 
+  test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    let fail = false;
+    const bodies = await saves(page, () => (fail ? { ok: false, code: 'NETWORK', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
+    await page.evaluate(() => { T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-p', type_key: 'round.presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]); go('round'); });
+    const here = page.locator('button[data-here]').first();
+    const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');
+    const not = page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`), line = page.locator(`[data-hsave="${area}|${sid}"]`);
+    await here.click();
+    await expect(here).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'check_log', fields: { check_type_id: 'cty-p', area_id: area, subject_id: sid, item: 'present', outcome: 'recorded', how_recorded: 'tapped' } });
+    await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
+    await here.click();   // a second tap on the saved button sends nothing
+    await page.waitForTimeout(200); expect(bodies.length).toBe(1);
+    await page.evaluate(() => go('round', false));   // after a redraw (or reload) the saved row still shows pressed, with its tick
+    await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await expect(line.locator('[data-saved="good"]')).toHaveCount(1);
+    fail = true;
+    await not.click();
+    await expect.poll(() => bodies.length).toBe(2);
+    await expect(line).toContainText('Not saved');
+    await expect(not).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {
     await open(page, guard);
     await page.evaluate(() => {
