@@ -28,7 +28,7 @@ const PEND = 'BLD-_pending.csv';
 const RULE_H = fx.BREEDING_RULE_HEADER.join(',');
 const H = {
   guest_reading: 'id,tenant_id,area_id,min_c,max_c,spot_c,precision_dp,period_start,taken_at,taken_by,read_method,camera_value_changed,mitigation_note,note',
-  check_type: 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit,note_label,note_required,asks_outcome,frequency,active,effective_from,source,note,set_at,set_by,every_days,group,includes,sop,evidence,site_scope,not_in_areas,only_in_areas,item_kind',
+  check_type: 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit,note_label,note_required,asks_outcome,frequency,active,effective_from,source,note,set_at,set_by,every_days,group,includes,sop,evidence,site_scope,not_in_areas,only_in_areas,item_kind,only_groups',
   check_field: 'id,tenant_id,type_key,field_key,label,kind,choices,required,sort,active,effective_from,set_at,set_by,unit,limit_low,limit_high,source',
   check_value: 'id,tenant_id,check_log_id,check_field_id,field_key,value',
   check_log: 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded,litter_id,note_for_id,item_id,time_given',
@@ -36,7 +36,7 @@ const H = {
   vaccination: 'id,tenant_id,subject_id,event_kind,product,product_shorthand,diseases_covered,batch,batch_use_by,given_on,route,administered_by,practice,titre_result,titre_lab,titre_protective,next_due_on_card,next_due_source,certificate_media_id,source,ruling_needed,note,voided_on,voided_by',
   subject_link: 'id,tenant_id,subject_id,other_subject_id,kind,from_date,to_date,source,note,set_at,set_by',
   files: 'id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on,created_at,updated_at',
-  links: 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,created_at,updated_at',
+  links: 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,end_reason,created_at,updated_at',
   code_register: 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by'
 };
 
