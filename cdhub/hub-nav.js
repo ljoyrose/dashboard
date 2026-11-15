@@ -8,10 +8,10 @@
                                        and no code may sit in a rule row (OV11, 14 Nov 2026).
      nav.first.<ROLE>.<section>        which view the section opens on: its place in the chip row (1 = first)
      nav.first.person.<person_id>.<section>   the same for one person; wins over the role
-   Chips (Lisa 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
-   "Next: X" buttons at the foot of the page, so any view is one tap away at any number of records.
      nav.home.<ROLE>.<card>            Main's cards (Lisa 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
      nav.home.person.<person_id>.<card>   the same for one person; wins over the role. No rows = the pack's starter cards.
+   Chips (Lisa 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
+   "Next: X" buttons at the foot of the page, so any view is one tap away at any number of records.
    No nav rows: the app's starting layout (STARTER), reported as not set so Settings can say so. */
 (function (root) {
   'use strict';
