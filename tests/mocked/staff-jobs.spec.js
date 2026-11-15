@@ -460,7 +460,8 @@ test('Earlier (late entry) saves the real day and time, ticks the card with that
   await ears.getByRole('button', { name: 'Done: Ears' }).click();
   await expect.poll(() => sent.length).toBe(1);
   const f = sent[0].fields;
-  expect(f.how_recorded).not.toBe('scanned');
+  expect(f.how_recorded).toBe('paper');
+  expect(f.time_given).toBeUndefined();   // a time was entered
   expect(london(new Date(f.happened_at))).toBe(yesterday);
   expect(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(new Date(f.happened_at))).toBe('07:30');
   await expect(ears.locator('.done-line.good')).toContainText('07:30');
@@ -482,7 +483,7 @@ test('Earlier, several days: a row per room per day, each judged and saved for i
   await page.getByRole('button', { name: 'Done all' }).click();
   await expect.poll(() => sent.length).toBe(3);
   expect(sent.map((b) => london(new Date(b.fields.happened_at)))).toEqual([day(2), day(1), day(0)]);
-  sent.forEach((b) => expect(b).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-clean', area_id: 'area-1', outcome: 'ok' } }));
+  sent.forEach((b) => expect(b).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-clean', area_id: 'area-1', outcome: 'ok', how_recorded: 'bulk', time_given: 'false' } }));
   await expect(rows.locator('.done-line.good')).toHaveCount(3);
   // a whole-site job saves as a whole-site row
   await page.getByLabel('Job').selectOption('bowls');

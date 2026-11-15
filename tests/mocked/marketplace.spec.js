@@ -890,16 +890,69 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await expect(page.locator('#view [data-growth] .tile')).toHaveCount(5);
   });
   test('v11.11 G/I/F: a check card with engine answer options shows one button per option (first is main) and a tap writes that option', async ({ page }) => {
-    const d = { kind: 'refund_reason', why: 'Order O-SAMPLE-1 was refunded. Why?', options: ['Wrong item', 'Damaged', 'Not as described', 'Buyer changed mind', 'Other'] };
-    const writes = await sheets(page, [['GROWTH|refund|O-SAMPLE-1', 'check', '', 'Refund: SAMPLE lead', JSON.stringify(d), ago(5)]]);
+    const d = { kind: 'rare_item', why: 'Sample check. Which?', options: ['Keep', 'Drop', 'Other'] };
+    const writes = await sheets(page, [['GROWTH|rare|SAMPLE-1', 'check', '', 'Rare: SAMPLE lead', JSON.stringify(d), ago(5)]]);
+    await open(page, '#/decide');
+    const card = page.locator('.card', { hasText: 'Rare: SAMPLE lead' });
+    await expect(card.locator('.acts button')).toHaveText(d.options);
+    await expect(card.locator('.acts button.main')).toHaveText('Keep');
+    await expect(card.locator('[data-v="Yes"]')).toHaveCount(0);
+    await card.locator('[data-v="Drop"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Drop');
+  });
+  test('refund card says the site, order (linked), UK sale date, amount, refund date, status, case, quote and next step; reasons include Item not received; a tap writes G:J @regression', async ({ page }) => {
+    const opts = ['Item not received', 'Wrong item', 'Damaged', 'Not as described', 'Buyer changed mind', 'Other'];
+    const d = { kind: 'refund_reason', platform: 'eBay', order_id: 'O-SAMPLE-1', order_url: 'https://www.ebay.co.uk/mesh/ord/details?orderid=O-SAMPLE-1',
+      listing_url: 'https://www.ebay.co.uk/itm/100000000001', amount: '£12.50', sold_at: '2026-08-31T10:15:00Z', sold: '2026-08-31', refund_at: '2026-09-04T09:00:00Z',
+      status: 'Fully refunded', case_type: 'Item not received', quote: 'Sample note: parcel never came', why: 'Refunded £12.50. Why?', options: opts,
+      next: 'Refund is complete. Pick the reason to close this card.' };
+    const writes = await sheets(page, [['CHK|refund|O-SAMPLE-1', 'check', '', 'Refund: SAMPLE lead', JSON.stringify(d), ago(5)]]);
     await open(page, '#/decide');
     const card = page.locator('.card', { hasText: 'Refund: SAMPLE lead' });
-    await expect(card.locator('.acts button')).toHaveText(d.options);
-    await expect(card.locator('.acts button.main')).toHaveText('Wrong item');
-    await expect(card.locator('[data-v="Yes"]')).toHaveCount(0);
+    await expect(card.locator('.bline')).toContainText('eBay');
+    await expect(card.locator('.ordl')).toContainText('Sold Mon 31 Aug');
+    await expect(card).not.toContainText('2026-08-31');
+    await expect(card.locator('.m.red')).toHaveCount(0);
+    await expect(card.locator('a[data-order]')).toHaveText('O-SAMPLE-1');
+    await expect(card.locator('a[data-order]')).toHaveAttribute('href', d.order_url);
+    await expect(card.locator('a.btn', { hasText: 'Open listing' })).toHaveAttribute('href', d.listing_url);
+    await expect(card.locator('a.btn', { hasText: 'Open order on eBay' })).toHaveAttribute('href', d.order_url);
+    const facts = card.locator('.facts');
+    await expect(facts).toContainText('Refunded£12.50'); await expect(facts).toContainText(/Refund dateFri 4 Sept?/);
+    await expect(facts).toContainText('StatusFully refunded'); await expect(facts).toContainText('CaseItem not received');
+    await expect(card).toContainText('It says: \u201cSample note: parcel never came\u201d');
+    await expect(card.locator('p.what b', { hasText: 'Next:' })).toHaveText('Next: ' + d.next);
+    await expect(card).toContainText('Updated ');
+    await expect(card.locator('.acts button')).toHaveText(opts);
+    await expect(card.locator('.acts button.main')).toHaveText('Item not received');   // matches the case type; nothing guessed otherwise
     await card.locator('[data-v="Damaged"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Damaged');
+  });
+  test('refund card with no case type has no main reason; the eBay order link is built from the order id', async ({ page }) => {
+    const d = { kind: 'refund_reason', platform: 'eBay', order_id: 'O-SAMPLE-2', sold_at: '2026-08-31', why: 'Refunded. Why?', options: ['Item not received', 'Wrong item', 'Other'] };
+    await sheets(page, [['CHK|refund|O-SAMPLE-2', 'check', '', 'Refund: SAMPLE two', JSON.stringify(d), ago(5)]]);
+    await open(page, '#/decide');
+    const card = page.locator('.card', { hasText: 'Refund: SAMPLE two' });
+    await expect(card.locator('.acts button.main')).toHaveCount(0);
+    await expect(card.locator('a[data-order]')).toHaveAttribute('href', 'https://www.ebay.co.uk/mesh/ord/details?orderid=O-SAMPLE-2');
+    await expect(card.locator('a.btn', { hasText: 'Open listing' })).toHaveCount(0);
+  });
+  test('an old refund card with no platform, url or options does not break: it still shows six reason buttons and no raw date @regression', async ({ page }) => {
+    const errs = []; page.on('pageerror', (e) => errs.push(e));
+    const d = { kind: 'refund_reason', sold: '2026-08-31', why: 'Refunded. Why? (wrong item, damaged, not as described, buyer changed mind, other)' };
+    const writes = await sheets(page, [['CHK|refund|O-SAMPLE-3', 'check', '', 'Refund: SAMPLE old', JSON.stringify(d), ago(5)]]);
+    await open(page, '#/decide');
+    const card = page.locator('.card', { hasText: 'Refund: SAMPLE old' });
+    await expect(card.locator('.acts button')).toHaveText(['Item not received', 'Wrong item', 'Damaged', 'Not as described', 'Buyer changed mind', 'Other']);
+    await expect(card.locator('.acts a.btn')).toHaveCount(0);
+    await expect(card.locator('.ordl')).toContainText('Order O-SAMPLE-3 · Sold Mon 31 Aug');
+    await expect(card.locator('.m.red')).toHaveCount(0);
+    await card.locator('[data-v="Other"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Other');
+    expect(errs).toEqual([]);
   });
   test('v11.11 C: cost card: own item says "£0 declutter"; a restock item (supplier known) has no £0 button', async ({ page }) => {
     const d = { kind: 'cost', item_sku: 'SKU-FAKE-1', listing_id: 'L1', platform: 'eBay', price: '£12.00', times_sold: 1, last_price: '£11.00' };

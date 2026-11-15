@@ -487,6 +487,19 @@
     return '<div class="m ordl">' + esc([oid && !/^vt-/.test(oid) ? 'Order ' + oid : '', tag ? 'buyer ' + tag + '…' : '', d.sold_at ? 'sold ' + ukDay(d.sold_at) : '', d.qty > 1 ? 'qty ' + d.qty : ''].filter(Boolean).join(' · ')) +
       (n ? ' <b class="date">' + esc(n) + '</b>' : '') + '</div>';
   }
+  // Refund cards (CHK|refund|<order_id>): the order number links to the order; sale date in UK words, never a raw ISO date.
+  var REFUND_OPTIONS = ['Item not received', 'Wrong item', 'Damaged', 'Not as described', 'Buyer changed mind', 'Other'];
+  function refundUrls(r, d) {
+    var oid = String(d.order_id || r.key.split('|')[2] || ''), eb = /ebay/i.test(d.platform || '');
+    return { oid: oid, order: safeUrl(d.order_url) || (eb && oid ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(oid) : ''),
+      listing: safeUrl(d.listing_url) || safeUrl(d.url) || (eb && /^\d+$/.test(String(d.item_id || '')) ? 'https://www.ebay.co.uk/itm/' + d.item_id : '') };
+  }
+  function refundLine(r, d) {
+    var u = refundUrls(r, d), sold = ukDay(d.sold_at || (/^\d{4}-\d\d-\d\d/.test(String(d.sold || '')) ? d.sold : '')), bits = [];
+    if (u.oid) bits.push('Order ' + (u.order ? '<a href="' + esc(u.order) + '" target="_blank" rel="noopener" data-order>' + esc(u.oid) + '</a>' : esc(u.oid)));
+    if (sold) bits.push('Sold ' + esc(sold));
+    return bits.length ? '<div class="m ordl">' + bits.join(' · ') + '</div>' : '';
+  }
   function postGuide(r, d) {
     if (d.kind === 'fish') return fishGuide(d);
     var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
@@ -514,10 +527,11 @@
   }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
+    var isRefund = r.section === 'check' && d.kind === 'refund_reason';
     var nx = opts && opts.next;
     var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
-      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
+      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (isRefund ? refundLine(r, d) : d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
@@ -539,6 +553,12 @@
       if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
       else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
       acts.push('<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it off</button>'); }
+    else if (isRefund) {   // Refund card (12 Nov): what, how much, when, then the reason buttons. No reason is guessed as the main one.
+      var ru = refundUrls(r, d), ro = Array.isArray(d.options) && d.options.length ? d.options : REFUND_OPTIONS;
+      h += factsOf([['Refunded', d.refund_amount || d.amount || ''], ['Refund date', ukDay(d.refund_at)], ['Status', d.status || ''], ['Case', d.case_type || '']]) +
+        '<p class="what"><b>Next: ' + esc(d.next || 'Pick the reason to close this card.') + '</b></p>';
+      acts.push(linkBtn(ru.listing, 'Open listing'), linkBtn(ru.order, 'Open order on ' + (siteOf(r) || 'the site')));
+      ro.forEach(function (o) { acts.push(ansBtn(r, String(o), String(o), !!d.case_type && String(o).toLowerCase() === String(d.case_type).toLowerCase())); }); }
     else if (r.section === 'check' && !isPair && Array.isArray(d.options) && d.options.length) {   // v11.11: the engine names the answers (growth checks, rare item, ads test)
       acts.push(linkBtn(d.url, 'Open on ' + (d.platform || 'eBay'))); d.options.forEach(function (o, i) { acts.push(ansBtn(r, String(o), String(o), i === 0)); }); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo

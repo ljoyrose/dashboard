@@ -12,7 +12,7 @@
 })(this, function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var TYPE = { A: 1, CNAME: 5, MX: 15, TXT: 16 };
   var DKIM_SELECTORS = ['google', 'selector1', 'selector2', 'k1', 's1', 'default'];
 
@@ -88,7 +88,8 @@
   }
 
   // DKIM at the small allow-list (DKIM_SELECTORS). A hit on any of them, not only google, is found.
-  // Not found is not a fault on its own. When the MX is Google Workspace and none of the list answers, it is missing.
+  // Not found is not a fault on its own. When the MX is Google Workspace and none of the list answers, it is
+  // 'missing (google)': the google selector Workspace publishes is absent (2.1). A custom selector that answers still counts.
   function dkimWord(resultsBySelector, mx) {
     var by = resultsBySelector || {}, found = [];
     Object.keys(by).forEach(function (sel) {
@@ -96,7 +97,7 @@
       if (hit) found.push(sel);
     });
     if (found.length) return { word: 'found (' + found.join(', ') + ')', selectors: found };
-    if (wordOf(mx) === 'google workspace') return { word: 'missing', selectors: [] };
+    if (wordOf(mx) === 'google workspace') return { word: 'missing (google)', selectors: [] };
     return { word: 'not found', selectors: [] };
   }
 
@@ -127,7 +128,8 @@
     { re: /(^|\.)improvmx\.com$/, name: 'ImprovMX', forwarding: true },
     { re: /(^|\.)forwardemail\.net$/, name: 'ForwardEmail', forwarding: true },
     { re: /\.mx\.cloudflare\.net$/, name: 'Cloudflare Email Routing', forwarding: true },
-    { re: /(^|\.)mailspamprotection\.com$/, name: 'SiteGround' }
+    { re: /(^|\.)mailspamprotection\.com$/, name: 'SiteGround' },
+    { re: /(^|\.)webwavecms\.com$/, name: 'WebWave' }
   ];
 
   function mxResult(word, host, forwarding) {
@@ -223,7 +225,11 @@
     else if (dmarc === 'weak') faults.push('DMARC weak');
     else if (dmarc === 'none') notes.push('DMARC p=none');
     if (/^missing/.test(dkim) || (/^not found/.test(dkim) && mx === 'google workspace')) faults.push('DKIM missing');
-    if (mx === 'none') faults.push('no MX');
+    // 2.5: no MX is a fault unless the Mail map is read and holds no address on this domain (then it is a note).
+    if (mx === 'none') {
+      if (r.mail_addresses === 0 || r.mail_addresses === '0') notes.push('no MX (no addresses on the Mail map)');
+      else faults.push('no MX');
+    }
     var fwd = forwardChain(r);
     if (fwd && fwd.unknown) faults.push('target unknown, needs registrar export');
     else if (fwd && fwd.flag) faults.push('more than one forward hop');
@@ -279,6 +285,183 @@
     return out.join('\n');
   }
 
+  // ---- private tabs: header contracts (fail closed) ----
+  // The Mail map and Mail switch tabs live only in the private RR_WEB-ESTATE sheet. Their header rows are fixed here.
+  // A missing or renamed column means no rows at all and a plain problem line, never a guess.
+  var MAIL_MAP_COLUMNS = ['address', 'kind', 'delivers_to', 'next_hop', 'checked_by'];
+  var MAIL_SWITCH_STEPS = ['Export the forwards from the registrar', 'Add the domain as a Workspace alias domain and verify it',
+    'Recreate every forward as an alias', 'Test delivery to each alias', 'Switch MX to Google', 'One SPF record with Google in it',
+    'Publish DKIM and start authentication', 'DMARC p=none with reports', 'Re-run the checks: all green', 'Rollback, only if needed'];
+  var MAIL_SWITCH_COLUMNS = ['domain', 'class'].concat(MAIL_SWITCH_STEPS.map(function (x, i) { return 'step_' + (i + 1); }), ['done_date', 'old_mx', 'card_ref']);
+
+  function headerOf(row) { return (row || []).map(function (h) { return String(h == null ? '' : h).trim().toLowerCase(); }); }
+
+  // values (rows of arrays, header first) -> { ok, rows, problems }. tabName is only for the words.
+  function tabFromValues(values, columns, tabName) {
+    var v = (values || []).filter(function (r) { return r && r.some(function (c) { return String(c == null ? '' : c).trim() !== ''; }); });
+    if (!v.length) return { ok: false, rows: [], problems: ['the ' + tabName + ' tab is empty'] };
+    var head = headerOf(v[0]);
+    var missing = columns.filter(function (c) { return head.indexOf(c) === -1; });
+    var extra = head.filter(function (h) { return h && columns.indexOf(h) === -1; });
+    if (missing.length) {
+      return { ok: false, rows: [], problems: ['the ' + tabName + ' tab header changed: missing ' + missing.join(', ') +
+        (extra.length ? ' (found ' + extra.join(', ') + ' instead)' : '') + '. Nothing from this tab is shown'] };
+    }
+    var rows = v.slice(1).map(function (r) {
+      var o = {};
+      columns.forEach(function (c) { var i = head.indexOf(c); o[c] = r[i] === undefined || r[i] === null ? '' : String(r[i]).trim(); });
+      return o;
+    });
+    return { ok: true, rows: rows, problems: [] };
+  }
+  function mailMapFromValues(values) { return tabFromValues(values, MAIL_MAP_COLUMNS, 'Mail map'); }
+  function mailSwitchFromValues(values) { return tabFromValues(values, MAIL_SWITCH_COLUMNS, 'Mail switch'); }
+
+  // ---- 2.6 forward hops over Mail map rows ----
+  function addrKey(a) { return String(a == null ? '' : a).trim().toLowerCase(); }
+  function domainOfAddress(a) { var s = addrKey(a), i = s.lastIndexOf('@'); return i < 0 ? '' : s.slice(i + 1); }
+
+  // address -> { chain, hops, loop, unknown, flag, text }. Follows next_hop from row to row.
+  // hops = forward steps (stops minus one). Flag: a loop, an unknown target, or 3 or more stops (2 or more steps).
+  // null when the address is not on the map.
+  var MAX_STOPS = 20;
+  function hops(address, mapRows) {
+    var by = {};
+    (mapRows || []).forEach(function (r) { var k = addrKey(r && r.address); if (k && !by[k]) by[k] = r; });
+    var start = addrKey(address);
+    if (!by[start]) return null;
+    var chain = [start], seen = {}, cur = start, loop = false, unknown = false;
+    seen[start] = true;
+    while (by[cur] && chain.length <= MAX_STOPS) {
+      var row = by[cur], kind = String(row.kind || '').trim().toLowerCase(), next = addrKey(row.next_hop);
+      if (kind === 'mailbox' && !next) break;
+      if (!next) { unknown = kind !== 'mailbox'; break; }
+      chain.push(next);
+      if (seen[next]) { loop = true; break; }
+      seen[next] = true;
+      cur = next;
+    }
+    if (chain.length > MAX_STOPS) loop = true;
+    var n = chain.length - 1;
+    var text = loop ? 'forward loop: ' + chain.join(' → ')
+      : unknown ? (n ? chain.join(' → ') + ', then ' : '') + 'target unknown: needs Namecheap export'
+      : n === 0 ? 'mailbox (no forward)'
+      : chain.join(' → ') + ' (' + n + ' hop' + (n === 1 ? '' : 's') + ')';
+    return { address: start, chain: chain, hops: n, loop: loop, unknown: unknown, flag: loop || unknown || n >= 2, text: text };
+  }
+
+  // Every Mail map address on one domain -> its hops() result.
+  function domainHops(domain, mapRows) {
+    var d = addrKey(domain);
+    var seen = {};
+    return (mapRows || []).filter(function (r) {
+      var a = addrKey(r && r.address);
+      if (!a || seen[a] || domainOfAddress(a) !== d) return false;
+      seen[a] = true;
+      return true;
+    }).map(function (r) { return hops(r.address, mapRows); });
+  }
+
+  // ---- 4.x Mail switch progress (read only) ----
+  function stepWord(v) {
+    var s = String(v == null ? '' : v).trim().toLowerCase();
+    if (s === 'done' || s === 'yes' || s === 'y') return 'done';
+    if (s === 'n/a' || s === 'na' || s === 'not needed') return 'n/a';
+    return 'todo';
+  }
+  function classWord(c) {
+    var s = String(c == null ? '' : c).trim().toLowerCase();
+    if (/primary/.test(s)) return 'primary';
+    if (/keep/.test(s)) return 'keep';
+    if (/alias|brand/.test(s)) return 'alias';
+    return 'unknown';
+  }
+  // checksGreen: true when 2.1 to 2.5 pass for the domain, false when they do not, null when not yet read.
+  // Step 9 comes only from checksGreen: a hand tick in the sheet is ignored. Step 10 (rollback) never holds progress.
+  function switchProgress(switchRow, checksGreen) {
+    if (!switchRow) return { cls: 'unknown', text: 'not on the Mail switch tab', step: null, of: 10 };
+    var cls = classWord(switchRow['class']);
+    if (cls === 'unknown') return { cls: cls, text: 'class: Lisa to say', step: null, of: 10 };
+    if (cls === 'keep') return { cls: cls, text: 'keeps its own mail: checks only', step: null, of: 10 };
+    if (cls === 'primary') return { cls: cls, text: 'primary Workspace domain', step: null, of: 10 };
+    var steps = MAIL_SWITCH_STEPS.map(function (name, i) {
+      var w = i === 8 ? (checksGreen === true ? 'done' : checksGreen === false ? 'todo' : 'not yet read') : stepWord(switchRow['step_' + (i + 1)]);
+      return { n: i + 1, name: name, word: w };
+    });
+    var open = steps.slice(0, 9).filter(function (s) { return s.word !== 'done' && s.word !== 'n/a'; })[0];
+    if (!open) return { cls: cls, text: 'all steps done', step: 10, of: 10, steps: steps, done: true };
+    return { cls: cls, step: open.n, of: 10, steps: steps, next: open.name,
+      text: 'step ' + open.n + ' of 10: ' + open.name + (open.word === 'not yet read' ? ' (not yet read)' : '') };
+  }
+
+  // ---- one card per domain for #/mail ----
+  function dayCount(v, today) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || '').trim());
+    if (!m) return null;
+    var t = today instanceof Date ? today : new Date(String(today || '') + (String(today || '').length === 10 ? 'T00:00:00Z' : ''));
+    if (isNaN(t)) return null;
+    var a = Date.UTC(+m[1], +m[2] - 1, +m[3]), b = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+    return Math.round((a - b) / 864e5);
+  }
+  function bareDomain(r) {
+    var s = String((r && (r.url_or_domain || r.key)) || '').trim().toLowerCase().replace(/^https?:\/\//, '').split(/[\/?#]/)[0].replace(/\.$/, '');
+    return s.replace(/^www\./, '');
+  }
+  function hasMail(r) { return r && (r.kind === 'email-domain' || r.spf || r.dmarc || r.dkim || r.mx); }
+
+  // rows (estate rows), mapRows / switchRows (already passed through the header contracts, or null when not read),
+  // today -> cards, faults first. Every check reads 'not yet read' when the engine has not filled it.
+  function domainCards(rows, mapRows, switchRows, today) {
+    var by = {}, order = [];
+    (rows || []).forEach(function (r) {
+      var d = bareDomain(r);
+      if (!d) return;
+      if (!by[d]) { by[d] = { domain: d, mail: null, certs: [] }; order.push(d); }
+      if (hasMail(r) && (!by[d].mail || r.kind === 'email-domain')) by[d].mail = r;
+      if (r.ssl_expires) by[d].certs.push(r.ssl_expires);
+    });
+    var sw = {};
+    (switchRows || []).forEach(function (s) { var d = addrKey(s.domain); if (d) sw[d] = s; });
+    var cards = order.filter(function (d) { return by[d].mail || sw[d]; }).map(function (d) {
+      var g = by[d], r = g.mail || {};
+      var chains = mapRows ? domainHops(d, mapRows) : [];
+      var row = {};
+      Object.keys(r).forEach(function (k) { row[k] = r[k]; });
+      if (mapRows) row.mail_addresses = chains.length;
+      var s = summarise(row), faults = s.faults.slice(), notes = s.notes.slice();
+      chains.forEach(function (c) {
+        if (c.loop) faults.push('forward loop: ' + c.address);
+        else if (c.unknown) faults.push('target unknown: needs Namecheap export (' + c.address + ')');
+        else if (c.hops >= 2) faults.push('3 or more stops: ' + c.address);
+      });
+      var certDays = g.certs.map(function (v) { return dayCount(v, today); }).filter(function (x) { return x !== null; }).sort(function (a, b) { return a - b; });
+      var cd = certDays.length ? certDays[0] : null;
+      if (cd !== null && cd <= 30) faults.push('certificate ' + (cd < 0 ? 'expired' : 'expires in ' + cd + ' day' + (cd === 1 ? '' : 's')));
+      var nr = 'not yet read';
+      var level = function (bad) { return bad ? 'bad' : 'ok'; };
+      var dk = wordOf(r.dkim), dm = wordOf(r.dmarc), sp = wordOf(r.spf), mx = wordOf(r.mx);
+      var fwdText = !mapRows ? 'Mail map not read' : chains.length ? (chains.filter(function (c) { return c.flag; }).length + ' of ' + chains.length + ' flagged') : 'no addresses on the Mail map';
+      var checks = [
+        { id: 'dkim', name: 'DKIM', value: dk ? String(r.dkim) : nr, level: !dk ? 'unread' : level(faults.indexOf('DKIM missing') !== -1) },
+        { id: 'dmarc', name: 'DMARC', value: dm ? String(r.dmarc) : nr, level: !dm ? 'unread' : level(/missing|two|weak/.test(dm)) },
+        { id: 'spf', name: 'SPF', value: sp ? String(r.spf) : nr, level: !sp ? 'unread' : level(/two|broken|missing|fail/.test(sp)) },
+        { id: 'mx', name: 'MX', value: mx ? mxLabel(r.mx) : nr, level: !mx ? 'unread' : level(faults.indexOf('no MX') !== -1) },
+        { id: 'forward', name: 'Forwards', value: fwdText, level: !mapRows ? 'unread' : level(chains.some(function (c) { return c.flag; })) },
+        { id: 'cert', name: 'Certificate', value: cd === null ? nr : cd < 0 ? 'expired' : cd + ' days left', level: cd === null ? 'unread' : cd <= 7 ? 'bad' : cd <= 30 ? 'soon' : 'ok' }
+      ];
+      var green = (!dk || !dm || !sp || !mx) ? null : !checks.slice(0, 4).some(function (c) { return c.level === 'bad'; });
+      var fixRow = {};
+      Object.keys(row).forEach(function (k) { fixRow[k] = row[k]; });
+      return {
+        domain: d, faults: faults, notes: notes, checks: checks, chains: chains,
+        fix: s.faults.length ? fixSuggestion(d, fixRow) : '',
+        progress: switchRows ? switchProgress(sw[d], green) : { cls: 'unread', text: 'Mail switch not read', step: null, of: 10 },
+        checksGreen: green
+      };
+    });
+    return cards.sort(function (a, b) { return (b.faults.length ? 1 : 0) - (a.faults.length ? 1 : 0) || a.domain.localeCompare(b.domain); });
+  }
+
   return {
     VERSION: VERSION,
     TYPE: TYPE,
@@ -297,6 +480,15 @@
     htmlVerifications: htmlVerifications,
     summarise: summarise,
     mergeSpf: mergeSpf,
-    fixSuggestion: fixSuggestion
+    fixSuggestion: fixSuggestion,
+    MAIL_MAP_COLUMNS: MAIL_MAP_COLUMNS,
+    MAIL_SWITCH_COLUMNS: MAIL_SWITCH_COLUMNS,
+    MAIL_SWITCH_STEPS: MAIL_SWITCH_STEPS,
+    mailMapFromValues: mailMapFromValues,
+    mailSwitchFromValues: mailSwitchFromValues,
+    hops: hops,
+    domainHops: domainHops,
+    switchProgress: switchProgress,
+    domainCards: domainCards
   };
 });

@@ -153,7 +153,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dpill.soon{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill:hover,.cnt:hover,.dpill:hover,.live:hover{outline:none}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0));flex:none;vertical-align:0}
-.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
+.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:pointer;vertical-align:middle}
+@media (hover:hover){.info:hover,#sopcard .sopgrp>summary:hover{background:var(--hov)}}   /* the house hover fill, on the two controls that had none */
+.infonote{display:block;margin:4px 0 8px;font-size:var(--fs-small);font-weight:400;color:var(--muted);max-width:74ch;white-space:normal}
 
 
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0 0 8px}
@@ -180,6 +182,8 @@ tr:last-child td{border-bottom:none}
 
 .filt,.srow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
 .rdate-out{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap}
+@media (max-width:389px){.rdate-out{flex-wrap:wrap}}   /* a 360px phone: the outside line drops under the date, the page never scrolls sideways */
+#brKey{max-width:100%}
 .rout{white-space:nowrap;font-size:var(--fs-small);color:var(--ink)}
 .filt input{min-width:190px}
 .fbar{position:relative;margin:0 0 12px}
@@ -304,12 +308,21 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.ph{position:relative;flex:0 0 auto;width:120px;height:120px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
 .ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ph .off{display:none !important}
 .dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .dogphoto-btn{justify-content:center;padding:0 8px}
+/* bigger photo, then Take photo and Upload photo under it (Lisa, 13 Nov 2026: camera or upload, any device) */
+.dogphoto-col{width:120px}
+.dogphoto-btns{display:flex;flex-direction:column;gap:6px}
+.dogphoto-btn{width:100%;box-sizing:border-box;white-space:nowrap}
+@media(max-width:400px){.ph{width:104px;height:104px}.dogphoto-col{width:104px}}
+.pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
+.pcrop-edit input{width:100%}
+.pcrop-size{margin:0;font-size:var(--fs-small)}
+.pcam video{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid var(--line);border-radius:var(--radius);background:var(--soft)}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
 /* gallery (Lisa 13 Nov 2026): small square thumbnails, files and links as plain links */
@@ -487,6 +500,8 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs-link svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs-link .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs-link::after{content:'\203A';margin-left:auto;flex:0 0 auto}
+.dcs-nolink::after{content:none}
+.dcs-nolink,.dcs-nolink:hover{cursor:default;background:transparent}
 @media (hover:hover){.dcs-link:hover{background:var(--hov);}}
 .lims{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
 .pill.lim{border-width:2px}
@@ -1303,7 +1318,7 @@ function ruleAudit(){
   var open=0;
   for(var i=0;i<v.length;i++){
    var f=(v[i].effective_from||'').trim(), t=(v[i].effective_to||'').trim();
-   if(!f){ bad.push(k+' v'+(v[i].version||'?')+' has no effective_from'); continue; }
+   if(!f){ bad.push(k+' v'+(v[i].version||'?')+' has no start date'); continue; }
    if(!t) open++;
    if(t && t<f) bad.push(k+' v'+(v[i].version||'?')+' ends before it starts');
    if(i){ var pt=(v[i-1].effective_to||'').trim();
@@ -1485,7 +1500,11 @@ function checks(){
    msg:c.nochip.length?c.nochip.length+' here have no chip recorded':'every dog here has one',list:'nochip'});
  out.push({k:'placed in an area',ok:!c.noarea.length,
    msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
- var sw=CD.tempSwaps||[];
+ var sw=CD.tempSwaps||[], ur=CD.tempUnread||[];
+ out.push({k:'room temps readable',ok:!ur.length,
+   msg:ur.length? ur.length+' reading'+(ur.length===1?' has':'s have')+' a min or max that is blank or not a number (e.g. 25,3): '
+     +ur.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+(x.min||'?')+'\u2013'+(x.max||'?'); }).join(', ')+(ur.length>5?' \u2026':'')
+     :'every saved reading has a number for min and max'});
  out.push({k:'room temps',ok:!sw.length,
    msg:sw.length? sw.length+' reading'+(sw.length===1?' has':'s have')+' max lower than min (typed the wrong way round?): '
      +sw.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+dmy(x.date)+' '+x.min+'\u2013'+x.max; }).join(', ')+(sw.length>5?' \u2026':'')
@@ -1680,13 +1699,13 @@ function littersCard(title){
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
 
- return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
+ return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span>'+(PAGES.litters?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
 }
 /* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
 function outdoorBandWord(min,max){
  var st=tempState(min,max);
- return st==='cold'?'Cold':st==='hot'?'Hot':st==='swap'?'Check':st==='ok'?'OK':'';
+ return st==='cold'?'Cold':st==='hot'?'Hot':(st==='swap'||st==='unread')?'Check':st==='ok'?'OK':'';
 }
 function outdoorRainCue(v){
  if(v==null||String(v).trim()==='') return '';
@@ -1770,7 +1789,7 @@ function tempsCard(){
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
  var cold=0, hot=0, swap=0, unk=0, mt=0; A.forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
-   ['am','pm'].forEach(function(s){ var t=r['t_'+s], st=t&&(t.min||t.max)?tempState(t.min,t.max,bd):''; if(t&&t.empty&&st&&st!=='ok'&&st!=='unknown'){ mt++; return; } if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
+   ['am','pm'].forEach(function(s){ var t=r['t_'+s], st=t&&(t.min||t.max)?tempState(t.min,t.max,bd):''; if(t&&t.empty&&st&&st!=='ok'&&st!=='unknown'){ mt++; return; } if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap'||st==='unread') swap++; if(st==='unknown') unk++; }); });
  var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
@@ -2081,13 +2100,16 @@ function fbar(o){
   +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'"'+(x[0]===o.sort[2]?' selected':'')+'>Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
   +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
-  +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'">Clear filters</button></div></div>'
+  +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'" data-clear-all="'+o.q+'" disabled>Clear filters</button></div></div>'
   +(o.hidden||'')+'</div>';
 }
 function quiet(x){ return capFirst(String(x||'').toLowerCase()); }
 function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
 function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
+ /* Clear filters is off until a filter or a search word is set: a button that would change nothing is not offered */
+ var ca=document.querySelector('#fp-'+id+' [data-clear-all]'), cq=ca&&document.getElementById(ca.getAttribute('data-clear-all'));
+ if(ca) ca.disabled=!(cq&&cq.value)&&!ids.some(function(i){ var e=document.getElementById(i); return e&&e.value; });
  var on=ids.map(function(i){ var e=document.getElementById(i); if(!e||!e.value) return null;
    var t=e.tagName==='SELECT'?(e.options[e.selectedIndex]||{}).textContent:(e.dataset.ftext?e.dataset.ftext(e.value):e.value);
    if(i==='fst'){ var s=statusList().filter(function(x){return x[0]===e.value;})[0]; t=s?s[1]:e.value; }
@@ -2138,7 +2160,7 @@ function pageDogs(){
     ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
     /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
     ['Status','<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
-     +'<span class="info" tabindex="0" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
+     +'<span class="info" tabindex="0" role="button" aria-expanded="false" title="Tap a status to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>']]})
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
@@ -2302,10 +2324,11 @@ function vaxForm(d){
 /* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
 function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
  var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
- return '<div class="dcs litc"><a class="dcs-link" href="#/litters/'+esc(d.id)+'" data-dam-link="'+esc(d.id)+'">'
+ var on=!!PAGES.litters;   /* the Litters page switched off: the line stays as words, with no link that would open Main */
+ return '<div class="dcs litc">'+(on?'<a class="dcs-link" href="#/litters/'+esc(d.id)+'" data-dam-link="'+esc(d.id)+'">':'<span class="dcs-link dcs-nolink">')
   +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
   +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
-  +'</a></div>'; }
+  +(on?'</a>':'</span>')+'</div>'; }
 /* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
    (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
 /* BFFs / Fren. (Lisa 13 Nov 2026): dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
@@ -2436,6 +2459,15 @@ function photoDecode(file){
  }
  return viaImg();
 }
+/* Edit before save (Lisa, 13 Nov 2026): brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
+function photoTone(g,size,br,ct){
+ br=+br||0; ct=+ct||0; if(!br&&!ct) return;
+ var c=ct*2, f=(259*(c+255))/(255*(259-c)), o=br*2.55, im=g.getImageData(0,0,size,size), d=im.data;
+ for(var i=0;i<d.length;i+=4){ d[i]=f*(d[i]-128)+128+o; d[i+1]=f*(d[i+1]-128)+128+o; d[i+2]=f*(d[i+2]-128)+128+o; }
+ g.putImageData(im,0,0);
+}
+function photoBytes(n){ n=Math.max(1,Math.round(n/1024)); return n<1024?n+' KB':(Math.round(n/102.4)/10)+' MB'; }
+function photoKB(b64){ return photoBytes(b64.length*3/4); }
 /* The square output: JPEG quality steps down from 0.8 until the base64 fits. */
 function photoSquareB64(draw){
  var c=document.createElement('canvas'); c.width=PHOTO_OUT; c.height=PHOTO_OUT;
@@ -2445,18 +2477,26 @@ function photoSquareB64(draw){
  return b.length<=PHOTO_MAX_B64?b:'';
 }
 /* The crop step. Resolves {mime,b64} on Use photo, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
-function photoCrop(src){
+function photoCrop(src,was){
  return new Promise(function(resolve){
   var box=document.createElement('div');
   box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcropT');
-  box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop the photo</h3>'
+  box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop and edit the photo</h3>'
    +'<div class="pcrop-view" data-crop-view><canvas data-crop-canvas></canvas></div>'
    +'<p class="mut pcrop-tip">Drag to move. Pinch or use the slider to zoom.</p>'
    +'<label class="pcrop-zoom"><span class="sr">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" data-crop-zoom aria-label="Zoom"></label>'
-   +'<div class="pcrop-btns"><button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><span class="pcrop-gap"></span>'
+   +'<div class="pcrop-edit"><label for="pcropB">Brightness</label><input id="pcropB" type="range" min="-50" max="50" step="1" value="0" data-crop-bright>'
+   +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
+   +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
+   +'<div class="pcrop-btns"><button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Use photo</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
+  var bright=box.querySelector('[data-crop-bright]'), contrast=box.querySelector('[data-crop-contrast]'), sizeEl=box.querySelector('[data-crop-size]'), sizeT=0;
+  function tone(g,size){ photoTone(g,size,bright.value,contrast.value); }
+  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Use photo) */
+  function sizeNote(){ clearTimeout(sizeT); sizeT=setTimeout(function(){ var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
+   sizeEl.textContent=b?'Saves as '+PHOTO_OUT+' \u00d7 '+PHOTO_OUT+', about '+photoKB(b)+(was?' (picture was '+was+')':''):'Too large to save. Zoom in or crop closer.'; },250); }
   var rot=0, z=1, ox=0, oy=0, V=0, dpr=Math.min(3,window.devicePixelRatio||1), pts={}, last=null, pinch=null;
   function dims(){ return rot%2?{w:src.height,h:src.width}:{w:src.width,h:src.height}; }
   function base(){ var d=dims(); return V/Math.min(d.w,d.h); }
@@ -2464,7 +2504,7 @@ function photoCrop(src){
   function paint(g,size){ var k=size/V, d=dims(), s=base()*z;
    g.save(); g.scale(k,k); g.translate(ox,oy); g.scale(s,s); g.translate(d.w/2,d.h/2); g.rotate(rot*Math.PI/2);
    g.drawImage(src,-src.width/2,-src.height/2); g.restore(); }
-  function draw(){ var g=cv.getContext('2d'); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height); paint(g,cv.width); }
+  function draw(){ var g=cv.getContext('2d',{willReadFrequently:true}); g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,cv.width,cv.height); paint(g,cv.width); tone(g,cv.width); sizeNote(); }
   function fit(){ V=view.clientWidth||300; cv.width=Math.round(V*dpr); cv.height=Math.round(V*dpr);
    var d=dims(), s=base(); z=1; zoom.value='1'; ox=(V-d.w*s)/2; oy=(V-d.h*s)/2; clamp(); draw(); }
   function zoomAt(nz,cx,cy){ nz=Math.max(1,Math.min(4,nz)); var s0=base()*z, s1=base()*nz;
@@ -2480,13 +2520,15 @@ function photoCrop(src){
   view.addEventListener('pointerup',up); view.addEventListener('pointercancel',up);
   view.addEventListener('wheel',function(e){ e.preventDefault(); var p=at(e); zoomAt(z*(e.deltaY<0?1.1:1/1.1),p.x,p.y); },{passive:false});
   zoom.addEventListener('input',function(){ zoomAt(parseFloat(zoom.value)||1,V/2,V/2); });
-  function done(v){ document.removeEventListener('keydown',key,true); window.removeEventListener('resize',fit); box.remove(); resolve(v); }
+  bright.addEventListener('input',draw); contrast.addEventListener('input',draw);
+  box.querySelector('[data-crop-reset]').addEventListener('click',function(){ bright.value='0'; contrast.value='0'; rot=0; fit(); });
+  function done(v){ clearTimeout(sizeT); document.removeEventListener('keydown',key,true); window.removeEventListener('resize',fit); box.remove(); resolve(v); }
   function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); } }
   document.addEventListener('keydown',key,true); window.addEventListener('resize',fit);
   box.querySelector('[data-crop-rotate]').addEventListener('click',function(){ rot=(rot+1)%4; fit(); });
   box.querySelector('[data-crop-cancel]').addEventListener('click',function(){ done(null); });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
-   var b=photoSquareB64(function(g,size){ paint(g,size); });
+   var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    done(b?{mime:'image/jpeg',b64:b}:{error:'That picture is too large.'}); });
   fit(); box.querySelector('[data-crop-use]').focus();
  });
@@ -2494,32 +2536,72 @@ function photoCrop(src){
 /* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
    Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
    holds the folder id and never changes who can see the file. */
-async function uploadDogPhoto(inp){
+/* Take photo: on a phone or tablet the input's capture opens the camera app. On a laptop or desktop (no touch pointer) the
+   page opens the camera itself (getUserMedia), so Take photo works on any device. The frame is handled like a picked file. */
+function photoCamera(){
+ return new Promise(function(resolve){
+  var md=navigator.mediaDevices;
+  if(!md||!md.getUserMedia){ resolve({error:'This device has no camera here. Use Upload photo instead.'}); return; }
+  md.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1920}},audio:false}).then(function(stream){
+   var box=document.createElement('div');
+   box.className='pcrop pcam'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcamT');
+   box.innerHTML='<div class="pcrop-in"><h3 id="pcamT">Take a photo</h3><video data-cam-video autoplay playsinline muted></video>'
+    +'<div class="pcrop-btns"><span class="pcrop-gap"></span><button type="button" class="btn" data-cam-cancel>Cancel</button>'
+    +'<button type="button" class="btn yes" data-cam-take>Take photo</button></div></div>';
+   document.body.appendChild(box);
+   var video=box.querySelector('[data-cam-video]'); video.srcObject=stream;
+   function done(v){ document.removeEventListener('keydown',key,true); stream.getTracks().forEach(function(t){ t.stop(); }); box.remove(); resolve(v); }
+   function key(e){ if(e.key==='Escape'){ e.preventDefault(); done(null); } }
+   document.addEventListener('keydown',key,true);
+   box.querySelector('[data-cam-cancel]').addEventListener('click',function(){ done(null); });
+   box.querySelector('[data-cam-take]').addEventListener('click',function(){
+    var w=video.videoWidth, h=video.videoHeight; if(!w||!h) return;   /* not ready yet: the button waits for a frame */
+    var k=Math.min(1,PHOTO_WORK/Math.max(w,h)), c=document.createElement('canvas');
+    c.width=Math.round(w*k); c.height=Math.round(h*k); c.getContext('2d').drawImage(video,0,0,c.width,c.height);
+    done(c); });
+   box.querySelector('[data-cam-take]').focus();
+  }, function(){ resolve({error:'The camera could not be opened. Allow the camera, or use Upload photo.'}); });
+ });
+}
+function photoBusy(inp,on){
+ var card=inp&&inp.closest?inp.closest('article'):null;
+ Array.prototype.forEach.call(card?card.querySelectorAll('input[data-dog-photo]'):[inp],function(x){ x.disabled=!!on; });
+}
+/* Upload goes through the save script (the same address and staff code as The round), which puts the file in the
+   Shared Drive folder named by Script Properties and writes that file id into the photo cell. The page never
+   holds the folder id and never changes who can see the file. */
+async function photoSave(inp,getSrc,was){
  var id=inp.getAttribute('data-dog-photo')||'';
- var file=inp.files&&inp.files[0];
- inp.value='';
- if(!file) return;
  if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
- if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
  var g=await sinkGate();
  if(!g.ok){ photoMsg(inp, g.code==='NO_CODE'?'Enter your staff code. Nothing was saved.':'Could not reach the save script. Nothing was saved.'); return; }
  photoMsg(inp,'');
- inp.disabled=true;
+ photoBusy(inp,true);
  try{
-  var src=await photoDecode(file);
-  var pic=await photoCrop(src);
-  if(!pic){ inp.disabled=false; return; }   /* Cancel: nothing is sent */
-  if(pic.error){ inp.disabled=false; photoMsg(inp,pic.error); return; }
-  photoMsg(inp,'Saving the photo\u2026');
+  var src=await getSrc();
+  if(!src){ photoBusy(inp,false); return; }   /* camera closed: nothing is sent */
+  if(src.error){ photoBusy(inp,false); photoMsg(inp,src.error); return; }
+  var pic=await photoCrop(src,was);
+  if(!pic){ photoBusy(inp,false); return; }   /* Cancel: nothing is sent */
+  if(pic.error){ photoBusy(inp,false); photoMsg(inp,pic.error); return; }
+  photoMsg(inp,'Saving the photo…');
   var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
    body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
-  if(!j.ok||!j.result||!j.result.file_id){ inp.disabled=false; photoMsg(inp,j.message||'The photo was not saved.'); return; }
+  if(!j.ok||!j.result||!j.result.file_id){ photoBusy(inp,false); photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
- }catch(e){ inp.disabled=false; photoMsg(inp,(e&&e.message)||'The photo was not saved.'); }
+ }catch(e){ photoBusy(inp,false); photoMsg(inp,(e&&e.message)||'The photo was not saved.'); }
+}
+async function uploadDogPhoto(inp){
+ var file=inp.files&&inp.files[0];
+ inp.value='';
+ if(!file) return;
+ if(!TOKEN){ photoMsg(inp,'Sign in to add a photo.'); return; }
+ if(!photoLooksImage(file)){ photoMsg(inp,'Choose a picture.'); return; }
+ return photoSave(inp,function(){ return photoDecode(file); },file.size?photoBytes(file.size):'');
 }
 /* Add weight (weighings panel), Add vaccination and Remove (newest vaccination only). Saved through the save script. */
 document.addEventListener('submit',async function(ev){
@@ -2608,6 +2690,15 @@ function bindDogPhotos(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-dog-photo]'), function(inp){
   inp.addEventListener('change', function(){ uploadDogPhoto(inp); });
  });
+ Array.prototype.forEach.call(document.querySelectorAll('label[data-photo-take]'), function(lb){
+  lb.addEventListener('click', function(e){
+   var inp=lb.querySelector('input[data-dog-photo]');
+   if(!inp||inp.disabled) return;
+   var touch=window.matchMedia&&window.matchMedia('(pointer: coarse)').matches;
+   if(touch||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) return;   /* phone / tablet: the camera app opens */
+   e.preventDefault(); photoSave(inp,photoCamera,'');
+  });
+ });
 }
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
@@ -2653,9 +2744,14 @@ function drawDogs(){
       +(pic?'<img class="dogphoto off" alt="" data-photo-id="'+esc(pic)+'" referrerpolicy="no-referrer">':'')
       +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
     +'</div>'
-    +'<label class="btn dogphoto-btn">'+(pic?'Change photo':'Add photo')
-      +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'">'
+    +'<div class="dogphoto-btns" role="group" aria-label="'+esc((pic?'Change the photo of ':'Add a photo of ')+(d.name||'this dog'))+'">'
+    +'<label class="btn dogphoto-btn" data-photo-take>Take photo'
+      +'<input type="file" accept="image/*" capture="environment" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="camera">'
     +'</label>'
+    +'<label class="btn dogphoto-btn" data-photo-upload>Upload photo'
+      +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
+    +'</label>'
+    +'</div>'
     +'</div>'
     +'<div class="dc-info">'
       +'<div class="nl">'
@@ -3265,8 +3361,8 @@ function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
  var rows=areasOn(date).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
- var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
-   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
+ var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap'||st==='unread', ur=st==='unread', unk=st==='unknown'; if(sw) st='hot';
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(ur?' \u2014 Check: not a number':sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
@@ -3278,9 +3374,15 @@ function keptReadings(date){
 /* Room empty (Lisa, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
    and never counted as non-compliant. An empty mark with no reading counts as covered. */
 function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim()); }
-function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
+/* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25 (parseFloat
+   would). A reading with one side blank or not a number is state 'unread', shown and counted as a problem like a swap. */
+function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
+function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
+function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
 function foldAreaReadings(rows){
  CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
+  .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
+ CD.tempUnread=rows.filter(function(r){ return r.area_id&&!(roomEmpty(r)&&tempNum(r.min_c)===null&&tempNum(r.max_c)===null)&&tempUnreadable(r.min_c,r.max_c); })
   .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
  rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
   var at=String(r.period_start||r.taken_at||''); if(!r.area_id||at.length<10) return;   /* period_start = the slot the Round saved (Nov 2026) */
@@ -3302,6 +3404,7 @@ function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
  if(!ids.length) return generalBand(date);
  var f=bandFor(ids,date); return f&&bandReadable(f.b)?f.b:null; }
 function tempState(min,max,band){ var lo=parseFloat(min), hi=parseFloat(max); if(arguments.length<3) band=generalBand();
+ if(tempUnreadable(min,max)) return 'unread';   /* blank or text on one side: a problem, never hidden */
  if(isNaN(lo)&&isNaN(hi)) return '';
  if(tempSwapped(min,max)) return 'swap';   /* max lower than min: wrong way round, checked before hot/cold */
  if(!band) return 'unknown';
@@ -3550,14 +3653,15 @@ function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
 /* a time on the round's date, with this device's offset, e.g. 2026-11-07T12:00:00+00:00 */
 function isoAt(dateISO,hh){ var d=new Date(dateISO+'T'+hh+':00:00'), off=-d.getTimezoneOffset(), sg=off<0?'-':'+'; off=Math.abs(off);
  return dateISO+'T'+hh+':00:00'+sg+('0'+Math.floor(off/60)).slice(-2)+':'+('0'+(off%60)).slice(-2); }
-function temp1dp(v){ v=String(v==null?'':v).trim(); if(!v) return {ok:true,val:''};
+function temp1dp(v){ v=String(v==null?'':v).trim().replace(',','.'); if(!v) return {ok:true,val:''};   /* "25,3" = 25.3 (OV11 15 Nov 2026) */
+ if(!/^-?\d+(\.\d+)?$/.test(v)) return {ok:false,nan:true};
  if(!/^-?\d{1,2}(\.\d)?$/.test(v)) return {ok:false};
  var n=parseFloat(v); if(n<-30||n>60) return {ok:false};
  return {ok:true,val:n.toFixed(1)}; }
 var TYPED={};   /* min/max typed on this page but not yet saved as a pair: TYPED[date__area__slot]={min,max} */
 async function tempSave(areaId,slot,which,raw,el,msgEl){
  var c=temp1dp(raw);
- if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent='1 decimal place only, e.g. 18.5'; return; }
+ if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent=c.nan?'Not a number. Type e.g. 18.5':'1 decimal place only, e.g. 18.5'; return; }
  if(el&&el.classList) el.classList.remove('bad');
  var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), tk=k+'__'+slot;
  var have=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
@@ -3974,7 +4078,7 @@ function compTemps(win){   /* win: {n,set}; Urgent passes one day (today) so it 
 }
 function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
- var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
+ var word={cold:'too cold',hot:'too hot',swap:'max lower than min',unread:'not a number'};
  var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(x.from&&x.from.length?'<span class="mut" data-from> \u2014 from '+esc(x.from.join(', '))+'</span>':'')+(extra||'')+'</li>'; };
  if(!c.win.set) return compFold('compTemps','temps','Room temperatures','<p class="mut" data-window="unset" id="tempsUnset"><span class="pill w">not set</span> Days Compliance looks back \u00b7 <a href="#/compliance" data-change-window="compliance.look_back_days">set it</a>. Readings are not checked here until it is set.</p>'
   +'<p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
@@ -4184,7 +4288,25 @@ var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],toda
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-function bbV(){return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos};}
+function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve':'',
+ canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
+/* Breed Better enrol / un-enrol (Lisa 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
+   Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
+function bbSaved(j){ if(!(j&&j.ok&&j.result&&j.result.status==='saved')) throw new Error(sinkMsg(j||{})); return j.result; }
+/* an owner setting: one new dated rule row (a change is a new row from today; old rows stay for the past) */
+function bbSetRule(key,value,from,source){
+ return sinkPost('breeding_rule',{rule_key:key,value:value,effective_from:from,source:source}).then(function(j){
+  var r=bbSaved(j); (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.id,rule_key:key,value:value,effective_from:from,source:source,to_date:''}); }); }
+function bbEnrol(sid,scheme,from){
+ return sinkAct('link_add',{from_table:'subject',from_id:sid,role:'enrolled_in',to_table:'score_scheme',to_id:scheme,from_date:from,source:'CD Hub, Enrol'}).then(function(j){
+  var r=bbSaved(j); (T['BLD-links.csv']=T['BLD-links.csv']||[]).push({id:r.id,from_table:'subject',from_id:sid,role:'enrolled_in',to_table:'score_scheme',to_id:scheme,from_date:from,to_date:''}); }); }
+function bbUnenrol(e,reason,to){
+ var end=function(id){ return sinkAct('link_end',{id:id,to_date:to,reason:reason}).then(function(j){
+  bbSaved(j); (T['BLD-links.csv']||[]).forEach(function(l){ if(l.id===id){ l.to_date=to; l.end_reason=reason; } }); }); };
+ if(e.src==='link') return end(e.id);
+ /* an older-list enrolment: copy it to a link from its own start, then end that link. Once a link exists the older row is not read. */
+ var from=e.from&&e.from<=to?e.from:to;
+ return bbEnrol(e.subject_id,e.scheme_id,from).then(function(){ var l=(T['BLD-links.csv']||[]).filter(function(x){ return x.from_id===e.subject_id&&x.to_id===e.scheme_id&&!x.to_date; }).pop(); return end(l.id); }); }
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
 if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; }
@@ -4324,7 +4446,7 @@ function go(id,push){
  navCurrent(id);
  labelControls(main);
  levelHeadings(main);
- document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
+ document.getElementById('next').innerHTML=(NEXT[id]||[]).filter(function(n){return !!PAGES[n];}).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
@@ -4488,7 +4610,9 @@ document.addEventListener('click',function(e){
  var row=document.getElementById(j.dataset.jump);
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
-document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
+document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus();
+  /* the tabindex is only there to take the focus: left on, every section heading inside stops folding when tapped */
+  m.addEventListener('blur',function(){ m.removeAttribute('tabindex'); },{once:true}); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
  if(b.getAttribute('data-dogshow')){
@@ -4539,11 +4663,20 @@ render();
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
-      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.setAttribute('role', 'button'); s.setAttribute('aria-expanded', 'false'); s.textContent = 'i';
       var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h);
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
+  /* An (i) says its words when it is tapped or pressed: a title alone shows nothing on a phone. A second tap puts them away. */
+  function say(i) {
+    var n = i.nextElementSibling;
+    if (n && n.classList.contains('infonote')) { n.remove(); i.setAttribute('aria-expanded', 'false'); return; }
+    n = document.createElement('span'); n.className = 'infonote'; n.setAttribute('role', 'note'); n.textContent = i.title || '';
+    i.insertAdjacentElement('afterend', n); i.setAttribute('aria-expanded', 'true');
+  }
+  document.addEventListener('click', function (e) { var i = e.target.closest && e.target.closest('.info'); if (!i) return; e.preventDefault(); e.stopPropagation(); say(i); }, true);
+  document.addEventListener('keydown', function (e) { var i = e.target; if (!i.classList || !i.classList.contains('info') || (e.key !== 'Enter' && e.key !== ' ')) return; e.preventDefault(); say(i); });
   new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('DOMContentLoaded', calm); calm();
 })();

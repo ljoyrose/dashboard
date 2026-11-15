@@ -100,7 +100,7 @@ async function roomAndPhoto(page, guard, code, shots) {
   await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
   const png = path.join(os.tmpdir(), 'pretend-pup-' + code + '.png');
   fs.writeFileSync(png, PNG);
-  await card.locator('input[type="file"]').setInputFiles(png);
+  await card.locator('input[data-photo-src="upload"]').setInputFiles(png);
   await page.locator('[data-crop-use]').click();
   await expect(card.locator('img.dogphoto')).toHaveAttribute('data-photo-id', 'drv-photo-new');
   await expect(card.locator('img.dogphoto')).toBeVisible();

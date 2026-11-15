@@ -1042,6 +1042,7 @@
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl house-open" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') + autoGateLine(a) +
       (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
+      (a.reuse === 'template' ? '<div class="needl"><span class="tag" data-chip="template" title="Marked to become a reusable template">Template candidate</span></div>' : '') +
       (a.appRef && (a.appRef.alias || a.appRef.slug) ? '<div class="needl"><span class="tag" data-chip="from-app" title="Asked for by App Factory">From app: ' + esc(a.appRef.alias || a.appRef.slug) + '</span></div>' : '') +
       (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
       claimLine(a) + checkLine(a) +
@@ -1640,7 +1641,9 @@
     } else if (sub === 'kits') {
       var used = {}; all().forEach(function (a) { if (a.kitId) used[a.kitId] = (used[a.kitId] || 0) + 1; });
       var KT = S.kits.filter(function (k) { return lqHit('kits', [k.name, k.type, k.notes, (k.needs || []).join(' ')].join(' ')); });
-      body = '<div class="card">' + (KT.length ? KT.map(function (k) {
+      var TC = all().filter(function (a) { return a.reuse === 'template'; }); // Lisa's Q3 = A: pieces marked as template candidates
+      body = (TC.length ? '<div class="card" data-template-candidates><h2 class="grp">' + I('copy') + 'Template candidates' + cnt(TC.length) + '</h2>' + TC.map(function (a) { return '<div class="crow"><div class="l1"><a class="ttl" href="#/asset/' + encodeURIComponent(a.id) + '">' + esc(bare(a)) + '</a></div></div>'; }).join('') + '</div>' : '') +
+        '<div class="card">' + (KT.length ? KT.map(function (k) {
         var t = typeOf(k.type);
         return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span>' + libEditBtn('kits', k.id) + '</div>' +
           '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Parts: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div>' + priceLine(k) + '</div>';
@@ -1838,7 +1841,8 @@
       if (p.destination !== undefined) a.destination = p.destination;
       if (p.legalSetId !== undefined) { var lsx = byIdIn('legalSets', p.legalSetId); a.legal = Object.assign({}, a.legal || {}, { setId: p.legalSetId, setName: lsx ? lsx.name : p.legalSetId }); }
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
-      if (p.clientMaterial !== undefined) a.clientMaterial = p.clientMaterial;
+      if (p.clientMaterial !== undefined) { a.clientMaterial = p.clientMaterial; if (p.clientMaterial === 'yes') a.reuse = 'one-off'; } // engine: client material is never a template
+      if (p.reuse !== undefined) a.reuse = p.reuse;
       if (p.sourceRights !== undefined) a.sourceRights = p.sourceRights;
       if (p.paid !== undefined) a.paid = p.paid;
       if (p.disclose !== undefined) a.disclose = p.disclose;
@@ -1925,7 +1929,9 @@
     return '<div class="rights" data-rights="' + esc(a.id) + '"><div class="rrow"><span class="rlab">Client material</span><div class="seg" role="group" aria-label="Client material">' +
       [[true, 'Yes'], [false, 'No']].map(function (o) { return '<button type="button" data-rset="clientMaterial" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (cm === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
       '<div class="rrow"><span class="rlab">Source files</span><div class="seg" role="group" aria-label="Source files">' +
-      [['kept', 'Kept by you'], ['sold', 'Sold to client']].map(function (o) { return '<button type="button" data-rset="sourceRights" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sr === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div></div>';
+      [['kept', 'Kept by you'], ['sold', 'Sold to client']].map(function (o) { return '<button type="button" data-rset="sourceRights" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sr === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div>' +
+      '<div class="rrow"><span class="rlab">Reuse</span><div class="seg" role="group" aria-label="Reuse">' +
+      [['one-off', 'One-off'], ['template', 'Template']].map(function (o) { var on = (a.reuse === 'template' ? 'template' : 'one-off') === o[0], off = o[0] === 'template' && cm; return '<button type="button" data-set="reuse" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + on + '"' + (off ? ' disabled title="Client material: never a template"' : dis() + own()) + '>' + o[1] + '</button>'; }).join('') + '</div></div></div>';
   }
   // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
   function sendCheck(bid, item) {
