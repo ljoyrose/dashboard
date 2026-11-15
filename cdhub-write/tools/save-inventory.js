@@ -173,10 +173,10 @@ if (require.main === module) {
   else if (flag === '--write' || flag === '--check') {
     const p = path.resolve(file || '');
     const doc = fs.readFileSync(p, 'utf8'), next = splice(doc);
-    if (flag === '--write') { fs.writeFileSync(p, next); console.log('updated ' + path.basename(p)); }
-    else if (next !== doc) { console.error('inventory table is out of date: run node tools/save-inventory.js --write ' + file); process.exit(1); }
-    else console.log('inventory table matches the code');
-  } else { console.error('usage: save-inventory.js [--write|--check <doc>]'); process.exit(2); }
+    if (flag === '--write') { fs.writeFileSync(p, next); process.stdout.write('updated ' + path.basename(p) + '\n'); }
+    else if (next !== doc) { process.stderr.write('inventory table is out of date: run node tools/save-inventory.js --write ' + file + '\n'); process.exit(1); }
+    else process.stdout.write('inventory table matches the code\n');
+  } else { process.stderr.write('usage: save-inventory.js [--write|--check <doc>]\n'); process.exit(2); }
 }
 
 module.exports = { rows, table, block, splice, START, END, LIVE };
