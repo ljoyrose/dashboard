@@ -378,13 +378,21 @@ test('a pup not enrolled shows its DNA chances from its parents', () => {
   assert.match(html, /Test recessive<\/span><span class="bb-pts">25% clear, 50% carrier, 25% affected or at risk/);
 });
 
-test('the auto-enrol setting is a dated rule row per scheme; no row reads as off', () => {
-  const key = View.autoKey({ id: 's1' });
-  assert.equal(key, 'enrol.auto_at_birth.score_scheme.s1');
-  const T = { 'BLD-breeding_rule.csv': [{ rule_key: key, value: 'on', effective_from: '2026-11-15', source: 'Lisa' }, { rule_key: key, value: 'off', effective_from: '2026-12-01' }] };
+test('the auto-enrol setting is one dated link-kind rule row listing schemes; no row reads as off', () => {
+  const key = View.autoKey();
+  assert.equal(key, 'link_kind.enrolled_in.inherit_at_birth');
+  const T = { 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01' }, { id: 's2' }], 'BLD-breeding_rule.csv': [{ rule_key: key, value: 's1', effective_from: '2026-11-15', source: 'Lisa' }, { rule_key: key, value: 'none', effective_from: '2026-12-01' }, { rule_key: key, value: '*', effective_from: '2027-01-01' }] };
   assert.equal(View.ruleOn(T, key, '2026-11-14'), null);
-  assert.equal(View.ruleOn(T, key, '2026-11-20').value, 'on');
-  assert.equal(View.ruleOn(T, key, '2026-12-02').value, 'off');
+  assert.equal(View.autoOn(T, 's1', '2026-11-14'), false);
+  assert.equal(View.autoOn(T, 's1', '2026-11-20'), true);
+  assert.equal(View.autoOn(T, 's2', '2026-11-20'), false);
+  assert.equal(View.autoOn(T, 's1', '2026-12-02'), false);
+  assert.equal(View.autoOn(T, 's2', '2027-01-02'), true);
+  assert.equal(View.autoNext(T, '2026-11-20', 's2', true), 's1|s2');
+  assert.equal(View.autoNext(T, '2026-11-20', 's1', false), 'none');
+  assert.equal(View.autoNext(T, '2026-12-02', 's2', true), 's2');
+  assert.equal(View.autoNext(T, '2027-01-02', 's1', false), 's2');
+  assert.equal(View.autoNext(T, '2027-01-02', 's1', true), '*');
   View.setTab('system');
   const html = View.page({ T: tables(T), today: '2026-11-20', esc });
   assert.match(html, /data-bb-auto-v="on" aria-pressed="true" disabled>On/);

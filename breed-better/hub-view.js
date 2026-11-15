@@ -505,10 +505,28 @@
           + '<span class="bb-acts">' + enrolBtn(v, c, x.id) + '</span></div>';
       }).join('') : '<p class="mut">None.</p>');
   }
-  /* Owner setting (Lisa, 15 Nov 2026): enrol young of an enrolled parent from their birth date. A dated rule row,
-     enrol.auto_at_birth.<table>.<id> = on | off, the same key shape for any scheme, course or certification. No row = off.
-     The save script reads it when a birth is recorded; this page only shows and changes it. */
-  function autoKey(sc) { return 'enrol.auto_at_birth.score_scheme.' + t(sc.id); }
+  /* Owner setting (Lisa, 15 Nov 2026): enrol young of an enrolled parent from their birth date. One dated rule row in the
+     link-kind family (agreed with STAFF, 15 Nov 2026), the same for any scheme, course or certification:
+     link_kind.enrolled_in.inherit_at_birth = a pipe list of scheme ids, or * for all; "none" = none. No row = off.
+     The save script copies the parent's open links of this kind when a birth is recorded; this page only shows and changes it. */
+  var AUTO_KEY = 'link_kind.enrolled_in.inherit_at_birth';
+  function autoKey() { return AUTO_KEY; }
+  function autoIds(r) { return r ? t(r.value).split('|').map(t).filter(Boolean) : []; }
+  function autoOn(T, scId, day) {
+    var ids = autoIds(ruleOn(T, AUTO_KEY, day));
+    return ids.indexOf('*') >= 0 || ids.indexOf(t(scId)) >= 0;
+  }
+  /* the value to save when one scheme is turned on or off; every other scheme keeps its setting */
+  function autoNext(T, day, scId, on) {
+    var ids = autoIds(ruleOn(T, AUTO_KEY, day)).filter(function (x) { return x !== 'none'; });
+    if (ids.indexOf('*') >= 0) {
+      if (on) return '*';
+      ids = (T['BLD-score_scheme.csv'] || []).map(function (r) { return t(r.id); }).filter(Boolean);
+    }
+    ids = ids.filter(function (x) { return x !== t(scId); });
+    if (on) ids.push(t(scId));
+    return ids.length ? ids.join('|') : 'none';
+  }
   function ruleOn(T, key, day) {
     var best = null;
     (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
@@ -520,7 +538,7 @@
     return best;
   }
   function autoHtml(v, sc) {
-    var r = ruleOn(v.T, autoKey(sc), v.today), on = !!r && /^(on|yes|true)$/i.test(t(r.value)), id = 'auto:' + sc.id, esc = v.esc;
+    var r = ruleOn(v.T, AUTO_KEY, v.today), on = autoOn(v.T, sc.id, v.today), id = 'auto:' + sc.id, esc = v.esc;
     var can = !!(v.canWrite && v.canWrite() && v.setRule);
     return '<div class="bb-auto"><span class="bb-name">Enrol young of an enrolled parent at birth</span>'
       + '<span class="bb-filt" role="group" aria-label="Enrol young at birth">'
@@ -754,7 +772,7 @@
     if (b.hasAttribute('data-bb-auto')) {
       var sid = b.getAttribute('data-bb-auto'), val = b.getAttribute('data-bb-auto-v');
       id = 'auto:' + sid; b.disabled = true;
-      Promise.resolve(v.setRule(autoKey({ id: sid }), val, v.today, 'Owner setting, Breed Better My system')).then(function () {
+      Promise.resolve(v.setRule(AUTO_KEY, autoNext(v.T, v.today, sid, val === 'on'), v.today, 'Owner setting, Breed Better My system')).then(function () {
         enrolMsg[id] = { ok: true, text: 'Saved ' + hhmm() }; refresh();
       }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
       return true;
@@ -894,5 +912,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { ruleOn: ruleOn, autoKey: autoKey, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
