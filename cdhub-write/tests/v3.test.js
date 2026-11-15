@@ -493,7 +493,7 @@ test('permanently gone = sold, owned_by_family, Collected, deceased: such a dog 
 
 test('config: version bumped, the new switch is documented, and nothing secret is in the repository files', () => {
   const env = standardEnv();
-  assert.equal(env.ctx.BLD.VERSION, '1.2.0');
+  assert.equal(env.ctx.BLD.VERSION, '1.3.0');
   const dir = path.join(__dirname, '..', fs.existsSync(path.join(__dirname, '..', 'code')) ? 'code' : '', 'apps-script');
   const cfg = fs.readFileSync(path.join(dir, 'Config.gs'), 'utf8');
   assert.match(cfg, /MOVES_QUEUE_UNTIL/);
