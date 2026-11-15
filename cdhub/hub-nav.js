@@ -186,6 +186,16 @@
       if (f && f.label) return '<button type="button" class="cb hback" data-hub-back>\u2190 Back to ' + esc(f.label) + '</button>';
       if (fallback && fallback.hash) return '<a class="cb hback" href="' + esc(fallback.hash) + '">\u2190 ' + esc(fallback.label || 'Back') + '</a>';
       return '';
+    },
+    /* sync(el, fallback): the Back button in the top bar (one app-wide header: Home on the left, Back on the right, OV11 15 Nov
+       2026). Shown when there is somewhere in the hub to go back to: this entry's from, or else fallback = {label} for a page
+       opened from the hub (the temps page). Hidden on a link opened cold. A click goes back one real history step. */
+    sync: function (el, fallback) {
+      if (!el) return;
+      /* read out "Back (Dogs)": a page's own "← Back to Dogs" link keeps its own name, so the two are never confused */
+      var f = back.from() || fallback || null;
+      el.classList.toggle('hidden', !f);
+      if (f) { el.setAttribute('aria-label', f.label ? 'Back (' + f.label + ')' : 'Back'); el.setAttribute('title', f.label ? 'Back to ' + f.label : 'Back'); }
     }
   };
   if (root.document) root.document.addEventListener('click', function (e) {

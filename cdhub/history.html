@@ -33,6 +33,7 @@
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hidden{display:none!important}
 .wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:140px}
 .hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -171,6 +172,7 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
   </a>
   <h1><span class="dot" aria-hidden="true" style="background:var(--ljr-6)"></span>Temperatures</h1>
   <span class="house-sp" aria-hidden="true"></span>
+  <button type="button" class="btn house-ib hidden" id="hubBack" data-hub-back aria-label="Back" title="Back"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
   <span class="live" id="livepill">Live</span>
   <button type="button" class="btn house-ib hidden" id="cdSignout" aria-label="Sign out" title="Sign out" onclick="signOut()">
     <svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>
@@ -195,7 +197,10 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
   </section>
 </aside>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
-<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});</script>
+<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});
+/* Back in the top bar: shown when this page was opened from the hub, so one tap returns to where you were there. */
+(function(){ var r=''; try{ var u=new URL(document.referrer); if(u.origin===location.origin&&/\/cdhub\/(index\.html)?$/.test(u.pathname)) r='CD Hub'; }catch(e){}
+ HubNav.back.sync(document.getElementById('hubBack'), r&&history.length>1?{label:r}:null); })();</script>
 
 <script>
 /* ---- config ---- */
