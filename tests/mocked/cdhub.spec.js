@@ -137,7 +137,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -209,7 +209,7 @@ test.describe('CD Hub: navigation', () => {
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
-    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
+    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
