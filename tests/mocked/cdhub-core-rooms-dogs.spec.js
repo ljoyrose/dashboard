@@ -163,6 +163,39 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('#kept-readings h3')).toHaveText('Readings');
   });
 
+  test('The round: present shows pressed at once, with no redraw and no jump to the top (Lisa 15 Nov)', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA);
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
+    w.file('bld-access-invented', 'BLD-area_access.csv', ACCESS, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+    await page.setViewportSize({ width: 375, height: 500 });
+    await HUBS.cdhub.open(page, guard);
+    await tabClick(page, '#nav button[data-go="round"]');
+    const here = page.locator('button[data-here]').last(), not = page.locator('button[data-nothere]').last();
+    await here.scrollIntoViewIfNeeded();
+    await page.evaluate(() => { window.__marker = document.querySelector('#main').firstElementChild; });
+    const y0 = await page.evaluate(() => window.scrollY);
+    expect(y0).toBeGreaterThan(0);
+    await here.click();
+    await expect(here).toHaveAttribute('aria-pressed', 'true');
+    await expect(not).toHaveAttribute('aria-pressed', 'false');
+    expect(await here.evaluate((b) => getComputedStyle(b, '::before').content)).toContain('\u2713');
+    expect(await not.evaluate((b) => getComputedStyle(b).opacity)).toBe('0.5');
+    expect(await page.evaluate(() => window.__marker === document.querySelector('#main').firstElementChild)).toBe(true);   // no redraw
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - y0)).toBeLessThan(2);
+    await expect(page.locator('.rsave[data-area="' + (await here.getAttribute('data-area')) + '"]')).toContainText('not saved yet');
+    await not.click();
+    await expect(not).toHaveAttribute('aria-pressed', 'true');
+    await expect(here).toHaveAttribute('aria-pressed', 'false');
+    // a full redraw of the round (flap, add a dog, temps, moves) keeps the place too
+    const y1 = await page.evaluate(() => { const y = window.scrollY; go('round', false); return y; });
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - y1)).toBeLessThan(2);
+    await expect(page.locator('button[data-nothere]').last()).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('Compliance temperatures: Room empty is flagged but not counted; missing only on days a thermometer is needed', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-area.csv', AREA);

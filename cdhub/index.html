@@ -352,7 +352,9 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .movepick .mopt{min-height:44px;text-align:left;border:1px solid var(--press);border-radius:12px;background:var(--card);padding:0 10px;font:inherit;cursor:pointer}
 .drow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0}.herebtns{display:inline-flex;gap:4px;margin-left:4px}
 .herebtns button{min-height:36px}
-.herebtns button[aria-pressed="true"]{border-color:var(--ljr-5)}
+#main .herebtns button[aria-pressed="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;font-weight:600}   /* the house selected look (follows the Look setting): no colour fill */
+.herebtns button[aria-pressed="true"]::before{content:"\2713\00a0"}
+.herebtns.on button[aria-pressed="false"]{opacity:.5}
 .dc .dedit{margin-left:auto;align-self:flex-start;min-height:36px}.dedit-form label{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small)}
 .lbar .lbhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lbok{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);font-size:var(--fs-small)}
 .lbtrack{display:flex;gap:4px;width:100%}.lbseg{min-width:0;min-height:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;border:1px solid var(--press);border-radius:var(--radius);background:var(--card);padding:0 8px;font:inherit;font-size:var(--fs-small);color:var(--ink);cursor:pointer}
@@ -2912,7 +2914,14 @@ function markSeen(areaId, sid, state){
  var date=CD._roundDate||todayISO(), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:'',subjects:inCabin(areaId,date)});
  cur.seen=cur.seen||{};
  if(cur.seen[sid]===state) delete cur.seen[sid]; else cur.seen[sid]=state;
- go('round', false);
+ /* update the two buttons in place: no redraw, no jump (Lisa 15 Nov 2026) */
+ var now=cur.seen[sid]||'', sel='[data-area="'+CSS.escape(areaId)+'"]';
+ var hb=document.querySelector('[data-here="'+CSS.escape(sid)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(sid)+'"]'+sel);
+ if(!hb||!nb){ go('round', false); return; }
+ hb.setAttribute('aria-pressed',String(now==='here')); nb.setAttribute('aria-pressed',String(now==='not'));
+ hb.parentNode.classList.toggle('on',!!now);
+ var m=document.querySelector('.rsave'+sel);
+ if(m) m.textContent=now?'\u2713 noted on this page (not saved yet)':'';
 }
 
 async function accessSave(aid,mode,msgEl){
@@ -3314,7 +3323,7 @@ function pageRound(){
    +'<div class="chips" style="margin-bottom:4px">'
    +(sel.length?sel.map(function(sid){ var d=CD._byId[sid], seen=(r.seen||{})[sid];
        return '<span class="drow">'+dogMoveChip(d,aid,sid)
-        +'<span class="herebtns">'
+        +'<span class="herebtns'+(seen?' on':'')+'">'
         +'<button type="button" class="cb" data-here="'+sid+'" data-area="'+aid+'" aria-pressed="'+String(seen==='here')+'">present</button>'
         +'<button type="button" class="cb" data-nothere="'+sid+'" data-area="'+aid+'" aria-pressed="'+String(seen==='not')+'">not here</button>'
         +'</span></span>'; }).join('')
@@ -4227,6 +4236,7 @@ function navCurrent(id){
   if(on) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
 }
 function go(id,push){
+ var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
  pill(); SHOWN=String(id||'');
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
@@ -4403,7 +4413,7 @@ function go(id,push){
  }
  var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries')?full:id;
  if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
- window.scrollTo(0,0);
+ window.scrollTo(0,keepY);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
