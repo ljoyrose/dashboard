@@ -563,7 +563,7 @@ if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
 if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
 if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
-var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
+var LATER_PAGES={items:1,dogs:1,work:1,decide:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
@@ -1665,7 +1665,7 @@ function goBtn(x,text){
  var t=text||(x.med?'Show the record':'Open'), lab=t+': '+x.title;
  if(x.med) return '<button type="button" class="btn house-open" data-go="dogs/'+esc(x.med)+'" aria-label="'+esc(lab)+'">Show the record</button>';
  if(x.list) return '<button type="button" class="btn ci house-open" data-list="'+esc(x.list)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
- if(x.anchor) return '<button type="button" class="btn house-open" data-jump="'+esc(x.anchor)+'" aria-label="'+esc(lab)+'">Show</button>';
+ if(x.anchor) return '<button type="button" class="btn house-open" data-jump="'+esc(x.anchor)+'" aria-label="'+esc('Show: '+x.title)+'">Show</button>';   /* the name starts with the words on the button */
  return '<button type="button" class="btn house-open" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
 }
 function needRow(x,hide){
@@ -3771,6 +3771,16 @@ function sinkCard(){
   +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
   +'<span class="mut" id="sinkmsg" role="status"></span></div></div>';
 }
+/* Decide (menu option A, OV11 14 Nov 2026): a view, not a table. The yes/no items waiting on the owner (work records
+   waiting on you), each with its one tap: a medicine ask shows the record; anything else opens Do at that item. */
+function pageDecide(){
+ var n=needsToday().filter(function(x){ return x.kind==='record'; });
+ var h='<h2>Decide</h2>';
+ if(!(CD.work||[]).length) return h+'<div class="card acc2"><h4>The work list did not load</h4></div>';
+ if(!n.length) return h+'<section class="mcard" id="decideCard"><p class="mut">Nothing is waiting on you.</p></section>';
+ return h+'<section class="mcard need-card" id="decideCard" style="--hc:var(--ljr-1-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Waiting on you'+cntPill(n.length,'')+'</h3>'
+  +n.map(function(x){ return needRow(x,false); }).join('')+'</section>';
+}
 function pageWork(){
  var W=CD.work||[];
  if(!W.length) return '<h2>Outstanding</h2>'+needsCard()+'<div class="card acc2"><h4>The work list did not load</h4></div>';
@@ -4291,7 +4301,7 @@ function bindCompliance(){
   }
  });
 }
-var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance};
+var PAGES={decide:pageDecide,work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance};
 var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance']];
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','areas'],areas:['today','litters'],litters:['dogs','areas'],buyers:['dogs','map'],sops:['dogs','buyers'],compliance:['litters','dogs']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
@@ -4343,7 +4353,7 @@ function navHas(id){
 function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',has:navHas}); }
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
- var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
+ var counts={map:nd,decide:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),decide:false};
  return HubNav.html({counts:counts,late:late,has:navHas,layout:navLayout()});
 }
 function pill(){
@@ -4621,6 +4631,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('click',function(e){
  var j=e.target.closest&&e.target.closest('[data-jump]'); if(!j) return;
  var row=document.getElementById(j.dataset.jump);
+ if(!row&&/^work-/.test(j.dataset.jump)){ go('work'); row=document.getElementById(j.dataset.jump); }   /* from Decide: open Do at that item */
  if(row){ row.setAttribute('tabindex','-1'); row.focus(); if(row.scrollIntoView) row.scrollIntoView({block:'nearest'}); }
 });
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus();

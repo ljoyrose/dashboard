@@ -209,7 +209,7 @@ test.describe('CD Hub: navigation', () => {
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
-    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
+    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Decide', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
