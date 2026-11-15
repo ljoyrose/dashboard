@@ -855,9 +855,12 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
     expect([ph.width, ph.height]).toEqual([120, 120]);
-    await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
-    const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
-    expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
+    // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
+    await expect(card.locator('.whor')).toHaveCount(1);
+    await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
+    await expect(card.locator('.meta [data-cabin-move]')).toHaveText('Test Cabin A');
+    const overlap = await card.evaluate((e) => { const w = e.querySelector('.whor').getBoundingClientRect(), m = e.querySelector('.dcs.more > summary').getBoundingClientRect(); return !(w.bottom <= m.top || w.top >= m.bottom || w.right <= m.left || w.left >= m.right); });
+    expect(overlap).toBe(false);
     expect(await card.locator('.nm').evaluate((e) => getComputedStyle(e).webkitLineClamp)).toBe('2');
   });
 
