@@ -461,11 +461,19 @@
           + '<span class="bb-l2"><span>' + day(x.date) + '</span><span>' + (late ? 'Overdue' : 'Due') + '</span></span></span></button>';
       }).join('') : '<p class="mut">Nothing here.</p>');
   }
-  function moreHtml(c) {
+  /* Inspector links are made on the owner's own page (the host gives its address as ownerPage); with none, say where to set it up */
+  function inspectorHtml(v) {
+    var u = t(v.ownerPage);
+    return /^https:\/\//.test(u)
+      ? '<a class="bb-dog" href="' + v.esc(u) + '" target="_blank" rel="noopener"><span class="bb-name">Inspector links</span><span class="bb-pts">Make, copy or stop a read-only link (owner page)</span></a>'
+      : '<div class="bb-dog" aria-disabled="true"><span class="bb-name">Inspector links</span><span class="bb-pts">Set up saving first, then links are made on the owner page.</span></div>';
+  }
+  function moreHtml(v, c) {
     return '<h3 class="bb-h">More</h3>'
       + '<button type="button" class="bb-dog" data-bb-tab="system"><span class="bb-name">My system</span><span class="bb-pts">Sections, checks and points</span></button>'
       + '<button type="button" class="bb-dog" data-bb-tab="archive"><span class="bb-name">Archive</span><span class="cnt">' + c.ended.length + '</span></button>'
-      + (Dna ? '<button type="button" class="bb-dog" data-bb-tab="dna"><span class="bb-name">DNA: probability per puppy</span><span class="bb-pts">Sire and dam, per test</span></button>' : '');
+      + (Dna ? '<button type="button" class="bb-dog" data-bb-tab="dna"><span class="bb-name">DNA: probability per puppy</span><span class="bb-pts">Sire and dam, per test</span></button>' : '')
+      + inspectorHtml(v);
   }
   function backMore() { return '<button type="button" class="bb-f" data-bb-tab="more">' + ic('M15 6l-6 6l6 6', 18) + 'More</button>'; }
   function archiveHtml(v, c) {
@@ -516,7 +524,7 @@
     }
     if (dog) return err + dogHtml(v, dog);
     words = c.words || VERDICT;
-    var body = state.tab === 'cal' ? calHtml(v, c) : state.tab === 'more' ? moreHtml(c) : state.tab === 'archive' ? archiveHtml(v, c)
+    var body = state.tab === 'cal' ? calHtml(v, c) : state.tab === 'more' ? moreHtml(v, c) : state.tab === 'archive' ? archiveHtml(v, c)
       : state.tab === 'system' ? systemHtml(v) : state.tab === 'dna' && Dna ? backMore() + Dna.key() + Dna.calc(v.T, state.calc, v.esc) : listHtml(v, c);
     return err + tabsHtml(v) + body;
   }
@@ -547,6 +555,7 @@
       '.bb-rb{height:3px;margin:8px 0 12px;border-radius:2px;background:linear-gradient(90deg,var(--ljr-7) 0 16.66%,var(--ljr-2) 0 33.33%,var(--ljr-3) 0 50%,var(--ljr-4) 0 66.66%,var(--ljr-5) 0 83.33%,var(--ljr-6) 0 100%)}',
       '.bb-f:focus-visible,.bb-dog:focus-visible,.bb-src:focus-visible,.bb-chip:focus-visible{border-color:var(--ink);outline:none}',
       '.bb-dog{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;margin:0 0 8px;text-align:left}',
+      'a.bb-dog,div.bb-dog{box-sizing:border-box;border:1px solid var(--line);border-radius:var(--radius,12px);background:var(--card,transparent);color:inherit;text-decoration:none}a.bb-dog:hover,#main #bbRoot a.bb-dog:hover{background:var(--card);outline:1px solid var(--ink);outline-offset:-1px}',
       '.bb-name{font-weight:500;flex:1 1 auto}.bb-pts,.bb-why{color:var(--muted);font-size:var(--fs-small)}',
       '.bb-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}.bb-head h3{margin:0;font-weight:500}',
       '.bb-band{border-left:3px solid var(--bb,var(--line))}.bb-band summary{cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;min-height:44px}',
