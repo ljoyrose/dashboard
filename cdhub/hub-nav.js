@@ -25,7 +25,8 @@
     temps: { label: 'Temps', icon: 't-temp', href: './history.html' },
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
-    admin: { label: 'Settings', icon: 't-box' }
+    admin: { label: 'Settings', icon: 't-box' },
+    bin: { label: 'Bin', icon: 't-box' }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
@@ -36,7 +37,7 @@
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin'] }
   ];
   /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Ops · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
