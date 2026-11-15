@@ -6,6 +6,10 @@
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
      nav.tab.person.<person_id>.<section>   the same for one person; wins over the role. Never a code: codes are secrets
                                        and no code may sit in a rule row (OV11, 14 Nov 2026).
+     nav.first.<ROLE>.<section>        which view the section opens on: its place in the chip row (1 = first)
+     nav.first.person.<person_id>.<section>   the same for one person; wins over the role
+   Chips (Lisa 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
+   "Next: X" buttons at the foot of the page, so any view is one tap away at any number of records.
    No nav rows: the app's starting layout (STARTER), reported as not set so Settings can say so. */
 (function (root) {
   'use strict';
@@ -83,7 +87,14 @@
     if (!tabs.length && o.role) tabs = picks('nav.tab.' + o.role + '.');
     if (!tabs.length) tabs = STARTER.tabs.slice();
     tabs = tabs.filter(function (id) { return on[id]; }).slice(0, MAX_TABS);
-    return { tabs: tabs, on: on, set: set };
+    /* The view each section opens on: the person's pick, else the role's, else the section's own. */
+    var first = {};
+    SECTIONS.forEach(function (s) {
+      var r = (o.person && rows['nav.first.person.' + o.person + '.' + s.id]) || (o.role && rows['nav.first.' + o.role + '.' + s.id]);
+      var live = s.views.filter(has), v = r && live[r.value - 1];
+      if (v) first[s.id] = v;
+    });
+    return { tabs: tabs, on: on, set: set, first: first };
   }
 
   function viewItem(id, slot, opts, has) {
@@ -106,7 +117,7 @@
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
-    function goOf(s) { return has(s.go) ? s.go : (s.views.filter(has)[0] || s.go); }
+    function goOf(s) { var f = lay.first && lay.first[s.id]; return f || (has(s.go) ? s.go : (s.views.filter(has)[0] || s.go)); }
     bar.forEach(function (s) { onBar[goOf(s)] = true; });
     var tabs = bar.map(function (s) {
       var go = goOf(s);
@@ -131,5 +142,26 @@
     return tabs + DK.tabs.more(opts.moreId || 'houseMore', items);
   }
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, sectionOf: sectionOf, html: html };
+  /* chips(opts): the chip row for the section that holds opts.current. Every view of that section that exists here,
+     in order, each with its count (opts.counts[view]; opts.late[view] = late). '' when the section has one view or none. */
+  function chips(opts) {
+    opts = opts || {};
+    var has = opts.has || function () { return true; };
+    var s = opts.current ? sectionOf(opts.current) : null;
+    if (!s) return '';
+    var live = s.views.filter(function (id) { return VIEWS[id] && has(id); });
+    if (live.length < 2) return '';
+    return live.map(function (id) {
+      /* the house chip (house.css 4, 5) and house count (.cnt; 0 writes nothing). Selected (Lisa 15 Nov 2026): the 3px section-colour
+         side line (.house-lbar, --sc from data-slot) and a tick; no fill. */
+      var v = VIEWS[id], n = opts.counts && opts.counts[id], on = opts.current === id;
+      var cls = 'chip hchip' + (on ? ' house-lbar' : ''), cur = on ? ' aria-current="page"' : '';
+      var cnt = n ? ' <span class="cnt' + (opts.late && opts.late[id] ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '">' + esc(n) + '</span>' : '';
+      var inner = (on ? '<span class="hck" aria-hidden="true">\u2713</span>' : '') + '<span class="hcl">' + esc(v.label) + '</span>' + cnt;
+      return v.href ? '<a class="' + cls + '" href="' + esc(v.href) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</a>'
+        : '<button type="button" class="' + cls + '" data-go="' + esc(id) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</button>';
+    }).join('');
+  }
+
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, sectionOf: sectionOf, html: html, chips: chips };
 })(typeof window !== 'undefined' ? window : this);
