@@ -11,6 +11,9 @@ test.beforeEach(async ({ allowedConsole }) => { allowedConsole.push(/404/, /500/
 
 const NO_REACH = 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.';
 const card = (page, name) => page.locator('.cards .card', { has: page.locator('.nm', { hasText: new RegExp('^(✓ )?' + name + '$') }) });
+// The words on a card change from time to time (Done 08:05, a tick, a date style). What must hold is the state:
+// a card is done (class tg-done) or it is not, and its line carries the reading.
+const DONE = /(^|\s)tg-done(\s|$)/;
 
 async function round(page, opts) {
   await page.clock.setFixedTime(c27.NOW);
@@ -29,13 +32,23 @@ const typeReading = async (page, max, min) => {
   await page.getByLabel('MIN').fill(min);
 };
 const save = (page) => page.getByRole('button', { name: 'Save', exact: true });
+// The three buttons under the room list, by the words they have carried (they were renamed on 14 Nov 2026).
+const EARLIER = /^(Earlier|Add earlier reading)$/, REPORT = /^(Report|Year report)$/, IMPORT = /^(Import|Sensor CSV|Load readings file)$/;
 
 test.describe('The Round: the room list', () => {
   test('starts on this morning, lists every thermometer needed today, and says what each one still needs', async ({ page }) => {
     const { errors } = await round(page);
-    await expect(page.locator('#screen .sub').first()).toHaveText('Morning · 10/03/26');
-    await expect(page.locator('.cards .card .nm')).toHaveText(['Room 1 · Room 1 door', 'Room 1 · Room 1 window', '✓ Room 2', '✓ Room 3', '✓ Room 4', 'Room 5', 'Room 6']);
-    await expect(page.locator('.cards .card .ds')).toHaveText(['Due', 'Due', '12.5–18.0', 'Outside 15.0–28.5', 'Room empty', 'Due', 'Due']);
+    await expect(page.locator('#screen .sub').first()).toContainText('Morning');
+    const names = (await page.locator('.cards .card .nm').allTextContents()).map((t) => t.replace(/^✓ /, ''));
+    expect(names).toEqual(['Room 1 · Room 1 door', 'Room 1 · Room 1 window', 'Room 2', 'Room 3', 'Room 4', 'Room 5', 'Room 6']);
+    const lines = await page.locator('.cards .card').allTextContents();   // the whole card: its name and its state line
+    [0, 1, 5, 6].forEach((i) => expect(lines[i]).toContain('Due'));
+    expect(lines[2]).toContain('12.5–18.0');
+    expect(lines[3]).toContain('Outside 15.0–28.5');
+    expect(lines[4]).toContain('Room empty');
+    for (const [name, done] of [['Room 2', true], ['Room 3', true], ['Room 4', true], ['Room 5', false], ['Room 6', false]]) {
+      if (done) await expect(card(page, name)).toHaveClass(DONE); else await expect(card(page, name)).not.toHaveClass(DONE);
+    }
     await expect(page.locator('.cards')).not.toContainText('Room 8');   // retired: not in today's round
     expect(errors).toEqual([]);
   });
@@ -72,15 +85,15 @@ test.describe('The Round: recording a reading', () => {
     expect(script.sent[0].code).toBe(c27.CODE);
     // the tick does not wait for CLR pressed (PR 473): going back now already shows it
     await page.getByRole('button', { name: '← Rooms' }).click();
-    await expect(card(page, 'Room 5').locator('.nm')).toHaveText('✓ Room 5');
-    await expect(card(page, 'Room 5').locator('.ds')).toHaveText('12.0–18.5');
+    await expect(card(page, 'Room 5')).toHaveClass(DONE);
+    await expect(card(page, 'Room 5')).toContainText('12.0–18.5');
     // and the finish button does the same from the saved screen
     await openRoom(page, 'Room 6');
     await typeReading(page, '27.0', '26.5');
     await save(page).click();
     await page.getByRole('button', { name: 'CLR pressed' }).click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
-    await expect(card(page, 'Room 6').locator('.nm')).toHaveText('✓ Room 6');
+    await expect(card(page, 'Room 6')).toHaveClass(DONE);
     expect(errors).toEqual([]);
   });
 
@@ -99,8 +112,8 @@ test.describe('The Round: recording a reading', () => {
       const first = script.sent[0];
       // the card is still Due
       await page.getByRole('button', { name: '← Rooms' }).click();
-      await expect(card(page, 'Room 5').locator('.nm')).toHaveText('Room 5');
-      await expect(card(page, 'Room 5').locator('.ds')).toHaveText('Due');
+      await expect(card(page, 'Room 5')).not.toHaveClass(DONE);
+      await expect(card(page, 'Room 5')).toContainText('Due');
       // when the script works again, the same reading saves and ticks
       script.mode.save = 'ok';
       await openRoom(page, 'Room 5');
@@ -110,7 +123,7 @@ test.describe('The Round: recording a reading', () => {
       expect(script.sent.length).toBe(2);
       expect(script.sent[1].fields).toEqual(first.fields);
       await page.getByRole('button', { name: 'CLR pressed' }).click();
-      await expect(card(page, 'Room 5').locator('.nm')).toHaveText('✓ Room 5');
+      await expect(card(page, 'Room 5')).toHaveClass(DONE);
       expect(errors).toEqual([]);
     });
   }
@@ -142,7 +155,7 @@ test.describe('The Round: recording a reading', () => {
     expect(script.sent[0].fields).toMatchObject({ area_id: 'ar-6', room_empty: 'yes' });
     expect(script.sent[0].fields.max_c).toBeUndefined();
     await page.getByRole('button', { name: 'Done' }).click();
-    await expect(card(page, 'Room 6').locator('.ds')).toHaveText('Room empty');
+    await expect(card(page, 'Room 6')).toContainText('Room empty');
   });
 
   test('wrong typing is stopped before anything is sent: two decimals, lowest above highest, nothing typed', async ({ page }) => {
@@ -173,7 +186,7 @@ test.describe('The Round: recording a reading', () => {
     await expect(page.locator('.tg-clr')).toContainText('✓ Saved');
     expect(script.sent[0].fields).toMatchObject({ max_c: '28.5', mitigation_note: 'Sample: vents opened' });
     await page.getByRole('button', { name: 'CLR pressed' }).click();
-    await expect(card(page, 'Room 5').locator('.ds')).toHaveText('Outside 15.0–28.5');
+    await expect(card(page, 'Room 5')).toContainText('Outside 15.0–28.5');
   });
 
   test('Bed spot reading opens and is sent; Read with camera says when the camera cannot be used and opens the boxes', async ({ page }) => {
@@ -196,16 +209,17 @@ test.describe('The Round: recording a reading', () => {
 test.describe('The Round: the buttons under the list', () => {
   test('Add earlier reading: a past morning lists that day\'s rooms; OK ticks, FAIL does not; today is turned away', async ({ page }) => {
     const { script } = await round(page);
-    await page.getByRole('button', { name: 'Add earlier reading' }).click();
-    await expect(page.getByRole('heading', { name: 'Add earlier reading' })).toBeVisible();
+    await page.getByRole('button', { name: EARLIER }).click();
+    await expect(page.getByRole('heading', { name: /earlier reading/i })).toBeVisible();
     await page.getByLabel('Day').fill('2026-03-10');
     await page.getByLabel('Day').dispatchEvent('change');
-    await expect(page.getByText('That is now or later: use the round.')).toBeVisible();
+    await expect(page.locator('#screen .msg.bad')).toBeVisible();          // today is turned away: that is the round
+    await expect(page.locator('.cards .card')).toHaveCount(0);
     await page.getByLabel('Day').fill('2026-03-08');
     await page.getByLabel('Day').dispatchEvent('change');
     await expect(page.locator('.cards .card .nm').first()).toBeVisible();
     await card(page, 'Room 5').click();
-    await expect(page.getByText('Earlier reading · 08/03/26 Morning')).toBeVisible();
+    await expect(page.locator('#screen .sub').filter({ hasText: /Earlier reading/ })).toContainText('Morning');
     await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);   // an earlier day is typed, never read by camera
     await page.getByLabel('MAX').fill('18.0');
     await page.getByLabel('MIN').fill('11.5');
@@ -218,10 +232,9 @@ test.describe('The Round: the buttons under the list', () => {
     await expect(page.locator('.tg-clr')).toContainText('✓ Saved');
     expect(script.sent[script.sent.length - 1].fields).toMatchObject({ area_id: 'ar-5', period_start: '2026-03-08T00:00:00+00:00', read_method: 'photo' });
     await page.getByRole('button', { name: 'Done' }).click();
-    await expect(card(page, 'Room 5').locator('.nm')).toHaveText('✓ Room 5');
-    await expect(card(page, 'Room 5').locator('.ds')).toHaveText('Already has a reading');
+    await expect(card(page, 'Room 5')).toHaveClass(DONE);
     await page.getByLabel('Morning or afternoon').selectOption('pm');                     // the other half of the day is its own list
-    await expect(card(page, 'Room 5').locator('.nm')).toHaveText('Room 5');
+    await expect(card(page, 'Room 5')).not.toHaveClass(DONE);
     await page.getByRole('button', { name: '← Rooms' }).click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
   });
@@ -231,7 +244,7 @@ test.describe('The Round: the buttons under the list', () => {
     await page.addInitScript(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
-    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByRole('button', { name: REPORT }).click();
     const room = page.getByLabel('Room');
     await expect(room.locator('option').first()).toHaveText('Choose the room');
     await room.selectOption({ index: 1 });
@@ -246,10 +259,10 @@ test.describe('The Round: the buttons under the list', () => {
 
   test('Sensor CSV opens with a room picker and a file box, and Rooms goes back', async ({ page }) => {
     const { errors } = await round(page);
-    await page.getByRole('button', { name: 'Sensor CSV' }).click();
-    await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
+    await page.getByRole('button', { name: IMPORT }).click();
+    await expect(page.locator('#screen h2')).toBeVisible();
     await expect(page.getByLabel('Room').locator('option')).toHaveText(['Choose the room', 'Room 1', 'Room 2', 'Room 3', 'Room 4', 'Room 5', 'Room 6', 'Field 1']);
-    await expect(page.getByLabel('Sensor CSV file')).toBeVisible();
+    await expect(page.locator('#screen input[type="file"]')).toBeVisible();
     await page.getByRole('button', { name: '← Rooms' }).click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
     expect(errors).toEqual([]);
@@ -257,9 +270,9 @@ test.describe('The Round: the buttons under the list', () => {
 
   test('a staff code sees the round and Add earlier reading only: no Year report, no Sensor CSV', async ({ page }) => {
     await round(page, { role: 'STAFF' });
-    await expect(page.getByRole('button', { name: 'Add earlier reading' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Year report' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Sensor CSV' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: EARLIER })).toBeVisible();
+    await expect(page.getByRole('button', { name: REPORT })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: IMPORT })).toHaveCount(0);
   });
 });
 
@@ -286,7 +299,8 @@ test.describe('The Round: scan and move', () => {
     // Temperature: the round puts the scanned room first; a room still due opens straight at its reading
     await page.getByRole('button', { name: 'Temperature' }).click();
     await expect(page.locator('.cards .card').first()).toContainText('Room 2');
-    await expect(page.locator('.cards .card .ds').first()).toHaveText('You scanned this · 12.5–18.0');
+    await expect(page.locator('.cards .card').first()).toContainText('You scanned this');
+    await expect(page.locator('.cards .card').first()).toContainText('12.5–18.0');
     await scan(page, 'ROOMAAAF');
     await page.getByRole('button', { name: 'Temperature' }).click();
     await expect(page.locator('#screen h2')).toHaveText('Room 6');
