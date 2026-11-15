@@ -163,3 +163,36 @@ function adminRemoveDailyBackup() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'adminDailyBackup') { ScriptApp.deleteTrigger(t); n++; } });
   Logger.log(n ? 'Stopped the nightly backup. Existing copies were not touched.' : 'No nightly backup was scheduled.');
 }
+
+/**
+ * 7. Dry run (15 Nov 2026): how many rows are waiting in the approvals queue (BLD-_pending.csv), per file and per state.
+ * Changes nothing: it reads the queue file only. It does not apply waiting room moves (doPost and a plain GET do that).
+ * Rows waiting on a phone (not yet sent) are not in this file and cannot be counted from here.
+ */
+function adminCountQueued() {
+  var p;
+  try { p = loadPending_(); }
+  catch (e) { Logger.log('Could not read ' + BLD.PENDING_FILE + ': ' + (e.userMessage || e)); return { total: 0, byFile: {}, byState: {} }; }
+  var st = pendingState_(p.records), out = { total: 0, byFile: {}, byState: {}, moves: 0 };
+  Object.keys(st).forEach(function (id) {
+    var s = st[id];
+    if (!s.waiting) return;
+    var file = s.queued.target_file || '(none)', state = s.last.event;
+    out.total++;
+    out.byFile[file] = (out.byFile[file] || 0) + 1;
+    out.byState[state] = (out.byState[state] || 0) + 1;
+    if (file === TABLES.occupancy.file && s.queued.kind !== 'correction' && !s.queued.corrects_id && isRoomMove_(s.queued)) out.moves++;
+  });
+  Logger.log('Waiting in ' + BLD.PENDING_FILE + ': ' + out.total + ' (nothing was changed).');
+  Object.keys(out.byFile).sort().forEach(function (f) { Logger.log('--   ' + f + ': ' + out.byFile[f]); });
+  Object.keys(out.byState).sort().forEach(function (s) { Logger.log('--   state ' + s + ': ' + out.byState[s]); });
+  Logger.log('--   room moves a plain GET or a save would apply now (while TABLE_ON_occupancy is true): ' + out.moves);
+  return out;
+}
+
+// A room move (area set, not off site): the only queued occupancy rows applyWaitingOccupancyMoves_ applies.
+function isRoomMove_(queued) {
+  var row = null;
+  try { row = JSON.parse(queued.payload_json || '{}'); } catch (e) { row = null; }
+  return !!row && !String(row.off_site_kind || '') && !!String(row.area_id || '');
+}

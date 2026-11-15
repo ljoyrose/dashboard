@@ -263,13 +263,13 @@ test('Sensor CSV opens for an owner: room picker and file box; a sensor file is 
     ? route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }, { key: 'sensor_reading', on: true, mode: 'direct' }] } })
     : route.fallback()));
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Sensor CSV' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
   const room = page.getByLabel('Room');
   await expect(room.locator('option')).toHaveText(['Choose the room', '3A.1/2']);   // rooms in use today, one choice each
   await expect(room.locator('option').nth(1)).toHaveAttribute('value', 'area-new');   // a room id, so the save names a room
   await expect(page.getByLabel('Sensor name')).toBeVisible();
-  await page.getByLabel('Sensor CSV file').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
+  await page.getByLabel('File to import').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
     buffer: Buffer.from('Timestamp,Temperature_Celsius\n2026-11-10 08:00:00,12.0\n2026-11-10 15:00:00,18.5\n2026-11-11 09:00:00,13.0\n') });
   await expect(page.getByText('2 days.')).toBeVisible();
   const saveAll = page.getByRole('button', { name: 'Save 2 days' });
@@ -370,4 +370,16 @@ test('year report: a saved reading with max lower than min is flagged, not count
     await row.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await page.screenshot({ path: staffShot('staff-year-report-swapped.png'), fullPage: false });
   } finally { TABLES.area_reading = []; }
+});
+
+test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 Nov)', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByRole('button', { name: 'Type it' }).click();
+  await page.getByLabel('MAX').fill('18,5');
+  await page.getByLabel('MIN').fill('12,0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { max_c: '18.5', min_c: '12.0' } });
 });

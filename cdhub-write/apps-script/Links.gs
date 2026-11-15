@@ -11,6 +11,10 @@
  *   link_kind.<role>.from_tables   pipes of allowed table names; no row = any      (same for .to_tables)
  *   link_kind.<role>.max_per_from  e.g. 1 for "main" - adding a new one ends the oldest open one in the same save
  *   link_kind.<role>.who_may       pipes of roles (OWNER, STAFF, ...) or person:<code id>; no row = OWNER only
+ *   link_kind.<role>.inherit_at_birth  pipes of to_ids, or * for all; none / blank / no row = off (15 Nov 2026, BB):
+ *                                  a new record made from parent records (a pup from its litter's parents) gets
+ *                                  the parents' open links of this kind, from its own start date (dob).
+ * link_end takes an optional `reason`, kept in end_reason (15 Nov 2026, BB: why someone left a course or scheme).
  * One links table: the spec is ITEMS' TABLES.links (PR 568); the owner's generic add path writes the same file.
  * A second open row with the same from, to and kind is refused as DUPLICATE.
  * Rows follow STANDARD S4: from_date/to_date, source, set_by, set_on, created_at/updated_at (UTC).
@@ -19,7 +23,7 @@
 var LINKS_ = {
   file: 'BLD-links.csv', on: 'links', idPrefix: 'lnk',
   need: ['id', 'tenant_id', 'from_table', 'from_id', 'role', 'to_table', 'to_id', 'from_date', 'to_date', 'source',
-    'set_by', 'set_on', 'sort', 'note', 'created_at', 'updated_at']
+    'set_by', 'set_on', 'sort', 'note', 'end_reason', 'created_at', 'updated_at']
 };
 var LINK_TABLE_RE_ = /^[a-z][a-z0-9_]{0,40}$/;
 
@@ -32,7 +36,7 @@ function linkKindsInForce_(day) {
   var out = {}, best = {}, rules = store_read_('BLD-breeding_rule.csv', false), tenant = prop_(BLD.PROP.TENANT_ID);
   if (!rules) return out;
   rules.records.forEach(function (r) {
-    var m = /^link_kind\.([a-z][a-z0-9_]{0,39})(?:\.(from_tables|to_tables|max_per_from|who_may))?$/.exec(String(r.rule_key || ''));
+    var m = /^link_kind\.([a-z][a-z0-9_]{0,39})(?:\.(from_tables|to_tables|max_per_from|who_may|inherit_at_birth))?$/.exec(String(r.rule_key || ''));
     if (!m || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
     var from = String(r.effective_from || ''), to = String(r.to_date || ''), k = m[1] + '.' + (m[2] || 'label');
     if (!from || from > day || (to && to < day)) return;
@@ -145,6 +149,8 @@ function sinkLinkEnd_(req) {
   return linksEntry_(req, function (f, who, now) {
     var rowId = String(f.id || '').trim(), today = todayLondon_(now), to = String(f.to_date || '').trim() || today;
     if (!ID_RE_.test(rowId)) throw err_('INVALID', 'Say which link to end.');
+    var rerr = {}, reason = dogcardText_(f.reason, 'reason', rerr, 500);
+    if (Object.keys(rerr).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: rerr });
     if (!isRealDate_(to)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'Use a real date as YYYY-MM-DD.' } });
     var read = linksRead_(), tenant = prop_(BLD.PROP.TENANT_ID), idx = -1;
     read.records.forEach(function (r, i) { if (r.id === rowId && (!tenant || !r.tenant_id || r.tenant_id === tenant)) idx = i; });
@@ -154,8 +160,68 @@ function sinkLinkEnd_(req) {
     if (String(rec.to_date || '')) throw err_('NOT_ALLOWED', 'That link has already ended.');
     if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });
     var stamp = linksUtc_(now);
-    var row = read.header.map(function (h) { return h === 'to_date' ? to : h === 'updated_at' ? stamp : (rec[h] == null ? '' : String(rec[h])); });
+    var row = read.header.map(function (h) {
+      if (h === 'to_date') return to;
+      if (h === 'updated_at') return stamp;
+      if (h === 'end_reason') return reason;
+      return rec[h] == null ? '' : String(rec[h]);
+    });
     store_replaceRow_(LINKS_.file, read.header, idx, row, read);
     return { status: 'saved', id: rowId, ended: to };
   });
+}
+
+/**
+ * Links a new record inherits from its parents (15 Nov 2026, BB): for each kind whose inherit_at_birth row is in
+ * force on `day`, every open link of that kind from a parent (same table) to an allowed to_id is copied to the new
+ * record, from `day`. Called INSIDE the caller's save and lock (e.g. DOGCARD subject_create with a birth litter).
+ * Does nothing while links are switched off. Returns the new link ids.
+ */
+function linkInherit_(table, childId, parentIds, day, who, now) {
+  if (!linksOn_() || !parentIds || !parentIds.length) return [];
+  var kinds = linkKindsInForce_(day), tenant = prop_(BLD.PROP.TENANT_ID), made = [];
+  var roles = Object.keys(kinds).filter(function (k) {
+    var v = String(kinds[k].inherit_at_birth || '').trim();
+    return v && v.toLowerCase() !== 'none';
+  });
+  if (!roles.length) return made;
+  var read = linksRead_(), stamp = linksUtc_(now), ids = {};
+  read.records.forEach(function (r) { ids[r.id] = 1; });
+  var mine = function (r) { return !tenant || !r.tenant_id || r.tenant_id === tenant; };
+  var has = function (role, tt, tid) {
+    return read.records.some(function (r) {
+      return mine(r) && r.from_table === table && r.from_id === childId && r.role === role && r.to_table === tt && r.to_id === tid && linkOpen_(r, day);
+    });
+  };
+  roles.forEach(function (role) {
+    var allow = linkPipes_(kinds[role].inherit_at_birth), all = allow.indexOf('*') >= 0;
+    linksRead_().records.filter(function (r) {
+      return mine(r) && r.from_table === table && parentIds.indexOf(r.from_id) >= 0 && r.role === role &&
+        String(r.from_date || '') <= day && linkOpen_(r, day) && (all || allow.indexOf(r.to_id) >= 0);
+    }).forEach(function (p) {
+      if (has(role, p.to_table, p.to_id)) return;                 // both parents on the same scheme: one link
+      var id = newId_(LINKS_.idPrefix, now);
+      while (ids[id]) id = newId_(LINKS_.idPrefix, now);
+      ids[id] = 1;
+      var v = { id: id, tenant_id: tenant, from_table: table, from_id: childId, to_table: p.to_table, to_id: p.to_id, role: role,
+        sort: '', note: '', end_reason: '', from_date: day, to_date: '', source: 'inherited at birth from ' + p.from_id,
+        set_by: who.id || who.who, set_on: todayLondon_(now), created_at: stamp, updated_at: '' };
+      var row = read.header.map(function (h) { return v[h] == null ? '' : String(v[h]); });
+      store_append_(LINKS_.file, read.header, row, read);
+      read = linksRead_();
+      made.push(id);
+    });
+  });
+  return made;
+}
+
+/** A pup made from a birth litter inherits its parents' links (the litter's dam and sire), from its dob. */
+function linkInheritAtBirth_(pupId, litterId, dob, who, now) {
+  if (!linksOn_() || !litterId || !dob) return [];
+  var lit = store_read_('BLD-litter.csv', false), tenant = prop_(BLD.PROP.TENANT_ID), parents = [];
+  (lit ? lit.records : []).forEach(function (r) {
+    if (r.id !== litterId || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
+    [r.dam_subject_id, r.sire_subject_id].forEach(function (p) { p = String(p || '').trim(); if (p && parents.indexOf(p) < 0) parents.push(p); });
+  });
+  return linkInherit_('subject', pupId, parents, dob, who, now);
 }
