@@ -50,6 +50,13 @@
     return Object.keys(m).sort().map(function (k) { return m[k]; });
   }
 
+  /** The owner's name for a part of the day (row job.day_part.<code>.label in force that day); no row = the code. */
+  function partLabel(v, code, day) {
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.day_part.' + code + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    return (best && String(best.value || '').trim()) || code;
+  }
+
   /** Records for one dog ({subject_id}), one room ({area_id}) or one litter ({litter_id}), newest first. A corrected record gives way to its correction. */
   function history(v, target) {
     var byId = {}, replaced = {};
@@ -58,7 +65,8 @@
     return v.logs.filter(function (l) {
       return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
     }).map(function (l) {
-      return { at: l.happened_at || l.taken_at || '', noTime: String(l.time_given).toLowerCase() === 'false', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '' };
+      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '';
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '' };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -106,7 +114,7 @@
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(Due.londonDate(r.at) || String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
-          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('') + '</div>';
+          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.part, r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('') + '</div>';
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
