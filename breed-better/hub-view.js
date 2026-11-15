@@ -22,7 +22,7 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
-  var state = { from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
+  var state = { from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', age: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -214,6 +214,32 @@
     var y = Math.floor(m / 12), mm = m % 12;
     return [y ? y + (y === 1 ? ' yr' : ' yrs') : '', mm || !y ? mm + (mm === 1 ? ' mth' : ' mths') : ''].filter(Boolean).join(' ');
   }
+  function months(dob, today) {
+    var a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(dob)), b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(today));
+    if (!a || !b) return null;
+    var m = (b[1] - a[1]) * 12 + (b[2] - a[2]) - (Number(b[3]) < Number(a[3]) ? 1 : 0);
+    return m < 0 ? null : m;
+  }
+  /* Age groups (Lisa's mock-up; OV11, 15 Nov 2026): owner rows in the shared rule list, never fixed. For each group key,
+     age_group.<key>.from_months, age_group.<key>.to_months and age_group.<key>.label, each dated (effective_from, to_date)
+     with a source. A group needs from_months; to_months blank = no upper end; an animal is in it when
+     from_months <= age in whole months < to_months. No rows: no filter. */
+  function ageGroups(T, today) {
+    var g = {}, re = /^age_group\.([a-z0-9_]+)\.(from_months|to_months|label)$/;
+    (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
+      var m = re.exec(t(r.rule_key)), from = t(r.effective_from), to = t(r.to_date);
+      if (!m || !from || from > today || (to && to < today)) return;
+      var x = g[m[1]] || (g[m[1]] = { key: m[1], at: {} });
+      if (x.at[m[2]] && x.at[m[2]] > from) return;   /* newest row in force wins */
+      x.at[m[2]] = from; x[m[2]] = t(r.value);
+    });
+    return Object.keys(g).map(function (k) {
+      var x = g[k], lo = x.from_months === undefined || x.from_months === '' ? NaN : Number(x.from_months), hi = x.to_months === undefined || x.to_months === '' ? Infinity : Number(x.to_months);
+      return { key: k, label: x.label || k.replace(/_/g, ' '), from: lo, to: hi };
+    }).filter(function (x) { return isFinite(x.from) && x.from >= 0 && !isNaN(x.to) && x.to > x.from; })
+      .sort(function (a, b) { return a.from - b.from || a.label.localeCompare(b.label); });
+  }
+  function inAge(grp, dob, today) { var m = months(dob, today); return m !== null && m >= grp.from && m < grp.to; }
   function subLine(v, r) {
     var d = hubDog(v, r.subject_id);
     return [d && t(d.sex), age(r.dob, v.today)].filter(Boolean).join(', ');
@@ -239,10 +265,11 @@
   };
   function shownRows(c) {
     var f = state.filter, q = state.q.toLowerCase();
-    var sx = state.sex;
+    var sx = state.sex, v = last || {}, ag = state.age && v.T ? ageGroups(v.T, v.today).filter(function (x) { return x.key === state.age; })[0] : null;
     return c.results.filter(function (r) {
-      var d = hubDog(last || {}, r.subject_id);
-      return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1) && (!sx || (d && t(d.sex) === sx));
+      var d = hubDog(v, r.subject_id);
+      return (!f || verdictOf(r) === f) && (!q || r.name.toLowerCase().indexOf(q) !== -1) && (!sx || (d && t(d.sex) === sx))
+        && (!ag || inAge(ag, r.dob, v.today));
     })
       .sort(SORT_FN[state.sort] || SORT_FN.verdict);
   }
@@ -300,7 +327,13 @@
     var sx = sk.length > 1 ? '<div class="bb-filt" role="group" aria-label="Filter by sex">' + [''].concat(sk).map(function (k) {
       return '<button type="button" class="bb-f" data-bb-sex="' + esc(k) + '" aria-pressed="' + (state.sex === k) + '">' + esc(k || 'Any sex') + (k ? ' <span class="cnt">' + sexes[k] + '</span>' : '') + '</button>';
     }).join('') + '</div>' : '';
-    return tools + h + sx + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
+    /* age groups: only when the owner has rows for them */
+    var groups = ageGroups(v.T, v.today);
+    var ag = groups.length ? '<div class="bb-filt" role="group" aria-label="Filter by age">' + [{ key: '', label: 'Any age' }].concat(groups).map(function (g) {
+      var n = g.key ? c.results.filter(function (r) { return inAge(g, r.dob, v.today); }).length : 0;
+      return '<button type="button" class="bb-f" data-bb-age="' + esc(g.key) + '" aria-pressed="' + (state.age === g.key) + '">' + esc(g.label) + (g.key ? ' <span class="cnt">' + n + '</span>' : '') + '</button>';
+    }).join('') + '</div>' : '';
+    return tools + h + sx + ag + '<div id="bbList">' + rowsHtml(v, c) + '</div>';
   }
 
   /** The animal's details from the hub, folded, as on the mock-up. Only what the hub holds is shown. */
@@ -915,7 +948,7 @@
       if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
       var hubGo = e.target.closest && e.target.closest('[data-go]');
       if (hubGo && !hubGo.hasAttribute('data-bb-dog') && !(hubGo.closest && hubGo.closest('#bbRoot'))) state.from = null;   /* left by the hub's own menu */
-      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-return],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
+      var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-return],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-age],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
       if (!b) return;
       if (b.hasAttribute('data-bb-dog')) { cameFrom(b); state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
       if (b.hasAttribute('data-bb-return')) {
@@ -942,6 +975,7 @@
       else if (b.hasAttribute('data-bb-back')) { state.dog = ''; state.edit = ''; }
       else if (b.hasAttribute('data-bb-tab')) { state.tab = b.getAttribute('data-bb-tab'); state.dog = ''; state.edit = ''; }
       else if (b.hasAttribute('data-bb-sex')) state.sex = b.getAttribute('data-bb-sex');
+      else if (b.hasAttribute('data-bb-age')) state.age = b.getAttribute('data-bb-age');
       else if (b.hasAttribute('data-bb-cal')) state.cal = b.getAttribute('data-bb-cal');
       else if (b.hasAttribute('data-bb-calc')) { var cv = b.getAttribute('data-bb-calc').split(':'); state.calc[cv[0]] = Number(cv[1]); }
       else if (b.hasAttribute('data-bb-month')) { state.month = b.getAttribute('data-bb-month'); state.cal = 'all'; }
@@ -967,5 +1001,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
