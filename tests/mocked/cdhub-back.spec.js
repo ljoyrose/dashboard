@@ -14,6 +14,7 @@ test.describe('CD Hub Back', () => {
     await signIn(page);
     await page.evaluate(() => go('dogs'));
     await expect(page).toHaveURL(/#\/dogs$/);
+    await expect(page.locator('#rows')).toBeVisible();   // Dogs loads its scripts on first open: wait for the list, not the wait card
     await page.evaluate(() => window.scrollTo(0, 500));
     const y = await page.evaluate(() => window.scrollY);
     expect(y).toBeGreaterThan(100);
