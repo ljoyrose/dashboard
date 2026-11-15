@@ -94,6 +94,12 @@ function waitingRows_(pendState, spec) {
   return out;
 }
 
+/** The local day of a datetime, or '' when blank or unreadable. */
+function dupDay_(v) {
+  var t = Date.parse(String(v || ''));
+  return isNaN(t) ? '' : todayLondon_(new Date(t));
+}
+
 function findDuplicate_(spec, clean, rows, nowMs, today) {
   if (spec.dupSkip && spec.dupSkip(clean)) return null;          // e.g. a note added to a check already done
   for (var i = 0; i < rows.length; i++) {
@@ -101,6 +107,11 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
     if (spec.dupSkip && spec.dupSkip(r)) continue;
     for (var k = 0; k < spec.dupKey.length; k++) {
       if ((r[spec.dupKey[k]] || '') !== (clean[spec.dupKey[k]] || '')) { same = false; break; }
+    }
+    // dupDateCols: these datetimes must fall on the same local day to be a repeat (paper catch-up: a week of one job
+    // for one room, typed in one go, is seven records, not one record and six duplicates; SOPJOBS S2, 14 Nov 2026)
+    for (k = 0; same && spec.dupDateCols && k < spec.dupDateCols.length; k++) {
+      if (dupDay_(r[spec.dupDateCols[k]]) !== dupDay_(clean[spec.dupDateCols[k]])) same = false;
     }
     if (!same) continue;
     if (spec.dupDayCol) { if ((r[spec.dupDayCol] || '') === today) return r; continue; }   // same calendar day (London)
