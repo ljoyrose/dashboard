@@ -247,6 +247,21 @@ test('phone: the round shows room cards only, never the table beside them (quali
   await expect(page.locator('#view-d .rscroll')).toBeHidden();
 });
 
+// Found by the click-crawl, 13 Nov 2026: later days and days with no readings were buttons that did nothing when tapped.
+test('heat map: a day with nothing to open is not a button you can press; every day you can press opens its panel', async ({ page, guard }) => {
+  await open(page, guard);
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  const cells = page.locator('#view-a button.d');
+  await expect(cells.first()).toBeVisible();
+  const kinds = await cells.evaluateAll((list) => list.map((b) => ({ blank: /(^|\s)(future|nd)(\s|$)/.test(b.className), disabled: b.disabled, opens: !!b.getAttribute('onclick') })));
+  expect(kinds.length).toBeGreaterThan(300);
+  expect(kinds.filter((k) => k.blank).length, 'the sample year has later days or days with no readings').toBeGreaterThan(0);
+  expect(kinds.filter((k) => k.blank && !k.disabled), 'a blank day must not be pressable').toEqual([]);
+  expect(kinds.filter((k) => !k.blank && (k.disabled || !k.opens)), 'a day with readings must open its panel').toEqual([]);
+  // every blank day still says what it is (for a screen reader and on hover)
+  await expect(page.locator('#view-a button.d.future').first()).toHaveAttribute('aria-label', /Later$/);
+});
+
 test('audit: a room in use with no readings at all is listed and shows missed, never hidden', async ({ page, guard }) => {
   await open(page, guard, null, ROOMS + 'area-r5,R5,5\n');
   await page.locator('#rdate').fill('2026-01-11');
@@ -501,4 +516,18 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
   expect(julyIn.shadow).not.toBe('none');
+});
+
+test('audit: a saved min or max that is text (25,3) or blank is "Check: not a number", counted with the problems, never read as 25 (OV11 15 Nov)', async ({ page, guard }) => {
+  await open(page, guard);
+  const r = await page.evaluate(() => ({
+    text: tempCls('24.1', '25,3', '2026-01-11', 'area-r1'),
+    half: tempCls('26.4', '', '2026-01-11', 'area-r1'),
+    none: tempCls('', '', '2026-01-11', 'area-r1'),
+    swap: tempSwapped('25,3', '24.1'),
+    slot: slotState({ min: '24.1', max: '25,3' }, 'area-r1', '2026-01-11', 'am'),
+  }));
+  expect(r.text).toBe('unread'); expect(r.half).toBe('unread'); expect(r.none).toBe(''); expect(r.swap).toBe(false);
+  expect(r.slot).toMatchObject({ k: 'swap', unread: true, lo: '24.1', hi: '25,3' });
+  expect(await page.evaluate((s) => slotHtml('AM', s), r.slot)).toContain('AM 24.1–25,3 · Check: not a number');
 });

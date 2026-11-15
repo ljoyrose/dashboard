@@ -333,10 +333,15 @@ function bandOn(day,aid){
   fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
   return fits[0]||null;
 }
-function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
+/* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25; a reading
+   with one side blank or not a number is "Check: not a number", counted with the problems, so text never hides from the counts. */
+function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
+function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
+function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
 function tempCls(min,max,day,aid){
   var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR,aid);
-  if(isNaN(lo)&&isNaN(hi))return'';
+  if(isNaN(lo)&&isNaN(hi)&&!tempUnreadable(min,max))return'';
+  if(tempUnreadable(min,max))return'unread';
   if(tempSwapped(min,max))return'swap';   /* max lower than min: typed the wrong way round, checked before hot/cold */
   if(!B)return'unknown';
   if(!isNaN(lo)&&lo<B.min)return'cold';
@@ -584,8 +589,9 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':cls==='swap'?'swap':'out';
+    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':(cls==='swap'||cls==='unread')?'swap':'out';
     if(t.empty&&k==='out') k='eout';
+    if(cls==='unread') return {k:k, unread:true, empty:!!t.empty, lo:String(t.min==null?'':t.min).trim(), hi:String(t.max==null?'':t.max).trim(), note:t.note||''};
     return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }
   if(t&&t.empty) return {k:'empty'};
@@ -625,7 +631,7 @@ function slotHtml(label,s){
   if(s.k==='due') return '<span class="due">'+label+' due</span>';
   if(s.k==='empty') return '<span class="due">'+label+' empty</span>';
   var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
-  if(s.k==='swap') return '<span class="warn">'+esc(txt)+' · max lower than min</span>';
+  if(s.k==='swap') return '<span class="warn"'+(s.unread?' data-unread':'')+'>'+esc(txt)+(s.unread?' · Check: not a number':' · max lower than min')+'</span>';
   if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
@@ -656,7 +662,8 @@ function monthCal(y, classOf, kind){
     for(var i=0;i<firstDow;i++) h+='<span class="d empty"></span>';
     for(var d=1;d<=md[mi];d++){
       var date=ds(y,mi,d), cls=classOf(date), today=date===TODAY_STR, word=stateWord(cls);
-      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+      /* a day with nothing to open (a later day, or no readings) is not offered as a button: it used to be one that did nothing */
+      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
       h+='<button type="button" class="d '+cls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'></button>';
     }

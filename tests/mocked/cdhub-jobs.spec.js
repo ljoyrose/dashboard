@@ -81,9 +81,10 @@ test.describe('CD Hub: jobs', () => {
 
   test('Compliance shows late, due and source; dog card shows its history in plain words', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', TYPES);
-    addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H + ',time_given', [
       'l1,t,t1,,sub-test-dog-1,,,ok,2026-01-05T09:00:00Z,,2026-01-05T09:00:00Z,Staff A,,,scanned',
-      'l2,t,t1,,sub-test-dog-1,,,concern,2026-01-06T09:00:00Z,pretend note,2026-01-06T09:00:00Z,Staff A,,,tapped'
+      'l2,t,t1,,sub-test-dog-1,,,concern,2026-01-06T09:00:00Z,pretend note,2026-01-06T09:00:00Z,Staff A,,,tapped',
+      'l3,t,t2,area-x,sub-test-dog-1,,,ok,2026-01-04T12:00:00Z,,2026-01-07T09:00:00Z,Staff A,,,paper,false'
     ]));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
@@ -94,13 +95,15 @@ test.describe('CD Hub: jobs', () => {
     await expect(page.locator('#compJobs tr[data-source=""]')).toContainText('No source entered');
     await tab(page, 'dogs');
     const hist = page.locator('[data-history="sub-test-dog-1"]');
-    await expect(hist).toContainText('2 job records');
+    await expect(hist).toContainText('3 job records');
     // job history sits behind More on the dog card (layout A, Lisa 12 Nov 2026)
     await page.locator('#rows article.dc', { has: hist }).locator('details.more > summary').click();
     await hist.locator('summary').click();
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
     await expect(hist).toContainText('6 Jan 2026');   // owner date: "2 Mar 2026"
+    await expect(hist).toContainText('entered earlier');   // how it came in: owner-only
+    await expect(hist).toContainText('time not given');
     await expect(hist).not.toContainText(/verified|attended/i);
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Nothing here'))).toBe('');

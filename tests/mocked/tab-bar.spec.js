@@ -21,14 +21,14 @@ const ALL = {
 };
 // What each hub's bar shows, in order, and what sits under More (Lisa's picks; the first is Main, More is always last).
 const PLAN = {
-  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; MOVE is a link out (new tab)
+  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Tech', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; Tech (TECH-HUB-1); MOVE is a link out (new tab)
   money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], phone: ['Main', 'Money', 'Do', 'Dates', 'Acct', 'More'], more: ['Control'] },
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
   cdhub: { tabs: ['Main', 'Compliance', 'Ops', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
-  estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov)
+  estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'DNS & Email', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov); DNS & Email: JOB 6.3 (12 Nov)
 };
 // phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
 // Each tab's colour (Lisa's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).

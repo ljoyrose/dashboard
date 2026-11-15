@@ -238,6 +238,31 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
   });
 
+  test('a comma decimal saves as a point; text is refused and nothing saves; a saved reading that is not a number shows as a problem (OV11 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
+    await page.evaluate(() => go('round'));
+    await page.locator('#rdate').fill('2026-11-11');
+    await page.locator('#rdate').dispatchEvent('change');
+    const min = page.locator('.tmin[data-slot="am"]').first();
+    const area = await min.getAttribute('data-area');
+    const max = page.locator(`.tmax[data-area="${area}"][data-slot="am"]`);
+    await min.fill('abc'); await min.blur();
+    await expect(page.locator('.tmp').first()).toContainText('Not a number. Type e.g. 18.5');
+    await expect(min).toHaveClass(/bad/);
+    await min.fill('11,3'); await min.blur();
+    await expect(min).toHaveValue('11.3');
+    await max.fill('13,2'); await max.blur();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
+    // a row typed straight into the sheet as text, and one with max blank: both are problems, never hidden
+    const st = await page.evaluate(() => ({ text: tempState('24.1', '25,3', { min: 10, max: 30 }), half: tempState('26.4', '', { min: 10, max: 30 }), ok: tempState('24.1', '25.3', { min: 10, max: 30 }) }));
+    expect(st).toEqual({ text: 'unread', half: 'unread', ok: 'ok' });
+    await page.evaluate(() => { T['BLD-area_reading.csv'] = [{ id: 'r-x', area_id: CD.areas[0].id, min_c: '24.1', max_c: '25,3', period_start: '2026-11-11T00:00:00Z', taken_at: '2026-11-11T08:00:00Z' }]; ROUND = {}; foldAreaReadings(T['BLD-area_reading.csv']); go('round', false); });
+    await expect(page.locator('#kept-readings')).toContainText('24.1–25,3 °C — Check: not a number');
+    expect(await page.evaluate(() => CD.tempUnread.map((x) => x.id))).toEqual(['r-x']);
+  });
+
   test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     let fail = false;
