@@ -80,3 +80,18 @@ test('the printed room sign reads the dated flap and limit rows (from_date), nev
   await page.getByRole('button', { name: 'Room signs' }).click();
   await expect(page.locator('.rcard[data-room="area-1"] .sz')).toHaveText(['2 small']);
 });
+
+test('room sign: one limit per size, only rows in force today; an ended row and an undated repeat never print twice (OV11 15 Nov)', async ({ page }) => {
+  await setup(page, 'OWNER', {
+    area_access: [{ id: 'acc-f', area_id: 'area-1', access_type: 'free', from_date: '2026-01-01' }],
+    area_capacity: [
+      { id: 'old-s', area_id: 'area-1', access_type: 'free', size_band: 'small', max_dogs: '4', from_date: '', to_date: '' },        // undated
+      { id: 'new-s', area_id: 'area-1', access_type: 'free', size_band: 'small', max_dogs: '4', from_date: '', to_date: '' },        // undated repeat
+      { id: 'end-m', area_id: 'area-1', access_type: 'free', size_band: 'medium', max_dogs: '9', from_date: '', to_date: '2026-11-10' }, // ended
+      { id: 'now-m', area_id: 'area-1', access_type: 'free', size_band: 'medium', max_dogs: '3', from_date: '2026-11-11', to_date: '' },
+      { id: 'lim-l', area_id: 'area-1', access_type: 'limited', size_band: 'large', max_dogs: '2', from_date: '2026-01-01' }]          // other flap setting
+  });
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Room signs' }).click();
+  await expect(page.locator('.rcard[data-room="area-1"] .sz')).toHaveText(['4 small', 'or 3 medium']);
+});
