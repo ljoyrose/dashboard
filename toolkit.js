@@ -351,6 +351,8 @@
         if (e) e.preventDefault();
         o.focus();
         root.close();
+        // A phone or an installed app may refuse to close this tab: then the tap would do nothing, so go to the dashboard here.
+        root.setTimeout(function () { if (!root.closed) root.location.href = SITE; }, 400);
         return true;
       }
     } catch (x) { /* another site or closed: fall through to the link */ }

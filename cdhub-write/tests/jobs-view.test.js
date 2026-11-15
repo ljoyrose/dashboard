@@ -35,3 +35,16 @@ test('a whole-site job about dogs counts as done only once every dog has a line'
   assert.equal(V.summary(v([line('d1')]))[0].due, 1);
   assert.equal(V.summary(v([line('d1'), line('d2')]))[0].ok, 1);
 });
+
+test('the SOP card says how often each job is due, from its every_days row', () => {
+  assert.equal(V.everyWords(365), 'every 12 months');
+  assert.equal(V.everyWords(730), 'every 24 months');
+  assert.equal(V.everyWords(14), 'every 2 weeks');
+  assert.equal(V.everyWords(7), 'weekly');
+  assert.equal(V.everyWords(1), 'daily');
+  assert.equal(V.everyWords(10), 'every 10 days');
+  assert.equal(V.everyWords(null), 'as needed');
+  const v = { today: '2026-03-02', logs: [], litters: [], types: [Object.assign(T('fit_to_breed', 'dog', '365'), { sop: 'Mating and Retirement' })],
+    dogs: [{ id: 'd1', area_id: 'r1' }], areas: [], esc: (s) => String(s), dmy: (s) => s };
+  assert.match(V.sopHtml(v, 'Mating and Retirement'), /<b>fit_to_breed<\/b><span class="mut" data-every>every 12 months<\/span>/);
+});
