@@ -37,7 +37,7 @@
     add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
     add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '' }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {
-      return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '' });
+      return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '', every_days: Due.everyDays(t.every_days) });
     }).sort(function (a, b) { return String(a.sop).localeCompare(String(b.sop)) || String(a.label).localeCompare(String(b.label)); });
     memo = { key: key, rows: list };
     return list;
@@ -91,12 +91,22 @@
     return h + '</details></section>';
   }
 
+  /** How often, in words, from the job row's every_days (never typed text): 365 = every 12 months, 14 = every 2 weeks; null = as needed. */
+  function everyWords(n) {
+    if (!n) return 'as needed';
+    if (n === 1) return 'daily';
+    if (n === 7) return 'weekly';
+    if (n % 365 === 0) return 'every ' + (n / 365 * 12) + ' months';
+    if (n % 7 === 0) return 'every ' + (n / 7) + ' weeks';
+    return 'every ' + n + ' days';
+  }
+
   function sopHtml(v, name) {
     var e = v.esc, rows = summary(v).filter(function (r) { return r.sop === name; });
     if (!rows.length) return '';
     return '<div class="sopjobs" data-sopjobs="' + e(name) + '">' + rows.map(function (r) {
       var state = r.late ? '<span class="pill no">' + r.late + ' late</span>' : r.due ? '<span class="pill w">' + r.due + ' due</span>' : '';
-      return '<div class="dcs-row"><b>' + e(r.label) + '</b><span class="mut">' + e(r.last_done ? 'last ' + v.dmy(r.last_done) : 'not recorded') + '</span>' + state + '</div>';
+      return '<div class="dcs-row"><b>' + e(r.label) + '</b><span class="mut" data-every>' + e(everyWords(r.every_days)) + '</span><span class="mut">' + e(r.last_done ? 'last ' + v.dmy(r.last_done) : 'not recorded') + '</span>' + state + '</div>';
     }).join('') + '</div>';
   }
 
@@ -110,5 +120,5 @@
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
-  return { summary: summary, bySource: bySource, history: history, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
+  return { summary: summary, everyWords: everyWords, bySource: bySource, history: history, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
 }));
