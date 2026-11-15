@@ -143,7 +143,7 @@ test.describe('CD Hub: items, click by click', () => {
     expect(fa.fields.data_base64.length).toBeGreaterThan(20);
     expect(fa.fields.link_from_table).toBeUndefined();
     const la = sent.find((b) => b.action === 'link_add');
-    expect([la.fields.from_table, la.fields.role, la.fields.to_table, la.fields.to_id]).toEqual(['check_logs', 'certificate', 'files', 'fil-new']);
+    expect([la.fields.from_table, la.fields.role, la.fields.to_table, la.fields.to_id]).toEqual(['check_log', 'certificate', 'files', 'fil-new']);
     await expect(card(page)).toContainText('Failed');
     await expect(card(page)).toContainText('outside');
     await expect(card(page).locator('a', { hasText: 'Certificate' })).toHaveAttribute('href', /drive\.google\.com\/file\/d\/drvfilenewpretend000000001/);
@@ -155,7 +155,7 @@ test.describe('CD Hub: items, click by click', () => {
     await page.locator('form[data-itm-save="move"] button[type="submit"]').click();
     await expect(card(page).locator('[role="status"]')).toHaveText('Saved.');
     expect(sent.map((b) => b.action)).toEqual(['link_add']);
-    expect([sent[0].fields.from_table, sent[0].fields.from_id, sent[0].fields.role, sent[0].fields.to_table]).toEqual(['items', 'i1', 'placed_in', 'areas']);
+    expect([sent[0].fields.from_table, sent[0].fields.from_id, sent[0].fields.role, sent[0].fields.to_table]).toEqual(['items', 'i1', 'placed_in', 'area']);
     await expect(card(page)).not.toContainText('No room');
 
     // Edit

@@ -503,7 +503,7 @@
     S.busy = true; S.msg = 'Saving…'; v.redraw();
     var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'note'];
     var pick = function () { var f = {}; ITEM.forEach(function (k) { if (d[k]) f[k] = d[k]; }); return f; };
-    var place = function (id, area, from, why2) { return linkAdd(v, { from_table: 'items', from_id: id, to_table: 'areas', to_id: area, role: PLACE, from_date: from, source: why2 }); };
+    var place = function (id, area, from, why2) { return linkAdd(v, { from_table: 'items', from_id: id, to_table: 'area', to_id: area, role: PLACE, from_date: from, source: why2 }); };
     if (kind === 'add') {
       post(v, 'items', pick()).then(function (r) {
         if (!r || !r.ok) return fail(r);
@@ -566,7 +566,7 @@
         });
         S.testOn = '';
         return sendReads(v, logId, reads).then(function (left) {
-          return fileAdd(v, form, d, 'check_logs', logId, d.file_kind === 'certificate' ? 'certificate' : 'evidence').then(function (r3) { return r3; }, function (x) { return x; }).then(function (r3) {
+          return fileAdd(v, form, d, 'check_log', logId, d.file_kind === 'certificate' ? 'certificate' : 'evidence').then(function (r3) { return r3; }, function (x) { return x; }).then(function (r3) {
             var fileBad = r3 && (r3 instanceof Error || r3.ok === false) ? ' File not saved: ' + why(r3) : '';
             done(S.open, (left ? 'Test saved. Values not all saved.' : 'Saved.') + fileBad);
           });
