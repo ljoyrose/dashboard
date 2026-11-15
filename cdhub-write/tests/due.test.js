@@ -197,3 +197,9 @@ test('part done is never counted as done', () => {
   const logs = [{ id: 'p1', check_type_id: 'cty-bowls-1', outcome: 'part_done', note: 'x', taken_at: '2026-03-02T09:00:00Z' }];
   assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
 });
+
+test('round.* types are written by the Round itself and are never listed as jobs (15 Nov 2026)', () => {
+  const keys = D.jobsInForce(TYPES.concat([T('round.presence', 'dog', '')]), '2026-10-02').map((r) => r.type_key);
+  assert.ok(keys.includes('ears'));
+  assert.ok(!keys.includes('round.presence'));
+});
