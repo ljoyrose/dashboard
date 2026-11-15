@@ -11,7 +11,9 @@
 
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
     /* evidence only Breed Better reads; the hub already loads health_screen, dna_result, litter and subject_status */
-    'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv'];
+    'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv',
+    /* the values typed on a Checks form (grade, certainty, answer), read onto their check_log row */
+    'BLD-check_value.csv'];
   /* default words; a scheme row can change any of them with verdict_words, e.g. "unverified=To prove" */
   var VERDICT = { pass: 'Pass', below_target: 'Below target', unverified: 'Unverified', fail: 'Fail' };
   var ORDER = ['pass', 'below_target', 'unverified', 'fail'];
@@ -68,7 +70,11 @@
     var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
-    var evidence = new Proxy({}, { get: function (o, name) { return T[name + '.csv']; } });
+    var logs = null;
+    var evidence = new Proxy({}, { get: function (o, name) {
+      if (name !== 'BLD-check_log') return T[name + '.csv'];
+      return logs || (logs = withValues(T['BLD-check_log.csv'], T['BLD-check_value.csv']));
+    } });
     var open = all.filter(function (e) { return !e.off && !(e.to && e.to < v.today) && !(e.from && e.from > v.today); });
     var isOpen = {}; open.forEach(function (e) { isOpen[e.subject_id] = 1; });
     /* kept for the Archive: an animal whose every enrolment has ended, with the latest one's dates and reason */
@@ -236,6 +242,26 @@
     });
     var n = best ? Number(t(best.value)) : 0;
     return n > 0 ? [{ key: 'puppy', label: 'Puppy', from: 0, to: n }, { key: 'adult', label: 'Adult', from: n, to: Infinity }] : [];
+  }
+  /* Records typed on the Checks screen (15 Nov 2026, OV11: the phone entry for Fit to Breed, health screens and judged
+     answers is the existing Checks form, any industry): each check_log row carries the values typed on its form
+     (BLD-check_value: field_key = value) as if they were its own columns, so a criterion can read e.g.
+     answer_field=grade, evidence_match=check_type_id=cty-hips;certainty=final. A real column of the same name wins. */
+  function withValues(logs, values) {
+    if (!logs) return logs;
+    var by = {};
+    (values || []).forEach(function (x) {
+      var k = t(x.field_key), id = t(x.check_log_id);
+      if (!k || !id || !/^[a-z][a-z0-9_]{0,40}$/.test(k)) return;
+      (by[id] || (by[id] = {}))[k] = t(x.value);
+    });
+    return logs.map(function (r) {
+      var add = by[t(r.id)];
+      if (!add) return r;
+      var o = {}; Object.keys(add).forEach(function (k) { o[k] = add[k]; });
+      Object.keys(r).forEach(function (k) { if (t(r[k]) !== '' || o[k] === undefined) o[k] = r[k]; });
+      return o;
+    });
   }
   function ageGroups(T, today) {
     var own = ownGroups(T, today);
@@ -800,19 +826,23 @@
   }
 
   /* Back to where Lisa came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
-     The hub pushes a real history entry for #/breed, so the phone's Back works too; this button does the same. */
-  /* History entry state is NAV's shape, { from: { hash, label, y, id } } (NAV, 15 Nov 2026), so this moves to HubNav.back
-     when that lands. A reload on #/breed keeps it; a cold link has none and shows no button. */
+     The hub pushes a real history entry for #/breed (HubNav.back, NAV #610), so the phone's Back works too; this button
+     is HubNav's own "\u2190 Back to <dog>" (data-hub-back: HubNav steps back). Only a dog card sets the dog (from.id);
+     the hub's menu leaves it blank, so no button then. A cold link has no entry and shows none. */
+  function nav() { return typeof window !== 'undefined' && window.HubNav && window.HubNav.back ? window.HubNav.back : null; }
   function fromHtml(v) {
     var f = state.from || fromHistory();
-    if (!f) return '';
+    if (!f || !f.id) return '';
     if (!state.from) state.from = f;
+    var inHistory = fromHistory();
+    /* the history entry is ours: HubNav's button and Back. Otherwise (no entry yet), the old way back by address. */
+    if (nav() && inHistory) return '<button type="button" class="cb hback bb-ret" data-hub-back>\u2190 Back to ' + v.esc(f.label || 'the dog card') + '</button>';
     return '<button type="button" class="bb-f bb-ret hback" data-bb-return="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back to ' + v.esc(f.label || 'the dog card') + '</button>';
   }
   function fromHistory() {
-    var h = null;
-    try { h = history.state && history.state.from; } catch (err) { h = null; }
-    return h && h.hash && location.hash === '#/breed' ? { id: h.id, label: h.label, hash: h.hash, y: h.y, top: null } : null;
+    var h = null, n = nav();
+    try { h = n ? n.from() : (history.state && history.state.from); } catch (err) { h = null; }
+    return h && h.hash && h.id && location.hash === '#/breed' ? { id: h.id, label: h.label, hash: h.hash, y: h.y, top: null } : null;
   }
   function cameFrom(b) {
     var card = b.closest && b.closest('article.dc'), id = b.getAttribute('data-bb-dog'), v = last || {};
@@ -1021,5 +1051,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
