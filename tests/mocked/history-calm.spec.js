@@ -502,3 +502,17 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
   expect(julyIn.shadow).not.toBe('none');
 });
+
+test('audit: a saved min or max that is text (25,3) or blank is "Check: not a number", counted with the problems, never read as 25 (OV11 15 Nov)', async ({ page, guard }) => {
+  await open(page, guard);
+  const r = await page.evaluate(() => ({
+    text: tempCls('24.1', '25,3', '2026-01-11', 'area-r1'),
+    half: tempCls('26.4', '', '2026-01-11', 'area-r1'),
+    none: tempCls('', '', '2026-01-11', 'area-r1'),
+    swap: tempSwapped('25,3', '24.1'),
+    slot: slotState({ min: '24.1', max: '25,3' }, 'area-r1', '2026-01-11', 'am'),
+  }));
+  expect(r.text).toBe('unread'); expect(r.half).toBe('unread'); expect(r.none).toBe(''); expect(r.swap).toBe(false);
+  expect(r.slot).toMatchObject({ k: 'swap', unread: true, lo: '24.1', hi: '25,3' });
+  expect(await page.evaluate((s) => slotHtml('AM', s), r.slot)).toContain('AM 24.1–25,3 · Check: not a number');
+});
