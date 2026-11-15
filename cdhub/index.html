@@ -2425,9 +2425,15 @@ function loadPhotoImg(img){
 }
 /* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subjects',d.id,todayISO()); }
-function galleryItem(f,mainId){
+/* Show photo dates (Lisa 15 Nov 2026, J5): a per-person display setting, never a fixed rule. Rows in the shared settings list:
+   photos.show_dates.owner = this person's own choice (the hub is the owner's page), photos.show_dates = the owner's default
+   for everyone. Value 1 shows the date under each gallery photo, 0 hides it. The row in force today wins; no row = shown,
+   as before. Sorting never changes; only the label is hidden. */
+var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
+function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
+function galleryItem(f,mainId,dates){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
- var cap='<span class="mut">'+esc(when)+'</span>'+(main?' <span class="pill" data-k="main">Main</span>':'');
+ var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'');
  if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
@@ -2437,12 +2443,27 @@ function galleryItem(f,mainId){
 }
 function galleryHtml(d,ph){
  if(!ph.gallery.length&&!ph.ended.length) return '';
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos';
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,''); }).join('')+'</ul></details>':'')
+  +'<button type="button" class="btn quiet" data-photo-dates="'+(dates?'0':'1')+'" aria-pressed="'+(dates?'true':'false')+'">Dates '+(dates?'shown':'hidden')+'</button> <span class="mut" data-photo-dates-msg></span>'
+  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
+  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates); }).join('')+'</ul></details>':'')
   +'</div></details>';
 }
+/* Dates shown / hidden: saves this person's own row (photos.show_dates.owner) from today. One change a day: the settings
+   list keeps one row per key per day, so a second change today is refused with a plain message. */
+document.addEventListener('click',async function(ev){
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-photo-dates]'):null; if(!b) return;
+ var want=b.getAttribute('data-photo-dates'), msg=b.parentNode.querySelector('[data-photo-dates-msg]'), day=todayLondon();
+ b.disabled=true; if(msg) msg.textContent='Saving\u2026';
+ var r=await sinkPost('breeding_rule',{rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery'});
+ b.disabled=false;
+ if(!(r.ok&&r.result&&r.result.status==='saved')){ if(msg) msg.textContent=(r.fields&&r.fields.effective_from)?'Already changed today. Try again tomorrow.':sinkMsg(r); return; }
+ (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
+ var g=b.closest('details.gal'), open=g&&g.open; drawDogs();
+ var again=document.querySelector('details.gal[data-dog="'+(g?g.getAttribute('data-dog'):'')+'"]');
+ if(again&&open){ again.open=true; var m2=again.querySelector('[data-photo-dates-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+});
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
