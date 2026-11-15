@@ -50,15 +50,34 @@
     return Object.keys(m).sort().map(function (k) { return m[k]; });
   }
 
+  /** The file a record's link points at, as a Drive link: the file row's url when it is https, else its Drive file id. */
+  function fileUrl(f) {
+    var u = String(f.url || '').trim(), id = String(f.drive_file_id || '').trim();
+    if (/^https:\/\//i.test(u)) return u;
+    return /^[A-Za-z0-9_-]{20,}$/.test(id) ? 'https://drive.google.com/file/d/' + id + '/view' : '';
+  }
+
+  /** Files linked to each record (v.links rows from check_log to files, any role, link not ended), keyed by record id. */
+  function filesByLog(v) {
+    var files = {}, out = {};
+    (v.files || []).forEach(function (f) { files[f.id] = f; });
+    (v.links || []).forEach(function (k) {
+      if (k.from_table !== 'check_log' || k.to_table !== 'files' || (k.to_date && k.to_date <= v.today)) return;
+      var f = files[k.to_id], url = f && fileUrl(f);
+      if (url) (out[k.from_id] = out[k.from_id] || []).push({ role: String(k.role || 'file').replace(/_/g, ' '), name: f.name || '', url: url });
+    });
+    return out;
+  }
+
   /** Records for one dog ({subject_id}), one room ({area_id}) or one litter ({litter_id}), newest first. A corrected record gives way to its correction. */
   function history(v, target) {
-    var byId = {}, replaced = {};
+    var byId = {}, replaced = {}, docs = filesByLog(v);
     v.types.forEach(function (t) { byId[t.id] = t; });
     v.logs.forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
     return v.logs.filter(function (l) {
       return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
     }).map(function (l) {
-      return { at: l.happened_at || l.taken_at || '', noTime: String(l.time_given).toLowerCase() === 'false', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '' };
+      return { at: l.happened_at || l.taken_at || '', noTime: String(l.time_given).toLowerCase() === 'false', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -116,7 +135,8 @@
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(Due.londonDate(r.at) || String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
-          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('') + '</div>';
+          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
+          + r.files.map(function (f) { return '<a href="' + e(f.url) + '" target="_blank" rel="noopener noreferrer" data-record-file title="' + e(f.name) + '">' + e(f.role) + '</a>'; }).join('') + '</div>';
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
