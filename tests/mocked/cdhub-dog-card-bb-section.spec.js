@@ -77,6 +77,7 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await page.locator('[data-bb-back]').click();   // to the Breed Better list and its tabs
     await page.locator('.bb-tabs [data-bb-tab]:not([aria-current])').last().click();
     await expect(page.getByRole('button', { name: 'Back to Test Dog Two' })).toBeVisible();
+    await expect(page.locator('#bbRoot [data-hub-back]')).toHaveText('\u2190 Back to Test Dog Two');   // HubNav's own Back (NAV #610)
     await page.getByRole('button', { name: 'Back to Test Dog Two' }).click();
     await expect(two.locator('.bb-sechd')).toBeVisible();
     await expect.poll(() => two.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(Math.round(top));
@@ -88,7 +89,7 @@ test.describe('CD Hub dog card: Breed Better section', () => {
     await expect.poll(() => two.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(Math.round(top));
     // opened from the menu, there is no Back to a dog
     await tabClick(page, '#nav button[data-go="breed"]');
-    await expect(page.getByRole('button', { name: /^Back to / })).toHaveCount(0);
+    await expect(page.locator('#bbRoot').getByRole('button', { name: /Back to / })).toHaveCount(0);
   });
 
   test('the must-pass list is folded at first behind one line; a tap opens it, and open or folded is remembered', async ({ page }) => {
