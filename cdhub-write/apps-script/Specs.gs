@@ -330,7 +330,7 @@ var TABLES = {
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
-      if (!errors.type_key && row.type_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {
+      if (!errors.type_key && row.type_key !== '' && !/^(round\.)?[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {   // 15 Nov 2026 (TEMPS): one reserved prefix round. = the round's own records, never listed as a job
         errors.type_key = 'Use lower-case letters, numbers and underscores, e.g. feeding.';
       }
       if (!errors.every_days && row.every_days === '0') errors.every_days = 'Use 1 or more, or leave blank for as needed.';

@@ -218,7 +218,7 @@ test('after a done, the same job can be saved again as a concern, not done or pa
 
 test('round toggle (15 Nov 2026): present, not here, present is three records; the same tap twice is a repeat; another dog is not', () => {
   const env = env0();
-  const id = typeId(env, 'presence', { target: 'dog' });
+  const id = typeId(env, 'round.presence', { target: 'dog' });
   const p = (item, dog) => log(env, { check_type_id: id, area_id: 'area-t1', subject_id: dog || 'sub-test-a', item, outcome: 'recorded' });
   assert.equal(p('present').ok, true);
   assert.equal(p('not here').ok, true);
@@ -226,6 +226,12 @@ test('round toggle (15 Nov 2026): present, not here, present is three records; t
   assert.equal(p('present').code, 'DUPLICATE');
   assert.equal(p('present', 'sub-test-b').ok, true);
   assert.deepEqual(recs(env, 'BLD-check_log.csv').map((x) => x.item), ['present', 'not here', 'present', 'present']);
+});
+
+test('job names: only the reserved round. prefix may have a dot', () => {
+  const env = env0();
+  assert.equal(type(env, 'round.presence').ok, true);
+  ['other.presence', 'round.', 'round.round.x', '.presence', 'Round.presence'].forEach((k) => assert.equal(type(env, k).code, 'INVALID', k));
 });
 
 test('paper catch-up (14 Nov 2026): a week of one job for one room is seven records; time_given false is kept; paper is a way in', () => {
