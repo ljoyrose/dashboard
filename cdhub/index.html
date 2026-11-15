@@ -2109,7 +2109,7 @@ function fbar(o){
   +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><svg class="ti" aria-hidden="true"><use href="#i-adjustments-horizontal"/></svg>Filter<span class="fcount"></span></button>'
   +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'"'+(x[0]===o.sort[2]?' selected':'')+'>Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
-  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
+  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.filter(Boolean).map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
   +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'" data-clear-all="'+o.q+'" disabled>Clear filters</button></div></div>'
   +(o.hidden||'')+'</div>';
 }
@@ -2166,7 +2166,9 @@ function pageDogs(){
    hidden:'<input type="hidden" id="fst" value="" data-fname="Status">',
    groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
     ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
-    ['Age',fsel('fa','Age','<option value="p">under 6m</option><option value="j">6m to 12m</option><option value="a">1 to 7y</option><option value="o">7y+</option><option value="__none">no DOB</option>')],
+    /* Age: two groups from the owner's rule "Age a dog counts as an adult", the row in force today (Lisa 15 Nov 2026:
+       "there are only 2 in sops"); no rule = no Age filter */
+    adultMonths()===null?null:['Age',fsel('fa','Age','<option value="p">Puppy</option><option value="a">Adult</option><option value="__none">no DOB</option>')],
     ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')],
     /* kit: animal (status chips), folded into Filter so the first dog shows on a phone (quality review 12 Nov 2026) */
     ['Status','<div class="key stf">'+statusList().map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false">'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
@@ -2175,7 +2177,7 @@ function pageDogs(){
  /* foundation: record media and named people, not held yet */
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
-function ageBand(m){ if(m===null) return '__none'; if(isPupM(m)) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
+function ageBand(m){ if(m===null) return '__none'; return isPupM(m)?'p':(isAdultM(m)?'a':''); }
 /* Edit the card header (Lisa, 12 Nov 2026): name, sex, date of birth, colour, entire/neutered, microchip. One save,
    action dog_details, owner code only, behind SAVE_ENABLED and TABLE_ON_dog_details. Size comes from weight unless an owner size_override row is set. */
 function dEditForm(d){
@@ -4498,7 +4500,7 @@ function go(id,push){
    if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
    var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
   ['q','fs','fn','fa','fst','fc','ft','dsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
-  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';});
+  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';});
    Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){ x.setAttribute('aria-pressed',x.dataset.code===''?'true':'false'); }); drawDogs(); });
   drawDogs();
  }
