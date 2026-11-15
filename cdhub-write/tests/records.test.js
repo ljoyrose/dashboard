@@ -221,6 +221,36 @@ test('occupancy_out: waits for approval, then is written to the occupancy file w
   assert.ok(rows[before].moved_in);
 });
 
+test('occupancy_out: a waiting move out is never applied by the automatic room-move step; only the owner approves it', () => {
+  const env = env1();
+  const before = recs(env, 'BLD-occupancy.csv').length;
+  const sold0 = recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length;
+  const out = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
+  assert.equal(out.result.status, 'queued');
+  assert.equal(env.ctx.applyWaitingOccupancyMoves_().applied, 0);
+  const sub = recs(env, 'BLD-subject.csv')[1].id;
+  const mv = recs(env, 'BLD-area.csv').map((a) => a.id).reduce((r, a) => (r && r.ok ? r : send(env, 'occupancy', { subject_id: sub, area_id: a })), null);   // a save also runs the step
+  assert.equal(mv.ok, true, JSON.stringify(mv));
+  assert.equal(recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length, sold0);
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before + 1);
+  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test');
+  assert.equal(recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length, sold0 + 1);
+});
+
+test('approving a queued item obeys the switches: saving off or that list switched off writes nothing', () => {
+  const env = env1();
+  const out = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
+  const before = recs(env, 'BLD-occupancy.csv').length;
+  env.props.TABLE_ON_occupancy = ''; env.props.TABLE_ON_occupancy_out = '';
+  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test'), (e) => e.code === 'TABLE_OFF');
+  env.props.TABLE_ON_occupancy_out = 'true'; env.props.SAVE_ENABLED = '';
+  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test'), (e) => e.code === 'SAVE_OFF');
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before);
+  env.props.SAVE_ENABLED = 'true';
+  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test');
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before + 1);
+});
+
 test('occupancy_out: a bad kind, a repeat tap and a dog already gone are refused', () => {
   const env = env1(); const d = dog(env);
   assert.equal(send(env, 'occupancy_out', { subject_id: d, off_site_kind: 'lost' }).code, 'INVALID');
