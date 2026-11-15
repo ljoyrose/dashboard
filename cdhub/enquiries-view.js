@@ -80,7 +80,7 @@
     if (!row) return '';
     var word = row.role === 'owner' ? 'Owner' : 'Assigned';
     var home = rows(T, 'BLD-household.csv').filter(function (h) { return h.id === row.household_id; })[0];
-    var name = home ? t(home.name) : '';
+    var name = home ? t(home.household_name || home.name) : '';
     if (!name && home) {
       var person = rows(T, 'BLD-person.csv').filter(function (p) { return p.id === home.primary_person_id; })[0];
       name = person ? t(person.known_as || person.full_name) : '';
