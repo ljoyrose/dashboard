@@ -420,3 +420,10 @@ test('age groups come from dated owner rows; with none there is no age filter', 
   const none = View.page({ T: tables({}), today: '2026-11-15', esc });
   assert.doesNotMatch(none, /Filter by age/);
 });
+
+test('a held-back record shows the word it holds ("Preliminary") on the line, with Unverified', () => {
+  const html = View.lineHtml({ esc }, { kind: 'gate', criterion_id: 'hip', label_then: 'Hips', gate_outcome: 'unverified',
+    unknown_reason: 'not_accepted', held_then: 'preliminary', answer_then: 'Good', date_then: '2026-03-02' });
+  assert.match(html, /Preliminary: Good · 2 Mar 2026/);
+  assert.doesNotMatch(html, /Not accepted yet/);
+});
