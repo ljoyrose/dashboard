@@ -399,3 +399,24 @@ test('the auto-enrol setting is one dated link-kind rule row listing schemes; no
   assert.match(html, /Since 15 Nov 2026\. Lisa/);
   View.setTab('dogs');
 });
+
+test('age groups come from dated owner rows; with none there is no age filter', () => {
+  const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'Owner' }, extra || {});
+  const rules = [R('age_group.young.from_months', '0'), R('age_group.young.to_months', '12'), R('age_group.young.label', 'Under 1'),
+    R('age_group.adult.from_months', '12'), R('age_group.adult.label', 'Adult'),
+    R('age_group.later.from_months', '99', '2027-01-01'),
+    R('age_group.bad.label', 'No months')];
+  const T = { 'BLD-breeding_rule.csv': rules };
+  const g = View.ageGroups(T, '2026-11-15');
+  assert.deepEqual(g.map((x) => [x.key, x.label, x.from, x.to]), [['young', 'Under 1', 0, 12], ['adult', 'Adult', 12, Infinity]]);
+  assert.equal(View.months('2025-11-16', '2026-11-15'), 11);
+  assert.equal(View.inAge(g[0], '2025-11-16', '2026-11-15'), true);
+  assert.equal(View.inAge(g[1], '2025-11-15', '2026-11-15'), true);
+  assert.equal(View.inAge(g[0], '', '2026-11-15'), false);
+  View.setTab('dogs');
+  const withRows = View.page({ T: tables(T), today: '2026-11-15', esc });
+  assert.match(withRows, /aria-label="Filter by age"/);
+  assert.match(withRows, /data-bb-age="young" aria-pressed="false">Under 1 <span class="cnt">/);
+  const none = View.page({ T: tables({}), today: '2026-11-15', esc });
+  assert.doesNotMatch(none, /Filter by age/);
+});

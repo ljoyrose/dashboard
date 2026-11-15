@@ -355,6 +355,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 13 Nov 2026 | CD Hub chip and occupancy saves wrote to retired file ids. A missing folder file still saved, instead of stopping | "saveChip and saveArea write the folder file and refuse when it is missing @regression" (tests/mocked/cdhub-listed-saves.spec.js) |
 | 13 Nov 2026 | CD Hub dog card refused a room move and a photo unless this browser had already been set up, and Breed Better Open on a check returned to the dog list | "staff code River saves a room and a photo from empty storage @regression", "an invalid staff code is refused and nothing is saved @regression" and "dog card, Breed Better, Open on Fit to Breed lands on add/edit, and Back returns to that dog @regression" |
 | 13 Nov 2026 | CD Hub kept an accepted staff code for the tab only, so a phone asked again after the tab or the Home Screen app was closed | "an accepted staff code is kept on this device and not asked again in a new tab @regression" (tests/mocked/cdhub-staff-code-save.spec.js) |
+| 15 Nov 2026 | CD Hub dog card said "could not reach the save script": the save address was held in memory only, and an empty first read was never tried again | "save address: an empty first read is tried again, and the found address is kept for the next visit @regression" (tests/mocked/cdhub-staff-code-save.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
