@@ -69,7 +69,7 @@ for (const [hub, H] of Object.entries(ALL)) {
     for (const t of tabs) {
       if (!t.n || !t.n.text) {
         if (t.n) expect(t.n.shown, `${hub} ${t.word}: 0 = no dot`).toBe(false);
-        expect(t.name, `${hub} ${t.word}: no count = just the word`).toBe(t.full);
+        expect(t.name, `${hub} ${t.word}: no count = just the word`).toMatch(new RegExp('^(' + t.full + '|' + t.word + ' \\(' + t.full + '\\))$'));
         continue;
       }
       dots++;
@@ -85,7 +85,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect(t.n.l - t.icon.r, `${hub} ${t.word}: ...right beside it`).toBeLessThanOrEqual(3);
       expect(Math.abs(t.n.t - t.icon.t), `${hub} ${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
       expect(t.n.r, `${hub} ${t.word}: inside the tab`).toBeLessThanOrEqual(t.w);
-      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full} ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
+      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.word === t.full ? t.full : t.word} ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}${t.word === t.full ? '' : ' (' + t.full + ')'}`);   // the name starts with the visible word
       if (t.n.broken) expect(t.n.why, `${hub} ${t.word}: a black count says what is broken`).toMatch(/^(down|expired|stuck|failed)$/);
     }
     expect(dots, `${hub}: the sample data shows at least one tab count`).toBeGreaterThan(0);
@@ -131,7 +131,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       if (!t.n.broken) expect(t.n.ring, `${hub} ${t.word}: rose ring = late, grey ring = waiting`).toBe(t.n.need ? ROSE : GREY);
       expect(t.w - t.n.r, `${hub} ${t.word}: in the tab's top-right corner`).toBeLessThan(5);
       expect(t.n.t, `${hub} ${t.word}: in the tab's top-right corner`).toBeLessThan(5);
-      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full} ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
+      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.word === t.full ? t.full : t.word} ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}${t.word === t.full ? '' : ' (' + t.full + ')'}`);   // the name starts with the visible word
       if (t.n.broken) expect(t.n.why, `${hub} ${t.word}: a black count says what is broken`).toMatch(/^(down|expired|stuck|failed)$/);
     }
     expect(rings, `${hub}: the sample data shows at least one tab count`).toBeGreaterThan(0);
@@ -174,6 +174,6 @@ for (const [hub, [full, short]] of Object.entries(SHORT)) {
     tabs = await page.evaluate(read);
     const wide = tabs.find((t) => t.full === full);
     expect(wide.wordFits, `${hub}: ${full} is whole at 1280`).toBe(true);
-    expect(wide.name, `${hub}: the name keeps the full word`).toMatch(new RegExp('^' + full + '(, \\d+ (late|waiting))?$'));
+    expect(wide.name, `${hub}: the name keeps the full word`).toMatch(new RegExp('^' + full + '( \\d+ (late|waiting))?$'));
   });
 }
