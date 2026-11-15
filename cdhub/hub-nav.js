@@ -163,5 +163,33 @@
     }).join('');
   }
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, sectionOf: sectionOf, html: html, chips: chips };
+  /* Back (Lisa 15 Nov 2026: "navigating through and back is not easy"). One helper for the whole hub and its bricks:
+     every move into a record or view is a real history entry, so the phone's Back works, and the entry remembers where
+     you came from (its address, its name, how far down you were). Shape: history.state.from = {hash, label, y, id}. */
+  var back = {
+    /* push(hash, {label, id, y}): go to hash and remember this place. Call it on any tap into a record. */
+    push: function (hash, o) {
+      o = o || {};
+      var w = root, from = { hash: w.location.hash || '#/map', label: o.label || '', y: o.y != null ? o.y : (w.scrollY || 0), id: o.id || '' };   /* o.y: how far down, read before the page redrew */
+      try { w.history.replaceState(Object.assign({}, w.history.state || {}, { y: from.y }), ''); } catch (e) { /* no history: fine */ }
+      w.history.pushState(Object.assign({}, o.state || {}, { from: from }), '', hash);
+    },
+    /* replace(hash): change the address without a new Back step (Prev / Next, tabs inside a record). Keeps where you came from. */
+    replace: function (hash) { root.history.replaceState(root.history.state || {}, '', hash); },
+    /* from(): where this entry came from, or null (a link opened cold). */
+    from: function () { var st = root.history && root.history.state; return st && st.from && st.from.hash ? st.from : null; },
+    /* button(fallback): "← Back to X". With no from (opened cold), a link to fallback = {hash, label} instead, or ''. */
+    button: function (fallback) {
+      var f = back.from();
+      if (f && f.label) return '<button type="button" class="cb hback" data-hub-back>\u2190 Back to ' + esc(f.label) + '</button>';
+      if (fallback && fallback.hash) return '<a class="cb hback" href="' + esc(fallback.hash) + '">\u2190 ' + esc(fallback.label || 'Back') + '</a>';
+      return '';
+    }
+  };
+  if (root.document) root.document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-hub-back]');
+    if (b) { e.preventDefault(); root.history.back(); }
+  });
+
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, sectionOf: sectionOf, html: html, chips: chips, back: back };
 })(typeof window !== 'undefined' ? window : this);
