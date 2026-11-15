@@ -249,15 +249,26 @@
     }).join('') + '</span>';
   }
 
+  /* Species words (Style, 12 Nov 2026): from the scheme's species row, never fixed. common_name gives "Find a dog";
+     plural_word, when the row has one, names the tab. With no row, neutral words. */
+  function spWords(v) {
+    var sch = (v.T['BLD-score_scheme.csv'] || [])[0] || {}, id = t(sch.species_id);
+    var all = v.T['BLD-species.csv'] || [], lc = id.toLowerCase();
+    var row = all.filter(function (x) { return lc && [t(x.id), t(x.code), t(x.common_name)].some(function (y) { return y.toLowerCase() === lc; }); })[0]
+      || (all.length === 1 ? all[0] : {});   /* one species held: it is that one */
+    var one = t(row.common_name).toLowerCase();
+    return { one: one, find: one ? 'Find ' + (/^[aeiou]/.test(one) ? 'an ' : 'a ') + one : 'Find', many: t(row.plural_word) || (t(row.common_name) ? t(row.common_name) + 's' : 'Animals') };
+  }
+
   function listHtml(v, c) {
     var esc = v.esc, f = state.filter;
     words = c.words || VERDICT;
     var counts = { '': c.results.length };
     c.results.forEach(function (r) { counts[verdictOf(r)] = (counts[verdictOf(r)] || 0) + 1; });
     var h = '<div class="bb-filt" role="group" aria-label="Filter by verdict">' + [''].concat(ORDER).map(function (k) {
-      return '<button type="button" class="bb-f" data-bb-filter="' + k + '" aria-pressed="' + (f === k) + '">' + (words[k] || 'All') + ' <span class="cnt">' + (counts[k] || 0) + '</span></button>';
+      return '<button type="button" class="bb-f" data-bb-filter="' + k + '"' + (k ? ' style="--hc:var(' + VTEXT[k] + ')"' : '') + ' aria-pressed="' + (f === k) + '">' + (words[k] || 'All') + ' <span class="cnt">' + (counts[k] || 0) + '</span></button>';
     }).join('') + '</div>';
-    var tools = '<div class="bb-tools"><label class="bb-lab">Find a dog<input type="search" id="bbSearch" data-bb-search="1" placeholder="Name" autocomplete="off" value="' + esc(state.q) + '"></label>'
+    var tools = '<div class="bb-tools"><label class="bb-lab">' + esc(spWords(v).find) + '<input type="search" id="bbSearch" data-bb-search="1" placeholder="Name" autocomplete="off" value="' + esc(state.q) + '"></label>'
       + '<label class="bb-lab">Sort<select id="bbSort" data-bb-sort="1">' + SORTS.map(function (o) {
         return '<option value="' + o[0] + '"' + (state.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select></label></div>';
@@ -316,7 +327,17 @@
   function dogHtml(v, r) {
     var esc = v.esc;
     var bands = r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
-    return '<button type="button" class="bb-f" data-bb-back="1">Back</button>'
+    /* previous and next follow the list as it is filtered and sorted now (mock-up header, 12 Nov 2026) */
+    var list = shownRows(compute(v)), at = -1;
+    list.forEach(function (x, i) { if (x.subject_id === r.subject_id) at = i; });
+    var prev = at > 0 ? list[at - 1] : null, next = at > -1 && at < list.length - 1 ? list[at + 1] : null;
+    var nav = '<div class="bb-nav"><button type="button" class="bb-f" data-bb-back="1">' + ic('M15 6l-6 6l6 6', 18) + 'Back</button>'
+      + (list.length > 1 ? '<span class="bb-pn">'
+        + '<button type="button" class="bb-f" data-bb-open="' + esc(prev ? prev.subject_id : '') + '"' + (prev ? ' aria-label="Previous: ' + esc(prev.name) + '"' : ' disabled') + '>' + ic('M15 6l-6 6l6 6', 18) + 'Previous</button>'
+        + '<span class="bb-pts">' + (at + 1) + ' of ' + list.length + '</span>'
+        + '<button type="button" class="bb-f" data-bb-open="' + esc(next ? next.subject_id : '') + '"' + (next ? ' aria-label="Next: ' + esc(next.name) + '"' : ' disabled') + '>Next' + ic('M9 6l6 6l-6 6', 18) + '</button></span>' : '')
+      + '</div>';
+    return nav
       + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></div>'
       + infoHtml(v, r) + verdictHtml(r)
       + (Dna ? Dna.card(v.T, r.subject_id, esc).replace('data-bb-band="__dna"', 'data-bb-band="__dna"' + (state.open.__dna ? ' open' : '')) : '')
@@ -391,10 +412,10 @@
   var TABS = [['dogs', 'Dogs', 'M9 6h11 M9 12h11 M9 18h11 M5 6v.01 M5 12v.01 M5 18v.01'],
     ['cal', 'Calendar', 'M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z M16 3v4 M8 3v4 M4 11h16'],
     ['more', 'More', 'M5 12l0 .01 M12 12l0 .01 M19 12l0 .01']];
-  function tabsHtml() {
-    var on = state.tab === 'system' || state.tab === 'archive' || state.tab === 'dna' ? 'more' : state.tab;
+  function tabsHtml(v) {
+    var many = v ? spWords(v).many : 'Dogs', on = state.tab === 'system' || state.tab === 'archive' || state.tab === 'dna' ? 'more' : state.tab;
     return '<nav class="bb-tabs" aria-label="Breed Better">' + TABS.map(function (x) {
-      return '<button type="button" class="bb-tab" data-bb-tab="' + x[0] + '"' + (on === x[0] ? ' aria-current="page"' : '') + '><span>' + ic(x[2], 18) + '</span>' + x[1] + '</button>';
+      return '<button type="button" class="bb-tab" data-bb-tab="' + x[0] + '"' + (on === x[0] ? ' aria-current="page"' : '') + '><span>' + ic(x[2], 18) + '</span>' + (x[0] === 'dogs' ? v.esc(many) : x[1]) + '</button>';
     }).join('') + '</nav>';
   }
   function addDays(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
@@ -497,7 +518,7 @@
     words = c.words || VERDICT;
     var body = state.tab === 'cal' ? calHtml(v, c) : state.tab === 'more' ? moreHtml(c) : state.tab === 'archive' ? archiveHtml(v, c)
       : state.tab === 'system' ? systemHtml(v) : state.tab === 'dna' && Dna ? backMore() + Dna.key() + Dna.calc(v.T, state.calc, v.esc) : listHtml(v, c);
-    return err + tabsHtml() + body;
+    return err + tabsHtml(v) + body;
   }
 
   function css() {
@@ -514,14 +535,22 @@
       '.bb-lab input,.bb-lab select{min-height:44px;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--card);color:var(--ink);font-size:var(--fs-input,16px)}',
       '.bb-f,.bb-dog,.bb-src,.bb-chip{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}',
       '.bb-f{min-height:44px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;font-weight:500}',
-      '.bb-f:hover,.bb-dog:hover,.bb-src:hover,.bb-chip:hover,.bb-f:active,.bb-dog:active,.bb-src:active,.bb-chip:active{background:var(--hov);outline:none}',
-      '.bb-f[aria-pressed=true]{background:var(--hov);border-color:var(--press)}',
+      /* the house selected look (Lisa, 15 Nov 2026). #main #bbRoot outranks the hub's own grey button hover, which still fills */
+      '.bb-f:hover,.bb-dog:hover,.bb-src:hover,.bb-chip:hover,.bb-f:active,.bb-dog:active,.bb-src:active,.bb-chip:active,'
+        + '#main #bbRoot .bb-f:hover,#main #bbRoot .bb-dog:hover,#main #bbRoot .bb-src:hover,#main #bbRoot .bb-tab:hover,#main #bbRoot .bb-f:active,#main #bbRoot .bb-dog:active'
+        + '{background:var(--card);outline:1px solid var(--hc,var(--v,var(--ink)));outline-offset:-1px}',
+      '#main #bbRoot .bb-f:disabled,#main #bbRoot .bb-f:disabled:hover{background:var(--card);outline:none}',
+      '.bb-f[aria-pressed=true],.bb-tab[aria-current=page],#main #bbRoot .bb-f[aria-pressed=true],#main #bbRoot .bb-tab[aria-current=page]{background:var(--card);box-shadow:inset 3px 0 0 var(--hc,var(--ink))}.bb-f[aria-pressed=true]::before,.bb-tab[aria-current=page]>span::after{content:"\\2713";font-weight:600;color:var(--hc,var(--ink))}',
+      '.bb-tab[aria-current=page]>span{position:relative}.bb-tab[aria-current=page]>span::after{position:absolute;right:-4px;top:-4px;font-size:12px}',
+      '.bb-f:disabled{opacity:.45;cursor:default;outline:none}.bb-nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}.bb-pn{display:inline-flex;align-items:center;gap:8px}',
+      '.bb-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.bb-top .bb-logo{width:40px;height:40px}',
+      '.bb-rb{height:3px;margin:8px 0 12px;border-radius:2px;background:linear-gradient(90deg,var(--ljr-7) 0 16.66%,var(--ljr-2) 0 33.33%,var(--ljr-3) 0 50%,var(--ljr-4) 0 66.66%,var(--ljr-5) 0 83.33%,var(--ljr-6) 0 100%)}',
       '.bb-f:focus-visible,.bb-dog:focus-visible,.bb-src:focus-visible,.bb-chip:focus-visible{border-color:var(--ink);outline:none}',
       '.bb-dog{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;margin:0 0 8px;text-align:left}',
       '.bb-name{font-weight:500;flex:1 1 auto}.bb-pts,.bb-why{color:var(--muted);font-size:var(--fs-small)}',
       '.bb-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}.bb-head h3{margin:0;font-weight:500}',
       '.bb-band{border-left:3px solid var(--bb,var(--line))}.bb-band summary{cursor:pointer;font-weight:500;display:flex;align-items:center;gap:8px;min-height:44px}',
-      '.bb-band summary .cnt{margin-left:auto}.bb-band summary::-webkit-details-marker{display:none}.bb-band summary{list-style:none}',
+      '.bb-band{--hc:var(--bb,var(--ink))}.bb-band>summary:hover{outline:1px solid var(--hc);outline-offset:-1px;border-radius:inherit}.bb-band summary .cnt{margin-left:auto}.bb-band summary::-webkit-details-marker{display:none}.bb-band summary{list-style:none}',
       '.bb-sic{width:30px;height:30px;flex:none;border:1px solid var(--line);border-radius:50%;display:inline-grid;place-items:center}',
       '.bb-res{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-small);font-weight:500}',
       '.bb-secs{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%}.bb-secs i{width:26px;height:26px;border:1px solid var(--line);border-radius:50%;display:inline-grid;place-items:center}',
@@ -555,7 +584,7 @@
       '.bb-vbox .bb-why{margin:0;color:var(--ink)}',
       '.bb-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 12px}',
       '.bb-tab{font:inherit;font-size:var(--fs-small);color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:var(--radius);min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}',
-      '.bb-tab:hover,.bb-tab:active{background:var(--hov)}.bb-tab[aria-current=page]{color:var(--ink);font-weight:600;background:var(--hov)}.bb-tab:focus-visible{border-color:var(--ink);outline:none}',
+      '.bb-tab:hover,.bb-tab:active{background:none;outline:1px solid var(--ink);outline-offset:-1px}.bb-tab[aria-current=page]{color:var(--ink);font-weight:600}.bb-tab:focus-visible{border-color:var(--ink);outline:none}',
       '.bb-h{margin:0 0 4px;font-weight:600}',
       '.bb-edit{display:flex;flex-direction:column;gap:8px;align-items:flex-start}',
       '.bb-edit form{display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box}',
@@ -567,7 +596,7 @@
       '.bb-arch{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}',
       '.bb-sec{border-top:1px solid var(--line);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}',
       '.bb-sec .bb-sechd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);border-radius:8px;text-align:left;cursor:pointer;list-style:none}',
-      '.bb-sec .bb-sechd::-webkit-details-marker{display:none}.bb-sec .bb-sechd:hover{background:var(--hov)}',
+      '.bb-sec .bb-sechd::-webkit-details-marker{display:none}.bb-sec .bb-sechd:hover{background:none;outline:1px solid var(--hc,var(--ink));outline-offset:-1px}',
       '.bb-secf>.bb-sechd>svg:last-child{transition:transform .15s}.bb-secf:not([open])>.bb-sechd>svg:last-child{transform:rotate(-90deg)}',
       '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
       '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
@@ -582,7 +611,7 @@
   /** The whole page. v = { T, today, esc } */
   function page(v) {
     last = v; css();
-    return '<h2>Breed Better <span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></h2><div id="bbRoot">' + inner(v) + '</div>';
+    return '<h2 class="bb-top">' + LOGO + '<span>Breed Better</span> <span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></h2><div class="bb-rb" aria-hidden="true"></div><div id="bbRoot">' + inner(v) + '</div>';
   }
 
   /** The score on a dog card. Empty when that animal is not enrolled. */

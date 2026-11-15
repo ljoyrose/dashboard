@@ -304,3 +304,25 @@ test('a section icon comes from the row icon cell, else its key, else a plain ci
   assert.notEqual(View.secIcon({ key: 'unknown_key' }), heart);
   assert.equal(View.secIcon({ key: 'unknown_key', kind: 'gate' }), View.secIcon({ key: 'gate' }));
 });
+
+test('species words come from the scheme species row; with none, neutral words', () => {
+  const sp = { 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', species_id: 'sp-h' }],
+    'BLD-species.csv': [{ id: 'sp-h', common_name: 'Horse', plural_word: 'Horses' }] };
+  View.setTab('dogs');
+  const on = View.page({ T: tables(sp), today: '2026-06-12', esc });
+  assert.match(on, /Find a horse<input/);
+  assert.match(on, /<\/span>Horses<\/button>/);
+  const off = View.page({ T: tables(), today: '2026-06-13', esc });
+  assert.match(off, /">Find<input/);
+});
+
+test('the dog page has Back, Previous and Next in list order, and the logo header', () => {
+  View.setTab('dogs');
+  View.open('a1');
+  const html = View.page({ T: tables(), today: '2026-06-14', esc });
+  assert.match(html, /class="bb-top"><img class="bb-logo"/);
+  assert.match(html, /data-bb-open="" disabled>.*Previous/);
+  assert.match(html, /data-bb-open="a2" aria-label="Next: Beta">Next/);
+  assert.match(html, /1 of 2/);
+  View.open('');
+});
