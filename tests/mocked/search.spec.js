@@ -53,13 +53,44 @@ test.describe('Search', () => {
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     await page.locator('[data-search-open]').click();
     await page.locator('#dashSearchBox').fill('test');
-    const first = page.locator('[data-search-group="CD Hub dogs"] a').first();
+    const first = page.locator('[data-search-group="Dogs"] a').first();
     await expect(first).toBeVisible();
     const dog = await first.textContent();
     await first.click();
     await expect(page.locator('#dashSearch')).toBeHidden();
     await expect(page.locator('#nav button[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#q')).toHaveValue(dog);
+  });
+
+  test('CD Hub Find: a view name goes there; an area opens that area; an SOP opens that SOP @regression', async ({ page }) => {
+    await page.goto('cdhub/');
+    await page.locator('#signinbtn').click();
+    await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
+    const box = page.locator('#dashSearchBox');
+    // A view by its name, with its section beside it
+    await page.locator('[data-search-open]').click();
+    await box.fill('litters');
+    const view = page.locator('[data-search-group="Go to"] a', { hasText: 'Litters' });
+    await expect(view).toBeVisible();
+    await view.click();
+    await expect(page).toHaveURL(/#\/litters$/);
+    await expect(page.locator('#main h2').first()).toContainText('Litters');
+    // An area by its code opens Areas focused on that area
+    await page.locator('[data-search-open]').click();
+    await box.fill('test cabin b');
+    const area = page.locator('[data-search-group="Areas"] a', { hasText: 'Test Cabin B' });
+    await expect(area).toBeVisible();
+    await area.click();
+    await expect(page).toHaveURL(/#\/areas\/area-2$/);
+    await expect(page.locator('[data-focus="room"]')).toContainText('Test Cabin B');
+    // An SOP by its name opens SOPs with that SOP
+    await page.locator('[data-search-open]').click();
+    await box.fill('microchip audit');
+    const sop = page.locator('[data-search-group="SOPs"] a', { hasText: 'Microchip Audit' });
+    await expect(sop).toBeVisible();
+    await sop.click();
+    await expect(page).toHaveURL(/#\/sops/);
+    await expect(page.locator('[data-sop="Microchip Audit"] [data-sop-open]')).toHaveAttribute('aria-expanded', 'true');
   });
 
   test('signed out, search stays hidden behind the sign-in and asks Drive nothing', async ({ page, guard }) => {

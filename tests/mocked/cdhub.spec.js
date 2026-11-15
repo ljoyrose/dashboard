@@ -137,7 +137,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -209,7 +209,7 @@ test.describe('CD Hub: navigation', () => {
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
-    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
+    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
@@ -833,12 +833,18 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
+    // Age groups come from the owner's adult-age rule (Lisa 15 Nov 2026: two in the SOP); no rule = no Age filter
+    await expect(page.locator('#fa')).toHaveCount(0);
+    await page.evaluate(() => { T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([{ id: 'ad', rule_key: 'dog.adult_from_months', value: '12', effective_from: '2010-01-01', source: 'Pretend SOP' }]); });
+    await openTab(page, 'round');
+    await openTab(page, 'dogs');
     await expect(page.locator('#fp-dogs')).toBeHidden();
     await page.locator('[data-fpanel="fp-dogs"]').click();
     await expect(page.locator('[data-fpanel="fp-dogs"]')).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#fa').selectOption('j');
+    expect(await page.locator('#fa option').allInnerTexts()).toEqual(['Any', 'Puppy', 'Adult', 'no DOB']);
+    await page.locator('#fa').selectOption('p');
     await expect(page.locator('#cnt')).toHaveText('1 of 3');
-    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: 6m to 12m/);
+    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: Puppy/);
     await expect(page.locator('[data-fpanel="fp-dogs"] .cnt')).toHaveText('1');
     await page.locator('#ach-dogs .achip').click();
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
@@ -854,10 +860,13 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([72, 72]);
-    await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
-    const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
-    expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
+    expect([ph.width, ph.height]).toEqual([120, 120]);
+    // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
+    await expect(card.locator('.whor')).toHaveCount(1);
+    await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
+    await expect(card.locator('.meta [data-cabin-move]')).toHaveText('Test Cabin A');
+    const overlap = await card.evaluate((e) => { const w = e.querySelector('.whor').getBoundingClientRect(), m = e.querySelector('.dcs.more > summary').getBoundingClientRect(); return !(w.bottom <= m.top || w.top >= m.bottom || w.right <= m.left || w.left >= m.right); });
+    expect(overlap).toBe(false);
     expect(await card.locator('.nm').evaluate((e) => getComputedStyle(e).webkitLineClamp)).toBe('2');
   });
 

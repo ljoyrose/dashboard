@@ -51,7 +51,7 @@
   function setMsg(el, text, kind) { el.className = 'msg ' + (kind || ''); el.textContent = text || ''; }
   function num(v) { if (v === '' || v == null) return null; var n = parseFloat(v); return isNaN(n) ? null : n; }
   function oneDp(v) {
-    v = String(v == null ? '' : v).trim();
+    v = String(v == null ? '' : v).trim().replace(',', '.');   // "25,3" = 25.3 (OV11 15 Nov 2026)
     if (!/^-?\d{1,2}(\.\d)?$/.test(v)) return null;
     return parseFloat(v).toFixed(1);   // an unusual value is the save script's warning ("Save anyway?", STAFF PR 458), never a stop here
   }
