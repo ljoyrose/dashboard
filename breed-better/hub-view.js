@@ -22,7 +22,7 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
-  var state = { filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
+  var state = { unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -43,23 +43,44 @@
   }
   function verdictOf(r) { return r.verdict || r.gate_result; }
 
+  /* Enrolments (Lisa, 15 Nov 2026): the older score_enrolment rows, read as they are, and enrolled_in link rows
+     (subject -> score_scheme, any course or certification later). Each from its from date to its to date, both inclusive. */
+  function enrolments(T) {
+    var out = [];
+    (T['BLD-score_enrolment.csv'] || []).forEach(function (e) {
+      out.push({ id: t(e.id), src: 'legacy', subject_id: t(e.subject_id), scheme_id: t(e.scheme_id), from: t(e.valid_from), to: t(e.to_date), off: /^false$/i.test(t(e.is_active)), reason: '' });
+    });
+    (T['BLD-links.csv'] || []).forEach(function (l) {
+      if (t(l.role) !== 'enrolled_in' || !/^subjects?$/.test(t(l.from_table)) || !/^score_schemes?$/.test(t(l.to_table))) return;
+      out.push({ id: t(l.id), src: 'link', subject_id: t(l.from_id), scheme_id: t(l.to_id), from: t(l.from_date), to: t(l.to_date), off: false, reason: t(l.end_reason) });
+    });
+    /* once an animal has a link row for a scheme, the links say it all: its older row for that scheme is no longer read */
+    var linked = {}; out.forEach(function (e) { if (e.src === 'link') linked[e.subject_id + '|' + e.scheme_id] = 1; });
+    return out.filter(function (e) { return e.src === 'link' || !linked[e.subject_id + '|' + e.scheme_id]; });
+  }
+
   /** One result per enrolled animal, best first. { results, error, byId } */
   function compute(v) {
-    var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv'])
+    var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
     if (memo && memo.key === key) return memo;
-    var out = { key: key, results: [], byId: {}, error: '', ended: [], setUp: !!(T['BLD-score_enrolment.csv'] || []).length };
+    var all = enrolments(T);
+    var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var evidence = new Proxy({}, { get: function (o, name) { return T[name + '.csv']; } });
-    (T['BLD-score_enrolment.csv'] || []).forEach(function (e) {
-      /* enrolled from valid_from (live name) to to_date, both inclusive */
-      if (/^false$/i.test(t(e.is_active)) || (t(e.to_date) && e.to_date < v.today)) {
-        /* kept for the Archive: an enrolment that has ended, with its dates */
-        if (subjects[e.subject_id]) out.ended.push({ id: e.subject_id, name: t(subjects[e.subject_id].name), from: t(e.valid_from), to: t(e.to_date) });
-        return;
-      }
-      if (t(e.valid_from) && e.valid_from > v.today) return;
+    var open = all.filter(function (e) { return !e.off && !(e.to && e.to < v.today) && !(e.from && e.from > v.today); });
+    var isOpen = {}; open.forEach(function (e) { isOpen[e.subject_id] = 1; });
+    /* kept for the Archive: an animal whose every enrolment has ended, with the latest one's dates and reason */
+    var last = {};
+    all.forEach(function (e) {
+      if (isOpen[e.subject_id] || !(e.off || (e.to && e.to < v.today)) || !subjects[e.subject_id]) return;
+      if (!last[e.subject_id] || (e.to || '') > (last[e.subject_id].to || '')) last[e.subject_id] = e;
+    });
+    Object.keys(last).forEach(function (k) { var e = last[k]; out.ended.push({ id: k, name: t(subjects[k].name), from: e.from, to: e.to, reason: e.reason, scheme_id: e.scheme_id }); });
+    open.forEach(function (e) {
+      if (out.enrol[e.subject_id]) return;   /* one score per animal: the first open enrolment */
+      out.enrol[e.subject_id] = e;
       var subject = subjects[e.subject_id];
       if (!subject) { out.error = 'An enrolled animal is not in the animal list: check BLD-score_enrolment.'; return; }
       /* the enrolment names one scheme; a later version of it (same name, species and breed) takes over on its own date */
@@ -480,22 +501,50 @@
     var esc = v.esc;
     return backMore() + '<h3 class="bb-h">Archive</h3><p class="bb-pts">Animals whose scoring has ended. Their records stay.</p>'
       + (c.ended.length ? c.ended.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (x) {
-        return '<div class="card bb-arch"><span class="bb-strong">' + esc(x.name) + '</span><span class="bb-pts">' + (x.from ? 'From ' + day(x.from) : '') + (x.to ? (x.from ? ', to ' : 'To ') + day(x.to) : '') + '</span></div>';
+        return '<div class="card bb-arch"><span class="bb-strong">' + esc(x.name) + '</span><span class="bb-pts">' + (x.from ? 'From ' + day(x.from) : '') + (x.to ? (x.from ? ', to ' : 'To ') + day(x.to) : '') + (x.reason ? ': ' + esc(x.reason) : '') + '</span>'
+          + '<span class="bb-acts">' + enrolBtn(v, c, x.id) + '</span></div>';
       }).join('') : '<p class="mut">None.</p>');
   }
+  /* Owner setting (Lisa, 15 Nov 2026): enrol young of an enrolled parent from their birth date. A dated rule row,
+     enrol.auto_at_birth.<table>.<id> = on | off, the same key shape for any scheme, course or certification. No row = off.
+     The save script reads it when a birth is recorded; this page only shows and changes it. */
+  function autoKey(sc) { return 'enrol.auto_at_birth.score_scheme.' + t(sc.id); }
+  function ruleOn(T, key, day) {
+    var best = null;
+    (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
+      if (t(r.rule_key) !== key) return;
+      var from = t(r.effective_from), to = t(r.to_date);
+      if (!from || from > day || (to && to < day)) return;
+      if (!best || from >= t(best.effective_from)) best = r;
+    });
+    return best;
+  }
+  function autoHtml(v, sc) {
+    var r = ruleOn(v.T, autoKey(sc), v.today), on = !!r && /^(on|yes|true)$/i.test(t(r.value)), id = 'auto:' + sc.id, esc = v.esc;
+    var can = !!(v.canWrite && v.canWrite() && v.setRule);
+    return '<div class="bb-auto"><span class="bb-name">Enrol young of an enrolled parent at birth</span>'
+      + '<span class="bb-filt" role="group" aria-label="Enrol young at birth">'
+      + ['on', 'off'].map(function (x) {
+        return '<button type="button" class="bb-f" data-bb-auto="' + esc(sc.id) + '" data-bb-auto-v="' + x + '" aria-pressed="' + ((x === 'on') === on) + '"' + (can ? '' : ' disabled') + '>' + (x === 'on' ? 'On' : 'Off') + '</button>';
+      }).join('') + '</span>'
+      + '<span class="bb-pts">' + (r ? 'Since ' + day(t(r.effective_from)) + (t(r.source) ? '. ' + esc(r.source) : '') : 'Not set: off') + '</span>'
+      + (can ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + msgHtml(id) + '</div>';
+  }
+
   /** The rules in force today, read only: sections, checks, must pass, answers and points, target, and where each rule came from. */
   function systemHtml(v) {
     var esc = v.esc, T = v.T, today = v.today, schemes = (T['BLD-score_scheme.csv'] || []);
-    var ids = {}; (T['BLD-score_enrolment.csv'] || []).forEach(function (e) { ids[e.scheme_id] = 1; });
+    var ids = {}; enrolments(T).forEach(function (e) { ids[e.scheme_id] = 1; });
     var shown = schemes.filter(function (s) { return ids[s.id] && /^active$/i.test(t(s.status)) && (!t(s.to_date) || s.to_date >= today); });
     if (!shown.length) return backMore() + '<p class="mut">No scheme in force today.</p>';
-    return backMore() + '<h3 class="bb-h">My system</h3><p class="bb-pts">Read only. A star means must pass. Rules today; past records keep the rules of their own date.</p>'
+    return backMore() + '<h3 class="bb-h">My system</h3><p class="bb-pts">Rules are read only here. A star means must pass. Rules today; past records keep the rules of their own date.</p>'
       + shown.map(function (sc) {
         var bands = (T['BLD-score_band.csv'] || []).filter(function (b) { return b.scheme_id === sc.id && t(b.kind); })
           .sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
         var crit = (T['BLD-score_criterion.csv'] || []).filter(function (x) { return x.scheme_id === sc.id && Score.inForce(x, today); });
         var pts = T['BLD-score_point.csv'] || [];
         return '<div class="card"><span class="bb-strong">' + esc(t(sc.name) || 'Scheme') + (t(sc.breed) ? ', ' + esc(sc.breed) : '') + (t(sc.version) ? ', version ' + esc(sc.version) : '') + '</span>'
+          + autoHtml(v, sc)
           + '<p class="bb-pts">' + (t(sc.target_points) ? 'Target ' + esc(sc.target_points) + (t(sc.target_is) ? ' (' + esc(sc.target_is) + ')' : '') + '. ' : '') + (t(sc.source) ? 'Source: ' + esc(sc.source) : '') + '</p>'
           + bands.map(function (b) {
             var cs = crit.filter(function (x) { return x.band_id === b.id; });
@@ -607,6 +656,9 @@
       '.bb-sec .bb-sechd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;width:100%;min-height:44px;padding:6px 8px;margin:0;border:1px solid var(--line);border-radius:8px;text-align:left;cursor:pointer;list-style:none}',
       '.bb-sec .bb-sechd::-webkit-details-marker{display:none}.bb-sec .bb-sechd:hover{background:none;outline:1px solid var(--hc,var(--ink));outline-offset:-1px}',
       '.bb-secf>.bb-sechd>svg:last-child{transition:transform .15s}.bb-secf:not([open])>.bb-sechd>svg:last-child{transform:rotate(-90deg)}',
+      '.bb-auto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}',
+      '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}',
+      '.bb-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.bb-unf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}.bb-odds{margin:0;padding:0;list-style:none;display:grid;gap:4px}.bb-odds li{display:flex;flex-wrap:wrap;gap:4px 8px}.bb-arch{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
       '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
       '.bb-logo{flex:none;width:32px;height:32px}.bb-sect{font-weight:600;font-size:var(--fs-body)}.bb-secpts{margin-left:auto;white-space:nowrap}',
       '.bb-secbar{display:flex;flex-direction:column;gap:4px}.bb-secbar .bb-bar span{display:block;height:100%}',
@@ -642,8 +694,8 @@
    *  against the target, the must-pass checks one per line, and a tap through to the dog's Breed Better page. */
   function section(v, id) {
     last = v; css();
-    var r = compute(v).byId[id];
-    if (!r) return '';
+    var c = compute(v), r = c.byId[id];
+    if (!r) return notInHtml(v, c, id);
     var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
     var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
     var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
@@ -662,8 +714,101 @@
         return '<li data-gate="' + esc(o) + '">' + ic(GATE_ICON[o] || GATE_ICON.unverified, 16, 'var(' + (VTEXT[o] || '--muted') + ')')
           + '<span class="bb-gl">' + esc(l.label_then) + '</span><span class="bb-gw">' + (GATE_WORD[o] || o) + '</span></li>';
       }).join('') + '</ul>' : '')
-      + '<button type="button" class="bb-secgo" data-go="breed" data-bb-dog="' + esc(id) + '">Open Breed Better page' + ic('M9 6l6 6l-6 6', 16) + '</button>'
+      + '<span class="bb-acts"><button type="button" class="bb-secgo" data-go="breed" data-bb-dog="' + esc(id) + '">Open Breed Better page' + ic('M9 6l6 6l-6 6', 16) + '</button>'
+      + unenrolHtml(v, c.enrol[id]) + '</span>'
       + '</div></details></section>';
+  }
+
+  /* ---- Enrol and un-enrol on every animal's card (Lisa, 15 Nov 2026). Saves go through the host: v.canWrite(),
+     v.enrol(subjectId, schemeId, fromDate), v.unenrol(enrolment, reason, toDate), then v.refresh(). Nothing is deleted:
+     un-enrol fills the enrolment's to date with a reason; the animal moves to the Archive, where Enrol brings it back. ---- */
+  var enrolMsg = {};
+  function canSave(v) { return !!(v.canWrite && v.canWrite() && v.enrol && v.unenrol); }
+  function msgHtml(id) {
+    var m = enrolMsg[id];
+    if (!m) return '';
+    return m.ok ? '<p class="bb-done" role="status" data-bb-enrol-msg>' + ic('M5 12l5 5l10 -10', 16, 'var(--ljr-5-text)') + last.esc(m.text) + '</p>'
+      : '<p class="bb-err" role="alert" data-bb-enrol-msg>' + last.esc(m.text) + '</p>';
+  }
+  function refresh() { memo = null; if (last && typeof last.refresh === 'function') last.refresh(); else redraw(); }
+  function hhmm() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  /* un-enrol ends the enrolment yesterday, so today it is already out; an enrolment that began today ends today */
+  function endDay(e, today) { var y = addDays(today, -1); return e.from && y < e.from ? today : y; }
+  function enrolClick(b) {
+    var v = last, id;
+    if (!v) return false;
+    if (b.hasAttribute('data-bb-unenrol')) { state.unenrol = b.getAttribute('data-bb-unenrol'); delete enrolMsg[state.unenrol]; refresh(); return true; }
+    if (b.hasAttribute('data-bb-unenrol-x')) { state.unenrol = ''; refresh(); return true; }
+    if (b.hasAttribute('data-bb-unenrol-go')) {
+      id = b.getAttribute('data-bb-unenrol-go');
+      var box = b.closest('.bb-unf'), inp = box && box.querySelector('[data-bb-reason]'), reason = inp ? t(inp.value) : '';
+      var en = compute(v).enrol[id];
+      if (!reason) { enrolMsg[id] = { ok: false, text: 'Add a reason.' }; refresh(); return true; }
+      if (!en) { state.unenrol = ''; refresh(); return true; }
+      b.disabled = true;
+      Promise.resolve(v.unenrol(en, reason, endDay(en, v.today))).then(function () {
+        state.unenrol = ''; enrolMsg[id] = { ok: true, text: 'Un-enrolled ' + hhmm() + '. It is in the Archive.' }; refresh();
+      }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
+      return true;
+    }
+    if (b.hasAttribute('data-bb-auto')) {
+      var sid = b.getAttribute('data-bb-auto'), val = b.getAttribute('data-bb-auto-v');
+      id = 'auto:' + sid; b.disabled = true;
+      Promise.resolve(v.setRule(autoKey({ id: sid }), val, v.today, 'Owner setting, Breed Better My system')).then(function () {
+        enrolMsg[id] = { ok: true, text: 'Saved ' + hhmm() }; refresh();
+      }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
+      return true;
+    }
+    if (b.hasAttribute('data-bb-enrol')) {
+      id = b.getAttribute('data-bb-enrol');
+      b.disabled = true;
+      Promise.resolve(v.enrol(id, b.getAttribute('data-bb-scheme'), v.today)).then(function () {
+        enrolMsg[id] = { ok: true, text: 'Enrolled ' + hhmm() }; refresh();
+      }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
+      return true;
+    }
+    return false;
+  }
+  function unenrolHtml(v, e) {
+    if (!e) return '';
+    var esc = v.esc, id = e.subject_id;
+    if (state.unenrol !== id) return '<button type="button" class="bb-f" data-bb-unenrol="' + esc(id) + '"' + (canSave(v) ? '' : ' disabled') + '>Un-enrol</button>'
+      + (canSave(v) ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + msgHtml(id);
+    return '<span class="bb-unf"><label class="bb-lab">Reason<input type="text" data-bb-reason="' + esc(id) + '" autocomplete="off" maxlength="200" placeholder="e.g. Rehomed, retired"></label>'
+      + '<button type="button" class="bb-f" data-bb-unenrol-go="' + esc(id) + '">Un-enrol</button><button type="button" class="bb-f" data-bb-unenrol-x="1">Cancel</button></span>' + msgHtml(id);
+  }
+  var NOSAVE = 'Saving is not set up yet.';
+  /* the scheme to enrol into: the one this animal was last in, else the one scheme in force today (newest if several) */
+  function enrolScheme(v, c, id) {
+    var was = c.ended.filter(function (x) { return x.id === id; })[0];
+    if (was && was.scheme_id) return was.scheme_id;
+    var on = (v.T['BLD-score_scheme.csv'] || []).filter(function (s) { return /^active$/i.test(t(s.status)) && (!t(s.to_date) || s.to_date >= v.today) && (!t(s.effective_from) || s.effective_from <= v.today); });
+    on.sort(function (a, b) { return t(b.effective_from).localeCompare(t(a.effective_from)); });
+    return on[0] ? on[0].id : '';
+  }
+  function enrolBtn(v, c, id) {
+    var sch = enrolScheme(v, c, id);
+    if (!sch) return '<span class="bb-pts">No scheme in force to enrol into.</span>';
+    return '<button type="button" class="bb-f" data-bb-enrol="' + v.esc(id) + '" data-bb-scheme="' + v.esc(sch) + '"' + (canSave(v) ? '' : ' disabled') + '>Enrol</button>'
+      + (canSave(v) ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + msgHtml(id);
+  }
+  /** The folded section on a card whose animal is not enrolled: why (if it ended), the pup's DNA chances from its parents, and Enrol. */
+  function notInHtml(v, c, id) {
+    var T = v.T, esc = v.esc;
+    if (!(T['BLD-score_scheme.csv'] || []).length) return '';   /* no scheme rows: Breed Better is not set up, or this reader cannot see it */
+    var sub = (T['BLD-subject.csv'] || []).filter(function (x) { return x.id === id; })[0] || hubDog(v, id);
+    if (!sub) return '';
+    var was = c.ended.filter(function (x) { return x.id === id; })[0];
+    var lit = t(sub.birth_litter_id) && (T['BLD-litter.csv'] || []).filter(function (l) { return l.id === t(sub.birth_litter_id); })[0];
+    var odds = lit && Dna && Dna.pupOdds ? Dna.pupOdds(T, t(lit.sire_subject_id), t(lit.dam_subject_id)) : [];
+    var body = (was ? '<p class="bb-pts">Ended' + (was.to ? ' ' + day(was.to) : '') + (was.reason ? ': ' + esc(was.reason) : '') + '</p>' : '')
+      + (odds.length ? '<p class="bb-pts">DNA chances from the parents</p><ul class="bb-odds">' + odds.map(function (o) {
+        return '<li><span class="bb-gl">' + esc(o.name) + '</span><span class="bb-pts">' + o.kinds.clear + '% clear, ' + o.kinds.carrier + '% carrier, ' + o.kinds.affected + '% affected or at risk</span></li>';
+      }).join('') + '</ul>' : '')
+      + '<span class="bb-acts">' + enrolBtn(v, c, id) + '</span>';
+    return '<section class="bb-sec bb-out" data-k="bb" aria-label="Breed Better"><details class="bb-secf" data-bb-sec="' + esc(id) + '"' + (secOpen(id) || enrolMsg[id] ? ' open' : '') + '>'
+      + '<summary class="bb-chip bb-sechd">' + LOGO + '<span class="bb-sect">Not in Breed Better</span><span class="bb-pts">' + (was ? 'Archived' : 'Enrol') + '</span>'
+      + ic('M6 9l6 6l6 -6', 16) + '</summary><div class="bb-secbd">' + body + '</div></details></section>';
   }
 
   /* remembered open sections: { animal id: 1 }, newest last, at most SEC_MAX; a private window simply forgets */
@@ -703,6 +848,8 @@
     });
     /* capture, so the chosen dog is set before the hub's own click handler opens the page */
     document.addEventListener('click', function (e) {
+      var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto]');
+      if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
       var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back],[data-bb-tab],[data-bb-sex],[data-bb-cal],[data-bb-month],[data-bb-calc],[data-bb-edit],[data-bb-edit-back]');
       if (!b) return;
       if (b.hasAttribute('data-bb-dog')) { state.dog = b.getAttribute('data-bb-dog'); state.edit = ''; return; }
@@ -747,5 +894,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { ruleOn: ruleOn, autoKey: autoKey, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
