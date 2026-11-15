@@ -38,14 +38,14 @@ test.describe('One way in', () => {
     await expect(page.locator('#houseMore #move-link')).toHaveText('MOVE');
   });
 
-  test('the bottom bar has the agreed tabs: Main, Decide, Do, then More holding Drives, Bin, Money, Actions minutes, Changes and MOVE (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
+  test('the bottom bar has the agreed tabs: Main, Decide, Do, then More holding Drives, Bin, Money, Actions minutes, Tech, Changes and MOVE (Lisa\'s tab picks, 2 Nov; Tech: TECH-HUB-1)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const tabs = page.locator('#mainNav a');
-    await expect(tabs).toHaveCount(9);
-    expect(await tabs.evaluateAll((els) => els.map((a) => a.getAttribute('href')))).toEqual(['#/map', '#/decide', '#/do', '#/drives', '#/bin', '#/money', '#/minutes', '#/changes', MOVE]);
+    await expect(tabs).toHaveCount(10);
+    expect(await tabs.evaluateAll((els) => els.map((a) => a.getAttribute('href')))).toEqual(['#/map', '#/decide', '#/do', '#/drives', '#/bin', '#/money', '#/minutes', '#/tech', '#/changes', MOVE]);
     await expect(page.locator('#mainNav > .ht')).toHaveCount(3);
-    await expect(page.locator('#mainNav .house-more > a')).toHaveCount(6);
+    await expect(page.locator('#mainNav .house-more > a')).toHaveCount(7);
     await expect(page.locator('#mainNav a[data-nav="map"]')).toContainText('Main');
     await expect(page.locator('#mainNav a[data-nav="drives"]')).toContainText('Drives');
     await expect(page.locator('#mainNav [data-house-more]')).toHaveAccessibleName('More');

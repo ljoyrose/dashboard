@@ -330,7 +330,7 @@ var TABLES = {
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
-      if (!errors.type_key && row.type_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {
+      if (!errors.type_key && row.type_key !== '' && !/^(round\.)?[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {   // 15 Nov 2026 (TEMPS): one reserved prefix round. = the round's own records, never listed as a job
         errors.type_key = 'Use lower-case letters, numbers and underscores, e.g. feeding.';
       }
       if (!errors.every_days && row.every_days === '0') errors.every_days = 'Use 1 or more, or leave blank for as needed.';
@@ -476,9 +476,9 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
@@ -504,12 +504,15 @@ var TABLES = {
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
-      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] },      // scanned = opened from a tag: it says which screen, not that anyone was there
+      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap', 'paper', 'bulk', 'import'] },      // scanned = opened from a tag: it says which screen, not that anyone was there; paper / bulk / import = entered later from paper or a file (14 Nov 2026)
       litter_id:     { type: 'ref', lookup: 'litter' },                             // 12 Nov 2026: a litter job (check_type target litter)
       note_for_id:   { type: 'text' },                                              // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
-      item_id:       { type: 'ref', lookup: 'items' }                               // 14 Nov 2026 (ITEMS): the item an item test is on (check_type target item)
+      item_id:       { type: 'ref', lookup: 'items' },                              // 14 Nov 2026 (ITEMS): the item an item test is on (check_type target item)
+      time_given:    { type: 'enum', values: ['false'] }                           // 14 Nov 2026 (SOPJOBS S7): 'false' = the time is the owner's default (job.paper_default_time), not one written down; blank = given. Owner/admin-only (no staff visibility row)
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',
+    dupNewestBy: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id'],   // 15 Nov 2026: a repeat only of the newest record for the same job, room, dog (round toggle present, not here, present)
+    dupDateCols: ['happened_at'],   // S2: a different day written on paper is a different record   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
     checkRow: function (row, errors, lookups) {
@@ -540,6 +543,104 @@ var TABLES = {
       if (!errors.area_id && row.area_id && typeof only === 'string' && only.split('|').indexOf(row.area_id) < 0) {
         errors.area_id = 'This job is not for this room.';
       }
+    }
+  },
+
+  // ---------------------------------------------------------------- readings
+  // 14 Nov 2026 (Lisa READINGS = B; TEMPS plan AA_TEMPS_2026-11-14-0033 §1; ITEMS item tests): ONE record for any
+  // measured value. What is measured is an owner row (BLD-reading_kinds: label, unit); limits are dated owner rows
+  // (BLD-reading_limits), so a past reading is judged by the limit then. An out-of-limit value is NEVER refused
+  // (readings are evidence): in_range is worked out here from the limit row, never trusted from the page.
+  // An item test (PAT, extinguisher...) saves its check_log row first, then one readings row per measured step with
+  // check_log_id and request_id <test request_id>-r<n>, so a resend is safe. NEW table, own switch, OFF by default.
+  // Room / guest / sensor readings move here in the rename sitting (TEMPS); their columns are in the header already.
+  readings: {
+    key: 'readings',
+    file: 'BLD-readings.csv',
+    idPrefix: 'rdg',
+    columns: ['id', 'tenant_id', 'kind_id', 'area_id', 'item_id', 'subject_id', 'check_log_id', 'value_min', 'value_max', 'value',
+              'unit_id', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'source', 'how_entered', 'read_method', 'samples',
+              'device_label', 'area_empty', 'limit_id', 'in_range', 'corrects_id', 'note', 'mitigation_note', 'sign_in_id',
+              'import_batch_id', 'camera_value_changed', 'reset_after_reading', 'set_by', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'kind_id', 'area_id', 'item_id', 'subject_id', 'check_log_id', 'value_min', 'value_max', 'value',
+              'unit_id', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'source', 'how_entered', 'read_method', 'samples',
+              'device_label', 'area_empty', 'limit_id', 'in_range', 'corrects_id', 'note', 'mitigation_note', 'sign_in_id',
+              'import_batch_id', 'camera_value_changed', 'reset_after_reading', 'set_by', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [
+      { name: 'reading_kinds', file: 'BLD-reading_kinds.csv', idCol: 'id', valCol: 'unit_id' },
+      { name: 'limit_kind', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'kind_id' },
+      { name: 'limit_low', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'low' },
+      { name: 'limit_high', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'high' },
+      { name: 'limit_from', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'from_date' },
+      { name: 'limit_to', file: 'BLD-reading_limits.csv', idCol: 'id', valCol: 'to_date' },
+      { name: 'check_log_item', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'item_id' },
+      { name: 'items', file: 'BLD-items.csv', idCol: 'id' },
+      { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,   // a correction is a new row with corrects_id, never an edit
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      kind_id:      { type: 'ref', lookup: 'reading_kinds', required: true },
+      item_id:      { type: 'ref', lookup: 'items' },
+      check_log_id: { type: 'ref', lookup: 'check_log_item' },
+      area_id:      { type: 'ref', lookup: 'area' },
+      subject_id:   { type: 'ref', lookup: 'subject' },
+      value:        { type: 'number' },
+      value_min:    { type: 'number' },
+      value_max:    { type: 'number' },
+      unit_id:      { type: 'text' },                    // copied from the kind; a different unit is refused
+      precision_dp: { type: 'count' },
+      limit_id:     { type: 'ref', lookup: 'limit_kind' },
+      in_range:     { type: 'text' },                    // ignored: worked out here from limit_id
+      taken_at:     { type: 'datetime' },                // the test or reading time; stored in UTC (S4.2); blank = now
+      source:       { type: 'enum', values: ['staff', 'guest', 'import', 'sensor'] },
+      how_entered:  { type: 'enum', values: ['typed', 'camera', 'photo', 'paper', 'file'] },   // owner-only display
+      note:         { type: 'text' },
+      corrects_id:  { type: 'text' }
+    },
+    dupKey: ['kind_id', 'item_id', 'check_log_id', 'area_id', 'subject_id', 'taken_at'], dupTimeCol: null,   // a resend of the same step is a DUPLICATE (duplicate_of = the saved row)
+    stamp: function (row, ctx) {
+      var utc = new Date(Date.parse(ctx.nowIso)).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      if (!row.taken_at) row.taken_at = utc;
+      row.created_at = utc;
+      row.taken_by = ctx.whoId || ctx.who;   // always from the code, never the page
+      row.set_by = ctx.whoId || ctx.who;
+    },
+    checkRow: function (row, errors, lookups) {
+      if (row.taken_at && !errors.taken_at) row.taken_at = new Date(Date.parse(row.taken_at)).toISOString().replace(/\.\d{3}Z$/, 'Z');   // S4.2: UTC, before the duplicate check
+      if (row.value === '' && (row.value_min === '' || row.value_max === '') && !errors.value) errors.value = 'Type the value.';
+      if (row.value_min !== '' && row.value_max !== '' && +row.value_max < +row.value_min && !errors.value_max) errors.value_max = 'The highest cannot be below the lowest.';
+      if (!row.item_id && !row.area_id && !row.subject_id && !errors.item_id) errors.item_id = 'Say what this reading is for.';
+      // the kind's unit is the reading's unit
+      var unit = lookups && lookups.reading_kinds ? lookups.reading_kinds[row.kind_id] : undefined;
+      if (typeof unit === 'string' && !errors.unit_id) {
+        if (row.unit_id && row.unit_id !== unit) errors.unit_id = 'That is not the unit for this kind of reading.';
+        else row.unit_id = unit;
+      }
+      // a test's step: the test must be on the same item
+      if (row.check_log_id && !errors.check_log_id && lookups && lookups.check_log_item) {
+        var on = lookups.check_log_item[row.check_log_id];
+        if (typeof on === 'string' && row.item_id && on !== row.item_id) errors.check_log_id = 'That test is on a different item.';
+        else if (typeof on === 'string' && !row.item_id) row.item_id = on;
+      }
+      // in range: from the limit row in force on the reading's own day, never from the page
+      row.in_range = '';
+      if (row.limit_id && !errors.limit_id && lookups && lookups.limit_kind) {
+        var lk = lookups.limit_kind[row.limit_id];
+        var day = (row.taken_at || new Date().toISOString()).slice(0, 10);
+        var from = lookups.limit_from[row.limit_id], to = lookups.limit_to[row.limit_id];
+        if (lk !== row.kind_id) errors.limit_id = 'That limit is for a different kind of reading.';
+        else if ((typeof from === 'string' && from > day) || (typeof to === 'string' && to < day)) errors.limit_id = 'That limit was not in force on the reading\'s date.';
+        else if (row.value !== '') {
+          var lo = lookups.limit_low[row.limit_id], hi = lookups.limit_high[row.limit_id], v = +row.value;
+          row.in_range = ((typeof lo !== 'string' || v >= +lo) && (typeof hi !== 'string' || v <= +hi)) ? 'true' : 'false';
+        }
+      }
+      if (row.corrects_id && !ID_RE_.test(row.corrects_id) && !errors.corrects_id) errors.corrects_id = 'That is not a valid id.';
     }
   },
 
@@ -1166,7 +1267,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
@@ -1183,7 +1284,7 @@ var READABLE = {
   occupancy:       { file: 'BLD-occupancy.csv',       vis: 'occupancy',       authorCol: '',            dateCol: '' },
   area_reading:    { file: 'BLD-area_reading.csv',    vis: 'area_reading',    authorCol: 'taken_by',    dateCol: 'taken_at' },
   occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' },
-  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' },
+  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at', keyCol: 'rule_key' },   // keyCol: a key_prefix=job. row-rule shows only those settings
   code_register:   { file: 'BLD-code_register.csv',   vis: 'code_register',   authorCol: '',            dateCol: '' },   // who has a code: never a code or hash
   code_vaults:     { file: 'BLD-code_vaults.csv',     vis: 'code_vaults',     authorCol: '',            dateCol: '' },   // sealed hex only (vault page); aud-admin rows only
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
@@ -1219,5 +1320,6 @@ var READABLE = {
   subject_link:    { file: 'BLD-subject_link.csv',    vis: 'subject_link',    authorCol: 'set_by',      dateCol: 'set_at' },
   // 14 Nov 2026 (ITEMS): the item list and its kinds, read only as far as visibility rows allow (staff phones read items to open an item's tests)
   items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
-  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' }
+  item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' },
+  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' }
 };

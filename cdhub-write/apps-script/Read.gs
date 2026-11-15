@@ -18,6 +18,8 @@
  *         (empty)               every row of this kennel
  *         rows_days<=N          rows from the last N days (needs a date column on that list)
  *         own_rows_days<=N      only rows this person entered, from the last N days
+ *         key_prefix=<p>        only rows whose key column starts with <p> (e.g. key_prefix=job. on breeding_rule:
+ *                               staff phones read the job.* owner settings and nothing else; 15 Nov 2026, SOPJOBS S8)
  *     No * row, or one we cannot understand, means no rows at all.
  * Staff never get the tenant_id column, the permissions file, the approvals queue or any list that is not in READABLE.
  */
@@ -28,6 +30,8 @@ function readEnabled_() { return prop_(BLD.PROP.READ_ENABLED) === 'true'; }
 function parseScope_(cond, rd) {
   cond = String(cond || '').trim();
   if (cond === '') return { kind: 'all', rank: 2 };
+  var kp = /^key_prefix=([a-z][a-z0-9_]{0,39}\.)$/.exec(cond);
+  if (kp) return rd.keyCol ? { kind: 'prefix', prefix: kp[1], rank: 1 } : null;
   var m = /^(own_rows_days|rows_days)<=(\d{1,3})$/.exec(cond);
   if (!m) return null;
   var days = parseInt(m[2], 10);
@@ -152,6 +156,7 @@ function sinkRead_(req) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
     if (sc.kind === 'own' && r[rd.authorCol] !== who.who) continue;
+    if (sc.kind === 'prefix' && String(r[rd.keyCol] || '').indexOf(sc.prefix) !== 0) continue;
     if (sc.kind === 'own' || sc.kind === 'recent') {
       var t = Date.parse(r[rd.dateCol]);
       if (isNaN(t) || t < cutoff) continue;
@@ -168,7 +173,7 @@ function sinkRead_(req) {
   }
   return {
     table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated, role: who.role, name: who.who,   // the caller's own role and name (Welcome line, buttons); never anyone else's
-    scope: sc.kind === 'all' ? 'all rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
+    scope: sc.kind === 'all' ? 'all rows' : sc.kind === 'prefix' ? 'the ' + sc.prefix + '* rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
     as_of: londonIso_(now)
   };
 }

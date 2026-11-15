@@ -23,8 +23,8 @@
   function aToZ(a, b) { return String(a.group || a.label).localeCompare(String(b.group || b.label)) || String(a.label).localeCompare(String(b.label)); }
   function worst(list) { return list.slice().sort(byRank)[0]; }
   function isOn(r) { return String(r.active).toLowerCase() !== 'false'; }
-  /* From paper: how_recorded for a paper entry. 'typed' until the save script accepts 'paper' (STAFF S1), then 'paper'. Owner-only either way. */
-  var PAPER_HOW = 'typed';
+  /* how a late entry came in: one at a time (paper) or several days at once (bulk). Owner-only; staff never see it */
+  var PAPER_HOW = 'paper', BULK_HOW = 'bulk';
   /* starting default for a new app only: the owner's rule row job.paper_default_time (or .<type_key>) wins */
   var START_TIME = '12:00';
   var PLUS = '<svg class="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
@@ -86,7 +86,8 @@
       var nameOf = {};
       (d.dogs || []).forEach(function (x) { nameOf[x.id] = x.label; });
 
-      var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = {};
+      /* type_keys starting "round." are rows The round writes for itself: never a job on this screen */
+      var today = c.today(), types = (typesRead.rows || []).filter(function (t) { return String(t.type_key || '').indexOf('round.') !== 0; }), inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
       types.forEach(function (t) { keyOf[t.id] = t.type_key; });
       /* today's lines for a job, newest first; a corrected line gives way to its correction */
@@ -171,6 +172,7 @@
           t = then; entry.check_type_id = then.id;
           entry.happened_at = londonIso(day, paper.time.value || paperTime(t.type_key, day));
           entry.how_recorded = PAPER_HOW;
+          if (!paper.time.value) entry.time_given = 'false';   // the owner's default time was used: the owner sees "time not given"
           entry.confirm_unusual = 'yes';   // the day was picked on purpose, so an older day is not a slip
           if (noteFor) { noteFor = null; delete entry.note_for_id; }   // a note on today's done row does not belong to an earlier day
         }
@@ -352,7 +354,7 @@
         if (prior) { row._saved = true; BLDDone.mark(row, { outcome: prior.outcome, at: prior.happened_at || prior.taken_at, who: prior.taken_by }); }
         row._save = function () {
           if (row._saved) return Promise.resolve();
-          var entry = Object.assign({ check_type_id: t.id, outcome: a.outcome ? 'ok' : 'recorded', how_recorded: PAPER_HOW, happened_at: londonIso(day, paperTime(t.type_key, day)), confirm_unusual: 'yes' }, tg.fields);
+          var entry = Object.assign({ check_type_id: t.id, outcome: a.outcome ? 'ok' : 'recorded', how_recorded: BULK_HOW, time_given: 'false', happened_at: londonIso(day, paperTime(t.type_key, day)), confirm_unusual: 'yes' }, tg.fields);
           Object.keys(inputs).forEach(function (k) { entry[k] = inputs[k].value.trim(); });
           var check = Object.assign({}, entry, tg.dog ? { subject_id: tg.dog } : {});
           delete check.confirm_unusual;
