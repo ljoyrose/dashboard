@@ -595,6 +595,19 @@ test('admin: health check changes nothing and speaks plainly', () => {
   assert.ok(env.logs.some((l) => /SAVE_ENABLED is TRUE/.test(l)));
 });
 
+// 15 Nov 2026: files and links saves only need their columns present, so the check no longer compares them with the queue header.
+test('admin: health check judges files and links by the columns their saves need, not the queue header', () => {
+  const env = standardEnv({ props: { TABLE_ON_files: 'true', TABLE_ON_links: 'true' } });
+  const links = env.ctx.LINKS_.need.slice().reverse().concat(['extra_col']);
+  env.addFile('BLD-links.csv', links.join(',') + '\r\n');
+  env.addFile('BLD-files.csv', env.ctx.DOGCARD_.files.need.filter((c) => c !== 'sha256').join(',') + '\r\n');
+  env.ctx.adminCheckSetup();
+  assert.equal(env.writes.length, 0);
+  assert.ok(env.logs.some((l) => /^OK   BLD-links.csv exists with 0 row\(s\); header has every column the save needs/.test(l)), env.logs.join('\n'));
+  assert.ok(env.logs.some((l) => /^FIX  BLD-files.csv exists with 0 row\(s\); header has no sha256/.test(l)));
+  assert.ok(!env.logs.some((l) => /BLD-(links|files).csv.*DOES NOT MATCH/.test(l)));
+});
+
 // ------------------------------------------------------------------ 10. the pending queue is itself append-only
 test('nothing the sink ever does shortens or edits any file', () => {
   const env = standardEnv();
