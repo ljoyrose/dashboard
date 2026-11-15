@@ -27,21 +27,20 @@ test.describe('CD Hub: Dogs search, Clear filters and the weighings panel', () =
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
   });
 
-  test('a dog\'s Weight opens its weighings (newest first, with the change), and close shuts it', async ({ page, guard }) => {
+  test('a dog\'s Weight opens its weighings in place (newest first, with the change)', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'dogs');
-    await page.locator('.dc', { hasText: 'Test Dog One' }).locator('.wtc').first().click();
-    const panel = page.locator('#wpanel');
-    await expect(panel).toContainText('Test Dog One: weighings');
-    await expect(panel.locator('tbody tr')).toHaveCount(2);
-    await expect(panel.locator('tbody tr').first()).toContainText('14.6 kg');
-    await expect(panel.locator('tbody tr').first()).toContainText('+0.4');
-    await expect(panel.locator('tbody tr').last()).toContainText('first');
+    const wt = page.locator('.dc', { hasText: 'Test Dog One' }).locator('details.wtc').first();
+    await wt.locator('> summary').click();   // in place on the card (Lisa 15 Nov 2026), no panel at the top
+    await expect(page.locator('#wpanel')).toBeEmpty();
+    const rows = wt.locator('[data-k="wrow"]');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('14.6 kg');
+    await expect(rows.first().locator('[data-k="wchange"]')).toHaveText('+0.4');
+    await expect(rows.last().locator('[data-k="wchange"]')).toHaveText('first');
     // the weight source column stays in the sheet but is not shown (Lisa, 12 Nov 2026)
-    await expect(panel.locator('thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);
-    await expect(panel).not.toContainText('invented');
-    await panel.locator('#wclose').click();
-    await expect(panel).toBeEmpty();
+    await expect(wt).not.toContainText('invented');
+    await expect(wt.locator('form[data-weigh-form]')).toBeVisible();
   });
 });
 

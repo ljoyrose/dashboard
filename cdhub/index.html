@@ -414,7 +414,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .wgraph{display:block;width:100%;max-width:420px;height:auto;overflow:visible}.wg-cap{display:flex;justify-content:space-between;gap:8px;max-width:420px;margin:2px 0 0}
 .wg-ax{stroke:var(--line);stroke-width:1}.wg-line{fill:none;stroke:var(--ljr-6);stroke-width:1.5;stroke-linejoin:round}.wg-dot{fill:var(--card);stroke:var(--ljr-6);stroke-width:1.5}
 .wgraph-box{border:1px solid var(--line);border-radius:var(--radius);padding:8px;margin:0 0 8px}
-.wform h4{margin:0}.wform [data-weigh-msg]:empty,[data-vax-msg]:empty{display:none}
+.wform h4,.wform .wft{margin:0}.wform .wft{font-weight:600}.wform [data-weigh-msg]:empty,[data-vax-msg]:empty{display:none}
 .vax-pick{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:4px 12px}.vax-pick legend{padding:0;margin-bottom:2px;font-size:var(--fs-small)}
 .dcs-form .vax-c{flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;color:var(--ink)}.dcs-form .vax-c input{width:auto;height:auto}
 .chipline{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-small);color:var(--muted)}
@@ -2192,9 +2192,9 @@ function dEditForm(d){
   +'</div><div class="dcs-row"><button type="submit" class="btn yes">Save details</button><button type="button" class="btn" data-dedit-cancel>Cancel</button></div>'
   +'<p class="mut" data-dedit-msg role="status"></p></form>';
 }
-function wForm(d){
+function wForm(d,inCard){   /* on the dog card the title is a label, not a heading: the Dogs page has no heading level for it */
  var opts='<option value="">\u2014</option>'; for(var b=1;b<=9;b++) opts+='<option value="'+b+'">'+b+'</option>';
- return '<form class="dcs-form wform" novalidate data-weigh-form="'+esc(d.id)+'"><h4>Add weight</h4><div class="dcs-row">'
+ return '<form class="dcs-form wform" novalidate data-weigh-form="'+esc(d.id)+'" aria-label="'+esc('Add weight for '+(d.name||''))+'">'+(inCard?'<p class="wft">Add weight</p>':'<h4>Add weight</h4>')+'<div class="dcs-row">'
   +'<label>Date<input type="date" name="on" value="'+todayLondon()+'" max="'+todayLondon()+'" required></label>'
   +'<label>kg<input type="number" name="kg" inputmode="decimal" step="0.01" min="0.1" max="150" required></label>'
   +'<label>BCS (optional)<select name="bcs" aria-label="Body condition score, 1 to 9">'+opts+'</select></label></div>'
@@ -2649,8 +2649,10 @@ document.addEventListener('submit',async function(ev){
   btn.disabled=false;
   if(!r.ok){ showSave(msg,sinkMsg(r)); return; }
   var d=CD._byId[id]; if(d){ d.weights.push({on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':''}); d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
-  drawDogs(); showWeights(id);
-  var m2=document.querySelector('[data-weigh-msg]'); if(m2) showSave(m2,sinkMsg(r));
+  var inCard=!!f.closest('article.dc'), keepY=window.scrollY;
+  drawDogs();
+  if(inCard){ weighReopen(id,sinkMsg(r)); window.scrollTo(0,keepY); }   /* the redraw leaves the page where it was */
+  else { showWeights(id); var m2=document.querySelector('#wpanel [data-weigh-msg]'); if(m2) showSave(m2,sinkMsg(r)); }
   return; }
  if(f.matches('[data-vax-form]')){ ev.preventDefault();
   var vid=f.getAttribute('data-vax-form'), vmsg=f.parentNode.querySelector('[data-vax-msg]'), vb=f.querySelector('button[type=submit]');
@@ -2668,11 +2670,11 @@ document.addEventListener('submit',async function(ev){
   drawDogs(); vaxReopen(vid,sinkMsg(vr)); }
 });
 document.addEventListener('click',async function(ev){
- var eb=ev.target&&ev.target.closest?ev.target.closest('[data-dog-edit],[data-dedit-cancel]'):null;
+ var eb=ev.target&&ev.target.closest?ev.target.closest('[data-dog-edit],[data-dog-edit-at],[data-dedit-cancel]'):null;
  if(eb){ var art=eb.closest('article.dc'), host=art&&art.querySelector('[data-dog-edit-host]'), ed=art&&CD._byId[art.getAttribute('data-dog')]; if(!host||!ed) return;
-  var open=eb.hasAttribute('data-dog-edit')&&host.hidden; host.innerHTML=open?dEditForm(ed):''; host.hidden=!open;
+  var open=(eb.hasAttribute('data-dog-edit')||eb.hasAttribute('data-dog-edit-at'))&&host.hidden; host.innerHTML=open?dEditForm(ed):''; host.hidden=!open;
   var tb=art.querySelector('[data-dog-edit]'); if(tb) tb.setAttribute('aria-expanded',open?'true':'false');
-  if(open){ var nm=host.querySelector('input[name=name]'); if(nm) nm.focus(); } return; }
+  if(open){ var nm=host.querySelector('input[name="'+(eb.getAttribute('data-focus')||'name')+'"]')||host.querySelector('input[name=name]'); if(nm) nm.focus(); } return; }
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-vax-void]'):null; if(!b) return;
  ev.preventDefault(); ev.stopPropagation();
  var id=b.getAttribute('data-dog'), rid=b.getAttribute('data-vax-void'), d=CD._byId[id]; if(!d) return;
@@ -2683,6 +2685,9 @@ document.addEventListener('click',async function(ev){
  if(!r.ok){ b.disabled=false; var m=b.closest('.dcs-bd'); m=m&&m.querySelector('[data-vax-msg]'); if(m) showSave(m,sinkMsg(r)); return; }
  d.vacc.pop(); drawDogs(); vaxReopen(id,'Removed '+hhmmNow());
 },true);
+function weighReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
+ var w=c.querySelector('details.wtc'); if(w) w.open=true;
+ var m=w&&w.querySelector('[data-weigh-msg]'); if(m) showSave(m,text); }
 function vaxReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
  var more=c.querySelector('details[data-k="more"]'), v=c.querySelector('details.vacc'); if(more) more.open=true; if(v) v.open=true;
  var m=c.querySelector('[data-vax-msg]'); if(m) showSave(m,text); }
@@ -2790,11 +2795,14 @@ function drawDogs(){
         +(lastB?' <span class="pill '+(lastB.bcs==='5'?'':(parseInt(lastB.bcs,10)>5?'w':'no'))+'" data-k="bcs" title="'+esc('BCS '+lastB.bcs+(lastB.scale?'/'+lastB.scale:'')+' on '+dmyShort(lastB.on))+'">BCS '+esc(lastB.bcs)+'</span>':'')+'</span>'
       +(d.weights.length>1?'<span class="dcs-spk" data-k="wgraph" aria-hidden="true">'+spark(d.weights,56,16)+'</span>':'')
     +'</summary><div class="dcs-bd">'
-      +(d.weights.length?d.weights.slice().reverse().map(function(ww){
-        return '<div class="dcs-row"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
+      +(d.weights.length?d.weights.slice().reverse().map(function(ww,i,arr){
+        var pv=arr[i+1], dl=pv?Math.round((ww.kg-pv.kg)*100)/100:null;   /* the change from the weighing before, shown in place */
+        return '<div class="dcs-row" data-k="wrow"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
+          +'<span class="'+(dl===null?'mut':(dl>0?'up':(dl<0?'dn':'mut')))+'" data-k="wchange">'+(dl===null?'first':(dl>0?'+':'')+dl.toFixed(1))+'</span>'
           +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+'</div>';
       }).join(''):'<span class="mut">No records</span>')
       +(d.weights.length>1?'<div class="dcs-row" style="margin-top:4px">'+wGraph(d.weights)+'</div>':'')
+      +wForm(d,true)   /* Add weight opens in place (Lisa 15 Nov 2026: tapping "no weight" jumped to the top) */
     +'</div></details>'
 
     +'<details class="dcs meds"><summary>'
@@ -2825,7 +2833,7 @@ function drawDogs(){
 
     +'<div class="dcs dcs-line" data-k="chip">'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-chip"/></svg>'
-      +'<span class="dcs-label">'+(d.chip?esc(d.chip):'<span class="mut">no chip recorded</span>')+'</span>'
+      +'<span class="dcs-label">'+(d.chip?esc(d.chip):'<button type="button" class="cb" data-dog-edit-at="'+esc(d.id)+'" data-focus="chip_number">no chip recorded</button>')+'</span>'
     +'</div>'
 
     /* Lisa 12 Nov 2026: layout A (weight, medications, chip) with B's sections behind More */
@@ -4474,6 +4482,7 @@ function go(id,push){
     drawDogs(); }); });
   document.getElementById('rows').addEventListener('click',function(ev){
    var el=ev.target&&ev.target.closest?ev.target.closest('.wtc'):null; if(!el||!el.dataset.dog) return;
+   if(el.matches('details.dcs')) return;   /* a dog card section opens in place: no panel, no jump to the top */
    if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
    var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
   ['q','fs','fn','fa','fst','fc','ft','dsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
