@@ -350,7 +350,7 @@ test('occupancy_check is on the allow-list behind its own switch, OFF by default
   assert.equal(env.text('BLD-occupancy_check.csv'), before);
   assert.equal(env.writes.length, 0);
   assert.deepEqual(Array.from(env.ctx.TABLES.occupancy_check.columns), fx.OCCUPANCY_CHECK_HEADER);
-  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff', 'parties', 'products', 'lots', 'stock_movements', 'courses', 'doses', 'prescriptions', 'product_dose_bands', 'certificate_kinds', 'certificates']);
 });
 
 test('ONE tap with 150 dogs appends exactly ONE row: who (code id), when, the dog list, the moved count', () => {
