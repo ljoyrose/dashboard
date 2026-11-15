@@ -224,7 +224,24 @@
      age_group.<key>.from_months, age_group.<key>.to_months and age_group.<key>.label, each dated (effective_from, to_date)
      with a source. A group needs from_months; to_months blank = no upper end; an animal is in it when
      from_months <= age in whole months < to_months. No rows: no filter. */
+  /* Lisa, 15 Nov 2026: "there are only 2 in sops". With no age_group rows, the two groups come from the owner's existing
+     rule "Age a dog counts as an adult" (dog.adult_from_months, the row in force today): Puppy under it, Adult from it.
+     Nothing new is seeded; no rule either = no filter. */
+  function adultGroups(T, today) {
+    var best = null;
+    (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
+      var from = t(r.effective_from), to = t(r.to_date);
+      if (t(r.rule_key) !== 'dog.adult_from_months' || !/^\d+$/.test(t(r.value)) || !from || from > today || (to && to < today)) return;
+      if (!best || from > t(best.effective_from) || (from === t(best.effective_from) && t(r.set_at) >= t(best.set_at))) best = r;
+    });
+    var n = best ? Number(t(best.value)) : 0;
+    return n > 0 ? [{ key: 'puppy', label: 'Puppy', from: 0, to: n }, { key: 'adult', label: 'Adult', from: n, to: Infinity }] : [];
+  }
   function ageGroups(T, today) {
+    var own = ownGroups(T, today);
+    return own.length ? own : adultGroups(T, today);
+  }
+  function ownGroups(T, today) {
     var g = {}, re = /^age_group\.([a-z0-9_]+)\.(from_months|to_months|label)$/;
     (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
       var m = re.exec(t(r.rule_key)), from = t(r.effective_from), to = t(r.to_date);
