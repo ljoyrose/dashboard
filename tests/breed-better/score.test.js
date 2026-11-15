@@ -63,6 +63,22 @@ test('evidence on its last valid day still counts; the day after it does not', (
   assert.equal(score(dogInput(rows, { asOf: '2026-06-02' })).gate_result, 'unverified');
 });
 
+test('a record saved with a time counts on its day; a time is never read as no date (DOCS, 15 Nov 2026)', () => {
+  for (const when of ['2025-06-01T12:00:00Z', '2025-06-01T23:30:00+01:00', '2025-06-01 09:15']) {
+    const rows = [exam('e1', 'a1', 'hip', 'sound', when)];
+    const r = score(dogInput(rows, { asOf: '2026-06-01' }));
+    assert.equal(r.gate_result, 'pass', when);
+    assert.equal(r.lines[0].date_then, '2025-06-01', when);
+    assert.equal(score(dogInput(rows, { asOf: '2026-06-02' })).gate_result, 'unverified', when);   // lasts 12 months from its day
+    assert.equal(score(dogInput(rows, { asOf: '2025-05-31' })).gate_result, 'unverified', when);   // not yet recorded
+  }
+  // the newest by day wins, whatever the time
+  const two = [exam('e1', 'a1', 'hip', 'odd', '2025-01-01T23:59:00Z'), exam('e2', 'a1', 'hip', 'sound', '2025-06-01T00:01:00Z')];
+  assert.equal(score(dogInput(two, { asOf: '2026-01-01' })).lines[0].evidence_id, 'e2');
+  // not a date at all stays undated
+  assert.equal(score(dogInput([exam('e1', 'a1', 'hip', 'sound', '13/08/2026')])).lines[0].unknown_reason, 'undated');
+});
+
 test('an undated record cannot satisfy a gate that expires', () => {
   const r = score(dogInput([exam('e1', 'a1', 'hip', 'sound', '')]));
   assert.equal(r.gate_result, 'unverified');
