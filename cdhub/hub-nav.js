@@ -10,6 +10,8 @@
      nav.first.person.<person_id>.<section>   the same for one person; wins over the role
    Chips (Lisa 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
    "Next: X" buttons at the foot of the page, so any view is one tap away at any number of records.
+     nav.home.<ROLE>.<card>            Main's cards (Lisa 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
+     nav.home.person.<person_id>.<card>   the same for one person; wins over the role. No rows = the pack's starter cards.
    No nav rows: the app's starting layout (STARTER), reported as not set so Settings can say so. */
 (function (root) {
   'use strict';
@@ -191,5 +193,20 @@
     if (b) { e.preventDefault(); root.history.back(); }
   });
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, sectionOf: sectionOf, html: html, chips: chips, back: back };
+  /* home({rows, iso, role, person, cards, starter}) -> the card ids on Main, in order. cards = every card this hub has;
+     starter = the pack's starting cards. The person's rows win, then the role's; a set of rows that takes every card off
+     leaves Main empty (that person chose it), only no rows at all falls back to the starter. */
+  function home(o) {
+    o = o || {};
+    var rows = inForce(o.rows, o.iso), cards = o.cards || [];
+    function pick(prefix) {
+      var any = false, p = [];
+      cards.forEach(function (id) { var r = rows[prefix + id]; if (r) { any = true; if (r.value >= 1) p.push([r.value, id]); } });
+      return any ? p.sort(function (a, b) { return a[0] - b[0] || cards.indexOf(a[1]) - cards.indexOf(b[1]); }).map(function (x) { return x[1]; }) : null;
+    }
+    return (o.person && pick('nav.home.person.' + o.person + '.')) || (o.role && pick('nav.home.' + o.role + '.'))
+      || (o.starter || []).filter(function (id) { return cards.indexOf(id) >= 0; });
+  }
+
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, sectionOf: sectionOf, html: html, chips: chips, back: back };
 })(typeof window !== 'undefined' ? window : this);
