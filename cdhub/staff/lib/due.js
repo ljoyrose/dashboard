@@ -42,7 +42,7 @@
       if (!r.type_key || !r.effective_from || r.effective_from > today) return;
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
-    return Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active) && String(r.type_key).indexOf('round.') !== 0; });   // round.* = written by the Round itself, never a job (15 Nov 2026)
+    return Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active) && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; });   // item tests (target item) are due per item on the Items page, never a job   // round.* = written by the Round itself, never a job (15 Nov 2026)
   }
 
   /** Log rows that still stand: a corrected row gives way to the row that corrects it. */

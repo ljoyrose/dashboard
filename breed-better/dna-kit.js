@@ -144,5 +144,18 @@
     ].join('');
   }
 
-  return { markers: markers, copiesOf: copiesOf, kindOf: kindOf, results: results, worst: worst, card: card, key: key, perPuppy: perPuppy, calcMarkers: calcMarkers, calc: calc, css: css };
+  /** A pup's chances per test from its parents' results (each passes the variant at copies / 2). Only tests the calculator
+   *  can work and where both parents have a known result. [{code, name, kinds:{clear,carrier,affected}}], percentages. */
+  function pupOdds(T, sireId, damId) {
+    if (!sireId || !damId) return [];
+    var got = function (id) { var o = {}; results(T, id).forEach(function (x) { if (x.copies !== null) o[x.code.toLowerCase()] = x.copies; }); return o; };
+    var s = got(sireId), d = got(damId);
+    return calcMarkers(T).filter(function (m) { var k = t(m.code).toLowerCase(); return s[k] !== undefined && d[k] !== undefined; }).map(function (m) {
+      var k = t(m.code).toLowerCase(), p = perPuppy(s[k], d[k]), kinds = { clear: 0, carrier: 0, affected: 0 };
+      [0, 1, 2].forEach(function (c) { kinds[kindOf(m, c)] += p[c]; });
+      Object.keys(kinds).forEach(function (x) { kinds[x] = Math.round(kinds[x] * 100); });
+      return { code: t(m.code), name: t(m.name) || t(m.code), kinds: kinds };
+    });
+  }
+  return { pupOdds: pupOdds, markers: markers, copiesOf: copiesOf, kindOf: kindOf, results: results, worst: worst, card: card, key: key, perPuppy: perPuppy, calcMarkers: calcMarkers, calc: calc, css: css };
 }));
