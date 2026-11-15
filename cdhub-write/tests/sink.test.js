@@ -318,7 +318,7 @@ test('the proposed staff table and the retired round_event are NOT on the allow-
     assert.equal(r.code, 'FILE_NOT_ALLOWED', t);
   });
   assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'guest_reading', 'sensor_reading', 'thermometer', 'requirement', 'area_link', 'check_type', 'check_field', 'check_value', 'check_log', 'readings', 'items', 'item_kinds', 'occupancy', 'occupancy_out', 'area_access', 'qr_tag', 'occupancy_check', 'breeding_rule', 'person', 'household', 'household_member', 'subject_owner', 'sale']);
-  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff', 'parties', 'products', 'lots', 'stock_movements', 'courses', 'doses', 'prescriptions', 'product_dose_bands', 'certificate_kinds', 'certificates']);
   assert.deepEqual(Array.from(Object.keys(env.ctx.RETIRED_TABLES)), ['round_event']);
   assert.equal(env.writes.length, 0);
   assert.throws(() => env.ctx.store_append_('BLD-staff.csv', fx.STAFF_HEADER, [], { header: fx.STAFF_HEADER, file: {}, text: '' }), (e) => e.code === 'FILE_NOT_ALLOWED');
@@ -487,6 +487,41 @@ test('backup when on: one copy per existing file per day, in BLD-backups, nothin
   assert.equal(env.writes.length, 0);
 });
 
+test('backup tidy: older .pre-daily-<date>.bak copies go to trash, newest per file kept, other names untouched', () => {
+  const env = standardEnv({ props: { BACKUP_ON: 'true' } });
+  const sf = (env.subfolders['BLD-backups'] = { files: [] });
+  const add = (title, extra) => sf.files.push(Object.assign({ id: 'b' + sf.files.length, title, content: 'x' }, extra || {}));
+  ['2026-10-13', '2026-10-14'].forEach((d) => ['BLD-person.csv', 'BLD-occupancy.csv'].forEach((t) => add(t + '.pre-daily-' + d + '.bak')));
+  add('BLD-old_table.csv.pre-daily-2026-10-01.bak');               // no newer copy: its newest is kept
+  add('BLD-person.csv.pre-daily-2026-10-12.bak', { failTrash: true }); // trash fails: kept, logged
+  ['BACKUP_BLD-person.csv', 'BAK_BLD-person.csv', 'BLD-person.csv.pre-cdhub-core-2026-10-01.bak', 'BLD-person.csv.pre-daily-2026-10-14.bak.txt', 'x.pre-daily-2026-1-1.bak']
+    .forEach((t) => add(t));
+  env.ctx.adminDailyBackup();                                       // 2026-10-15: copies today, then tidies
+  const trashed = sf.files.filter((f) => f.trashed).map((f) => f.title).sort();
+  assert.deepEqual(trashed, ['BLD-occupancy.csv.pre-daily-2026-10-13.bak', 'BLD-occupancy.csv.pre-daily-2026-10-14.bak',
+    'BLD-person.csv.pre-daily-2026-10-13.bak', 'BLD-person.csv.pre-daily-2026-10-14.bak']);
+  const live = sf.files.filter((f) => !f.trashed).map((f) => f.title);
+  ['BLD-old_table.csv.pre-daily-2026-10-01.bak', 'BLD-person.csv.pre-daily-2026-10-12.bak', 'BACKUP_BLD-person.csv', 'BAK_BLD-person.csv',
+    'BLD-person.csv.pre-cdhub-core-2026-10-01.bak', 'BLD-person.csv.pre-daily-2026-10-14.bak.txt', 'x.pre-daily-2026-1-1.bak',
+    'BLD-person.csv.pre-daily-2026-10-15.bak', 'BLD-occupancy.csv.pre-daily-2026-10-15.bak'].forEach((t) => assert.ok(live.includes(t), t));
+  assert.ok(env.logs.some((l) => /Could not move to trash \(kept\): BLD-person.csv.pre-daily-2026-10-12.bak/.test(l)));
+  assert.equal(env.writes.length, 0);
+  assert.equal(sf.files.length, 16);                                // nothing removed for ever
+});
+
+test('backup tidy by hand: same rule, copies nothing; no folder = nothing', () => {
+  const none = standardEnv();
+  assert.equal(JSON.stringify(none.ctx.adminTrashOldDailyBackups()), '{"trashed":[],"kept":[]}');
+  const env = standardEnv();
+  const sf = (env.subfolders['BLD-backups'] = { files: [] });
+  ['2026-10-13', '2026-10-14'].forEach((d) => sf.files.push({ id: d, title: 'BLD-person.csv.pre-daily-' + d + '.bak', content: 'x' }));
+  const r = env.ctx.adminTrashOldDailyBackups();
+  assert.deepEqual(Array.from(r.trashed), ['BLD-person.csv.pre-daily-2026-10-13.bak']);
+  assert.deepEqual(Array.from(r.kept), ['BLD-person.csv.pre-daily-2026-10-14.bak']);
+  assert.equal(env.copies.length, 0);
+  assert.deepEqual(Array.from(env.ctx.adminTrashOldDailyBackups().trashed), []);   // trashed ones are not counted twice
+});
+
 test('backup schedule installs once and removes without touching copies', () => {
   const env = standardEnv({ props: { BACKUP_ON: 'true' } });
   env.ctx.adminInstallDailyBackup(); env.ctx.adminInstallDailyBackup();
@@ -521,7 +556,7 @@ test('status check shows switches only: no codes, no ids, no data', () => {
   assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]);        // occupancy, the daily check and breeding rules have their own switches, OFF
   assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'direct', 'pending', 'direct', 'direct', 'direct', 'direct', 'pending', 'pending', 'pending', 'pending', 'pending']);   // temperature and occupancy moves straight in; occupancy_out and enquiry rows still queue
   assert.equal(out.readEnabled, false);                                                    // reading is OFF by default
-  assert.deepEqual(Array.from(out.proposed), ['staff']);
+  assert.deepEqual(Array.from(out.proposed), ['staff', 'parties', 'products', 'lots', 'stock_movements', 'courses', 'doses', 'prescriptions', 'product_dose_bands', 'certificate_kinds', 'certificates']);
   // approval page is only for owners
   assert.match(env.ctx.doGet({ parameter: { page: 'approve' } }).html, /for the kennel owner/);
   env.email = 'owner@example.test';
