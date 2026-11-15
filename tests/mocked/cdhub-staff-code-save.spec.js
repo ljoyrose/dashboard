@@ -172,3 +172,42 @@ test('a refused staff code is not kept on this device', async ({ page, guard }) 
   await expect(page.locator('[data-move-msg]')).toHaveText('Not saved: That staff code was not recognised.');
   expect(await page.evaluate(() => localStorage.getItem('cdhub.staff.code'))).toBeNull();
 });
+
+// 15 Nov 2026 ("could not reach the save script" on the dog card): a Drive read of the save address that found
+// nothing was kept as the answer for the whole visit, and a found address lived in memory only. Now an empty read is
+// tried again, and the address is kept on this device for the next visit.
+test('save address: an empty first read is tried again, and the found address is kept for the next visit @regression', async ({ page, guard }) => {
+  rooms(guard.world);
+  const sent = [];
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    sent.push(body);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
+  await card.getByRole('button', { name: 'Place' }).click();
+  await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
+  await expect(page.locator('[data-move-msg]')).toContainText('Could not reach the save script');
+  expect(sent).toHaveLength(0);
+
+  setFile(guard.world, 'BLD-save-webapp.json', JSON.stringify({ url: SINK }));
+  await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
+  await enterCode(page, 'river-staff-441');
+  await expect(card.locator('[data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
+  expect(sent).toHaveLength(1);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.save.url'))).toBe(SINK);
+
+  setFile(guard.world, 'BLD-save-webapp.json', '{}');
+  await page.reload();
+  if (await page.locator('#signinbtn').isVisible()) await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  const again = page.locator('.dc[data-dog="sub-test-pup-1"]');
+  await again.getByRole('button', { name: 'Place' }).click();
+  await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
+  await expect(again.locator('[data-k="moved"]')).toHaveText(/^Moved \d\d:\d\d$/);
+  expect(sent).toHaveLength(2);
+});
+
