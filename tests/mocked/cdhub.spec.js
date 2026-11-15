@@ -1,5 +1,5 @@
 const { test, expect, buildWorld } = require('../support/test');
-const { tabClick, tabTo } = require('../support/tabs');
+const { tabClick, tabTo, openView } = require('../support/tabs');
 const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
@@ -22,7 +22,8 @@ test.describe('CD Hub: loads', () => {
     await expect(page.locator('#nav button')).toHaveCount(0);
   });
 
-  test('holds no table data; only the shared sign-in is kept, one key in this browser', async ({ page, context }) => {
+  // Tables are kept only as the owner's device copy (IndexedDB, owner speed 13 Nov 2026), wiped on Sign out: cdhub-speed.spec.js
+  test('nothing but the shared sign-in in local storage, one key in this browser; Sign out clears it and the device copy', async ({ page, context }) => {
     await page.goto('cdhub/');
     await expect(page.locator('#main')).toContainText('Read-only. One sign-in for the whole site.');
     await expect(page.locator('#main')).not.toContainText(/from Drive|live from/i);
@@ -34,6 +35,7 @@ test.describe('CD Hub: loads', () => {
     expect(await context.cookies()).toEqual([]);
     await page.locator('header button[data-signout]').click();
     expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
+    await expect.poll(() => page.evaluate(async () => !!(await copyGet()))).toBe(false);
   });
 });
 
@@ -49,6 +51,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
   test('lists the BLD-app-tables folder and reads each sample BLD-*.csv', async ({ page, guard }) => {
     await page.goto('cdhub/');
     await signIn(page);
+    await page.waitForFunction(() => LOAD.later === 'ok');   // the tables the first screen does not need are read straight after it
     // folder listing used the right folder
     const listing = guard.world.calls.find((c) => c.path === '/files' && c.query.includes(IDS.bld));
     expect(listing, 'folder listing call').toBeTruthy();
@@ -134,7 +137,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -192,49 +195,71 @@ test.describe('CD Hub: navigation', () => {
     test(`section button "${id}" opens that section`, async ({ page }) => {
       await page.goto('cdhub/');
       await signIn(page);
-      await tabClick(page, `#nav button[data-go="${id}"]`);
-      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
+      await openView(page, id);
       await expect(page.locator('#main')).not.toBeEmpty();
       await expect(page.locator('#main')).not.toContainText('Sign in to see the tables');
     });
   }
 
-  test('all twelve sections are in the bar: five tabs, then the rest under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
-    await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
+    const bar = page.locator('#nav > button.ht[data-section]');
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
+    const more = page.locator('#nav .house-more > [data-slot]');
+    expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
+    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('Assocs sits under More and still opens #/buyers', async ({ page }) => {
+  test('Assocs and Table map are off the bar and More (Lisa 13 Nov) but still open by link', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
-    await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAccessibleName('SOPs');
-    const tab = page.locator('#nav .house-more button[data-go="buyers"]');
-    await expect(tab).toHaveText('Assocs');
-    await expect(tab).not.toContainText('Buyers');
-    await page.locator('nav.house-tabs [data-house-more]').click();
-    await expect(tab).toHaveAccessibleName('Assocs');
-    await tab.click();
-    await expect(page).toHaveURL(/#\/buyers$/);
+    await expect(page.locator('#nav [data-go="buyers"], #nav [data-go="shape"]')).toHaveCount(0);
+    await expect(page.locator('#nav .house-more button[data-go="sops"] .htl')).toHaveText('SOPs');
+    await openView(page, 'shape');
+    await expect(page.locator('#main')).not.toBeEmpty();
+    await openView(page, 'buyers');
     await expect(page.locator('#main h2')).toHaveText('Assocs');
-    await expect(page.locator('#next')).toContainText('Next: Dogs');
   });
 
-  test('the "Next:" buttons at the bottom lead to other sections', async ({ page }) => {
+  test('chips at the top of a section reach each of its views in one tap; no "Next:" buttons at the foot @regression', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await tabClick(page, '#nav button[data-go="today"]');
-    const next = page.locator('#next button[data-go]').first();
-    const target = await next.getAttribute('data-go');
-    await next.click();
-    await expect(page.locator(`#nav button[data-go="${target}"]`)).toHaveAttribute('aria-current', 'page');
+    await tabClick(page, '#nav button[data-go="dogs"]');
+    const chips = page.locator('#chips');
+    await expect(chips).toBeVisible();
+    await expect(chips.locator('.hchip .hcl')).toHaveText(['Dogs', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps']);
+    await expect(chips.locator('[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
+    await expect(chips.locator('[data-go="dogs"] .cnt')).toHaveText(/^\d+$/);
+    await chips.locator('[data-go="areas"]').click();
+    await expect(page.locator('#main h2').first()).toHaveText('Areas');
+    await expect(chips.locator('[data-go="areas"]')).toHaveAttribute('aria-current', 'page');
+    await expect(chips.locator('[data-go="dogs"]')).not.toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#next')).toHaveCount(0);
+    await expect(page.getByText(/^Next: /)).toHaveCount(0);
+    // Temps is its own page: its chip is a link there
+    await expect(chips.locator('a.hchip', { hasText: 'Temps' })).toHaveAttribute('href', './history.html');
+  });
+
+  test('the view a section opens on is an owner setting row per role or person, not code', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    const r = await page.evaluate(() => {
+      const row = (k, v) => ({ rule_key: k, value: String(v), effective_from: '2026-11-01' });
+      const has = () => true;
+      return {
+        none: HubNav.layout({ rows: [], role: 'OWNER', has }).first.ops,
+        role: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3)], role: 'OWNER', has }).first.ops,
+        person: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3), row('nav.first.person.p1.ops', 2)], role: 'OWNER', person: 'p1', has }).first.ops,
+        tab: HubNav.html({ layout: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3)], role: 'OWNER', has }), has }).includes('data-go="areas"')
+      };
+    });
+    expect(r).toEqual({ none: undefined, role: 'areas', person: 'litters', tab: true });
   });
 
   test('Reread reads the folder again', async ({ page, guard }) => {
@@ -359,10 +384,7 @@ const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,meth
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
   + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84']
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
-const openTab = async (page, id) => {
-  await tabClick(page, `#nav button[data-go="${id}"]`);
-  await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
-};
+const openTab = (page, id) => openView(page, id);
 // Walks every visible element and returns plain-English problems, one list per rule.
 function cdAudit() {
   const rgb = (s) => { let m = /^rgba?\(([^)]+)\)/.exec(s); if (m) { const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] === undefined ? 1 : p[3]]; }
@@ -475,7 +497,7 @@ test.describe('CD Hub house look', () => {
     const lines = new Set();
     for (const tab of ['map', 'today', 'round', 'dogs', 'litters', 'areas']) {
       await openTab(page, tab);
-      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible, #next button:visible');
+      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible');
       const n = await ctls.count();
       expect(n, tab).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
@@ -541,8 +563,9 @@ test.describe('CD Hub house look', () => {
       const sizes = await measure();
       expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Main').toEqual(expect.arrayContaining(['18']));
       // The tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): 24 x 24 whatever the font, the two digits on one line.
-      const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
-      expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 24, 24, '12px', 'nowrap', '14px']);
+      const tc = await page.locator('#nav button[data-section="main"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
+      expect(tc[0], 'the Main tab count holds Do (12) and Decide').toMatch(/^\d{2}$/);   // menu option A: Do sits inside Main
+      expect(tc.slice(1), 'the Main tab count' + (wide ? ' (wider font)' : '')).toEqual([24, 24, '12px', 'nowrap', '14px']);
       for (const x of sizes) expect(x.slice(1), `count ${x[0]}${wide ? ' (wider font)' : ''}`).toEqual([30, 24, '12px', 'nowrap', 'tabular-nums']);
     }
     const big = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = cntPill(123); document.querySelector('#main').appendChild(h); const r = h.firstChild.getBoundingClientRect(); return [r.width, r.height]; });
@@ -569,7 +592,7 @@ test.describe('CD Hub house look', () => {
       await openTab(page, tab);
       const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(over, '#/' + tab).toBeLessThanOrEqual(0);
-      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #chips .hchip, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
     // The top bar (Lisa's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
@@ -602,8 +625,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
     await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('7');   // + Breeding rules not set (8 Nov 2026)
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('7');
-    await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
+    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('8');   // Main holds Decide (7) and Do (1)
     // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
     await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
@@ -642,7 +664,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(rows.nth(1).locator('.dpill')).toHaveClass(/soon/);
     await expect(rows.nth(2).locator('.dpill')).toHaveCount(0);   // undated rows carry no date pill
     const due = iso(-66 + 63).split('-');
-    await expect(rows.nth(0).locator('.dpill')).toContainText(`${due[2]}/${due[1]}/${due[0].slice(2)}`);
+    await expect(rows.nth(0).locator('.dpill')).toContainText(`${+due[2]} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+due[1] - 1]} ${due[0]}`);
     const ring = (sel) => page.locator(sel).first().evaluate((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; });
     const late = await ring('#needsCard .dpill.late'), soon = await ring('#needsCard .dpill.soon');
     expect(late[0]).toBe('1px'); expect(late[1]).toBe(await page.evaluate(() => getComputedStyle(document.querySelector('.cnt.need')).borderTopColor));
@@ -835,12 +857,18 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
+    // Age groups come from the owner's adult-age rule (Lisa 15 Nov 2026: two in the SOP); no rule = no Age filter
+    await expect(page.locator('#fa')).toHaveCount(0);
+    await page.evaluate(() => { T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([{ id: 'ad', rule_key: 'dog.adult_from_months', value: '12', effective_from: '2010-01-01', source: 'Pretend SOP' }]); });
+    await openTab(page, 'round');
+    await openTab(page, 'dogs');
     await expect(page.locator('#fp-dogs')).toBeHidden();
     await page.locator('[data-fpanel="fp-dogs"]').click();
     await expect(page.locator('[data-fpanel="fp-dogs"]')).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#fa').selectOption('j');
+    expect(await page.locator('#fa option').allInnerTexts()).toEqual(['Any', 'Puppy', 'Adult', 'no DOB']);
+    await page.locator('#fa').selectOption('p');
     await expect(page.locator('#cnt')).toHaveText('1 of 3');
-    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: 6m to 12m/);
+    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: Puppy/);
     await expect(page.locator('[data-fpanel="fp-dogs"] .cnt')).toHaveText('1');
     await page.locator('#ach-dogs .achip').click();
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
@@ -856,10 +884,13 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([72, 72]);
-    await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
-    const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
-    expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
+    expect([ph.width, ph.height]).toEqual([120, 120]);
+    // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
+    await expect(card.locator('.whor')).toHaveCount(1);
+    await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
+    await expect(card.locator('.meta [data-cabin-move]')).toHaveText('Test Cabin A');
+    const overlap = await card.evaluate((e) => { const w = e.querySelector('.whor').getBoundingClientRect(), m = e.querySelector('.dcs.more > summary').getBoundingClientRect(); return !(w.bottom <= m.top || w.top >= m.bottom || w.right <= m.left || w.left >= m.right); });
+    expect(overlap).toBe(false);
     expect(await card.locator('.nm').evaluate((e) => getComputedStyle(e).webkitLineClamp)).toBe('2');
   });
 
@@ -982,11 +1013,11 @@ test('CD Hub: gestation and adult age come from dated rows; no row = not set, ju
   expect([r.adult, r.pup, r.grown]).toEqual([6, true, true]);
 });
 
-test('CD Hub: The round shows a Kept readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
+test('CD Hub: The round shows a Readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
   await page.goto('cdhub/');
   await signIn(page);
   await openTab(page, 'round');
-  await expect(page.locator('#kept-readings h3')).toHaveText('Kept readings');
+  await expect(page.locator('#kept-readings h3')).toHaveText('Readings');
   await expect(page.locator('#arrive-reading')).toHaveCount(0);
   await page.locator('#rdate').fill('2026-01-15');
   await page.locator('#rdate').dispatchEvent('change');
@@ -1021,7 +1052,7 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
   expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
-test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are DD/MM/YY', () => {
+test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are "2 Mar 2026"', () => {
   test('Dogs, Litters and Do carry no "Arrives with Bloodline" boxes; Litters says its title once', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
@@ -1031,7 +1062,7 @@ test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates a
       await expect(page.locator('#main')).not.toContainText('BLD-WORK.csv');
     }
     await expect(page.locator('#main h3', { hasText: /^Litters/ })).toHaveCount(0);
-    expect(await page.evaluate(() => [dmy('2026-11-12'), plural(1, 'row'), plural(2, 'row')])).toEqual(['12/11/26', '1 row', '2 rows']);
+    expect(await page.evaluate(() => [dmy('2026-11-12'), plural(1, 'row'), plural(2, 'row')])).toEqual(['12 Nov 2026', '1 row', '2 rows']);
   });
 });
 

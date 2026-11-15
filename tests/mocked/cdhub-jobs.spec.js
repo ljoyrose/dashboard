@@ -20,14 +20,32 @@ const TYPES = csv(TYPE_H, [
 test.describe('CD Hub: jobs', () => {
   test('the manifest check warns only when a table has fewer rows than listed', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
-    const msg = (live, listed) => page.evaluate(([l, r]) => {
-      CD.counts.pretend = l; CD.manifest = [{ file: 'BLD-pretend.csv', table: 'pretend', rows: r }];
-      return checks().filter((c) => c.k === 'tables')[0];
-    }, [live, listed]);
+    await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+    const msg = (live, listed, copy) => page.evaluate(([l, r, c]) => {
+      LOAD.rowCounts = { pretend: l }; LOAD.copy = !!c; CD.manifest = [{ file: 'BLD-pretend.csv', table: 'pretend', rows: r }];
+      const x = checks().filter((k) => k.k === 'tables')[0]; LOAD.copy = false; return x;
+    }, [live, listed, copy]);
     expect((await msg(12, '10')).msg).not.toContain('fewer rows');
     const fewer = await msg(9, '10');
     expect(fewer.ok).toBe(false);
     expect(fewer.msg).toContain('1 tables have fewer rows than the manifest: pretend');
+    // the copy on this device can be older than the manifest: no warning while it shows
+    const onCopy = await msg(9, '10', true);
+    expect(onCopy.ok).toBe(true);
+    expect(onCopy.msg).toBe('Checking tables\u2026');
+  });
+
+  test('the manifest check counts the live read, not the rows on screen', async ({ page, guard }) => {
+    await HUBS.cdhub.open(page, guard);
+    await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
+    const x = await page.evaluate(() => {
+      const n = LOAD.rowCounts.subject;
+      CD.counts.subject = 0;   // what a copy or half read would show
+      CD.manifest = [{ file: 'BLD-subject.csv', table: 'subject', rows: String(n) }];
+      return checks().filter((k) => k.k === 'tables')[0];
+    });
+    expect(x.wait).toBeFalsy();
+    expect(x.msg).not.toContain('fewer rows');
   });
 
   test('no job files yet: the page still loads and says so', async ({ page, guard }) => {
@@ -63,9 +81,10 @@ test.describe('CD Hub: jobs', () => {
 
   test('Compliance shows late, due and source; dog card shows its history in plain words', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', TYPES);
-    addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H + ',time_given', [
       'l1,t,t1,,sub-test-dog-1,,,ok,2026-01-05T09:00:00Z,,2026-01-05T09:00:00Z,Staff A,,,scanned',
-      'l2,t,t1,,sub-test-dog-1,,,concern,2026-01-06T09:00:00Z,pretend note,2026-01-06T09:00:00Z,Staff A,,,tapped'
+      'l2,t,t1,,sub-test-dog-1,,,concern,2026-01-06T09:00:00Z,pretend note,2026-01-06T09:00:00Z,Staff A,,,tapped',
+      'l3,t,t2,area-x,sub-test-dog-1,,,ok,2026-01-04T12:00:00Z,,2026-01-07T09:00:00Z,Staff A,,,paper,false'
     ]));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
@@ -76,12 +95,15 @@ test.describe('CD Hub: jobs', () => {
     await expect(page.locator('#compJobs tr[data-source=""]')).toContainText('No source entered');
     await tab(page, 'dogs');
     const hist = page.locator('[data-history="sub-test-dog-1"]');
-    await expect(hist).toContainText('2 job records');
+    await expect(hist).toContainText('3 job records');
     // job history sits behind More on the dog card (layout A, Lisa 12 Nov 2026)
     await page.locator('#rows article.dc', { has: hist }).locator('details.more > summary').click();
     await hist.locator('summary').click();
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
+    await expect(hist).toContainText('6 Jan 2026');   // owner date: "2 Mar 2026"
+    await expect(hist).toContainText('entered earlier');   // how it came in: owner-only
+    await expect(hist).toContainText('time not given');
     await expect(hist).not.toContainText(/verified|attended/i);
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Nothing here'))).toBe('');

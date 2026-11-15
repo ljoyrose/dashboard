@@ -21,7 +21,7 @@ const RULES = {
       /taken by/i, /entered by/i, /Feels like/i, /Max °C/, /Min °C/, /\bactual\b/i, /source/i],
     roomLine: /^[^·]+ · (AM (\d+\.\d–\d+\.\d( ✓)?|missed|due))?( · )?(PM (\d+\.\d–\d+\.\d( ✓)?|missed|due))?/,
     outsideLine: /^-?\d+(\.\d)? \/ -?\d+(\.\d)? °C(, rain \d+(\.\d)? mm)?$/,
-    dayTitle: /^\d\d\/\d\d\/\d\d$/,   // DD/MM/YY
+    dayTitle: /^\d{1,2} [A-Z][a-z]{2} \d{4}$/,   // 2 Mar 2026
   },
   colour: {
     // Every colour on the page must be one of these house tokens (or transparent).
@@ -125,16 +125,16 @@ for (const size of RULES.layout.widths) {
 }
 
 // ------------------------------------------------------------------ INFORMATION
-test('information: one short line per room, a tick inside the limit, the unit once, outside as max / min and rain, DD/MM/YY', async ({ page, guard }) => {
+test('information: one short line per room, a tick inside the limit, the unit once, outside as max / min and rain, dates as 2 Mar 2026', async ({ page, guard }) => {
   await open(page, guard);
   await openDay(page, '2026-01-05');
   const drill = page.locator('#drill');
   await expect(drill.locator('#d-title')).toHaveText(RULES.words.dayTitle);
-  await expect(drill.locator('#d-title')).toHaveText('05/01/26');
+  await expect(drill.locator('#d-title')).toHaveText('5 Jan 2026');
   await expect(drill.locator('#d-out')).toHaveText('5.3 / -1.9 °C, rain 0 mm');
   await expect(drill.locator('#d-out')).toHaveText(RULES.words.outsideLine);
   const lines = drill.locator('.rl');
-  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 (retired 10/01/26) · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
+  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 (retired 10 Jan 2026) · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
   for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
@@ -245,6 +245,21 @@ test('phone: the round shows room cards only, never the table beside them (quali
   await open(page, guard, { width: 390, height: 844 });
   await expect(page.locator('#view-d .rtile').first()).toBeVisible();
   await expect(page.locator('#view-d .rscroll')).toBeHidden();
+});
+
+// Found by the click-crawl, 13 Nov 2026: later days and days with no readings were buttons that did nothing when tapped.
+test('heat map: a day with nothing to open is not a button you can press; every day you can press opens its panel', async ({ page, guard }) => {
+  await open(page, guard);
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  const cells = page.locator('#view-a button.d');
+  await expect(cells.first()).toBeVisible();
+  const kinds = await cells.evaluateAll((list) => list.map((b) => ({ blank: /(^|\s)(future|nd)(\s|$)/.test(b.className), disabled: b.disabled, opens: !!b.getAttribute('onclick') })));
+  expect(kinds.length).toBeGreaterThan(300);
+  expect(kinds.filter((k) => k.blank).length, 'the sample year has later days or days with no readings').toBeGreaterThan(0);
+  expect(kinds.filter((k) => k.blank && !k.disabled), 'a blank day must not be pressable').toEqual([]);
+  expect(kinds.filter((k) => !k.blank && (k.disabled || !k.opens)), 'a day with readings must open its panel').toEqual([]);
+  // every blank day still says what it is (for a screen reader and on hover)
+  await expect(page.locator('#view-a button.d.future').first()).toHaveAttribute('aria-label', /Later$/);
 });
 
 test('audit: a room in use with no readings at all is listed and shows missed, never hidden', async ({ page, guard }) => {
@@ -501,4 +516,33 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
   expect(julyIn.shadow).not.toBe('none');
+});
+
+test('audit: a saved min or max that is text (25,3) or blank is "Check: not a number", counted with the problems, never read as 25 (OV11 15 Nov)', async ({ page, guard }) => {
+  await open(page, guard);
+  const r = await page.evaluate(() => ({
+    text: tempCls('24.1', '25,3', '2026-01-11', 'area-r1'),
+    half: tempCls('26.4', '', '2026-01-11', 'area-r1'),
+    none: tempCls('', '', '2026-01-11', 'area-r1'),
+    swap: tempSwapped('25,3', '24.1'),
+    slot: slotState({ min: '24.1', max: '25,3' }, 'area-r1', '2026-01-11', 'am'),
+  }));
+  expect(r.text).toBe('unread'); expect(r.half).toBe('unread'); expect(r.none).toBe(''); expect(r.swap).toBe(false);
+  expect(r.slot).toMatchObject({ k: 'swap', unread: true, lo: '24.1', hi: '25,3' });
+  expect(await page.evaluate((s) => slotHtml('AM', s), r.slot)).toContain('AM 24.1–25,3 · Check: not a number');
+});
+
+test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) shows a clear warning, never wrong columns (OV11 15 Nov)', async ({ page, guard }) => {
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard);
+  await expect(page.locator('[data-hdrbad]')).toHaveCount(0);   // the normal sheet: no warning
+  const lines = READINGS.trimEnd().split('\n');
+  put('BLD-area_reading.csv', [lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');   // sorted: a reading on row 1, heading on row 2
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await expect(page.locator('[data-hdrbad]')).toContainText('row 1 is not the heading row');
+  put('BLD-area_reading.csv', [lines[0], lines[1], lines[0]].concat(lines.slice(2)).join('\n') + '\n');   // heading on row 1 and again lower down
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
 });

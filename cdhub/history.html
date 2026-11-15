@@ -208,6 +208,7 @@ var TOKEN=null,TOKEN_EXP=0;
 var DAYS={};  /* ISO date -> row */
 var FOLDER_ID=window.DASH_CONFIG.cdhub.folderId;
 var DRIVE_API=window.DASH_CONFIG.urls.files;
+var AREA_HDR_BAD='';  /* set when the area_reading sheet's heading row is not on row 1 (sorted or filtered) */
 var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
@@ -333,10 +334,15 @@ function bandOn(day,aid){
   fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
   return fits[0]||null;
 }
-function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
+/* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25; a reading
+   with one side blank or not a number is "Check: not a number", counted with the problems, so text never hides from the counts. */
+function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
+function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
+function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
 function tempCls(min,max,day,aid){
   var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR,aid);
-  if(isNaN(lo)&&isNaN(hi))return'';
+  if(isNaN(lo)&&isNaN(hi)&&!tempUnreadable(min,max))return'';
+  if(tempUnreadable(min,max))return'unread';
   if(tempSwapped(min,max))return'swap';   /* max lower than min: typed the wrong way round, checked before hot/cold */
   if(!B)return'unknown';
   if(!isNaN(lo)&&lo<B.min)return'cold';
@@ -376,6 +382,9 @@ async function loadAreaData(){
     if(rf){
       var txt=await readDriveFile(rf);
       var rows=parseCSV(txt);
+      AREA_HDR_BAD=(rows.length&&(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])))?'row 1 is not the heading row'
+        :rows.some(function(r){ return r.id==='id'||r.area_id==='area_id'; })?'a heading row is also lower down':'';
+      rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
       if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
@@ -498,9 +507,10 @@ function dayClass(isoDate){
   return'omild';
 }
 
-function ddmmyy(iso){ iso=String(iso||''); return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(2,4); }
+/* One date format everywhere (Lisa 13 Nov 2026): "2 Mar 2026"; stored dates stay ISO. */
+function dayWords(iso){ iso=String(iso||''); if(!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8,10),10)+' '+MONTHS[parseInt(iso.slice(5,7),10)-1]+' '+iso.slice(0,4); }
 function openDrill(isoDate){
-  el('d-title').textContent=ddmmyy(isoDate);
+  el('d-title').textContent=dayWords(isoDate);
   el('d-out').textContent=outsideLine(isoDate)||'No outside reading';
   var lines=dayRooms(isoDate).map(function(x){ return roomLine(x,true); });
   el('d-areas-inner').innerHTML=lines.join('');
@@ -521,7 +531,7 @@ function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
 function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')).replace(/^ZZ_/,''); }
 function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_area_id===aid&&l.to_area_id&&l.to_area_id!==aid) to=l.to_area_id; }); return to; }
 function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
-  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+ddmmyy(areaEnd(aid))+')'; }
+  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+dayWords(areaEnd(aid))+')'; }
 function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
 function thermoNeeded(aid,day){
   var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;
@@ -583,8 +593,9 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':cls==='swap'?'swap':'out';
+    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':(cls==='swap'||cls==='unread')?'swap':'out';
     if(t.empty&&k==='out') k='eout';
+    if(cls==='unread') return {k:k, unread:true, empty:!!t.empty, lo:String(t.min==null?'':t.min).trim(), hi:String(t.max==null?'':t.max).trim(), note:t.note||''};
     return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }
   if(t&&t.empty) return {k:'empty'};
@@ -624,7 +635,7 @@ function slotHtml(label,s){
   if(s.k==='due') return '<span class="due">'+label+' due</span>';
   if(s.k==='empty') return '<span class="due">'+label+' empty</span>';
   var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
-  if(s.k==='swap') return '<span class="warn">'+esc(txt)+' · max lower than min</span>';
+  if(s.k==='swap') return '<span class="warn"'+(s.unread?' data-unread':'')+'>'+esc(txt)+(s.unread?' · Check: not a number':' · max lower than min')+'</span>';
   if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
@@ -655,7 +666,8 @@ function monthCal(y, classOf, kind){
     for(var i=0;i<firstDow;i++) h+='<span class="d empty"></span>';
     for(var d=1;d<=md[mi];d++){
       var date=ds(y,mi,d), cls=classOf(date), today=date===TODAY_STR, word=stateWord(cls);
-      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+      /* a day with nothing to open (a later day, or no readings) is not offered as a button: it used to be one that did nothing */
+      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
       h+='<button type="button" class="d '+cls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'></button>';
     }
@@ -783,7 +795,8 @@ function legend(){
 function renderPage(){
   ROUND_DATE=ROUND_DATE||TODAY_STR;
   el('main').innerHTML=
-    legend()
+    (AREA_HDR_BAD?'<p class="warn" role="alert" data-hdrbad>Room temperatures sheet out of order: '+esc(AREA_HDR_BAD)+'. Put the heading row back on row 1; use a filter view, never sort the sheet.</p>':'')
+    +legend()
     +'<div class="yr-row">'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'

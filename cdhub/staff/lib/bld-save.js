@@ -22,7 +22,7 @@
   var URL_OK = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
-  var TIMEOUT_MS = 20000;
+  var TIMEOUT_MS = 45000;   // the save script can take over 20 s when busy; a shorter wait said "could not reach" for saves that landed
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
   var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
@@ -96,11 +96,12 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
+    var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
-    function clearCode() { inMemoryCode = ''; lastRole = ''; put(session, CODE_KEY, ''); }
+    function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
@@ -271,6 +272,29 @@
     }
 
     /**
+     * Send one named save that is not a table row (e.g. link_add, link_end). Same code, same no-double-save reference.
+     * Resolves (never rejects): {ok:true, ...result, message:'Saved.'} or {ok:false, code, message, fields}.
+     */
+    function act(action, fields, requestId) {
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
+      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
+      var body = { v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} };
+      return withTimeout(doFetch(scriptUrl, {
+        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
+      })).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+      }).catch(function () {
+        return { ok: false, code: 'NETWORK', requestId: body.request_id, message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.' };
+      });
+    }
+    /** Record-to-record links (14 Nov 2026): {from_table, from_id, role, to_table, to_id, sort?, note?, from_date?}. */
+    function linkAdd(fields, requestId) { return act('link_add', fields, requestId); }
+    /** End one link: {id, to_date?} (blank = today). */
+    function linkEnd(fields, requestId) { return act('link_end', fields, requestId); }
+
+    /**
      * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
      * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
@@ -285,7 +309,7 @@
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
       })).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; return res; }
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
@@ -303,7 +327,7 @@
           if (!prev.ok) return prev;
           return read(k).then(function (r) {
             if (r.ok) { out[k] = r.rows; return { ok: true }; }
-            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING')) { out[k] = []; return { ok: true }; }
+            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED'))   /* FILE_NOT_ALLOWED: the script does not know this list yet */ { out[k] = []; return { ok: true }; }
             return r;
           });
         });
@@ -342,10 +366,12 @@
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
       setCode: setCode, getCode: getCode, clearCode: clearCode,
       role: function () { return lastRole; },
+      name: function () { return lastName; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
       loadConfigFromDrive: loadConfigFromDrive,
+      act: act, linkAdd: linkAdd, linkEnd: linkEnd,
       read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
