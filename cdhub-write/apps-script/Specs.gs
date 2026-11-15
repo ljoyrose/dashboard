@@ -42,6 +42,10 @@ var TABLES = {
     ],
     proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty', 'thermometer_id'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
+    // Lisa 15 Nov 2026 ("issues with text and numbers"): written as real values like the 30,866 rows typed by hand, not
+    // text - temperatures as numbers (1 decimal place), times as real dates shown as UK time. Only this table (Store.gs).
+    // The 7th column is '' here and may be named variance_c in the live header (sameHeader_ accepts either).
+    sheetTypes: { min_c: 'num1', max_c: 'num1', '': 'num1', variance_c: 'num1', spot_c: 'num1', precision_dp: 'int', period_start: 'datetime', taken_at: 'datetime' },
     // thermometer: id -> its area_id (valCol), so a reading can only name a thermometer in its own room
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }, { name: 'thermometer', file: 'BLD-thermometer.csv', idCol: 'id', valCol: 'area_id' }],
     // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
@@ -78,7 +82,7 @@ var TABLES = {
     dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
-      if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);
+      if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);   // the 7th column (blank or variance_c)
       row.taken_at = ctx.nowIso;
       row.taken_by = ctx.who;
     },
@@ -1576,7 +1580,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_()).concat(editFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
