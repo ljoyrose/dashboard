@@ -1550,6 +1550,12 @@ function checks(){
  out.push({k:'rule changes',ok:!ra.bad.length,
    msg:ra.bad.length? ra.bad.slice(0,4).join('; ')+(ra.bad.length>4?' \u2026':'')
      :ra.keys+' declaration(s) version cleanly; '+ra.checked+' record(s) still resolve to the rule in force on their own date'});
+ /* Time zone (STAFF, 14 Nov 2026): a BLD-locale row for this tenant with a time_zone in force today. Without one the save
+    script falls back to its own setting, so the owner sees the gap here. */
+ var tzDay=todayISO(), tzTen=CD.tenant&&CD.tenant.id, tz=(T['BLD-locale.csv']||[]).filter(function(r){
+   var f=String(r.from_date||'').slice(0,10), t=String(r.to_date||'').slice(0,10);
+   return String(r.time_zone||'').trim() && (!tzTen||!r.tenant_id||r.tenant_id===tzTen) && (!f||f<=tzDay) && (!t||t>=tzDay); })[0];
+ out.push({k:'time zone',ok:!!tz,msg:tz?String(tz.time_zone).trim():'Time zone not set'});
  out.push({k:'saving',ok:true,msg:'A valid staff code saves through the save script, which checks the code and records who saved.'});
  return out;
 }
@@ -1564,7 +1570,7 @@ function strip(){
 
 /* ---------- Live feed: the Bloodline home screens, built only from what this page already reads. ---------- */
 var BREED_CHECKS={'litter gap':1,'dam age':1,'litter count':1,'breeding rules':1};
-var CHECKNAME={'room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
+var CHECKNAME={'time zone':'Time zone','room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
  'placed in an area':'Placed in a cabin','joins':'Joins','dates':'Dates','rule changes':'Rule changes','saving off':'Saving'};
 function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
 function dmyShort(iso){ return BLDDates.long(iso||''); }
