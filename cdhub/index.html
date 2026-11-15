@@ -1729,7 +1729,7 @@ function littersCard(title){
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
 
- return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span>'+(PAGES.litters?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
+ return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span>'+(navHas('litters')?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
 }
 /* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
@@ -2356,7 +2356,7 @@ function vaxForm(d){
 /* litters as dam: count, the last one, and a link to the Litters page filtered to this dam */
 function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
  var last=''; x.forEach(function(l){ var b=l.born_on||l.dob||''; if(b>last) last=b; });
- var on=!!PAGES.litters;   /* the Litters page switched off: the line stays as words, with no link that would open Main */
+ var on=navHas('litters');   /* the Litters page switched off: the line stays as words, with no link that would open Main */
  return '<div class="dcs litc">'+(on?'<a class="dcs-link" href="#/litters/'+esc(d.id)+'" data-dam-link="'+esc(d.id)+'">':'<span class="dcs-link dcs-nolink">')
   +'<svg class="ricon" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'
   +'<span class="dcs-label" data-k="litters"><b>'+x.length+'</b> litter'+(x.length!==1?'s':'')+(last?' <span class="mut">· last '+esc(dmyShort(last))+'</span>':'')+'</span>'
@@ -4387,11 +4387,13 @@ PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
+function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){
+ if(!viewOn(id)) return false;   /* switched off by the owner, or by the pack's starter */
  if(id==='temps') return true;
  if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
- return !!PAGES[id]&&id!=='shape'&&id!=='buyers';
+ return !!PAGES[id];
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
 function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',has:navHas}); }
@@ -4502,7 +4504,7 @@ function go(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- if(!PAGES[id]) id='map';
+ if(!PAGES[id]||!viewOn(id)) id='map';   /* a switched-off view's address opens Main */
  DOGFOCUS=(id==='dogs'&&sub&&!medGo)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:'';
  if(id==='sops'&&sub) SOP.open=sub;   /* opened from a Compliance number: that SOP, unfolded */
  if(medGo) CD._medGo={month:{jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}[sub], token:sub};
@@ -4747,7 +4749,7 @@ DashKit.search.register(function(q){
  (CD.areas||[]).filter(function(a){ return hit([a.code,a.id,a.grouping].join(' ')); }).slice(0,12).forEach(function(a){
   out.push({group:L('areas'),slot:4,title:a.code||a.id,sub:a.grouping||'',act:function(){ go('areas/'+encodeURIComponent(a.id)); focusView(); }});
  });
- (CD.litters||[]).filter(function(l){ var dam=byId[l.dam_subject_id], sire=byId[l.sire_subject_id];
+ (navHas('litters')?CD.litters||[]:[]).filter(function(l){ var dam=byId[l.dam_subject_id], sire=byId[l.sire_subject_id];
    return hit([l.id,l.born_on,dam&&dam.name,sire&&sire.name].join(' ')); }).slice(0,8).forEach(function(l){
   var dam=byId[l.dam_subject_id];
   out.push({group:L('litters'),slot:4,title:(l.born_on?ukDate(l.born_on):l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
