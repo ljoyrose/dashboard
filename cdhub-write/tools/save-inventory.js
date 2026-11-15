@@ -135,6 +135,9 @@ function rows() {
   out.push({ id: 'owner_edit', kind: 'owner page: edit in place', sw: 'OWNER_EDIT_ENABLED', dflt: 'off', live: UNKNOWN,
     writes: 'tables marked ownerEditable: ' + Object.keys(c.TABLES).filter((k) => c.TABLES[k].ownerEditable === true).join(', '), master: 'yes', needs: 'owner signed in',
     mode: 'in place', who: 'owner (Google account)', risk: 'Overwrites in place; no old value kept by the script.' });
+  out.push({ id: 'record_edit', kind: 'code: record_edit / record_archive / record_delete (Edit.gs, Q1/Q2)', sw: 'RECORD_EDIT_ON', dflt: 'off', live: UNKNOWN,
+    writes: 'tables marked ownerEditable, in place or one row removed; BLD-audit_log.csv (append)', master: 'yes', needs: 'BLD-permission rows (defaults: owner edits and archives, nobody deletes)',
+    mode: 'in place', who: 'per permission rows', risk: 'Every change logged with old and new values unless edit.log is no or the person may edit_unlogged; a delete is logged before the row goes.' });
   out.push({ id: 'approve', kind: 'owner page: approve / reject', sw: 'SAVE_ENABLED and the target table TABLE_ON switch, checked on approve', dflt: 'n/a', live: 'n/a',
     writes: pend + ' event + the queued row\'s file', master: 'depends', needs: 'owner signed in', mode: 'from queue', who: 'owner (Google account)',
     risk: 'Refused while saving or the table switch is off (Risks found, R5, fixed).' });
