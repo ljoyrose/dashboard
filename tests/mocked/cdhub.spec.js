@@ -201,11 +201,11 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
-    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Records', 'People']);
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
@@ -885,7 +885,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([120, 120]);
+    expect([ph.width, ph.height]).toEqual([160, 160]);   // tighter card (15 Nov 2026): bigger photo on wide screens, full width on phones
     // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
     await expect(card.locator('.whor')).toHaveCount(1);
     await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
