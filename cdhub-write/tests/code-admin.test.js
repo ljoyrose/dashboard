@@ -79,7 +79,7 @@ test('sync fills the register once; with the register off, codes still work and 
   assert.equal(off.ctx.ui_codeRegisterSync().code, 'TABLE_OFF');
 });
 
-test('owner page: Make their code shows it once; "I have written it down" clears it; New code and Change name work from the list', async () => {
+test('owner page: Make their code shows it once; the copied-it button clears it; New code and Change name work from the list', async () => {
   const { JSDOM } = require('jsdom');
   const fs = require('node:fs'), path = require('node:path');
   const e = env();
@@ -116,4 +116,16 @@ test('owner page: Make their code shows it once; "I have written it down" clears
   [...card.querySelectorAll('button')].find((b) => b.textContent === 'Give them a new code').click(); await tick();
   assert.match($('#sc-once-code').textContent, /^[A-HJ-NP-Z2-9]{10}$/);
   assert.equal(saves(e, e.codes.staff), false);
+  // Lisa 16 Nov 2026: the box names the code plainly; the list hides ended codes unless asked; search; name tag label
+  assert.match($('#sc-once').textContent, /Your code: type this/);
+  $('#sc-once-hide').click(); await tick(); await tick();
+  const names = () => [...$('#sc-list').children].map((c) => c.textContent);
+  assert.equal(names().some((t) => /REPLACED|SWITCHED OFF/.test(t)), false);
+  assert.match($('#sc-old-label').textContent, /Show switched-off and replaced \(\d+\)/);
+  $('#sc-old').checked = true; $('#sc-old').dispatchEvent(new w.Event('change')); 
+  assert.equal(names().some((t) => /REPLACED/.test(t)), true);
+  assert.equal(/REPLACED|SWITCHED OFF/.test(names()[0]), false);   // active codes first
+  $('#sc-find').value = 'page person'; $('#sc-find').dispatchEvent(new w.Event('input'));
+  assert.equal(names().length >= 1 && names().every((t) => /Page Person/.test(t)), true);
+  assert.match(names()[0], /Name tag \(not the code\)/);
 });
