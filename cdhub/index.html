@@ -462,7 +462,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
 /* Chip row (Lisa 15 Nov 2026): sticky under the top bar, scrolls sideways on a phone. The house chip, count and hover;
    selected = the 3px section-colour side line (.house-lbar) and a tick, no fill (Lisa 15 Nov 2026). */
-.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;flex-wrap:wrap;gap:8px;   /* every view in sight, no sideways scroll (Lisa 16 Nov 2026) */
  margin:0;padding:10px 0;background:var(--bg);border-bottom:1px solid var(--line)}
 .hchips::-webkit-scrollbar{display:none}
 .hchips [data-slot="1"]{--sc:var(--ljr-1-edge)} .hchips [data-slot="2"]{--sc:var(--ljr-2)} .hchips [data-slot="3"]{--sc:var(--ljr-3)}
@@ -3789,7 +3789,11 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
 /* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved): no answer in 40 s = NOT saved, said plainly. */
-function sinkFetch(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
+/* Saves go one at a time from this device (Lisa 16 Nov 2026: the round sent every room at once and all but the first
+   gave up with "Someone else is saving right now"). The 40 s limit starts when a save is sent, not while it waits. */
+var sinkTurn=Promise.resolve();
+function sinkFetch(body,url){ var p=sinkTurn.then(function(){ return sinkFetchNow(body,url); }); sinkTurn=p.then(function(){},function(){}); return p; }
+function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
  return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
    function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 40 seconds. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
