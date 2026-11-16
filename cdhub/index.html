@@ -4617,7 +4617,8 @@ function go(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- if(!PAGES[id]||!viewOn(id)) id='map';   /* a switched-off view's address opens Main */
+ if(!PAGES[id]||!viewOn(id)){ var wasOff=!viewOn(id); id='map'; SHOWN='map';   /* a switched-off view's address opens Main */
+  if(wasOff&&history.replaceState) history.replaceState(history.state,'','#/map'); }
  DOGFOCUS=(id==='dogs'&&sub&&!medGo)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:'';
  if(id==='sops'&&sub) SOP.open=sub;   /* opened from a Compliance number: that SOP, unfolded */
  if(medGo) CD._medGo={month:{jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}[sub], token:sub};

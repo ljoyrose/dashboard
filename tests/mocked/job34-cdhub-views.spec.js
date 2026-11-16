@@ -231,7 +231,9 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
 
 test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and litters and matings are checked against them (Lisa, 8 Nov 2026)', () => {
   const LIT = (rows) => 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\n' + rows.join('\n') + '\n';
-  const RULES = (rows) => 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n' + rows.join('\n') + '\n';
+  // These tests replace the rules table, so they keep the test kennel's switched-on views (Table map, Litters).
+  const NAV_ON = ['nv1,ten-test,nav.view.litters,1,2020-01-01,invented,,,', 'nv3,ten-test,nav.view.shape,1,2020-01-01,invented,,,'];
+  const RULES = (rows) => 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n' + rows.concat(NAV_ON).join('\n') + '\n';
   const STD = ['brl-1,ten-test,min_months_between_litters,12,2020-01-01,invented,,2026-11-08,owner',
     'brl-2,ten-test,max_litters_per_dam,6,2020-01-01,invented,,2026-11-08,owner',
     'brl-3,ten-test,min_dam_age_months,12,2020-01-01,invented,,2026-11-08,owner'];
