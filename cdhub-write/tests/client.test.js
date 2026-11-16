@@ -907,3 +907,21 @@ test('name(): the name held against this code from the last read (Welcome line);
   s.clearCode();
   assert.equal(s.name(), '');
 });
+
+// Lisa 16 Nov 2026: saves sent together (the round) all hit the script at once; all but one gave up with BUSY.
+// One device now sends its saves one at a time, and a failed save does not stop the next.
+test('saves sent together go one at a time; a failed one does not stop the next', async () => {
+  let now = 0, most = 0, n = 0;
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    now++; most = Math.max(most, now); const mine = ++n;
+    await new Promise((r) => setTimeout(r, 30));
+    now--;
+    return { json: async () => (mine === 2 ? { ok: false, code: 'BUSY', message: 'busy' } : { ok: true, result: { id: 'x' + mine } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: null, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const rs = await Promise.all(['a', 'b', 'c'].map((id) => s.act('link_end', { id })));
+  assert.deepEqual(rs.map((r) => r.ok), [true, false, true]);
+  assert.equal(most, 1);
+});
