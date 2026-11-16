@@ -185,3 +185,14 @@ asOwner('the owner page link uses the same save address as the hub save', async 
   if (!(await page.locator('#adm-codes').isVisible())) await page.locator('[data-adm-open="codes"]').click();   // the card may still be open
   await expect(page.locator('#adm-codes a.btn[href*="page=approve"]').first()).toHaveAttribute('href', /SAMPLE-from-drive\/exec/);
 });
+
+// Lisa 16 Nov 2026: "it says what to do but no link". Add staff opens the owner page with a real button.
+asOwner('Add staff has a Make a code button to the owner page codes section', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  await page.locator('[data-adm-open="staff"]').click();
+  const link = page.locator('.adm-make a', { hasText: 'Make a code' });
+  await expect(link).toHaveAttribute('href', /SAMPLE-fake-address\/exec\?page=approve&section=codes$/);
+  await expect(page.locator('#adm-staff')).toContainText('name tag');
+});
