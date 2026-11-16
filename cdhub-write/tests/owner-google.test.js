@@ -6,10 +6,10 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 
 const HUB = 'hub-client.apps.googleusercontent.test';
-const OWNER_TOKEN = 'ya29.FAKE-owner-token-000000000001';
-const GMAIL_TOKEN = 'ya29.FAKE-gmail-owner-token-0000002';
-const STRANGER_TOKEN = 'ya29.FAKE-stranger-token-00000003';
-const OTHER_APP_TOKEN = 'ya29.FAKE-other-app-token-0000004';
+const OWNER_TOKEN = 'fake-token-owner-token-000000000001';
+const GMAIL_TOKEN = 'fake-token-gmail-owner-token-0000002';
+const STRANGER_TOKEN = 'fake-token-stranger-token-00000003';
+const OTHER_APP_TOKEN = 'fake-token-other-app-token-0000004';
 const google = { tokens: {
   [OWNER_TOKEN]: { aud: HUB, email: 'owner@example.test', name: 'Olive Owner' },
   [GMAIL_TOKEN]: { aud: HUB, email: 'second.owner@example.test', name: 'Second Owner' },
@@ -54,7 +54,7 @@ test('a token issued to another app is refused, even for an owner email (no repl
 
 test('an unknown or expired token is refused', () => {
   const env = env0();
-  assert.equal(save(env, noCode(env, { google_token: 'ya29.FAKE-not-a-real-token-000005' })).code, 'GOOGLE_NOT_OWNER');
+  assert.equal(save(env, noCode(env, { google_token: 'fake-token-not-a-real-token-000005' })).code, 'GOOGLE_NOT_OWNER');
   const env2 = standardEnv({ google: { tokens: { [OWNER_TOKEN]: { aud: HUB, email: 'owner@example.test', name: 'O', expires_in: 0 } } },
     props: { MODE_area_reading: 'direct', HUB_CLIENT_ID: HUB } });
   assert.equal(save(env2, noCode(env2, { google_token: OWNER_TOKEN })).code, 'GOOGLE_NOT_OWNER');

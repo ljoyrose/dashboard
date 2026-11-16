@@ -29,6 +29,11 @@ function rooms(world) {
 }
 
 function answer(body) {
+  // 16 Nov 2026: a signed-in hub first sends its Google sign-in; these pretend staff are not owners, so the script says
+  // so and the hub asks for the staff code (as the real script does when the account is not on the owner list).
+  if (!body.code) return body.google_token
+    ? { ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.' }
+    : { ok: false, code: 'NO_CODE', message: 'Enter your staff code.' };
   const who = WHO[body.code];
   if (!who) return { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' };
   if (body.action === 'dog_photo') return { ok: true, result: { status: 'saved', subject_id: body.fields.subject_id, file_id: 'drv-photo-new', who, at: '2026-11-13T10:00:00+00:00' } };
@@ -40,7 +45,7 @@ async function openDogs(page, guard) {
   const sent = [];
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
-    sent.push(body);
+    if (body.code) sent.push(body);   // the Google-only first try (refused in answer) is not a save
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
   });
   await page.route('https://example.com/pretend-dog-new.png', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
@@ -181,7 +186,7 @@ test('save address: an empty first read is tried again, and the found address is
   const sent = [];
   await page.route(SINK, async (route) => {
     const body = JSON.parse(route.request().postData() || '{}');
-    sent.push(body);
+    if (body.code) sent.push(body);   // the Google-only first try (refused in answer) is not a save
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
   });
   await page.goto('cdhub/');
@@ -277,7 +282,7 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
     });
     await ctx.route(SINK, async (r) => {
       const body = JSON.parse(r.request().postData() || '{}');
-      sent.push(body);
+      if (body.code) sent.push(body);   // the Google-only first try (refused in answer) is not a save
       await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
     });
     const page = ctx.pages()[0] || await ctx.newPage();
