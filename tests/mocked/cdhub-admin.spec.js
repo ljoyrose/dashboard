@@ -125,3 +125,35 @@ asOwnerEmpty('Codes: an empty register (V8 live, not yet filled) says to press F
   await page.locator('[data-adm-open="codes"]').click();
   await expect(page.locator('#adm-codes')).toContainText('Fill the code register');
 });
+
+// 15 Nov 2026: Set up a phone → Show QR stuck on "Drawing…". The QR now fills its own box when the drawer loads (no
+// page redraw needed), and a drawer that does not load says so instead of waiting for ever.
+asOwner('Show QR draws even when the page is not redrawn', async ({ page }) => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  await page.route(/staff\/lib\/qr\.js$/, async (route) => { await gate; route.continue(); });
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  await page.locator('[data-adm-open="phone"]').click();
+  await page.locator('[data-adm-qr]').click();
+  await expect(page.locator('#adm-qr-box')).toContainText('Drawing');
+  await page.evaluate(() => { const f = document.getElementById('admFuture'); if (f) f.remove(); });   // the old redraw needed this
+  release();
+  await expect(page.locator('#adm-qr-box .adm-qr svg')).toBeVisible();
+});
+
+asOwner('Show QR: a QR drawer that cannot load says so, and Show QR tries again', async ({ page, allowedConsole }) => {
+  allowedConsole.push(/Failed to load resource|ERR_FAILED|qr\.js/);   // the drawer is made to fail on purpose
+  await page.route(/staff\/lib\/qr\.js$/, (route) => route.abort());
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  await page.locator('[data-adm-open="phone"]').click();
+  await page.locator('[data-adm-qr]').click();
+  await expect(page.locator('#adm-phone')).toContainText('did not load');
+  await page.unroute(/staff\/lib\/qr\.js$/);
+  await page.locator('[data-adm-qr]').click();   // Hide
+  await page.locator('[data-adm-qr]').click();   // Show again
+  await expect(page.locator('#adm-phone .adm-qr svg')).toBeVisible();
+});
