@@ -3490,8 +3490,10 @@ function walkList(){
    "whole litter with the dam" choice. A dog already in this cabin is greyed (it is here); elsewhere shows that cabin's name. */
 function roundPickOptions(dogs,sel,placed,aid){
  var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
- function opt(d){ return '<option value="'+esc(d.id)+'"'+(sel.indexOf(d.id)>=0?' disabled':'')+'>'+esc(d.name||d.id)
-   +(d.colour?' \u00b7 '+esc(colourLabel(d)):'')+(sel.indexOf(d.id)>=0?' \u2014 here':(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(code[placed[d.id]]||placed[d.id]):''))+'</option>'; }
+ var adding=(CD._adding&&CD._adding[aid])||[];
+ function opt(d){ var busy=adding.indexOf(d.id)>=0&&sel.indexOf(d.id)<0;
+   return '<option value="'+esc(d.id)+'"'+(sel.indexOf(d.id)>=0||busy?' disabled':'')+'>'+esc(d.name||d.id)
+   +(d.colour?' \u00b7 '+esc(colourLabel(d)):'')+(sel.indexOf(d.id)>=0?' \u2014 here':busy?' \u2014 adding\u2026':(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(code[placed[d.id]]||placed[d.id]):''))+'</option>'; }
  var pups=CD.dogs.filter(function(d){ var c=statusOf(d).code; return d.birthLitter&&c!=='CL'&&c!=='DE'&&!d.off&&months(d.dob)!==null&&months(d.dob)<6; });
  var adults=dogs.filter(function(d){ return pups.indexOf(d)<0; }), by={};
  pups.forEach(function(d){ (by[d.birthLitter]=by[d.birthLitter]||[]).push(d); });
@@ -3938,6 +3940,11 @@ async function roundSave(areaId,patch,msgEl,sel){
  if(msgEl) showSave(msgEl,sinkMsg(r,'move'));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){ var d=CD._byId[patch.add]; if(d) d.area_id=areaId;
   var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
+  /* The room's dog list is read from the occupancy rows: add the saved move here too, so the dog shows in its new room
+     straight away and the next dog can be added (Lisa 16 Nov 2026). A queued move waits for approval and is not added. */
+  if(r.result.status==='saved'){ var occ=T['BLD-occupancy.csv']||(T['BLD-occupancy.csv']=[]);
+   var prev=window.BLDOccupancy&&BLDOccupancy.latestRow?BLDOccupancy.latestRow(occ,patch.add):null;
+   occ.push({id:r.result.id||'',subject_id:patch.add,area_id:areaId,moved_in:date,moved_out:'',classification:(prev&&prev.classification)||'',off_site_kind:''}); }
   cur.subjects=(cur.subjects||CD.dogs.filter(function(x){ return x.area_id===areaId&&x.id!==patch.add; }).map(function(x){ return x.id; })).concat([patch.add]);
   Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o!==cur&&o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==patch.add; }); });
   CD._roundMsg={area:areaId,text:sinkMsg(r,'move')};
@@ -4747,12 +4754,22 @@ function go(id,push){
    el.addEventListener('change',function(){
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
     roundSave(el.dataset.area,{access:el.value},msg,el); }); });
+  /* Add several dogs in a row (Lisa 16 Nov 2026: an empty room could not take a second dog while the first was saving).
+     The list goes back to "add a dog..." at once; a dog being added shows "adding..." and cannot be picked twice. */
   Array.prototype.forEach.call(document.querySelectorAll('.radd'),function(el){
    el.addEventListener('change',function(){
-    if(!el.value) return;
-    var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
-    if(/^litter:/.test(el.value)){ roundAddLitter(el.dataset.area,el.value.slice(7),msg); return; }
-    roundSave(el.dataset.area,{add:el.value},msg); }); });
+    var v=el.value, aid=el.dataset.area; if(!v) return;
+    el.value='';
+    var msg=document.querySelector('.rsave[data-area="'+aid+'"]');
+    if(/^litter:/.test(v)){ roundAddLitter(aid,v.slice(7),msg); return; }
+    var P=CD._adding||(CD._adding={}), list=P[aid]||(P[aid]=[]);
+    if(list.indexOf(v)>=0) return;
+    list.push(v);
+    var opt=null, was='';
+    Array.prototype.forEach.call(el.options,function(o){ if(o.value===v){ opt=o; was=o.textContent; o.disabled=true; o.textContent=was.replace(/ \u2014 .*$/,'')+' \u2014 adding\u2026'; } });
+    /* finished: forget it; if the page was not redrawn (the save failed), the dog can be picked again */
+    var done=function(){ var l=(CD._adding||{})[aid]||[], i=l.indexOf(v); if(i>=0) l.splice(i,1); if(opt&&opt.isConnected){ opt.disabled=false; opt.textContent=was; } };
+    roundSave(aid,{add:v},msg).then(done,done); }); });
   Array.prototype.forEach.call(document.querySelectorAll('.rempty'),function(el){ el.addEventListener('click',function(){
    /* One tap saves (Lisa 16 Nov 2026: no "Mark this cabin empty?" second click). */
    roomEmptySave(el.dataset.area,el.dataset.slot,el.parentNode); }); });
