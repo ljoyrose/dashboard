@@ -936,6 +936,19 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#rows')).not.toContainText('javascript:');
   });
 
+  test('Litters: plain headings; a litter with no pairing name shows dam × sire; one litter is "1 litter"', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-litter.csv', 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\nlit-a,sub-test-dog-1,sub-test-dog-2,2025-02-01,,born,invented\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'litters');
+    const heads = page.locator('#lrows').locator('xpath=ancestor::table').locator('th');
+    await expect(heads.nth(0)).toHaveText('litter');
+    await expect(heads.nth(1)).toHaveText('name on file');
+    await expect(page.locator('#lrows tr').first().locator('td').first()).toHaveText('Test Dog One × Test Dog Two');
+    await expect(page.locator('main')).toContainText('1 litter on file');
+    await expect(page.locator('main')).not.toContainText('raw name');
+  });
+
   test('Litters: the same filter row; Sort changes the order', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-litter.csv', 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\nlit-a,sub-test-dog-1,sub-test-dog-2,2025-02-01,Alpha pairing,born,invented\nlit-b,sub-test-dog-1,sub-test-dog-2,2026-02-01,Beta pairing,born,invented\n');
     await page.goto('cdhub/');

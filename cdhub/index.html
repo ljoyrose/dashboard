@@ -1736,7 +1736,7 @@ function littersCard(title){
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
 
- return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span>'+(PAGES.litters?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
+ return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+((CD.litters||[]).length===1?' litter':' litters')+' on file</span>'+(PAGES.litters?'<button type="button" class="btn" data-go="litters">Litters</button>':'')+'</div></section>';
 }
 /* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
@@ -3294,7 +3294,7 @@ function pageLitters(){
    groups:[['Date of birth',fsel('ld','Date of birth','<option value="y">has a DOB</option><option value="n">missing a DOB</option>')],
     ['Year',fsel('ly','Year','')],['Status',fsel('ls','Status','')],['Dam',fsel('lm','Dam','')],['Sire',fsel('lp','Sire','')],
     ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
- +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>litter</th><th>name on file</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
 function litterPups(){
@@ -3327,7 +3327,7 @@ function drawLitters(){
  var gapOf={}; litterGaps().forEach(function(x){ gapOf[x.next.id]=x; gapOf[x.prev.id]=gapOf[x.prev.id]||x; });
  document.getElementById('lrows').innerHTML=list.map(function(l){
   var g=gapOf[l.id];
-  return '<tr><td><b>'+esc(l.pairing)+'</b>'+(g?' <span class="pill w" title="'+esc((g.days===0?'Same date as ':g.days+' days from ')+(g.next.id===l.id?g.prev.pairing:g.next.pairing)+'. Your rule: '+g.months+' months.')+'">too close to another litter — check</span>':'')+'</td><td class="mut"><code>'+esc(l.raw_name||'—')+'</code></td>'
+  return '<tr><td>'+(l.pairing?'<b>'+esc(l.pairing)+'</b>':'<span class="mut">'+esc((nameOf(l.dam_subject_id)||'?')+' \u00d7 '+(nameOf(l.sire_subject_id)||'?'))+'</span>')+(g?' <span class="pill w" title="'+esc((g.days===0?'Same date as ':g.days+' days from ')+(g.next.id===l.id?g.prev.pairing:g.next.pairing)+'. Your rule: '+g.months+' months.')+'">too close to another litter — check</span>':'')+'</td><td class="mut"><code>'+esc(l.raw_name||'—')+'</code></td>'
    +'<td>'+esc(nameOf(l.dam_subject_id)||'—')+'</td>'
    +'<td>'+esc(nameOf(l.sire_subject_id)||'—')+'</td>'
    +'<td>'+(l.dob?esc(dmy(l.dob)):'<span class="pill w">no DOB</span>')+'</td>'
