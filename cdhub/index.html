@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="manifest" href="../manifest.webmanifest">
+<link rel="manifest" href="../manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#2C2C2A">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
@@ -105,6 +105,13 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 
 
 .card{margin:0 0 12px;box-shadow:var(--shadow)}
+.hhome .hcard{margin:0;display:flex;flex-direction:column;gap:8px}.hhome .hcard h3{margin:0}.hcnum{font-weight:600}
+.hctop{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}.hctop a,.hsee{color:var(--ink)}
+.hlist{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
+.hlist li{display:flex;align-items:center;gap:8px;padding-left:12px;box-shadow:inset 3px 0 0 var(--ljr-0)}
+.hlist li span{flex:1}.hadd{display:flex;flex-wrap:wrap;gap:8px}
+.hlist li[data-slot="0"]{box-shadow:inset 3px 0 0 var(--ljr-0)}.hlist li[data-slot="1"]{box-shadow:inset 3px 0 0 var(--ljr-1)}.hlist li[data-slot="2"]{box-shadow:inset 3px 0 0 var(--ljr-2)}.hlist li[data-slot="3"]{box-shadow:inset 3px 0 0 var(--ljr-3)}.hlist li[data-slot="4"]{box-shadow:inset 3px 0 0 var(--ljr-4)}.hlist li[data-slot="5"]{box-shadow:inset 3px 0 0 var(--ljr-5)}.hlist li[data-slot="6"]{box-shadow:inset 3px 0 0 var(--ljr-6)}.hlist li[data-slot="7"]{box-shadow:inset 3px 0 0 var(--ljr-7)}.hlist li[data-slot="8"]{box-shadow:inset 3px 0 0 var(--ljr-8)}
+
 .card.dash{border-style:dashed}
 .card h4,.card .hx4{margin:0 0 12px;font-size:var(--fs-head);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
 .card p{margin:0 0 8px;font-size:var(--fs-body)}.card p:last-child{margin-bottom:0}
@@ -1863,9 +1870,68 @@ function mainNums(ok){
   {label:'Unplaced',value:ok?listFor('unplaced').length:null,href:'#/today/unplaced'},
   {label:'Bitches',value:ok?c.bitches.length:null,href:'#/today/bitches',late:ok&&c.bitches.length!==c.active.length}];
 }
-function pageMap(){
- return '<h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',rows:mainRows(),nums:mainNums(true),doHref:'#/work'});
+/* Main answers "what needs me today?" (OV11 15 Nov 2026). Each person builds their own: which cards, in what order, are
+   owner-setting rows nav.home.<ROLE>.<card> (place 1, 2, 3...; 0 = off), dated, with a source. No rows = the starter.
+   A card is a count or its top 3, then "See all" to the full list in its own section: Main never repeats a whole list. */
+var HOME_CARDS={
+ needs:{label:'Needs you',view:'work',draw:function(){ return DashKit.hubMain({hub:'cdhub',rows:mainRows(),nums:mainNums(true),doHref:'#/work'}); }},
+ unplaced:{label:'Not placed',view:'today',all:'#/today/unplaced',n:function(){ return listFor('unplaced').length; },
+  top:function(){ return listFor('unplaced').slice(0,3).map(function(d){ return {text:d.name||d.id,href:'#/today/unplaced'}; }); }},
+ round:{label:'The round',view:'round',all:'#/round',n:function(){ var A=liveCabins(), date=CD._roundDate||todayISO();
+  return A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length+' of '+A.length; }},
+ dogs:{label:'Dogs here',view:'dogs',all:'#/dogs',n:function(){ return counts().here.length; }},
+ litters:{label:'Litters',view:'litters',all:'#/litters',n:function(){ return (CD.litters||[]).length; },
+  top:function(){ return (CD.litters||[]).filter(function(l){ return l.dob; }).sort(function(a,b){ return String(b.dob).localeCompare(String(a.dob)); })
+   .slice(0,3).map(function(l){ return {text:(l.raw_name||l.id)+' \u00b7 '+dmy(l.dob),href:'#/litters'}; }); }},
+ areas:{label:'Areas',view:'areas',all:'#/areas',n:function(){ return liveCabins().length; }},
+ sops:{label:'SOPs',view:'sops',all:'#/sops',n:function(){ return SOP.rows?SOP.rows.length:'\u2026'; }}
+};
+var HOME_STARTER=['needs'];   /* the pack's starting Main: the house Main (Next, Needs you, 3 numbers, Lisa 2 Nov 2026); more cards are each person's own */
+var HOME={edit:null,msg:''};
+function homeCards(){ var ids=Object.keys(HOME_CARDS).filter(function(id){ return navHas(HOME_CARDS[id].view); });
+ return {ids:ids,on:HubNav.home({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',cards:ids,starter:HOME_STARTER})}; }
+function homeSlot(id){ var s=HubNav.sectionOf(HOME_CARDS[id].view); return s?s.slot:'0'; }
+function homeCard(id){ var c=HOME_CARDS[id];
+ if(c.draw) return '<div data-home="'+id+'">'+c.draw()+'</div>';
+ var top=c.top?c.top():[], n=c.n();
+ return '<section class="card house-lbar hcard" data-home="'+id+'" data-slot="'+homeSlot(id)+'" style="--sc:var(--ljr-'+homeSlot(id)+')">'
+  +'<h3 class="hm-head"><a class="house-go" href="'+c.all+'">'+esc(c.label)+'</a><span class="hcnum">'+esc(String(n))+'</span></h3>'
+  +(top.length?'<ul class="hctop">'+top.map(function(x){ return '<li><a href="'+x.href+'">'+esc(x.text)+'</a></li>'; }).join('')+'</ul>':'')
+  +'<a class="hsee" href="'+c.all+'">See all \u203a</a></section>'; }
+function homeEditHtml(ids){ var on=HOME.edit, off=ids.filter(function(id){ return on.indexOf(id)<0; });
+ return '<section class="card" id="homeEdit"><h3>Arrange Main</h3><ol class="hlist">'
+  +on.map(function(id,i){ var l=esc(HOME_CARDS[id].label);
+   return '<li data-slot="'+homeSlot(id)+'"><span>'+l+'</span>'
+    +'<button type="button" class="btn" data-home-up="'+id+'" aria-label="Move up: '+l+'"'+(i?'':' disabled')+'>\u2191</button>'
+    +'<button type="button" class="btn" data-home-down="'+id+'" aria-label="Move down: '+l+'"'+(i<on.length-1?'':' disabled')+'>\u2193</button>'
+    +'<button type="button" class="btn" data-home-off="'+id+'" aria-label="Take off: '+l+'">\u2715</button></li>'; }).join('')+'</ol>'
+  +(off.length?'<p class="hadd">'+off.map(function(id){ return '<button type="button" class="btn" data-home-add="'+id+'">+ '+esc(HOME_CARDS[id].label)+'</button>'; }).join('')+'</p>':'')
+  +'<p class="hm-go"><button type="button" class="btn" data-home-save>Save</button><button type="button" class="btn" data-home-cancel>Cancel</button>'
+  +'<span class="msg" id="homeMsg">'+saveHtml(HOME.msg)+'</span></p></section>'; }
+function pageMap(){ var h=homeCards();
+ return '<h2 class="sr">Main</h2>'
+  +(HOME.edit?homeEditHtml(h.ids):'<div class="hm hhome">'+h.on.map(homeCard).join('')+'</div>'
+   +(sinkOn()?'<p class="hm-go"><button type="button" class="btn" data-home-arrange>Arrange Main</button>'+(HOME.msg?' <span class="msg">'+saveHtml(HOME.msg)+'</span>':'')+'</p>':''));
 }
+/* Save = one dated row per card (place, or 0 = off), a new row from today; old rows stay for the past. */
+function homeSave(){ var h=homeCards(), on=HOME.edit, from=todayISO();
+ var rows=h.ids.map(function(id){ return {rule_key:'nav.home.OWNER.'+id,value:String(on.indexOf(id)+1),effective_from:from,source:'CD Hub, Arrange Main'}; });
+ HOME.msg='Saving';
+ return rows.reduce(function(p,r){ return p.then(function(){ return sinkPost('breeding_rule',r).then(function(j){
+   var s=bbSaved(j); (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:s.id,rule_key:r.rule_key,value:r.value,effective_from:from,source:r.source,to_date:''}); }); }); },Promise.resolve())
+  .then(function(){ HOME.edit=null; HOME.msg='Saved '+hhmmNow(); go('map',false); },
+   function(e){ HOME.msg='Not saved: '+(e&&e.message||'error'); showSave(document.getElementById('homeMsg'),HOME.msg); }); }
+document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-home-arrange],[data-home-up],[data-home-down],[data-home-off],[data-home-add],[data-home-save],[data-home-cancel]');
+ if(!t) return; var d=t.dataset, L=HOME.edit, id, i;
+ if('homeArrange' in d){ HOME.edit=homeCards().on.slice(); HOME.msg=''; }
+ else if('homeCancel' in d){ HOME.edit=null; HOME.msg=''; }
+ else if('homeSave' in d){ homeSave(); return; }
+ else if(L&&(id=d.homeUp||d.homeDown)){ i=L.indexOf(id); var j=d.homeUp?i-1:i+1; if(i<0||j<0||j>=L.length) return; L[i]=L[j]; L[j]=id; }
+ else if(L&&d.homeOff){ L.splice(L.indexOf(d.homeOff),1); }
+ else if(L&&d.homeAdd){ L.push(d.homeAdd); }
+ else return;
+ go('map',false);
+ var f=document.querySelector(d.homeUp?'[data-home-up="'+d.homeUp+'"]':d.homeDown?'[data-home-down="'+d.homeDown+'"]':'[data-home-save]'); if(f&&!f.disabled) f.focus(); });
 
 function pageToday(){
  var c=counts(), date=CD._roundDate||todayISO();
@@ -2134,6 +2200,31 @@ function fbar(o){
   +(o.hidden||'')+'</div>';
 }
 function quiet(x){ return capFirst(String(x||'').toLowerCase()); }
+/* Find and sort on a list that has no filter panel (Areas, Do). Lisa 15 Nov 2026: any list, any number of records.
+   Search hides the [data-find] items whose words do not match (a group with none left hides too) and says "n of N";
+   the sort is BLDSort's, offering only what the list holds. The words and the sort are kept while the page redraws. */
+var FIND={};
+function findRow(id,what,sortFields,sortVal){
+ var q=(FIND[id]||{}).q||'';
+ return '<div class="fbar" id="fb-'+id+'"><div class="srow">'
+  +'<label class="sbox srch"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg><input type="search" data-find-in="'+id+'" aria-label="Search '+esc(what)+'" placeholder="Search '+esc(what)+'" value="'+esc(q)+'"></label>'
+  +'<select class="sortsel" data-find-sort="'+id+'" aria-label="Sort">'+BLDSort.options(sortFields).map(function(x){ return '<option value="'+x[0]+'"'+(x[0]===sortVal?' selected':'')+'>Sort: '+esc(x[1])+'</option>'; }).join('')+'</select>'
+  +'<span class="mut" data-find-count="'+id+'"></span></div></div>';
+}
+function findSort(id,dflt){ var f=FIND[id]; return f&&f.sort!=null?f.sort:dflt; }
+function findApply(id){
+ var box=document.querySelector('[data-find-in="'+id+'"]'); if(!box) return;
+ var q=box.value.trim().toLowerCase().replace(/\s+/g,' '), items=document.querySelectorAll('[data-find-of="'+id+'"] [data-find]'), n=0;
+ (FIND[id]=FIND[id]||{}).q=box.value;
+ Array.prototype.forEach.call(items,function(el){ var ok=!q||el.textContent.toLowerCase().replace(/\s+/g,' ').indexOf(q)>=0;   /* the words as typed, together */
+  el.classList.toggle('hidden',!ok); if(ok) n++; });
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-of="'+id+'"] [data-find-group]'),function(g){
+  g.classList.toggle('hidden',!!q&&!g.querySelector('[data-find]:not(.hidden)')); });
+ var c=document.querySelector('[data-find-count="'+id+'"]'); if(c) c.textContent=q?n+' of '+items.length:'';
+}
+document.addEventListener('input',function(e){ var id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-find-in'); if(id) findApply(id); });
+document.addEventListener('change',function(e){ var id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-find-sort'); if(!id) return;
+ (FIND[id]=FIND[id]||{}).sort=e.target.value; go(SHOWN,false); var s=document.querySelector('[data-find-sort="'+id+'"]'); if(s) s.focus(); });
 function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
 function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
@@ -3161,7 +3252,8 @@ function pageAreas(){
  var occ=all.filter(function(a){ return inCabin(a.id,date).length; });
  var filt=AREAFOCUS, AFILT={nom2:1,nomode:1,occ:1,cabins:1};
  var shown=filt==='nom2'?noM2:filt==='nomode'?noMode:filt==='occ'?occ:(!filt||filt==='cabins')?all:all.filter(function(a){ return a.id===filt; });
- var fam={}; shown.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var asort=findSort('areas','');   /* As on file = grouped by building, as before; A to Z = one list by code */
+ var fam={}; shown.forEach(function(a){ var k=asort==='name'?'':familyOf(a); (fam[k]=fam[k]||[]).push(a); });
  var order=Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);});
  var N=all.length;
  function cbtn(go,n,lab,on){ return '<button type="button" data-go="'+go+'" aria-pressed="'+String(!!on)+'"><b>'+n+'</b>'+lab+'</button>'; }
@@ -3174,15 +3266,18 @@ function pageAreas(){
  +cbtn('areas/nomode',(N-noMode.length)+'/'+N,'have a mode',filt==='nomode')
  +cbtn('areas/occ',occ.length+'/'+N,'occupied',filt==='occ')
  +'</div>'
+ +findRow('areas','areas',{name:1},asort)+'<div data-find-of="areas">'
  ;
  order.forEach(function(f){
-  var rows=fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);});
-  h+='<h3><span class="dot" style="background:'+(f.charAt(0)==='H'?'var(--p5)':(f.charAt(0)==='3'?'var(--p6)':'var(--p3)'))+'"></span>'
+  var rows=asort==='name'?BLDSort.sort(fam[f],'name',{name:function(a){ return a.code; }})
+   :fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);});
+  h+='<div data-find-group>';
+  if(f) h+='<h3><span class="dot" style="background:'+(f.charAt(0)==='H'?'var(--p5)':(f.charAt(0)==='3'?'var(--p6)':'var(--p3)'))+'"></span>'
    +(FAMNAME[f]||f)+' <span class="mut" style="font-weight:400">'+rows.length+(rows.length===1?' cabin':' cabins')+'</span></h3>';
   rows.forEach(function(a){
    var cur=accessOf(a.id), who=inCabin(a.id,date);
    var m2=a.m2;
-   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'" id="room-'+esc(a.id)+'" data-room="'+esc(a.id)+'">'
+   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'" id="room-'+esc(a.id)+'" data-room="'+esc(a.id)+'" data-find>'
     +'<h4>'+esc(a.code)+' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
     +(cur?' <span class="pill '+(cur==='free'?'i':'w')+'">'+cur+'</span>':' <span class="pill no">flap?</span>')
     +(a.m2ok==='NO'?' <span class="pill w">m\u00b2 unconfirmed</span>':'')+'</h4>'
@@ -3213,8 +3308,8 @@ function pageAreas(){
         return r.status==='over'?' <button type="button" class="pill no" data-over-move="'+esc(a.id)+'">over its limit</button>':''; })()
      +'</div><div data-move-host="'+esc(a.id)+'"></div>';
    }
-   h+='</div>';});});
- return h;
+   h+='</div>';}); h+='</div>';});
+ return h+'</div>';
 }
 function pageLitters(){
  var withDob=CD.litters.filter(function(l){return l.dob;}).length;
@@ -3591,19 +3686,20 @@ function tempVerdict(val,band){
 /* ROUND SAVING. One new row on the save script. The script checks the staff code and records who saved.
    A code remembered in this tab is reused. A missing device set-up does not block a save. Room temperatures are 1 decimal place. */
 var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KEY='cdhub.save.url';   // save.url: an address read from Drive or that worked, kept on this device (15 Nov 2026)
-/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" only clears
-   the round card's copy. It does not stop a valid staff code. #join=<code>&url=<address> still fills the card. */
+/* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" forgets the code
+   and the address kept on this device, and stops the staff page's copy being reused here (15 Nov 2026).
+   #join=<code>&url=<address> still fills the card. */
 var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
 var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
 /* A code the save script ACCEPTED is kept on this device (localStorage), so a phone is not asked again after the tab
    or the Home Screen app is closed. A refused code is removed. This tab's copy (sessionStorage) is only a fallback. */
 var STAFF_KEEP_KEY='cdhub.staff.code';
 function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) return;
- sinkSet(STAFF_KEEP_KEY,c);
+ sinkSet(STAFF_KEEP_KEY,c); sinkSet(SINK_OFF_KEY,'');
  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
-function sinkGet(k){ var v=sinkRaw(k); if(v) return v;
- if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(sinkRaw(SINK_OFF_KEY)?'':sinkRaw(SAVE_KEEP_KEY))||''; if(k===SINK_CODE_KEY&&!sinkRaw(SINK_OFF_KEY)) return sinkRaw('bld.device.code'); return ''; }
+function sinkGet(k){ if(k===SINK_CODE_KEY) return staffCodeNow(); var v=sinkRaw(k); if(v) return v;
+ if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(sinkRaw(SINK_OFF_KEY)?'':sinkRaw(SAVE_KEEP_KEY))||''; return ''; }
 /* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
    in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
@@ -3624,11 +3720,15 @@ function saveUrlLoad(){
 }
 function keepSaveUrl(u){ if(SINK_RE.test(u)&&!sinkRaw(SINK_OFF_KEY)) sinkSet(SAVE_KEEP_KEY,u); }
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
-function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!sinkGet(SINK_CODE_KEY); }
+/* ONE source for the code (live test 13 Nov 2026: the panel said "off" although the kept code saved fine). The panel, the
+   saves and the photo all use staffCodeNow(). The staff page's copy (bld.*) is not reused after "Switch off here". */
+function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!staffCodeNow(); }
+function codeKept(){ var off=!!sinkRaw(SINK_OFF_KEY);
+ return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
  var c=STAFF_MEM;
  if(!c){ try{ c=sessionStorage.getItem('cdhub.staff.session')||''; }catch(e){ c=''; } if(c) STAFF_MEM=c; }
- if(!c) c=sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')||'';
+ if(!c) c=codeKept();
  if(c&&c===STAFF_REJECTED) return '';
  return c;
 }
@@ -3642,7 +3742,17 @@ function noteBadCode(c){
  STAFF_REJECTED=String(c||''); STAFF_MEM='';
  try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
  if(sinkRaw(STAFF_KEEP_KEY)===STAFF_REJECTED) sinkSet(STAFF_KEEP_KEY,'');
+ if(sinkRaw(SINK_CODE_KEY)===STAFF_REJECTED) sinkSet(SINK_CODE_KEY,'');
 }
+/* "Switch off here": forget the code and the address on this device; the next save asks for the code again. */
+function forgetHere(){ STAFF_MEM='';
+ try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
+ [SINK_URL_KEY,SINK_CODE_KEY,STAFF_KEEP_KEY,SAVE_KEEP_KEY].forEach(function(k){ sinkSet(k,''); });
+ sinkSet(SINK_OFF_KEY,'1'); }
+/* One line on the panel that says what this device holds. It never shows the code, only whether one is kept. */
+function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
+ var yn=function(b){ return b?'yes':'no'; };
+ return 'This device: app mode '+yn(app)+' \u00b7 code kept '+yn(!!codeKept())+' \u00b7 save address '+yn(SINK_RE.test(sinkGet(SINK_URL_KEY))); }
 function askStaffCode(){
  var have=staffCodeNow(); if(have) return Promise.resolve(have);
  if(STAFF_ASK) return STAFF_ASK;
@@ -3821,8 +3931,9 @@ function sinkCard(){
  saveUrlLoad(); var on=sinkOn();
  return '<div class="card '+(on?'acc5':'acc2')+'" id="sinkcard"><h4>Saving on this device: '+(on?'on':'off')+'</h4>'
   +(!on&&SINK_RE.test(sinkGet(SINK_URL_KEY))?'<p class="mut">The save address is already on this phone: type your staff code and tap Use these.</p>':'')
+  +'<p class="mut" data-device-line>'+deviceLine()+'</p>'
   +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(sinkGet(SINK_URL_KEY))+'"'+(SINK_RE.test(sinkGet(SINK_URL_KEY))?' hidden style="display:none"':'')+'>'
-  +'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(sinkGet(SINK_CODE_KEY)?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">'
+  +'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(staffCodeNow()?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">'
   +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
   +'<span class="mut" id="sinkmsg" role="status"></span></div></div>';
 }
@@ -3832,13 +3943,15 @@ function pageWork(){
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
+ var wsort=findSort('work','');   /* As on file = by area, as before */
  var h='<h2>Outstanding</h2>'+needsCard()
-  +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>';
+  +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>'
+  +findRow('work','to-dos',{name:1},wsort)+'<div data-find-of="work">';
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
-  rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
+  rows=wsort==='name'?BLDSort.sort(rows,'name',{name:function(r){ return r.item; }}):rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */
-  h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
+  h+='<div class="card '+g[1]+'" data-find-group><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      var ask=g[0]==='BLOCKED'?medAsk(r):null, found=ask?medRows(ask):null;
@@ -3848,12 +3961,12 @@ function pageWork(){
       if(!found.length) act='<br><span class="mut">No medicine recorded'+(ask.month?' in '+esc(UKMON[ask.month-1]):'')+'. Nothing to open.</span>';
       else act='<br><button type="button" class="btn" data-go="dogs/'+esc(ask.token)+'">Show the record</button>';
      }
-     return '<tr id="work-'+esc(r.id)+'"><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
+     return '<tr id="work-'+esc(r.id)+'" data-find><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
       +'<td>'+esc(r.item)+(r.note?'<br><span class="mut">'+esc(r.note)+'</span>':'')+act+'</td>'
       +'<td class="mut">'+esc(tail)+'</td></tr>'; }).join('')
    +'</tbody></table></div></div>';
  });
- return h;
+ return h+'</div>';
 }
 
 
@@ -4633,11 +4746,12 @@ function go(id,push){
    if(!u) u=sinkGet(SINK_URL_KEY);
    if(!SINK_RE.test(u)){ m.textContent='That is not a save script address (it ends in /exec).'; return; }
    sinkSet(SINK_OFF_KEY,'');
-   if(c&&c.indexOf('\u2022')<0) sinkSet(SINK_CODE_KEY,c);
-   if(!sinkGet(SINK_CODE_KEY)){ m.textContent='Type your staff code too.'; return; }
+   c=String(c).trim();
+   if(c&&c.indexOf('\u2022')<0){ sinkSet(SINK_CODE_KEY,c); if(sinkRaw(STAFF_KEEP_KEY)!==c) sinkSet(STAFF_KEEP_KEY,''); rememberStaffCode(c); }
+   if(!staffCodeNow()){ m.textContent='Type your staff code too.'; return; }
    if(!sinkSet(SINK_URL_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
    go('round',false); });
-  if(sOff) sOff.addEventListener('click',function(){ sinkSet(SINK_URL_KEY,''); sinkSet(SINK_CODE_KEY,''); sinkSet(SAVE_KEEP_KEY,''); sinkSet(SINK_OFF_KEY,'1'); go('round',false); });
+  if(sOff) sOff.addEventListener('click',function(){ forgetHere(); go('round',false); });
   Array.prototype.forEach.call(document.querySelectorAll('.tmin, .tmax'),function(el){
    var which=(el.className.indexOf('tmin')>=0)?'min':'max';
    var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]');
@@ -4664,6 +4778,7 @@ function go(id,push){
  }
  /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });   /* kept words still hide what they hid */
  window.scrollTo(0,keepY);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
