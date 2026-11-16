@@ -114,7 +114,11 @@
     return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
   function photoBox(s) {
     var id = mainPhoto(s), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
+    /* the photo's turn (photo.rotate.<file>, Lisa 15 Nov 2026) is drawn on top; the stored picture never changes */
+    var deg = id ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
     if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
+      'data-rot': String(deg),
+      onload: function () { if (deg) { box.style.position = 'relative'; this.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); } },
       onerror: function () { box.textContent = 'Photo'; } }));
     return box; }
   function dogCard(tag, it) {
