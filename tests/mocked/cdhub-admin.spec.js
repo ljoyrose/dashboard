@@ -157,3 +157,13 @@ asOwner('Show QR: a QR drawer that cannot load says so, and Show QR tries again'
   await page.locator('[data-adm-qr]').click();   // Show again
   await expect(page.locator('#adm-phone .adm-qr svg')).toBeVisible();
 });
+
+// Lisa 15 Nov 2026: an always-visible link labelled exactly "Script page" opens the owner page.
+asOwner('Admin always shows a "Script page" link to the owner page', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  const link = page.locator('.adm-script a', { hasText: 'Script page' });
+  await expect(link).toHaveText('Script page');
+  await expect(link).toHaveAttribute('href', /SAMPLE-fake-address\/exec\?page=approve$/);
+});
