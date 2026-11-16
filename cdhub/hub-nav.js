@@ -19,6 +19,7 @@
   var VIEWS = {
     today: { label: 'Today', icon: 't-cal' },
     work: { label: 'Do', icon: 't-do' },
+    decide: { label: 'Decide', icon: 's-check' },   /* yes/no items waiting on the owner (a view, no table) */
     map: { label: 'Main', icon: 't-main' },   /* the Live feed: Main's own page */
     compliance: { label: 'Compliance', icon: 's-check' },
     items: { label: 'Items', icon: 't-box' },
@@ -35,7 +36,7 @@
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
-    { id: 'main', label: 'Main', slot: '1', icon: 't-main', go: 'map', views: ['map', 'today', 'work'] },
+    { id: 'main', label: 'Main', slot: '1', icon: 't-main', go: 'map', views: ['map', 'today', 'work', 'decide'] },
     { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check', go: 'compliance', views: ['compliance', 'items', 'breed'] },   /* Breed Better: a welfare and standards scheme, its own brick */
     { id: 'money', label: 'Money', slot: '3', icon: 't-money', go: 'money', views: [] },
     { id: 'ops', label: 'Records', slot: '4', icon: 't-box', go: 'dogs', views: ['dogs', 'litters', 'areas', 'round', 'sops', 'temps'] },
