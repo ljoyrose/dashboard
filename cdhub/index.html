@@ -2522,9 +2522,18 @@ function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-function galleryItem(f,mainId,dates){
+/* Remove, Make main and Put back (Lisa 16 Nov 2026: "some are bad so need to be able to remove"). Nothing is deleted:
+   Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
+   main link (the script ends the old main one). ended = true for an item in the Ended list. */
+function galleryTools(f,main,ended){
+ if(!f.link_id) return '';
+ if(ended) return ' <button type="button" class="cb" data-gal-back="'+esc(f.id)+'">Put back</button>';
+ return ' <span class="gtools">'+(main||f.kind!=='photo'?'':'<button type="button" class="cb" data-gal-main="'+esc(f.id)+'">Make main</button> ')
+  +'<button type="button" class="cb" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this from the gallery">Remove</button></span>';
+}
+function galleryItem(f,mainId,dates,ended){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
- var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'');
+ var cap=(dates===false?'':'<span class="mut" data-k="photo-date">'+esc(when)+'</span>')+(main?' <span class="pill" data-k="main">Main</span>':'')+galleryTools(f,main,ended);
  if(f.kind==='link'){ var u=BLDPhotos.safeUrl(f.url); if(!u) return '';
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
@@ -2538,9 +2547,36 @@ function galleryHtml(d,ph){
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
   +'<button type="button" class="btn quiet" data-photo-dates="'+(dates?'0':'1')+'" aria-pressed="'+(dates?'true':'false')+'">Dates '+(dates?'shown':'hidden')+'</button> <span class="mut" data-photo-dates-msg></span>'
   +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates); }).join('')+'</ul></details>':'')
-  +'</div></details>';
+  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates,true); }).join('')+'</ul></details>':'')
+  +'<p class="mut" data-gal-msg role="status"></p></div></details>';
 }
+/* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
+   with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
+   end reason marks it removed and photos.js treats it as ended straight away. */
+var GAL_REMOVED='Removed from gallery';
+document.addEventListener('click',async function(ev){
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
+ var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
+ b.disabled=true; if(msg) msg.textContent='Saving\u2026';
+ if(b.hasAttribute('data-gal-end')){
+  var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
+  var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
+  j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
+  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; }
+ } else {
+  var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
+  j=await sinkAct('link_add',{from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
+  if(j.ok&&j.result&&j.result.status==='saved'){
+   if(role==='main') links.forEach(function(l){ if(l.from_table==='subjects'&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
+   links.push({id:j.result.id||'',from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
+ }
+ b.disabled=false;
+ if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ if(msg) msg.textContent='Not saved: '+((j&&j.message)||'try again.'); return; }
+ var open=g&&g.open; drawDogs();
+ var again=document.querySelector('details.gal[data-dog="'+dog+'"]');
+ if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+});
 /* Dates shown / hidden: saves this person's own row (photos.show_dates.owner) from today. One change a day: the settings
    list keeps one row per key per day, so a second change today is refused with a plain message. */
 document.addEventListener('click',async function(ev){
