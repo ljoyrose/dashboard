@@ -54,6 +54,16 @@ test('only a real Apps Script address is accepted as the Script URL', () => {
   assert.equal(s.getScriptUrlSet(), true);
 });
 
+test('a Workspace save address (/a/macros/<domain>/) is accepted too; look-alikes are not (16 Nov 2026)', () => {
+  const s = mk(fakeServer());
+  ['https://script.google.com/a/macros/example.com/s/ABC/dev', 'https://script.google.com/a/macros/ex ample.com/s/ABC/exec',
+    'https://script.google.com/a/example.com/s/ABC/exec', 'https://evil.example/a/macros/example.com/s/ABC/exec'].forEach((u) => {
+    assert.equal(s.setScriptUrl(u).ok, false, u);
+  });
+  assert.equal(s.setScriptUrl('https://script.google.com/a/macros/example.com/s/AKfycbxTEST_1-x/exec').ok, true);
+  assert.equal(s.getScriptUrlSet(), true);
+});
+
 test('banner follows what the script reports', async () => {
   const srv = fakeServer();
   const s = mk(srv, { scriptUrl: GOOD_URL });
