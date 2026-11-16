@@ -221,11 +221,10 @@ function dogcardPick_(word, allowed) {
   return hit;
 }
 
-/** sub-<name slug>, made unique against the ids already in the file. */
-function dogcardSubjectId_(name, ids) {
-  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'dog';
-  var id = 'sub-' + slug, n = 2;
-  while (ids[id]) id = 'sub-' + slug + '-' + (n++);
+/** A new dog's id: sub- and random letters (Q4, 15 Nov 2026), never the name. Unique against the ids already in the file. */
+function dogcardSubjectId_(ids) {
+  var id = newId_('sub');
+  while (ids[id]) id = newId_('sub');
   return id;
 }
 
@@ -320,7 +319,7 @@ function sinkSubjectCreate_(req) {
     }
 
     var allIds = {}; read.records.forEach(function (r) { allIds[r.id] = 1; });
-    var id = dogcardSubjectId_(name, allIds);
+    var id = dogcardSubjectId_(allIds);
     var host = dogcardText_(f.host, 'host', {}, 40) || 'CD Hub';
     var values = { id: id, tenant_id: tenant, name: name, sex: sex, dob: dob, size_band: '', coat_type: coatType, kind: kind,
       neuter_status: neuter, species: species, breed: breed, coat_colour_id: ids.coat_colour_id, coat_pattern_id: ids.coat_pattern_id,
@@ -334,7 +333,9 @@ function sinkSubjectCreate_(req) {
     dogcardAppend_({ file: STATUS_FILE_, need: ['id', 'subject_id', 'state', 'from_date'], idPrefix: 'sst' },
       { subject_id: id, state: activeWord, from_date: today, to_date: '', reason: 'added in ' + host });
     if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
-    return { status: 'saved', id: id };
+    // 15 Nov 2026 (BB): a pup gets its parents' open links of kinds the owner set to inherit at birth (e.g. a scheme)
+    var inherited = litterId ? linkInheritAtBirth_(id, litterId, dob, who, now) : [];
+    return inherited.length ? { status: 'saved', id: id, links: inherited } : { status: 'saved', id: id };
   });
 }
 

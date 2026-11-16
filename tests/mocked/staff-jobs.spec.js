@@ -504,6 +504,7 @@ test('Earlier, owner time choices: part of day, exact, not known and now each sa
   await ears.getByLabel('Time done').fill('07:15');
   await ears.getByRole('button', { name: 'Done: Ears' }).click();
   await expect.poll(() => sent.length).toBe(2);
+  await expect(ears.locator('.done-line.good')).toBeVisible();
   f = sent[1].fields;
   expect(f.time_given).toBeUndefined();
   expect(hm(new Date(f.happened_at))).toBe('07:15');
@@ -513,6 +514,7 @@ test('Earlier, owner time choices: part of day, exact, not known and now each sa
   await when.selectOption('none');
   await ears.getByRole('button', { name: 'Done: Ears' }).click();
   await expect.poll(() => sent.length).toBe(3);
+  await expect(ears.locator('.done-line.good')).toBeVisible();
   expect(sent[2].fields.time_given).toBe('false');
   // today: now is offered
   await page.getByRole('button', { name: 'Earlier: Ears' }).click();

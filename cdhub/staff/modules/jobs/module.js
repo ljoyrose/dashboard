@@ -106,7 +106,7 @@
       (d.dogs || []).forEach(function (x) { nameOf[x.id] = x.label; });
 
       /* type_keys starting "round." are rows The round writes for itself: never a job on this screen */
-      var today = c.today(), types = (typesRead.rows || []).filter(function (t) { return String(t.type_key || '').indexOf('round.') !== 0; }), inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = {};
+      var today = c.today(), types = (typesRead.rows || []).filter(function (t) { return String(t.type_key || '').indexOf('round.') !== 0 && t.target !== 'item'; }), inForce = BLDDue.jobsInForce(types, today), byKey = {}, keyOf = {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
       types.forEach(function (t) { keyOf[t.id] = t.type_key; });
       /* today's lines for a job, newest first; a corrected line gives way to its correction */

@@ -76,14 +76,14 @@ test('the public seed is 49 name rows and carries no form address', () => {
   }
 });
 
-test('bottom bar is Main, Compliance, Ops, People (menu option A); SOPs sit under More in Ops yellow; Assocs is off the menus', async ({ page }) => {
+test('bottom bar is Main, Compliance, Records, People (menu option A); SOPs sit under More in Records yellow; Assocs is off the menus', async ({ page }) => {
   await page.goto('cdhub/');
   await signIn(page);
-  await expect(page.locator('#nav > button.ht .htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+  await expect(page.locator('#nav > button.ht .htl')).toHaveText(['Main', 'Compliance', 'Records', 'People']);
   await expect(page.locator('#nav [data-go="buyers"]')).toHaveCount(0);
   await expect(page.locator('#nav .house-more button[data-go="sops"]')).toHaveAttribute('data-slot', '4');
   await page.locator('nav.house-tabs [data-house-more]').click();
-  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Today', 'Do', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
+  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveText('Temps');
   await tabClick(page, '#nav button[data-go="sops"]');
   await expect(page).toHaveURL(/#\/sops$/);

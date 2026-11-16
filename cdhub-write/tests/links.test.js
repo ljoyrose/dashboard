@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');
 
-const LINKS_H = 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,created_at,updated_at';
+const LINKS_H = 'id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,end_reason,created_at,updated_at';
 const RULE_H = 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date';
 let n = 0;
 
@@ -43,7 +43,7 @@ test('link_add: behind its own switch; role from link_kind rule rows in force; w
   const row = rows(e)[0];
   assert.deepEqual(row.slice(2, 9), ['subject', 'sub-test-a', 'gallery', 'files', 'fil-1', '2026-11-14', '']);
   assert.equal(row[12], '2');
-  assert.match(row[14], /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);   // created_at in UTC
+  assert.match(row[15], /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);   // created_at in UTC
   assert.equal(post(e, 'link_add', g('sub-test-a', 'fil-2', 'main')).code, 'NOT_ALLOWED');   // blank who_may = owner only
   assert.equal(post(e, 'link_add', g('sub-test-a', 'fil-2', 'old'), e.codes.owner).code, 'INVALID');
   assert.equal(post(e, 'link_add', g('sub-test-a', 'fil-9'), e.codes.owner).code, 'NOT_FOUND');
@@ -61,7 +61,7 @@ test('link_add: max_per_from 1 (main) ends the old main in the same save; link_e
   const rs = rows(e);
   assert.equal(rs.length, 2);
   assert.equal(rs[0][8], '2026-11-09');
-  assert.match(rs[0][15], /Z$/);
+  assert.match(rs[0][16], /Z$/);
   assert.equal(rs[1][8], '');
   assert.equal(post(e, 'link_end', { id: b.result.id }).code, 'NOT_ALLOWED');
   assert.equal(post(e, 'link_end', { id: b.result.id, to_date: '2026-11-09' }, e.codes.owner).code, 'INVALID');
@@ -69,4 +69,53 @@ test('link_add: max_per_from 1 (main) ends the old main in the same save; link_e
   assert.equal(end.ok, true, JSON.stringify(end));
   assert.equal(rows(e)[1][8], '2026-11-12');
   assert.equal(post(e, 'link_end', { id: b.result.id }, e.codes.owner).code, 'NOT_ALLOWED');
+});
+
+test('link_end: an optional reason is kept in end_reason; nothing else changes', () => {
+  const e = env();
+  const a = post(e, 'link_add', Object.assign(g('sub-test-a', 'fil-1'), { from_date: '2026-11-01' }), e.codes.owner);
+  const end = post(e, 'link_end', { id: a.result.id, to_date: '2026-11-12', reason: 'Left the scheme' }, e.codes.owner);
+  assert.equal(end.ok, true, JSON.stringify(end));
+  assert.equal(rows(e)[0][14], 'Left the scheme');
+  assert.equal(rows(e)[0][13], '');
+});
+
+function inheritEnv(value, extraRules) {
+  const e = env();
+  const t = e.props.TENANT_ID;
+  const br = e.file('BLD-breeding_rule.csv')[0];
+  br.content += [`r20,${t},link_kind.enrolled_in,Enrolled in,2026-01-01,test,,,,`, `r21,${t},link_kind.enrolled_in.to_tables,score_schemes,2026-01-01,test,,,,`]
+    .concat(value === undefined ? [] : [`r22,${t},link_kind.enrolled_in.inherit_at_birth,${value},2026-01-01,test,,,,`]).concat(extraRules || []).join('\r\n') + '\r\n';
+  e.file('BLD-subject.csv')[0].content += `sub-test-p,${t},Pup\r\n`;
+  e.addFile('BLD-score_schemes.csv', `id,tenant_id,name\r\nscs-1,${t},One\r\nscs-2,${t},Two\r\n`);
+  e.addFile('BLD-litter.csv', `id,tenant_id,dam_subject_id,sire_subject_id\r\nltr-1,${t},sub-test-a,sub-test-b\r\n`);
+  const en = (from, to) => post(e, 'link_add', { from_table: 'subject', from_id: from, to_table: 'score_schemes', to_id: to, role: 'enrolled_in', from_date: '2026-01-05', source: 'test' }, e.codes.owner);
+  assert.equal(en('sub-test-a', 'scs-1').ok, true);
+  assert.equal(en('sub-test-b', 'scs-1').ok, true);
+  assert.equal(en('sub-test-b', 'scs-2').ok, true);
+  return e;
+}
+const inherit = (e) => { const r = e.ctx.linkInheritAtBirth_('sub-test-p', 'ltr-1', '2026-11-10', { id: 'sc-test', who: 'Owner', role: 'OWNER' }, new Date(Date.UTC(2026, 10, 12, 10))); return Array.from(r); };
+const pupLinks = (e) => rows(e).filter((r) => r[3] === 'sub-test-p');
+
+test('inherit at birth: no row, none or blank = off; a list copies only those schemes, once even if both parents have it', () => {
+  [undefined, 'none', ''].forEach((v) => { const e = inheritEnv(v); assert.deepEqual(inherit(e), []); assert.equal(pupLinks(e).length, 0); });
+  const e = inheritEnv('scs-1');
+  assert.equal(inherit(e).length, 1);
+  const p = pupLinks(e);
+  assert.equal(p.length, 1);
+  assert.equal(p[0][6], 'scs-1');
+  assert.equal(p[0][7], '2026-11-10');
+  assert.match(p[0][9], /^inherited at birth from sub-test-/);
+  assert.deepEqual(inherit(e), []);   // run again: already there
+});
+
+test('inherit at birth: * copies every open scheme; an ended parent link is not copied', () => {
+  const e = inheritEnv('*');
+  const lid = rows(e).find((r) => r[3] === 'sub-test-b' && r[6] === 'scs-2')[0];
+  assert.equal(post(e, 'link_end', { id: lid, to_date: '2026-11-01', reason: 'Retired' }, e.codes.owner).ok, true);
+  assert.equal(inherit(e).length, 1);
+  assert.deepEqual(pupLinks(e).map((r) => r[6]), ['scs-1']);
+  const e2 = inheritEnv('*');
+  assert.equal(inherit(e2).length, 2);
 });
