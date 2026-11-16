@@ -2729,11 +2729,13 @@ async function photoSave(inp,getSrc,was){
   if(!pic){ photoBusy(inp,false); return; }   /* Cancel: nothing is sent */
   if(pic.error){ photoBusy(inp,false); photoMsg(inp,pic.error); return; }
   photoMsg(inp,'Saving the photo…');
-  var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-   body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
+  var pb={v:1,request_id:sinkRid(),code:g.code||'',action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}};
+  if(g.google) pb.google_token=g.google;
+  var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pb)});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
+  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; photoBusy(inp,false); photoMsg(inp,'This Google account is not an owner. Add the photo again and enter your staff code.'); return; }
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok&&g.code) keepStaffCode(g.code);
   if(!j.ok||!j.result||!j.result.file_id){ photoBusy(inp,false); photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
@@ -3722,7 +3724,7 @@ function keepSaveUrl(u){ if(SINK_RE.test(u)&&!sinkRaw(SINK_OFF_KEY)) sinkSet(SAV
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 /* ONE source for the code (live test 13 Nov 2026: the panel said "off" although the kept code saved fine). The panel, the
    saves and the photo all use staffCodeNow(). The staff page's copy (bld.*) is not reused after "Switch off here". */
-function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!staffCodeNow(); }
+function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && (!!staffCodeNow() || !!sinkGoogle()); }   /* a signed-in owner needs no code (16 Nov 2026) */
 function codeKept(){ var off=!!sinkRaw(SINK_OFF_KEY);
  return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
@@ -3773,10 +3775,17 @@ function askStaffCode(){
  });
  return STAFF_ASK;
 }
+/* Owners save with their Google sign-in (Lisa 16 Nov 2026, option A): while the hub is signed in, the save carries the
+   Google sign-in and no code is asked. The save script checks it with Google and against its owner list. If it answers
+   that this account is not an owner (or that route is off), this device goes back to asking for the code. */
+var SINK_GOOGLE_NO=false;
+function sinkGoogle(){ return !SINK_GOOGLE_NO&&!sinkRaw(SINK_OFF_KEY)&&TOKEN&&Date.now()<TOKEN_EXP?TOKEN:''; }   /* Switch off here wins */
 async function sinkGate(){
  if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
  var url=sinkGet(SINK_URL_KEY);
  if(!SINK_RE.test(url)) return {ok:false,code:'UNREACHABLE',message:'Could not reach the save script. Nothing is known to be saved.'};
+ var gt=sinkGoogle();
+ if(gt) return {ok:true,url:url,code:staffCodeNow(),google:gt};
  var code=await askStaffCode();
  if(!code) return {ok:false,code:'NO_CODE',message:'Enter your staff code. Nothing was saved.'};
  return {ok:true,url:url,code:code};
@@ -3797,13 +3806,16 @@ function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortControll
  return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
    function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 40 seconds. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
+function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOGLE_NOT_OWNER'||j.code==='NO_CODE')); }
 async function sinkSend(body){
  var g=await sinkGate();
  if(!g.ok) return g;
- body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code;
+ body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code||'';
+ if(g.google) body.google_token=g.google; else delete body.google_token;
  try{
   var j=await sinkFetch(body,g.url);
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok){ keepStaffCode(g.code); keepSaveUrl(g.url); }
+  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; return sinkSend(body); }   /* not an owner account: ask the code instead */
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok){ if(g.code) keepStaffCode(g.code); keepSaveUrl(g.url); }
   return j;
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
@@ -4742,7 +4754,7 @@ function go(id,push){
     if(/^litter:/.test(el.value)){ roundAddLitter(el.dataset.area,el.value.slice(7),msg); return; }
     roundSave(el.dataset.area,{add:el.value},msg); }); });
   Array.prototype.forEach.call(document.querySelectorAll('.rempty'),function(el){ el.addEventListener('click',function(){
-   if(!window.confirm('Mark this cabin empty for the '+(el.dataset.slot==='am'?'morning':'afternoon')+'? No dogs, so no reading is needed.')) return;
+   /* One tap saves (Lisa 16 Nov 2026: no "Mark this cabin empty?" second click). */
    roomEmptySave(el.dataset.area,el.dataset.slot,el.parentNode); }); });
   var sOn=document.getElementById('sinkon'), sOff=document.getElementById('sinkoff');
   if(sOn) sOn.addEventListener('click',function(){

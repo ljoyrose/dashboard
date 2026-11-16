@@ -67,7 +67,7 @@ function sinkDogcard_(req, kind, fn) {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + spec.on) !== 'true') throw err_('TABLE_OFF', 'Saving to ' + spec.file + ' is switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
-  var who = authStaff_(req.code);
+  var who = authSaver_(req);
   if (who.role !== 'OWNER' && (spec.owner || who.role !== 'STAFF')) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }

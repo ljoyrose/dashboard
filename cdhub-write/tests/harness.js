@@ -34,6 +34,7 @@ function makeEnv(opts = {}) {
   const env = {
     nowMs: opts.nowMs || DEFAULT_NOW,
     props: Object.assign({}, opts.props || {}),
+    fetches: [], google: opts.google || null,
     cache: {},
     email: opts.email || '',
     drive: [],          // [{id,title,content}]
@@ -154,6 +155,21 @@ function makeEnv(opts = {}) {
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
+    // Google's answers for the owner sign-in check (Auth.gs authOwnerGoogle_). Tests set env.google; none = Google unreachable.
+    UrlFetchApp: { fetch: (url, o) => {
+      env.fetches.push({ url, headers: (o && o.headers) || {} });
+      if (!env.google) throw new Error('no network in tests');
+      const resp = (code, body) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(body) });
+      if (url.indexOf('https://oauth2.googleapis.com/tokeninfo?access_token=') === 0) {
+        const t = env.google.tokens[decodeURIComponent(url.split('=')[1])];
+        return t ? resp(200, { aud: t.aud, azp: t.aud, expires_in: String(t.expires_in == null ? 3000 : t.expires_in) }) : resp(400, { error: 'invalid_token' });
+      }
+      if (url.indexOf('https://www.googleapis.com/drive/v3/about') === 0) {
+        const t = env.google.tokens[String((o && o.headers && o.headers.Authorization) || '').replace('Bearer ', '')];
+        return t ? resp(200, { user: { emailAddress: t.email, displayName: t.name } }) : resp(401, {});
+      }
+      return resp(404, {});
+    } },
     DriveApp: {
       getFolderById: (id) => {
         if (id === 'FOLDER-TEST') return folder;
