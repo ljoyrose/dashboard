@@ -460,3 +460,20 @@ test('Checks records score: a check_log row carries the values typed on its form
   assert.equal(r.gate_result, 'pass', JSON.stringify(r.lines));
   assert.deepEqual(r.lines.map((l) => [l.answer_then, l.date_then]), [['ok', '2026-08-13'], ['Good', '2026-09-01']]);
 });
+
+test('Checks records score by check type family: every version of a check type (cty-ftb-1, then -2) is read through its type_key', () => {
+  const types = [{ id: 'cty-ftb-1', type_key: 'fit_to_breed' }, { id: 'cty-ftb-2', type_key: 'fit_to_breed' }, { id: 'cty-other-1', type_key: 'other' }];
+  const logs = [{ id: 'c1', check_type_id: 'cty-ftb-1', subject_id: 'a1', outcome: 'ok', happened_at: '2026-08-13T12:00:00Z' },
+    { id: 'c2', check_type_id: 'cty-ftb-2', subject_id: 'a2', outcome: 'ok', happened_at: '2026-11-16T09:00:00Z' },
+    { id: 'c3', check_type_id: 'cty-other-1', subject_id: 'a3', outcome: 'ok', happened_at: '2026-11-16T09:00:00Z' },
+    { id: 'c4', check_type_id: 'cty-gone-1', subject_id: 'a1', outcome: 'ok' },
+    { id: 'c5', check_type_id: 'cty-ftb-2', subject_id: 'a4', outcome: 'ok', check_type_key: 'own' }];
+  const m = View.withValues(logs, [], types);
+  assert.deepEqual(m.map((r) => r.check_type_key), ['fit_to_breed', 'fit_to_breed', 'other', undefined, 'own']);   // a real column wins
+  assert.equal(logs[0].check_type_key, undefined);   // the loaded rows are not changed
+  const Score = require('../../breed-better/score.js');
+  const crit = { id: 'ftb', band_id: 'g', label: 'Fit to Breed', evidence_source: 'BLD-check_log', evidence_match: 'check_type_key=fit_to_breed', answer_field: 'outcome', date_field: 'happened_at' };
+  const run = (id) => Score.score({ scheme: { id: 's' }, bands: [{ id: 'g', kind: 'gate' }], subject: { id }, asOf: '2026-11-16', judgements: {},
+    criteria: [crit], points: [{ id: 'p1', criterion_id: 'ftb', answer_match: 'in:fit|yes|ok', gate_outcome: 'pass' }], evidence: { 'BLD-check_log': m } }).gate_result;
+  assert.deepEqual([run('a1'), run('a2'), run('a3') === 'pass'], ['pass', 'pass', false]);   // old version, new version, not this family
+});
