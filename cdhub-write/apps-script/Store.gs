@@ -139,6 +139,102 @@ function store_readSheet_(file) {
            rowNums: got.rowNums, width: got.width, lastRow: sh.getLastRow(), shown: got.rows, types: types };
 }
 
+/**
+ * Fast read for an append (16 Nov 2026: BLD-area_reading has ~31,000 rows and every save read all of them, ~25 s).
+ * Reads the header, the LAST `n` rows in full, and only the columns named in `fullCols` for every row (e.g. id, so a
+ * new id is still checked against every row; the slot columns, so a late reading is still checked against every slot).
+ * Returns the same shape as store_readSheet_ with records = the last n rows only, plus tail: true, tailFrom (sheet row
+ * of the first tail row), full: {col: [values for every data row]} and complete (true when the tail is the whole table).
+ * Not a Sheet (CSV): the normal full read. Only for appends: an edit in place needs store_read_.
+ */
+function store_readTail_(title, n, fullCols) {
+  var file = store_findOne_(title);
+  if (!file) throw err_('FILE_MISSING', title + ' does not exist yet. Lisa needs to create it before this can be saved.');
+  if (!store_isSheet_(file)) { var all = store_read_(title, true); all.complete = true; return all; }
+  var sh = store_tab_(file), lr = sh.getLastRow(), lc = sh.getLastColumn();
+  if (!lr || !lc) return store_readSheet_(file);
+  var head = sh.getRange(1, 1, 1, lc).getDisplayValues()[0].slice();
+  while (head.length && head[head.length - 1] === '') head.pop();
+  var w = head.length, from = Math.max(2, lr - n + 1), types = store_typesFor_(file.getName(), head);
+  if (!w) return store_readSheet_(file);
+  var rows = [head], nums = [1];
+  if (lr >= from) {
+    var block = sh.getRange(from, 1, lr - from + 1, w).getDisplayValues();
+    var real = {};
+    if (types) types.forEach(function (t, j) {
+      if (t === 'datetime') real[j] = sh.getRange(from, j + 1, lr - from + 1, 1).getValues();
+    });
+    var realRows = [];
+    block.forEach(function (r, i) {
+      if (r.every(function (x) { return x === ''; })) return;
+      rows.push(r.slice()); nums.push(from + i);
+      var rr = {}; for (var j in real) { var v = (real[j][i] || [])[0]; rr[j] = store_isDate_(v) ? store_isoOf_(v) : null; }
+      realRows.push(rr);
+    });
+  }
+  var records = rows.slice(1).map(function (r, k) {
+    var o = {};
+    for (var i = 0; i < w; i++) o[head[i]] = realRows[k][i] !== undefined && realRows[k][i] !== null ? realRows[k][i] : (r[i] === undefined ? '' : r[i]);
+    for (i = 0; i < w; i++) if (HEADER_NAMED_BLANK_[head[i]] === true && head.indexOf('') < 0) o[''] = o[head[i]];
+    return o;
+  });
+  var full = {};
+  (fullCols || []).forEach(function (c) {
+    var j = head.indexOf(c);
+    if (j < 0 || lr < 2) { full[c] = []; return; }
+    var dt = types && types[j] === 'datetime';
+    var col = dt ? sh.getRange(2, j + 1, lr - 1, 1).getValues() : sh.getRange(2, j + 1, lr - 1, 1).getDisplayValues();
+    full[c] = col.map(function (x) { var v = x[0]; return dt ? (store_isDate_(v) ? store_isoOf_(v) : String(v === undefined || v === null ? '' : v)) : v; });
+  });
+  var text = store_rowsText_(rows);
+  return { file: file, kind: 'sheet', tab: sh, text: text, size: text.length, header: head, records: records,
+           rowNums: nums, width: w, lastRow: lr, shown: rows, types: types,
+           tail: true, tailFrom: from, full: full, complete: from === 2 };
+}
+
+/** The tail rows as the Sheet shows them now, for the same row span as `read` (only used with store_readTail_). */
+function store_tailText_(sh, read, upTo) {
+  var w = read.width, rows = [sh.getRange(1, 1, 1, w).getDisplayValues()[0]];
+  if (upTo >= read.tailFrom) sh.getRange(read.tailFrom, 1, upTo - read.tailFrom + 1, w).getDisplayValues().forEach(function (r) {
+    if (!r.every(function (x) { return x === ''; })) rows.push(r);
+  });
+  return { rows: rows, text: store_rowsText_(rows) };
+}
+
+/** store_appendSheet_ for a tail read: the same guards, over the header and the tail rows instead of every row. */
+function store_appendSheetTail_(title, rowValues, read) {
+  var sh = read.tab, beforeHash = textHash_(read.text);
+  if (sh.getLastRow() !== read.lastRow || textHash_(store_tailText_(sh, read, read.lastRow).text) !== beforeHash) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  }
+  var w = read.width, vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
+  while (vals.length < w) vals.push('');
+  var at = read.lastRow + 1;
+  if (sh.getMaxRows() < at) sh.insertRowsAfter(sh.getMaxRows(), 1);
+  var rg = sh.getRange(at, 1, 1, w), typed = store_typedRows_([vals], read.types);
+  if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
+  rg.setValues(read.types ? typed.values : [vals]);
+  SpreadsheetApp.flush();
+  var check = store_tailText_(sh, read, at);
+  var newRow = check.rows[check.rows.length - 1];
+  var ok = sh.getLastRow() === at && check.rows.length === read.shown.length + 1 &&
+    textHash_(store_rowsText_(check.rows.slice(0, -1))) === beforeHash &&
+    (read.types ? store_sameTyped_(rg.getValues(), typed.values) : csvLine_(newRow) === csvLine_(vals));
+  if (ok) return read.text + csvLine_(newRow) + '\r\n';
+  var restored = false;
+  try {
+    if (sh.getLastRow() === at) sh.deleteRow(at);
+    else sh.getRange(at, 1, 1, w).clearContent();
+    SpreadsheetApp.flush();
+    restored = sh.getLastRow() === read.lastRow && textHash_(store_tailText_(sh, read, read.lastRow).text) === beforeHash;
+  } catch (e) { restored = false; }
+  throw err_('VERIFY_FAILED',
+    restored
+      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+      : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the Sheet\'s version history.',
+    { restored: restored, file: title });
+}
+
 /** Same as the CSV append, for a Sheet. `read` is store_readSheet_ taken inside the same lock. */
 function store_appendSheet_(title, rowValues, read) {
   var sh = read.tab, beforeHash = textHash_(read.text);
@@ -180,6 +276,7 @@ function store_appendSheet_(title, rowValues, read) {
 
 /** Same as the CSV in-place edit, for a Sheet: ONE row's values change, every other cell must be identical. */
 function store_replaceSheetRow_(title, index, rowValues, read) {
+  if (read.tail) throw err_('UNEXPECTED_LAYOUT', title + ' was read in part, so nothing was changed. Try again.');
   var sh = read.tab, beforeHash = textHash_(read.text);
   if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) !== beforeHash) {
     throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
@@ -278,6 +375,7 @@ function store_appendMany_(title, expectedHeader, rows, read) {
 }
 
 function store_appendManySheet_(title, rows, read) {
+  if (read.tail) throw err_('UNEXPECTED_LAYOUT', title + ' was read in part, so nothing was changed. Try again.');
   var sh = read.tab, beforeHash = textHash_(read.text), now = store_sheetRows_(sh);
   if (textHash_(store_rowsText_(now.rows)) !== beforeHash || sh.getLastRow() !== read.lastRow) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
   var w = read.width, n = rows.length, at = read.lastRow + 1;
@@ -313,7 +411,7 @@ function store_append_(title, expectedHeader, rowValues, read) {
   if (!sameHeader_(read.header, expectedHeader)) {
     throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
-  if (read.kind === 'sheet') return store_appendSheet_(title, rowValues, read);
+  if (read.kind === 'sheet') return read.tail ? store_appendSheetTail_(title, rowValues, read) : store_appendSheet_(title, rowValues, read);
   var file = read.file;
   var before = read.text;
   var beforeHash = textHash_(before);

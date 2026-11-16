@@ -66,6 +66,7 @@ var BLD = {
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends
     DUP_WINDOW_MIN: 30,     // a second reading for the same room inside this window is refused
     PERIOD_MAX_AGE_HOURS: 168,
+    SAVE_TAIL_ROWS: 200,    // a fast append (Specs fastAppend) reads this many of the last rows in full; the rest only the checked columns
     // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
     // a section, the legal period, else this many years. Used only as that fallback.
     RETENTION_DEFAULT_YEARS: 6,
