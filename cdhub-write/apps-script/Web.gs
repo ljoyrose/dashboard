@@ -48,6 +48,10 @@ function doPost(e) {
     // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
     if (req && typeof req === 'object' && req.action === 'link_end') return jsonOut_({ ok: true, result: sinkLinkEnd_(req) });
+    // edit / archive / delete a saved row with a code, logged (Q1/Q2, 15 Nov 2026; Edit.gs). OFF until RECORD_EDIT_ON is true
+    if (req && typeof req === 'object' && req.action === 'record_edit') return jsonOut_({ ok: true, result: sinkRecordEdit_(req) });
+    if (req && typeof req === 'object' && req.action === 'record_archive') return jsonOut_({ ok: true, result: sinkRecordArchive_(req) });
+    if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
@@ -55,15 +59,62 @@ function doPost(e) {
   }
 }
 
-/** GET = status check (no data) or the owner's approval page. */
+/**
+ * GET = status check (no data) or the owner's approval page.
+ * ?status=1 is the side-effect-free status (15 Nov 2026): it only reads Script Properties. It does NOT apply waiting
+ * room moves, reads no file and writes nothing, and it also lists every other save switch by NAME (on/off, or set/not
+ * set for a folder id). Never a property value. A plain GET keeps its old behaviour (it applies waiting room moves).
+ */
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.page === 'approve') return approvePage_();
+  if (p.status === '1') {
+    var body = statusBody_();
+    body.sideEffectFree = true;
+    body.switches = switchesStatus_();
+    return jsonOut_(body);
+  }
   try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
+  return jsonOut_(statusBody_());
+}
+
+/** The status every GET has always returned: version, the two master switches, each table's switch and mode. Reads properties only. */
+function statusBody_() {
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });
-  return jsonOut_({ ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES) });
+  return { ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES) };
+}
+
+/**
+ * Every other switch the code reads, by name. `on` for a 'true' switch; `set` (true/false) for a folder id or address,
+ * whose value is never shown. Built from the specs, so a new dog card action shows up here without a change.
+ */
+function switchesStatus_() {
+  var out = [], seen = {};
+  var on = function (name) { return prop_(name) === 'true'; };
+  var set = function (name) { return String(prop_(name) || '').trim() !== ''; };
+  var add = function (o) { if (!seen[o.name + '|' + o.action]) { seen[o.name + '|' + o.action] = 1; out.push(o); } };
+  var actions = { weighing: 'weighing', vaccination: 'vaccination, vaccination_void', dog_details: 'dog_details', subject_create: 'subject_create',
+    subject_link: 'subject_link, subject_link_end', files: 'file_add' };
+  Object.keys(DOGCARD_).forEach(function (k) {
+    var n = BLD.PROP.TABLE_ON_PREFIX + DOGCARD_[k].on;
+    add({ name: n, action: actions[k] || k, file: DOGCARD_[k].file, on: on(n) });
+  });
+  add({ name: BLD.PROP.TABLE_ON_PREFIX + LINKS_.on, action: 'link_add, link_end', file: LINKS_.file, on: linksOn_() });
+  add({ name: BLD.PROP.TABLE_ON_PREFIX + CODE_REG.ON, action: 'owner page: code admin mirror', file: CODE_REG.FILE, on: codeRegisterOn_() });
+  Object.keys(PROPOSED_TABLES).forEach(function (k) {
+    var n = BLD.PROP.TABLE_ON_PREFIX + PROPOSED_TABLES[k].key;
+    add({ name: n, action: k + ' (proposed: refused whatever this says)', file: PROPOSED_TABLES[k].file, on: on(n) });
+  });
+  add({ name: BLD.PROP.DOG_PHOTOS_FOLDER, action: 'dog_photo (no switch of its own: SAVE_ENABLED and this folder id)', file: SUBJECT_FILE_, set: set(BLD.PROP.DOG_PHOTOS_FOLDER) });
+  add({ name: BLD.PROP.FILES_FOLDER, action: 'file_add of a photo or upload', file: '', set: set(BLD.PROP.FILES_FOLDER) });
+  add({ name: BLD.PROP.OWNER_EDIT_ENABLED, action: 'owner page: edit an entry in place', file: '', on: ownerEditEnabled_() });
+  add({ name: EDIT_.PROP, action: 'record_edit, record_archive, record_delete (logged)', file: EDIT_.AUDIT_FILE, on: editOn_() });
+  add({ name: BLD.PROP.BACKUP_ON, action: 'nightly backup copy', file: '', on: on(BLD.PROP.BACKUP_ON) });
+  add({ name: BLD.PROP.ALLOW_CREATE, action: 'adminCreateEmptyTables', file: '', on: on(BLD.PROP.ALLOW_CREATE) });
+  add({ name: BLD.PROP.INSPECT_PAGE_URL, action: 'inspector links (address only)', file: '', set: set(BLD.PROP.INSPECT_PAGE_URL) });
+  return out;
 }
 
 function approvePage_() {

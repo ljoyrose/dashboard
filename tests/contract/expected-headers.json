@@ -128,6 +128,10 @@
       "columns": ["file", "rows", "note"],
       "read": ["rows", "note"]
     },
+    "BLD-locale.csv": {
+      "columns": ["id", "tenant_id", "language_tag", "date_display", "first_day_of_week", "area_unit_id", "temperature_unit_id", "mass_unit_id", "length_unit_id", "currency_code", "set_by", "set_on", "notes", "time_zone", "from_date", "to_date", "source"],
+      "read": ["tenant_id", "time_zone", "from_date", "to_date"]
+    },
     "BLD-area.csv": {
       "columns": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"],
       "read": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"]

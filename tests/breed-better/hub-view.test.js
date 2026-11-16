@@ -399,3 +399,64 @@ test('the auto-enrol setting is one dated link-kind rule row listing schemes; no
   assert.match(html, /Since 15 Nov 2026\. Lisa/);
   View.setTab('dogs');
 });
+
+test('age groups come from dated owner rows; with none there is no age filter', () => {
+  const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'Owner' }, extra || {});
+  const rules = [R('age_group.young.from_months', '0'), R('age_group.young.to_months', '12'), R('age_group.young.label', 'Under 1'),
+    R('age_group.adult.from_months', '12'), R('age_group.adult.label', 'Adult'),
+    R('age_group.later.from_months', '99', '2027-01-01'),
+    R('age_group.bad.label', 'No months')];
+  const T = { 'BLD-breeding_rule.csv': rules };
+  const g = View.ageGroups(T, '2026-11-15');
+  assert.deepEqual(g.map((x) => [x.key, x.label, x.from, x.to]), [['young', 'Under 1', 0, 12], ['adult', 'Adult', 12, Infinity]]);
+  assert.equal(View.months('2025-11-16', '2026-11-15'), 11);
+  assert.equal(View.inAge(g[0], '2025-11-16', '2026-11-15'), true);
+  assert.equal(View.inAge(g[1], '2025-11-15', '2026-11-15'), true);
+  assert.equal(View.inAge(g[0], '', '2026-11-15'), false);
+  View.setTab('dogs');
+  const withRows = View.page({ T: tables(T), today: '2026-11-15', esc });
+  assert.match(withRows, /aria-label="Filter by age"/);
+  assert.match(withRows, /data-bb-age="young" aria-pressed="false">Under 1 <span class="cnt">/);
+  const none = View.page({ T: tables({}), today: '2026-11-15', esc });
+  assert.doesNotMatch(none, /Filter by age/);
+});
+
+test('a held-back record shows the word it holds ("Preliminary") on the line, with Unverified', () => {
+  const html = View.lineHtml({ esc }, { kind: 'gate', criterion_id: 'hip', label_then: 'Hips', gate_outcome: 'unverified',
+    unknown_reason: 'not_accepted', held_then: 'preliminary', answer_then: 'Good', date_then: '2026-03-02' });
+  assert.match(html, /Preliminary: Good · 2 Mar 2026/);
+  assert.doesNotMatch(html, /Not accepted yet/);
+});
+
+test('with no age_group rows, the two age groups come from the existing adult-age rule (Lisa 15 Nov 2026: two in the SOP)', () => {
+  const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'SOP' }, extra || {});
+  const T = { 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '9', '2020-01-01'), R('dog.adult_from_months', '6', '2025-01-01'),
+    R('dog.adult_from_months', '12', '2027-01-01')] };
+  const g = View.ageGroups(T, '2026-11-15');
+  assert.deepEqual(g.map((x) => [x.key, x.label, x.from, x.to]), [['puppy', 'Puppy', 0, 6], ['adult', 'Adult', 6, Infinity]]);
+  assert.equal(View.inAge(g[0], '2026-05-16', '2026-11-15'), true);   // 5 months
+  assert.equal(View.inAge(g[1], '2026-05-15', '2026-11-15'), true);   // 6 months: adult
+  assert.deepEqual(View.ageGroups(T, '2024-06-01').map((x) => x.to), [9, Infinity]);   // the rule in force that day
+  const own = T['BLD-breeding_rule.csv'].concat([R('age_group.all.from_months', '0'), R('age_group.all.label', 'All ages')]);
+  assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': own }, '2026-11-15').map((x) => x.key), ['all']);   // owner's own groups win
+  assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '6', '2027-01-01')] }, '2026-11-15'), []);
+});
+
+test('Checks records score: a check_log row carries the values typed on its form (Fit to Breed, a hip X-ray), any industry', () => {
+  const logs = [{ id: 'clg-1', check_type_id: 'cty-ftb', subject_id: 'a1', outcome: 'ok', happened_at: '2026-08-13T12:00:00Z' },
+    { id: 'clg-2', check_type_id: 'cty-hips', subject_id: 'a1', outcome: 'ok', happened_at: '2026-09-01T10:00:00Z', grade: '' }];
+  const vals = [{ check_log_id: 'clg-2', field_key: 'grade', value: 'Good' }, { check_log_id: 'clg-2', field_key: 'certainty', value: 'final' },
+    { check_log_id: 'clg-2', field_key: 'outcome', value: 'bad' }, { check_log_id: 'clg-2', field_key: 'Bad Key', value: 'x' }];
+  const m = View.withValues(logs, vals);
+  assert.deepEqual([m[1].grade, m[1].certainty, m[1].outcome, m[1]['Bad Key']], ['Good', 'final', 'ok', undefined]);   // a real value wins
+  assert.equal(m[0], logs[0]);
+  assert.ok(View.FILES.includes('BLD-check_value.csv'));
+  const Score = require('../../breed-better/score.js');
+  const crit = (id, match, field) => ({ id, band_id: 'g', label: id, evidence_source: 'BLD-check_log', evidence_match: match, answer_field: field, date_field: 'happened_at' });
+  const r = Score.score({ scheme: { id: 's' }, bands: [{ id: 'g', kind: 'gate' }], subject: { id: 'a1' }, asOf: '2026-11-15', judgements: {},
+    criteria: [crit('ftb', 'check_type_id=cty-ftb', 'outcome'), crit('hips', 'check_type_id=cty-hips;certainty=final', 'grade')],
+    points: [{ id: 'p1', criterion_id: 'ftb', answer_match: 'is:ok', gate_outcome: 'pass' }, { id: 'p2', criterion_id: 'hips', answer_match: 'in:Excellent|Good|Fair', gate_outcome: 'pass' }],
+    evidence: { 'BLD-check_log': m } });
+  assert.equal(r.gate_result, 'pass', JSON.stringify(r.lines));
+  assert.deepEqual(r.lines.map((l) => [l.answer_then, l.date_then]), [['ok', '2026-08-13'], ['Good', '2026-09-01']]);
+});

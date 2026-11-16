@@ -11,12 +11,13 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const PRIMARY = [
   ['Main', './index.html#/map'],
   ['Compliance', './index.html#/compliance'],
-  ['Ops', './index.html#/dogs'],
+  ['Records', './index.html#/dogs'],
   ['People', './index.html#/staff'],
 ];
 const MORE = [
   ['Today', './index.html#/today'],
   ['Do', './index.html#/work'],
+  ['Items', './index.html#/items'],
   ['Litters', './index.html#/litters'],
   ['Areas', './index.html#/areas'],
   ['The round', './index.html#/round'],
@@ -63,7 +64,7 @@ test('one list draws hub buttons and history links, with Temps and without Breed
     for (const [label, href] of PRIMARY.concat(MORE)) expect(html, label).toContain('href="' + href + '"');
   }
   expect(hist).toMatch(/href="\.\/history\.html"[^>]*aria-current="page"/);
-  expect(hist).toMatch(/data-section="ops"[^>]*aria-current="page"/);   // Temps sits in Ops
+  expect(hist).toMatch(/data-section="ops"[^>]*aria-current="page"/);   // Temps sits in Records
   expect(arch).not.toContain('aria-current');
 });
 
