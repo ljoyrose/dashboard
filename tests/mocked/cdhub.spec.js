@@ -382,7 +382,7 @@ const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,meth
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
 // Gestation timings are dated rows now (Lisa 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
-  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84', 'nav.view.litters,1']   // Litters is off by default; this kennel has it on
+  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84', 'nav.view.litters,1', 'nav.view.buyers,1', 'nav.view.shape,1', 'nav.view.vet,1', 'nav.view.enquiries,1']   // the views a new kennel starts with off; this kennel has them on
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
 const openTab = (page, id) => openView(page, id);
 // Walks every visible element and returns plain-English problems, one list per rule.
