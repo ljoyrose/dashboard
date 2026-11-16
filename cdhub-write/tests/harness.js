@@ -34,7 +34,7 @@ function makeEnv(opts = {}) {
   const env = {
     nowMs: opts.nowMs || DEFAULT_NOW,
     props: Object.assign({}, opts.props || {}),
-    fetches: [], google: opts.google || null,
+    fetches: [], google: opts.google || null, ranges: [],
     cache: {},
     email: opts.email || '',
     drive: [],          // [{id,title,content}]
@@ -77,7 +77,7 @@ function makeEnv(opts = {}) {
     insertRowsAfter: (after, n) => { f.maxRows = Math.max(f.maxRows, after + n); },
     deleteRow: (n) => { f.sheet.splice(n - 1, 1); },
     setName: (n) => { f.tabName = n; },
-    getRange: (r, c, nr, nc) => { const grid = (fn) => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(fn(i, j)); out.push(row); } return out; }; return {
+    getRange: (r, c, nr, nc) => { env.ranges.push([f.title, r, c, nr || 1, nc || 1]); const grid = (fn) => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(fn(i, j)); out.push(row); } return out; }; return {
       // cells may hold text, real numbers or real dates (as Sheets does); shown the way the cell's number format says
       getDisplayValues: () => grid((i, j) => shown(cell(r + i, c + j), f.cfmt[(r + i) + ':' + (c + j)])),
       getValues: () => grid((i, j) => { const v = cell(r + i, c + j); return v === undefined ? '' : v; }),

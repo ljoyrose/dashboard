@@ -3803,7 +3803,12 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
 /* Saves go one at a time from this device (Lisa 16 Nov 2026: the round sent every room at once and all but the first
    gave up with "Someone else is saving right now"). The 40 s limit starts when a save is sent, not while it waits. */
 var sinkTurn=Promise.resolve();
-function sinkFetch(body,url){ var p=sinkTurn.then(function(){ return sinkFetchNow(body,url); }); sinkTurn=p.then(function(){},function(){}); return p; }
+function sinkFetch(body,url){ var p=sinkTurn.then(function(){ return sinkFetchBusy(body,url,0); }); sinkTurn=p.then(function(){},function(){}); return p; }
+/* Two people saving at once (Lisa 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
+   is sent again after a short random pause, up to 3 times, before the person is told. */
+function sinkFetchBusy(body,url,n){ return sinkFetchNow(body,url).then(function(j){
+ if(j&&j.ok===false&&j.code==='BUSY'&&n<3) return new Promise(function(r){ setTimeout(r,1500+Math.floor(Math.random()*2500)); }).then(function(){ return sinkFetchBusy(body,url,n+1); });
+ return j; }); }
 function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
  return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
