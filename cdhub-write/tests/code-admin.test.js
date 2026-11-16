@@ -122,7 +122,7 @@ test('owner page: Make their code shows it once; the copied-it button clears it;
   const names = () => [...$('#sc-list').children].map((c) => c.textContent);
   assert.equal(names().some((t) => /REPLACED|SWITCHED OFF/.test(t)), false);
   assert.match($('#sc-old-label').textContent, /Show switched-off and replaced \(\d+\)/);
-  $('#sc-old').checked = true; $('#sc-old').dispatchEvent(new w.Event('change')); 
+  $('#sc-old').checked = true; $('#sc-old').dispatchEvent(new w.Event('change'));
   assert.equal(names().some((t) => /REPLACED/.test(t)), true);
   assert.equal(/REPLACED|SWITCHED OFF/.test(names()[0]), false);   // active codes first
   $('#sc-find').value = 'page person'; $('#sc-find').dispatchEvent(new w.Event('input'));
