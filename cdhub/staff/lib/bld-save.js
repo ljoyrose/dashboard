@@ -19,7 +19,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var URL_OK = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/exec$/;
+  var URL_OK = /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.\-]+|macros)\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
   var TIMEOUT_MS = 45000;   // the save script can take over 20 s when busy; a shorter wait said "could not reach" for saves that landed
