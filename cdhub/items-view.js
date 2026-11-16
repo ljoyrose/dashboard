@@ -206,8 +206,10 @@
     if (exp) est = exp < on ? 'expired' : (soon !== null && addDays(on, soon) >= exp ? 'soon' : 'ok');
     var worst = lines.map(function (l) { return l.st; }).concat(est ? [est] : []).reduce(function (a, b) { return RANK[b] > RANK[a] ? b : a; }, lines.length || est ? 'ok' : 'none');
     var nexts = lines.map(function (l) { return l.next; }).concat(exp ? [exp] : []).filter(Boolean).sort();
-    var never = lines.some(function (l) { return !l.last && l.st === 'due'; });
-    return { st: worst, lines: lines, next: nexts[0] || '', never: never, expiry: est };
+    // which tests were never done (16 Nov 2026: an extinguisher with a service but no monthly look said "never tested")
+    var never = lines.filter(function (l) { return !l.last && l.st === 'due'; }).map(function (l) { return l.label; });
+    var all = never.length && never.length === lines.length;
+    return { st: worst, lines: lines, next: nexts[0] || '', never: all ? true : never.length ? never : false, expiry: est };
   }
 
   /** Every item with its kind, room, use and status on a day, best to worst. */
@@ -309,7 +311,7 @@
       h += '<details class="compfold" open><summary><h3>' + e(k) + ' <span class="mut">' + xs.length + '</span>' + (bad ? ' <span class="pill no">' + bad + '</span>' : '') + '</h3></summary>'
         + xs.map(function (x) {
           return '<button type="button" class="itm-row" data-itm-open="' + e(x.it.id) + '"><b>' + e(x.it.item_no) + '</b><span>' + e(x.it.name) + (x.it.size ? ' · ' + e(x.it.size) : '') + '</span>'
-            + '<span class="mut">' + e(x.place || 'no room') + (x.s.never ? ' · never tested' : x.s.next ? ' · next ' + e(v.dmy(x.s.next)) : '') + '</span>'
+            + '<span class="mut">' + e(x.place || 'no room') + (x.s.never === true ? ' · never tested' : (x.s.never ? ' · ' + x.s.never.map(e).join(', ') + ' never done' : '') + (x.s.next ? ' · next ' + e(v.dmy(x.s.next)) : '')) + '</span>'
             + (x.archived ? '<span class="pill">Archived</span>' : pill(x.s.st)) + (S.ticks[x.it.id] ? '<span class="itm-tick" aria-label="saved">' + ic('tick') + '</span>' : '') + '</button>';
         }).join('') + '</details>';
     });
