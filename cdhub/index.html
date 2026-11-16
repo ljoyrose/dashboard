@@ -4494,7 +4494,7 @@ function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sink
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']);
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Admin']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
@@ -4512,6 +4512,50 @@ function navHas(id){
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
 function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',has:navHas}); }
+/* Settings, Menu (menu PR 3): which sections are on and which sit on the bar, as owner-setting rows (nav.on.*, nav.tab.OWNER.*),
+   in force from today. Nothing is deleted: a change is a newer row. No rows: the starting layout, said so. */
+function navPickable(){ return HubNav.SECTIONS.filter(function(s){ return s.id!=='main'&&s.id!=='settings'; }); }
+function navMenuCard(){
+ var lay=navLayout(), any=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'});
+ var h='<section class="card" id="navMenu" style="margin-top:24px"><h3 class="hx4">Menu</h3>'
+  +'<p class="mut">'+(lay.set?'Your menu, in force from the dates saved.':'Starting layout, not set.')+' Main is always first and More always last; up to 3 sections sit between.</p>'
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>Section</th><th>On</th><th>On the bar</th></tr></thead><tbody>'
+  +navPickable().map(function(sc){ var pos=any.tabs.indexOf(sc.id)+1;
+    return '<tr data-nav="'+sc.id+'"><td><b>'+esc(sc.label)+'</b></td>'
+     +'<td><input type="checkbox" id="navOn-'+sc.id+'" aria-label="'+esc(sc.label)+' on"'+(any.on[sc.id]?' checked':'')+'></td>'
+     +'<td><select id="navTab-'+sc.id+'" aria-label="'+esc(sc.label)+' on the bar"><option value="0">Under More</option>'
+     +[1,2,3].map(function(n){ return '<option value="'+n+'"'+(pos===n?' selected':'')+'>Place '+n+'</option>'; }).join('')+'</select></td></tr>'; }).join('')
+  +'</tbody></table></div><div class="frow"><button type="button" class="btn" id="navSave">Save menu</button> <span class="mut" id="navMsg" role="status"></span></div></section>';
+ return h;
+}
+function bindNavMenu(){
+ var b=document.getElementById('navSave'); if(!b) return;
+ b.addEventListener('click',async function(){
+  var msg=document.getElementById('navMsg'), want={on:{},tab:{}}, used={}, bad='';
+  navPickable().forEach(function(sc){
+   want.on[sc.id]=document.getElementById('navOn-'+sc.id).checked?1:0;
+   var t=+document.getElementById('navTab-'+sc.id).value; want.tab[sc.id]=t;
+   if(t&&!want.on[sc.id]) bad=bad||sc.label+' is on the bar but switched off.';
+   if(t&&used[t]) bad=bad||'Two sections share place '+t+'.';
+   used[t]=1; });
+  if(bad){ msg.textContent=bad; return; }
+  var now=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'}), from=todayLondon(), src='CD Hub Settings, Menu', posts=[];
+  navPickable().forEach(function(sc){
+   if(want.on[sc.id]!==(now.on[sc.id]?1:0)) posts.push(['nav.on.'+sc.id,want.on[sc.id]]);
+   if(want.tab[sc.id]!==now.tabs.indexOf(sc.id)+1||!now.set) posts.push(['nav.tab.OWNER.'+sc.id,want.tab[sc.id]]); });   /* the bar is saved whole: a partial set would drop the rest */
+  if(posts.some(function(x){ return x[0].indexOf('nav.tab.')===0; })) navPickable().forEach(function(sc){ var k='nav.tab.OWNER.'+sc.id;
+   if(!posts.some(function(x){ return x[0]===k; })) posts.push([k,want.tab[sc.id]]); });
+  if(!posts.length){ msg.textContent='Nothing changed.'; return; }
+  b.disabled=true; msg.textContent='saving…';
+  for(var i=0;i<posts.length;i++){
+   var r=await sinkPost('breeding_rule',{rule_key:posts[i][0],value:String(posts[i][1]),effective_from:from,source:src});
+   if(!(r.ok&&r.result&&r.result.status==='saved')){ b.disabled=false; showSave(msg,sinkMsg(r)); return; }
+   (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.result.id||'',rule_key:posts[i][0],value:String(posts[i][1]),effective_from:from,source:src,set_at:r.result.at||''});
+  }
+  CD._built=(CD._built||0)+1; go('admin',false);
+  showSave(document.getElementById('navMsg'),'Saved '+hhmmNow());
+ });
+}
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
@@ -4644,7 +4688,7 @@ function go(id,push){
  levelHeadings(main);
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
- if(id==='admin') AdminView.bind(admV());
+ if(id==='admin'){ AdminView.bind(admV()); bindNavMenu(); }
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
