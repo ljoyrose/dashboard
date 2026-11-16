@@ -61,7 +61,13 @@ function authStaff_(code) {
   if (!salt || !Object.keys(reg).length) {
     throw err_('NOT_SET_UP', 'No staff codes have been set up yet. Ask Lisa.');
   }
+  // Codes are made in capitals with no spaces. A code typed in small letters or with spaces/dashes is tried as made too
+  // (15 Nov 2026: Lisa's new hub code was refused). The exact code is tried first, so an older code is never changed.
   var entry = reg[hashCode_(code.trim(), salt)];
+  if (!entry) {
+    var plain = code.replace(/[\s-]+/g, '').toUpperCase();
+    if (plain && plain !== code.trim()) entry = reg[hashCode_(plain, salt)];
+  }
   if (!entry || entry.active === false || entry.revoked_at) {
     authNoteFailure_();
     throw err_('BAD_CODE', 'That staff code was not recognised.');
