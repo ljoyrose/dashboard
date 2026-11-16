@@ -11,6 +11,13 @@ const signIn = async (page) => {
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
 
+test('dates use 3-letter months, "2 Sep 2026" never "Sept" (Lisa, 16 Nov 2026)', () => {
+  const D = require('../../cdhub/staff/lib/date-words.js');
+  D.setLocale([{ language_tag: 'en-GB' }]);
+  expect(D.long('2026-09-30')).toBe('30 Sep 2026');
+  expect(D.long('2026-03-02')).toBe('2 Mar 2026');
+});
+
 test.describe('CD Hub: loads', () => {
   test('page loads with HTTP 200 and asks for sign-in; no tables shown yet', async ({ page }) => {
     const res = await page.goto('cdhub/');

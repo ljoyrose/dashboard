@@ -222,7 +222,7 @@
   /* ---------- views ---------- */
   var STEP_LABEL = { enquiries: 'Enquiries', calls_booked: 'Calls booked', calls_held: 'Calls held', deposits: 'Deposits', offers: 'Offers',
     balances: 'Balances', collected: 'Collected' };
-  function monthName(m) { var d = new Date(m + '-01T12:00:00Z'); return isNaN(d) ? m : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }); }
+  function monthName(m) { var d = new Date(m + '-01T12:00:00Z'); return isNaN(d) ? m : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/\bSept\b/, 'Sep'); }
   function rateCell(r) { var t = Core.pct(r); return '<td class="n' + (r == null ? ' nodata' : '') + '" data-rate>' + t + '</td>'; }
   function hoursText(h) { return h == null ? 'no data' : h < 48 ? h + ' h' : Math.round(h / 24 * 10) / 10 + ' days'; }
   // One month: each step with its count and the share of the step before; lost, junk, adult-dog sale, reply time.
