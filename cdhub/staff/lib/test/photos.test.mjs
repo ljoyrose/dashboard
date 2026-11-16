@@ -56,3 +56,23 @@ test('no link_kind rule rows: no label (the page uses its own fallback); unsafe 
   assert.equal(P.safeUrl('javascript:alert(1)'), '');
   assert.equal(P.safeUrl('https://x.org/"onmouseover'), '');
 });
+
+// Photo turn (Lisa 15 Nov 2026): a dated owner setting row photo.rotate.<file>; the stored picture never changes. Invented rows.
+test('photo turn: the row in force on the day, found by files row id or Drive id; bad values and other photos ignored', () => {
+  const fl = [{ id: 'fil-1', drive_file_id: 'https://drive.google.com/file/d/DRIVEturn0001/view' }, { id: 'fil-2', drive_file_id: 'DRIVEturn0002' }];
+  const R = (key, value, from, to) => ({ rule_key: key, value, effective_from: from, to_date: to || '' });
+  const rules = [R('photo.rotate.fil-1', '90', '2026-11-10'), R('photo.rotate.fil-1', '270', '2026-11-16'),
+    R('photo.rotate.fil-2', '45', '2026-11-10'), R('photo.rotate.fil-2', '180', '2026-11-01', '2026-11-05')];
+  assert.equal(P.rotation(fl, rules, 'fil-1', '2026-11-12'), 90);
+  assert.equal(P.rotation(fl, rules, 'DRIVEturn0001', '2026-11-16'), 270);   // by Drive id, the newer row wins
+  assert.equal(P.rotation(fl, rules, 'DRIVEturn0001', '2026-11-09'), 0);     // before any row
+  assert.equal(P.rotation(fl, rules, 'DRIVEturn0002', '2026-11-03'), 180);
+  assert.equal(P.rotation(fl, rules, 'DRIVEturn0002', '2026-11-12'), 0);     // ended, and 45 is not a turn
+  assert.equal(P.rotation(fl, rules, 'DRIVEnoRow999', '2026-11-12'), 0);
+  assert.equal(P.rotation(fl, rules, '', '2026-11-12'), 0);
+  assert.equal(P.rotateKey('FIL-1'), 'photo.rotate.fil-1');
+  assert.deepEqual([P.turned(0, 1), P.turned(0, -1), P.turned(270, 1), P.turned(90, -1)], [90, 270, 0, 0]);
+  assert.equal(P.turnStyle(0, 100, 50), '');
+  assert.equal(P.turnStyle(180, 100, 50), 'transform:rotate(180deg)');
+  assert.match(P.turnStyle(90, 100, 50), /width:50px;height:100px;.*rotate\(90deg\)/);   // still fills a box that is not square
+});
