@@ -167,3 +167,21 @@ asOwner('Admin always shows a "Script page" link to the owner page', async ({ pa
   await expect(link).toHaveText('Script page');
   await expect(link).toHaveAttribute('href', /SAMPLE-fake-address\/exec\?page=approve$/);
 });
+
+// 15 Nov 2026: a code made on the owner page was refused by the hub's save. The owner page link now takes the save
+// address in the same order as the hub's save, so both go to the same script. Invented addresses only.
+asOwner('the owner page link uses the same save address as the hub save', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => {
+    localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-hub-save/exec');
+    localStorage.setItem('bld.scriptUrl', 'https://script.google.com/macros/s/SAMPLE-other/exec');
+    go('admin', false);
+  });
+  await page.locator('[data-adm-open="codes"]').click();
+  const link = page.locator('#adm-codes a.btn[href*="page=approve"]').first();
+  await expect(link).toHaveAttribute('href', /SAMPLE-hub-save\/exec\?page=approve/);
+  await page.evaluate(() => { localStorage.removeItem('cdhub.sink.url'); localStorage.removeItem('bld.scriptUrl'); localStorage.setItem('cdhub.save.url', 'https://script.google.com/macros/s/SAMPLE-from-drive/exec'); go('admin', false); });
+  if (!(await page.locator('#adm-codes').isVisible())) await page.locator('[data-adm-open="codes"]').click();   // the card may still be open
+  await expect(page.locator('#adm-codes a.btn[href*="page=approve"]').first()).toHaveAttribute('href', /SAMPLE-from-drive\/exec/);
+});
