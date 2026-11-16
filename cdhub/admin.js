@@ -191,10 +191,22 @@ var AdminView = (function () {
     }
     if (id === 'phone') {
       var link = u ? staffBase() + '#setup=' + encodeURIComponent(u) : '', qr = '';
-      if (S.qr && link && typeof BLDQr === 'undefined') {   // the QR drawer loads only when asked for (keeps the hub's first load small)
-        if (!document.getElementById('adm-qrjs')) { var sc = document.createElement('script'); sc.id = 'adm-qrjs'; sc.src = 'staff/lib/qr.js'; sc.onload = function () { v.rerender(); }; document.head.appendChild(sc); }
-        qr = '<p class="mut">Drawing\u2026</p>';
-      } else if (S.qr && link) { try { qr = '<div class="adm-qr">' + BLDQr.svg(link, 'Phone set-up QR') + '<small>Show on screen. Do not pin up or photograph.</small></div>'; } catch (e) { qr = '<p class="mut">QR could not be drawn.</p>'; } }
+      // the QR drawer loads only when asked for (keeps the hub's first load small). 15 Nov 2026: it stuck on "Drawing..." when
+      // the redraw after loading did not happen, so the QR now goes straight into its own box, and a failed load says so.
+      var qrHtml = function () { try { return '<div class="adm-qr">' + BLDQr.svg(link, 'Phone set-up QR') + '<small>Show on screen. Do not pin up or photograph.</small></div>'; } catch (e) { return '<p class="mut">QR could not be drawn.</p>'; } };
+      if (S.qr && link && typeof BLDQr === 'undefined') {
+        if (S.qrFailed) qr = '<p class="mut">The QR drawer did not load. Check the connection, then press Hide QR and Show QR again.</p>';
+        else {
+          var fill = function (html) { var box = document.getElementById('adm-qr-box'); if (box) box.innerHTML = html; };
+          if (!document.getElementById('adm-qrjs')) {
+            var sc = document.createElement('script'); sc.id = 'adm-qrjs'; sc.src = 'staff/lib/qr.js';
+            sc.onload = function () { if (S.qr && typeof BLDQr !== 'undefined') fill(qrHtml()); };
+            sc.onerror = function () { S.qrFailed = true; sc.parentNode.removeChild(sc); fill('<p class="mut">The QR drawer did not load. Check the connection, then press Hide QR and Show QR again.</p>'); };
+            document.head.appendChild(sc);
+          }
+          qr = '<div id="adm-qr-box"><p class="mut">Drawing\u2026</p></div>';
+        }
+      } else if (S.qr && link) qr = qrHtml();
       return '<p>Sets up <b>' + v.esc(host) + '</b> only. Each address needs its own set-up.</p>'
         + (u ? '<p><button type="button" class="btn" data-adm-qr="1">' + icon('qr') + (S.qr ? ' Hide QR' : ' Show QR') + '</button></p>' + qr
           : '<p class="mut">No save address in this browser. <button type="button" class="cb" data-go="round">Set it up</button></p>')
@@ -309,7 +321,8 @@ var AdminView = (function () {
     if (!on(v.T)) return '<h2>Admin</h2><div class="card"><p class="mut">Only the owner sees Admin.</p></div>';
     var groups = [], seen = {};
     CARDS.forEach(function (c) { if (!seen[c[4]]) { seen[c[4]] = 1; groups.push(c[4]); } });
-    var html = '<h2 class="adm-h">' + icon('shield') + ' Admin <span class="adm-lock">Only you</span></h2>';
+    var html = '<h2 class="adm-h">' + icon('shield') + ' Admin <span class="adm-lock">Only you</span></h2>'
+      + '<p class="adm-script">' + ownerPage(v, 'Script page') + '</p>';   // Lisa 15 Nov 2026: always one tap to the owner page
     groups.forEach(function (g) {
       html += '<h3 class="adm-g">' + g + '</h3><div class="adm-grid">' + CARDS.filter(function (c) { return c[4] === g; }).map(function (c) {
         var open = S.open === c[0];
@@ -355,7 +368,7 @@ var AdminView = (function () {
       if (d.admOpen) { S.open = S.open === d.admOpen ? '' : d.admOpen; if (S.open !== 'phone') S.qr = false; }
       else if (d.admAud) { S.aud = S.aud === d.admAud ? '' : d.admAud; S.mapShut = false; }
       else if (d.admCell) S.cell = S.cell === d.admCell ? '' : d.admCell;
-      else if (d.admQr) S.qr = !S.qr;
+      else if (d.admQr) { S.qr = !S.qr; S.qrFailed = false; }
       else if (d.admFuture) S.futureAll = !S.futureAll;
       var keep = d.admOpen ? 'adm-' + S.open : (d.admAud || d.admCell ? 'admMap' : '');
       AdminView._v.rerender();
