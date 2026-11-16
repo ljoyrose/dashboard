@@ -84,7 +84,8 @@ var AdminView = (function () {
   function on(T) { return rows(T, 'BLD-field_visibility.csv').length > 0; }
   function ls(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function scriptUrl() {
-    var u = ls('bld.scriptUrl') || ls('cdhub.sink.url');
+    // the same order the hub's save uses (index.html sinkGet), so the owner page makes codes in the script that checks them
+    var u = ls('cdhub.sink.url') || ls('bld.scriptUrl') || ls('cdhub.save.url');
     return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
