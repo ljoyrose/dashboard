@@ -936,6 +936,21 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#rows')).not.toContainText('javascript:');
   });
 
+  test('Joins: a link to an archived dog resolves; only links that land nowhere are reported (OV11, 16 Nov 2026)', async ({ page, guard }) => {
+    const W = fs.readFileSync(path.join(FIX, 'bld', 'BLD-weight.csv'), 'utf8').trimEnd()
+      + '\nsub-archived-1,2024-01-01,9.0,kg,5,9,invented\nsub-nowhere-1,2024-01-01,9.0,kg,5,9,invented\n';
+    setFile(guard.world, 'BLD-weight.csv', W);
+    setFile(guard.world, 'BLD-subject-Archive.csv', 'id,tenant_id,name,dam_id\nsub-archived-1,t,Archived Dog,sub-gone-dam\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'compliance');
+    const joins = page.locator('main').getByText(/references do not resolve|references checked, all resolve/);
+    await expect(joins).toContainText('1 references do not resolve');
+    await expect(joins).toContainText('sub-nowhere-1');
+    await expect(joins).not.toContainText('sub-archived-1');
+    await expect(joins).not.toContainText('sub-gone-dam');   // the archive is a place a link lands, not a table to audit
+  });
+
   test('Litters: the same filter row; Sort changes the order', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-litter.csv', 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\nlit-a,sub-test-dog-1,sub-test-dog-2,2025-02-01,Alpha pairing,born,invented\nlit-b,sub-test-dog-1,sub-test-dog-2,2026-02-01,Beta pairing,born,invented\n');
     await page.goto('cdhub/');

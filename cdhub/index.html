@@ -588,6 +588,10 @@ var LATER={};
 function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTIONAL_FILES[f]=1; }
 if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
 if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
+/* Archived dogs (OV11 for Lisa, 16 Nov 2026): a link to an archived dog is history, not a broken link. The Joins check
+   looks for a dog in the archive too and reports only links that resolve nowhere. Absent archive is fine. */
+wantLater('BLD-subject-Archive.csv');
+var REF_ALSO={'BLD-subject.csv':['BLD-subject-Archive.csv']};
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
 if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
@@ -1309,10 +1313,13 @@ function refAudit(){
   if(idsOf[f]||absent[f]) return;
   var rows=T[f];
   if(!rows||!rows.length){ absent[f]=1; return; }
-  var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
+  var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; });
+  (REF_ALSO[f]||[]).forEach(function(a){ (T[a]||[]).forEach(function(r){ if(r.id) s[r.id]=1; }); });
+  idsOf[f]=s; });
  var seen={};
  Object.keys(T||{}).forEach(function(f){
   var rows=T[f]; if(!rows||!rows.length) return;
+  if(f==='BLD-subject-Archive.csv') return;   /* the archive is somewhere a link can land, not a table to audit */
   Object.keys(rows[0]).forEach(function(c){
    var tgt=REFMAP[c]; if(!tgt) return;
 
