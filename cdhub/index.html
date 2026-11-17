@@ -656,6 +656,7 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 /* Joins A (Lisa 17 Nov 2026): dogs moved to the archive keep their history (vaccinations, vet visits, litters). The archive
    is read so those records point at a real dog; nothing is deleted. Read after the first screen; absent is fine. */
 wantLater('BLD-subject-Archive.csv');
+wantLater('BLD-litter-Archive.csv');   /* Lisa 17 Nov 2026: old litters (paper books) kept as history, so their vet visits resolve */
 wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
@@ -1379,7 +1380,9 @@ function refAudit(){
   if(!rows||!rows.length){ absent[f]=1; return; }
   var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
  /* Joins A: a record of an archived dog resolves (it is history, not an error); counted separately */
- var arch={}; (T['BLD-subject-Archive.csv']||[]).forEach(function(r){ if(r.id&&!(idsOf['BLD-subject.csv']||{})[r.id]) arch[r.id]=1; });
+ /* Any table's "<name>-Archive.csv" (dogs, litters, 17 Nov 2026) holds history: a record pointing there resolves. */
+ var arch={}; Object.keys(idsOf).forEach(function(f){ var a=f.replace(/\.csv$/,'-Archive.csv'), s=arch[f]={};
+  (T[a]||[]).forEach(function(r){ if(r.id&&!idsOf[f][r.id]) s[r.id]=1; }); });
  var archived=0;
  var seen={};
  Object.keys(T||{}).forEach(function(f){
@@ -1397,7 +1400,7 @@ function refAudit(){
    for(var i=0;i<rows.length;i++){
     var v=(rows[i][c]||'').trim(); if(!v) continue;
     checked++;
-    if(!idsOf[tgt][v]){ if(tgt==='BLD-subject.csv'&&arch[v]){ archived++; continue; } miss++; n++; if(!eg) eg=v; }
+    if(!idsOf[tgt][v]){ if(arch[tgt]&&arch[tgt][v]){ archived++; continue; } miss++; n++; if(!eg) eg=v; }
    }
    if(miss){ var k=f.replace(/^BLD-|\.csv$/g,'')+'.'+c;
      if(!seen[k]){ seen[k]=1; bad.push(k+' ('+miss+', e.g. '+eg+')'); } }
@@ -1692,7 +1695,7 @@ function checks(){
  var rc=refAudit();
  out.push({k:'joins',ok:!rc.bad.length,
    msg:rc.bad.length? plural(rc.n,'reference')+(rc.n===1?' does':' do')+' not resolve: '+rc.bad.slice(0,5).join(', ')+(rc.bad.length>5?' \u2026':'')
-     :plural(rc.checked,'reference')+' checked, all resolve'+(rc.archived?' ('+rc.archived+' are records of archived dogs, kept as history)':'')});
+     :plural(rc.checked,'reference')+' checked, all resolve'+(rc.archived?' ('+rc.archived+' point at archived records, kept as history)':'')});
  var dc=dateAudit();
  out.push({k:'dates',ok:!dc.bad.length,
    msg:dc.bad.length? plural(dc.bad.length,'date column')+(dc.bad.length===1?' is':' are')+' not written as year-month-day (2026-03-02): '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')
