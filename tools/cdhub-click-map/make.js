@@ -16,7 +16,14 @@ const OUT = path.join(ROOT, 'docs', 'cdhub', 'CLICK-MAP.md');
 const SITES = [['hub', 'CD Hub (cdhub/)'], ['temperatures', 'Temperatures page (cdhub/history.html)'], ['staff', 'Staff page (cdhub/staff/)']];
 const FLAGS = ['LOOP', 'DEAD', 'ERROR', 'ESCAPE', 'WORDING'];
 
-const read = (name) => { const p = path.join(IN, name + '.json'); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; };
+const one = (name) => { const p = path.join(IN, name + '.json'); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; };
+/** One result per place and screen size. A walk done in parts (hub-desktop-1, hub-desktop-2) is added together. */
+const read = (name) => {
+  const parts = [one(name)].concat([1, 2, 3, 4].map((n) => one(name + '-' + n))).filter(Boolean);
+  if (!parts.length) return null;
+  const sum = (k) => parts.reduce((a, r) => a + (r[k] || 0), 0);
+  return { rows: [].concat(...parts.map((r) => r.rows)), findings: [].concat(...parts.map((r) => r.findings)), tapped: sum('tapped'), reachable: sum('reachable'), states: sum('states'), sampledLeft: sum('sampledLeft') };
+};
 /** One pattern for every copy: Dog A07 -> Dog A.., Room 3 -> Room N, 12/02/26 -> a date, 14.5 -> a number. */
 const fold = (s) => String(s == null ? '' : s)
   .replace(/\b(Dog A|Pup P)\d\d\b/g, '$1..').replace(/\b(Room|Field) \d\b/g, '$1 N').replace(/\bsub-[ap]\d\d\b/g, 'sub-..').replace(/\bar-\d\b/g, 'ar-N')

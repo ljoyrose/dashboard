@@ -288,7 +288,7 @@
   function page(v) {
     var e = v.esc, on = v.today, all = list(v.T, on);
     if (!rows(v.T, 'BLD-item_kinds.csv').length && !rows(v.T, 'BLD-items.csv').length) {
-      return '<section class="card" id="itmPage"><h2 class="adm-h">' + ic('item', 'c2') + 'Items</h2><p class="mut">No item list yet. When BLD-items and BLD-item_kinds are created, the items show here.</p></section>';
+      return '<section class="card" id="itmPage"><h2 class="adm-h">' + ic('item', 'c2') + 'Items</h2><p class="mut">No item list yet. When the two item lists are set up, the items show here.</p></section>';
     }
     if (S.open) return cardHtml(v, all.filter(function (x) { return x.it.id === S.open; })[0]);
     var counts = { all: 0, ok: 0, soon: 0, due: 0, archived: 0 };

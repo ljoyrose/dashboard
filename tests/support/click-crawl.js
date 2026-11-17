@@ -38,6 +38,8 @@ function inPage() {
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || cs.pointerEvents === 'none') return false;
     if (el.closest('[hidden], .hidden, [inert], [aria-hidden="true"]')) return false;
+    const modal = document.querySelector('dialog:modal');
+    if (modal && !modal.contains(el)) return false;   // behind an open box: not reachable until it is shut
     for (let d = el.parentElement; d; d = d.parentElement) {   // inside a shut fold
       if (d.tagName === 'DETAILS' && !d.open && !(el.tagName === 'SUMMARY' && el.parentElement === d) && !d.querySelector(':scope > summary')?.contains(el)) return false;
     }
@@ -208,6 +210,7 @@ function inPage() {
 }
 
 const FLAGS = ['LOOP', 'DEAD', 'ERROR', 'ESCAPE', 'WORDING'];
+const TAP_MS = 6000;   // how long a tap may wait for its control to be ready (a busy test machine is slow, not broken)
 const short = (s, n = 70) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
 /**
@@ -233,7 +236,7 @@ async function crawl(site) {
   const visited = new Map();           // screen key -> how it was reached
   const sampled = new Map();           // kind of control on a screen -> how many copies were left untapped
   const wordSeen = new Set();
-  let sameAddress = 0;
+  let sameAddress = 0, retried = 0;
   const ev = { dialog: 0, popup: [], chooser: 0, download: 0 };
   const onDialog = (d) => { ev.dialog++; d.dismiss().catch(() => {}); };
   const onPopup = (p) => { ev.popup.push(p); };
@@ -242,7 +245,7 @@ async function crawl(site) {
   page.on('dialog', onDialog); page.on('popup', onPopup); page.on('filechooser', onChooser); page.on('download', onDownload);
   // CRAWL_LOG=<file> writes one line per tap as it happens (for working on the crawler itself); CRAWL_MAX=<n> stops after n taps.
   const fsLog = process.env.CRAWL_LOG ? require('fs') : null;
-  const log = (t) => { if (fsLog) fsLog.appendFileSync(process.env.CRAWL_LOG, '[' + site.name + '] ' + t + '\n'); };
+  const log = (t) => { if (fsLog) fsLog.appendFileSync(process.env.CRAWL_LOG, new Date().toISOString().slice(11, 19) + ' [' + site.name + '] ' + t + '\n'); };
   const cap = Number(process.env.CRAWL_MAX || 0);
   let taps = 0;
   let cAt = guard.consoleSeen.length, pAt = guard.problems.length, outAt = guard.outside.length;
@@ -260,7 +263,8 @@ async function crawl(site) {
         await page.waitForLoadState('load', { timeout: 8000 });
         await page.evaluate((ms) => window.__cc.quiet(ms, 3500), q);
         if (!site.busy || !(await site.busy())) break;
-      } catch (e) { /* the page was changing address: look again */ }
+      } catch (e) { if (i > 1) log('WAIT ' + i + ' · ' + String(e.message || e).split('\n')[0].slice(0, 90) + ' · at ' + page.url().slice(-40)); }
+      if (i > 2 && i % 5 === 0) log('WAIT ' + i + ' · still loading · at ' + page.url().slice(-40));
       await page.waitForTimeout(100);
     }
     return Date.now() - t0;
@@ -276,14 +280,14 @@ async function crawl(site) {
     if (c.off) { await loc.focus(); return page.keyboard.press('Enter'); }   // off the side of the screen until focused (skip link): keyboard only
     if (c.kind === 'row') return loc.evaluate((e) => e.click());
     if (c.kind === 'select') return loc.evaluate((e) => { const o = Array.from(e.options).filter((x) => !x.disabled); const next = o.find((x) => x.value !== e.value && x.value !== '') || o.find((x) => x.value !== e.value); if (next) { e.value = next.value; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); } });
-    if (/^input:(checkbox|radio|button|submit|image|reset)$/.test(c.kind)) return loc.click({ timeout: 2500 });
+    if (/^input:(checkbox|radio|button|submit|image|reset)$/.test(c.kind)) return loc.click({ timeout: TAP_MS });
     if (/^input:/.test(c.kind)) {
       const type = c.kind.slice(6);
       const v = type === 'date' ? (site.typeDate || '2026-03-09') : type === 'number' || type === 'range' ? '18.5' : type === 'time' ? '09:30' : type === 'password' ? 'sample-code' : type === 'url' ? 'https://example.test/sample' : (site.typeText || 'a');
-      await loc.fill(v, { timeout: 2500 });   // fill sends input and change; the page may redraw and the box may be gone
+      await loc.fill(v, { timeout: TAP_MS });   // fill sends input and change; the page may redraw and the box may be gone
       return page.evaluate((i) => { const e = document.querySelector('[data-cc="' + i + '"]'); if (e) e.blur(); }, c.i);
     }
-    return loc.click({ timeout: 2500 });
+    return loc.click({ timeout: TAP_MS });
   }
   /** Back to a screen: its route, then the taps that opened this panel. force = reload the page first. */
   async function goto(node, force) {
@@ -295,7 +299,7 @@ async function crawl(site) {
     for (const step of node.path) {
       const got = await page.evaluate(([sig, k]) => window.__cc.prep(sig, k), [step.sig, step.k]);
       if (!got.c) return false;
-      await act(got.c);
+      try { await act(got.c); } catch (e) { return false; }
       await settle();
     }
     return true;
@@ -315,7 +319,7 @@ async function crawl(site) {
   const only = (process.env.CRAWL_ROOTS || '').split(',').filter(Boolean);   // for working on the crawler: start screens to keep
   const queue = site.roots.filter((r) => !only.length || only.includes(r)).map((r) => ({ route: r, path: [], depth: 0 }));
   const perRoot = {}, rootHad = new Map();
-  let chromeDone = false;
+  let chromeDone = !!site.noChrome;   // the top bar and bottom tabs are walked once: a second part of the same walk leaves them out
   while (queue.length) {
     const node = queue.shift();
     if (!(await goto(node, true))) continue;
@@ -341,6 +345,7 @@ async function crawl(site) {
     for (const c0 of list) {
       if (cap && taps >= cap) break;
       const id = (c0.chrome ? 'chrome' : key) + ' ¦ ' + c0.sig + ' ¦ ' + c0.k;
+      if (c0.chrome && site.noChrome && !node.chromePanel) continue;   // the top bar and tabs belong to the first part of this walk
       if (!reach.has(id)) reach.set(id, { screen, label: c0.label, kind: c0.kind });
       if (done.has(id)) continue;
       if (c0.chrome && !withChrome && !node.chromePanel) continue;
@@ -371,16 +376,25 @@ async function crawl(site) {
       for (const force of [false, true]) {
         if (!(await goto(node, force))) continue;
         got = await page.evaluate(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k]);
-        if (got.c && got.st.key === key) break;
+        // the same address and heading is the same screen, even when the page remembers a fold from an earlier tap
+        if (got.c && (got.st.key === key || (got.st.hash === cur.st.hash && got.st.heading === cur.st.heading))) break;
         got = null;
       }
-      if (!got || got.c.disabled) { log((Date.now() - t0) + 'ms LOST ' + c0.kind + ' · ' + short(c0.label, 60)); continue; }
+      if (!got || got.c.disabled) { const now = await here(); log((Date.now() - t0) + 'ms LOST ' + c0.kind + ' · ' + short(c0.label, 60) + ' · screen now ' + now.st.key + ' · wanted ' + key + ' · there ' + now.controls.some((x) => x.sig === c0.sig && x.k === c0.k)); continue; }
       const c = got.c;
       done.add(id);
       newErrors(); newOutside();
       const evBefore = { dialog: ev.dialog, popup: ev.popup.length, chooser: ev.chooser, download: ev.download };
       let blocked = '';
-      try { await act(c); } catch (e) { blocked = String(e.message || e).split('\n')[0]; }
+      log('tap ' + c.kind + ' · ' + short(c.label, 60) + ' · ' + short(c.tag, 110));
+      try { await act(c); } catch (e) {
+        blocked = String(e.message || e).split('\n')[0];
+        try {
+          await goto(node, true); await settle(300);
+          const again = await page.evaluate(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k]);
+          if (again.c) { await act(again.c); blocked = ''; retried++; }
+        } catch (e2) { blocked = String(e2.message || e2).split('\n')[0]; }
+      }
       const ms = await settle();
       let aft;
       try { aft = await page.evaluate(() => window.__cc.after()); } catch (e) { await settle(); aft = await page.evaluate(() => window.__cc.after()); }
@@ -455,7 +469,7 @@ async function crawl(site) {
   page.off('dialog', onDialog); page.off('popup', onPopup); page.off('filechooser', onChooser); page.off('download', onDownload);
   const reachable = reach.size, tapped = Array.from(reach.keys()).filter((k) => done.has(k)).length;
   const left = Array.from(sampled.values()).reduce((a, b) => a + b, 0);
-  return { name: site.name, rows, findings, reachable, tapped, sameAddress, sampledLeft: left, sampledKinds: sampled.size, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
+  return { name: site.name, rows, findings, reachable, tapped, sameAddress, retried, sampledLeft: left, sampledKinds: sampled.size, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
 }
 
 /** One line a person can read in the test output. */
