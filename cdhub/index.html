@@ -2509,8 +2509,10 @@ function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1
  var bw=lw?BLDCapacity.sizeFromKg(lw.kg,CD.sizeCut):'';
  var ov=sizeOverrideOf(d);
  if(ov){ d.sizeWord=ov; d.sizeFrom='override'; d.sizeWhy='set as '+sizeName(ov)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''); return; }
- d.sizeWord=bw; d.sizeFrom=bw?'weight':'';
- d.sizeWhy=bw?(lw.kg+' kg on '+dmyShort(lw.on)):''; }
+ if(bw){ d.sizeWord=bw; d.sizeFrom='weight'; d.sizeWhy=lw.kg+' kg on '+dmyShort(lw.on); return; }
+ /* no weighing: the midpoint of the kg range in the size cell, e.g. "Mini 8-12kg" counts as 10 kg (Lisa 15 Nov 2026) */
+ var by=BLDCapacity.sizeOf(null,d.size,CD.sizeCut);
+ d.sizeWord=by.size; d.sizeFrom=by.from; d.sizeWhy=by.size?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
 function sizeName(k){ return SIZE_WORD[k]||''; }
 function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
 function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }
