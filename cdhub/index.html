@@ -2738,18 +2738,22 @@ async function photoEdit(dog,fileId,msg){
   if(!(k.ok&&k.result&&k.result.status==='saved')) throw new Error(sinkMsg(k));
   if(role==='main') links.forEach(function(l){ if(l.from_table==='subjects'&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
   links.push({id:k.result.id||'',from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:nid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); };
+ var done='\u2713 Edited copy saved';
  try{
   var gl=f?links.filter(function(l){ return l.from_table==='subjects'&&l.from_id===dog&&l.role==='gallery'&&l.to_id===f.id&&!l.to_date; })[0]:null;
+  /* 17 Nov 2026 (Lisa: "edits to photos not saving"): add the copy to the gallery FIRST and only then end the old photo,
+     so a refused add never leaves the gallery a photo short (the old order ended 5 photos whose copies could not be added). */
   if(gl){ var y=dayMinus(day,1), to=String(gl.from_date||'').slice(0,10)<=y?y:day;
+   await add('gallery');
    var e=await sinkAct('link_end',{id:gl.id,to_date:to,reason:GAL_EDITED});
    if(!(e.ok&&e.result&&e.result.status==='saved')) throw new Error(sinkMsg(e));
-   gl.to_date=to; gl.end_reason=GAL_EDITED; await add('gallery'); }
+   gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
- }catch(err){ say('The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.')); drawDogs(); return; }
- drawDogs();
+ }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
+ drawDogs();   /* the message is set after the redraw, so it is not wiped by it (17 Nov 2026) */
  var again=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(again&&fileId) again.open=true;
  var card=document.querySelector('.dc[data-dog="'+dog+'"]'), m=(again&&fileId)?again.querySelector('[data-gal-msg]'):card&&card.querySelector('[data-photo-msg]');
- if(m) m.textContent='\u2713 Edited copy saved';
+ if(m) m.textContent=done;
 }
 document.addEventListener('click',function(ev){
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-edit],[data-photo-edit]'):null; if(!b) return;
