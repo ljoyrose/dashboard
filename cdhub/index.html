@@ -2049,7 +2049,9 @@ function homeEditHtml(ids){ var on=HOME.edit, off=ids.filter(function(id){ retur
 function pageMap(){ var h=homeCards();
  return '<h2 class="sr">Main</h2>'
   +(HOME.edit?homeEditHtml(h.ids):'<div class="hm hhome">'+h.on.map(homeCard).join('')+'</div>'
-   +(sinkOn()?'<p class="hm-go"><button type="button" class="btn" data-home-arrange>Arrange Main</button>'+(HOME.msg?' <span class="msg">'+saveHtml(HOME.msg)+'</span>':'')+'</p>':''));
+   +(sinkOn()?'<p class="hm-go"><button type="button" class="btn" data-home-arrange>Arrange Main</button>'+(HOME.msg?' <span class="msg">'+saveHtml(HOME.msg)+'</span>':'')+'</p>':'')
+   /* Lisa 17 Nov 2026: "Board is hard to find" and "I need to print areas and dogs": both one tap from Main. */
+   +'<p class="hm-go" data-main-links><a class="btn" href="./staff/" data-open-board>The Board</a> <a class="btn" href="./staff/print/" data-open-print>Print cards</a></p>');
 }
 /* Save = one dated row per card (place, or 0 = off), a new row from today; old rows stay for the past. */
 function homeSave(){ var h=homeCards(), on=HOME.edit, from=todayISO();

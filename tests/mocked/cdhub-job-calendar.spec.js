@@ -41,3 +41,10 @@ test('Compliance opens with a calendar per daily job; yesterday done is green; D
   const sent = await page.evaluate(() => window.__sent);
   expect(sent).toEqual([{ table: 'check_log', action: 'add_site', fields: { check_type_id: 'j1', outcome: 'ok', how_recorded: 'site_tap' } }]);
 });
+
+// Lisa 17 Nov 2026: "Board is hard to find" and "I need to print areas and dogs": one tap each from Main.
+test('Main has The Board and Print cards', async ({ page, guard }) => {
+  await HUBS.cdhub.open(page, guard);
+  await expect(page.locator('[data-open-board]')).toHaveAttribute('href', './staff/');
+  await expect(page.locator('[data-open-print]')).toHaveAttribute('href', './staff/print/');
+});
