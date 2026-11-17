@@ -1190,8 +1190,13 @@ function build(){
   /* size from the latest weight (dog card mock-up, 7 Nov 2026): cut-offs are Lisa's size_from_kg.* rows with a source.
      12 Nov 2026 (Lisa): size is ALWAYS worked out from the latest weight, never kept separately. No weight, or no
      cut-off rows: no size. The card frame, lists, filters and the room check all read d.sizeWord. Colours: Lisa's
-     size_colour.* rows; without one, Toy/Mini (small) orange, Medium green, Standard (large) blue. */
+     size_colour.* rows; without one, small orange, medium green, large blue. The words are the owner's size_label.* rows
+     (OV12 17 Nov 2026, never fixed in code); without one, Small, Medium, Large as in SOP Care Rounds. */
   ['small','medium','large'].forEach(function(k,i){ if(!CD.sizeColour[k]) CD.sizeColour[k]=['var(--ljr-3)','var(--ljr-5)','var(--ljr-6)'][i]; });
+  CD.sizeLabel={}; var slFrom={}, slDay=todayISO(); (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var m=/^size_label\.(small|medium|large)$/.exec(String(r.rule_key||'').trim());
+   var v=String(r.value||'').trim(), f=String(r.effective_from||'').slice(0,10), t=String(r.to_date||'').slice(0,10);
+   if(!m||!v||v.length>30||(f&&f>slDay)||(t&&t<slDay)) return; if(slFrom[m[1]]!==undefined&&f<slFrom[m[1]]) return;   /* newest row in force wins */
+   slFrom[m[1]]=f; CD.sizeLabel[m[1]]=v; });
   CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
   CD.dogs.forEach(sizeFromWeight);
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
@@ -2424,7 +2429,7 @@ function dEditForm(d){
   +'<label>Neutered<select name="neuter_status"><option value="entire"'+(isEntire(d)?' selected':'')+'>entire</option><option value="'+(d.sex==='Male'?'neutered':'spayed')+'"'+(isEntire(d)?'':' selected')+'>'+(d.sex==='Male'?'neutered':'spayed')+'</option></select></label>'
   +'<label>Microchip<input name="chip_number" type="text" inputmode="numeric" autocomplete="off" maxlength="19" value="'+esc(d.chip||'')+'"></label>'
   +'<label>Size<select name="size_override"><option value=""'+(d.sizeFrom!=='override'?' selected':'')+'>from weight</option>'
-    +[['small','Toy/Mini'],['medium','Medium'],['large','Standard']].map(function(x){ return '<option value="'+x[0]+'"'+(d.sizeFrom==='override'&&d.sizeWord===x[0]?' selected':'')+'>'+x[1]+'</option>'; }).join('')
+    +['small','medium','large'].map(function(k){ return '<option value="'+k+'"'+(d.sizeFrom==='override'&&d.sizeWord===k?' selected':'')+'>'+esc(sizeName(k))+'</option>'; }).join('')
     +'</select></label>'
   +'</div><div class="dcs-row"><button type="submit" class="btn yes">Save details</button><button type="button" class="btn" data-dedit-cancel>Cancel</button></div>'
   +'<p class="mut" data-dedit-msg role="status"></p></form>';
@@ -2476,7 +2481,7 @@ function showTreats(id){
 }
 var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='';
 /* one size band to its colour key (small, medium, large) */
-var SIZE_WORD={small:'Toy/Mini',medium:'Medium',large:'Standard'};
+var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
 function sizeOverrideOf(d){
  var k='size_override.'+d.id, hit=null, from='';
@@ -2494,7 +2499,7 @@ function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1
  if(ov){ d.sizeWord=ov; d.sizeFrom='override'; d.sizeWhy='set as '+sizeName(ov)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''); return; }
  d.sizeWord=bw; d.sizeFrom=bw?'weight':'';
  d.sizeWhy=bw?(lw.kg+' kg on '+dmyShort(lw.on)):''; }
-function sizeName(k){ return SIZE_WORD[k]||''; }
+function sizeName(k){ return (CD.sizeLabel&&CD.sizeLabel[k])||SIZE_WORD[k]||''; }
 function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
 function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }
 

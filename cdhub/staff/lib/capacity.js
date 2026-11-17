@@ -39,7 +39,8 @@
   /**
    * Size from weight (Lisa's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
    * never fixed here: size_from_kg.medium = the weight (kg) at which a dog counts as medium, size_from_kg.large = the
-   * weight at which it counts as large. A row needs a value and a source; the newest row in force on `today` wins.
+   * weight a dog must be OVER to count as large (SOP Care Rounds: "small under 10 kg, medium 10-25 kg, large over 25 kg",
+   * so exactly 25 kg is medium; OV12 17 Nov 2026). A row needs a value and a source; the newest row in force on `today` wins.
    * Returns null unless both are set and medium < large, so a half-set pair never sorts a dog.
    */
   function sizeCutoffs(rules, today) {
@@ -57,7 +58,7 @@
   /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. */
   function sizeFromKg(kg, cut) {
     kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
-    return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+    return kg > cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
   }
 
   /** The flap setting in force: the last row for that room with a value (rows are only ever added). */

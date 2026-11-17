@@ -141,7 +141,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = dog(page);
     await expect(card).toHaveAttribute('data-size', 'small');
-    await expect(card.locator('[data-k="size"]')).toHaveText('Toy/Mini');
+    await expect(card.locator('[data-k="size"]')).toHaveText('Small');
     const frame = () => card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopColor);
     const small = await frame();
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['small', 'small']);
