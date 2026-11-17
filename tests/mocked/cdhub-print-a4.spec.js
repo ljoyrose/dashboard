@@ -50,7 +50,7 @@ test.describe('CD Hub print on A4', () => {
       await page.getByRole('button', { name: P.PER_LABEL[per] }).click();
       await expect(page.locator('.sheet')).toHaveClass(new RegExp('\\bper' + per + '\\b'));
       // paper width: portrait, or the landscape sheet that holds two A5 cards
-      await page.setViewportSize(per === 2 ? { width: Math.round(277 * P.MM), height: Math.round(190 * P.MM) } : P.PAPER.portrait);
+      await page.setViewportSize(per === 2 ? P.PAPER.landscape : P.PAPER.portrait);
       const fit = await P.cardsFit(page);
       fit.forEach((c) => {
         expect(c.out, c.id + ': nothing past the card edge').toEqual([]);

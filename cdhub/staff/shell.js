@@ -1,7 +1,9 @@
 /*!
- * The Board, staff page shell. No Google sign-in: a phone is set up ONCE (the save address arrives by the owner's
- * set-up QR, or the same payload typed in, then the person types their own staff code). The code stays on that phone.
+ * The Board, staff page shell. Staff: a phone is set up ONCE (the save address arrives by the owner's set-up QR, or the
+ * same payload typed in, then the person types their own staff code). The code stays on that phone.
  * If the owner switches the code off, the next read or save is refused and this page wipes it and goes back to set-up.
+ * Owners (Board A, Lisa 17 Nov 2026): the same Google sign-in as CD Hub, no code. The save address comes from this
+ * browser (CD Hub keeps it) or BLD-save-webapp.json in the hub folder. The save script checks the account is an owner.
  *
  * Nothing about dogs, rooms or people is in these files. Everything is read through the save script with the code.
  *
@@ -10,9 +12,9 @@
 (function () {
   'use strict';
   var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
-  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'lib/area-link.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
+  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'lib/area-link.js', 'lib/temp-judge.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
   var ICONS = {
-    report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg>',
+    report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0z"/><path d="M12 16h.01"/></svg>',   // Tabler alert-triangle (Problem tab)
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
     scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M4 12h16"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
@@ -22,7 +24,55 @@
   var screen = document.getElementById('screen'), tabs = document.getElementById('tabs');
   var save = BLDSave.create({});
   save.deviceCode = true;
-  var modules = [], cleanup = null, dataP = null, started = false, join = null;
+  var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '';
+  var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
+  var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';
+  function owner() { return BLDSave.ownerToken ? BLDSave.ownerToken() : ''; }
+
+  /** An owner's save address: one CD Hub kept in this browser, else the hub folder's BLD-save-webapp.json. */
+  function ownerUrl() {
+    for (var i = 0; i < HUB_URL_KEYS.length; i++) { var u = storeGet(HUB_URL_KEYS[i]); if (u && save.setScriptUrl(u, true).ok) return Promise.resolve(true); }
+    var tok = owner(), folder = CFG.cdhub && CFG.cdhub.folderId;
+    if (!tok || !folder || typeof fetch === 'undefined') return Promise.resolve(false);
+    var hd = { headers: { Authorization: 'Bearer ' + tok } }, base = 'https://www.googleapis.com/drive/v3/files';
+    var q = "'" + folder + "' in parents and trashed = false and name = '" + SAVE_URL_FILE + "'";
+    return fetch(base + '?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&fields=files(id)&q=' + encodeURIComponent(q), hd)
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var f = (j && j.files) || [];
+        if (f.length !== 1) return false;
+        return fetch(base + '/' + encodeURIComponent(f[0].id) + '?alt=media&supportsAllDrives=true', hd).then(function (r) { return r.json(); })
+          .then(function (cfg) { return save.setScriptUrl(String((cfg && cfg.url) || '').trim(), true).ok && !!(cfg && cfg.url); });
+      })
+      .catch(function () { return false; });
+  }
+
+  /* Google sign-in for owners on this page (the same client and the same saved sign-in as CD Hub). Set up only when the
+     owner taps the button, or to refresh a sign-in this browser already had, so a staff phone never sees Google. */
+  var gClient = null, gWant = '';
+  function gReady() { return !!(window.google && google.accounts && google.accounts.oauth2 && CFG.clientId && window.DashAuth); }
+  function gInit() {
+    if (gClient || !gReady()) return !!gClient;
+    gClient = google.accounts.oauth2.initTokenClient({ client_id: CFG.clientId, scope: SCOPE,
+      callback: function (resp) {
+        var want = gWant; gWant = '';
+        if (!resp || resp.error || !google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) { if (want === 'ask') { ownerNote = 'Google sign-in did not complete.'; route(); } return; }
+        DashAuth.save(resp.access_token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
+        BLDSave.ownerSkip(false); ownerNote = ''; urlTried = false; dataP = null; route();
+      },
+      error_callback: function () { var want = gWant; gWant = ''; if (want === 'ask') { ownerNote = 'Google sign-in did not complete. Allow pop-ups for this page and try again.'; route(); } } });
+    return true;
+  }
+  function ownerSignIn() {
+    BLDSave.ownerSkip(false);
+    if (!gInit()) { ownerNote = 'Google sign-in is still loading. Try again in a moment.'; route(); return; }
+    gWant = 'ask'; gClient.requestAccessToken({ prompt: 'select_account' });
+  }
+  /** An owner's sign-in in this browser ran out (about an hour): renew it quietly, as CD Hub does. */
+  function ownerRefresh() {
+    if (!window.DashAuth || !DashAuth.expired || !DashAuth.expired() || storeGet(CODE_KEY)) return;
+    (function wait(n) { if (gInit()) { gWant = 'quiet'; gClient.requestAccessToken({ prompt: '' }); } else if (n < 50) setTimeout(function () { wait(n + 1); }, 200); })(0);
+  }
 
   /** The encoded # body of a private set-up QR (#join=<code>&url=<save address>), or null. */
   function readJoin(raw) {
@@ -83,11 +133,17 @@
     (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
     return e;
   }
-  function isSetUp() { return save.getScriptUrlSet() && !!storeGet(CODE_KEY); }
-  function forget() { storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; }
+  function isSetUp() { return save.getScriptUrlSet() && (!!storeGet(CODE_KEY) || !!owner()); }
+  function forget() { storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
 
   /** Any read or save answering BAD_CODE means this phone was switched off: wipe it. */
   function guard(r) {
+    if (r && r.ok === false && save.usingGoogle && save.usingGoogle() && (r.code === 'GOOGLE_NOT_OWNER' || r.code === 'NO_CODE' || r.code === 'BAD_CODE')) {
+      // The Google sign-in was not accepted (not on the owner list, or the save script is not updated yet): use a code.
+      BLDSave.ownerSkip(true); dataP = null;
+      ownerNote = r.code === 'GOOGLE_NOT_OWNER' ? 'This Google account is not on the owner list. Type your staff code.' : 'The save script did not accept the Google sign-in yet. Type your staff code.';
+      route(); return r;
+    }
     if (r && r.ok === false && r.code === 'BAD_CODE') { forget(); route(); }
     return r;
   }
@@ -118,17 +174,41 @@
 
   var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
 
+  /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
+  function showMe() {
+    var me = document.getElementById('me');
+    if (!me) return;
+    var name = save.name ? save.name() : '', role = save.role ? save.role() : '';
+    if (!name && !role) { me.hidden = true; return; }
+    role = role ? role.charAt(0) + role.slice(1).toLowerCase() : '';
+    me.textContent = 'Welcome ' + (name || '') + (name && role ? ' · ' : '') + role + ' ';
+    // shared work phone: the next person swaps in with two taps; the save address stays, so no set-up QR again
+    if (!storeGet(CODE_KEY) && owner()) me.appendChild(h('button', { class: 'switch', type: 'button', text: 'Use a staff code', onclick: function () { BLDSave.ownerSkip(true); forget(); go('home'); } }));
+    else me.appendChild(h('button', { class: 'switch', type: 'button', text: 'Not ' + (name || 'you') + '? Switch', onclick: function () { forget(); go('home'); } }));
+    me.hidden = false;
+  }
   function setTabs(cur) {
+    showMe();
     tabs.hidden = false; tabs.textContent = '';
-    [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['m/report', 'Report', 'report'], ['device', 'Phone', 'gear']].forEach(function (t) {
+    [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['m/report', 'Problem', 'report'], ['device', 'Phone', 'gear']].forEach(function (t) {
       tabs.appendChild(h('button', { type: 'button', 'aria-current': cur === t[0] ? 'page' : false, onclick: function () { go(t[0]); } }, [h('span', { class: 'ring', html: ICONS[t[2]] }), t[1]]));
     });
   }
   function clearScreen() { if (cleanup) { try { cleanup(); } catch (e) { /* a module's tidy-up must not stop the page */ } cleanup = null; } screen.textContent = ''; window.scrollTo(0, 0); }
 
+  /** Owners: one button, the CD Hub Google sign-in. */
+  function ownerBox() {
+    var box = h('div', { class: 'owner-in' }, [
+      h('button', { class: 'btn', type: 'button', 'data-owner-signin': '', text: 'Owner: sign in with Google', onclick: ownerSignIn }),
+      h('p', { class: 'sub', text: 'The same sign-in as CD Hub. No code needed.' })
+    ]);
+    if (ownerNote) box.appendChild(h('p', { class: 'msg bad', role: 'status', text: ownerNote }));
+    return box;
+  }
   function drawSetup(note) {
     clearScreen(); tabs.hidden = true;
     screen.appendChild(h('h1', { text: 'Set up this phone' }));
+    screen.appendChild(ownerBox());
     if (!save.getScriptUrlSet()) {
       screen.appendChild(h('p', { class: 'sub', text: 'This phone is not set up. Ask the hub owner for the set-up QR and scan it.' }));
       var box = h('div');
@@ -141,6 +221,12 @@
         status.className = 'msg';
         status.textContent = '';
         if (!String(typed || '').trim()) { status.className = 'msg bad'; status.textContent = 'Paste the set-up code.'; return; }
+        // Lisa 17 Nov 2026: a staff code typed here said "That set-up QR was not right", which read as "your code is wrong".
+        if (!/[#=\/]/.test(typed) && String(typed).trim().length <= 40) {
+          status.className = 'msg bad';
+          status.textContent = 'That looks like a staff code. This box needs the set-up link first: scan the Phone set-up QR (CD Hub, Admin, Tools, Print). Owners: use the Google button above.';
+          return;
+        }
         if (!acceptScan(typed)) setupFail();
       }
       field.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); submitTyped(); } });
@@ -192,7 +278,8 @@
   function drawHome() {
     clearScreen(); setTabs('home'); delete ctx.reportFor;
     screen.appendChild(h('h1', { text: 'The Board' }));
-    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) }));
+    data().then(showMe);   // the first read tells us whose code this is
+    screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' }).replace('Sept', 'Sep') }));
     var list = h('div', { class: 'cards' });
     modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
       list.appendChild(h('button', { class: 'card go', type: 'button', 'data-module': m.id, onclick: function () { go('m/' + m.id); } }, [
@@ -207,7 +294,12 @@
   function drawDevice() {
     clearScreen(); setTabs('device');
     screen.appendChild(h('h2', { text: 'This phone' }));
-    screen.appendChild(h('p', { class: 'sub', text: 'This phone is set up with your staff code. If it is lost, tell Lisa: she switches the code off and it stops working everywhere.' }));
+    if (!storeGet(CODE_KEY) && owner()) {
+      screen.appendChild(h('p', { class: 'sub', text: 'Signed in with your Google account, the same as CD Hub. Signing out of CD Hub signs out here too.' }));
+      screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Use a staff code instead', onclick: function () { BLDSave.ownerSkip(true); forget(); go('home'); } }));
+      return;
+    }
+    screen.appendChild(h('p', { class: 'sub', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
     screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Remove my code from this phone', onclick: function () { forget(); go('home'); } }));
   }
   function openModule(id, params) {
@@ -233,6 +325,14 @@
     if (raw && acceptScan(raw)) return;   // the same checks as a typed set-up code; the address does not stay in the bar
     var hash;
     try { hash = decodeURIComponent(raw); } catch (e) { hash = raw; }
+    if (!save.getScriptUrlSet() && owner() && !urlTried) {
+      urlTried = true;
+      clearScreen(); tabs.hidden = true;
+      screen.appendChild(h('h1', { text: 'The Board' }));
+      screen.appendChild(h('p', { class: 'msg', role: 'status', text: 'Finding the save address...' }));
+      ownerUrl().then(function (ok) { if (ok) save.checkStatus().then(route); else { ownerNote = 'Signed in, but the save address was not found. Open CD Hub once on this phone, then come back.'; route(); } });
+      return;
+    }
     if (!isSetUp()) { drawSetup(); return; }
     save.setCode(storeGet(CODE_KEY), false);
     if (hash.indexOf(SCAN_PREFIX) === 0) {
@@ -266,6 +366,8 @@
     }
     started = true;
     window.addEventListener('hashchange', route);
+    if (window.DashAuth && DashAuth.onChange) DashAuth.onChange(function () { dataP = null; urlTried = false; route(); });   // signed in or out in CD Hub
+    ownerRefresh();
     return save.checkStatus();
   }).then(route);
 }());

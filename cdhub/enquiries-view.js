@@ -20,9 +20,10 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  /* "2 Mar 2026": the one formatter, staff/lib/date-words.js (Lisa 13 Nov 2026) */
   function dmy(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t(iso));
-    return m ? m[3] + '/' + m[2] + '/' + m[1].slice(2) : '';
+    return m ? root.BLDDates.long(m[0]) : '';
   }
   function cfg() { return (root.DASH_CONFIG && root.DASH_CONFIG.enquiries) || {}; }
   function writesOn() { return !!(root.DASH_CONFIG && root.DASH_CONFIG.cdhub && root.DASH_CONFIG.cdhub.enquiriesWrites); }
@@ -181,8 +182,9 @@
   }
 
   function pageAll(litters, subjects, speciesRows) {
+    /* the count says what it counts: "6 enquiries", not a bare 6 (17 Nov 2026) */
     var list = shown(state.tabs.Enquiries, litters);
-    return shell(litterSelect(litters) + '<div class="card"><h3>All</h3><p class="mut">' + list.length + '</p></div>' +
+    return shell(litterSelect(litters) + '<div class="card"><h3>All</h3><p class="mut" data-enq-count>' + list.length + (list.length === 1 ? ' enquiry' : ' enquiries') + '</p></div>' +
       (list.length ? list.map(function (e) { return rowHtml(e, litters, subjects, speciesRows); }).join('') : '<p class="mut">No enquiry matches.</p>'));
   }
 

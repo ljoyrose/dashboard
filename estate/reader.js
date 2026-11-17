@@ -50,9 +50,10 @@
       .catch(function (e) { return done('error', ['could not reach Google: ' + ((e && e.message) || e)]); });
   }
 
-  // An optional extra tab (Shops, Keywords): plain objects by header, no contract. A missing tab is not an error:
+  // An optional extra tab (Shops, Keywords, Mail map, Mail switch): plain objects by header, plus the raw values so a
+  // caller with its own header contract (estate/mail.js) can check the header row itself (raw = true). No contract here. A missing tab is not an error:
   // it resolves { ok: true, rows: [], missing: true } so the page can say "not reported" / "not connected".
-  function readTab(opts, tab) {
+  function readTab(opts, tab, raw) {
     opts = opts || {};
     var fetchFn = opts.fetch || (root && root.DashKit && root.DashKit.googleFetch) || (root && root.fetch);
     if (!opts.sheetId || !opts.token || !fetchFn) return Promise.resolve({ ok: false, rows: [], missing: true });
@@ -64,7 +65,9 @@
           var msg = (j.error && j.error.message) || '';
           if (!res.ok) return /Unable to parse range/i.test(msg) ? { ok: true, rows: [], missing: true } : { ok: false, rows: [], missing: false, problem: why(res.status, msg) };
           var v = (j.values || []).filter(function (r) { return r && r.some(function (c) { return String(c == null ? '' : c).trim() !== ''; }); });
-          return { ok: true, rows: Core.toObjects(v), missing: false };
+          var out = { ok: true, rows: Core.toObjects(v), missing: false };
+          if (raw) out.values = v;
+          return out;
         });
       })
       .catch(function (e) { return { ok: false, rows: [], missing: false, problem: 'could not reach Google: ' + ((e && e.message) || e) }; });

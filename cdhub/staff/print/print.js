@@ -15,15 +15,18 @@
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
-  if (!save.getScriptUrlSet() || !code) { screen.appendChild(h('p', { class: 'sub', text: 'Set up this device on the staff page first, with an owner code.' })); return; }
-  save.setCode(code, false);
+  // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
+  var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
+  if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
+  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
+  if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' });
   screen.appendChild(opts); screen.appendChild(msg); screen.appendChild(sheet);
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files'], ['subject_link', 'links', 'files', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -33,6 +36,12 @@
   function make(kind, items, draw) {
     sheet.textContent = '';
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
+    // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
+    var role = typeof save.role === 'function' ? save.role() : '';
+    if (missing.length && role && role !== 'OWNER') {
+      say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
+      return;
+    }
     (function next() {
       if (i < missing.length && !failed) {
         say('Making code ' + (i + 1) + ' of ' + missing.length + '...');
@@ -43,8 +52,11 @@
         });
         return;
       }
+      // only codes already saved are drawn (a code whose save failed is never shown); the rest are named as not printed
       items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room)); });
-      say(failed ? 'Stopped: ' + failed : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
+      var left = items.filter(function (it) { return !current(kind, it.id); }).length;
+      say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
+        : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
     }());
   }
   /* Lisa's "Dog Card Print-outs" layout (v4). Every value prints from rows: size colours from size_colour.* rule rows,
@@ -63,7 +75,9 @@
     var w = m[2].charAt(0).toUpperCase() + m[2].slice(1), kg = m[1].replace(/-/g, '\u2013').replace(/kg/i, ' kg').replace(/\s+/g, ' ').trim();
     return [w, h('br'), kg];
   }
-  function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1].slice(2) : ''; }
+  /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
   function sexIcon(sex) {
     var f = /^f/i.test(sex || ''), m = /^m/i.test(sex || '');
     if (!f && !m) return null;
@@ -85,15 +99,38 @@
     out.sort(function (a, b) { return a.localeCompare(b); });
     return out.length ? h('div', { class: 'jobs', 'data-k': 'jobs' }, out.map(function (n) { return h('span', { class: 'job', text: n }); })) : null; }
   function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
+  /* BFFs / Fren. (Lisa 13 Nov 2026): dated link rows, words from link_kind.* rules; up to 3 names, then +n */
+  function linksOf(id) {
+    if (typeof BLDLinks === 'undefined') return [];
+    var names = {}; (T.subject || []).forEach(function (x) { names[x.id] = x.name || x.id; });
+    return BLDLinks.forDog(T.subject_link || [], T.breeding_rule || [], id, BLDNeeds.today()).map(function (g) {
+      var n = g.ids.map(function (x) { return names[x] || x; });
+      return { label: g.label + ':', names: n.slice(0, 3).join(', ') + (n.length > 3 ? ' +' + (n.length - 3) : '') }; }); }
+  /* Classification: the licence label from the latest occupancy row that has one (a move row leaves it blank) */
+  function classOf(s) { var r = BLDOccupancy.latestRow((T.occupancy || []).filter(function (o) { return o.classification; }), s.id); return r ? String(r.classification) : ''; }
+  /* Photo: the dog's photo cell holds a Drive file id (or a Drive link). The card shows Drive's own picture of it, which
+     loads for whoever is signed in to Google with access to the photos folder; otherwise the empty Photo box stays. */
+  function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
+    return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
+  /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
+  function mainPhoto(s) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], 'subjects', s.id, BLDNeeds.today()).main;
+    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  function photoBox(s) {
+    var id = mainPhoto(s), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
+    if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
+      onerror: function () { box.textContent = 'Photo'; } }));
+    return box; }
   function dogCard(tag, it) {
-    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s);
+    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s), cls = classOf(s);
+    if (cls) rows.push(['Class', cls]);
     if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
+    linksOf(s.id).forEach(function (g) { rows.push([g.label, g.names]); });
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
       h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band ? h('small', { 'data-size': sizeKey(s.size_band) }, sizeLines(s.size_band)) : null]),
       h('div', { class: 'dbody' }, [
-        h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
+        h('div', { class: 'cside' }, [photoBox(s),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
         chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,

@@ -222,7 +222,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').dispatchEvent('change');
     const round = page.locator('#view-d');
     // A room in use with no readings at all (Test Cabin Z) is still listed, and shows its missed slots (the audit).
-    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'Test Cabin Z', '3S.2-iso (retired 15/01/26)']);
+    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'Test Cabin Z', '3S.2-iso (retired 15 Jan 2026)']);
     await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('AM missed');
     await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('PM missed');
     await expect(round.locator('.rtable th')).toHaveText(['Room', 'AM min', 'AM max', 'PM min', 'PM max']);
@@ -261,7 +261,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     put('BLD-area_reading.csv', 'id,area_id,taken_at,min_c,max_c\na,area-old,2026-01-15T08:00,12,18\n');
     await openHistory(page);
     const round = page.locator('#view-d');
-    for (const [day, names] of [['2026-01-15', ['3A.2-3 (retired 15/01/26)']], ['2026-01-16', ['3A.1/2']]]) {
+    for (const [day, names] of [['2026-01-15', ['3A.2-3 (retired 15 Jan 2026)']], ['2026-01-16', ['3A.1/2']]]) {
       await page.locator('#rdate').fill(day);
       await page.locator('#rdate').dispatchEvent('change');
       await expect(round.locator('.rtile .rn')).toHaveText(names);
@@ -286,7 +286,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     const round = page.locator('#view-d');
     await page.locator('#rdate').fill('2026-01-10');
     await page.locator('#rdate').dispatchEvent('change');
-    await expect(round.locator('.rtile .rn')).toHaveText(['3A.2-3 (retired 11/01/26)']);
+    await expect(round.locator('.rtile .rn')).toHaveText(['3A.2-3 (retired 11 Jan 2026)']);
     await expect(round.locator('.rtile').first()).toContainText('18.5');
     await expect(page.locator('body')).not.toContainText(/camera|typed|photo/i);   // how a reading was taken is saved only (Lisa, 11 Nov)
     await page.locator('#rdate').fill('2026-01-12');

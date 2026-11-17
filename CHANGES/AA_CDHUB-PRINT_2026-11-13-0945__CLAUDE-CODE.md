@@ -45,3 +45,9 @@ The on-screen dog card is not changed. Print rules only, plus the light look dur
 - **2 per A4 now prints on a landscape sheet** (two A5 cards). Safari may ignore landscape: then it prints two cards side by side on portrait, as before.
 - Round sheet hides present / not here and Empty buttons; on paper a cabin is "empty" if its boxes are left blank.
 - Kennel card photo stays the "Photo" box to stick a print on. The print page has no Google sign-in, so it cannot fetch Drive photos.
+
+## 17 Nov 2026: main merged in (PR had a conflict)
+
+- Kept "no address on any print-out" (ljoyrose/dashboard#530): every print page has margin 0, so the browser has no room to print the page address. The 10 mm inset is body padding, repeated on every page (Chrome 153 checked).
+- New dog card from main, on paper: the full name prints (main cuts it to two lines with "…" on screen), the photo prints at 30 mm, and the section chips stay off the paper. 32 dogs: 6 pages again (8 without this).
+- Not this PR: `cdhub-jobs` "Compliance shows late, due and source…" and the Factory page budget fail the same way on main.

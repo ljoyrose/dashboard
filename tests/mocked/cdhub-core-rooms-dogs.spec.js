@@ -141,6 +141,61 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('#main')).not.toContainText('Room D');
   });
 
+  test('The round: a dog whose latest row is a day pen is "not yet placed" with the reason, and its name opens the place-in list (OV11 14 Nov)', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA.replace(/\r\n$/, '') + '\r\nar-d,t,Room D,A,1,7,u-m2,yes,,,\r\n');
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', csv('id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_out,classification,classification_note', [
+      'o1,t,sub-x1,ar-a,,2026-01-01,,SLA,',
+      'o2,t,sub-x2,ar-d,,2026-01-01,,SLA,'
+    ]));
+    put(w, 'BLD-requirement.csv', REQ.replace(/\r\n$/, '') + '\r\nreq-9,t,room.no_overnight,area,ar-d,2026-01-01,,Pretend day pen,Pretend,2026-01-01\r\n');
+    w.file('bld-access-invented', 'BLD-area_access.csv', ACCESS, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+    await HUBS.cdhub.open(page, guard);
+    await tabClick(page, '#nav button[data-go="round"]');
+    const card = page.locator('.card', { has: page.locator('h4', { hasText: 'not yet placed' }) });
+    await expect(card.locator('h4')).toHaveText('1 dog not yet placed');
+    await expect(card).toContainText('in Room D (day pen)');
+    await card.getByRole('button', { name: 'Move Pretend Adult Two' }).click();
+    await expect(card.locator('[data-move-panel]')).toBeVisible();
+    await expect(card.locator('[data-move-panel] [data-move-to="ar-d"]')).toHaveCount(0);   // never offered the day pen
+    await expect(page.locator('#kept-readings h3')).toHaveText('Readings');
+  });
+
+  test('The round: present shows pressed at once, with no redraw and no jump to the top (Lisa 15 Nov)', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA);
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
+    w.file('bld-access-invented', 'BLD-area_access.csv', ACCESS, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+    await page.setViewportSize({ width: 375, height: 500 });
+    await HUBS.cdhub.open(page, guard);
+    await tabClick(page, '#nav button[data-go="round"]');
+    const here = page.locator('button[data-here]').last(), not = page.locator('button[data-nothere]').last();
+    await here.scrollIntoViewIfNeeded();
+    await page.evaluate(() => { window.__marker = document.querySelector('#main').firstElementChild; });
+    const y0 = await page.evaluate(() => window.scrollY);
+    expect(y0).toBeGreaterThan(0);
+    await here.click();
+    await expect(here).toHaveAttribute('aria-pressed', 'true');
+    await expect(not).toHaveAttribute('aria-pressed', 'false');
+    expect(await here.evaluate((b) => getComputedStyle(b, '::before').content)).toContain('\u2713');
+    expect(await not.evaluate((b) => getComputedStyle(b).opacity)).toBe('0.5');
+    expect(await page.evaluate(() => window.__marker === document.querySelector('#main').firstElementChild)).toBe(true);   // no redraw
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - y0)).toBeLessThan(2);
+    await expect(page.locator('[data-hsave]').last()).toHaveText('noted on this page, not saved');   // no round.presence row: says so
+    await not.click();
+    await expect(not).toHaveAttribute('aria-pressed', 'true');
+    await expect(here).toHaveAttribute('aria-pressed', 'false');
+    // a full redraw of the round (flap, add a dog, temps, moves) keeps the place too
+    const y1 = await page.evaluate(() => { const y = window.scrollY; go('round', false); return y; });
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - y1)).toBeLessThan(2);
+    await expect(page.locator('button[data-nothere]').last()).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('Compliance temperatures: Room empty is flagged but not counted; missing only on days a thermometer is needed', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-area.csv', AREA);
@@ -182,7 +237,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const d = await page.evaluate(() => {
       const t = todayISO();
       T['BLD-breeding_rule.csv'] = [{ id: 'b1', rule_key: 'compliance.look_back_days', value: '3', effective_from: '2020-01-01', source: 'Pretend setting' }];
-      T['BLD-area_reading.csv'].push({ id: 'r5', area_id: 'ar-b', thermometer_id: 'th-b', min_c: '40.0', max_c: '41.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' });
+      // Temps A (17 Nov 2026): over the top of the limit is a cooling action, not a breach, so the breach here is a cold one
+      T['BLD-area_reading.csv'].push({ id: 'r5', area_id: 'ar-b', thermometer_id: 'th-b', min_c: '1.0', max_c: '2.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' });
       go('compliance', false);
       const x = compTemps();
       return { n: x.win.n, c: x.miss.filter((m) => m.name === 'Pretend C').length, bad: x.bad.map((b) => b.th) };
@@ -235,7 +291,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
       T['BLD-breeding_rule.csv'] = [{ id: 's1', rule_key: 'staffing.adults_per_full_time', value: '7', effective_from: '2020-01-01', source: 'Pretend source' }];
       go('today', false);
     });
-    await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults (Pretend source)');
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults');
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).not.toContainText('Pretend source');   // Lisa 17 Nov 2026: no legal source on the tile
     // dated rows: each day is judged by the row in force that day; a to_date ends a row
     const r = await page.evaluate(() => {
       T['BLD-breeding_rule.csv'] = [
@@ -350,7 +407,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('.dcard .who b')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
     const one = page.locator('.dcard[data-dog="d1"]');
     await expect(one.locator('[data-k="Room"] dd')).toHaveText('Room A');
-    await expect(one.locator('[data-k="DOB"] dd')).toHaveText('05/01/22');
+    await expect(one.locator('[data-k="DOB"] dd')).toHaveText('5 Jan 2022');
     await expect(one).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
     await expect(one.locator('.band small')).toHaveText('Medium10–25 kg');

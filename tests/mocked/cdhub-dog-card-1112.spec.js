@@ -40,12 +40,11 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     await expect(dog(page).locator('[data-k="wgraph"] svg.spk')).toHaveCount(1);   // visible without opening anything
     await expect(dog(page).locator('[data-k="wgraph"]').first()).toBeVisible();
-    await dog(page).locator('details.wtc > summary').click();
-    const g = page.locator('#wpanel svg.wgraph');
-    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 01/01/26 to 8.9 kg on 12/03/26');
+    await dog(page).locator('details.wtc > summary').click();   // opens in place (Lisa 15 Nov 2026), no panel at the top
+    const g = dog(page).locator('details.wtc svg.wgraph');
+    await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 1 Jan 2026 to 8.9 kg on 12 Mar 2026');
     await expect(g.locator('circle')).toHaveCount(3);
-    await expect(page.locator('#wpanel thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);   // no source column
-    await expect(page.locator('#wpanel')).not.toContainText('Pretend source');
+    await expect(dog(page).locator('details.wtc')).not.toContainText('Pretend source');   // no source shown
   });
 
   test('Add weight: date defaults to today, kg and optional BCS, sent as action weighing; the new weight shows', async ({ page, guard }) => {
@@ -53,7 +52,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const bodies = await saves(page);
     await page.evaluate(() => go('dogs/sub-x1'));
     await dog(page).locator('details.wtc > summary').click();
-    const f = page.locator('#wpanel form[data-weigh-form]');
+    const f = dog(page).locator('details.wtc form[data-weigh-form]');
     const today = await page.evaluate(() => todayLondon());
     await expect(f.locator('input[name=on]')).toHaveValue(today);
     await f.locator('input[name=kg]').fill('999');
@@ -66,7 +65,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0].action).toBe('weighing');
     expect(bodies[0].fields).toEqual({ subject_id: 'sub-x1', performed_on: today, weight_kg: '9.25', body_condition_score: '6' });
-    await expect(page.locator('#wpanel tbody tr').first()).toContainText('9.25 kg');
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]').first()).toContainText('9.25 kg');
     await expect(dog(page).locator('[data-k="weight"]')).toContainText('9.25 kg');
   });
 
@@ -75,11 +74,11 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await saves(page, () => ({ ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }));
     await page.evaluate(() => go('dogs/sub-x1'));
     await dog(page).locator('details.wtc > summary').click();
-    const f = page.locator('#wpanel form[data-weigh-form]');
+    const f = dog(page).locator('details.wtc form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('9.3');
     await f.locator('button[type=submit]').click();
-    await expect(f.locator('[data-weigh-msg]')).toHaveText('NOT saved \u2014 The save script has not been updated for this yet. Nothing was saved.');
-    await expect(page.locator('#wpanel tbody tr')).toHaveCount(3);
+    await expect(f.locator('[data-weigh-msg]')).toHaveText('Not saved: The save script has not been updated for this yet. Nothing was saved.');
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]')).toHaveCount(3);
   });
 
   test('vaccines: codes as words, removed rows hidden, card link, and Remove only on the newest', async ({ page, guard }) => {
@@ -147,7 +146,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     const small = await frame();
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['small', 'small']);
     await card.locator('details.wtc > summary').click();
-    const f = page.locator('#wpanel form[data-weigh-form]');
+    const f = card.locator('details.wtc form[data-weigh-form]');
     await f.locator('input[name=kg]').fill('12.5');
     await f.locator('button[type=submit]').click();
     await expect(card).toHaveAttribute('data-size', 'medium');
@@ -214,7 +213,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await page.evaluate(() => licenceBar({ adults: new Array(27), bitches: new Array(25), active: new Array(25), studs: new Array(2) }))).toContain('lbok');
   });
 
-  test('a saved reading shows at once in the count and Kept readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
+  test('a saved reading shows at once in the count and Readings; Empty saves room_empty for the slot', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
     await page.evaluate(() => go('round'));
@@ -230,12 +229,82 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
     await expect(page.locator('#rstat')).toContainText('1 with a temperature');
     await expect(page.locator('#kept-readings')).toContainText('11.3–13.2');
-    page.once('dialog', (d) => d.accept());
+    const dialogs = []; page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });   // Lisa 16 Nov: one tap, no pop-up
     await page.locator(`.rempty[data-area="${area}"][data-slot="pm"]`).click();
     await expect.poll(() => bodies.length).toBe(2);
     expect(bodies[1]).toMatchObject({ table: 'area_reading', fields: { area_id: area, room_empty: 'yes' } });
     expect(bodies[1].fields.min_c).toBeUndefined();
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
+    expect(dialogs).toEqual([]);
+  });
+
+  test('a comma decimal saves as a point; text is refused and nothing saves; a saved reading that is not a number shows as a problem (OV11 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
+    await page.evaluate(() => go('round'));
+    await page.locator('#rdate').fill('2026-11-11');
+    await page.locator('#rdate').dispatchEvent('change');
+    const min = page.locator('.tmin[data-slot="am"]').first();
+    const area = await min.getAttribute('data-area');
+    const max = page.locator(`.tmax[data-area="${area}"][data-slot="am"]`);
+    await min.fill('abc'); await min.blur();
+    await expect(page.locator('.tmp').first()).toContainText('Not a number. Type e.g. 18.5');
+    await expect(min).toHaveClass(/bad/);
+    await min.fill('11,3'); await min.blur();
+    await expect(min).toHaveValue('11.3');
+    await max.fill('13,2'); await max.blur();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
+    // a row typed straight into the sheet as text, and one with max blank: both are problems, never hidden
+    const st = await page.evaluate(() => ({ text: tempState('24.1', '25,3', { min: 10, max: 30 }), half: tempState('26.4', '', { min: 10, max: 30 }), ok: tempState('24.1', '25.3', { min: 10, max: 30 }) }));
+    expect(st).toEqual({ text: 'unread', half: 'unread', ok: 'ok' });
+    await page.evaluate(() => { T['BLD-area_reading.csv'] = [{ id: 'r-x', area_id: CD.areas[0].id, min_c: '24.1', max_c: '25,3', period_start: '2026-11-11T00:00:00Z', taken_at: '2026-11-11T08:00:00Z' }]; ROUND = {}; foldAreaReadings(T['BLD-area_reading.csv']); go('round', false); });
+    await expect(page.locator('#kept-readings')).toContainText('24.1–25,3 °C — Check: not a number');
+    expect(await page.evaluate(() => CD.tempUnread.map((x) => x.id))).toEqual(['r-x']);
+  });
+
+  test('guard: the room temperatures sheet with its heading row moved (sorted or filtered) shows on Readings and Data checks (OV11 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    await page.evaluate(() => go('round'));
+    await expect(page.locator('[data-hdrbad]')).toHaveCount(0);
+    const r = await page.evaluate(() => {
+      const H = 'id,area_id,min_c,max_c,period_start,taken_at';
+      const sorted = parseCSV('r-1,area-a,12.0,18.0,2026-11-11T00:00:00Z,2026-11-11T08:00:00Z\n' + H + '\n');
+      const twice = parseCSV(H + '\nr-1,area-a,12.0,18.0,2026-11-11T00:00:00Z,2026-11-11T08:00:00Z\n' + H + '\n');
+      return { sorted: areaHeaderProblem(sorted), twice: areaHeaderProblem(twice), ok: areaHeaderProblem(parseCSV(H + '\nr-1,area-a,12.0,18.0,,\n')), sortedRows: sorted };
+    });
+    expect(r).toMatchObject({ sorted: 'row 1 is not the heading row', twice: 'a heading row is also lower down', ok: '' });
+    await page.evaluate((rows) => { T['BLD-area_reading.csv'] = rows; ROUND = {}; foldAreaReadings(rows); go('round', false); }, r.sortedRows);
+    await expect(page.locator('#kept-readings [data-hdrbad]')).toContainText('row 1 is not the heading row');
+    const line = await page.evaluate(() => checks().find((c) => c.k === 'room temps sheet'));
+    expect(line.ok).toBe(false);
+    expect(line.msg).toContain('never sort the sheet');
+  });
+
+  test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    let fail = false;
+    const bodies = await saves(page, () => (fail ? { ok: false, code: 'NETWORK', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
+    await page.evaluate(() => { T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-p', type_key: 'round.presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]); go('round'); });
+    const here = page.locator('button[data-here]').first();
+    const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');
+    const not = page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`), line = page.locator(`[data-hsave="${area}|${sid}"]`);
+    await here.click();
+    await expect(here).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'check_log', fields: { check_type_id: 'cty-p', area_id: area, subject_id: sid, item: 'present', outcome: 'recorded', how_recorded: 'tapped' } });
+    await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
+    await here.click();   // a second tap on the saved button sends nothing
+    await page.waitForTimeout(200); expect(bodies.length).toBe(1);
+    await page.evaluate(() => go('round', false));   // after a redraw (or reload) the saved row still shows pressed, with its tick
+    await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
+    await expect(line.locator('[data-saved="good"]')).toHaveCount(1);
+    fail = true;
+    await not.click();
+    await expect.poll(() => bodies.length).toBe(2);
+    await expect(line).toContainText('Not saved');
+    await expect(not).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {

@@ -11,9 +11,10 @@ const OUT = process.env.CDHUB_PRINT_PDF || '';
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-PRINT-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
-// A4 printable area at the 10 mm margin the pages ask for, in CSS pixels (96 per inch).
+// The whole A4 sheet in CSS pixels (96 per inch). The pages print with margin 0 (no page address) and keep a 10 mm
+// inset as body padding, so the page is laid out at the sheet's full width.
 const MM = 96 / 25.4;
-const PAPER = { portrait: { width: Math.round(190 * MM), height: Math.round(277 * MM) } };
+const PAPER = { portrait: { width: Math.round(210 * MM), height: Math.round(297 * MM) }, landscape: { width: Math.round(297 * MM), height: Math.round(210 * MM) } };
 
 /** Pages and their sizes (points) in a PDF Chrome made. */
 function pdfPages(buf) {

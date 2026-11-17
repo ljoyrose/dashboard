@@ -55,3 +55,42 @@ test('freePlaces: lists remaining places of the incoming size, and 0 when the ro
   assert.equal(medOk.ok, true);
   assert.equal(medOk.free, 1);
 });
+
+test('flap set to limited but limits only recorded for free access: unknown, and the reason says so (3A.1/2, 17 Nov 2026)', () => {
+  const rows = [{ area_id: 'r2', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
+  const r = C.check({ areaId: 'r2', access: 'limited', capacity: rows, dogs: [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }], date: '2026-11-17' });
+  assert.equal(r.status, 'unknown');
+  assert.match(r.message, /flap is set to limited access, but this room only has limits for free access/);
+  const ok = C.check({ areaId: 'r2', access: 'free', capacity: rows, dogs: [{ id: 'a', size: 'medium' }], date: '2026-11-17' });
+  assert.equal(ok.status, 'ok');
+  assert.doesNotMatch(ok.message, /flap is set/);
+});
+
+// The Space Rules poster as BLD-breeding_rule holds it (rule keys as in the live sheet, 11 Nov 2026). Invented ids.
+const POSTER = [];
+[['free', { small: [2.5, 2.5, 4.5, 6.0], medium: [2.5, 4.5, 6.0], large: [4.5, 6.0] }, { small: 5, medium: 5, large: 9 }],
+ ['limited', { small: [4.5, 4.5, 6.5, 8.5], medium: [4.5, 6.5, 8.5], large: [6.5, 8.5] }, { small: 9, medium: 9, large: 13 }]].forEach(([mode, t, p]) => {
+  Object.keys(t).forEach((sz) => t[sz].forEach((v, i) => POSTER.push({ rule_key: `space.${mode}.adult.${sz}.${i + 1}`, value: String(v), effective_from: '2026-11-11' })));
+  Object.keys(p).forEach((sz) => POSTER.push({ rule_key: `space.${mode}.mum_with_pups.${sz}.1`, value: String(p[sz]), effective_from: '2026-11-11' }));
+});
+
+test('space rules: 3A.1/2 (9 m²) with the flap shut gets 4 small, 3 medium or 2 large, small/medium mum with pups but not large', () => {
+  const space = C.spaceRules(POSTER, '2026-11-17');
+  const rows = C.deriveRows('r3', 9, space).filter((r) => r.access_type === 'limited');
+  const by = Object.fromEntries(rows.map((r) => [r.size_band, r.max_dogs]));
+  assert.deepEqual(by, { small: '4', medium: '3', large: '2', 'small + pups': '1', 'medium + pups': '1', 'large + pups': '0' });
+  const free = Object.fromEntries(C.deriveRows('r3', 3.14, space).filter((r) => r.access_type === 'free').map((r) => [r.size_band, r.max_dogs]));
+  assert.equal(free.small, '2'); assert.equal(free.medium, '1'); assert.equal(free.large, '0');   // matches 4A on the Cabin List
+});
+
+test('check: a flap setting with no rows of its own uses the space rules and says so; the owner\'s own rows still win', () => {
+  const space = C.spaceRules(POSTER, '2026-11-17');
+  const own = [{ area_id: 'r3', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
+  const two = [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }];
+  const r = C.check({ areaId: 'r3', access: 'limited', capacity: own, dogs: two, date: '2026-11-17', m2: 9, space });
+  assert.equal(r.status, 'ok'); assert.equal(r.limit, 3);
+  assert.match(r.message, /worked out from the room size \(9 m²\)/);
+  const mine = C.check({ areaId: 'r3', access: 'free', capacity: [{ area_id: 'r3', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '1' }], dogs: two, date: '2026-11-17', m2: 9, space });
+  assert.equal(mine.status, 'over');   // the owner's row (1) is used, not the derived 3
+  assert.equal(C.spaceRules([], '2026-11-17').free, undefined);   // no poster rows: nothing is invented
+});
