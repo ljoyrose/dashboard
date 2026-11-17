@@ -101,7 +101,8 @@ header.house-head > .house-row, .house-page.house-page { box-sizing: border-box;
   font-size: var(--house-press-size); font-weight: 600; color: var(--ink); cursor: pointer; text-decoration: none; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; background: var(--card); line-height: 1.2; }
 .btn[disabled], .btn:disabled { cursor: not-allowed; opacity: .55; }
-@media (max-width: 600px) {
+/* A touch screen of any width gets the phone tap size (Lisa 17 Nov 2026: the folding phone open is 860px wide and its buttons were 36px) */
+@media (max-width: 600px), (pointer: coarse) {
   .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button { min-height: var(--house-btn-phone); }
 }
 /* Meaning buttons (Lisa's approved picture, 28 Oct): they REST on their own colour line with their icon in that colour
