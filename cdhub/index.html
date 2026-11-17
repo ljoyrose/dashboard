@@ -584,12 +584,10 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 .pill.dna.d-affected{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 @media(max-width:767px){.dcs-link{height:var(--house-btn-phone)}}
 @media(max-width:767px){.dcs>summary,.dcs-line,.dcs-form input,.dcs-form select,.dcs-form button{height:var(--house-btn-phone)}}
-/* 17 Nov 2026: "no chip recorded" was a bordered button taller than its line, drawn over the lines above and below. It now fills
-   its line like the weight and medication rows: muted words and an arrow, the whole line the tap target. */
-#main .dcs-line .dcs-label>button.cb{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:var(--house-btn);padding:0;border:0;border-radius:0;background:transparent;font-weight:400;color:var(--muted);text-align:left}
-.dcs-line:has(>.dcs-label>button.cb){height:auto}
-@media(max-width:767px){#main .dcs-line .dcs-label>button.cb{min-height:var(--house-btn-phone)}}
-#main .dcs-line .dcs-label>button.cb::after{content:'\203A';flex:none;margin-left:8px}
+/* 17 Nov 2026: "no chip recorded" (a house button, 36px / 44px on a phone) was taller than its fixed-height line and was drawn over
+   the lines above and below. A line that holds a button grows round it instead. */
+.dcs-line:has(>.dcs-label>button){height:auto;min-height:var(--house-btn);padding-top:4px;padding-bottom:4px}
+.dcs-line>.dcs-label:has(>button){overflow:visible}
 /* the name and its Edit button share one row; Edit no longer floats on a line of its own */
 .dc .nmrow{display:flex;align-items:flex-start;gap:8px;min-width:0}.dc .nmrow>.nm{flex:1;min-width:0}.dc .nmrow>.dedit{margin-left:0;flex:none}
 /* Menu option A (14 Nov 2026) has 5 tabs: on a phone they stay square (Lisa's pick b, 2 Nov), a long word still keeps its room. */
