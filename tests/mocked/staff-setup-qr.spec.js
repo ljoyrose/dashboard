@@ -231,3 +231,25 @@ test('add mode (?add=thermometer): straight to the form; corridors listed; saved
   await expect(page.locator('.qcard', { hasText: '3A corridor' }).locator('svg')).toHaveCount(1);
   expect(sent.map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', '3A corridor', 'area-c'], ['qr_tag', 'thermometer', 'thm-2']]);
 });
+
+test('print page: an owner signed in to CD Hub prints thermometer cards with no code (Board A, 17 Nov 2026)', async ({ page }) => {
+  const tables = { area: [{ id: 'area-t1', code: 'T1' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
+    thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1' }] };
+  const sent = [];
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
+    const b = JSON.parse(route.request().postData());
+    sent.push(b);
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER', name: 'Pat Example' } } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'qrt-1' } } });
+  });
+  await page.addInitScript(([u]) => {
+    localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: 'fake-owner-token-0002', expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' }));
+    localStorage.setItem('cdhub.sink.url', u);
+  }, [SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Thermometer cards' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Hall']);
+  expect(sent.length).toBeGreaterThan(0);
+  for (const b of sent) { expect(b.google_token).toBe('fake-owner-token-0002'); expect(b.code).toBe(''); }
+});

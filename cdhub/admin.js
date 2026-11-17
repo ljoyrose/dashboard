@@ -39,7 +39,8 @@ var AdminView = (function () {
     ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
     ['inspect', 'Inspector link', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
     ['print', 'Print', 'print', 4, 'Tools'], ['rules', 'Rules & limits', 'rules', 3, 'Tools'],
-    ['records', 'Records kept', 'records', 0, 'Tools'], ['health', 'System health', 'health', 5, 'Tools']
+    ['records', 'Records kept', 'records', 0, 'Tools'], ['health', 'System health', 'health', 5, 'Tools'],
+    ['display', 'Display', 'eye', 6, 'Tools']   // Lisa 17 Nov 2026: display choices are settings here, not buttons on cards
   ];
 
 
@@ -264,6 +265,12 @@ var AdminView = (function () {
       }).join('') + '</ul>' : '<p class="mut">No rule rows.</p>')
         + '<p class="mut">A change is a new row from a date; history stays.</p><p><button type="button" class="btn" data-go="compliance">Add a change</button></p>';
     }
+    if (id === 'display') {
+      var on1 = v.photoDates ? v.photoDates() : true;
+      return '<p><b>Photo dates</b> under each photo in a dog\u2019s gallery: <b>' + (on1 ? 'shown' : 'hidden') + '</b></p>'
+        + '<p><button type="button" class="btn" data-photo-dates="' + (on1 ? '0' : '1') + '" aria-pressed="' + (on1 ? 'true' : 'false') + '">' + (on1 ? 'Hide dates' : 'Show dates') + '</button> <span class="mut" data-photo-dates-msg role="status"></span></p>'
+        + '<p class="mut">Your own choice, from today. Order never changes. One change a day.</p>';
+    }
     if (id === 'records') {
       var K = rows(T, 'BLD-retention_setting.csv');
       return (v.hasTable('BLD-retention_setting.csv') && K.length ? '<ul class="adm-list">' + K.map(function (r) {
@@ -297,6 +304,7 @@ var AdminView = (function () {
     if (id === 'rules') { var k = {}; rows(v.T, 'BLD-breeding_rule.csv').forEach(function (r) { if (r.rule_key) k[r.rule_key] = 1; }); return Object.keys(k).length + ' rules'; }
     if (id === 'records') return rows(v.T, 'BLD-retention_setting.csv').length ? 'Per section' : 'Coming';
     if (id === 'health') return v.load.state === 'ok' ? 'Read ✓' : 'Problem';
+    if (id === 'display') return 'Photo dates ' + (v.photoDates && !v.photoDates() ? 'hidden' : 'shown');
     return '';
   }
 

@@ -205,13 +205,29 @@
     // this room's row first, then the narrowest age, then the later from_date (two rows in force: the newer wins)
     fits.sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || (num(b.age_from_days) || 0) - (num(a.age_from_days) || 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); });
     var f = fits[0];
-    return { min: num(f.min_temp), max: num(f.max_temp), label: f.band || '', id: f.id || '' };
+    // Temps A (Lisa 17 Nov 2026): the room itself is judged on the open-ended (adult) row; a puppy row (with an upper
+    // age) is for the bed spot. Shared rule: staff/lib/temp-judge.js.
+    var adult = bands.filter(function (b) { return (!b.area_id || b.area_id === areaId) && num(b.age_to_days) === null && num(b.min_temp) !== null && num(b.max_temp) !== null; })
+      .sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); })[0];
+    var puppy = num(f.age_to_days) !== null && !!adult && adult !== f;
+    return { min: num(f.min_temp), max: num(f.max_temp), label: f.band || '', id: f.id || '', puppy: puppy,
+      adult: adult ? { min: num(adult.min_temp), max: num(adult.max_temp) } : null };
   }
-  function breach(lim, mn, mx) {
+  /* '' | 'low' (below the limit) | 'warm' (over the limit: cooling action) | 'spotlow' | 'spothigh' (bed spot outside the
+     puppy row). Every one asks "What was done?"; only low, spotlow and spothigh are outside the limit. */
+  function breach(lim, mn, mx, sp) {
     if (!lim || lim.min == null) return '';
+    var J = window.BLDTempJudge;
+    if (J) {
+      var k = J.judge({ min: mn, max: mx, spot: sp }, { min: lim.min, max: lim.max }, lim.adult, lim.puppy);
+      return k === 'cold' ? 'low' : k === 'warm' ? 'warm' : k === 'spotcold' ? 'spotlow' : k === 'spothot' ? 'spothigh' : '';
+    }
     if (mn !== null && mn < lim.min) return 'low';
-    if (mx !== null && mx > lim.max) return 'high';
+    if (mx !== null && mx > lim.max) return 'warm';
     return '';
+  }
+  function breachWords(b) {
+    return b === 'low' ? 'Below the limit.' : b === 'warm' ? 'Over the limit: what cooling was done?' : b === 'spotlow' ? 'Bed spot below the puppy limit.' : b === 'spothigh' ? 'Bed spot above the puppy limit.' : '';
   }
 
   /* ------------------------------------------------------------------ live camera reader */
@@ -312,17 +328,18 @@
     function field(label, ph) { return h('input', { class: 'inp', inputmode: 'decimal', autocomplete: 'off', placeholder: ph || '00.0', 'aria-label': label }); }
     var maxIn = field('MAX'), minIn = field('MIN'), spotIn = field('Bed spot', 'optional');
     var noteIn = h('input', { class: 'inp', type: 'text', maxlength: '500', 'aria-label': 'What was done', placeholder: 'What was done?' });
-    var noteRow = h('label', { class: 'tg-f', hidden: true }, [h('span', { text: 'Outside the limit. What was done?' }), noteIn]);
+    var noteRow = h('label', { class: 'tg-f', hidden: true }, [h('span', { text: 'What was done?' }), noteIn]);
     var checkMsg = say(''), msg = say('');
     var saveBtn = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: send });
     var form = h('div', { hidden: true }, [
       h('div', { class: 'tg-pair' }, [h('label', { class: 'tg-f' }, [h('span', { text: 'MAX' }), maxIn]), h('label', { class: 'tg-f' }, [h('span', { text: 'MIN' }), minIn])]),
-      h('details', { class: 'tg-spot' }, [h('summary', { text: 'Bed spot reading (optional)' }), spotIn]),
+      // Temps A: with puppies under four weeks the bed spot is what the puppy limit is about, so it is open and asked for
+      h('details', { class: 'tg-spot', open: !!lim.puppy }, [h('summary', { text: lim.puppy ? 'Bed spot reading (puppies under 4 weeks: ' + lim.min.toFixed(1) + '–' + lim.max.toFixed(1) + ' C)' : 'Bed spot reading (optional)' }), spotIn]),
       checkMsg, noteRow, saveBtn, msg
     ]);
     host.appendChild(form);
     if (past) form.hidden = false;
-    [maxIn, minIn].forEach(function (i) { i.addEventListener('input', check); });
+    [maxIn, minIn, spotIn].forEach(function (i) { i.addEventListener('input', check); });
     var requestId = null, anyway = null, none = false;   // none: Room empty with no temperatures (set by send)
 
     function stopNow() { if (stopCam) { stopCam(); stopCam = null; } if (stopEv) { stopEv(); stopEv = null; } }
@@ -341,13 +358,13 @@
     }
     function check() {
       requestId = null;
-      var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx));
+      var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx), num(oneDp(spotIn.value)));
       var pe = (window.BLDTempPair && mx && mn) ? window.BLDTempPair.error(mn, mx) : '';
       noteRow.hidden = !b;
       [minIn, maxIn].forEach(function (i) { i.classList.toggle('swap', !!pe); });
       if ((maxIn.value && !mx) || (minIn.value && !mn)) setMsg(checkMsg, 'One decimal place, e.g. 18.5', 'bad');
       else if (pe) setMsg(checkMsg, pe, 'bad');
-      else if (b) setMsg(checkMsg, (b === 'low' ? 'Below' : 'Above') + ' the limit.', 'bad');
+      else if (b) setMsg(checkMsg, breachWords(b), b === 'warm' ? 'warn' : 'bad');
       else setMsg(checkMsg, '');
     }
     function send() {
@@ -356,7 +373,7 @@
       if (!none && (!mx || !mn)) { setMsg(msg, empty ? 'Type MAX and MIN, or leave both blank.' : 'Type MAX and MIN, one decimal place.', 'bad'); return; }
       if (sp === null) { setMsg(msg, 'Bed spot: one decimal place, or leave it empty.', 'bad'); return; }
       if (!none && window.BLDTempPair && window.BLDTempPair.swapped(mn, mx)) { setMsg(msg, window.BLDTempPair.message, 'bad'); return; }
-      var b = empty ? null : breach(lim, num(mn), num(mx));
+      var b = empty ? null : breach(lim, num(mn), num(mx), sp ? num(sp) : null);
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
       if (o.area.thermometerId && table === 'area_reading') f.thermometer_id = o.area.thermometerId;
@@ -485,7 +502,7 @@
       var mn = num(d.min_c), mx = num(d.max_c), empty = String(d.room_empty || '').toLowerCase() === 'yes';
       if (mn === null && mx === null) return { text: empty ? 'Room empty' : 'Done' };
       var range = (mn === null ? '–' : mn.toFixed(1)) + '–' + (mx === null ? '–' : mx.toFixed(1));
-      var out = !!breach(limit(a.id), mn, mx);
+      var bk = breach(limit(a.id), mn, mx, num(d.spot_c)), out = !!bk && bk !== 'warm';
       return { text: (out ? 'Outside ' : '') + range + (empty ? ' · Room empty' : ''), out: out && !empty };
     }
     function list() {

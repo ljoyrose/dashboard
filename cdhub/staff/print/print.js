@@ -15,8 +15,11 @@
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
-  if (!save.getScriptUrlSet() || !code) { screen.appendChild(h('p', { class: 'sub', text: 'Set up this device on the staff page first, with an owner code.' })); return; }
-  save.setCode(code, false);
+  // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
+  var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
+  if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
+  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
+  if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' });
   screen.appendChild(opts); screen.appendChild(msg); screen.appendChild(sheet);
