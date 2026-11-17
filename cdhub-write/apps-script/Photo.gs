@@ -72,7 +72,7 @@ function sinkDogPhoto_(req) {
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
-  var who = authStaff_(req.code);
+  var who = authSaver_(req);
   if (who.role !== 'OWNER' && who.role !== 'STAFF') throw err_('NOT_ALLOWED', 'Your role is not allowed to add a photo.');
   var cache = CacheService.getScriptCache();
   var cached = cache.get('rid:' + rid);

@@ -188,8 +188,9 @@
   }
 
   function pageAll(litters, subjects, speciesRows) {
+    /* the count says what it counts: "6 enquiries", not a bare 6 (17 Nov 2026) */
     var list = shown(state.tabs.Enquiries, litters);
-    return shell(litterSelect(litters) + '<div class="card"><h3>All</h3><p class="mut">' + list.length + '</p></div>' +
+    return shell(litterSelect(litters) + '<div class="card"><h3>All</h3><p class="mut" data-enq-count>' + list.length + (list.length === 1 ? ' enquiry' : ' enquiries') + '</p></div>' +
       (list.length ? list.map(function (e) { return rowHtml(e, litters, subjects, speciesRows); }).join('') : '<p class="mut">No enquiry matches.</p>'));
   }
 

@@ -28,7 +28,7 @@ test.describe('CD Hub: jobs', () => {
     expect((await msg(12, '10')).msg).not.toContain('fewer rows');
     const fewer = await msg(9, '10');
     expect(fewer.ok).toBe(false);
-    expect(fewer.msg).toContain('1 tables have fewer rows than the manifest: pretend');
+    expect(fewer.msg).toContain('1 table has fewer rows than the manifest: pretend');
     // the copy on this device can be older than the manifest: no warning while it shows
     const onCopy = await msg(9, '10', true);
     expect(onCopy.ok).toBe(true);

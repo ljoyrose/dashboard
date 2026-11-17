@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-dash-gate="off">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -25,6 +25,8 @@
   </form>
   <div id="app"></div>
 </main>
+<script src="../../config.js"></script>
+<script src="../../auth.js"></script>
 <script src="../staff/lib/bld-save.js"></script>
 <script src="../staff/lib/needs.js"></script>
 <script src="../staff/lib/occupancy.js"></script>
@@ -51,8 +53,9 @@
       return;
     }
     try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
-    gate.hidden = !!device;
-    if (device) { save.setCode(device, false); open(); }
+    var owner = !device && !!save.usingGoogle && save.usingGoogle();   // an owner signed in to CD Hub needs no code (Board A, 17 Nov 2026)
+    gate.hidden = !!device || owner;
+    if (device) { save.setCode(device, false); open(); } else if (owner) open();
     gate.addEventListener('submit', function (ev) { ev.preventDefault(); save.setCode(document.getElementById('code').value.toUpperCase(), false); open(); });
   })();
 </script>
