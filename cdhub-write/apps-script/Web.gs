@@ -40,6 +40,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'weighing') return jsonOut_({ ok: true, result: sinkWeighing_(req) });
     if (req && typeof req === 'object' && req.action === 'vaccination') return jsonOut_({ ok: true, result: sinkVaccination_(req) });
     if (req && typeof req === 'object' && req.action === 'vaccination_void') return jsonOut_({ ok: true, result: sinkVaccinationVoid_(req) });
+    if (req && typeof req === 'object' && req.action === 'vaccination_delete') return jsonOut_({ ok: true, result: sinkVaccinationDelete_(req) });
     if (req && typeof req === 'object' && req.action === 'dog_details') return jsonOut_({ ok: true, result: sinkDogDetails_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
@@ -123,7 +124,7 @@ function switchesStatus_() {
   var on = function (name) { return prop_(name) === 'true'; };
   var set = function (name) { return String(prop_(name) || '').trim() !== ''; };
   var add = function (o) { if (!seen[o.name + '|' + o.action]) { seen[o.name + '|' + o.action] = 1; out.push(o); } };
-  var actions = { weighing: 'weighing', vaccination: 'vaccination, vaccination_void', dog_details: 'dog_details', subject_create: 'subject_create',
+  var actions = { weighing: 'weighing', vaccination: 'vaccination, vaccination_void, vaccination_delete', dog_details: 'dog_details', subject_create: 'subject_create',
     subject_link: 'subject_link, subject_link_end', files: 'file_add' };
   Object.keys(DOGCARD_).forEach(function (k) {
     var n = BLD.PROP.TABLE_ON_PREFIX + DOGCARD_[k].on;
