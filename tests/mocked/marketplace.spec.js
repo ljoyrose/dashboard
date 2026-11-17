@@ -919,7 +919,7 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await expect(card.locator('a.btn', { hasText: 'Open listing' })).toHaveAttribute('href', d.listing_url);
     await expect(card.locator('a.btn', { hasText: 'Open order on eBay' })).toHaveAttribute('href', d.order_url);
     const facts = card.locator('.facts');
-    await expect(facts).toContainText('Refunded£12.50'); await expect(facts).toContainText(/Refund dateFri 4 Sept?/);
+    await expect(facts).toContainText('Refunded£12.50'); await expect(facts).toContainText(/Refund dateFri 4 Sep(?!t)/);
     await expect(facts).toContainText('StatusFully refunded'); await expect(facts).toContainText('CaseItem not received');
     await expect(card).toContainText('It says: \u201cSample note: parcel never came\u201d');
     await expect(card.locator('p.what b', { hasText: 'Next:' })).toHaveText('Next: ' + d.next);
