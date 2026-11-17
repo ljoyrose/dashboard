@@ -44,7 +44,7 @@ test.describe('The Round: the room list', () => {
     const lines = await page.locator('.cards .card').allTextContents();   // the whole card: its name and its state line
     [0, 1, 5, 6].forEach((i) => expect(lines[i]).toContain('Due'));
     expect(lines[2]).toContain('12.5–18.0');
-    expect(lines[3]).toContain('Outside 15.0–28.5');
+    expect(lines[3]).toContain('15.0–28.5');   // too warm is a cooling action, not "Outside" (the one temperature rule, 16 Nov 2026); too cold is tested below
     expect(lines[4]).toContain('Room empty');
     for (const [name, done] of [['Room 2', true], ['Room 3', true], ['Room 4', true], ['Room 5', false], ['Room 6', false]]) {
       if (done) await expect(card(page, name)).toHaveClass(DONE); else await expect(card(page, name)).not.toHaveClass(DONE);
@@ -89,7 +89,7 @@ test.describe('The Round: recording a reading', () => {
     await expect(card(page, 'Room 5')).toContainText('12.0–18.5');
     // and the finish button does the same from the saved screen
     await openRoom(page, 'Room 6');
-    await typeReading(page, '27.0', '26.5');
+    await typeReading(page, '25.0', '24.0');   // inside the room limit (10.0 to 26.0): the room is judged on the adult row, the puppy row is for the bed spot
     await save(page).click();
     await page.getByRole('button', { name: 'CLR pressed' }).click();
     await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
@@ -173,11 +173,29 @@ test.describe('The Round: recording a reading', () => {
     expect(script.sent).toHaveLength(0);
   });
 
-  test('outside the limit: it asks what was done, will not save without it, and the card says Outside', async ({ page }) => {
+  // One temperature rule (Temps A, 16 Nov 2026; staff/lib/temp-judge.js): below the room limit is outside the limit; above it
+  // is a cooling action. Both ask what was done; only the cold one is marked Outside on the card.
+  test('below the limit: it asks what was done, will not save without it, and the card says Outside', async ({ page }) => {
+    const { script } = await round(page);
+    await openRoom(page, 'Room 5');
+    await typeReading(page, '15.0', '8.0');
+    await expect(page.getByText('Below the limit.')).toBeVisible();
+    await save(page).click();
+    await expect(page.locator('#screen .msg').last()).toHaveText('Say what was done.');
+    expect(script.sent).toHaveLength(0);
+    await page.getByLabel('What was done').fill('Sample: heater switched on');
+    await save(page).click();
+    await expect(page.locator('.tg-clr')).toContainText('✓ Saved');
+    expect(script.sent[0].fields).toMatchObject({ min_c: '8.0', mitigation_note: 'Sample: heater switched on' });
+    await page.getByRole('button', { name: 'CLR pressed' }).click();
+    await expect(card(page, 'Room 5')).toContainText('Outside 8.0–15.0');
+  });
+
+  test('over the limit: it asks what cooling was done, will not save without it, and the card is not marked Outside', async ({ page }) => {
     const { script } = await round(page);
     await openRoom(page, 'Room 5');
     await typeReading(page, '28.5', '15.0');
-    await expect(page.getByText('Above the limit.')).toBeVisible();
+    await expect(page.getByText('Over the limit: what cooling was done?')).toBeVisible();
     await save(page).click();
     await expect(page.locator('#screen .msg').last()).toHaveText('Say what was done.');
     expect(script.sent).toHaveLength(0);
@@ -186,7 +204,8 @@ test.describe('The Round: recording a reading', () => {
     await expect(page.locator('.tg-clr')).toContainText('✓ Saved');
     expect(script.sent[0].fields).toMatchObject({ max_c: '28.5', mitigation_note: 'Sample: vents opened' });
     await page.getByRole('button', { name: 'CLR pressed' }).click();
-    await expect(card(page, 'Room 5')).toContainText('Outside 15.0–28.5');
+    await expect(card(page, 'Room 5')).toContainText('15.0–28.5');
+    await expect(card(page, 'Room 5')).not.toContainText('Outside');
   });
 
   test('Bed spot reading opens and is sent; Read with camera says when the camera cannot be used and opens the boxes', async ({ page }) => {
