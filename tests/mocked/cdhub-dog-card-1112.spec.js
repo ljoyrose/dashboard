@@ -81,21 +81,26 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(dog(page).locator('details.wtc [data-k="wrow"]')).toHaveCount(3);
   });
 
-  test('vaccines: codes as words, removed rows hidden, card link, and Remove only on the newest', async ({ page, guard }) => {
+  test('vaccines: codes as words, archived rows apart, card link, Archive and Delete forever on every row', async ({ page, guard }) => {
     await open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     await openMore(page);
-    const rows = dog(page).locator('details.vacc .dcs-bd > .dcs-row');
-    await expect(rows).toHaveCount(2);   // v0 is voided
+    const rows = dog(page).locator('details.vacc > .dcs-bd > .dcs-row');
+    await expect(rows).toHaveCount(2);   // v0 is archived
+    await expect(dog(page).locator('details[data-k="vax-arch"] > summary')).toHaveText('Archived (1)');
     await expect(rows.nth(1).locator('[data-k="covers"]')).toHaveText('Distemper, Hepatitis (adenovirus), Parvovirus');
     await expect(rows.nth(0).locator('[data-k="covers"]')).toHaveText('Kennel cough (Bordetella), Parainfluenza, Canine herpesvirus');
     await expect(rows.nth(1).locator('[data-k="vcard"]')).toHaveAttribute('href', 'https://example.test/pretend-card.jpg');
-    await expect(rows.nth(0).locator('[data-vax-void]')).toHaveCount(1);
-    await expect(rows.nth(1).locator('[data-vax-void]')).toHaveCount(0);
+    for (const i of [0, 1]) {   // the owner's records: any row (Lisa 17 Nov 2026)
+      await expect(rows.nth(i).locator('[data-vax-void]')).toHaveText('Archive');
+      await expect(rows.nth(i).locator('[data-vax-del]')).toHaveText('Delete forever');
+    }
+    await expect(dog(page).locator('[data-vax-arch] [data-vax-void]')).toHaveCount(0);
+    await expect(dog(page).locator('[data-vax-arch] [data-vax-del]')).toHaveCount(1);
     expect(await page.evaluate(() => vaxWords('some_new_thing;rabies'))).toBe('Some new thing, Rabies');
   });
 
-  test('Add vaccination sends one row; Remove sends vaccination_void for the newest and the one before becomes newest', async ({ page, guard }) => {
+  test('Add vaccination sends one row; Archive moves a row under Archived; Delete forever takes it away; each ticks', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, (b) => ({ ok: true, result: { status: 'saved', id: b.action === 'vaccination' ? 'v-new' : b.fields.id } }));
     await page.evaluate(() => go('dogs/sub-x1'));
@@ -108,15 +113,29 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await f.locator('button[type=submit]').click();
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0]).toMatchObject({ action: 'vaccination', fields: { subject_id: 'sub-x1', given_on: '2026-02-01', product: 'Pretend L4', diseases_covered: 'leptospirosis', certificate_link: 'https://example.test/pretend-card-2.jpg' } });
-    const rows = dog(page).locator('details.vacc .dcs-bd > .dcs-row');
+    const rows = dog(page).locator('details.vacc > .dcs-bd > .dcs-row');
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('Leptospirosis');
     page.once('dialog', (d) => d.accept());
-    await rows.nth(0).locator('[data-vax-void]').click();
+    await rows.nth(1).locator('[data-vax-void]').click();   // not the newest: allowed
     await expect.poll(() => bodies.length).toBe(2);
-    expect(bodies[1]).toMatchObject({ action: 'vaccination_void', fields: { subject_id: 'sub-x1', id: 'v-new' } });
+    const archived = bodies[1].fields.id;
+    expect(bodies[1]).toMatchObject({ action: 'vaccination_void', fields: { subject_id: 'sub-x1' } });
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0).locator('[data-vax-void]')).toHaveCount(1);
+    await expect(dog(page).locator('details.vacc [data-vax-msg] [data-saved="good"]')).toBeVisible();
+    await expect(dog(page).locator('details[data-k="vax-arch"] > summary')).toHaveText('Archived (2)');
+    page.once('dialog', (d) => { expect(d.message()).toContain('cannot be undone'); d.accept(); });
+    await dog(page).locator('details[data-k="vax-arch"] > summary').click();
+    await dog(page).locator('[data-vax-arch="' + archived + '"] [data-vax-del]').click();
+    await expect.poll(() => bodies.length).toBe(3);
+    expect(bodies[2]).toMatchObject({ action: 'vaccination_delete', fields: { subject_id: 'sub-x1', id: archived } });
+    await expect(dog(page).locator('details[data-k="vax-arch"] > summary')).toHaveText('Archived (1)');
+    await expect(dog(page).locator('details.vacc [data-vax-msg] [data-saved="good"]')).toBeVisible();
+    // a dismissed question sends nothing
+    page.once('dialog', (d) => d.dismiss());
+    await rows.nth(0).locator('[data-vax-del]').click();
+    await page.waitForTimeout(200);
+    expect(bodies.length).toBe(3);
   });
 
   test('status words without code letters, no "Colour" word, and the microchip is a plain line', async ({ page, guard }) => {

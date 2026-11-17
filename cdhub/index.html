@@ -1129,10 +1129,12 @@ function build(){
     (DNA[r.subject_id]=DNA[r.subject_id]||[]).push({code:r.marker_code,genotype:r.genotype,
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
-  var VAC={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id||String(r.voided_on||'').trim()) return;   /* a removed row stays in the sheet, marked voided_on */
-    (VAC[r.subject_id]=VAC[r.subject_id]||[]).push({id:r.id||'',vet:r.practice||r.administered_by||'',card:r.certificate_media_id||'',on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
+  var VAC={}, VACA={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id) return;
+    var arch=!!String(r.voided_on||'').trim();   /* Archive (owner, 17 Nov 2026): the row stays in the sheet, marked voided_on, shown under Archived */
+    ((arch?VACA:VAC)[r.subject_id]=(arch?VACA:VAC)[r.subject_id]||[]).push({id:r.id||'',vet:r.practice||r.administered_by||'',card:r.certificate_media_id||'',on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
       covers:r.diseases_covered||'',titre:r.titre_result||'',protective:r.titre_protective||'',due:r.next_due_on_card||'',dueSrc:r.next_due_source||''}); });
-  Object.keys(VAC).forEach(function(k){ VAC[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); });
+  [VAC,VACA].forEach(function(M){ Object.keys(M).forEach(function(k){ M[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); }); });
+  CD.vaxArch=VACA;
   CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
     min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source,
     rain:r.rain_value,wind:r.wind_kmh}; });
@@ -2548,7 +2550,11 @@ function dnaRow(d){ var x=d.dna||[]; if(!x.length) return '';
     return '<div class="dcs-row">'+dnaPill(r)+'<span class="mut">'+esc([m.name||'',r.genotype||'',r.lab||'',r.on?dmyShort(r.on):''].filter(Boolean).join(' · '))+'</span></div>'; }).join('')
   +'</div></details>'; }
 /* vaccinations (licence check item): count, the last one, and the next due date written on the card */
-function vaccRow(d){ var x=d.vacc||[], newest=x[x.length-1];
+/* Lisa 17 Nov 2026: the records are the owner's, so the owner may Archive (hide, kept) or Delete forever any entry */
+function vaxBtns(v,d,arch){ if(!v.id) return '';
+ return (arch?'':'<button type="button" class="cb" data-vax-void="'+esc(v.id)+'" data-dog="'+esc(d.id)+'">Archive</button>')
+  +'<button type="button" class="cb" data-vax-del="'+esc(v.id)+'" data-dog="'+esc(d.id)+'">Delete forever</button>'; }
+function vaccRow(d){ var x=d.vacc||[], ax=(CD.vaxArch||{})[d.id]||[];
  var last='', due='', dueSrc=''; x.forEach(function(v){ if(v.on&&v.on>=last){ last=v.on; } if(v.due&&v.due>due){ due=v.due; dueSrc=v.dueSrc; } });
  var late=due&&due<BLDNeeds.today();
  return '<details class="dcs vacc"><summary>'
@@ -2560,9 +2566,11 @@ function vaccRow(d){ var x=d.vacc||[], newest=x[x.length-1];
     +(v.covers?'<span class="mut" data-k="covers">'+esc(vaxWords(v.covers))+'</span>':'')
     +(v.vet?'<span class="mut">'+esc(v.vet)+'</span>':'')
     +(vaxCardUrl(v.card)?'<a class="cb" href="'+esc(vaxCardUrl(v.card))+'" target="_blank" rel="noopener" data-k="vcard">Card</a>':'')
-    +(v===newest&&v.id?'<button type="button" class="cb" data-vax-void="'+esc(v.id)+'" data-dog="'+esc(d.id)+'">Remove</button>':'')
     +(v.titre?'<span class="pill">titre '+esc(v.titre)+'</span>':'')
-    +(v.due?'<span class="mut">due '+esc(dmyShort(v.due))+'</span>':'')+'</div>'; }).join('')
+    +(v.due?'<span class="mut">due '+esc(dmyShort(v.due))+'</span>':'')+vaxBtns(v,d,false)+'</div>'; }).join('')
+  +(ax.length?'<details class="dcs" data-k="vax-arch"><summary>Archived ('+ax.length+')</summary><div class="dcs-bd">'
+    +ax.slice().reverse().map(function(v){ return '<div class="dcs-row" data-vax-arch="'+esc(v.id)+'"><span class="mut">'+esc(dmyShort(v.on))+'</span><b>'+esc(v.product||v.kind||'\u2014')+'</b>'+vaxBtns(v,d,true)+'</div>'; }).join('')
+    +'</div></details>':'')
   +vaxForm(d)
   +'<p class="mut" data-vax-msg role="status"></p>'
   +'</div></details>'; }
@@ -3052,15 +3060,19 @@ document.addEventListener('click',async function(ev){
   var open=(eb.hasAttribute('data-dog-edit')||eb.hasAttribute('data-dog-edit-at'))&&host.hidden; host.innerHTML=open?dEditForm(ed):''; host.hidden=!open;
   var tb=art.querySelector('[data-dog-edit]'); if(tb) tb.setAttribute('aria-expanded',open?'true':'false');
   if(open){ var nm=host.querySelector('input[name="'+(eb.getAttribute('data-focus')||'name')+'"]')||host.querySelector('input[name=name]'); if(nm) nm.focus(); } return; }
- var b=ev.target&&ev.target.closest?ev.target.closest('[data-vax-void]'):null; if(!b) return;
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-vax-void],[data-vax-del]'):null; if(!b) return;
  ev.preventDefault(); ev.stopPropagation();
- var id=b.getAttribute('data-dog'), rid=b.getAttribute('data-vax-void'), d=CD._byId[id]; if(!d) return;
- var last=d.vacc[d.vacc.length-1]; if(!last||last.id!==rid) return;   /* only the newest row can be removed */
- if(!window.confirm('Remove the '+dmy(last.on)+' '+(last.product||'vaccination')+'? It stays in the sheet, marked removed, and you can add it again.')) return;
+ var del=b.hasAttribute('data-vax-del'), id=b.getAttribute('data-dog'), rid=b.getAttribute(del?'data-vax-del':'data-vax-void'), d=CD._byId[id]; if(!d) return;
+ var live=d.vacc||[], arch=(CD.vaxArch=CD.vaxArch||{})[id]=(CD.vaxArch[id]||[]);
+ var v=live.filter(function(x){return x.id===rid;})[0]||arch.filter(function(x){return x.id===rid;})[0]; if(!v) return;
+ var what=dmy(v.on)+' '+(v.product||'vaccination');
+ if(!window.confirm(del?'Delete the '+what+' forever? This cannot be undone.':'Archive the '+what+'? It is hidden from the card and kept.')) return;
  b.disabled=true;
- var r=await sinkAct('vaccination_void',{subject_id:id,id:rid});
- if(!r.ok){ b.disabled=false; var m=b.closest('.dcs-bd'); m=m&&m.querySelector('[data-vax-msg]'); if(m) showSave(m,sinkMsg(r)); return; }
- d.vacc.pop(); drawDogs(); vaxReopen(id,'Removed '+hhmmNow());
+ var r=await sinkAct(del?'vaccination_delete':'vaccination_void',{subject_id:id,id:rid});
+ if(!r.ok){ b.disabled=false; var m=b.closest('details.vacc'); m=m&&m.querySelector('[data-vax-msg]'); if(m) showSave(m,sinkMsg(r)); return; }
+ d.vacc=live.filter(function(x){return x!==v;}); CD.vaxArch[id]=arch.filter(function(x){return x!==v;});
+ if(!del){ CD.vaxArch[id].push(v); CD.vaxArch[id].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); }
+ drawDogs(); vaxReopen(id,(del?'Deleted ':'Archived ')+hhmmNow());
 },true);
 function weighReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
  var w=c.querySelector('details.wtc'); if(w) w.open=true;
@@ -4095,7 +4107,7 @@ function hhmmNow(){ return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Lon
 var SV_TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>',
     SV_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 function saveHtml(text){ text=String(text||''); if(!text) return '';
- var k=/^(Saved|Moved|Removed)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
+ var k=/^(Saved|Moved|Removed|Archived|Deleted)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
  if(!k) return esc(text);
  return '<span class="sv-line '+k+'" data-saved="'+k+'"><span class="sv-ic">'+(k==='good'?SV_TICK:k==='wait'?SV_CLOCK:'')+'</span><span>'+esc(text)+'</span></span>'; }
 function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
