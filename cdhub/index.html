@@ -2545,7 +2545,6 @@ function galleryHtml(d,ph){
  if(!ph.gallery.length&&!ph.ended.length) return '';
  var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +'<button type="button" class="btn quiet" data-photo-dates="'+(dates?'0':'1')+'" aria-pressed="'+(dates?'true':'false')+'">Dates '+(dates?'shown':'hidden')+'</button> <span class="mut" data-photo-dates-msg></span>'
   +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
   +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates,true); }).join('')+'</ul></details>':'')
   +'<p class="mut" data-gal-msg role="status"></p></div></details>';
@@ -2578,7 +2577,8 @@ document.addEventListener('click',async function(ev){
  if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
 });
 /* Dates shown / hidden: saves this person's own row (photos.show_dates.owner) from today. One change a day: the settings
-   list keeps one row per key per day, so a second change today is refused with a plain message. */
+   list keeps one row per key per day, so a second change today is refused with a plain message.
+   Lisa 17 Nov 2026: a setting, not a button on the dog card. The button lives in Admin -> Display (admin.js). */
 document.addEventListener('click',async function(ev){
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-photo-dates]'):null; if(!b) return;
  var want=b.getAttribute('data-photo-dates'), msg=b.parentNode.querySelector('[data-photo-dates-msg]'), day=todayLondon();
@@ -2587,9 +2587,8 @@ document.addEventListener('click',async function(ev){
  b.disabled=false;
  if(!(r.ok&&r.result&&r.result.status==='saved')){ if(msg) msg.textContent=(r.fields&&r.fields.effective_from)?'Already changed today. Try again tomorrow.':sinkMsg(r); return; }
  (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:PHOTO_DATES_ME,value:want,effective_from:day,source:'Set on the photo gallery',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
- var g=b.closest('details.gal'), open=g&&g.open; drawDogs();
- var again=document.querySelector('details.gal[data-dog="'+(g?g.getAttribute('data-dog'):'')+'"]');
- if(again&&open){ again.open=true; var m2=again.querySelector('[data-photo-dates-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+ if(document.getElementById('adm-display')){ go('admin',false); var m3=document.querySelector('#adm-display [data-photo-dates-msg]'); if(m3) m3.textContent='\u2713 Saved'; return; }
+ drawDogs();
 });
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
@@ -4553,7 +4552,7 @@ if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
+function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
