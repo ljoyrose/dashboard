@@ -37,4 +37,21 @@ test.describe('CD Hub: items', () => {
     await page.locator('[name="r_r1"]').fill('0.09');
     await expect(page.locator('.itm-lim.ok')).toHaveText('inside limit');
   });
+
+  test('a test never done is named in the list; the item is not called never tested (16 Nov 2026)', async ({ page, guard }) => {
+    addTable(guard.world, 'BLD-item_kinds.csv', csv('id,tenant_id,kind_key,label,source,set_by,set_on', ['k2,t,pretend_ext,Pretend extinguisher,x,o,2026-01-01']));
+    addTable(guard.world, 'BLD-items.csv', csv('id,tenant_id,item_no,name,kind_key,make,model,serial_no,size,made_on,expires_on,photo,note,corrects_id,created_at,created_by',
+      ['i2,t,E-01,Pretend CO2,pretend_ext,,,,,,,,,,2026-01-01T00:00:00Z,o', 'i3,t,E-02,Pretend foam,pretend_ext,,,,,,,,,,2026-01-01T00:00:00Z,o']));
+    addTable(guard.world, 'BLD-check_type.csv', csv('id,tenant_id,type_key,label,target,active,effective_from,every_days,item_kind',
+      ['c2,t,pretend_svc,Pretend service,item,true,2020-01-01,3650,pretend_ext', 'c3,t,pretend_look,Pretend look,item,true,2020-01-01,30,pretend_ext']));
+    addTable(guard.world, 'BLD-check_log.csv', csv('id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded,litter_id,note_for_id,item_id',
+      ['l2,t,c2,,,,,ok,2024-05-28T12:00:00Z,,,o,,,typed,,,i2']));
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => { location.hash = '#/items'; });
+    const done = page.locator('#itmPage .itm-row', { hasText: 'Pretend CO2' });
+    await expect(done).toContainText('Pretend look never done');
+    await expect(done).toContainText('next 26 May 2034');
+    await expect(done).not.toContainText('never tested');
+    await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend foam' })).toContainText('never tested');
+  });
 });
