@@ -203,6 +203,9 @@ test.describe('CD Hub core: rooms and dogs', () => {
     put(w, 'BLD-subject_status.csv', STATUS);
     put(w, 'BLD-occupancy.csv', OCC);
     put(w, 'BLD-requirement.csv', REQ);
+    // 17 Nov 2026: the counts below assume a morning (after midday today's afternoon reading is also missing), so the test
+    // runs at 09:00 UK time whatever the real clock says.
+    await page.clock.setFixedTime(new Date(new Date().toISOString().slice(0, 10) + 'T09:00:00Z'));
     await HUBS.cdhub.open(page, guard);
     const c = await page.evaluate(() => {
       const t = todayISO(), y = dayMinus(t, 1);
