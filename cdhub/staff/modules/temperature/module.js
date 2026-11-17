@@ -128,9 +128,13 @@
     var mine = (items || []).filter(function (a) { return a.id === r.area_id; });
     return mine.length === 1 ? itemKey(mine[0]) : String(r.area_id);
   }
+  /* The slot a period_start names, as London day + hour. The page sends "2026-11-17T12:00:00+00:00"; the save script
+     reads the cell back as shown, "2026-11-17 12:00" (17 Nov 2026: since readings are saved as real dates the two never
+     matched as text, so every saved reading still showed Due). Both start with the same London day and hour. */
+  function slotId(s) { s = String(s || ''); return /^\d{4}-\d{2}-\d{2}[T ]\d{2}/.test(s) ? s.slice(0, 10) + ' ' + s.slice(11, 13) : s; }
   function doneFor(rows, items, periodStart) {
-    var done = {};
-    (rows || []).forEach(function (r) { if (String(r.period_start || '') === periodStart) done[readingKey(r, items)] = r; });   // the row itself: the card shows its numbers
+    var done = {}, want = slotId(periodStart);
+    (rows || []).forEach(function (r) { if (slotId(r.period_start) === want) done[readingKey(r, items)] = r; });   // the row itself: the card shows its numbers
     return done;
   }
   /* The round is the thermometer rows (BLD-thermometer: name, area_id), never a coded list: a room with no

@@ -137,13 +137,20 @@
       }).join('') + '</select></label></div>';
   }
 
+  /** The buyer's name for a card (Lisa 17 Nov 2026, "yes all"): known-as, else full name, from the People tab; '' when none. */
+  function buyerName(e) {
+    var p = ((state.tabs && state.tabs.People) || []).filter(function (x) { return e && x.person_key && x.person_key === e.person_key; })[0];
+    return p ? t(p.known_as || p.full_name || p.name) : '';
+  }
   function rowHtml(e, litters, subjects, speciesRows) {
     var stage = Core.plainStage(e);
     var sub = subjectFor(e, litters, subjects);
     var pup = '';
     if (sub) pup = ' <a class="btn" href="#/dogs/' + esc(sub.id) + '">' + esc(pupLabel(sub, speciesRows) || sub.id) + '</a>';
     else if (t(e.pup_ref)) pup = ' <span>' + esc(e.pup_ref) + '</span>';
-    return '<div class="card" data-enq="' + esc(e.key) + '"><p><a class="btn" href="#/enquiries/' + esc(e.key) + '">' + esc(e.ref || e.key) + '</a>' +
+    var who = buyerName(e);
+    return '<div class="card" data-enq="' + esc(e.key) + '"><p><a class="btn" href="#/enquiries/' + esc(e.key) + '">' + esc(who || e.ref || e.key) + '</a>' +
+      (who && e.ref ? ' <small class="mut" data-enq-ref>' + esc(e.ref) + '</small>' : '') +
       (stage ? ' <span class="pill" data-plain-stage>' + esc(stage) + '</span>' : '') +
       ' <span data-litter-label>' + esc(litterWords(e, litters)) + '</span>' + pup + '</p>' +
       '<p class="mut">' + esc(Core.summary(e.question_summary || e.kind || '', 120)) + '</p>' + writeButton(e) + '</div>';

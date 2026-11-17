@@ -29,3 +29,25 @@ test('the archive is read after the first screen and is optional (absent is not 
   const r = await page.evaluate(() => ({ want: WANT.indexOf('BLD-subject-Archive.csv') >= 0, later: !!LATER['BLD-subject-Archive.csv'], optional: !!OPTIONAL_FILES['BLD-subject-Archive.csv'] }));
   expect(r).toEqual({ want: true, later: true, optional: true });
 });
+
+// Lisa 17 Nov 2026 ("99 references remove error"): old litters live only in the paper books. Kept in BLD-litter-Archive,
+// a vet visit pointing at one is history too; a litter in neither list is still reported.
+test('a record pointing at an archived litter resolves; the litter archive is optional', async ({ page }) => {
+  await page.goto('cdhub/');
+  await expect(page.locator('#signinbtn')).toBeEnabled();
+  await page.locator('#signinbtn').click();
+  await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
+  const r = await page.evaluate(() => {
+    const keep = Object.assign({}, T);
+    T['BLD-litter.csv'] = [{ id: 'lit-now' }];
+    T['BLD-litter-Archive.csv'] = [{ id: 'lit-old' }];
+    T['BLD-vet_visit.csv'] = [{ id: 'vv-1', litter_id: 'lit-old' }, { id: 'vv-2', litter_id: 'lit-now' }, { id: 'vv-3', litter_id: 'lit-gone' }];
+    const a = refAudit();
+    Object.keys(T).forEach((k) => delete T[k]); Object.assign(T, keep);
+    return { a, optional: !!OPTIONAL_FILES['BLD-litter-Archive.csv'] && WANT.indexOf('BLD-litter-Archive.csv') >= 0 };
+  });
+  expect(r.a.archived).toBeGreaterThanOrEqual(1);
+  expect(r.a.bad.join(' ')).toContain('lit-gone');
+  expect(r.a.bad.join(' ')).not.toContain('lit-old');
+  expect(r.optional).toBe(true);
+});

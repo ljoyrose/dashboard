@@ -24,6 +24,7 @@ function errorBody_(ex) {
 
 /** POST = a save request or a read request (JSON body, sent as text/plain so the browser needs no pre-flight). */
 function doPost(e) {
+  SAVE_TIMING_ = {};
   try {
     var body = (e && e.postData && e.postData.contents) || '';
     if (body.length > BLD.LIMITS.MAX_PHOTO_CHARS) throw err_('BAD_REQUEST', 'That request was too large.');
@@ -51,8 +52,21 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'record_edit') return jsonOut_({ ok: true, result: sinkRecordEdit_(req) });
     if (req && typeof req === 'object' && req.action === 'record_archive') return jsonOut_({ ok: true, result: sinkRecordArchive_(req) });
     if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
-    try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
-    return jsonOut_({ ok: true, result: sinkHandle_(req) });
+    // 17 Nov 2026: the waiting-room-moves pass reads the whole approvals queue. It runs at most once a minute from saves
+    // (a plain GET, the owner page and the queue itself still run it), so an ordinary save does not pay for it each time.
+    var tMoves = Date.now(), movesCache = null;
+    try { movesCache = CacheService.getScriptCache(); } catch (ex) { movesCache = null; }
+    if (!movesCache || !movesCache.get('moves:ran')) {
+      if (movesCache) { try { movesCache.put('moves:ran', '1', 60); } catch (ex) { /* only a speed-up */ } }
+      try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
+      timing_('room_moves', Date.now() - tMoves);
+    }
+    var tSave = Date.now();
+    try {
+      var saved = sinkHandle_(req);
+      if (saved && typeof saved === 'object') saved.timing = SAVE_TIMING_;
+      return jsonOut_({ ok: true, result: saved });
+    } finally { lastTiming_(tSave); }
   } catch (ex) {
     return jsonOut_(errorBody_(ex));
   }
@@ -71,10 +85,25 @@ function doGet(e) {
     var body = statusBody_();
     body.sideEffectFree = true;
     body.switches = switchesStatus_();
+    body.lastSaveTimings = lastTimings_();   // numbers only: how long the last saves' steps took (no data, no names)
     return jsonOut_(body);
   }
   try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
   return jsonOut_(statusBody_());
+}
+
+/** Keep the timings of the last 10 saves (numbers and the table name only) in the script cache for ?status=1. */
+function lastTiming_(t0) {
+  try {
+    if (!SAVE_TIMING_ || !SAVE_TIMING_.table) return;
+    var c = CacheService.getScriptCache(), list = JSON.parse(c.get('save:timings') || '[]');
+    var t = {}; for (var k in SAVE_TIMING_) if (Object.prototype.hasOwnProperty.call(SAVE_TIMING_, k)) t[k] = SAVE_TIMING_[k];
+    t.total = Date.now() - t0; t.at = Utilities.formatDate(new Date(), BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX").slice(11, 19);
+    list.unshift(t); c.put('save:timings', JSON.stringify(list.slice(0, 10)), 21600);
+  } catch (e) { /* timings are only a help */ }
+}
+function lastTimings_() {
+  try { return JSON.parse(CacheService.getScriptCache().get('save:timings') || '[]'); } catch (e) { return []; }
 }
 
 /** The status every GET has always returned: version, the two master switches, each table's switch and mode. Reads properties only. */
