@@ -991,6 +991,23 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
     await expect(page.locator('#main')).toContainText('In whelp');
     await expect(page.locator('#main')).toContainText('day 40');
   });
+
+  test("a mating's own due date wins over first mating + due days (SOP Mating Plan)", async ({ page, guard }) => {
+    const fixture = fs.readFileSync(path.join(FIX, 'bld', 'BLD-mating.csv'), 'utf8').trimEnd();
+    setFile(guard.world, 'BLD-mating.csv', fixture
+      + `\nmat-test-2,sub-test-dog-1,sub-test-dog-2,${iso(-40)},1,natural,yes,${iso(30)},,,invented open mating with own due date`
+      + `\nmat-test-3,sub-test-dog-2,sub-test-dog-1,${iso(-20)},1,natural,yes,,,,invented open mating with no due date\n`);
+    GEST(guard.world);
+    await page.goto('cdhub/');
+    await signIn(page);
+    const r = await page.evaluate(() => inWhelp().map((x) => ({ dam: x.dam, due: x.due, own: x.dueOwn, ruleDue: addDays(x.on, x.g.due) })));
+    const own = r.find((x) => x.dam === 'sub-test-dog-1'), rule = r.find((x) => x.dam === 'sub-test-dog-2');
+    expect(own.due).toBe(iso(30));
+    expect(own.own).toBe(true);
+    expect(own.due).not.toBe(own.ruleDue);
+    expect(rule.due).toBe(rule.ruleDue);
+    expect(rule.own).toBe(false);
+  });
 });
 
 test('CD Hub: gestation and adult age come from dated rows; no row = not set, judged on the mating date', async ({ page, guard }) => {
