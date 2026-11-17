@@ -540,7 +540,9 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const julyIn = await paint('2026-07-12');
   const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
-  expect(julyIn.shadow).not.toBe('none');
+  // Lisa 17 Nov 2026: in limit is the solid green (the pale tint with a frame looked "weird"), the same colour as the legend
+  const solid = await page.evaluate(() => { const i = document.createElement('i'); i.style.color = 'var(--ljr-5)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; });
+  expect(julyIn.bg).toBe(solid);
 });
 
 test('audit: a saved min or max that is text (25,3) or blank is "Check: not a number", counted with the problems, never read as 25 (OV11 15 Nov)', async ({ page, guard }) => {

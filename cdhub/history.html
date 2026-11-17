@@ -104,8 +104,8 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.empty{background:transparent;box-shadow:none}
 .d.future{background:var(--paper);border:1px solid var(--line);box-shadow:none;opacity:.35}
 .d.unknown,.sd.unknown{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
-/* In limit: green from the heat palette, with a frame so a month of in-limit days is not a pale wash. Outside limit: solid orange. Missed: the same orange as a frame on a light cell, never a brown fill. */
-.d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.d.warn{background:var(--ljr-3);box-shadow:none}.d.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.d.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+/* In limit: solid green (Lisa 17 Nov 2026: the pale tint with a frame looked "weird"; back to the solid green she had). Outside limit: solid orange. Missed: the same orange as a frame on a light cell, never a brown fill. */
+.d.allok{background:var(--ljr-5);box-shadow:none}.d.warn{background:var(--ljr-3);box-shadow:none}.d.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.d.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .d.ocool{background:var(--ljr-6-tint);box-shadow:none}.d.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.d.owarm{background:var(--ljr-4-tint);box-shadow:none}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
 /* Over the maximum = cooling action, not outside (Lisa 17 Nov 2026): a light warm tint, never the solid orange of a breach */
@@ -120,7 +120,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .sd{height:14px;min-width:3px;flex:1;border-radius:var(--radius);cursor:default;background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .sd:not(.future):not(.nd){cursor:pointer}
 @media(hover:hover){.sd:not(.future):not(.nd):hover{transform:scaleY(1.5);z-index:2}}
-.sd.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.sd.warn{background:var(--ljr-3);box-shadow:none}.sd.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.sd.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+.sd.allok{background:var(--ljr-5);box-shadow:none}.sd.warn{background:var(--ljr-3);box-shadow:none}.sd.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.sd.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .sd.ocool{background:var(--ljr-6-tint);box-shadow:none}.sd.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.sd.owarm{background:var(--ljr-4-tint);box-shadow:none}
 .sd.future{background:var(--paper);border:1px solid var(--line);box-shadow:none;opacity:.3;cursor:default}
 .smlbls{display:flex;gap:1px;padding-left:30px;margin-bottom:3px}
@@ -816,7 +816,7 @@ function setYear(y){
 function legend(){
   var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
   return '<div class="legend">'
-    +'<div class="leg">'+sq('background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)')+'In limit</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-5)')+'In limit</div>'
     +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit</div>'
     +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)')+'Missed</div>'
     +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 1px var(--line)')+'No readings</div>'

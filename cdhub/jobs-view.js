@@ -58,6 +58,18 @@
     return (best && String(best.value || '').trim()) || code;
   }
 
+  /** How a record was made, in the owner's words (Lisa 17 Nov 2026: "is that not for the app user to decide?"). Row
+      job.how.<how>.label in force that day: its value is the words; "off" hides the words. No row = the starter words.
+      The record always keeps how_recorded itself: only what the screen says is the owner's choice. */
+  function howLabel(v, how, day) {
+    if (!how) return '';
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.how.' + how + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    if (!best) return HOW[how] || '';
+    var w = String(best.value || '').trim();
+    return /^off$/i.test(w) ? '' : w;
+  }
+
   /** The file a record's link points at, as a Drive link: the file row's url when it is https, else its Drive file id. */
   function fileUrl(f) {
     var u = String(f.url || '').trim(), id = String(f.drive_file_id || '').trim();
@@ -150,10 +162,10 @@
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(Due.londonDate(r.at) || String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
-          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.part, r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
+          + [r.item, r.amount, r.note, r.by, howLabel(v, r.how, Due.londonDate(r.at) || String(r.at).slice(0, 10)), r.part, r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
           + r.files.map(function (f) { return '<a href="' + e(f.url) + '" target="_blank" rel="noopener noreferrer" data-record-file title="' + e(f.name) + '">' + e(f.role) + '</a>'; }).join('') + '</div>';
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
-  return { summary: summary, everyWords: everyWords, bySource: bySource, history: history, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
+  return { summary: summary, everyWords: everyWords, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
 }));
