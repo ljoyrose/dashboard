@@ -80,6 +80,8 @@ var TABLES = {
     // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
     // slot sent by the hub) within DUP_WINDOW_MIN of taken_at. Without period_start: same room inside the window.
     dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
+    // 16 Nov 2026: ~31,000 rows; an add reads the last rows in full and only the checked columns of the rest (Sink.gs)
+    fastAppend: true,
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
       if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);   // the 7th column (blank or variance_c)

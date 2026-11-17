@@ -4026,8 +4026,11 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
 /* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved): no answer in 40 s = NOT saved, said plainly. */
 /* Saves go one at a time from this device (Lisa 16 Nov 2026: the round sent every room at once and all but the first
    gave up with "Someone else is saving right now"). The 40 s limit starts when a save is sent, not while it waits. */
-var sinkTurn=Promise.resolve();
-function sinkFetch(body,url){ var p=sinkTurn.then(function(){ return sinkFetchBusy(body,url,0); }); sinkTurn=p.then(function(){},function(){}); return p; }
+var sinkTurn=Promise.resolve(), sinkWaiting=0;
+function sinkFetch(body,url){ sinkWaiting++; var p=sinkTurn.then(function(){ return sinkFetchBusy(body,url,0); }); sinkTurn=p.then(function(){},function(){});
+ p.then(function(){ sinkWaiting--; },function(){ sinkWaiting--; }); return p; }
+/* leaving the page while saves wait their turn would drop them (OV12 16 Nov 2026): the browser asks "Leave site?" first */
+window.addEventListener('beforeunload',function(e){ if(sinkWaiting>0){ e.preventDefault(); e.returnValue=''; return ''; } });
 /* Two people saving at once (Lisa 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
    is sent again after a short random pause, up to 3 times, before the person is told. */
 function sinkFetchBusy(body,url,n){ return sinkFetchNow(body,url).then(function(j){

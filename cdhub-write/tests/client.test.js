@@ -924,6 +924,26 @@ test('saves sent together go one at a time; a failed one does not stop the next'
   const rs = await Promise.all(['a', 'b', 'c'].map((id) => s.act('link_end', { id })));
   assert.deepEqual(rs.map((r) => r.ok), [true, false, true]);
   assert.equal(most, 1);
+  assert.equal(s.sending(), 0);   // all answered: leaving the page no longer asks first
+});
+
+// OV12 16 Nov 2026: leaving the page while saves wait their turn dropped them. sending() counts the saves not yet answered.
+test('saves still waiting are counted until each is answered', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    await gate;
+    return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: null, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const all = Promise.all(['a', 'b'].map((id) => s.act('link_end', { id })));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(s.sending(), 2);
+  release();
+  await all;
+  assert.equal(s.sending(), 0);
 });
 
 // Lisa 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
