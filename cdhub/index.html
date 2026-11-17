@@ -1483,7 +1483,7 @@ function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
 function inWhelp(onISO){
  var today=onISO||todayISO(), out=[], bydam={};
 
- (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
+ (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||'',due:m.due_from_this_mating||''}; })
   .forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
  Object.keys(bydam).forEach(function(dam){
   var ms=bydam[dam].slice().sort(function(a,b){return (a.on||'')<(b.on||'')?-1:1;});
@@ -1498,8 +1498,10 @@ function inWhelp(onISO){
   if(day===null||day<0) return;
   if(!g){ out.push({dog:d,dam:dam,matings:open.length,on:first.on,due:'',from:'',to:'',day:day,unset:true}); return; }
   if(day>g.to) return;
-  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,
-    due:addDays(first.on,g.due),from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
+  /* SOP Mating Plan: the mating's own due date wins; else first mating + gestation.due_days (17 Nov 2026) */
+  var due=isoDay(first.due)||addDays(first.on,g.due);
+  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,dueDay:daysBetween(first.on,due),dueOwn:!!isoDay(first.due),
+    due:due,from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
     sires:open.map(function(m){var x=CD._byId[m.sire];return x?x.name:(m.sire||'?');}),
     methods:open.map(function(m){return m.method||'not recorded';})});
  });
@@ -1788,7 +1790,7 @@ function needsToday(){
   if(x.unset){ out.push({title:x.dog.name+': gestation timings not set',sub:'Add the gestation rows in Compliance',go:'compliance',tone:'',kind:'kit'}); return; }
   if(x.g.alert===null||x.day<x.g.alert) return;   /* no alert-day row: no alert */
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
-   tone:x.day>x.g.due?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
+   tone:x.day>x.dueDay?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
  areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id),date);
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
@@ -1849,7 +1851,7 @@ function littersCard(title){
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
  var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'+(title||'Litters')+cntPill(n)+'</h3>';
- h+=w.map(function(x){ var tone=x.day>x.g.due?'late':(x.day>=x.g.from?'soon':'');
+ h+=w.map(function(x){ var tone=x.day>x.dueDay?'late':(x.day>=x.g.from?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of '+x.g.from+'\u2013'+x.g.to+' \u00b7 working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
  if(rd===null) h+='<p class="mut" data-unset="litters.recent_days"><span class="pill w">not set</span> Days the Litters card looks back</p>';
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
