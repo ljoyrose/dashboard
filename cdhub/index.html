@@ -192,10 +192,12 @@ tr:last-child td{border-bottom:none}
 /* Tables (Lisa 17 Nov 2026, "improve spacing and layout on all tables"). tidyTables() below marks the cells:
    rows sit on one middle line; short values never break ("6y 4m"); long text wraps at a readable width; the cell with
    buttons stays in view at the right edge while the rest scrolls. Narrow phones: each row becomes a small card. */
-table[data-tidy] th,table[data-tidy] td{padding:10px 14px;vertical-align:middle}
-table[data-tidy] td.tshort{white-space:nowrap}
-table[data-tidy] td.tlong{min-width:22ch;max-width:44ch}
-table[data-tidy] td.tact{white-space:nowrap;position:sticky;right:0;background:var(--card);box-shadow:-8px 0 8px -8px var(--line)}
+table[data-tidy] td{vertical-align:middle}
+.scroll table[data-tidy] th,.scroll table[data-tidy] td{padding:10px 14px}
+/* only where the table can scroll sideways: a table outside a scroll box must still fit the screen */
+.scroll table[data-tidy] td.tshort{white-space:nowrap}
+.scroll table[data-tidy] td.tlong{min-width:22ch;max-width:44ch}
+.scroll table[data-tidy] td.tact{white-space:nowrap;position:sticky;right:0;background:var(--card);box-shadow:-8px 0 8px -8px var(--line)}
 table[data-tidy] td.tact>:is(button,select,input,a){vertical-align:middle;margin:2px 4px 2px 0}
 @media (max-width:600px){
  table.tstack,table.tstack tbody,table.tstack tr,table.tstack td{display:block;width:auto}
