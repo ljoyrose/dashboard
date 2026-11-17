@@ -1959,7 +1959,7 @@ function pageToday(){
  +tileGo('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','enter on The round','round')
  +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,dogWord(unplaced.length)+' not yet placed','','unplaced')
  +tileC('b6',c.here.length,'dogs here','','here')
- +(sr?tileC('b4',Math.ceil(c.adults.length/sr.ft)+' FT',(sr.pt?Math.ceil(c.adults.length/sr.pt)+' PT':'')+' staffing',esc('1 per '+sr.ft+(sr.pt?', or 1 per '+sr.pt:'')+' adults'+(sr.src&&hideSource(sr.src)?' ('+esc(hideSource(sr.src))+')':'')),'adults'):'')+'</div>'
+ +(sr?tileC('b4',Math.ceil(c.adults.length/sr.ft)+' FT',(sr.pt?Math.ceil(c.adults.length/sr.pt)+' PT':'')+' staffing',esc('1 per '+sr.ft+(sr.pt?', or 1 per '+sr.pt:'')+' adults')   /* Lisa 17 Nov 2026: the rule's legal source made this the only long tile; it stays on the rules list */,'adults'):'')+'</div>'
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
    /* kit: animal */
    return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
