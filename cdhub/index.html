@@ -263,6 +263,7 @@ table[data-tidy] td.tact>:is(button,select,input,a){vertical-align:middle;margin
 #sopcard .sopgrp>summary::-webkit-details-marker{display:none}@media(max-width:767px){#sopcard .sopgrp>summary{height:var(--house-btn-phone)}}#sopcard .sopgrp>summary .n{font-weight:400;color:var(--muted)}
 #sopcard .sopgrp .mrow{margin-left:12px}
 .compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
+.rgroup{margin:8px 0}.rgroup>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.rgroup>summary h4{margin:0;flex:1}.rgroup[hidden]{display:none}
 .compfold>summary h3{margin:0;flex:1}.compfold>summary::after{content:"\25BE";color:var(--muted);margin-left:8px}.compfold:not([open])>summary::after{content:"\25B8"}
 .urg{display:inline-flex;align-items:center;gap:6px;font-weight:600}.urg-ring{box-sizing:border-box;width:20px;height:20px;border:2px solid var(--house-late);border-radius:50%;display:inline-grid;place-items:center;flex:none}.urg-ring>i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0))}.urg>svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}ul.urgl{list-style:none;margin:8px 0;padding:0}ul.urgl>li{margin:0 0 10px}
 ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ctemps .ctl{margin:4px 0 0;padding-left:20px;font-size:var(--fs-small)}
@@ -1485,6 +1486,38 @@ var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','da
  ['gestation.due_days','Days from first mating to working due date','days'],['gestation.window_from_days','Whelping window opens (days from mating)','days'],
  ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days'],
  ['litters.recent_days','Days the Litters card looks back','days']];
+/* RULES BY TOPIC (Lisa 17 Nov 2026, option A): one foldable card per topic instead of one long list. The topic comes from
+   the start of the rule's name, so a new rule joins its group with no code change; anything unmatched goes in "Other".
+   Each row: rule, value, from. Source and versions sit behind the (i). Search and "Not set only" filter the rows. */
+var RULE_GROUPS=[['breeding','Breeding',/^(min_dam_age_months|max_litters_per_dam|min_months_between_litters|gestation\.|litters\.)/],
+ ['space','Space and rooms',/^(space\.|size_from_kg\.|size_colour\.|size_override\.|room\.|move_check\.|move\.)/],
+ ['staffing','Staffing',/^staffing\./],['dogs','Dogs',/^dog\./],['temps','Temperatures',/^temp_round\./],
+ ['jobs','Jobs and checks',/^(job\.|items\.|compliance\.)/],['records','Records and files',/^(link_kind\.|file\.)/],['other','Other',/./]];
+function ruleLabel(k){ var kn=BREED_RULES.concat(SETTING_RULES).filter(function(b){ return b[0]===k; })[0]; if(kn) return {label:kn[1],unit:kn[2]};
+ var m=/^space\.(free|limited)\.(adult|mum_with_pups)\.(small|medium|large)\.(\d+)$/.exec(k);
+ if(m) return {label:(m[2]==='adult'?m[4]+' '+m[3]+' dog'+(m[4]==='1'?'':'s'):'Mum with pups, '+m[3])+', '+m[1]+' access',unit:'m\u00b2 needed'};
+ return {label:k.replace(/_/g,' ').split('.').join(' \u00b7 '),unit:''}; }
+function compRulesHtml(today){
+ var keys={}; BREED_RULES.concat(SETTING_RULES).forEach(function(b){ keys[b[0]]=1; });
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var k=String(r.rule_key||'').trim(); if(k) keys[k]=1; });
+ var by={}; Object.keys(keys).sort().forEach(function(k){ var g=RULE_GROUPS.filter(function(x){ return x[2].test(k); })[0]; (by[g[0]]=by[g[0]]||[]).push(k); });
+ var allRows=function(k){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return String(r.rule_key||'').trim()===k&&/^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||''); })
+  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:1; }); };
+ var cur=function(rows){ var c=null; rows.forEach(function(r){ if(r.effective_from<=today&&!(r.to_date&&r.to_date<today)) c=r; }); return c; };
+ var body='<div class="filt" data-rules-find><input type="search" data-rules-q placeholder="Find a rule" aria-label="Find a rule"> <label><input type="checkbox" data-rules-unset> Not set only</label></div>';
+ RULE_GROUPS.forEach(function(g){ var ks=by[g[0]]||[]; if(!ks.length) return;
+  var unset=0, rows=ks.map(function(k){ var all=allRows(k), c=cur(all), L=ruleLabel(k); if(!c) unset++;
+   var info=c?[(c.source&&hideSource(c.source))?'Source: '+hideSource(c.source):'',all.length>1?'Versions: '+all.map(function(r){ return r.value+' from '+dmy(r.effective_from); }).join(' \u2192 '):''].filter(Boolean):[];
+   return '<tr data-rule="'+esc(k)+'" data-unset="'+(c?'0':'1')+'"><td><b>'+esc(L.label)+'</b>'+(info.length?' <ul class="notes">'+info.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')+'</ul>':'')+'</td>'
+    +'<td>'+(c?'<b>'+esc(c.value)+'</b> '+esc(L.unit):'<span class="pill w">not set</span>')+'</td><td>'+(c?esc(dmy(c.effective_from)):'\u2014')+'</td></tr>'; }).join('');
+  body+='<details class="rgroup" data-rule-group="'+g[0]+'"'+(unset?' open':'')+'><summary><h4>'+esc(g[1])+cntPill(ks.length)+(unset?' <span class="pill w">'+unset+' not set</span>':'')+'</h4></summary>'
+   +'<div class="scroll" tabindex="0" role="group" aria-label="'+esc(g[1])+' rules"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th></tr></thead><tbody>'+rows+'</tbody></table></div></details>'; });
+ return compFold('compRules','rules','Your rules',body+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet.</p>'));
+}
+document.addEventListener('input',function(e){ var box=e.target.closest&&e.target.closest('[data-rules-find]'); if(!box) return;
+ var q=(box.querySelector('[data-rules-q]').value||'').trim().toLowerCase(), only=box.querySelector('[data-rules-unset]').checked, card=box.parentNode;
+ card.querySelectorAll('tr[data-rule]').forEach(function(tr){ var hit=(!q||tr.textContent.toLowerCase().indexOf(q)>=0||tr.getAttribute('data-rule').indexOf(q)>=0)&&(!only||tr.getAttribute('data-unset')==='1'); tr.hidden=!hit; });
+ card.querySelectorAll('details.rgroup').forEach(function(d){ var any=d.querySelector('tr[data-rule]:not([hidden])'); d.hidden=!any; if(any&&(q||only)) d.open=true; }); });
 /* Today's staffing tile: only from the owner's dated rows (Lisa 12 Nov: every limit is a dated row; no assumed ratio).
    The row in force on the day shown is used. Not set: no tile. */
 function staffRule(iso){ iso=iso||todayISO(); var f=breedRule('staffing.adults_per_full_time',iso), p=breedRule('staffing.adults_per_part_time',iso);
@@ -4463,12 +4496,7 @@ function pageCompliance(){
  h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
- h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
-  +BREED_RULES.concat(SETTING_RULES).map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
-   return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
-    +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+(cur&&hideSource(cur.source)?esc(hideSource(cur.source)):'—')+'</td>'
-    +'<td class="mut">'+(all.length>1?all.map(function(r){ return esc(r.value)+' from '+esc(dmy(r.effective_from)); }).join(' → '):(all.length?'1 version':'—'))+'</td></tr>'; }).join('')
-  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet.</p>'));
+ h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
   +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
   +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
