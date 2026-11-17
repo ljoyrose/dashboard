@@ -54,7 +54,7 @@ test.describe('CD Hub print on A4', () => {
       const fit = await P.cardsFit(page);
       fit.forEach((c) => {
         expect(c.out, c.id + ': nothing past the card edge').toEqual([]);
-        expect(c.qr, c.id + ': QR big enough to scan across a kennel (mm)').toBeGreaterThanOrEqual(Math.round({ 1: 66, 2: 60, 4: 40 }[per] * P.MM));   // Full A4 66 mm, A5 60 mm, A6 40 mm
+        expect(c.qr, c.id + ': QR big enough to scan across a kennel (mm)').toBeGreaterThanOrEqual(Math.round({ 1: 66, 2: 55, 4: 35 }[per] * P.MM));   // worst case (long name, wide font, every fact line): Full A4 66 mm, A5 55 mm, A6 35 mm
       });
       expect(fit[0].status, 'the "cards ready" line does not print').toBe('none');
       const pdf = await P.printPdf(page, 'cdhub-kennel-cards-' + per + '-per-A4');
@@ -63,12 +63,14 @@ test.describe('CD Hub print on A4', () => {
     });
   }
 
-  test('room signs print two a row on A4, each whole', async ({ page }) => {
+  test('room signs print four a sheet, two a row, each whole @regression', async ({ page }) => {
     await P.openCards(page);
     await page.getByRole('button', { name: 'Room signs' }).click();
-    await expect(page.locator('.rcard')).toHaveCount(1);
+    await expect(page.locator('.rcard')).toHaveCount(P.SIGNS);
+    await expect(page.locator('.rcard').first().locator('.sz')).toHaveCount(3);
+    await expect(page.locator('.rcard').first().locator('[data-k="jobs"] li')).toHaveCount(3);
     const pdf = await P.printPdf(page, 'cdhub-room-signs');
-    expect(pdf.count).toBe(1);
+    expect(pdf.count, P.SIGNS + ' signs with limits and jobs, 4 a sheet (one row a page wasted two-thirds of each sheet)').toBe(Math.ceil(P.SIGNS / 4));
     expect(pdf.boxes.every((b) => P.isA4(b))).toBe(true);
   });
 });

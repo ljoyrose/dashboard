@@ -90,17 +90,22 @@ async function paperLook(page, view) {
 const CARDS = 5;
 function cardTables() {
   return {
-    area: [{ id: 'ar-a', code: 'Room A' }], requirement: [],
-    subject: Array.from({ length: CARDS }, (_, i) => ({ id: 'd' + i, name: i === 1 ? 'Pretend Bartholomew-Fitzgerald the Third' : 'Pretend Dog ' + i, sex: i % 2 ? 'Male' : 'Female', size_band: ['5-10kg (small)', '10-25kg (medium)', '25kg+ (large)'][i % 3], dob: '2022-03-01', coat_colour_id: 'cc-1', coat_pattern_id: 'cp-1' })),
+    area: ['A', 'B', 'C', 'D', 'E', 'F'].map((x) => ({ id: 'ar-' + x.toLowerCase(), code: 'Room ' + x })), requirement: [],
+    subject: Array.from({ length: CARDS }, (_, i) => ({ id: 'd' + i, name: i === 1 ? 'Pretend Bartholomew-Fitzgerald the Third' : 'Pretend Dog ' + i, sex: i % 2 ? 'Male' : 'Female', size_band: ['5-10kg (small)', '10-25kg (medium)', '25kg+ (large)'][i % 3], dob: '2022-03-01', coat_colour_id: 'cc-1', coat_pattern_id: 'cp-1', nose_pigment_id: 'np-1' })),
     subject_status: [], litter: [],
-    breeding_rule: [{ rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.small', value: 'orange' }, { rule_key: 'size_colour.large', value: 'blue' }],
-    area_access: [], area_capacity: [],
-    occupancy: Array.from({ length: CARDS }, (_, i) => ({ subject_id: 'd' + i, area_id: 'ar-a', moved_in: '2026-01-01' })),
-    qr_tag: Array.from({ length: CARDS }, (_, i) => ({ tag: 'PRNT000' + i, kind: 'subject', ref_id: 'd' + i, active: 'true' })).concat([{ tag: 'PRNTROOM', kind: 'area', ref_id: 'ar-a', active: 'true' }]),
-    coat_colour: [{ id: 'cc-1', name: 'Pretend Chocolate' }], coat_pattern: [{ id: 'cp-1', name: 'Parti' }], nose_pigment: [],
+    breeding_rule: [{ rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.small', value: 'orange' }, { rule_key: 'size_colour.large', value: 'blue' }, { rule_key: 'link_kind.bff', value: 'BFFs', effective_from: '2026-01-01' }, { rule_key: 'link_kind.fren', value: 'Fren.', effective_from: '2026-01-01' }],
+    // every room has three size limits and three room jobs: the tallest sign the page makes
+    area_access: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => ({ area_id: 'ar-' + x, access_type: 'free', effective_from: '2026-01-01' })),
+    area_capacity: ['a', 'b', 'c', 'd', 'e', 'f'].flatMap((x) => [['5-10kg (small)', '4'], ['10-25kg (medium)', '3'], ['25kg+ (large)', '2']].map(([b, n]) => ({ area_id: 'ar-' + x, access_type: 'free', size_band: b, max_dogs: n }))),
+    // a licence class on every dog and friends on some: the card's fullest lines
+    occupancy: Array.from({ length: CARDS }, (_, i) => ({ subject_id: 'd' + i, area_id: 'ar-a', moved_in: '2026-01-01', classification: i % 2 ? 'Stud' : 'Breeding bitch' })),
+    subject_link: [{ subject_id: 'd1', other_subject_id: 'd0', kind: 'bff', from_date: '2026-01-01' }, { subject_id: 'd1', other_subject_id: 'd2', kind: 'bff', from_date: '2026-01-01' }, { subject_id: 'd1', other_subject_id: 'd3', kind: 'fren', from_date: '2026-01-01' }], links: [], files: [],
+    qr_tag: Array.from({ length: CARDS }, (_, i) => ({ tag: 'PRNT000' + i, kind: 'subject', ref_id: 'd' + i, active: 'true' })).concat(['a', 'b', 'c', 'd', 'e', 'f'].map((x) => ({ tag: 'PRNTROOM' + x.toUpperCase(), kind: 'area', ref_id: 'ar-' + x, active: 'true' }))),
+    coat_colour: [{ id: 'cc-1', name: 'Pretend Chocolate' }], coat_pattern: [{ id: 'cp-1', name: 'Parti' }], nose_pigment: [{ id: 'np-1', name: 'Pretend brown nose' }],
     microchip: Array.from({ length: CARDS }, (_, i) => ({ id: 'm' + i, subject_id: 'd' + i, chip_number: '12345678901234' + i })),
     // many jobs, so the job strip wraps: the most a card has to hold
     check_type: ['Nails', 'Ears', 'Weigh', 'Teeth', 'Coat brush', 'Flea and worm', 'Eyes'].map((l, i) => ({ type_key: 'k' + i, label: l, target: 'dog', every_days: '28', effective_from: '2026-01-01', active: 'true' }))
+      .concat(['Daily clean', 'Deep clean', 'Water bowls'].map((l, i) => ({ type_key: 'a' + i, label: l, target: 'area', every_days: i === 1 ? '7' : '1', effective_from: '2026-01-01', active: 'true' })))
   };
 }
 async function openCards(page) {
@@ -128,4 +133,5 @@ async function cardsFit(page) {
   return r;
 }
 
-module.exports = { OUT, PAPER, MM, A4, isA4, pdfPages, printPdf, openHub, paperLook, ROOMS, DOGS, openCards, cardsFit, CARDS, PER_LABEL };
+const SIGNS = 6;
+module.exports = { SIGNS, OUT, PAPER, MM, A4, isA4, pdfPages, printPdf, openHub, paperLook, ROOMS, DOGS, openCards, cardsFit, CARDS, PER_LABEL };

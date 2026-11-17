@@ -51,3 +51,8 @@ The on-screen dog card is not changed. Print rules only, plus the light look dur
 - Kept "no address on any print-out" (ljoyrose/dashboard#530): every print page has margin 0, so the browser has no room to print the page address. The 10 mm inset is body padding, repeated on every page (Chrome 153 checked).
 - New dog card from main, on paper: the full name prints (main cuts it to two lines with "…" on screen), the photo prints at 30 mm, and the section chips stay off the paper. 32 dogs: 6 pages again (8 without this).
 - Not this PR: `cdhub-jobs` "Compliance shows late, due and source…" and the Factory page budget fail the same way on main.
+
+## 17 Nov 2026, evening: preview of dog and room cards found two more
+
+- Room signs printed one row a page (two-thirds of each sheet blank). The room QR is capped at 66 mm: 4 signs a sheet. Test: 6 rooms with 3 limits and 3 jobs = 2 pages (was 3).
+- The newer card lines (Class, BFFs, Fren., colour with nose) squeezed the kennel-card QR to 29–43 mm. On paper each label now sits beside its value. Worst case (long name, wide font, every line): QR 86 mm Full A4, 60 mm 2 per A4, 36 mm 4 per A4.
