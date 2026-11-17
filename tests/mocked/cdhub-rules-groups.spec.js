@@ -16,7 +16,6 @@ test('Compliance rules come in topic groups; a group with gaps opens; search and
     go('compliance', false);
   });
   const card = page.locator('#compRules');
-  await expect(card.locator('[data-rule-group]')).toHaveCount(await card.locator('[data-rule-group]').count());
   await expect(card.locator('[data-rule-group="breeding"] tr[data-rule="max_litters_per_dam"]')).toContainText('6');
   await expect(card.locator('[data-rule-group="space"] tr[data-rule="space.limited.adult.medium.3"]')).toContainText('3 medium dogs, limited access');
   await expect(card.locator('[data-rule-group="records"] tr[data-rule="link_kind.bff"]')).toBeAttached();

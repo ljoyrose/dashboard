@@ -48,6 +48,6 @@ test('every table is tidied: short values stay on one line, long text wraps, and
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(done).toHaveClass(/tstack/);
   expect(await done.locator('tbody tr').first().evaluate((e) => getComputedStyle(e).display)).toBe('block');
-  const item = done.locator('td[data-label="item"]').first();
-  expect(await item.evaluate((e) => getComputedStyle(e, '::before').content)).toContain('item');
+  const item = done.locator('td[data-label="Item"]').first();
+  expect(await item.evaluate((e) => getComputedStyle(e, '::before').content)).toContain('Item');   // sentence case (audit 17 Nov 2026)
 });
