@@ -55,3 +55,13 @@ test('freePlaces: lists remaining places of the incoming size, and 0 when the ro
   assert.equal(medOk.ok, true);
   assert.equal(medOk.free, 1);
 });
+
+test('flap set to limited but limits only recorded for free access: unknown, and the reason says so (3A.1/2, 17 Nov 2026)', () => {
+  const rows = [{ area_id: 'r2', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
+  const r = C.check({ areaId: 'r2', access: 'limited', capacity: rows, dogs: [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }], date: '2026-11-17' });
+  assert.equal(r.status, 'unknown');
+  assert.match(r.message, /flap is set to limited access, but this room only has limits for free access/);
+  const ok = C.check({ areaId: 'r2', access: 'free', capacity: rows, dogs: [{ id: 'a', size: 'medium' }], date: '2026-11-17' });
+  assert.equal(ok.status, 'ok');
+  assert.doesNotMatch(ok.message, /flap is set/);
+});

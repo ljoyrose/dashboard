@@ -620,6 +620,9 @@ if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
 if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
 if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
+/* Joins A (Lisa 17 Nov 2026): dogs moved to the archive keep their history (vaccinations, vet visits, litters). The archive
+   is read so those records point at a real dog; nothing is deleted. Read after the first screen; absent is fine. */
+wantLater('BLD-subject-Archive.csv');
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
@@ -1341,6 +1344,9 @@ function refAudit(){
   var rows=T[f];
   if(!rows||!rows.length){ absent[f]=1; return; }
   var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
+ /* Joins A: a record of an archived dog resolves (it is history, not an error); counted separately */
+ var arch={}; (T['BLD-subject-Archive.csv']||[]).forEach(function(r){ if(r.id&&!(idsOf['BLD-subject.csv']||{})[r.id]) arch[r.id]=1; });
+ var archived=0;
  var seen={};
  Object.keys(T||{}).forEach(function(f){
   var rows=T[f]; if(!rows||!rows.length) return;
@@ -1357,13 +1363,13 @@ function refAudit(){
    for(var i=0;i<rows.length;i++){
     var v=(rows[i][c]||'').trim(); if(!v) continue;
     checked++;
-    if(!idsOf[tgt][v]){ miss++; n++; if(!eg) eg=v; }
+    if(!idsOf[tgt][v]){ if(tgt==='BLD-subject.csv'&&arch[v]){ archived++; continue; } miss++; n++; if(!eg) eg=v; }
    }
    if(miss){ var k=f.replace(/^BLD-|\.csv$/g,'')+'.'+c;
      if(!seen[k]){ seen[k]=1; bad.push(k+' ('+miss+', e.g. '+eg+')'); } }
   });
  });
- return {bad:bad,n:n,checked:checked};
+ return {bad:bad,n:n,checked:checked,archived:archived};
 }
 
 function ruleAudit(){
@@ -1597,12 +1603,12 @@ function checks(){
  var rl=roomAudit(todayISO());
  out.push({k:'room limits',ok:!rl.over.length&&!rl.unknown.length,
    msg:rl.over.length? rl.over.length+' room'+(rl.over.length===1?' is':'s are')+' over: '+rl.over.slice(0,5).map(function(x){ return x.label+' ('+x.mix+', takes '+x.alternatives+')'; }).join(', ')+(rl.over.length>5?' \u2026':'')
-     :rl.unknown.length? rl.unknown.length+' occupied room'+(rl.unknown.length===1?'':'s')+' cannot be checked: '+rl.unknown.slice(0,5).map(function(x){ return x.label; }).join(', ')+(rl.unknown.length>5?' \u2026':'')
+     :rl.unknown.length? rl.unknown.length+' occupied room'+(rl.unknown.length===1?'':'s')+' cannot be checked: '+rl.unknown.slice(0,5).map(function(x){ return x.label+(x.message?' ('+x.message+')':''); }).join(', ')+(rl.unknown.length>5?' \u2026':'')
      :'every occupied room is within its limit'});
  var rc=refAudit();
  out.push({k:'joins',ok:!rc.bad.length,
    msg:rc.bad.length? rc.n+' references do not resolve: '+rc.bad.slice(0,5).join(', ')+(rc.bad.length>5?' \u2026':'')
-     :rc.checked+' references checked, all resolve'});
+     :rc.checked+' references checked, all resolve'+(rc.archived?' ('+rc.archived+' are records of archived dogs, kept as history)':'')});
  var dc=dateAudit();
  out.push({k:'dates',ok:!dc.bad.length,
    msg:dc.bad.length? dc.bad.length+' date columns are not ISO yyyy-mm-dd: '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')

@@ -108,6 +108,11 @@
       return res;
     }
     if (!o.access) res.notes.push('The flap is not set for this room, so the stricter limit is used.');
+    // Lisa 17 Nov 2026 (3A.1/2): the flap was set to one way but the limits are only recorded for the other. Say so.
+    else if (!rows.some(function (r) { return String(r.access_type).toLowerCase() === String(o.access).toLowerCase(); })) {
+      var have = rows.map(function (r) { return String(r.access_type).toLowerCase(); }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+      res.notes.push('The flap is set to ' + o.access + ' access, but this room only has limits for ' + have.join(' and ') + ' access.');
+    }
     var tally = {}, noSize = 0;
     counted.forEach(function (d) {
       var w = word(d.size);
