@@ -725,7 +725,7 @@
       '</ul></section>';
     return h;
   }
-  function whenOf(s) { var t = new Date(s); return s && !isNaN(t) ? whenFmt.format(t) : String(s || ''); }
+  function whenOf(s) { var t = new Date(s); return s && !isNaN(t) ? whenFmt.format(t).replace(/\bSept\b/, 'Sep') : String(s || ''); }
 
   // ---- Router ----
   var TITLES = { now: 'Now', money: 'Money', e: 'Entity', dates: 'Dates', todo: 'To-do', register: 'To-do', accountant: 'Accountant', control: 'Control' };
