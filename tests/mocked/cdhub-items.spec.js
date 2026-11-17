@@ -2,7 +2,12 @@
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
-const addTable = (world, name, content) => world.file('bld-items-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
+const addTable = (world, name, content) => {
+  const f = world.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); }
+  else world.file('bld-items-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
 
 test.describe('CD Hub: items', () => {
