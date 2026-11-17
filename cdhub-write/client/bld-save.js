@@ -19,9 +19,11 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var URL_OK = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/exec$/;
+  var URL_OK = /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.\-]+|macros)\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
+  var OWNER_SKIP_KEY = 'bld.owner.skip';   // this tab chose "Use a staff code instead" (sessionStorage)
+  var READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
   var TIMEOUT_MS = 45000;   // the save script can take over 20 s when busy; a shorter wait said "could not reach" for saves that landed
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
@@ -71,6 +73,24 @@
   }
   function root_() { return (typeof window !== 'undefined') ? window : {}; }
 
+  /**
+   * Board A (Lisa 17 Nov 2026): an owner uses the SAME Google sign-in as CD Hub (auth.js keeps it in this browser),
+   * so no code is needed. Returns the live access token, or '' when there is none, it has expired, or this tab chose to
+   * use a staff code. The save script decides who is an owner (ADMIN_EMAILS); a token alone never grants anything.
+   */
+  function ownerToken() {
+    var g = root_(), A = g.DashAuth;
+    if (!A || typeof A.valid !== 'function') return '';
+    try { if (g.sessionStorage && g.sessionStorage.getItem(OWNER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
+    var s = A.valid();
+    if (!s || (A.hasScope && !A.hasScope(s, READ_SCOPE))) return '';
+    return s.access_token || '';
+  }
+  /** Stop (true) or allow again (false) the owner sign-in on this tab. */
+  function ownerSkip(on) {
+    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(OWNER_SKIP_KEY, '1'); else ss.removeItem(OWNER_SKIP_KEY); } } catch (e) { /* ignore */ }
+  }
+
   function create(opts) {
     opts = opts || {};
     var doFetch = opts.fetch || (typeof fetch !== 'undefined' ? fetch.bind(root_()) : null);
@@ -99,6 +119,11 @@
     function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
+    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
+    /** A staff code, or an owner's Google sign-in. */
+    function hasAuth() { return !!getCode() || !!googleFn(); }
+    /** Adds the owner's Google token to a request body when there is one (the code still goes too, as the fallback). */
+    function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; return body; }
     var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
     function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
@@ -122,6 +147,39 @@
           status = { checked: true, reachable: false, saveEnabled: false, tables: {}, version: '' };
           return status;
         });
+    }
+
+    // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
+    // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
+    // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
+    var saveTurn = Promise.resolve(), sending = 0;
+    function oneAtATime(send) {
+      sending++;
+      var p = saveTurn.then(send, send);
+      saveTurn = p.then(function () {}, function () {});
+      p.then(function () { sending--; }, function () { sending--; });
+      return p;
+    }
+    // Leaving the page while saves are still waiting their turn would drop them (OV12 16 Nov 2026): the browser asks
+    // "Leave site?" first. Nothing is kept on the device: the staff code never goes into storage for this.
+    var win = root_();
+    if (win.addEventListener) win.addEventListener('beforeunload', function (e) {
+      if (sending > 0) { e.preventDefault(); e.returnValue = ''; return ''; }
+    });
+
+    // Two people saving at once (Lisa 16 Nov 2026): the script lets one save write at a time and answers BUSY to a save
+    // that waited too long. Nothing was written, so the same save (same request id) is sent again after a short,
+    // random pause, up to BUSY_TRIES times, before the person is told.
+    var BUSY_TRIES = 3;
+    var BUSY_PAUSE_MS = opts && typeof opts.busyPauseMs === 'number' ? opts.busyPauseMs : null;   // tests only
+    function busyRetry(sendOnce, tries) {
+      return sendOnce().then(function (j) {
+        if (j && j.ok === false && j.code === 'BUSY' && (tries || 0) < BUSY_TRIES) {
+          return new Promise(function (r) { setTimeout(r, BUSY_PAUSE_MS != null ? BUSY_PAUSE_MS : 1500 + Math.floor(Math.random() * 2500)); })
+            .then(function () { return busyRetry(sendOnce, (tries || 0) + 1); });
+        }
+        return j;
+      });
     }
 
     function withTimeout(p) {
@@ -238,21 +296,22 @@
       if (!spec) return Promise.resolve({ ok: false, code: 'BAD_REQUEST', message: 'Unknown table.' });
       var b = banner(tableKey);
       if (!b.canSave) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: b.text });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
       var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
+      withGoogle(body);
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
-      return withTimeout(doFetch(scriptUrl, {
+      return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
         body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
@@ -277,12 +336,12 @@
      */
     function act(action, fields, requestId) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
-      var body = { v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} };
-      return withTimeout(doFetch(scriptUrl, {
+      var body = withGoogle({ v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} });
+      return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
@@ -303,11 +362,11 @@
     function read(tableKey, filter) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
+        body: JSON.stringify(withGoogle(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey }))
       })).then(function (r) { return r.json(); }).then(function (j) {
         if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
@@ -364,17 +423,18 @@
     return {
       TABLES: TABLES,
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
-      setCode: setCode, getCode: getCode, clearCode: clearCode,
+      setCode: setCode, getCode: getCode, clearCode: clearCode, hasAuth: hasAuth, usingGoogle: function () { return !getCode() && !!googleFn(); },
       role: function () { return lastRole; },
       name: function () { return lastName; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
+      sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,
       read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 
-  return { create: create, TABLES: TABLES, URL_OK: URL_OK };
+  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip };
 }));

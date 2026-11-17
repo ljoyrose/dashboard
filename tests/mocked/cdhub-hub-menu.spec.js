@@ -26,7 +26,7 @@ const nav = () => {
 const row = (k, v, from = '2026-01-01', to = '') => ({ rule_key: k, value: String(v), effective_from: from, to_date: to, source: 'Pretend setting' });
 
 test.describe('CD Hub menu: layout from rows', () => {
-  test('no nav rows: the starting layout Compliance, Ops, People, reported as not set', () => {
+  test('no nav rows: the starting layout Compliance, Records, People, reported as not set', () => {
     const L = nav().layout({ rows: [], iso: '2026-11-14', role: 'OWNER' });
     expect(L.tabs).toEqual(['compliance', 'ops', 'people']);
     expect(L.set).toBe(false);
@@ -67,7 +67,8 @@ test.describe('CD Hub menu: layout from rows', () => {
 test('hub: owner rows move Sales onto the bar and switch People off; old routes still open', async ({ page, guard }) => {
   setFile(guard.world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
     + 'n1,t,nav.tab.OWNER.sales,1,2026-01-01,Pretend setting,,,\nn2,t,nav.tab.OWNER.compliance,2,2026-01-01,Pretend setting,,,\n'
-    + 'n3,t,nav.on.people,0,2026-01-01,Pretend setting,,,\n');
+    + 'n3,t,nav.on.people,0,2026-01-01,Pretend setting,,,\n'
+    + 'n4,t,nav.view.enquiries,1,2026-01-01,Pretend setting,,,\nn5,t,nav.view.litters,1,2026-01-01,Pretend setting,,,\n');   // both start hidden; this owner has them on
   await page.goto('cdhub/');
   await signIn(page);
   await expect(page.locator('#nav > button.ht[data-section] .htl')).toHaveText(['Main', 'Sales', 'Compliance']);

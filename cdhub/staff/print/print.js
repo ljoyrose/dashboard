@@ -15,8 +15,11 @@
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
-  if (!save.getScriptUrlSet() || !code) { screen.appendChild(h('p', { class: 'sub', text: 'Set up this device on the staff page first, with an owner code.' })); return; }
-  save.setCode(code, false);
+  // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
+  var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
+  if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
+  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
+  if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' });
   screen.appendChild(opts); screen.appendChild(msg); screen.appendChild(sheet);
@@ -33,6 +36,12 @@
   function make(kind, items, draw) {
     sheet.textContent = '';
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
+    // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
+    var role = typeof save.role === 'function' ? save.role() : '';
+    if (missing.length && role && role !== 'OWNER') {
+      say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
+      return;
+    }
     (function next() {
       if (i < missing.length && !failed) {
         say('Making code ' + (i + 1) + ' of ' + missing.length + '...');
@@ -43,8 +52,11 @@
         });
         return;
       }
+      // only codes already saved are drawn (a code whose save failed is never shown); the rest are named as not printed
       items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room)); });
-      say(failed ? 'Stopped: ' + failed : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
+      var left = items.filter(function (it) { return !current(kind, it.id); }).length;
+      say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
+        : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
     }());
   }
   /* Lisa's "Dog Card Print-outs" layout (v4). Every value prints from rows: size colours from size_colour.* rule rows,
