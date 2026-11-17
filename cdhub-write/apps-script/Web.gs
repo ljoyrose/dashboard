@@ -51,7 +51,9 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'record_edit') return jsonOut_({ ok: true, result: sinkRecordEdit_(req) });
     if (req && typeof req === 'object' && req.action === 'record_archive') return jsonOut_({ ok: true, result: sinkRecordArchive_(req) });
     if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
+    var tMoves = Date.now();
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
+    console.log('save timing: waiting room moves ' + (Date.now() - tMoves) + ' ms');
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
     return jsonOut_(errorBody_(ex));

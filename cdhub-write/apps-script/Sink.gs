@@ -254,7 +254,11 @@ function sinkHandle_(req) {
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
 
-  var result = withLock_(function () { return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
+  // 17 Nov 2026: live saves took 17-127 s. Each save logs where its time went (no data, no names): before the lock,
+  // waiting for the lock, and the work inside it, so a slow save can be traced in Executions.
+  var tLock = Date.now(), tIn = 0;
+  var result = withLock_(function () { tIn = Date.now(); return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
+  console.log('save timing ' + spec.key + ': before lock ' + (tLock - nowMs) + ' ms, lock wait ' + (tIn - tLock) + ' ms, work ' + (Date.now() - tIn) + ' ms');
   cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
   return result;
 }
