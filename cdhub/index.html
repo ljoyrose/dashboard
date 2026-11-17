@@ -26,6 +26,7 @@
 <script src="staff/lib/links.js"></script>
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
+<script src="docs-view.js"></script>
 <script src="../breed-better/score.js"></script>
 <script src="../breed-better/dna-kit.js"></script>
 <script src="../breed-better/hub-view.js"></script>
@@ -666,6 +667,8 @@ function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
 function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
+/* a dog's documents: files linked from the dog, labelled by BLD-doc_type (Lisa 17 Nov 2026) */
+function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -3193,6 +3196,7 @@ function drawDogs(){
 
     /* Lisa 12 Nov 2026: layout A (weight, medications, chip) with B's sections behind More */
     +'<details class="dcs more" data-k="more"><summary><svg class="ricon" aria-hidden="true"><use href="#i-dots"/></svg><span class="dcs-label">More</span></summary><div class="dc-more">'
+    +docsRow(d)
     +(d.findings.length?
       '<details class="dcs"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-stethoscope"/></svg>'
