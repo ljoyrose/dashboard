@@ -10,7 +10,7 @@
 (function () {
   'use strict';
   var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
-  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'lib/area-link.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
+  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'lib/thermometer.js', 'lib/area-link.js', 'lib/temp-judge.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
   var ICONS = {
     report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0z"/><path d="M12 16h.01"/></svg>',   // Tabler alert-triangle (Problem tab)
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
