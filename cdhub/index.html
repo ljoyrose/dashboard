@@ -272,7 +272,17 @@ table[data-tidy] th::first-letter{text-transform:uppercase}
 #sopcard .sopgrp .mrow{margin-left:12px}
 .compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
 .rgroup{margin:8px 0}.rgroup>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.rgroup>summary h4{margin:0;flex:1}.rgroup[hidden]{display:none}
-.compfold>summary h3{margin:0;flex:1}.compfold>summary::after{content:"\25BE";color:var(--muted);margin-left:8px}.compfold:not([open])>summary::after{content:"\25B8"}
+.compfold>summary h3{margin:0;flex:1}
+/* 17 Nov 2026: these folds (Compliance, Items, Jobs, Settings) drew a small black triangle while the card beside them has the house
+   chevron. The same look here, in CSS: ::after is the 36px (44px phone) box on the control line, ::before the grey chevron in it,
+   a quarter turn when folded. */
+.compfold>summary{--cfb:var(--house-btn)}
+@media (max-width:767.98px){.compfold>summary{--cfb:var(--house-btn-phone)}}
+.compfold>summary::after{content:"";order:2;flex:none;box-sizing:border-box;width:var(--cfb);height:var(--cfb);margin-left:8px;border:var(--house-line) solid var(--press);border-radius:var(--radius)}
+.compfold>summary::before{content:"";order:3;flex:none;box-sizing:border-box;width:8px;height:8px;margin:0 calc(var(--cfb)/2 - 4px) 0 calc(var(--cfb)/-2 - 4px);border:solid var(--muted);border-width:0 2px 2px 0;transform:translateY(-2px) rotate(45deg);transition:transform .15s ease-out}
+.compfold:not([open])>summary::before{transform:rotate(-45deg)}
+@media (prefers-reduced-motion:reduce){.compfold>summary::before{transition:none}}
+@media (hover:hover){.compfold>summary:hover::after{background:var(--hov)}}
 .urg{display:inline-flex;align-items:center;gap:6px;font-weight:600}.urg-ring{box-sizing:border-box;width:20px;height:20px;border:2px solid var(--house-late);border-radius:50%;display:inline-grid;place-items:center;flex:none}.urg-ring>i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0))}.urg>svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}ul.urgl{list-style:none;margin:8px 0;padding:0}ul.urgl>li{margin:0 0 10px}
 ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ctemps .ctl{margin:4px 0 0;padding-left:20px;font-size:var(--fs-small)}
 #compJobs td[data-n] a{text-decoration:none;display:inline-flex;min-height:32px;align-items:center}

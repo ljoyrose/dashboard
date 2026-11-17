@@ -179,7 +179,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
     await open(page, 390);
     const more = page.locator('[data-hm-more]');
     await expect(more).toBeVisible();
-    expect((await box(more)).height).toBeGreaterThanOrEqual(44);
+    await expect.poll(async () => (await box(more)).height).toBeGreaterThanOrEqual(44);   // Main redraws once the later tables land
   });
 
   test('today is the kennel\'s day: at 00:30 summer time the hub and the medicine form open on that day, not the UTC day before', async ({ page }) => {
@@ -197,4 +197,22 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
     await view(page, 'enquiries/all');
     await expect(page.locator('[data-enq-count]')).toHaveText(/^\d+ enquir(y|ies)$/);
   });
+
+  for (const width of [390, 1280]) {
+    test(`at ${width}px the Compliance folds wear the same chevron box as the card beside them, and still fold`, async ({ page }) => {
+      await open(page, width);
+      await tabClick(page, '#nav [data-go="compliance"]');
+      const sum = page.locator('#compUrgent details.compfold > summary');
+      const look = (s) => s.evaluate((e) => { const a = getComputedStyle(e, '::after'), b = getComputedStyle(e, '::before');
+        return { content: a.content, w: a.width, h: a.height, line: a.borderTopWidth, chevron: b.borderRightWidth, turn: b.transform }; });
+      const house = await page.locator('#checksCard button.house-fold').evaluate((e) => { const s = getComputedStyle(e); return { w: s.width, h: s.height, line: s.borderTopWidth }; });
+      const open1 = await look(sum);
+      expect(open1.content).toBe('""');   // no ▾ / ▸ characters
+      expect({ w: open1.w, h: open1.h, line: open1.line }).toEqual(house);
+      expect(open1.chevron).toBe('2px');
+      await sum.click();
+      await expect(page.locator('#compUrgent details.compfold')).not.toHaveAttribute('open', '');
+      await expect.poll(async () => (await look(sum)).turn).not.toBe(open1.turn);   // a quarter turn when folded
+    });
+  }
 });
