@@ -237,7 +237,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const d = await page.evaluate(() => {
       const t = todayISO();
       T['BLD-breeding_rule.csv'] = [{ id: 'b1', rule_key: 'compliance.look_back_days', value: '3', effective_from: '2020-01-01', source: 'Pretend setting' }];
-      T['BLD-area_reading.csv'].push({ id: 'r5', area_id: 'ar-b', thermometer_id: 'th-b', min_c: '40.0', max_c: '41.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' });
+      // Temps A (17 Nov 2026): over the top of the limit is a cooling action, not a breach, so the breach here is a cold one
+      T['BLD-area_reading.csv'].push({ id: 'r5', area_id: 'ar-b', thermometer_id: 'th-b', min_c: '1.0', max_c: '2.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' });
       go('compliance', false);
       const x = compTemps();
       return { n: x.win.n, c: x.miss.filter((m) => m.name === 'Pretend C').length, bad: x.bad.map((b) => b.th) };
@@ -290,7 +291,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
       T['BLD-breeding_rule.csv'] = [{ id: 's1', rule_key: 'staffing.adults_per_full_time', value: '7', effective_from: '2020-01-01', source: 'Pretend source' }];
       go('today', false);
     });
-    await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults (Pretend source)');
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults');
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).not.toContainText('Pretend source');   // Lisa 17 Nov 2026: no legal source on the tile
     // dated rows: each day is judged by the row in force that day; a to_date ends a row
     const r = await page.evaluate(() => {
       T['BLD-breeding_rule.csv'] = [

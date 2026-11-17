@@ -90,6 +90,7 @@ for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop'
     put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date', [
       'k1,t,link_kind.gallery,Photos,2026-01-01,Pretend,,,,', 'k2,t,photos.show_dates,1,2026-01-01,Pretend,,,,', 'k3,t,photos.show_dates.owner,0,2026-01-01,Pretend,,,,']));
     for (const id of ['DRIVEmainPhoto01', 'DRIVEoldPhoto002']) { w.file(id, id + '.png', '', { mimeType: 'image/png' }); w.byId(id).thumbnailLink = 'https://example.com/pretend-' + id + '.png'; }
+    put(w, 'BLD-field_visibility.csv', csv('id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason', ['fv-1,t,area,*,aud-staff,yes,,,test,2026-10-16,owner sees Admin']));
     await openDogs(page, guard);
 
     const gal = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
@@ -98,20 +99,27 @@ for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop'
     await expect(items).toHaveCount(2);
     await expect(items.first()).toHaveAttribute('data-file', 'fil-1');   // order unchanged: newest first
     await expect(gal.locator('[data-k="photo-date"]')).toHaveCount(0);   // the owner's own row hides the dates
-    const btn = gal.locator('[data-photo-dates]');
-    await expect(btn).toHaveText('Dates hidden');
-    await expect(btn).toBeVisible();
+    // Lisa 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
+    await expect(gal.locator('[data-photo-dates]')).toHaveCount(0);
+    await page.evaluate(() => go('admin'));
+    await page.locator('[data-adm-open="display"]').click();
+    const btn = page.locator('#adm-display [data-photo-dates]');
+    await expect(page.locator('#adm-display')).toContainText('hidden');
+    await expect(btn).toHaveText('Show dates');
     const box = await btn.boundingBox();
     expect(box.x + box.width).toBeLessThanOrEqual(size.width);   // fits the screen
 
     await btn.click();
-    await expect(gal.locator('[data-photo-dates-msg]')).toHaveText('✓ Saved');
+    await expect(page.locator('#adm-display [data-photo-dates-msg]')).toHaveText('✓ Saved');
     expect(sent).toHaveLength(1);
     expect(sent[0].table).toBe('breeding_rule');
     expect(sent[0].fields).toMatchObject({ rule_key: 'photos.show_dates.owner', value: '1' });
-    await expect(gal.locator('[data-photo-dates]')).toHaveText('Dates shown');
-    await expect(gal.locator('> .dcs-bd > .glist > .gi').first()).toHaveAttribute('data-file', 'fil-1');
-    await expect(gal.locator('> .dcs-bd > .glist [data-k="photo-date"]').first()).toHaveText('1 Jun 2026');
+    await expect(page.locator('#adm-display [data-photo-dates]')).toHaveText('Hide dates');
+    await page.evaluate(() => go('dogs'));
+    const gal2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
+    await gal2.locator('> summary').click();
+    await expect(gal2.locator('> .dcs-bd > .glist > .gi').first()).toHaveAttribute('data-file', 'fil-1');
+    await expect(gal2.locator('> .dcs-bd > .glist [data-k="photo-date"]').first()).toHaveText('1 Jun 2026');
   });
 }
 
@@ -130,5 +138,5 @@ test('dog card gallery: with no photo dates rows the dates show, as before', asy
   const gal = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
   await gal.locator('> summary').click();
   await expect(gal.locator('[data-k="photo-date"]')).toHaveText('1 Jun 2026');
-  await expect(gal.locator('[data-photo-dates]')).toHaveText('Dates shown');
+  await expect(gal.locator('[data-photo-dates]')).toHaveCount(0);   // no setting button on the dog card
 });
