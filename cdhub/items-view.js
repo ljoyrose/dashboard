@@ -311,7 +311,7 @@
       h += '<details class="compfold" open><summary><h3>' + e(k) + ' <span class="mut">' + xs.length + '</span>' + (bad ? ' <span class="pill no">' + bad + '</span>' : '') + '</h3></summary>'
         + xs.map(function (x) {
           return '<button type="button" class="itm-row" data-itm-open="' + e(x.it.id) + '"><b>' + e(x.it.item_no) + '</b><span>' + e(x.it.name) + (x.it.size ? ' · ' + e(x.it.size) : '') + '</span>'
-            + '<span class="mut">' + e(x.place || 'no room') + (x.s.never === true ? ' · never tested' : (x.s.never ? ' · ' + x.s.never.map(e).join(', ') + ' never done' : '') + (x.s.next ? ' · next ' + e(v.dmy(x.s.next)) : '')) + '</span>'
+            + '<span class="mut">' + e(x.place || 'no room') + (x.s.never === true ? ' · never tested' : (x.s.never ? ' · ' + x.s.never.map(e).join(', ') + ' never done' : '') + (x.s.next ? (x.s.next < v.today ? ' · Overdue since ' : ' · next ') + e(v.dmy(x.s.next)) : '')) + '</span>'
             + (x.archived ? '<span class="pill">Archived</span>' : pill(x.s.st)) + (S.ticks[x.it.id] ? '<span class="itm-tick" aria-label="saved">' + ic('tick') + '</span>' : '') + '</button>';
         }).join('') + '</details>';
     });
