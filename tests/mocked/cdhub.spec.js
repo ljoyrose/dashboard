@@ -188,7 +188,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
   test('tables missing from the folder are reported, not hidden', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#main')).toContainText(/\d+ file\(s\) not in the folder/);
+    await expect(page.locator('#main')).toContainText(/\d+ files? not in the folder/);   // plain plural, never "file(s)" (audit 17 Nov 2026)
   });
 });
 
@@ -627,7 +627,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
     await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('7');   // + Breeding rules not set (8 Nov 2026)
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('8');   // Main holds Decide (7) and Do (1)
+    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('7');   // Main holds Decide (7); Do's 1 waiting item is one of those 7, so it is not counted twice (audit 17 Nov 2026)
     // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
     await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
