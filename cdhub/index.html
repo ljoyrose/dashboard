@@ -146,7 +146,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
+/* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
+@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -1720,7 +1721,7 @@ function strip(){
 /* ---------- Live feed: the Bloodline home screens, built only from what this page already reads. ---------- */
 var BREED_CHECKS={'litter gap':1,'dam age':1,'litter count':1,'breeding rules':1};
 var CHECKNAME={'time zone':'Time zone','room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
- 'placed in an area':'Placed in a cabin','joins':'Joins','dates':'Dates','rule changes':'Rule changes','saving off':'Saving'};
+ 'placed in an area':'Placed in a cabin','joins':'Links between records','dates':'Date formats','rule changes':'Rule history','saving off':'Saving'};
 function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
 function dmyShort(iso){ return BLDDates.long(iso||''); }
 /* foundation: date on a record. Every date pill wears a plain ring; late = rose ring + tint, soon = amber ring + tint. */
@@ -3980,7 +3981,8 @@ function forgetHere(){ STAFF_MEM='';
 /* One line on the panel that says what this device holds. It never shows the code, only whether one is kept. */
 function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
  var yn=function(b){ return b?'yes':'no'; };
- return 'This device: app mode '+yn(app)+' \u00b7 code kept '+yn(!!codeKept())+' \u00b7 save address '+yn(SINK_RE.test(sinkGet(SINK_URL_KEY))); }
+ /* plain words (Lisa 17 Nov 2026, "yes all") */
+ return 'On this device: '+(app?'opened as an app':'opened in the browser')+' \u00b7 '+(codeKept()?'your code is remembered':'no code remembered')+' \u00b7 '+(SINK_RE.test(sinkGet(SINK_URL_KEY))?'saving is set up':'saving is not set up yet'); }
 function askStaffCode(){
  var have=staffCodeNow(); if(have) return Promise.resolve(have);
  if(STAFF_ASK) return STAFF_ASK;
@@ -4738,7 +4740,7 @@ function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sink
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']);
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Settings']);   /* the tab says Settings; the page and its chip say the same (17 Nov 2026) */
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
