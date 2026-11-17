@@ -52,7 +52,15 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'record_edit') return jsonOut_({ ok: true, result: sinkRecordEdit_(req) });
     if (req && typeof req === 'object' && req.action === 'record_archive') return jsonOut_({ ok: true, result: sinkRecordArchive_(req) });
     if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
-    try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
+    // 17 Nov 2026: the waiting-room-moves pass reads the whole approvals queue. It runs at most once a minute from saves
+    // (a plain GET, the owner page and the queue itself still run it), so an ordinary save does not pay for it each time.
+    var tMoves = Date.now(), movesCache = null;
+    try { movesCache = CacheService.getScriptCache(); } catch (ex) { movesCache = null; }
+    if (!movesCache || !movesCache.get('moves:ran')) {
+      if (movesCache) { try { movesCache.put('moves:ran', '1', 60); } catch (ex) { /* only a speed-up */ } }
+      try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
+      console.log('save timing: waiting room moves ' + (Date.now() - tMoves) + ' ms');
+    }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
     return jsonOut_(errorBody_(ex));

@@ -21,11 +21,24 @@ function store_folder_() {
 
 /** Find exactly one file by exact title. null if none. Two with the same title = refuse (like CD Hub). */
 function store_findOne_(title) {
+  // 17 Nov 2026 (saves took 17-127 s): a save looks up several files by name, and each search of the folder is slow.
+  // The id found is remembered for 5 minutes. A remembered id is used only if that file still has this exact name and
+  // is not in the bin; otherwise the folder is searched again, with the two-files-one-name check, as before.
+  var cache = null, key = 'fileid:' + title;
+  try { cache = CacheService.getScriptCache(); } catch (e) { cache = null; }
+  var known = cache ? cache.get(key) : null;
+  if (known) {
+    try {
+      var f = DriveApp.getFileById(known);
+      if (f.getName() === title && !f.isTrashed()) return f;
+    } catch (e) { /* gone or unreadable: search again */ }
+  }
   var it = store_folder_().getFilesByName(title), found = [];
   while (it.hasNext()) found.push(it.next());
   if (found.length > 1) {
     throw err_('DUPLICATE_TITLE', 'There are two files called ' + title + ' in the folder. Lisa needs to rename one before saving can use it.');
   }
+  if (found.length && cache) { try { cache.put(key, found[0].getId(), 300); } catch (e) { /* remembering is only a speed-up */ } }
   return found.length ? found[0] : null;
 }
 

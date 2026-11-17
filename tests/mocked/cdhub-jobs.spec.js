@@ -6,7 +6,12 @@ const tab = async (page, id) => {
   await tabClick(page, `#nav button[data-go="${id}"]`);
   await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
 };
-const addTable = (world, name, content) => world.file('bld-jobs-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
+const addTable = (world, name, content) => {
+  const f = world.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); }
+  else world.file('bld-jobs-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
 
 const TYPE_H = 'id,tenant_id,type_key,label,target,active,effective_from,source,every_days,group,includes,sop';
 const LOG_H = 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded';
