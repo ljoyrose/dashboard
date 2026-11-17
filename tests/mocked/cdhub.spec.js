@@ -180,7 +180,9 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await signIn(page);
     await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
-    await expect(page.locator('#main')).toContainText('Sample finished item');
+    await expect(page.locator('#main')).toContainText('Sample item waiting on Claude');
+    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // Lisa 17 Nov 2026: the Done list is cleared from view
+    await expect(page.locator('[data-work-sum]')).toContainText('done 1');
   });
 
   test('tables missing from the folder are reported, not hidden', async ({ page }) => {
@@ -1024,7 +1026,8 @@ test('CD Hub: The round shows a Readings card (from BLD-area_reading.csv), not a
   const rows = page.locator('#kept-readings tbody tr');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0).locator('td').nth(1).locator('.ic')).toHaveClass(/cold/);   // 8.50 min: blue
-  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/late/);   // 28.50 max: red
+  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/ok/);     // 28.50 max: over 26 is cooling action, not outside (Temps A, 17 Nov 2026)
+  await expect(rows.nth(0).locator('td').nth(2)).toContainText('over the limit: cooling action');
   await expect(rows.nth(1).locator('td').nth(1).locator('.ic')).toHaveClass(/ok/);     // 12-20: green
 });
 
@@ -1040,8 +1043,12 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     CD._byId.tpup = { id: 'tpup', dob: '2026-01-01' };
     CD.dogs.push({ id: 'tpup', area_id: 'test-pup-room', dob: '2026-01-01' });
     const pup = roomBand('test-pup-room', '2026-01-10');
-    out.pupOk = tempState('26.5', '27.5', pup);
-    out.pupCold = tempState('22', '24', pup);
+    // Temps A (Lisa 17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
+    out.pupOk = tempState('18', '22', pup, '27.0', '2026-01-10');
+    out.pupRoomWarm = tempState('20', '27.5', pup, '27.0', '2026-01-10');
+    out.pupCold = tempState('22', '24', pup, '24.5', '2026-01-10');
+    out.pupNoSpot = tempState('22', '24', pup, '', '2026-01-10');
+    out.pupRoomCold = tempState('9', '14', pup, '27.0', '2026-01-10');
     CD.dogs.push({ id: 'tnodob', area_id: 'test-nodob-room', dob: '' });
     CD._byId.tnodob = { id: 'tnodob', dob: '' };
     out.noDob = tempState('15', '20', roomBand('test-nodob-room', '2026-01-10'));
@@ -1049,7 +1056,7 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     out.noRows = tempState('15', '20');
     return out;
   });
-  expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
+  expect(r).toEqual({ adult26: 'ok', adultHot: 'warm', adultCold: 'cold', pupOk: 'ok', pupRoomWarm: 'warm', pupCold: 'cold', pupNoSpot: 'nospot', pupRoomCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
 test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are "2 Mar 2026"', () => {
