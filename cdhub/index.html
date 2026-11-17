@@ -624,6 +624,7 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 /* Joins A (Lisa 17 Nov 2026): dogs moved to the archive keep their history (vaccinations, vet visits, litters). The archive
    is read so those records point at a real dog; nothing is deleted. Read after the first screen; absent is fine. */
 wantLater('BLD-subject-Archive.csv');
+wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
@@ -1493,6 +1494,19 @@ var RULE_GROUPS=[['breeding','Breeding',/^(min_dam_age_months|max_litters_per_da
  ['space','Space and rooms',/^(space\.|size_from_kg\.|size_colour\.|size_override\.|room\.|move_check\.|move\.)/],
  ['staffing','Staffing',/^staffing\./],['dogs','Dogs',/^dog\./],['temps','Temperatures',/^temp_round\./],
  ['jobs','Jobs and checks',/^(job\.|items\.|compliance\.)/],['records','Records and files',/^(link_kind\.|file\.)/],['other','Other',/./]];
+/* RULES B (Lisa 17 Nov 2026, "yes B for cross industry"): the groups are the owner's rows in BLD-rule_group
+   (group_key, label, sort, key_pattern, from_date, to_date). key_pattern is rule-name starts separated by |, e.g.
+   "staffing.|dog.adult_from_months". A rule goes in the first group (by sort) that matches; anything unmatched is "Other".
+   No BLD-rule_group rows in force: the stop-gap groups above (option A) are used. */
+function ruleGroups(iso){
+ var rows=BLDCapacity.inForce((T['BLD-rule_group.csv']||[]).filter(function(r){ return r.group_key&&r.label&&r.key_pattern; }),iso,'from_date');
+ if(!rows.length) return RULE_GROUPS;
+ var esc2=function(t){ return t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); };
+ var out=rows.slice().sort(function(a,b){ return (parseFloat(a.sort)||0)-(parseFloat(b.sort)||0)||String(a.label).localeCompare(String(b.label)); })
+  .map(function(r){ var parts=String(r.key_pattern).split('|').map(function(x){ return x.trim(); }).filter(Boolean);
+   return [String(r.group_key),String(r.label),new RegExp('^('+parts.map(esc2).join('|')+')')]; });
+ return out.concat([['other','Other',/./]]);
+}
 function ruleLabel(k){ var kn=BREED_RULES.concat(SETTING_RULES).filter(function(b){ return b[0]===k; })[0]; if(kn) return {label:kn[1],unit:kn[2]};
  var m=/^space\.(free|limited)\.(adult|mum_with_pups)\.(small|medium|large)\.(\d+)$/.exec(k);
  if(m) return {label:(m[2]==='adult'?m[4]+' '+m[3]+' dog'+(m[4]==='1'?'':'s'):'Mum with pups, '+m[3])+', '+m[1]+' access',unit:'m\u00b2 needed'};
@@ -1500,12 +1514,13 @@ function ruleLabel(k){ var kn=BREED_RULES.concat(SETTING_RULES).filter(function(
 function compRulesHtml(today){
  var keys={}; BREED_RULES.concat(SETTING_RULES).forEach(function(b){ keys[b[0]]=1; });
  (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var k=String(r.rule_key||'').trim(); if(k) keys[k]=1; });
- var by={}; Object.keys(keys).sort().forEach(function(k){ var g=RULE_GROUPS.filter(function(x){ return x[2].test(k); })[0]; (by[g[0]]=by[g[0]]||[]).push(k); });
+ var GROUPS=ruleGroups(today);
+ var by={}; Object.keys(keys).sort().forEach(function(k){ var g=GROUPS.filter(function(x){ return x[2].test(k); })[0]; (by[g[0]]=by[g[0]]||[]).push(k); });
  var allRows=function(k){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return String(r.rule_key||'').trim()===k&&/^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||''); })
   .sort(function(a,b){ return a.effective_from<b.effective_from?-1:1; }); };
  var cur=function(rows){ var c=null; rows.forEach(function(r){ if(r.effective_from<=today&&!(r.to_date&&r.to_date<today)) c=r; }); return c; };
  var body='<div class="filt" data-rules-find><input type="search" data-rules-q placeholder="Find a rule" aria-label="Find a rule"> <label><input type="checkbox" data-rules-unset> Not set only</label></div>';
- RULE_GROUPS.forEach(function(g){ var ks=by[g[0]]||[]; if(!ks.length) return;
+ GROUPS.forEach(function(g){ var ks=by[g[0]]||[]; if(!ks.length) return;
   var unset=0, rows=ks.map(function(k){ var all=allRows(k), c=cur(all), L=ruleLabel(k); if(!c) unset++;
    var info=c?[(c.source&&hideSource(c.source))?'Source: '+hideSource(c.source):'',all.length>1?'Versions: '+all.map(function(r){ return r.value+' from '+dmy(r.effective_from); }).join(' \u2192 '):''].filter(Boolean):[];
    return '<tr data-rule="'+esc(k)+'" data-unset="'+(c?'0':'1')+'"><td><b>'+esc(L.label)+'</b>'+(info.length?' <ul class="notes">'+info.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join('')+'</ul>':'')+'</td>'
