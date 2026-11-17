@@ -229,12 +229,13 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
     await expect(page.locator('#rstat')).toContainText('1 with a temperature');
     await expect(page.locator('#kept-readings')).toContainText('11.3–13.2');
-    page.once('dialog', (d) => d.accept());
+    const dialogs = []; page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });   // Lisa 16 Nov: one tap, no pop-up
     await page.locator(`.rempty[data-area="${area}"][data-slot="pm"]`).click();
     await expect.poll(() => bodies.length).toBe(2);
     expect(bodies[1]).toMatchObject({ table: 'area_reading', fields: { area_id: area, room_empty: 'yes' } });
     expect(bodies[1].fields.min_c).toBeUndefined();
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
+    expect(dialogs).toEqual([]);
   });
 
   test('a comma decimal saves as a point; text is refused and nothing saves; a saved reading that is not a number shows as a problem (OV11 15 Nov)', async ({ page, guard }) => {
