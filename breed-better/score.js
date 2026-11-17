@@ -215,7 +215,7 @@
     /* a count is of things that happened: a row with no date (a mating that took, say, or a blank line) is not one */
     if (reads === 'count' && dateField) found = found.filter(function (r) { return recDay(r[dateField]); });
     if (reads === 'count') return { answer: String(found.length), row: null, count: true };
-    if (!found.length) return { reason: 'no_record' };
+    if (!found.length) return heldBack(c, table, subjectField, dateField, subject, asOf);
     var chosen;
     if (reads === 'lowest') {
       chosen = found.slice().sort(function (a, b) {
@@ -229,6 +229,25 @@
       })[0];
     }
     return { answer: chosen[c.answer_field], row: chosen };
+  }
+
+  /* Lisa's Design Doc reads "latest final result" (OV11, 15 Nov 2026). evidence_match's FIRST condition says which record
+     (test=hips); any later one says which records are accepted (certainty=final), dated with the criterion. A record that
+     matches the first but not a later one is shown on the line by the value it holds ("Preliminary") and stays Unverified. */
+  function heldBack(c, table, subjectField, dateField, subject, asOf) {
+    var pairs = text(c.evidence_match).split(';').map(text).filter(Boolean);
+    if (pairs.length < 2) return { reason: 'no_record' };
+    var near = table.filter(function (r) {
+      return r[subjectField] === subject.id && fieldsMatch(pairs[0], r) &&
+        (!dateField || !recDay(r[dateField]) || recDay(r[dateField]) <= asOf);
+    }).sort(function (a, b) {
+      var da = recDay(a[dateField]) || text(a[dateField]), db = recDay(b[dateField]) || text(b[dateField]);
+      return da === db ? 0 : (da < db ? 1 : -1);
+    });
+    if (!near.length) return { reason: 'no_record' };
+    var miss = pairs.slice(1).filter(function (p) { return !fieldsMatch(p, near[0]); })[0];
+    var held = miss ? text(near[0][miss.slice(0, miss.indexOf('=')).trim()]) : '';
+    return { reason: 'not_accepted', row: near[0], answer: near[0][c.answer_field], held: held };
   }
 
   /** How long a record lasts, by g: the version of the check in force on the record's own date. */
@@ -296,7 +315,7 @@
         evidence_table: c.evidence_source, evidence_id: ev.row ? text(ev.row.id) : '',
         answer_then: ev.answer === undefined ? '' : text(ev.answer),
         date_then: recDate || (ev.row && text(c.date_field) ? text(ev.row[c.date_field]) : ''), due: ev.due || '', due_date: ev.dueDate || '',
-        points: '', points_max: '', gate_outcome: '', unknown_reason: ev.reason || '', judged_by: ev.judgedBy || '',
+        points: '', points_max: '', gate_outcome: '', unknown_reason: ev.reason || '', held_then: ev.held || '', judged_by: ev.judgedBy || '',
         rules_then: g !== c || ids(ruleRows) !== ids(todayRules)
       };
 
@@ -310,7 +329,7 @@
       if (band.kind === 'gate') {
         var outcome;
         if (rule) outcome = rule.gate_outcome;
-        else if (ev.reason === 'expired') outcome = 'unverified';
+        else if (ev.reason === 'expired' || ev.reason === 'not_accepted') outcome = 'unverified';
         else if (when === 'fail') outcome = 'fail';
         else outcome = 'unverified';
         line.gate_outcome = outcome;

@@ -32,7 +32,7 @@ const RULES = {
     outsideCalendarNever: ['--ljr-3', '--ljr-3-text', '--ljr-2', '--ljr-2-text'],
   },
   audit: {
-    dayStates: { allok: 'In limit', warn: 'Check', miss: 'Missed', nd: 'No readings', nolimit: 'No limit set' },
+    dayStates: { allok: 'In limit', warn: 'Check', miss: 'Missed', nd: 'No readings', nolimit: 'No limit set', warmd: 'Warm: cooling action' },
   },
 };
 
@@ -45,7 +45,7 @@ const R = [];
 const add = (aid, day, slot, min, max, note) => R.push([aid, day, slot, min, max, note || '']);
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) { add(aid, '2026-01-05', 'am', '12.0', '15.0'); add(aid, '2026-01-05', 'pm', '12.5', '16.0'); }
 for (const aid of ['area-r1', 'area-r3', 'area-r4']) { add(aid, '2026-01-06', 'am', '12.0', '15.0'); }
-add('area-r2', '2026-01-06', 'am', '14.0', '27.0', 'Fan on, door open');            // outside the limit, with a note
+add('area-r2', '2026-01-06', 'am', '14.0', '27.0', 'Fan on, door open');            // over 26: cooling action (Temps A, 17 Nov 2026), with a note
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) add(aid, '2026-01-06', 'pm', '12.0', '15.0');
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) add(aid, '2026-01-07', 'am', '12.0', '15.0');
 for (const aid of ['area-r1', 'area-r2', 'area-r4']) add(aid, '2026-01-07', 'pm', '12.0', '15.0');   // R3 PM missed
@@ -62,8 +62,9 @@ function expected() {
   const needed = { 'area-r1': ['2026-01-05', '2026-01-12'], 'area-r2': ['2026-01-05', '2026-01-12'], 'area-r3': ['2026-01-05', '2026-01-12'], 'area-r4': ['2026-01-05', '2026-01-10'] };
   let slots = 0;
   for (const [, [a, b]] of Object.entries(needed)) for (let d = 5; d <= +b.slice(8); d++) slots += (d === 12 && b === '2026-01-12') ? 1 : 2;   // today PM is due
-  const read = R.length, out = R.filter((r) => +r[3] < 10 || +r[4] > 26).length;
-  return { read, out, miss: slots - read };
+  // Temps A (Lisa 17 Nov 2026): below the minimum is outside; over the maximum is "warm: cooling action", not outside.
+  const read = R.length, out = R.filter((r) => +r[3] < 10).length, warm = R.filter((r) => +r[3] >= 10 && +r[4] > 26).length;
+  return { read, out, warm, miss: slots - read };
 }
 
 async function open(page, guard, size, rooms, now) {
@@ -192,7 +193,8 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   const state = async (iso) => (await day(page, iso).getAttribute('class')).split(' ')[1];
   expect(await state('2026-01-04')).toBe('nd');      // before any room was in use: nothing needed, no alarm
   expect(await state('2026-01-05')).toBe('allok');
-  expect(await state('2026-01-06')).toBe('warn');    // R2 AM outside the limit
+  expect(await state('2026-01-06')).toBe('warmd');   // R2 AM over 26: cooling action, a light warm tint, not orange
+  expect(await state('2026-01-10')).toBe('warn');    // R1 PM below 10: outside the limit
   expect(await state('2026-01-07')).toBe('miss');    // R3 PM missed
   expect(await state('2026-01-08')).toBe('miss');    // nothing read, rooms in use
   expect(await state('2026-01-12')).toBe('allok');   // today: AM all read, PM still due
@@ -203,7 +205,8 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
 
   await openDay(page, '2026-01-06');
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 14.0–27.0');
-  await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn').first()).toHaveText('AM 14.0–27.0');
+  await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
+  await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.cool-act')).toContainText('over the limit: cooling action');
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM what was done: Fan on, door open');
   await page.locator('#drill .dclose').click();
   await openDay(page, '2026-01-10');
@@ -232,6 +235,7 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(jan).toHaveAttribute('data-miss', String(want.miss));
   await expect(jan).toContainText(`${want.read - want.out} in limit`);
   await expect(jan).toContainText(`${want.out} outside`);
+  await expect(jan).toContainText(`${want.warm} warm (cooling action)`);
   await expect(jan).toContainText(`${want.miss} missed`);
   await expect(jan).toContainText(`${Math.round(100 * (want.read - want.out) / (want.read + want.miss))}% in limit`);
   // quality review 12 Nov: no card for a month that has not started; a card opens its month on the heat map
@@ -383,11 +387,29 @@ test('audit: a room holding a puppy under 4 weeks is judged by the puppy band th
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
   await openDay(page, '2026-01-05');
-  // R1 holds a 4-day-old puppy: 12.0–15.0 is outside 26–28
-  await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first()).toContainText('12.0–15.0');
+  // Temps A (Lisa 17 Nov 2026): R1 holds a 4-day-old puppy. The room is judged on the adult row (12.0–15.0 is in);
+  // 26–28 is for the bed spot, and with no bed spot reading the slot says so - never outside.
+  const r1 = page.locator('#drill .rl', { hasText: 'R1' });
+  await expect(r1.locator('.warn')).toHaveCount(0);
+  await expect(r1).toContainText('AM 12.0–15.0 ✓');
+  await expect(r1.locator('.cool-act').first()).toHaveText('· puppies: bed spot not recorded');
   // R2 has no dogs: the adult band, 12.0–15.0 is in
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
   await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
+  await page.locator('#drill .dclose').click();
+  // A bed spot reading is judged on the puppy row: 24.5 is below 26 (outside), 27.0 is inside.
+  const spotRows = 'id,area_id,taken_at,period_start,min_c,max_c,spot_c,read_method\n'
+    + 'rdg-s1,area-r1,2026-01-07T09:00:00Z,2026-01-07T00:00:00+00:00,12.0,15.0,24.5,typed\n'
+    + 'rdg-s2,area-r1,2026-01-07T16:00:00Z,2026-01-07T12:00:00+00:00,12.0,15.0,27.0,typed\n';
+  upsert('bld-readings', 'BLD-area_reading.csv', spotRows);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await openDay(page, '2026-01-07');
+  const s1 = page.locator('#drill .rl', { hasText: 'R1' });
+  await expect(s1.locator('.warn').first()).toHaveText('AM 12.0–15.0 · bed spot 24.5 below the puppy limit');
+  await expect(s1).toContainText('PM 12.0–15.0 ✓');
+  await expect(s1).not.toContainText('PM 12.0–15.0 ✓ · puppies: bed spot not recorded');
 });
 
 test('audit: a reading with max lower than min is flagged, even when both figures are inside the limit', async ({ page, guard }) => {
@@ -431,13 +453,14 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const rows = R.slice();
   const addRow = (aid, day, slot, min, max, note) => rows.push([aid, day, slot, min, max, note || '']);
   for (const aid of ['area-r1', 'area-r2', 'area-r3']) {
-    addRow(aid, '2026-07-10', 'am', aid === 'area-r1' ? '25.0' : '18.0', aid === 'area-r1' ? '28.2' : '22.0');
+    addRow(aid, '2026-07-10', 'am', aid === 'area-r1' ? '8.5' : '18.0', aid === 'area-r1' ? '22.0' : '22.0');   // R1 below 10: outside
     addRow(aid, '2026-07-10', 'pm', '18.0', '22.0');
     addRow(aid, '2026-07-12', 'am', '18.0', '22.0');
     addRow(aid, '2026-07-12', 'pm', '18.0', '22.0');
     addRow(aid, '2026-08-10', 'am', '12.0', '15.0');
     addRow(aid, '2026-08-10', 'pm', '12.5', '16.0');
   }
+  addRow('area-r2', '2026-08-11', 'am', '18.0', '27.5'); addRow('area-r2', '2026-08-11', 'pm', '18.0', '22.0');   // over 26: cooling action
   const readings = 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camera_value_changed,taken_by,mitigation_note\n'
     + rows.map((r, i) => ['rdg-' + i, r[0], r[1] + 'T' + (r[2] === 'am' ? '09' : '16') + ':00:00Z', r[1] + 'T' + (r[2] === 'am' ? '00' : '12') + ':00:00+00:00', r[3], r[4], 'camera', 'true', 'stf-1', '"' + r[5] + '"'].join(',')).join('\n') + '\n';
   const bands = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date,note\n'
@@ -463,6 +486,8 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   expect((await dayM('2026-07-10').getAttribute('class')).split(' ')[1]).toBe('warn');
   expect((await dayM('2026-07-11').getAttribute('class')).split(' ')[1]).toBe('miss');
   expect((await dayM('2026-08-10').getAttribute('class')).split(' ')[1]).toBe('allok');
+  const warmCell = await dayM('2026-08-11').getAttribute('class');
+  expect(warmCell.split(' ')[1] === 'warmd' || warmCell.split(' ')[1] === 'miss', 'a day over 26 is never solid orange').toBe(true);
   await expect(page.locator('.legend')).toContainText('Outside limit');
   await expect(page.locator('.legend')).toContainText('Missed');
   await expect(page.locator('.legend')).not.toContainText('Outside limit or missed');
@@ -483,7 +508,7 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   expect(drillBox.radius).not.toBe('0px');
   expect(drillBox.border).toBe('1px');
   const outLine = page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first();
-  await expect(outLine).toHaveText('AM 25.0–28.2');
+  await expect(outLine).toHaveText('AM 8.5–22.0');
   await expect(outLine).not.toHaveClass(/\bmiss\b/);
   await expect(page.locator('#drill')).not.toContainText('what was done');
   await expect(page.locator('#drill')).not.toContainText('(from');

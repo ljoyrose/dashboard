@@ -11,6 +11,13 @@ const signIn = async (page) => {
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
 
+test('dates use 3-letter months, "2 Sep 2026" never "Sept" (Lisa, 16 Nov 2026)', () => {
+  const D = require('../../cdhub/staff/lib/date-words.js');
+  D.setLocale([{ language_tag: 'en-GB' }]);
+  expect(D.long('2026-09-30')).toBe('30 Sep 2026');
+  expect(D.long('2026-03-02')).toBe('2 Mar 2026');
+});
+
 test.describe('CD Hub: loads', () => {
   test('page loads with HTTP 200 and asks for sign-in; no tables shown yet', async ({ page }) => {
     const res = await page.goto('cdhub/');
@@ -180,13 +187,15 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await signIn(page);
     await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
-    await expect(page.locator('#main')).toContainText('Sample finished item');
+    await expect(page.locator('#main')).toContainText('Sample item waiting on Claude');
+    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // Lisa 17 Nov 2026: the Done list is cleared from view
+    await expect(page.locator('[data-work-sum]')).toContainText('done 1');
   });
 
   test('tables missing from the folder are reported, not hidden', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#main')).toContainText(/\d+ file\(s\) not in the folder/);
+    await expect(page.locator('#main')).toContainText(/\d+ files? not in the folder/);   // plain plural, never "file(s)" (audit 17 Nov 2026)
   });
 });
 
@@ -201,11 +210,11 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
-    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Records', 'People']);
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
@@ -225,17 +234,41 @@ test.describe('CD Hub: navigation', () => {
     await expect(page.locator('#main')).not.toBeEmpty();
     await openView(page, 'buyers');
     await expect(page.locator('#main h2')).toHaveText('Assocs');
-    await expect(page.locator('#next')).toContainText('Next: Dogs');
   });
 
-  test('the "Next:" buttons at the bottom lead to other sections', async ({ page }) => {
+  test('chips at the top of a section reach each of its views in one tap; no "Next:" buttons at the foot @regression', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await tabClick(page, '#nav button[data-go="today"]');
-    const next = page.locator('#next button[data-go]').first();
-    const target = await next.getAttribute('data-go');
-    await next.click();
-    await expect(page.locator(`#nav button[data-go="${target}"]`)).toHaveAttribute('aria-current', 'page');
+    await tabClick(page, '#nav button[data-go="dogs"]');
+    const chips = page.locator('#chips');
+    await expect(chips).toBeVisible();
+    await expect(chips.locator('.hchip .hcl')).toHaveText(['Dogs', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps']);
+    await expect(chips.locator('[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
+    await expect(chips.locator('[data-go="dogs"] .cnt')).toHaveText(/^\d+$/);
+    await chips.locator('[data-go="areas"]').click();
+    await expect(page.locator('#main h2').first()).toHaveText('Areas');
+    await expect(chips.locator('[data-go="areas"]')).toHaveAttribute('aria-current', 'page');
+    await expect(chips.locator('[data-go="dogs"]')).not.toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#next')).toHaveCount(0);
+    await expect(page.getByText(/^Next: /)).toHaveCount(0);
+    // Temps is its own page: its chip is a link there
+    await expect(chips.locator('a.hchip', { hasText: 'Temps' })).toHaveAttribute('href', './history.html');
+  });
+
+  test('the view a section opens on is an owner setting row per role or person, not code', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    const r = await page.evaluate(() => {
+      const row = (k, v) => ({ rule_key: k, value: String(v), effective_from: '2026-11-01' });
+      const has = () => true;
+      return {
+        none: HubNav.layout({ rows: [], role: 'OWNER', has }).first.ops,
+        role: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3)], role: 'OWNER', has }).first.ops,
+        person: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3), row('nav.first.person.p1.ops', 2)], role: 'OWNER', person: 'p1', has }).first.ops,
+        tab: HubNav.html({ layout: HubNav.layout({ rows: [row('nav.first.OWNER.ops', 3)], role: 'OWNER', has }), has }).includes('data-go="areas"')
+      };
+    });
+    expect(r).toEqual({ none: undefined, role: 'areas', person: 'litters', tab: true });
   });
 
   test('Reread reads the folder again', async ({ page, guard }) => {
@@ -358,7 +391,7 @@ const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,meth
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
 // Gestation timings are dated rows now (Lisa 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
-  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84']
+  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84', 'nav.view.litters,1', 'nav.view.buyers,1', 'nav.view.shape,1', 'nav.view.vet,1', 'nav.view.enquiries,1']   // the views a new kennel starts with off; this kennel has them on
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
 const openTab = (page, id) => openView(page, id);
 // Walks every visible element and returns plain-English problems, one list per rule.
@@ -473,7 +506,7 @@ test.describe('CD Hub house look', () => {
     const lines = new Set();
     for (const tab of ['map', 'today', 'round', 'dogs', 'litters', 'areas']) {
       await openTab(page, tab);
-      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible, #next button:visible');
+      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible');
       const n = await ctls.count();
       expect(n, tab).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
@@ -568,7 +601,7 @@ test.describe('CD Hub house look', () => {
       await openTab(page, tab);
       const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(over, '#/' + tab).toBeLessThanOrEqual(0);
-      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #chips .hchip, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
     // The top bar (Lisa's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
@@ -601,7 +634,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
     await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('7');   // + Breeding rules not set (8 Nov 2026)
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('8');   // Main holds Decide (7) and Do (1)
+    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('7');   // Main holds Decide (7); Do's 1 waiting item is one of those 7, so it is not counted twice (audit 17 Nov 2026)
     // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
     await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
@@ -860,7 +893,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).not.toContainText('Bitch');   // sex is the photo icon; no role word on top (12 Nov)
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([120, 120]);
+    expect([ph.width, ph.height]).toEqual([160, 160]);   // tighter card (15 Nov 2026): bigger photo on wide screens, full width on phones
     // Where the dog is: one icon on the place line, beside the room you tap to move it (15 Nov: the corner badge sat over More, dead on a tap)
     await expect(card.locator('.whor')).toHaveCount(1);
     await expect(card.locator('.meta .whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
@@ -1000,7 +1033,8 @@ test('CD Hub: The round shows a Readings card (from BLD-area_reading.csv), not a
   const rows = page.locator('#kept-readings tbody tr');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0).locator('td').nth(1).locator('.ic')).toHaveClass(/cold/);   // 8.50 min: blue
-  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/late/);   // 28.50 max: red
+  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/ok/);     // 28.50 max: over 26 is cooling action, not outside (Temps A, 17 Nov 2026)
+  await expect(rows.nth(0).locator('td').nth(2)).toContainText('over the limit: cooling action');
   await expect(rows.nth(1).locator('td').nth(1).locator('.ic')).toHaveClass(/ok/);     // 12-20: green
 });
 
@@ -1016,8 +1050,12 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     CD._byId.tpup = { id: 'tpup', dob: '2026-01-01' };
     CD.dogs.push({ id: 'tpup', area_id: 'test-pup-room', dob: '2026-01-01' });
     const pup = roomBand('test-pup-room', '2026-01-10');
-    out.pupOk = tempState('26.5', '27.5', pup);
-    out.pupCold = tempState('22', '24', pup);
+    // Temps A (Lisa 17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
+    out.pupOk = tempState('18', '22', pup, '27.0', '2026-01-10');
+    out.pupRoomWarm = tempState('20', '27.5', pup, '27.0', '2026-01-10');
+    out.pupCold = tempState('22', '24', pup, '24.5', '2026-01-10');
+    out.pupNoSpot = tempState('22', '24', pup, '', '2026-01-10');
+    out.pupRoomCold = tempState('9', '14', pup, '27.0', '2026-01-10');
     CD.dogs.push({ id: 'tnodob', area_id: 'test-nodob-room', dob: '' });
     CD._byId.tnodob = { id: 'tnodob', dob: '' };
     out.noDob = tempState('15', '20', roomBand('test-nodob-room', '2026-01-10'));
@@ -1025,7 +1063,7 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     out.noRows = tempState('15', '20');
     return out;
   });
-  expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
+  expect(r).toEqual({ adult26: 'ok', adultHot: 'warm', adultCold: 'cold', pupOk: 'ok', pupRoomWarm: 'warm', pupCold: 'cold', pupNoSpot: 'nospot', pupRoomCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
 test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are "2 Mar 2026"', () => {

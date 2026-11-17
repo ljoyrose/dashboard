@@ -42,6 +42,10 @@ var TABLES = {
     ],
     proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty', 'thermometer_id'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
+    // Lisa 15 Nov 2026 ("issues with text and numbers"): written as real values like the 30,866 rows typed by hand, not
+    // text - temperatures as numbers (1 decimal place), times as real dates shown as UK time. Only this table (Store.gs).
+    // The 7th column is '' here and may be named variance_c in the live header (sameHeader_ accepts either).
+    sheetTypes: { min_c: 'num1', max_c: 'num1', '': 'num1', variance_c: 'num1', spot_c: 'num1', precision_dp: 'int', period_start: 'datetime', taken_at: 'datetime' },
     // thermometer: id -> its area_id (valCol), so a reading can only name a thermometer in its own room
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }, { name: 'thermometer', file: 'BLD-thermometer.csv', idCol: 'id', valCol: 'area_id' }],
     // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
@@ -76,9 +80,11 @@ var TABLES = {
     // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
     // slot sent by the hub) within DUP_WINDOW_MIN of taken_at. Without period_start: same room inside the window.
     dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
+    // 16 Nov 2026: ~31,000 rows; an add reads the last rows in full and only the checked columns of the rest (Sink.gs)
+    fastAppend: true,
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
-      if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);
+      if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);   // the 7th column (blank or variance_c)
       row.taken_at = ctx.nowIso;
       row.taken_by = ctx.who;
     },
@@ -1168,8 +1174,354 @@ var PROPOSED_TABLES = {
         errors.ended_on = 'The end date cannot be before the start date.';
       }
     }
+  },
+
+  // ================================================================ BLD schema v2 (15 Nov 2026, Lisa Q5, Q6, Q8)
+  // Designed only. Refused today whatever switches say; promoting one is a one-line move into TABLES plus its own
+  // TABLE_ON_ switch, OFF, plus Lisa's yes for the live file. Neutral names, plural (13 Nov), S4.15 dates, S4.3 reserved
+  // names. Kinds of thing (dose types, certificate kinds, party roles) are row values, never column names.
+
+  // ---------------------------------------------------------------- parties (Q6)
+  // Reference lists with permanent ids: vets, practices, makers, suppliers, registries. What a party is TO you
+  // (vet, practice, manufacturer...) is a links row (role), dated; never a column. A person in an organisation = a links row.
+  parties: {
+    key: 'parties',
+    file: 'BLD-parties.csv',
+    idPrefix: 'pty',
+    columns: ['id', 'tenant_id', 'kind', 'name', 'country_iso', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'kind', 'name', 'country_iso', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      kind:        { type: 'enum', values: ['person', 'organisation'], required: true },
+      name:        { type: 'text', required: true },   // editable name; the id never changes (Q4)
+      country_iso: { type: 'text' },
+      note:        { type: 'text' },
+      source:      { type: 'text' }
+    },
+    dupKey: ['kind', 'name'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors) {
+      if (!errors.country_iso && row.country_iso !== '' && !/^[A-Z]{2}$/.test(row.country_iso)) errors.country_iso = 'Use the two-letter country code, e.g. GB.';
+    }
+  },
+
+  // ---------------------------------------------------------------- products (Q5 stock chain)
+  // A medicine, vaccine, wormer or any other product given in doses. dose_type is a row value (vaccine, wormer, medicine...).
+  products: {
+    key: 'products',
+    file: 'BLD-products.csv',
+    idPrefix: 'prd',
+    columns: ['id', 'tenant_id', 'name', 'dose_type', 'maker_party_id', 'form', 'strength', 'unit_id', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'name', 'dose_type', 'maker_party_id', 'form', 'strength', 'unit_id', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'party', file: 'BLD-parties.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      name:           { type: 'text', required: true },
+      dose_type:      { type: 'text', required: true },
+      maker_party_id: { type: 'ref', lookup: 'party' },
+      form:           { type: 'text' },
+      strength:       { type: 'text' },
+      unit_id:        { type: 'text' },
+      note:           { type: 'text' },
+      source:         { type: 'text' }
+    },
+    dupKey: ['name', 'dose_type', 'maker_party_id'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors) { checkKindKey_(row, errors, 'dose_type', 'vaccine'); }
+  },
+
+  // ---------------------------------------------------------------- lots (Q5)
+  lots: {
+    key: 'lots',
+    file: 'BLD-lots.csv',
+    idPrefix: 'lot',
+    columns: ['id', 'tenant_id', 'product_id', 'batch', 'expires_on', 'quantity', 'unit_id', 'supplier_party_id', 'received_on', 'note', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'product_id', 'batch', 'expires_on', 'quantity', 'unit_id', 'supplier_party_id', 'received_on', 'note', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'product', file: 'BLD-products.csv', idCol: 'id' }, { name: 'party', file: 'BLD-parties.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      product_id:        { type: 'ref', lookup: 'product', required: true },
+      batch:             { type: 'text', required: true },
+      expires_on:        { type: 'date' },
+      quantity:          { type: 'number', required: true },   // as received; what is left = stock_movements, worked out, never stored
+      unit_id:           { type: 'text' },
+      supplier_party_id: { type: 'ref', lookup: 'party' },
+      received_on:       { type: 'date' },
+      note:              { type: 'text' }
+    },
+    dupKey: ['product_id', 'batch'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors) {
+      if (!errors.quantity && row.quantity !== '' && Number(row.quantity) <= 0) errors.quantity = 'A lot starts with more than nothing.';
+    }
+  },
+
+  // ---------------------------------------------------------------- stock_movements (Q5)
+  // Every change in a lot: received, given, wasted, returned, counted (row values). Given = written with its dose row.
+  stock_movements: {
+    key: 'stock_movements',
+    file: 'BLD-stock_movements.csv',
+    idPrefix: 'stm',
+    columns: ['id', 'tenant_id', 'lot_id', 'quantity', 'reason', 'dose_id', 'note', 'at', 'by', 'sign_in_id', 'corrects_id', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'lot_id', 'quantity', 'reason', 'dose_id', 'note', 'at', 'by', 'sign_in_id', 'corrects_id', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'lot', file: 'BLD-lots.csv', idCol: 'id' }],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      lot_id:      { type: 'ref', lookup: 'lot', required: true },
+      quantity:    { type: 'number', required: true },   // + in, - out
+      reason:      { type: 'text', required: true },
+      dose_id:     { type: 'text' },
+      note:        { type: 'text' },
+      corrects_id: { type: 'text' }
+    },
+    dupKey: ['lot_id', 'quantity', 'reason', 'dose_id'], dupTimeCol: 'at',
+    stamp: function (row, ctx) { row.at = ctx.nowIso; row.by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors) {
+      checkKindKey_(row, errors, 'reason', 'given');
+      if (!errors.quantity && row.quantity !== '' && Number(row.quantity) === 0) errors.quantity = 'A movement of nothing is not a movement.';
+      if (!errors.dose_id && row.dose_id !== '' && !ID_RE_.test(row.dose_id)) errors.dose_id = 'That is not a valid id.';
+    }
+  },
+
+  // ---------------------------------------------------------------- courses (Q5)
+  // A planned run of doses of any type (e.g. a two-shot vaccine course). Steps are counted, dates come from the doses.
+  courses: {
+    key: 'courses',
+    file: 'BLD-courses.csv',
+    idPrefix: 'crs',
+    columns: ['id', 'tenant_id', 'subject_id', 'product_id', 'dose_type', 'steps', 'from_date', 'to_date', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'subject_id', 'product_id', 'dose_type', 'steps', 'from_date', 'to_date', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'product', file: 'BLD-products.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      subject_id: { type: 'text', required: true },
+      product_id: { type: 'ref', lookup: 'product' },
+      dose_type:  { type: 'text', required: true },
+      steps:      { type: 'count', required: true },
+      from_date:  { type: 'date', required: true },
+      to_date:    { type: 'date' },
+      note:       { type: 'text' },
+      source:     { type: 'text' }
+    },
+    dupKey: ['subject_id', 'dose_type', 'product_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors) {
+      checkKindKey_(row, errors, 'dose_type', 'vaccine');
+      if (!errors.subject_id && !ID_RE_.test(row.subject_id)) errors.subject_id = 'That is not a valid id.';
+      if (!errors.steps && row.steps !== '' && Number(row.steps) < 1) errors.steps = 'A course has at least one dose.';
+      checkDates_(row, errors);
+    }
+  },
+
+  // ---------------------------------------------------------------- doses (Q5)
+  // ONE table for vaccines, wormers and medicines (dose_type is a row value). Ticking a dose writes this row with its lot,
+  // and one stock_movements row (reason given). next_due_on feeds the calendar, compliance, jobs and rounds: they read it here.
+  doses: {
+    key: 'doses',
+    file: 'BLD-doses.csv',
+    idPrefix: 'dos',
+    columns: ['id', 'tenant_id', 'subject_id', 'dose_type', 'product_id', 'lot_id', 'course_id', 'course_step', 'given_at', 'given_by', 'sign_in_id', 'route', 'amount', 'unit_id', 'next_due_on', 'due_source', 'note', 'corrects_id', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'subject_id', 'dose_type', 'product_id', 'lot_id', 'course_id', 'course_step', 'given_at', 'given_by', 'sign_in_id', 'route', 'amount', 'unit_id', 'next_due_on', 'due_source', 'note', 'corrects_id', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'product', file: 'BLD-products.csv', idCol: 'id' }, { name: 'lot', file: 'BLD-lots.csv', idCol: 'id', valCol: 'product_id' },
+      { name: 'course', file: 'BLD-courses.csv', idCol: 'id', valCol: 'steps' }],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      subject_id:  { type: 'text', required: true },
+      dose_type:   { type: 'text', required: true },
+      product_id:  { type: 'ref', lookup: 'product', required: true },
+      lot_id:      { type: 'ref', lookup: 'lot' },
+      course_id:   { type: 'ref', lookup: 'course' },
+      course_step: { type: 'count' },
+      given_at:    { type: 'datetime', required: true },
+      route:       { type: 'text' },
+      amount:      { type: 'number' },
+      unit_id:     { type: 'text' },
+      next_due_on: { type: 'date' },
+      due_source:  { type: 'text' },
+      note:        { type: 'text' },
+      corrects_id: { type: 'text' }
+    },
+    dupKey: ['subject_id', 'product_id', 'given_at', 'corrects_id'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.given_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors, lookups) {
+      checkKindKey_(row, errors, 'dose_type', 'wormer');
+      if (!errors.subject_id && !ID_RE_.test(row.subject_id)) errors.subject_id = 'That is not a valid id.';
+      if (!errors.lot_id && row.lot_id !== '' && lookups && lookups.lot && lookups.lot[row.lot_id] !== row.product_id) errors.lot_id = 'That lot is of another product.';
+      if (!errors.course_step && row.course_step !== '' && row.course_id === '') errors.course_step = 'A step needs its course.';
+      if (!errors.course_step && row.course_step !== '' && row.course_id !== '' && lookups && lookups.course) {
+        var steps = Number(lookups.course[row.course_id]);
+        if (Number(row.course_step) < 1 || (steps && Number(row.course_step) > steps)) errors.course_step = 'That course has ' + steps + ' doses.';
+      }
+      if (!errors.next_due_on && row.next_due_on !== '' && !errors.given_at && row.next_due_on < row.given_at.slice(0, 10)) errors.next_due_on = 'Next due cannot be before the dose was given.';
+      if (!errors.corrects_id && row.corrects_id !== '' && !ID_RE_.test(row.corrects_id)) errors.corrects_id = 'That is not a valid id.';
+    }
+  },
+
+  // ---------------------------------------------------------------- prescriptions (Q5)
+  prescriptions: {
+    key: 'prescriptions',
+    file: 'BLD-prescriptions.csv',
+    idPrefix: 'rx',
+    columns: ['id', 'tenant_id', 'subject_id', 'product_id', 'prescriber_party_id', 'instructions', 'from_date', 'to_date', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'subject_id', 'product_id', 'prescriber_party_id', 'instructions', 'from_date', 'to_date', 'note', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'product', file: 'BLD-products.csv', idCol: 'id' }, { name: 'party', file: 'BLD-parties.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      subject_id:          { type: 'text', required: true },
+      product_id:          { type: 'ref', lookup: 'product', required: true },
+      prescriber_party_id: { type: 'ref', lookup: 'party' },
+      instructions:        { type: 'text' },
+      from_date:           { type: 'date', required: true },
+      to_date:             { type: 'date' },
+      note:                { type: 'text' },
+      source:              { type: 'text' }
+    },
+    dupKey: ['subject_id', 'product_id', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors) {
+      if (!errors.subject_id && !ID_RE_.test(row.subject_id)) errors.subject_id = 'That is not a valid id.';
+      checkDates_(row, errors);
+    }
+  },
+
+  // ---------------------------------------------------------------- product_dose_bands (Q5)
+  // How much by weight: dated rows with a source (no hard-coded doses).
+  product_dose_bands: {
+    key: 'product_dose_bands',
+    file: 'BLD-product_dose_bands.csv',
+    idPrefix: 'pdb',
+    columns: ['id', 'tenant_id', 'product_id', 'weight_from', 'weight_to', 'weight_unit_id', 'amount', 'unit_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'product_id', 'weight_from', 'weight_to', 'weight_unit_id', 'amount', 'unit_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [{ name: 'product', file: 'BLD-products.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      product_id:     { type: 'ref', lookup: 'product', required: true },
+      weight_from:    { type: 'number' },
+      weight_to:      { type: 'number' },
+      weight_unit_id: { type: 'text' },
+      amount:         { type: 'number', required: true },
+      unit_id:        { type: 'text', required: true },
+      from_date:      { type: 'date', required: true },
+      to_date:        { type: 'date' },
+      source:         { type: 'text', required: true }
+    },
+    dupKey: ['product_id', 'weight_from', 'weight_to', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.weight_to && row.weight_from !== '' && row.weight_to !== '' && Number(row.weight_to) <= Number(row.weight_from)) errors.weight_to = 'The top of the band must be above its bottom.';
+      checkDates_(row, errors);
+    }
+  },
+
+  // ---------------------------------------------------------------- certificate_kinds (Q8)
+  // What kinds of certificate there are, per industry (owner rows): e.g. hips, elbows, eyes, gas_safety, fire_risk.
+  certificate_kinds: {
+    key: 'certificate_kinds',
+    file: 'BLD-certificate_kinds.csv',
+    idPrefix: 'ckd',
+    columns: ['id', 'tenant_id', 'kind_key', 'label', 'issuer_hint', 'grades_shape', 'source', 'set_by', 'set_on'],
+    proposedColumns: ['id', 'tenant_id', 'kind_key', 'label', 'issuer_hint', 'grades_shape', 'source', 'set_by', 'set_on'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      kind_key:     { type: 'text', required: true },
+      label:        { type: 'text', required: true },
+      issuer_hint:  { type: 'text' },
+      grades_shape: { type: 'enum', values: ['none', 'pass_fail', 'grade', 'score', 'pair'] },   // pair = left and right (e.g. hips)
+      source:       { type: 'text' }
+    },
+    dupKey: ['kind_key', 'label'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) { checkKindKey_(row, errors, 'kind_key', 'gas_safety'); }
+  },
+
+  // ---------------------------------------------------------------- certificates (Q8)
+  // ONE cross-industry table for issued certificates about any record (subject_table + subject_id): an animal's hip
+  // score, a building's gas safety check. The file itself is a files row joined by a links row (role certificate).
+  // Breed Better reads OFA rows from here. credential / credential_version stay for licences a person or site holds.
+  certificates: {
+    key: 'certificates',
+    file: 'BLD-certificates.csv',
+    idPrefix: 'crt',
+    columns: ['id', 'tenant_id', 'subject_table', 'subject_id', 'cert_kind_key', 'issuer_party_id', 'number', 'issued_on', 'result', 'grades', 'expires_on', 'note', 'corrects_id', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    proposedColumns: ['id', 'tenant_id', 'subject_table', 'subject_id', 'cert_kind_key', 'issuer_party_id', 'number', 'issued_on', 'result', 'grades', 'expires_on', 'note', 'corrects_id', 'source', 'set_by', 'set_on', 'created_at', 'updated_at'],
+    computedColumns: [],
+    lookups: [{ name: 'cert_kind', file: 'BLD-certificate_kinds.csv', idCol: 'kind_key' }, { name: 'party', file: 'BLD-parties.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      subject_table:   { type: 'text', required: true },
+      subject_id:      { type: 'text', required: true },
+      cert_kind_key:   { type: 'text', required: true },
+      issuer_party_id: { type: 'ref', lookup: 'party' },
+      number:          { type: 'text' },
+      issued_on:       { type: 'date', required: true },
+      result:          { type: 'text' },
+      grades:          { type: 'text' },   // as printed, e.g. 4/5 or Excellent; shape from the kind row
+      expires_on:      { type: 'date' },
+      note:            { type: 'text' },
+      corrects_id:     { type: 'text' },
+      source:          { type: 'text' }
+    },
+    dupKey: ['subject_table', 'subject_id', 'cert_kind_key', 'issued_on', 'number', 'corrects_id'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; row.created_at = ctx.nowIso; },
+    checkRow: function (row, errors, lookups) {
+      if (!errors.subject_table && !/^[a-z][a-z0-9_]{1,39}$/.test(row.subject_table)) errors.subject_table = 'Use the table\'s name, e.g. subjects or areas.';
+      if (!errors.subject_id && !ID_RE_.test(row.subject_id)) errors.subject_id = 'That is not a valid id.';
+      if (!errors.cert_kind_key && lookups && lookups.cert_kind && !lookups.cert_kind[row.cert_kind_key]) errors.cert_kind_key = 'No certificate kind with that name. Add it to the kinds first.';
+      if (!errors.expires_on && row.expires_on !== '' && !errors.issued_on && row.expires_on < row.issued_on) errors.expires_on = 'It cannot expire before it was issued.';
+      if (!errors.corrects_id && row.corrects_id !== '' && !ID_RE_.test(row.corrects_id)) errors.corrects_id = 'That is not a valid id.';
+    }
   }
 };
+
+/** A kind word sent as a row value (dose_type, reason, kind_key): lower case, never free text. */
+function checkKindKey_(row, errors, col, eg) {
+  if (!errors[col] && row[col] !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row[col])) errors[col] = 'Use lower-case letters, numbers and underscores, e.g. ' + eg + '.';
+}
+/** S4.15: to_date, when given, is not before from_date. */
+function checkDates_(row, errors) {
+  if (!errors.to_date && row.to_date && row.from_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+}
 
 /**
  * RETIRED tables. Kept for the record, never written to, refused like the proposed ones. Nothing was deleted.
@@ -1230,7 +1582,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_()).concat(editFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }

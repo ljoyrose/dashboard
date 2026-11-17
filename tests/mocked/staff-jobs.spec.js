@@ -468,6 +468,66 @@ test('Earlier (late entry) saves the real day and time, ticks the card with that
   await expect(ears.locator('.done-line.good')).toContainText(/\d{1,2} [A-Z][a-z]{2}/);
 });
 
+test('Earlier, owner time choices: part of day, exact, not known and now each save the right time', async ({ page }) => {
+  const R = (k, v) => ({ id: 'r-' + k, rule_key: k, value: v, effective_from: '2026-01-01', to_date: '', source: 'test' });
+  const sent = await setup(page, { breeding_rule: [R('job.paper_time_options', 'part|exact|none|now'),
+    R('job.day_part.am.label', 'Pretend AM'), R('job.day_part.am.at', '09:00'), R('job.day_part.am.sort', '1'),
+    R('job.day_part.pm.label', 'Pretend PM'), R('job.day_part.pm.at', '14:30'), R('job.day_part.pm.sort', '2')] });
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const hm = (d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(d);
+  const yesterday = london(new Date(Date.now() - 86400000));
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  const when = ears.getByLabel('When');
+  await ears.getByLabel('Day done').fill(yesterday);
+  // the first choice is preselected; "now" is only for today
+  await expect(when).toHaveValue('part');
+  await expect(when.locator('option')).toHaveText(['Part of day', 'Time', 'Not known']);
+  await expect(ears.getByLabel('Part of day')).toBeVisible();
+  await expect(ears.getByLabel('Time done')).toBeHidden();
+  await ears.getByLabel('Part of day').selectOption('pm');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  let f = sent[0].fields;
+  expect(f.time_given).toBe('part:pm');
+  expect(london(new Date(f.happened_at))).toBe(yesterday);
+  expect(hm(new Date(f.happened_at))).toBe('14:30');
+  await expect(ears.locator('.done-line.good')).toContainText('Pretend PM');
+  // exact: a time is needed
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(yesterday);
+  await when.selectOption('exact');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('Type the time');
+  await ears.getByLabel('Time done').fill('07:15');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  await expect(ears.locator('.done-line.good')).toBeVisible();
+  f = sent[1].fields;
+  expect(f.time_given).toBeUndefined();
+  expect(hm(new Date(f.happened_at))).toBe('07:15');
+  // not known: the owner's default time, marked "time not given"
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(yesterday);
+  await when.selectOption('none');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(3);
+  await expect(ears.locator('.done-line.good')).toBeVisible();
+  expect(sent[2].fields.time_given).toBe('false');
+  // today: now is offered
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(london(new Date()));
+  await expect(when.locator('option')).toHaveText(['Part of day', 'Time', 'Not known', 'Now']);
+  await when.selectOption('now');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(4);
+  f = sent[3].fields;
+  expect(f.time_given).toBeUndefined();
+  expect(Math.abs(Date.parse(f.happened_at) - Date.now())).toBeLessThan(5 * 60000);
+});
+
 test('Earlier, several days: a row per room per day, each judged and saved for its own day, each ticks', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');

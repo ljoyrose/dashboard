@@ -51,7 +51,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
     await expect(page.locator('#main h2')).toContainText('Admin');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(11);
+    await expect(page.locator('[data-adm-open]')).toHaveCount(12);   // Display added 17 Nov 2026 (photo dates setting)
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
@@ -124,4 +124,64 @@ asOwnerEmpty('Codes: an empty register (V8 live, not yet filled) says to press F
   await expect(page.locator('[data-adm-open="codes"] small')).toHaveText('0 live');
   await page.locator('[data-adm-open="codes"]').click();
   await expect(page.locator('#adm-codes')).toContainText('Fill the code register');
+});
+
+// 15 Nov 2026: Set up a phone → Show QR stuck on "Drawing…". The QR now fills its own box when the drawer loads (no
+// page redraw needed), and a drawer that does not load says so instead of waiting for ever.
+asOwner('Show QR draws even when the page is not redrawn', async ({ page }) => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  await page.route(/staff\/lib\/qr\.js$/, async (route) => { await gate; route.continue(); });
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  await page.locator('[data-adm-open="phone"]').click();
+  await page.locator('[data-adm-qr]').click();
+  await expect(page.locator('#adm-qr-box')).toContainText('Drawing');
+  await page.evaluate(() => { const f = document.getElementById('admFuture'); if (f) f.remove(); });   // the old redraw needed this
+  release();
+  await expect(page.locator('#adm-qr-box .adm-qr svg')).toBeVisible();
+});
+
+asOwner('Show QR: a QR drawer that cannot load says so, and Show QR tries again', async ({ page, allowedConsole }) => {
+  allowedConsole.push(/Failed to load resource|ERR_FAILED|qr\.js/);   // the drawer is made to fail on purpose
+  await page.route(/staff\/lib\/qr\.js$/, (route) => route.abort());
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  await page.locator('[data-adm-open="phone"]').click();
+  await page.locator('[data-adm-qr]').click();
+  await expect(page.locator('#adm-phone')).toContainText('did not load');
+  await page.unroute(/staff\/lib\/qr\.js$/);
+  await page.locator('[data-adm-qr]').click();   // Hide
+  await page.locator('[data-adm-qr]').click();   // Show again
+  await expect(page.locator('#adm-phone .adm-qr svg')).toBeVisible();
+});
+
+// Lisa 15 Nov 2026: an always-visible link labelled exactly "Script page" opens the owner page.
+asOwner('Admin always shows a "Script page" link to the owner page', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
+  const link = page.locator('.adm-script a', { hasText: 'Script page' });
+  await expect(link).toHaveText('Script page');
+  await expect(link).toHaveAttribute('href', /SAMPLE-fake-address\/exec\?page=approve$/);
+});
+
+// 15 Nov 2026: a code made on the owner page was refused by the hub's save. The owner page link now takes the save
+// address in the same order as the hub's save, so both go to the same script. Invented addresses only.
+asOwner('the owner page link uses the same save address as the hub save', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.evaluate(() => {
+    localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-hub-save/exec');
+    localStorage.setItem('bld.scriptUrl', 'https://script.google.com/macros/s/SAMPLE-other/exec');
+    go('admin', false);
+  });
+  await page.locator('[data-adm-open="codes"]').click();
+  const link = page.locator('#adm-codes a.btn[href*="page=approve"]').first();
+  await expect(link).toHaveAttribute('href', /SAMPLE-hub-save\/exec\?page=approve/);
+  await page.evaluate(() => { localStorage.removeItem('cdhub.sink.url'); localStorage.removeItem('bld.scriptUrl'); localStorage.setItem('cdhub.save.url', 'https://script.google.com/macros/s/SAMPLE-from-drive/exec'); go('admin', false); });
+  if (!(await page.locator('#adm-codes').isVisible())) await page.locator('[data-adm-open="codes"]').click();   // the card may still be open
+  await expect(page.locator('#adm-codes a.btn[href*="page=approve"]').first()).toHaveAttribute('href', /SAMPLE-from-drive\/exec/);
 });

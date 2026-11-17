@@ -67,7 +67,7 @@ function sinkDogcard_(req, kind, fn) {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + spec.on) !== 'true') throw err_('TABLE_OFF', 'Saving to ' + spec.file + ' is switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
-  var who = authStaff_(req.code);
+  var who = authSaver_(req);
   if (who.role !== 'OWNER' && (spec.owner || who.role !== 'STAFF')) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
@@ -221,11 +221,10 @@ function dogcardPick_(word, allowed) {
   return hit;
 }
 
-/** sub-<name slug>, made unique against the ids already in the file. */
-function dogcardSubjectId_(name, ids) {
-  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'dog';
-  var id = 'sub-' + slug, n = 2;
-  while (ids[id]) id = 'sub-' + slug + '-' + (n++);
+/** A new dog's id: sub- and random letters (Q4, 15 Nov 2026), never the name. Unique against the ids already in the file. */
+function dogcardSubjectId_(ids) {
+  var id = newId_('sub');
+  while (ids[id]) id = newId_('sub');
   return id;
 }
 
@@ -320,7 +319,7 @@ function sinkSubjectCreate_(req) {
     }
 
     var allIds = {}; read.records.forEach(function (r) { allIds[r.id] = 1; });
-    var id = dogcardSubjectId_(name, allIds);
+    var id = dogcardSubjectId_(allIds);
     var host = dogcardText_(f.host, 'host', {}, 40) || 'CD Hub';
     var values = { id: id, tenant_id: tenant, name: name, sex: sex, dob: dob, size_band: '', coat_type: coatType, kind: kind,
       neuter_status: neuter, species: species, breed: breed, coat_colour_id: ids.coat_colour_id, coat_pattern_id: ids.coat_pattern_id,

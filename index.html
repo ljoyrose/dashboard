@@ -9,7 +9,7 @@
 <title>Dashboard</title>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#2C2C2A">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -846,7 +846,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function fmtTime(iso) { var d = new Date(iso); return iso && !isNaN(d) ? timeFmt.format(d) : ''; }
+  function fmtTime(iso) { var d = new Date(iso); return iso && !isNaN(d) ? timeFmt.format(d).replace(/\bSept\b/, 'Sep') : ''; }
   function stamp(t) { return t ? stampFmt.format(new Date(t)) : ''; }
   function folderUrl(id) { return 'https://drive.google.com/drive/folders/' + encodeURIComponent(id); }
   function icon(name) { return '<svg class="icon" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
@@ -1379,7 +1379,7 @@
       };
       html += '<ul class="files" data-runlog>' + d.runs.slice(0, RUNLOG_SHOW).map(function (x) {
         var res = runResult(x), c = counts(x);
-        return '<li data-run><div><strong>' + esc(runFmt.format(new Date(x.t))) + '</strong>' + (x.job ? ' · ' + esc(x.job) : '') + (x.mode ? ' · ' + esc(runModeWord(x.mode)) : '') +
+        return '<li data-run><div><strong>' + esc(runFmt.format(new Date(x.t)).replace(/\bSept\b/, 'Sep')) + '</strong>' + (x.job ? ' · ' + esc(x.job) : '') + (x.mode ? ' · ' + esc(runModeWord(x.mode)) : '') +
           (x.place ? ' <span class="mtag">' + esc(x.place) + '</span>' : '') + '</div><p class="res ' + (res.bad ? 'bad' : 'ok') + '">' + (c ? c + '. ' : '') + esc(res.word) + '.</p></li>';
       }).join('') + '</ul>';
       if (d.runs.length > RUNLOG_SHOW) html += '<p class="note">Showing the newest ' + RUNLOG_SHOW + ' of ' + num(d.runs.length) + ' runs.</p>';
