@@ -50,7 +50,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('Admin is in More; set-up QR is one tap away and names this address', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
-    await expect(page.locator('#main h2')).toContainText('Admin');
+    await expect(page.locator('#main h2')).toContainText('Settings');
     await expect(page.locator('[data-adm-open]')).toHaveCount(12);   // Display added 17 Nov 2026 (photo dates setting)
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
