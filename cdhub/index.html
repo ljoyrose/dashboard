@@ -27,6 +27,7 @@
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
 <script src="job-calendar.js"></script>
+<script src="docs-view.js"></script>
 <script src="../breed-better/score.js"></script>
 <script src="../breed-better/dna-kit.js"></script>
 <script src="../breed-better/hub-view.js"></script>
@@ -669,6 +670,8 @@ function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
 function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
+/* a dog's documents: files linked from the dog, labelled by BLD-doc_type (Lisa 17 Nov 2026) */
+function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -2507,8 +2510,10 @@ function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1
  var bw=lw?BLDCapacity.sizeFromKg(lw.kg,CD.sizeCut):'';
  var ov=sizeOverrideOf(d);
  if(ov){ d.sizeWord=ov; d.sizeFrom='override'; d.sizeWhy='set as '+sizeName(ov)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''); return; }
- d.sizeWord=bw; d.sizeFrom=bw?'weight':'';
- d.sizeWhy=bw?(lw.kg+' kg on '+dmyShort(lw.on)):''; }
+ if(bw){ d.sizeWord=bw; d.sizeFrom='weight'; d.sizeWhy=lw.kg+' kg on '+dmyShort(lw.on); return; }
+ /* no weighing: the midpoint of the kg range in the size cell, e.g. "Mini 8-12kg" counts as 10 kg (Lisa 15 Nov 2026) */
+ var by=BLDCapacity.sizeOf(null,d.size,CD.sizeCut);
+ d.sizeWord=by.size; d.sizeFrom=by.from; d.sizeWhy=by.size?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
 function sizeName(k){ return SIZE_WORD[k]||''; }
 function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
 function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }
@@ -3212,6 +3217,7 @@ function drawDogs(){
 
     /* Lisa 12 Nov 2026: layout A (weight, medications, chip) with B's sections behind More */
     +'<details class="dcs more" data-k="more"><summary><svg class="ricon" aria-hidden="true"><use href="#i-dots"/></svg><span class="dcs-label">More</span></summary><div class="dc-more">'
+    +docsRow(d)
     +(d.findings.length?
       '<details class="dcs"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-stethoscope"/></svg>'
