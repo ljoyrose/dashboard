@@ -215,7 +215,13 @@ function retentionYears_(section, tenant, ymd) {
 /** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
 function sameSlot_(late, clean, rows, nowMs) {
   if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
-  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && (rows[i].thermometer_id || '') === (clean.thermometer_id || '') && rows[i][late.field] === clean[late.field]) return rows[i];
+  // the slot is compared as the same instant (16 Nov 2026): 07:00Z and 08:00+01:00 are one slot
+  var want = Date.parse(clean[late.field]);
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (r.area_id !== clean.area_id || (r.thermometer_id || '') !== (clean.thermometer_id || '')) continue;
+    if (r[late.field] === clean[late.field] || (!isNaN(want) && Date.parse(r[late.field]) === want)) return r;
+  }
   return null;
 }
 
@@ -318,14 +324,39 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at, who: who.who };
 }
 
+/** The columns a fast append reads for every row: id and whatever the repeat checks compare (sameSlot_ included). */
+function fastCols_(spec) {
+  var c = ['id'].concat(spec.dupKey || [], spec.dupNewestBy || [], spec.dupDateCols || []);
+  if (spec.dupTimeCol) c.push(spec.dupTimeCol);
+  if (spec.dupDayCol) c.push(spec.dupDayCol);
+  if (spec.ageCap) c.push('area_id', 'thermometer_id', spec.ageCap.field);
+  return c.filter(function (x, i) { return c.indexOf(x) === i; });
+}
+
+/** Every row of a fast read, as records holding only the columns read for every row. */
+function fastRecords_(read) {
+  var cols = Object.keys(read.full), n = cols.length ? read.full[cols[0]].length : 0, out = [];
+  for (var i = 0; i < n; i++) {
+    var o = {}, blank = true;
+    for (var k = 0; k < cols.length; k++) { o[cols[k]] = read.full[cols[k]][i]; if (o[cols[k]] !== '') blank = false; }
+    if (!blank) out.push(o);
+  }
+  return out;
+}
+
 function sinkProcess_(spec, req, who, now, nowMs) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
 
-  var target = store_read_(spec.file, true);
+  // fastAppend (16 Nov 2026, saves took ~25 s on ~31,000 rows): an add reads the last rows in full and, for EVERY row,
+  // only the columns the repeat and id checks look at, so the checks still cover the whole table. A correction needs
+  // the whole row it points at, so it reads everything as before.
+  var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
+  var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec)) : store_read_(spec.file, true);
   if (!sameHeader_(target.header, spec.columns)) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
+  var all = target.tail ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read)
   var lookups = store_lookups_(spec, tenant);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
@@ -364,7 +395,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting), nowMs) : null);
+    var dup = findDuplicate_(spec, v.clean, all.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, all.concat(waiting), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
@@ -372,7 +403,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   var ids = {};
-  target.records.forEach(function (r) { ids[r.id] = true; });
+  all.forEach(function (r) { ids[r.id] = true; });
   var rowId = newId_(spec.idPrefix, now);
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
 

@@ -152,12 +152,20 @@
     // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
     // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
     // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
-    var saveTurn = Promise.resolve();
+    var saveTurn = Promise.resolve(), sending = 0;
     function oneAtATime(send) {
+      sending++;
       var p = saveTurn.then(send, send);
       saveTurn = p.then(function () {}, function () {});
+      p.then(function () { sending--; }, function () { sending--; });
       return p;
     }
+    // Leaving the page while saves are still waiting their turn would drop them (OV12 16 Nov 2026): the browser asks
+    // "Leave site?" first. Nothing is kept on the device: the staff code never goes into storage for this.
+    var win = root_();
+    if (win.addEventListener) win.addEventListener('beforeunload', function (e) {
+      if (sending > 0) { e.preventDefault(); e.returnValue = ''; return ''; }
+    });
 
     // Two people saving at once (Lisa 16 Nov 2026): the script lets one save write at a time and answers BUSY to a save
     // that waited too long. Nothing was written, so the same save (same request id) is sent again after a short,
@@ -421,6 +429,7 @@
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
+      sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,
       read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
