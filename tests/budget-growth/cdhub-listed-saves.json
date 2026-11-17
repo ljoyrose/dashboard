@@ -1,0 +1,1 @@
+{"cdhub": 2000, "why": "Chip and occupancy saves look up the live list in the folder and stop when that read fails. Measured 586930 bytes against 585420 allowed."}

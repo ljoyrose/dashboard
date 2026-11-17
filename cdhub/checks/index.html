@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-dash-gate="off">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -25,6 +25,8 @@
   </form>
   <div id="app"></div>
 </main>
+<script src="../../config.js"></script>
+<script src="../../auth.js"></script>
 <script src="../staff/lib/bld-save.js"></script>
 <script src="../staff/lib/needs.js"></script>
 <script src="../staff/lib/occupancy.js"></script>
@@ -40,10 +42,20 @@
         if (r && r.reason === 'read') { save.clearCode(); document.getElementById('code').value = ''; gate.hidden = false; }
       });
     }
-    if (!save.getScriptUrlSet()) { note.textContent = 'This phone is not set up. Open The Board and set it up first.'; return; }
+    if (!save.getScriptUrlSet()) {
+      note.textContent = '';
+      note.appendChild(document.createTextNode('This phone is not set up. Ask the hub owner or an admin, then set it up on '));
+      var a = document.createElement('a');
+      a.href = '../staff/';
+      a.textContent = 'The Board';
+      note.appendChild(a);
+      note.appendChild(document.createTextNode('.'));
+      return;
+    }
     try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
-    gate.hidden = !!device;
-    if (device) { save.setCode(device, false); open(); }
+    var owner = !device && !!save.usingGoogle && save.usingGoogle();   // an owner signed in to CD Hub needs no code (Board A, 17 Nov 2026)
+    gate.hidden = !!device || owner;
+    if (device) { save.setCode(device, false); open(); } else if (owner) open();
     gate.addEventListener('submit', function (ev) { ev.preventDefault(); save.setCode(document.getElementById('code').value.toUpperCase(), false); open(); });
   })();
 </script>

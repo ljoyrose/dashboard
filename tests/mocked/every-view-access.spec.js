@@ -3,7 +3,7 @@
 // fails only if a view gets WORSE. When you fix something, lower the number so it can never creep back.
 // Run with MEASURE=1 to print today's numbers instead of checking them.
 const { test, expect } = require('../support/test');
-const { tabClick } = require('../support/tabs');
+const { openView } = require('../support/tabs');
 const AxeBuilder = require('@axe-core/playwright').default;
 
 const MAIN = ['map', 'readfirst', 'drive', 'drive/drv-alpha1', 'personal', 'usb', 'bin', 'changes/recent', 'changes/24h', 'changes/7d', 'changes/totals'];
@@ -22,7 +22,7 @@ const PAGES = [
     open: async (page, v) => { await page.evaluate((h) => { location.hash = h; }, '#/' + v); await page.waitForTimeout(150); } },
   { key: 'cdhub', url: 'cdhub/', button: '#signinbtn', views: CDHUB,
     ready: async (page) => expect(page.locator('#nav button[data-go]').first()).toBeVisible(),
-    open: async (page, v) => { await tabClick(page, `#nav button[data-go="${v}"]`); await expect(page.locator(`#nav button[data-go="${v}"]`)).toHaveAttribute('aria-current', 'page'); } },
+    open: async (page, v) => { await openView(page, v); } },
 ];
 
 const measured = {};

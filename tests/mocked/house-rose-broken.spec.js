@@ -93,8 +93,7 @@ for (const scheme of ['light', 'dark']) {
 
     test('CD Hub Data checks: failed checks are the black badge, read out as "failed"', async ({ page }) => {
       await HUBS.cdhub.open(page);
-      await page.locator('#nav [data-house-more]').click();
-      await page.locator('#houseMore button[data-go="shape"]').click();
+      await page.evaluate(() => { location.hash = '#/shape'; });   // Table map is off More (Lisa 13 Nov); open by link
       const c = page.locator('#checksCard h3 .cnt');
       await expect(c).toHaveText('6');
       await expect(c).toHaveClass(/\bbroken\b/);
@@ -149,7 +148,7 @@ test.describe('Search dialog (390px)', () => {
   });
 
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: Close is a house button: 1px line, 12px corners, Lexend 14px/600, no fill; hover a 1px line inside, focus the ring @regression`, async ({ page }) => {
+    test(`${scheme}: Close is a house button: 1px line, 12px corners, Lexend 14px/600, no fill; hover and keyboard focus a 1px line inside @regression`, async ({ page }) => {
       await setLook(page, { scheme });
       await home(page);
       await page.locator('[data-search-open]').first().click();
@@ -171,7 +170,7 @@ test.describe('Search dialog (390px)', () => {
       await page.keyboard.press('Tab');
       await expect(close).toBeFocused();
       const fc = await st();
-      expect([fc.ow, fc.os, fc.oo], 'keyboard focus: one 1px line inside (Lisa, 3 Nov 2026)').toEqual(['1px', 'solid', '-1px']);
+      expect([fc.ow, fc.os, fc.oo], 'keyboard focus: one 1px line inside (house rule since #295)').toEqual(['1px', 'solid', '-1px']);
       expect([fc.bg, fc.box]).toEqual([rest.bg, rest.box]);
     });
   }

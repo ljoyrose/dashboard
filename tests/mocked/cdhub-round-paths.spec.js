@@ -42,7 +42,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await expect(answer).toContainText('Medicine in Feb 2026');
     await expect(answer).toContainText('Test Dog One');
     await expect(answer).toContainText('Not named');
-    await expect(answer).toContainText('03/02/26');
+    await expect(answer).toContainText('3 Feb 2026');
     await expect(answer).toContainText('1 tablet');
     await expect(answer).not.toContainText('not on the current list');
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
@@ -126,8 +126,9 @@ test.describe('CD Hub: The round controls', () => {
     await amMin.blur();
     await page.locator(`.tmax[data-area="${area}"][data-slot="am"]`).fill('12.4');
     await page.locator(`.tmax[data-area="${area}"][data-slot="am"]`).blur();
-    await expect(amMsg).toContainText('lower than min');
-    await expect(amMsg).toContainText('Not saved');
+    await expect(amMsg).toHaveText('The lowest reading cannot be higher than the highest reading.');
+    await expect(amMsg).toHaveAttribute('role', 'alert');
+    expect(sent, 'a swapped pair must not be posted').toHaveLength(0);
 
     const pmMin = page.locator(`.tmin[data-area="${area}"][data-slot="pm"]`);
     const pmMax = page.locator(`.tmax[data-area="${area}"][data-slot="pm"]`);
@@ -141,11 +142,22 @@ test.describe('CD Hub: The round controls', () => {
 
     const flap = page.locator('.racc[data-area="area-1"]');
     await flap.selectOption('limited');
-    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('saving off — set it up at the top of this page');
+    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('Not saved: Could not reach the save script. Nothing is known to be saved.');
     await expect(flap).toHaveValue('free');
 
-    await page.locator('.rdel[data-sub="sub-test-dog-1"]').click();
-    await expect(page.locator('.rsave[data-area="area-1"]')).toContainText('Test Dog One stays in this cabin');
+    await page.locator('[data-move-dog="sub-test-dog-1"]').click();
+    const mv = page.locator('[data-move-panel]');
+    await expect(mv).toBeVisible();
+    await expect(mv.locator('[data-move-to="area-1"]')).toHaveCount(0);
+    const dest = mv.locator('[data-move-to]');
+    if (await dest.count()) {
+      const to = await dest.first().getAttribute('data-move-to');
+      await dest.first().click();
+      await expect(page.locator(`.rsave[data-area="${to}"]`).or(page.locator('.rsave[data-area="area-1"]')).first()).toContainText('Not saved');
+    } else {
+      await expect(mv).toContainText('No cabin has space');
+    }
+    expect(sent).toHaveLength(0);
     await expect(page.locator('.card[data-area="area-1"]')).toContainText('Test Dog One');
 
     await page.evaluate(() => {
@@ -153,7 +165,7 @@ test.describe('CD Hub: The round controls', () => {
       localStorage.setItem('cdhub.sink.code', 'test-code-1');
     });
     await page.locator('.racc[data-area="area-1"]').selectOption('limited');
-    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText('saved ✓');
+    await expect(page.locator('.rsave[data-area="area-1"]')).toHaveText(/^Saved \d\d:\d\d$/);
     await expect(page.locator('.racc[data-area="area-1"]')).toHaveValue('limited');
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ table: 'area_access', action: 'add', fields: { area_id: 'area-1', access_type: 'limited' } });
