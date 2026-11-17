@@ -1586,7 +1586,7 @@ function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.
  y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
  return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+Math.min(d,last)).slice(-2); }
 function litDob(l){ return isoDay(l&&(l.dob||l.born_on)); }
-/* A litter's name for people: the sheet has no pairing or name column (BLD-litter: id, dam, sire, born_on, notes), so it is
+/* A litter's name for people: pairing when the sheet has it (the live sheet does), otherwise it is
    the dam and sire by name. Never the row id (17 Nov 2026). */
 function litName(l){ return (l&&l.pairing)||((nameOf(l&&l.dam_subject_id)||'dam not recorded')+' \u00d7 '+(nameOf(l&&l.sire_subject_id)||'sire not recorded')); }
 function isoDay(v){ return /^\d{4}-\d{2}-\d{2}/.test(v||'')?v.slice(0,10):''; }
@@ -3533,8 +3533,8 @@ function pageAreas(){
  return h+'</div>';
 }
 function pageLitters(){
- /* 17 Nov 2026: read the columns BLD-litter has (born_on, notes). The page read dob, pairing, raw_name and status, which the sheet
-    does not have, so every litter showed "no DOB" and a blank name. */
+ /* 17 Nov 2026: the date of birth is dob or born_on (the live sheet uses dob; older copies born_on) and the name is pairing,
+    else "Dam × Sire", so a litter never shows "no DOB" or a blank name whichever columns the sheet has. */
  var withDob=CD.litters.filter(function(l){return litDob(l);}).length;
  var h='<h2>Litters</h2><p class="sub">'+withDob+' of '+CD.litters.length+' have a date of birth.</p>'
  +'<div class="mecards">'+littersCard('Due and new')+'</div>'
