@@ -189,6 +189,24 @@ table{width:100%;border-collapse:collapse;font-size:var(--fs-small)}
 th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)}
 td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:none}
+/* Tables (Lisa 17 Nov 2026, "improve spacing and layout on all tables"). tidyTables() below marks the cells:
+   rows sit on one middle line; short values never break ("6y 4m"); long text wraps at a readable width; the cell with
+   buttons stays in view at the right edge while the rest scrolls. Narrow phones: each row becomes a small card. */
+table[data-tidy] th,table[data-tidy] td{padding:10px 14px;vertical-align:middle}
+table[data-tidy] td.tshort{white-space:nowrap}
+table[data-tidy] td.tlong{min-width:22ch;max-width:44ch}
+table[data-tidy] td.tact{white-space:nowrap;position:sticky;right:0;background:var(--card);box-shadow:-8px 0 8px -8px var(--line)}
+table[data-tidy] td.tact>:is(button,select,input,a){vertical-align:middle;margin:2px 4px 2px 0}
+@media (max-width:600px){
+ table.tstack,table.tstack tbody,table.tstack tr,table.tstack td{display:block;width:auto}
+ table.tstack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+ table.tstack tr{padding:10px 14px;border-bottom:1px solid var(--line)}
+ table.tstack tr:last-child{border-bottom:none}
+ table.tstack td,table.tstack td.tact{padding:3px 0;border:none;position:static;box-shadow:none;background:none;max-width:none;min-width:0;white-space:normal}
+ table.tstack td[data-label]:not(:first-child)::before{content:attr(data-label) ': ';color:var(--muted)}
+ table.tstack td:first-child{font-weight:600}
+ table.tstack td:empty{display:none}
+}
 
 
 .filt,.srow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
@@ -1076,7 +1094,8 @@ function build(){
     min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source,
     rain:r.rain_value,wind:r.wind_kmh}; });
   CD.docTypes=(T['BLD-doc_type.csv']||[]);
-  CD.work=(T['BLD-WORK.csv']||[]);
+  /* Lisa 17 Nov 2026: items that are not CD Hub work (the CCP webinar, W043) never show here, whatever their status. */
+  CD.work=(T['BLD-WORK.csv']||[]).filter(function(r){ return String(r.area||'').trim().toLowerCase()!=='ccp'&&!/\bnot CD Hub\b/i.test(String(r.evidence||'')); });
 
   CD.matings=(T['BLD-mating.csv']||[]).map(function(r){ return {id:r.id,dam:r.dam_subject_id,
     sire:r.sire_subject_id,on:r.mated_on,no:r.mating_no,method:r.method||'',
@@ -5054,6 +5073,31 @@ render();
   document.addEventListener('click', function (e) { var i = e.target.closest && e.target.closest('.info'); if (!i) return; e.preventDefault(); e.stopPropagation(); say(i); }, true);
   document.addEventListener('keydown', function (e) { var i = e.target; if (!i.classList || !i.classList.contains('info') || (e.key !== 'Enter' && e.key !== ' ')) return; e.preventDefault(); say(i); });
   new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
+  /* Every table (Lisa 17 Nov 2026): mark each cell once so the CSS above can lay it out. A cell with a button, box or
+     list is the action cell; up to 16 characters is short (kept on one line); over 40 is long (wraps at a set width).
+     A plain table (no merged cells) also gets each cell's column name, for the card layout on narrow phones. */
+  function tidyTables() {
+    document.querySelectorAll('table:not([data-tidy])').forEach(function (t) {
+      t.setAttribute('data-tidy', '1');
+      var heads = Array.prototype.map.call(t.querySelectorAll('thead th'), function (th) { return th.textContent.trim(); });
+      var plain = heads.length > 0 && heads.length <= 8 && !!t.closest('.scroll') && !t.querySelector('[colspan]:not([colspan="1"]),[rowspan]:not([rowspan="1"])');
+      if (plain) t.classList.add('tstack');
+      Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function (tr) {
+        Array.prototype.forEach.call(tr.children, function (td, i) {
+          if (td.tagName !== 'TD') return;
+          var n = td.textContent.trim().length;
+          if (td.querySelector('button,select,input,textarea')) td.classList.add(i === tr.children.length - 1 ? 'tact' : 'tshort');
+          else if (n <= 16) td.classList.add('tshort');
+          else if (n > 40) td.classList.add('tlong');
+          if (plain && heads[i]) td.setAttribute('data-label', heads[i]);
+        });
+      });
+    });
+  }
+  var tidyQueued = false;
+  new MutationObserver(function () { if (tidyQueued) return; tidyQueued = true; requestAnimationFrame(function () { tidyQueued = false; tidyTables(); }); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', tidyTables);
   document.addEventListener('DOMContentLoaded', calm); calm();
 })();
 </script>
