@@ -42,7 +42,7 @@ function makeEnv(rows, opts = {}) {
   const ctx = {
     Logger: { log: (s) => log.push(String(s)) },
     SpreadsheetApp: { getActiveSpreadsheet: () => ({ getSheetByName: () => sh, getSheets: () => [sh], setActiveSheet() {}, moveActiveSheet() {}, insertSheet: () => sh }) },
-    UrlFetchApp: { fetch: () => ({ getResponseCode: () => 200, getContentText: () => JSON.stringify({ daily, current: { temperature_2m: 7, time: TODAY + 'T12:00' } }) }) },
+    UrlFetchApp: { fetch: () => opts.status ? ({ getResponseCode: () => opts.status, getContentText: () => '{"reason":"Daily API request limit exceeded. Please try again tomorrow.","error":true}' }) : ({ getResponseCode: () => 200, getContentText: () => JSON.stringify({ daily, current: { temperature_2m: 7, time: TODAY + 'T12:00' } }) }) },
     Utilities: { formatDate: (d, tz, f) => (f === 'yyyy-MM-dd' ? TODAY : TODAY + 'T12:00Z'), parseCsv: () => [] },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); } }) },
     LockService: { getScriptLock: () => ({ tryLock: () => { if (locked) return false; locked = true; return true; }, releaseLock: () => { locked = false; } }) },
@@ -109,6 +109,15 @@ test('outdoor temp: the archive back-fill skips days already there and numbers a
   env.ctx.runBackfill();
   assert.deepEqual(ids(env), ['wx-0701', 'wx-0700', 'wx-0702']);
   assert.equal(env.sheet.filter((r) => r[4] === '2026-11-15').length, 1);
+});
+
+test('outdoor temp: Open-Meteo busy (429) is not a failure: nothing written, one line logged, the next run tries again', () => {
+  const env = makeEnv([H, row('wx-0001', '2026-11-10')], { status: 429 });
+  assert.equal(env.ctx.run(), undefined);
+  assert.equal(env.sheet.length, 2);
+  assert.match(env.log.join('\n'), /Open-Meteo busy \(429/);
+  const bad = makeEnv([H], { status: 500 });
+  assert.throws(() => bad.ctx.run(), /Open-Meteo 500/);   // any other refusal still shows as a failed run
 });
 
 test('outdoor temp: missing location settings stop the run plainly and nothing is written', () => {

@@ -18,6 +18,8 @@
  *  - Only one run writes at a time (LockService). A second run that cannot get the lock in 30 s writes nothing.
  *  - The archive back-fill takes ids the same way and skips days already in the sheet.
  *
+ * OPEN-METEO BUSY (429): the run writes nothing, logs one line and ends normally; the next 3-hourly run tries again.
+ *
  * SETTINGS (Script Properties; Project Settings > Script Properties. Not in this file: the repo is public.)
  *  LAT, LON        the point to read, e.g. 51.42, -3.21          (needed)
  *  LOCATION        text written in the location column            (needed)
@@ -93,6 +95,10 @@ function record_(pastDays) {
     + 'wind_speed_10m_max,precipitation_sum,weather_code'
     + '&timezone=' + encodeURIComponent(CFG.TZ) + '&past_days=' + (pastDays - 1) + '&forecast_days=' + CFG.FORECAST_DAYS;
   var resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  // 429 (STAFF 17 Nov 2026: about 3 runs in 4 since 12 Nov): Open-Meteo's free daily limit counts by address, and
+  // Apps Script shares Google's addresses with other users, so the limit is often used up by others. Nothing was
+  // fetched, so nothing is written; the next 3-hourly run tries again. Not an error: the run is not marked failed.
+  if (resp.getResponseCode() === 429) { Logger.log('Open-Meteo busy (429, daily limit on a shared address); nothing written, next run tries again.'); return 0; }
   if (resp.getResponseCode() !== 200) throw new Error('Open-Meteo ' + resp.getResponseCode() + ': ' + resp.getContentText());
   var d = JSON.parse(resp.getContentText()), dl = d.daily, cur = d.current || {};
   var today = today_(), now = Utilities.formatDate(new Date(), CFG.TZ, "yyyy-MM-dd'T'HH:mmXXX");
