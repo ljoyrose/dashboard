@@ -54,7 +54,8 @@ async function open(page, guard, opts) {
     const ok = (result) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result }) });
     if (b.action === 'file_add') return ok({ status: 'saved', id: 'fil-new', drive_file_id: 'drvfilenewpretend000000001' });
     if (b.action === 'link_add') return ok({ status: 'saved', id: 'lnk-new-' + sent.length, role: b.fields.role, ended: [] });
-    if (b.table === 'readings' && readingFails > 0) { readingFails--; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'BUSY', message: 'Try again.' }) }); }
+    // 16 Nov 2026: BUSY is now retried by the hub on its own, so the failed save here is one the person must retry.
+    if (b.table === 'readings' && readingFails > 0) { readingFails--; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'CHANGED_DURING_WRITE', message: 'Try again.' }) }); }
     return ok({ status: 'saved', id: (b.table || 'x').slice(0, 3) + '-new-' + sent.length });
   });
   await HUBS.cdhub.open(page, guard);
