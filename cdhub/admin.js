@@ -326,10 +326,10 @@ var AdminView = (function () {
   }
 
   function page(v) {
-    if (!on(v.T)) return '<h2>Admin</h2><div class="card"><p class="mut">Only the owner sees Admin.</p></div>';
+    if (!on(v.T)) return '<h2>Settings</h2><div class="card"><p class="mut">Only the owner sees Settings.</p></div>';
     var groups = [], seen = {};
     CARDS.forEach(function (c) { if (!seen[c[4]]) { seen[c[4]] = 1; groups.push(c[4]); } });
-    var html = '<h2 class="adm-h">' + icon('shield') + ' Admin <span class="adm-lock">Only you</span></h2>'
+    var html = '<h2 class="adm-h">' + icon('shield') + ' Settings <span class="adm-lock">Only you</span></h2>'
       + '<p class="adm-script">' + ownerPage(v, 'Script page') + '</p>';   // Lisa 15 Nov 2026: always one tap to the owner page
     groups.forEach(function (g) {
       html += '<h3 class="adm-g">' + g + '</h3><div class="adm-grid">' + CARDS.filter(function (c) { return c[4] === g; }).map(function (c) {

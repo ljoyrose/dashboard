@@ -173,7 +173,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await frame()).not.toBe(small);
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['medium', 'medium']);
     expect(await page.evaluate(() => sizeDot(CD._byId['sub-x1'].sizeWord))).toContain('data-size="medium"');
-    // the dog with no weight has no size at all, whatever its record says
+    // the dog with no weight and no kg range in its size cell has no size at all
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(dog(page)).not.toHaveAttribute('data-size', /./);
   });

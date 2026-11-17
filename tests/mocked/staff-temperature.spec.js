@@ -117,6 +117,20 @@ test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", a
   expect(sent[0].fields).toMatchObject({ area_id: 'area-new', min_c: '8.5', period_start: '2026-11-12T00:00:00+00:00', mitigation_note: 'Heater on, rechecked at 12:00' });
 });
 
+// Lisa 17 Nov 2026 ("says all temps are due but I definitely put them in"): the save script reads a reading's
+// period_start back as the cell shows it ("2026-11-12 00:00"), not as the page sent it; it must still count as done.
+test('a saved reading read back as "2026-11-12 00:00" shows as done, not Due', async ({ page }) => {
+  const keep = TABLES.area_reading;
+  TABLES.area_reading = [{ id: 'r1', area_id: 'area-new', thermometer_id: 'thm-new', period_start: '2026-11-12 00:00', taken_at: '2026-11-12 08:10', min_c: '12.0', max_c: '18.0' }];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    const card = page.locator('.cards .card').first();
+    await expect(card).toContainText('12.0–18.0');
+    await expect(card).not.toContainText('Due');
+  } finally { TABLES.area_reading = keep; }
+});
+
 // Room empty (Lisa 11 Nov 2026): no dog present. A flag on the slot's reading; a reading is optional with it, and an
 // outside reading in an empty room is never a non-compliance, so "What was done" is not asked.
 test('Room empty with no reading saves room_empty yes and no temperatures; no CLR step', async ({ page }) => {
