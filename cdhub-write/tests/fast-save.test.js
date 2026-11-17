@@ -100,7 +100,7 @@ test('fast save: a correction still finds a row at the top of the table (full re
 test('fast save: a change to the last rows while saving is caught and nothing is saved', () => {
   const env = bigEnv(400);
   const read = env.ctx.store_readTail_(T, 200, ['id']);
-  env.rows(T)[399][col('taken_by')] = 'Edited';            // someone edits a recent row between the read and the write
+  env.rows(T)[400][col('taken_by')] = 'Edited';            // someone edits the last row between the read and the write
   const vals = H.map(() => ''); vals[0] = 'rdg-new';
   assert.throws(() => env.ctx.store_append_(T, env.ctx.TABLES.area_reading.columns, vals, read), /changed while saving/);
   assert.equal(env.rows(T).length, 401);

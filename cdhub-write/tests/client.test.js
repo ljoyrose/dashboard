@@ -917,7 +917,7 @@ test('saves sent together go one at a time; a failed one does not stop the next'
     now++; most = Math.max(most, now); const mine = ++n;
     await new Promise((r) => setTimeout(r, 30));
     now--;
-    return { json: async () => (mine === 2 ? { ok: false, code: 'BUSY', message: 'busy' } : { ok: true, result: { id: 'x' + mine } }) };
+    return { json: async () => (mine === 2 ? { ok: false, code: 'INVALID', message: 'bad' } : { ok: true, result: { id: 'x' + mine } }) };
   };
   const s = BLDSave.create({ fetch: f, localStorage: null, sessionStorage: null });
   s.setScriptUrl(GOOD_URL); s.setCode('ABC');
@@ -944,4 +944,35 @@ test('saves still waiting are counted until each is answered', async () => {
   release();
   await all;
   assert.equal(s.sending(), 0);
+});
+
+// Lisa 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
+// sent again after a pause, up to 3 times; only then is the person told.
+test('BUSY (someone else saving) is retried with the same request id and then saves', async () => {
+  const sent = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true }], proposed: [] }) };
+    const b = JSON.parse(init.body); sent.push(b);
+    return { json: async () => (sent.length < 3 ? { ok: false, code: 'BUSY', message: 'Someone else is saving right now.' } : { ok: true, result: { status: 'saved', id: 'r1' } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: null, sessionStorage: null, busyPauseMs: 5 });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const r = await s.act('link_end', { id: 'lnk-1' });
+  assert.equal(r.ok, true);
+  assert.equal(sent.length, 3);
+  assert.equal(new Set(sent.map((b) => b.request_id)).size, 1, 'the same save, never two');
+});
+
+test('BUSY that never clears: after 3 retries the person is told, plainly', async () => {
+  let n = 0;
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    n++; return { json: async () => ({ ok: false, code: 'BUSY', message: 'Someone else is saving right now. Wait a moment and press save again.' }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: null, sessionStorage: null, busyPauseMs: 5 });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const r = await s.act('link_end', { id: 'lnk-1' });
+  assert.equal(r.ok, false);
+  assert.equal(r.code, 'BUSY');
+  assert.equal(n, 4);
 });

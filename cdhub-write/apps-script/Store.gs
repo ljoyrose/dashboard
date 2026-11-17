@@ -192,54 +192,27 @@ function store_readTail_(title, n, fullCols) {
            tail: true, tailFrom: from, full: full, complete: from === 2 };
 }
 
-/** The tail rows as the Sheet shows them now, for the same row span as `read` (only used with store_readTail_). */
-function store_tailText_(sh, read, upTo) {
-  var w = read.width, rows = [sh.getRange(1, 1, 1, w).getDisplayValues()[0]];
-  if (upTo >= read.tailFrom) sh.getRange(read.tailFrom, 1, upTo - read.tailFrom + 1, w).getDisplayValues().forEach(function (r) {
-    if (!r.every(function (x) { return x === ''; })) rows.push(r);
-  });
-  return { rows: rows, text: store_rowsText_(rows) };
-}
-
-/** store_appendSheet_ for a tail read: the same guards, over the header and the tail rows instead of every row. */
-function store_appendSheetTail_(title, rowValues, read) {
-  var sh = read.tab, beforeHash = textHash_(read.text);
-  if (sh.getLastRow() !== read.lastRow || textHash_(store_tailText_(sh, read, read.lastRow).text) !== beforeHash) {
-    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
-  }
-  var w = read.width, vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
-  while (vals.length < w) vals.push('');
-  var at = read.lastRow + 1;
-  if (sh.getMaxRows() < at) sh.insertRowsAfter(sh.getMaxRows(), 1);
-  var rg = sh.getRange(at, 1, 1, w), typed = store_typedRows_([vals], read.types);
-  if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
-  rg.setValues(read.types ? typed.values : [vals]);
-  SpreadsheetApp.flush();
-  var check = store_tailText_(sh, read, at);
-  var newRow = check.rows[check.rows.length - 1];
-  var ok = sh.getLastRow() === at && check.rows.length === read.shown.length + 1 &&
-    textHash_(store_rowsText_(check.rows.slice(0, -1))) === beforeHash &&
-    (read.types ? store_sameTyped_(rg.getValues(), typed.values) : csvLine_(newRow) === csvLine_(vals));
-  if (ok) return read.text + csvLine_(newRow) + '\r\n';
-  var restored = false;
-  try {
-    if (sh.getLastRow() === at) sh.deleteRow(at);
-    else sh.getRange(at, 1, 1, w).clearContent();
-    SpreadsheetApp.flush();
-    restored = sh.getLastRow() === read.lastRow && textHash_(store_tailText_(sh, read, read.lastRow).text) === beforeHash;
-  } catch (e) { restored = false; }
-  throw err_('VERIFY_FAILED',
-    restored
-      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
-      : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the Sheet\'s version history.',
-    { restored: restored, file: title });
+/* FAST APPEND CHECKS (Lisa 16 Nov 2026: saves took about 25 s each and a second person got "Someone else is saving").
+ * An append used to read the WHOLE tab three times (once to read, once before writing, once after). The temperature
+ * log is over 30,000 rows, so the lock was held for most of that time. Now, after the one full read, an append checks
+ * only what an append can disturb: the row count, the header row and the last row before writing, then reads back
+ * just the new rows and the row above them. A row ADDED by anyone between read and write still stops the save
+ * (CHANGED_DURING_WRITE). In-place edits (owner edit) keep the full whole-tab checks. */
+function store_rowShown_(sh, rowNum, w) { return csvLine_(sh.getRange(rowNum, 1, 1, w).getDisplayValues()[0]); }
+/** Is the tab still exactly as read where an append could disturb it: same last row, same header, same last row text? */
+function store_tailSame_(sh, read) {
+  if (sh.getLastRow() !== read.lastRow) return false;
+  var w = read.width, shown = read.shown || [];
+  if (!shown.length) return true;
+  if (store_rowShown_(sh, 1, w) !== csvLine_(shown[0])) return false;
+  var lastNum = read.rowNums[read.rowNums.length - 1];
+  return shown.length < 2 || store_rowShown_(sh, lastNum, w) === csvLine_(shown[shown.length - 1]);
 }
 
 /** Same as the CSV append, for a Sheet. `read` is store_readSheet_ taken inside the same lock. */
 function store_appendSheet_(title, rowValues, read) {
-  var sh = read.tab, beforeHash = textHash_(read.text);
-  var now = store_sheetRows_(sh);
-  if (textHash_(store_rowsText_(now.rows)) !== beforeHash || sh.getLastRow() !== read.lastRow) {
+  var sh = read.tab;
+  if (!store_tailSame_(sh, read)) {
     throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
   }
   var w = read.width, vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
@@ -250,22 +223,19 @@ function store_appendSheet_(title, rowValues, read) {
   if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
   rg.setValues(read.types ? typed.values : [vals]);
   SpreadsheetApp.flush();
-  var check = store_sheetRows_(sh);
-  if (!read.types) {
-    var want = textHash_(read.text + csvLine_(vals) + '\r\n');
-    if (textHash_(store_rowsText_(check.rows)) === want) return read.text + csvLine_(vals) + '\r\n';
-  } else if (check.rowNums[check.rowNums.length - 1] === at &&
-             textHash_(store_rowsText_(check.rows.slice(0, -1))) === beforeHash &&
-             store_sameTyped_(rg.getValues(), typed.values)) {
-    // every old row identical, and the new row holds exactly the numbers and dates sent
-    return read.text + csvLine_(check.rows[check.rows.length - 1]) + '\r\n';
+  // read back only the new row and the row above it (see FAST APPEND CHECKS)
+  var aboveOk = read.shown.length < 2 || store_rowShown_(sh, read.rowNums[read.rowNums.length - 1], w) === csvLine_(read.shown[read.shown.length - 1]);
+  var newShown = sh.getRange(at, 1, 1, w).getDisplayValues()[0];
+  if (sh.getLastRow() === at && aboveOk) {
+    if (!read.types) { if (csvLine_(newShown) === csvLine_(vals)) return read.text + csvLine_(vals) + '\r\n'; }
+    else if (store_sameTyped_(rg.getValues(), typed.values)) return read.text + csvLine_(newShown) + '\r\n';   // exactly the numbers and dates sent
   }
   var restored = false;
   try {
     if (sh.getLastRow() === at) sh.deleteRow(at);
     else sh.getRange(at, 1, 1, w).clearContent();
     SpreadsheetApp.flush();
-    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+    restored = store_tailSame_(sh, read);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED',
     restored
@@ -375,9 +345,8 @@ function store_appendMany_(title, expectedHeader, rows, read) {
 }
 
 function store_appendManySheet_(title, rows, read) {
-  if (read.tail) throw err_('UNEXPECTED_LAYOUT', title + ' was read in part, so nothing was changed. Try again.');
-  var sh = read.tab, beforeHash = textHash_(read.text), now = store_sheetRows_(sh);
-  if (textHash_(store_rowsText_(now.rows)) !== beforeHash || sh.getLastRow() !== read.lastRow) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  var sh = read.tab;
+  if (!store_tailSame_(sh, read)) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
   var w = read.width, n = rows.length, at = read.lastRow + 1;
   var vals = rows.map(function (r) { var v = r.slice(0, w).map(function (x) { return x === null || x === undefined ? '' : String(x); }); while (v.length < w) v.push(''); return v; });
   if (sh.getMaxRows() < at + n - 1) sh.insertRowsAfter(sh.getMaxRows(), at + n - 1 - sh.getMaxRows());
@@ -385,19 +354,19 @@ function store_appendManySheet_(title, rows, read) {
   if (read.types) rg.setNumberFormats(typed.formats); else rg.setNumberFormat('@');
   rg.setValues(read.types ? typed.values : vals);
   SpreadsheetApp.flush();
-  if (!read.types) {
-    var text = read.text + vals.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
-    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === textHash_(text)) return text;
-  } else {
-    var chk = store_sheetRows_(sh);
-    if (chk.rowNums[chk.rowNums.length - 1] === at + n - 1 && textHash_(store_rowsText_(chk.rows.slice(0, chk.rows.length - n))) === beforeHash &&
-        store_sameTyped_(rg.getValues(), typed.values)) return store_rowsText_(chk.rows);
+  // read back only the new rows and the row above them (see FAST APPEND CHECKS)
+  var aboveOk = read.shown.length < 2 || store_rowShown_(sh, read.rowNums[read.rowNums.length - 1], w) === csvLine_(read.shown[read.shown.length - 1]);
+  var back = sh.getRange(at, 1, n, w).getDisplayValues();
+  if (sh.getLastRow() === at + n - 1 && aboveOk) {
+    if (!read.types) {
+      if (back.map(csvLine_).join('\n') === vals.map(csvLine_).join('\n')) return read.text + vals.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
+    } else if (store_sameTyped_(rg.getValues(), typed.values)) return read.text + back.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
   }
   var restored = false;
   try {
     for (var i = n - 1; i >= 0; i--) { if (sh.getLastRow() === at + i) sh.deleteRow(at + i); else sh.getRange(at + i, 1, 1, w).clearContent(); }
     SpreadsheetApp.flush();
-    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+    restored = store_tailSame_(sh, read);
   } catch (e) { restored = false; }
   throw err_('VERIFY_FAILED', restored
     ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
@@ -411,7 +380,7 @@ function store_append_(title, expectedHeader, rowValues, read) {
   if (!sameHeader_(read.header, expectedHeader)) {
     throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
-  if (read.kind === 'sheet') return read.tail ? store_appendSheetTail_(title, rowValues, read) : store_appendSheet_(title, rowValues, read);
+  if (read.kind === 'sheet') return store_appendSheet_(title, rowValues, read);   // a tail read (store_readTail_) has the same shape
   var file = read.file;
   var before = read.text;
   var beforeHash = textHash_(before);
