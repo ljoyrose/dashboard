@@ -90,12 +90,59 @@
     return rows.filter(function (r) { return ymd(r.from_date) === top[String(r.access_type).toLowerCase() + '|' + band(r.size_band)]; });
   }
   /**
+   * SPACE RULES (Lisa 17 Nov 2026: "should be calculated automatically"). The poster's table is kept as dated rows in
+   * BLD-breeding_rule: rule_key space.<free|limited>.<small|medium|large>.<number of dogs> = m² needed, and
+   * space.<free|limited>.<size>+pups = m² needed for a mum with her litter. Nothing about the figures is coded here.
+   * spaceRules(ruleRows, date) -> {free:{small:{1:2.5,...}, 'small+pups':5}, limited:{...}} (the row in force that day).
+   */
+  function spaceRules(ruleRows, date) {
+    var best = {}, out = {};
+    inForce((ruleRows || []).filter(function (r) { return /^space\.(free|limited)\.(small|medium|large)(\+pups|\.\d+)$/.test(String(r.rule_key || '').trim()); }), date, 'effective_from')
+      .forEach(function (r) {
+        var k = String(r.rule_key).trim(), f = ymd(r.effective_from), v = parseFloat(r.value);
+        if (isNaN(v)) return;
+        if (!(k in best) || f >= best[k].f) best[k] = { f: f, v: v };
+      });
+    Object.keys(best).forEach(function (k) {
+      var p = k.split('.'), mode = p[1], size = p[2], n = p[3];
+      out[mode] = out[mode] || {};
+      if (/\+pups$/.test(size)) out[mode][size] = best[k].v;
+      else { out[mode][size] = out[mode][size] || {}; out[mode][size][n] = best[k].v; }
+    });
+    return out;
+  }
+  /**
+   * The limits a room of m2 square metres gets from the space rules, as capacity rows (marked derived):
+   * for each size, the most dogs whose m² needed fits the room; a mum with pups fits (1) or not (0).
+   */
+  function deriveRows(areaId, m2, space) {
+    var rows = [], a = parseFloat(m2);
+    if (isNaN(a) || a <= 0 || !space) return rows;
+    Object.keys(space).forEach(function (mode) {
+      SIZES.forEach(function (sz) {
+        var t = space[mode][sz], most = 0;
+        if (t && typeof t === 'object') Object.keys(t).forEach(function (n) { if (t[n] <= a + 1e-9 && +n > most) most = +n; });
+        if (t) rows.push({ area_id: areaId, access_type: mode, size_band: sz, max_dogs: String(most), derived: true });
+        var pups = space[mode][sz + '+pups'];
+        if (pups != null) rows.push({ area_id: areaId, access_type: mode, size_band: sz + ' + pups', max_dogs: pups <= a + 1e-9 ? '1' : '0', derived: true });
+      });
+    });
+    return rows;
+  }
+  /**
    * dogs = everyone who would be in the room: [{id, size, damId}]
+   * Optional m2 (the room's size) and space (spaceRules()): a flap setting with no capacity rows of its own is worked out
+   * from the room's m² and the space rules, and the message says so.
    * Returns {status: 'ok'|'over'|'unknown', count, limit, access, alternatives, mix, message, notes}
    */
   function check(o) {
     var rows = (o.capacity || []).filter(function (r) { return r.area_id === o.areaId; });
     if (o.date) rows = latestPerBand(inForce(rows, o.date, 'from_date'));
+    var derivedFor = [];
+    if (o.space && o.m2) {
+      var have = {}; rows.forEach(function (r) { have[String(r.access_type).toLowerCase()] = 1; });
+      deriveRows(o.areaId, o.m2, o.space).forEach(function (r) { if (!have[r.access_type]) { rows.push(r); if (derivedFor.indexOf(r.access_type) < 0) derivedFor.push(r.access_type); } });
+    }
     var ids = {}; o.dogs.forEach(function (d) { ids[d.id] = true; });
     var dams = {}; o.dogs.forEach(function (d) { if (d.damId && ids[d.damId]) dams[d.damId] = true; });
     var counted = o.dogs.filter(function (d) { return !(d.damId && ids[d.damId]); });
@@ -108,6 +155,7 @@
       return res;
     }
     if (!o.access) res.notes.push('The flap is not set for this room, so the stricter limit is used.');
+    if (o.access && derivedFor.indexOf(String(o.access).toLowerCase()) >= 0) res.notes.push('Limits for ' + o.access + ' access worked out from the room size (' + o.m2 + ' m²) and the space rules.');
     // Lisa 17 Nov 2026 (3A.1/2): the flap was set to one way but the limits are only recorded for the other. Say so.
     else if (!rows.some(function (r) { return String(r.access_type).toLowerCase() === String(o.access).toLowerCase(); })) {
       var have = rows.map(function (r) { return String(r.access_type).toLowerCase(); }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
@@ -142,7 +190,7 @@
   function audit(rooms, capacity) {
     var out = { over: [], unknown: [], ok: 0 };
     rooms.forEach(function (r) {
-      var c = check({ areaId: r.areaId, access: r.access, capacity: capacity, dogs: r.dogs, date: r.date });
+      var c = check({ areaId: r.areaId, access: r.access, capacity: capacity, dogs: r.dogs, date: r.date, m2: r.m2, space: r.space });
       c.areaId = r.areaId; c.label = r.label; c.reasons = r.reasons || [];
       if (c.status === 'over') out.over.push(c); else if (c.status === 'unknown') out.unknown.push(c); else out.ok++;
     });
@@ -156,11 +204,11 @@
     var add = o && o.add, cur = (o && o.dogs) || [];
     if (!add) return { ok: false, free: 0, size: '', limit: null, count: cur.length };
     var size = word(add.size) || '';
-    var sim = check({ areaId: o.areaId, access: o.access, capacity: o.capacity, dogs: cur.concat([add]), date: o.date });
+    var sim = check({ areaId: o.areaId, access: o.access, capacity: o.capacity, dogs: cur.concat([add]), date: o.date, m2: o.m2, space: o.space });
     var free = (sim.status === 'ok' && sim.limit !== null) ? (sim.limit - (sim.count - 1)) : 0;
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce, freePlaces: freePlaces };
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));

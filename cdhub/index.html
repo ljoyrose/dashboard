@@ -3180,12 +3180,15 @@ function sizeOn(d,date){ if(!date||date>=todayISO()) return d.sizeWord;
  return (lw&&BLDCapacity.sizeFromKg(lw.kg,cut))||''; }
 function roomDogs(ids,date){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
  return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:sizeOn(d,date),damId:dam[d.birthLitter]||''}; }); }
-function roomCheck(aid,ids,acc,date){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids,date),date:date||todayISO()}); }
+/* Space rules (Lisa 17 Nov 2026): a flap setting with no capacity rows is worked out from the room's m² and the poster rows. */
+function areaM2(aid){ var a=(CD.allAreas||CD.areas||[]).filter(function(x){ return x.id===aid; })[0]; return a&&a.m2?parseFloat(a.m2):null; }
+function spaceOn(date){ return BLDCapacity.spaceRules?BLDCapacity.spaceRules(T['BLD-breeding_rule.csv']||[],date||todayISO()):null; }
+function roomCheck(aid,ids,acc,date){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids,date),date:date||todayISO(),m2:areaM2(aid),space:spaceOn(date)}); }
 function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
  ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
   if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
 function roomAudit(date){ return BLDCapacity.audit(areasOn(date).map(function(a){ var ids=inCabin(a.id,date);
- return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids,date),reasons:roomReasons(ids),date:date||todayISO()}; }),T['BLD-area_capacity.csv']||[]); }
+ return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids,date),reasons:roomReasons(ids),date:date||todayISO(),m2:areaM2(a.id),space:spaceOn(date)}; }),T['BLD-area_capacity.csv']||[]); }
 /* ROOM-TO-ROOM RULES (R4, Lisa 11 Nov 2026): "a room is closed while another room is in use" is a row, never code.
    BLD-breeding_rule rule_key room.closed_when_in_use.<closed area id>, value = the area id whose use closes it, dated by
    effective_from like every rule (a later row changes it; a later row with value "none" ends it). "In use" = a dog is in
