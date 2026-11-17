@@ -53,6 +53,8 @@ test('CD Hub: every kind of control hovers with the pale grey fill, no line, and
   // SWITCHED OFF, 17 Nov 2026, and it must be switched back on (JOB CDH-HT.1 successor; docs/cdhub/HANDOVER.md).
   // Green on 13 Nov (67 kinds of control, no problems). On the hub as it is today it runs past its four minutes;
   // the cause is not found yet. Run it by hand with CRAWL_HUB=1.
+  // DECISION NEEDED: start the successor session (docs/cdhub/CONTINUE_PROMPT.md) to make this steady and switch it back on.
+  // OWNER: Lisa starts it; the JOB CDH-HT.1 successor session does it. BY 2026-11-24
   test.fixme(!process.env.CRAWL_HUB, 'runs past its time on the hub as it is today; cause not found yet');
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1280, height: 900 });

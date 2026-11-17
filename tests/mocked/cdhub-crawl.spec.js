@@ -71,6 +71,8 @@ for (const view of VIEWS) {
         // On 13 Nov this walk was green: 884 of 884 controls, desktop and phone, no findings. Since then the hub has grown
         // (Staff, Items, Enquiries, Admin) and the walk now loses its way back to a screen it opened one tap deep, then
         // waits for minutes. One start screen at a time still finishes. Run it by hand with CRAWL_HUB=1.
+        // DECISION NEEDED: start the successor session (docs/cdhub/CONTINUE_PROMPT.md) to make this steady and switch it back on.
+        // OWNER: Lisa starts it; the JOB CDH-HT.1 successor session does it. BY 2026-11-24
         test.fixme(!process.env.CRAWL_HUB, 'the hub walk cannot yet return to its one-tap-deep screens on the hub as it is today');
         test.setTimeout(1_500_000);
         await page.goto('cdhub/');
