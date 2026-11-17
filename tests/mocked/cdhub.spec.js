@@ -180,7 +180,9 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await signIn(page);
     await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
-    await expect(page.locator('#main')).toContainText('Sample finished item');
+    await expect(page.locator('#main')).toContainText('Sample item waiting on Claude');
+    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // Lisa 17 Nov 2026: the Done list is cleared from view
+    await expect(page.locator('[data-work-sum]')).toContainText('done 1');
   });
 
   test('tables missing from the folder are reported, not hidden', async ({ page }) => {

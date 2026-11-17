@@ -4103,7 +4103,8 @@ function pageWork(){
  var h='<h2>Outstanding</h2>'+needsCard()
   +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>'
   +findRow('work','to-dos',{name:1},wsort)+'<div data-find-of="work">';
- [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
+ /* Lisa 17 Nov 2026: "this section cleared": finished items are not listed (the rows stay in BLD-WORK.csv as history). */
+ [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
   rows=wsort==='name'?BLDSort.sort(rows,'name',{name:function(r){ return r.item; }}):rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */

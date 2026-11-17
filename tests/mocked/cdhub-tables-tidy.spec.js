@@ -17,7 +17,7 @@ const setFile = (world, name, content) => {
 const WORK = [
   'id,area,item,status,owner,blocked_on,evidence,note',
   'W001,sample,Sample item waiting on Lisa,BLOCKED,Lisa,a sample answer,,',
-  'W002,sample,Sample finished item that has a much longer name than the others,DONE,Claude,,shown in the hub,',
+  'W002,sample,Sample open item that has a much longer name than the others,OPEN,Claude,,,',
   'W043,ccp,Pretend webinar document corrections,DONE,Claude,,"closed 13/11/26: not CD Hub (pretend webinar)",',
   'W044,other,Pretend other-project item,OPEN,Claude,,closed: not CD Hub,',
 ].join('\n') + '\n';
@@ -27,7 +27,7 @@ test('items that are not CD Hub work (area ccp, or marked "not CD Hub") never sh
   await page.goto('cdhub/');
   await signIn(page);
   await tabClick(page, '#nav button[data-go="work"]');
-  await expect(page.locator('#main')).toContainText('Sample finished item');
+  await expect(page.locator('#main')).toContainText('Sample open item');
   await expect(page.locator('#main')).not.toContainText('Pretend webinar');
   await expect(page.locator('#main')).not.toContainText('Pretend other-project item');
 });
@@ -43,7 +43,7 @@ test('every table is tidied: short values stay on one line, long text wraps, and
   await expect(idCell).toHaveClass(/tshort/);
   expect(await idCell.evaluate((e) => getComputedStyle(e).whiteSpace)).toBe('nowrap');
   expect(await idCell.evaluate((e) => getComputedStyle(e).verticalAlign)).toBe('middle');
-  const done = page.locator('#main table', { hasText: 'Sample finished item' });
+  const done = page.locator('#main table', { hasText: 'Sample open item' });
   await expect(done.locator('td.tlong').first()).toContainText('much longer name');
   await page.setViewportSize({ width: 390, height: 800 });
   await expect(done).toHaveClass(/tstack/);
