@@ -120,6 +120,10 @@
     }
   },
   "cdhub": {
+    "BLD-breeding_rule.csv": {
+      "columns": ["id", "tenant_id", "rule_key", "value", "effective_from", "source", "note", "set_at", "set_by"],
+      "read": ["rule_key", "value", "effective_from"]
+    },
     "BLD-WORK.csv": {
       "columns": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"],
       "read": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"]

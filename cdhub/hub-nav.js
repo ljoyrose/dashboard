@@ -6,6 +6,7 @@
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
      nav.tab.person.<person_id>.<section>   the same for one person; wins over the role. Never a code: codes are secrets
                                        and no code may sit in a rule row (OV11, 14 Nov 2026).
+     nav.view.<view>                   1 on, 0 off: one view inside a section (starter: Assocs, Table map, Litters, Vet, Enquiries off)
      nav.first.<ROLE>.<section>        which view the section opens on: its place in the chip row (1 = first)
      nav.first.person.<person_id>.<section>   the same for one person; wins over the role
      nav.home.<ROLE>.<card>            Main's cards (Lisa 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
@@ -46,6 +47,15 @@
   ];
   /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
+  /* Views a pack starts with switched off (Lisa approved 13 Nov 2026, PR 472: hide Assocs, the Table map and Litters; the vet
+     link stays off). An owner switches one back on with a dated row nav.view.<id> = 1 (0 = off). Hidden views are off every
+     menu, chip row, Find and Main card, and their addresses open Main. Their pages and data stay. */
+  var STARTER_OFF = { buyers: 1, shape: 1, litters: 1, vet: 1, enquiries: 1 };
+  function viewOn(o) {
+    o = o || {};
+    var r = inForce(o.rows, o.iso)['nav.view.' + o.id];
+    return r ? r.value >= 1 : !STARTER_OFF[o.id];
+  }
   var PICKABLE = ['compliance', 'money', 'ops', 'people', 'sales', 'ideas'];
   var MAX_TABS = 3;
 
@@ -208,5 +218,5 @@
       || (o.starter || []).filter(function (id) { return cards.indexOf(id) >= 0; });
   }
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, sectionOf: sectionOf, html: html, chips: chips, back: back };
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, viewOn: viewOn, STARTER_OFF: STARTER_OFF, sectionOf: sectionOf, html: html, chips: chips, back: back };
 })(typeof window !== 'undefined' ? window : this);
