@@ -88,7 +88,10 @@
  .sheet.dogs.per4 .dcard .jobs{gap:1mm 3mm}.sheet.dogs.per4 .dcard .job{font-size:11px}.sheet.dogs.per4 .dcard .job:before{height:12px;width:3px}
  .sheet.dogs.per4 .dcard .lst{font-size:10px;gap:1px}.sheet.dogs.per4 .dcard .lst li{padding-top:1px}.sheet.dogs.per4 .dcard .tag{font-size:8px}
  .sheet.rooms{display:block;font-size:0;orphans:1;widows:1}
- .sheet.rooms .rcard{display:inline-block;vertical-align:top;box-sizing:border-box;width:calc(50% - 2mm);margin:0 0 4mm;font-size:16px}
+ /* four signs a sheet: each sign is a fixed 132 mm and the QR takes the height that is left, whatever the font */
+ .sheet.rooms .rcard{display:inline-flex;flex-direction:column;vertical-align:top;box-sizing:border-box;width:calc(50% - 2mm);height:132mm;margin:0 0 4mm;font-size:16px;overflow:hidden}
  .sheet.rooms .rcard:nth-child(odd){margin-right:4mm}
- .rcard .code svg{max-width:66mm}   /* four signs a sheet: a sign with limits and three jobs stays under half the page */
+ .sheet.rooms .rcard>b,.sheet.rooms .rcard .limits,.sheet.rooms .rcard .lst,.sheet.rooms .rcard .tag{flex:none}
+ .sheet.rooms .rcard .code{flex:1 1 0;min-height:20mm;display:flex;justify-content:center;margin:2mm 0}
+ .sheet.rooms .rcard .code svg{width:auto;height:100%;max-width:100%;max-height:100%;margin:0}
 }

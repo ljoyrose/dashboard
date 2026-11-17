@@ -54,5 +54,5 @@ The on-screen dog card is not changed. Print rules only, plus the light look dur
 
 ## 17 Nov 2026, evening: preview of dog and room cards found two more
 
-- Room signs printed one row a page (two-thirds of each sheet blank). The room QR is capped at 66 mm: 4 signs a sheet. Test: 6 rooms with 3 limits and 3 jobs = 2 pages (was 3).
+- Room signs printed one row a page (two-thirds of each sheet blank). Each sign is now a fixed 132 mm and the QR takes the height left (at least 50 mm), so 4 signs fit a sheet in any font. Test: 6 rooms with 3 limits and 3 jobs, in the wide fallback font = 2 pages (was 3).
 - The newer card lines (Class, BFFs, Fren., colour with nose) squeezed the kennel-card QR to 29–43 mm. On paper each label now sits beside its value. Worst case (long name, wide font, every line): QR 86 mm Full A4, 60 mm 2 per A4, 36 mm 4 per A4.

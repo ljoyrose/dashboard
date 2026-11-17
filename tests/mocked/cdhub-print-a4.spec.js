@@ -65,10 +65,23 @@ test.describe('CD Hub print on A4', () => {
 
   test('room signs print four a sheet, two a row, each whole @regression', async ({ page }) => {
     await P.openCards(page);
+    // the wide fallback font (as on CI, or a printer with no web font) makes the tallest signs
+    await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif!important}' });
     await page.getByRole('button', { name: 'Room signs' }).click();
     await expect(page.locator('.rcard')).toHaveCount(P.SIGNS);
     await expect(page.locator('.rcard').first().locator('.sz')).toHaveCount(3);
     await expect(page.locator('.rcard').first().locator('[data-k="jobs"] li')).toHaveCount(3);
+    await page.setViewportSize(P.PAPER.portrait);
+    await page.emulateMedia({ media: 'print' });
+    const signs = await page.evaluate(() => Array.from(document.querySelectorAll('.rcard')).map((c) => {
+      const b = c.getBoundingClientRect(), q = c.querySelector('.code svg').getBoundingClientRect();
+      return { out: Array.from(c.querySelectorAll('b,.limits,.code svg,.lst,.tag')).filter((e) => e.getBoundingClientRect().bottom > b.bottom + 1).length, qr: Math.min(q.width, q.height) };
+    }));
+    await page.emulateMedia({ media: 'screen' });
+    signs.forEach((x, i) => {
+      expect(x.out, 'sign ' + i + ': nothing past its edge').toBe(0);
+      expect(x.qr, 'sign ' + i + ': QR at least 50 mm').toBeGreaterThanOrEqual(Math.round(50 * P.MM));
+    });
     const pdf = await P.printPdf(page, 'cdhub-room-signs');
     expect(pdf.count, P.SIGNS + ' signs with limits and jobs, 4 a sheet (one row a page wasted two-thirds of each sheet)').toBe(Math.ceil(P.SIGNS / 4));
     expect(pdf.boxes.every((b) => P.isA4(b))).toBe(true);
