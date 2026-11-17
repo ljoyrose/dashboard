@@ -18,7 +18,8 @@ async function setUp(page, guard, today) {
   const sent = [];
   await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
     const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'lnk-new-' + sent.length } }) });
+    const id = b.action === 'file_add' ? 'fil-new' : 'lnk-new-' + sent.length;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id, drive_file_id: b.action === 'file_add' ? 'DRIVEeditedNew9' : undefined } }) });
   });
   const w = guard.world;
   put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status,photo', [
@@ -35,7 +36,7 @@ async function setUp(page, guard, today) {
     'm1,t,subjects,sub-g1,files,fil-1,main,,,2026-06-01,,dog card,owner,2026-06-01T11:00:00Z,']));
   put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date', [
     'k1,t,link_kind.gallery,Photos,2026-01-01,Pretend,,,,', 'k2,t,link_kind.main,Main photo,2026-01-01,Pretend,,,,']));
-  for (const id of ['DRIVEmainPhoto01', 'DRIVEbadPhoto002', 'DRIVEnewPhoto003']) { w.file(id, id + '.png', '', { mimeType: 'image/png' }); w.byId(id).thumbnailLink = 'https://example.com/pretend-' + id + '.png'; }
+  for (const id of ['DRIVEmainPhoto01', 'DRIVEbadPhoto002', 'DRIVEnewPhoto003', 'DRIVEeditedNew9']) { w.file(id, id + '.png', '', { mimeType: 'image/png' }); w.byId(id).thumbnailLink = 'https://example.com/pretend-' + id + '.png'; }
   await HUBS.cdhub.open(page, guard);
   await page.evaluate(() => go('dogs'));
   const gal = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
@@ -81,4 +82,51 @@ test('Make main sets another photo as the card photo; the main photo has no Make
   expect(sent[0]).toMatchObject({ action: 'link_add', fields: { role: 'main', to_id: 'fil-2', from_id: 'sub-g1', from_date: today } });
   await expect(page.locator('.dc[data-dog="sub-g1"] img.dogphoto')).toHaveAttribute('data-photo-id', 'DRIVEbadPhoto002');
   await expect(page.locator('.dc[data-dog="sub-g1"] .gi[data-file="fil-2"] [data-k="main"]')).toHaveText('Main');
+});
+
+// ✎ Crop or adjust (Lisa 17 Nov 2026): the saved picture opens in the same crop tool; the edited picture is saved as a
+// new file and takes the old one's place; the original is kept (its link ends, so it is in Ended).
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8z8DAwMDAxMDAwMAAACYABTxrpVkAAAAASUVORK5CYII=';
+async function driveBytes(page) {
+  await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/DRIVE[A-Za-z0-9]+\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PNG, 'base64') }));
+}
+
+test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old photo\'s place, the original kept', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent, gal } = await setUp(page, guard, today);
+  await driveBytes(page);
+  await expect(gal.locator('.gi[data-file="fil-2"] .gph .gx')).toHaveAttribute('aria-label', 'Remove this photo from the gallery');
+  await expect(gal.locator('.gi[data-file="fil-2"] .gph .ged')).toBeVisible();
+  await gal.locator('.gi[data-file="fil-2"] .ged').click();
+  await expect(page.getByRole('dialog', { name: 'Crop and edit the photo' })).toBeVisible();
+  await page.locator('[data-crop-rotate]').click();
+  await page.locator('[data-crop-use]').click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent[0]).toMatchObject({ action: 'file_add', fields: { kind: 'photo', mime: 'image/jpeg', taken_on: '2025-01-01' } });
+  expect(sent[0].fields.data_base64.length).toBeGreaterThan(50);
+  expect(sent[1]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Replaced by edited copy' } });
+  expect(sent[2]).toMatchObject({ action: 'link_add', fields: { role: 'gallery', to_id: 'fil-new', from_id: 'sub-g1', from_date: today } });
+  const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
+  await expect(g2.locator('[data-gal-msg]')).toHaveText('✓ Edited copy saved');
+  await expect(g2.locator('> summary')).toHaveText('Photos (3)');
+  await expect(g2.locator('.gi[data-file="fil-new"]')).toHaveCount(1);
+  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
+});
+
+test('card: ✎ Edit on the main photo saves an edited copy that becomes the main photo; Cancel saves nothing', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent } = await setUp(page, guard, today);
+  await driveBytes(page);
+  const card = page.locator('.dc[data-dog="sub-g1"]');
+  await card.locator('[data-photo-edit]').click();
+  await page.locator('[data-crop-cancel]').click();
+  await expect(page.getByRole('dialog', { name: 'Crop and edit the photo' })).toHaveCount(0);
+  expect(sent).toHaveLength(0);
+  await card.locator('[data-photo-edit]').click();
+  await page.locator('[data-crop-use]').click();
+  await expect.poll(() => sent.length).toBe(4);
+  expect(sent.map((b) => b.action)).toEqual(['file_add', 'link_end', 'link_add', 'link_add']);   // fil-1 is in the gallery and is main
+  expect(sent[3].fields).toMatchObject({ role: 'main', to_id: 'fil-new' });
+  await expect(page.locator('.dc[data-dog="sub-g1"] img.dogphoto')).toHaveAttribute('data-photo-id', 'DRIVEeditedNew9');
+  await expect(page.locator('.dc[data-dog="sub-g1"] [data-photo-msg]')).toHaveText('✓ Edited copy saved');
 });

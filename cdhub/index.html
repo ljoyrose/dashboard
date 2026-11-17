@@ -337,6 +337,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
  .ph .ti{width:56px;height:56px}
  .dogphoto-btns{flex-direction:row}
  .dogphoto-btn{flex:1 1 0;width:auto}
+ .dogphoto-btn[data-photo-edit]{flex:0 0 auto;padding:0 12px}
 }
 @media(min-width:601px){.ph{width:160px;height:160px}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
@@ -351,6 +352,14 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gph{display:block;width:88px;height:88px;border-radius:8px;overflow:hidden;background:var(--line)}
 .gph img{width:100%;height:100%;object-fit:cover;display:block}
 .gph img.off{visibility:hidden}
+/* × remove and ✎ edit on the photo itself (Lisa 17 Nov 2026: "still not got a x to remove a bad image") */
+.gph{position:relative}
+.gx,.ged{all:unset;box-sizing:border-box;position:absolute;top:4px;width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;
+ background:rgba(255,255,255,.92);color:#222;border:1px solid var(--line);font-size:18px;line-height:1;cursor:pointer}
+.gx{right:4px}.ged{left:4px;font-size:15px}
+.gx:focus-visible,.ged:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
+.gi .gtools .cb{font-size:var(--fs-small)}
 .gal-ended{margin-top:8px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
@@ -2528,8 +2537,14 @@ function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO
 function galleryTools(f,main,ended){
  if(!f.link_id) return '';
  if(ended) return ' <button type="button" class="cb" data-gal-back="'+esc(f.id)+'">Put back</button>';
- return ' <span class="gtools">'+(main||f.kind!=='photo'?'':'<button type="button" class="cb" data-gal-main="'+esc(f.id)+'">Make main</button> ')
-  +'<button type="button" class="cb" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this from the gallery">Remove</button></span>';
+ if(f.kind==='photo') return main?'':' <span class="gtools"><button type="button" class="cb" data-gal-main="'+esc(f.id)+'">Make main</button></span>';
+ return ' <span class="gtools"><button type="button" class="cb" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this from the gallery">\u00d7 Remove</button></span>';
+}
+/* the × and ✎ that sit on a gallery photo (not in the Ended list) */
+function galleryPhotoMarks(f,ended){
+ if(ended||!f.link_id) return '';
+ return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
+  +'<button type="button" class="gx" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this photo from the gallery" title="Remove">\u00d7</button>';
 }
 function galleryItem(f,mainId,dates,ended){
  var when=dmyShort(String(f.taken_on||f.set_on||f.created_at||'').slice(0,10)), main=mainId&&f.id===mainId;
@@ -2538,7 +2553,7 @@ function galleryItem(f,mainId,dates,ended){
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer"></span>'+cap+'</li>';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryHtml(d,ph){
@@ -2575,6 +2590,59 @@ document.addEventListener('click',async function(ev){
  var open=g&&g.open; drawDogs();
  var again=document.querySelector('details.gal[data-dog="'+dog+'"]');
  if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+});
+/* ✎ Crop or adjust a photo already saved (Lisa 17 Nov 2026: "a crop / adjust tool anywhere there is a photo, starting
+   with dog photos"). The same crop tool as Take/Upload photo opens on the saved picture (read from Drive with this
+   sign-in). The edited picture is saved as a NEW file (file_add); the original is never changed or deleted. In the
+   gallery the old photo's link ends (reason "Replaced by edited copy", so it is in Ended) and the copy takes its place;
+   if the photo was the main one, or this is the card's Edit photo, the copy becomes the main photo (link_add main). */
+var GAL_EDITED='Replaced by edited copy';
+async function photoEdit(dog,fileId,msg){
+ var say=function(t){ if(msg) msg.textContent=t||''; };
+ var ph=dogPhotos(CD._byId[dog]||{id:dog}), files=T['BLD-files.csv']||(T['BLD-files.csv']=[]), links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
+ var f=fileId?files.filter(function(x){ return x.id===fileId; })[0]:ph.main, d=CD._byId[dog]||{};
+ var drive=f?dogPhotoId(f.drive_file_id):dogPhotoId(d.photo), day=todayLondon();
+ if(!drive||!TOKEN){ say('This photo cannot be opened here. Sign in again and try.'); return; }
+ say('Opening the photo\u2026');
+ var img;
+ try{
+  var res=await DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(drive)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}});
+  var blob=res.ok?await res.blob():null;
+  if(!blob||!/^image\//.test(blob.type||'')) throw new Error('not an image');
+  var url=URL.createObjectURL(blob); img=new Image();
+  await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
+ }catch(e){ say('The photo could not be opened for editing.'); return; }
+ say('');
+ var pic=await photoCrop(img,'');
+ if(!pic) return;   /* Cancel: nothing is saved */
+ if(pic.error){ say(pic.error); return; }
+ say('Saving the edited copy\u2026');
+ var j=await sinkAct('file_add',{kind:'photo',mime:pic.mime,data_base64:pic.b64,name:'edited-photo.jpg',taken_on:(f&&String(f.taken_on||'').slice(0,10))||day,source:'Edited copy'+(f?' of '+f.id:'')});
+ if(!(j.ok&&j.result&&j.result.id)){ say('Not saved: '+sinkMsg(j)); return; }
+ var nid=j.result.id;
+ if(!files.some(function(x){ return x.id===nid; })) files.push({id:nid,kind:'photo',drive_file_id:j.result.drive_file_id||'',mime:pic.mime,name:'edited-photo.jpg',taken_on:(f&&f.taken_on)||day,set_on:day,created_at:new Date().toISOString()});
+ var add=async function(role){ var k=await sinkAct('link_add',{from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:nid,from_date:day,source:'CD Hub, Edited copy'});
+  if(!(k.ok&&k.result&&k.result.status==='saved')) throw new Error(sinkMsg(k));
+  if(role==='main') links.forEach(function(l){ if(l.from_table==='subjects'&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
+  links.push({id:k.result.id||'',from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:nid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); };
+ try{
+  var gl=f?links.filter(function(l){ return l.from_table==='subjects'&&l.from_id===dog&&l.role==='gallery'&&l.to_id===f.id&&!l.to_date; })[0]:null;
+  if(gl){ var y=dayMinus(day,1), to=String(gl.from_date||'').slice(0,10)<=y?y:day;
+   var e=await sinkAct('link_end',{id:gl.id,to_date:to,reason:GAL_EDITED});
+   if(!(e.ok&&e.result&&e.result.status==='saved')) throw new Error(sinkMsg(e));
+   gl.to_date=to; gl.end_reason=GAL_EDITED; await add('gallery'); }
+  if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
+ }catch(err){ say('The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.')); drawDogs(); return; }
+ drawDogs();
+ var again=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(again&&fileId) again.open=true;
+ var card=document.querySelector('.dc[data-dog="'+dog+'"]'), m=(again&&fileId)?again.querySelector('[data-gal-msg]'):card&&card.querySelector('[data-photo-msg]');
+ if(m) m.textContent='\u2713 Edited copy saved';
+}
+document.addEventListener('click',function(ev){
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-edit],[data-photo-edit]'):null; if(!b) return;
+ ev.preventDefault();
+ if(b.hasAttribute('data-photo-edit')){ var card=b.closest('.dc'); photoEdit(b.getAttribute('data-photo-edit'),'',card&&card.querySelector('[data-photo-msg]')); return; }
+ var g=b.closest('details.gal'); photoEdit(g?g.getAttribute('data-dog'):'',b.getAttribute('data-gal-edit'),g&&g.querySelector('[data-gal-msg]'));
 });
 /* Dates shown / hidden: saves this person's own row (photos.show_dates.owner) from today. One change a day: the settings
    list keeps one row per key per day, so a second change today is refused with a plain message.
@@ -2932,6 +3000,7 @@ function drawDogs(){
     +'<label class="btn dogphoto-btn" data-photo-upload>Upload photo'
       +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
     +'</label>'
+    +(pic?'<button type="button" class="btn dogphoto-btn" data-photo-edit="'+esc(d.id)+'" aria-label="Crop or adjust the photo of '+esc(d.name||'this dog')+'">\u270e Edit</button>':'')
     +'</div>'
     +'</div>'
     +'<div class="dc-info">'
