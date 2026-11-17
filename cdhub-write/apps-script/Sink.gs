@@ -235,7 +235,9 @@ function sinkHandle_(req) {
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
+  var tAuth = Date.now();
   var who = authSaver_(req);
+  console.log('save timing: sign-in check ' + (Date.now() - tAuth) + ' ms');
   if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
 
   var asked = String(req.table || req.file || '');
@@ -356,13 +358,17 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   // only the columns the repeat and id checks look at, so the checks still cover the whole table. A correction needs
   // the whole row it points at, so it reads everything as before.
   var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
+  var tRead = Date.now();
   var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec)) : store_read_(spec.file, true);
+  console.log('save timing: read ' + spec.key + (fast ? ' (fast)' : '') + ' ' + (Date.now() - tRead) + ' ms');
   if (!sameHeader_(target.header, spec.columns)) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var all = target.tail ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read)
+  var tLook = Date.now();
   var lookups = store_lookups_(spec, tenant);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
+  console.log('save timing: lookups and rules ' + (Date.now() - tLook) + ' ms');
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -430,9 +436,11 @@ function sinkProcess_(spec, req, who, now, nowMs) {
       try { store_appendMany_(vSpec.file, vSpec.columns, vRows, form.read); }
       catch (e) { logWriteFailure_(e, vSpec, rowId, who.who, now); throw e; }
     }
+    var tWrite = Date.now();
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
+    console.log('save timing: write ' + spec.key + ' ' + (Date.now() - tWrite) + ' ms');
     var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
     if (form) out.answers = form.answers.length;
     return out;

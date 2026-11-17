@@ -46,3 +46,16 @@ test('two files with one name are still refused when the folder is searched', ()
   env.drive.push(Object.assign({}, f, { id: f.id + '-2' }));
   assert.throws(() => env.ctx.store_findOne_(T), (e) => e.code === 'DUPLICATE_TITLE');
 });
+
+test('the waiting-room-moves pass runs at most once a minute from saves', () => {
+  const { req } = require('./harness');
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  const post = (r) => JSON.parse(env.ctx.doPost({ postData: { contents: JSON.stringify(r) } }).getContent());
+  const a = post(req(env, {}));
+  assert.ok(a.ok || a.code, 'first save answered');
+  assert.equal(env.cache['moves:ran'], '1', 'the once-a-minute mark is set by the first save');
+  const pendBefore = env.text ? env.text('BLD-_pending.csv') : '';
+  const b = post(req(env, {}));
+  assert.ok(b.ok || b.code, 'second save answered');
+  assert.equal(env.text ? env.text('BLD-_pending.csv') : '', pendBefore, 'a save inside the minute leaves the queue alone');
+});
