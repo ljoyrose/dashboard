@@ -19,7 +19,7 @@ test.describe('CD Hub dog photo: crop, then shrink', () => {
     await expect(dlg.locator('h3')).toHaveText('Crop and edit the photo');
     await expect(dlg.locator('[data-crop-rotate]')).toHaveText('Rotate 90\u00b0');
     await expect(dlg.locator('[data-crop-cancel]')).toHaveText('Cancel');
-    await expect(dlg.locator('[data-crop-use]')).toHaveText('Save photo');
+    await expect(dlg.locator('[data-crop-use]')).toHaveText('Save');
     // square crop box
     const box = await dlg.locator('[data-crop-view]').boundingBox();
     expect(Math.abs(box.width - box.height)).toBeLessThan(2);
