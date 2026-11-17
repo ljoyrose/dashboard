@@ -124,6 +124,31 @@
         });
     }
 
+    // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
+    // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
+    // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
+    var saveTurn = Promise.resolve();
+    function oneAtATime(send) {
+      var p = saveTurn.then(send, send);
+      saveTurn = p.then(function () {}, function () {});
+      return p;
+    }
+
+    // Two people saving at once (Lisa 16 Nov 2026): the script lets one save write at a time and answers BUSY to a save
+    // that waited too long. Nothing was written, so the same save (same request id) is sent again after a short,
+    // random pause, up to BUSY_TRIES times, before the person is told.
+    var BUSY_TRIES = 3;
+    var BUSY_PAUSE_MS = opts && typeof opts.busyPauseMs === 'number' ? opts.busyPauseMs : null;   // tests only
+    function busyRetry(sendOnce, tries) {
+      return sendOnce().then(function (j) {
+        if (j && j.ok === false && j.code === 'BUSY' && (tries || 0) < BUSY_TRIES) {
+          return new Promise(function (r) { setTimeout(r, BUSY_PAUSE_MS != null ? BUSY_PAUSE_MS : 1500 + Math.floor(Math.random() * 2500)); })
+            .then(function () { return busyRetry(sendOnce, (tries || 0) + 1); });
+        }
+        return j;
+      });
+    }
+
     function withTimeout(p) {
       return new Promise(function (resolve, reject) {
         var t = setTimeout(function () { reject(new Error('timeout')); }, TIMEOUT_MS);
@@ -248,11 +273,11 @@
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
-      return withTimeout(doFetch(scriptUrl, {
+      return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
         body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
@@ -280,9 +305,9 @@
       if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       var body = { v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} };
-      return withTimeout(doFetch(scriptUrl, {
+      return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {

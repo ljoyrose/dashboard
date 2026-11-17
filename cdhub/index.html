@@ -462,7 +462,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
 /* Chip row (Lisa 15 Nov 2026): sticky under the top bar, scrolls sideways on a phone. The house chip, count and hover;
    selected = the 3px section-colour side line (.house-lbar) and a tick, no fill (Lisa 15 Nov 2026). */
-.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;flex-wrap:wrap;gap:8px;   /* every view in sight, no sideways scroll (Lisa 16 Nov 2026) */
  margin:0;padding:10px 0;background:var(--bg);border-bottom:1px solid var(--line)}
 .hchips::-webkit-scrollbar{display:none}
 .hchips [data-slot="1"]{--sc:var(--ljr-1-edge)} .hchips [data-slot="2"]{--sc:var(--ljr-2)} .hchips [data-slot="3"]{--sc:var(--ljr-3)}
@@ -1142,7 +1142,7 @@ function build(){
   CD.litters=T['BLD-litter.csv']||[];
   CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
-  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // Animana map archived (Lisa, 12 Nov 2026): status comes from BLD-subject_status only
+  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only (Lisa, 12 Nov 2026)
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
   CD._built=Date.now(); CD._needs=null;
@@ -2729,11 +2729,13 @@ async function photoSave(inp,getSrc,was){
   if(!pic){ photoBusy(inp,false); return; }   /* Cancel: nothing is sent */
   if(pic.error){ photoBusy(inp,false); photoMsg(inp,pic.error); return; }
   photoMsg(inp,'Saving the photo…');
-  var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-   body:JSON.stringify({v:1,request_id:sinkRid(),code:g.code,action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}})});
+  var pb={v:1,request_id:sinkRid(),code:g.code||'',action:'dog_photo',fields:{subject_id:id,mime:pic.mime,image_base64:pic.b64}};
+  if(g.google) pb.google_token=g.google;
+  var res=await fetch(g.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(pb)});
   var j;
   try{ j=await res.json(); }catch(e){ j={ok:false,message:'The save script did not answer. Nothing was saved.'}; }
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok) keepStaffCode(g.code);
+  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; photoBusy(inp,false); photoMsg(inp,'This Google account is not an owner. Add the photo again and enter your staff code.'); return; }
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok&&g.code) keepStaffCode(g.code);
   if(!j.ok||!j.result||!j.result.file_id){ photoBusy(inp,false); photoMsg(inp,j.message||'The photo was not saved.'); return; }
   var d=CD._byId[id]; if(d) d.photo=j.result.file_id;
   drawDogs();
@@ -3488,8 +3490,10 @@ function walkList(){
    "whole litter with the dam" choice. A dog already in this cabin is greyed (it is here); elsewhere shows that cabin's name. */
 function roundPickOptions(dogs,sel,placed,aid){
  var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
- function opt(d){ return '<option value="'+esc(d.id)+'"'+(sel.indexOf(d.id)>=0?' disabled':'')+'>'+esc(d.name||d.id)
-   +(d.colour?' \u00b7 '+esc(colourLabel(d)):'')+(sel.indexOf(d.id)>=0?' \u2014 here':(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(code[placed[d.id]]||placed[d.id]):''))+'</option>'; }
+ var adding=(CD._adding&&CD._adding[aid])||[];
+ function opt(d){ var busy=adding.indexOf(d.id)>=0&&sel.indexOf(d.id)<0;
+   return '<option value="'+esc(d.id)+'"'+(sel.indexOf(d.id)>=0||busy?' disabled':'')+'>'+esc(d.name||d.id)
+   +(d.colour?' \u00b7 '+esc(colourLabel(d)):'')+(sel.indexOf(d.id)>=0?' \u2014 here':busy?' \u2014 adding\u2026':(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(code[placed[d.id]]||placed[d.id]):''))+'</option>'; }
  var pups=CD.dogs.filter(function(d){ var c=statusOf(d).code; return d.birthLitter&&c!=='CL'&&c!=='DE'&&!d.off&&months(d.dob)!==null&&months(d.dob)<6; });
  var adults=dogs.filter(function(d){ return pups.indexOf(d)<0; }), by={};
  pups.forEach(function(d){ (by[d.birthLitter]=by[d.birthLitter]||[]).push(d); });
@@ -3722,7 +3726,7 @@ function keepSaveUrl(u){ if(SINK_RE.test(u)&&!sinkRaw(SINK_OFF_KEY)) sinkSet(SAV
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 /* ONE source for the code (live test 13 Nov 2026: the panel said "off" although the kept code saved fine). The panel, the
    saves and the photo all use staffCodeNow(). The staff page's copy (bld.*) is not reused after "Switch off here". */
-function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && !!staffCodeNow(); }
+function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && (!!staffCodeNow() || !!sinkGoogle()); }   /* a signed-in owner needs no code (16 Nov 2026) */
 function codeKept(){ var off=!!sinkRaw(SINK_OFF_KEY);
  return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
@@ -3773,10 +3777,17 @@ function askStaffCode(){
  });
  return STAFF_ASK;
 }
+/* Owners save with their Google sign-in (Lisa 16 Nov 2026, option A): while the hub is signed in, the save carries the
+   Google sign-in and no code is asked. The save script checks it with Google and against its owner list. If it answers
+   that this account is not an owner (or that route is off), this device goes back to asking for the code. */
+var SINK_GOOGLE_NO=false;
+function sinkGoogle(){ return !SINK_GOOGLE_NO&&!sinkRaw(SINK_OFF_KEY)&&TOKEN&&Date.now()<TOKEN_EXP?TOKEN:''; }   /* Switch off here wins */
 async function sinkGate(){
  if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
  var url=sinkGet(SINK_URL_KEY);
  if(!SINK_RE.test(url)) return {ok:false,code:'UNREACHABLE',message:'Could not reach the save script. Nothing is known to be saved.'};
+ var gt=sinkGoogle();
+ if(gt) return {ok:true,url:url,code:staffCodeNow(),google:gt};
  var code=await askStaffCode();
  if(!code) return {ok:false,code:'NO_CODE',message:'Enter your staff code. Nothing was saved.'};
  return {ok:true,url:url,code:code};
@@ -3789,17 +3800,29 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
 /* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved): no answer in 40 s = NOT saved, said plainly. */
-function sinkFetch(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
+/* Saves go one at a time from this device (Lisa 16 Nov 2026: the round sent every room at once and all but the first
+   gave up with "Someone else is saving right now"). The 40 s limit starts when a save is sent, not while it waits. */
+var sinkTurn=Promise.resolve();
+function sinkFetch(body,url){ var p=sinkTurn.then(function(){ return sinkFetchBusy(body,url,0); }); sinkTurn=p.then(function(){},function(){}); return p; }
+/* Two people saving at once (Lisa 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
+   is sent again after a short random pause, up to 3 times, before the person is told. */
+function sinkFetchBusy(body,url,n){ return sinkFetchNow(body,url).then(function(j){
+ if(j&&j.ok===false&&j.code==='BUSY'&&n<3) return new Promise(function(r){ setTimeout(r,1500+Math.floor(Math.random()*2500)); }).then(function(){ return sinkFetchBusy(body,url,n+1); });
+ return j; }); }
+function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
  return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
    function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 40 seconds. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
+function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOGLE_NOT_OWNER'||j.code==='NO_CODE')); }
 async function sinkSend(body){
  var g=await sinkGate();
  if(!g.ok) return g;
- body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code;
+ body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code||'';
+ if(g.google) body.google_token=g.google; else delete body.google_token;
  try{
   var j=await sinkFetch(body,g.url);
-  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')) noteBadCode(g.code); else if(j&&j.ok){ keepStaffCode(g.code); keepSaveUrl(g.url); }
+  if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; return sinkSend(body); }   /* not an owner account: ask the code instead */
+  if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok){ if(g.code) keepStaffCode(g.code); keepSaveUrl(g.url); }
   return j;
  }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
@@ -3922,6 +3945,11 @@ async function roundSave(areaId,patch,msgEl,sel){
  if(msgEl) showSave(msgEl,sinkMsg(r,'move'));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){ var d=CD._byId[patch.add]; if(d) d.area_id=areaId;
   var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
+  /* The room's dog list is read from the occupancy rows: add the saved move here too, so the dog shows in its new room
+     straight away and the next dog can be added (Lisa 16 Nov 2026). A queued move waits for approval and is not added. */
+  if(r.result.status==='saved'){ var occ=T['BLD-occupancy.csv']||(T['BLD-occupancy.csv']=[]);
+   var prev=window.BLDOccupancy&&BLDOccupancy.latestRow?BLDOccupancy.latestRow(occ,patch.add):null;
+   occ.push({id:r.result.id||'',subject_id:patch.add,area_id:areaId,moved_in:date,moved_out:'',classification:(prev&&prev.classification)||'',off_site_kind:''}); }
   cur.subjects=(cur.subjects||CD.dogs.filter(function(x){ return x.area_id===areaId&&x.id!==patch.add; }).map(function(x){ return x.id; })).concat([patch.add]);
   Object.keys(ROUND).forEach(function(kk){ var o=ROUND[kk]; if(o!==cur&&o.date===date&&o.subjects) o.subjects=o.subjects.filter(function(x){ return x!==patch.add; }); });
   CD._roundMsg={area:areaId,text:sinkMsg(r,'move')};
@@ -4731,14 +4759,24 @@ function go(id,push){
    el.addEventListener('change',function(){
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
     roundSave(el.dataset.area,{access:el.value},msg,el); }); });
+  /* Add several dogs in a row (Lisa 16 Nov 2026: an empty room could not take a second dog while the first was saving).
+     The list goes back to "add a dog..." at once; a dog being added shows "adding..." and cannot be picked twice. */
   Array.prototype.forEach.call(document.querySelectorAll('.radd'),function(el){
    el.addEventListener('change',function(){
-    if(!el.value) return;
-    var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
-    if(/^litter:/.test(el.value)){ roundAddLitter(el.dataset.area,el.value.slice(7),msg); return; }
-    roundSave(el.dataset.area,{add:el.value},msg); }); });
+    var v=el.value, aid=el.dataset.area; if(!v) return;
+    el.value='';
+    var msg=document.querySelector('.rsave[data-area="'+aid+'"]');
+    if(/^litter:/.test(v)){ roundAddLitter(aid,v.slice(7),msg); return; }
+    var P=CD._adding||(CD._adding={}), list=P[aid]||(P[aid]=[]);
+    if(list.indexOf(v)>=0) return;
+    list.push(v);
+    var opt=null, was='';
+    Array.prototype.forEach.call(el.options,function(o){ if(o.value===v){ opt=o; was=o.textContent; o.disabled=true; o.textContent=was.replace(/ \u2014 .*$/,'')+' \u2014 adding\u2026'; } });
+    /* finished: forget it; if the page was not redrawn (the save failed), the dog can be picked again */
+    var done=function(){ var l=(CD._adding||{})[aid]||[], i=l.indexOf(v); if(i>=0) l.splice(i,1); if(opt&&opt.isConnected){ opt.disabled=false; opt.textContent=was; } };
+    roundSave(aid,{add:v},msg).then(done,done); }); });
   Array.prototype.forEach.call(document.querySelectorAll('.rempty'),function(el){ el.addEventListener('click',function(){
-   if(!window.confirm('Mark this cabin empty for the '+(el.dataset.slot==='am'?'morning':'afternoon')+'? No dogs, so no reading is needed.')) return;
+   /* One tap saves (Lisa 16 Nov 2026: no "Mark this cabin empty?" second click). */
    roomEmptySave(el.dataset.area,el.dataset.slot,el.parentNode); }); });
   var sOn=document.getElementById('sinkon'), sOff=document.getElementById('sinkoff');
   if(sOn) sOn.addEventListener('click',function(){

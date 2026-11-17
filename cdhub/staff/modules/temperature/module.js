@@ -32,6 +32,20 @@
     });
     return readerP;
   }
+  // Keep-photo setting (Lisa 16 Nov 2026): evidence.js is loaded only when the owner's job.temps_keep_photo row exists.
+  var evidenceP = null;
+  function loadEvidence() {
+    if (window.BLDTempEvidence) return Promise.resolve(window.BLDTempEvidence);
+    if (!evidenceP) evidenceP = new Promise(function (ok) {
+      var s = document.createElement('script'); s.src = BASE + 'evidence.js';
+      s.onload = function () { ok(window.BLDTempEvidence || null); }; s.onerror = function () { evidenceP = null; ok(null); };
+      document.head.appendChild(s);
+    });
+    return evidenceP;
+  }
+  function keepRule(rules) {
+    return (rules || []).some(function (r) { return r && String(r.rule_key || '').trim() === 'job.temps_keep_photo'; });
+  }
 
   /* ------------------------------------------------------------------ small helpers */
   function h(tag, attrs, kids) {
@@ -269,7 +283,7 @@
    * "What was done" is asked. Staff only (area_reading), never guests.
    */
   function entry(host, o) {
-    var stopCam = null, cam = null;   // cam = {max, min} as the camera read them
+    var stopCam = null, cam = null, stopEv = null;   // cam = {max, min} as the camera read them; stopEv = the keep-photo camera
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
     host.textContent = '';
     host.appendChild(h('h2', { text: o.area.label }));
@@ -311,7 +325,7 @@
     [maxIn, minIn].forEach(function (i) { i.addEventListener('input', check); });
     var requestId = null, anyway = null, none = false;   // none: Room empty with no temperatures (set by send)
 
-    function stopNow() { if (stopCam) { stopCam(); stopCam = null; } }
+    function stopNow() { if (stopCam) { stopCam(); stopCam = null; } if (stopEv) { stopEv(); stopEv = null; } }
     function startCam() {
       stopNow(); setMsg(camMsg, 'Starting camera...');
       loadReader().then(function (R) {
@@ -380,10 +394,20 @@
         form.hidden = true; camBox.textContent = ''; camMsg.textContent = '';
         // Lisa 12 Nov 2026: the item shows its tick as soon as the save reply is OK, even if CLR pressed / Done is never tapped
         if (o.onSaved) o.onSaved(f);
+        var clrHint = past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' });
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
-          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') }),
-          past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' })
+          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') }), clrHint
         ]));
+        // Keep a photo with the reading only while the owner's dated setting is on (evidence.js). A queued reading
+        // has no record id yet, so no photo is offered for it.
+        var evBox = h('div'); host.appendChild(evBox);
+        if (table === 'area_reading' && !none && r.id && r.status !== 'queued' && keepRule(o.rules)) {
+          loadEvidence().then(function (E) {
+            if (!E || !E.on(o.rules, slot.date)) return;
+            if (clrHint) clrHint.textContent = 'Take the photo first, then press CLR on the thermometer.';
+            stopEv = E.offer(evBox, { save: o.save, readingId: r.id, day: slot.date, areaLabel: o.area.label, past: past });
+          });
+        }
         host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(f); } }));
       });
     }
@@ -423,7 +447,7 @@
         var k = itemKey(a);
         cards.appendChild(h('button', { class: 'card go' + (done[k] ? ' tg-done' : ''), type: 'button', onclick: function () {
           var box = h('div'); list.textContent = ''; list.appendChild(box);
-          o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot,
+          o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot, rules: o.rules,
             dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length,
             limit: limitFor(a.id, o.bands, (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }), slot.date),
             onSaved: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); },
@@ -451,7 +475,7 @@
       host.textContent = '';
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
-      stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
+      stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest, rules: o.guest ? [] : o.rules,
         dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) { var g = {}; Object.keys(f || {}).forEach(function (k) { if (k !== 'confirm_unusual') g[k] = f[k]; }); g._saved_at = new Date().toISOString(); (o.done = o.done || {})[itemKey(a)] = g; } }, onDone: function () { list(); } });
     }
     /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
@@ -750,7 +774,7 @@
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
@@ -761,6 +785,7 @@
       var areas = d.raw && d.raw.area && d.raw.area.length ? areaRows(d.raw.area, req, slotNow().date)
         : d.areas.map(function (a) { return { id: a.id, code: a.label, label: a.label, sort: a.sort }; });
       var bands = v[1].ok ? v[1].rows : [];
+      var rules = v[5] && v[5].ok ? v[5].rows : [];   // owner rule rows staff may read (job.*): job.temps_keep_photo
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
@@ -770,7 +795,7 @@
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back();
-            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
+            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), rules: rules, setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
           mayReport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }, [h0('span', { class: 'ic', html: ICON.page }), 'Report']) : null,
           mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null
         ].filter(Boolean));
@@ -781,7 +806,7 @@
         host.textContent = ''; sub = h('div'); host.appendChild(sub);
         if (!v[1].ok) sub.appendChild(say('Room limits are not loaded, so no limit is checked: ' + (v[1].message || ''), 'warn'));
         var inner = h('div'); sub.appendChild(inner);
-        stop = rooms(inner, { save: c.save, areas: round, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true });
+        stop = rooms(inner, { save: c.save, areas: round, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true, rules: rules });
       }
       start();
     });

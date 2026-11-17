@@ -87,6 +87,73 @@ function authStaff_(code) {
   return { who: entry.who, role: entry.role, id: String(entry.id || '') };
 }
 
+/* -----------------------------------------------------------------------------------------------
+ * OWNERS SAVE WITH THEIR GOOGLE SIGN-IN (Lisa 16 Nov 2026, option A). Staff keep codes.
+ * The CD Hub page sends the Google access token it already holds for reading Drive (google_token). This script asks
+ * Google two things about it:
+ *   1. tokeninfo: is it live, and was it issued to HUB_CLIENT_ID (the hub's own sign-in)? A token any other app
+ *      obtained is refused, so it cannot be replayed here.
+ *   2. Drive "about": whose account is it (email, display name)? The hub's Drive permission is enough; nothing
+ *      extra is asked of the person, and a personal Gmail works the same as a Workspace account.
+ * The email must be on ADMIN_EMAILS (the owner list, comma separated). Then the save is the OWNER's, recorded under
+ * the account's display name with the public id go-xxxxxx (a short hash of the email, never the email itself).
+ * Script Property HUB_CLIENT_ID missing = this route is OFF and codes work exactly as before.
+ * The token is never stored or logged; a hash of it is the cache key for at most 5 minutes.
+ * If a code is sent too, a Google sign-in that is not an owner falls back to the code.
+ * --------------------------------------------------------------------------------------------- */
+var GOOGLE_TOKEN_RE_ = /^[A-Za-z0-9._\-~+\/=]{20,4096}$/;
+
+function authOwnerList_() {
+  return prop_(BLD.PROP.ADMIN_EMAILS).split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(String);
+}
+
+/** {who, role:'OWNER', id, via:'google'} for an owner's live hub token; null when it is not one (or the route is off). */
+function authOwnerGoogle_(token) {
+  var clientId = prop_(BLD.PROP.HUB_CLIENT_ID);
+  if (!clientId || typeof token !== 'string' || !GOOGLE_TOKEN_RE_.test(token)) return null;
+  var cache = CacheService.getScriptCache();
+  var key = 'gtok:' + hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token, Utilities.Charset.UTF_8)).slice(0, 40);
+  var hit = cache.get(key);
+  if (hit) { var c = JSON.parse(hit); return c.ok ? c.who : null; }
+  var who = null, ttl = 300;
+  var info = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token), { muteHttpExceptions: true });
+  if (info.getResponseCode() === 200) {
+    var t = JSON.parse(info.getContentText() || '{}'), left = parseInt(t.expires_in, 10);
+    if ((t.aud === clientId || t.azp === clientId) && left > 0) {
+      ttl = Math.max(1, Math.min(300, left));
+      var about = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress%2CdisplayName)',
+        { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+      if (about.getResponseCode() === 200) {
+        var u = (JSON.parse(about.getContentText() || '{}').user) || {};
+        var email = String(u.emailAddress || '').trim().toLowerCase();
+        if (email && authOwnerList_().indexOf(email) >= 0) {
+          var hid = hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'owner:' + email, Utilities.Charset.UTF_8)).slice(0, 6);
+          who = { who: String(u.displayName || '').trim() || 'Owner', role: 'OWNER', id: 'go-' + hid, via: 'google' };
+        }
+      }
+    }
+  }
+  cache.put(key, JSON.stringify({ ok: !!who, who: who }), ttl);
+  return who;
+}
+
+/**
+ * Who is saving? An owner's Google sign-in (google_token) when it checks out, otherwise the staff code as before.
+ * @throws err_ GOOGLE_NOT_OWNER when only a Google sign-in was sent and it is not an owner's; otherwise authStaff_'s errors
+ */
+function authSaver_(req) {
+  req = req || {};
+  var tok = typeof req.google_token === 'string' ? req.google_token : '';
+  if (tok && prop_(BLD.PROP.HUB_CLIENT_ID)) {
+    var owner = null;
+    try { owner = authOwnerGoogle_(tok); }
+    catch (e) { if (!req.code) throw err_('GOOGLE_UNREACHABLE', 'Your Google sign-in could not be checked just now. Nothing was saved. Try again, or use your code.'); }
+    if (owner) return owner;
+    if (!req.code) throw err_('GOOGLE_NOT_OWNER', 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.');
+  }
+  return authStaff_(req.code);
+}
+
 /** A guest code with no readable end date counts as ended (the safe side). */
 function guestExpired_(entry) {
   var end = Date.parse(entry.expires_at || '');
