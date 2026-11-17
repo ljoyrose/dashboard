@@ -96,6 +96,12 @@
       var inner = n ? '<span class="pill ' + cls + '">' + n + '</span>' : '<span class="mut">0</span>';
       return '<td data-n="' + k + '">' + (href ? '<a href="' + e(href) + '" aria-label="' + n + ' ' + k + ', open ' + e(r.sop) + '">' + inner + '</a>' : inner) + '</td>';
     }
+    // Lisa 17 Nov 2026 (checks A): an owner's note covering a past period (how_recorded owner_note) is shown as written,
+    // with the day it was entered, so anyone reading sees it was recorded afterwards.
+    var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'owner_note' && l.note; });
+    var seenNote = {};
+    notes.forEach(function (l) { var k = l.note; if (seenNote[k]) return; seenNote[k] = 1;
+      h += '<p class="note" data-owner-note>Owner\u2019s note: ' + e(l.note) + (l.taken_at ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
     h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';

@@ -17,6 +17,7 @@
 <script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/occupancy.js"></script>
 <script src="staff/lib/area-link.js"></script>
+<script src="staff/lib/temp-judge.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
@@ -107,6 +108,9 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.allok{background:var(--ljr-5-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.d.warn{background:var(--ljr-3);box-shadow:none}.d.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.d.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .d.ocool{background:var(--ljr-6-tint);box-shadow:none}.d.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.d.owarm{background:var(--ljr-4-tint);box-shadow:none}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+/* Over the maximum = cooling action, not outside (Lisa 17 Nov 2026): a light warm tint, never the solid orange of a breach */
+.d.warmd{background:var(--ljr-4-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.sd.warmd{background:var(--ljr-4-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}
+.cool-act{color:var(--muted)}
 
 /* Strip view */
 .strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}
@@ -172,9 +176,12 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
   <h1><span class="dot" aria-hidden="true" style="background:var(--ljr-6)"></span>Temperatures</h1>
   <span class="house-sp" aria-hidden="true"></span>
   <span class="live" id="livepill">Live</span>
-  <button type="button" class="btn house-ib hidden" id="cdSignout" aria-label="Sign out" title="Sign out" onclick="signOut()">
-    <svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>
-  </button>
+  <!-- Lisa 17 Nov 2026: closing Temperatures must go back to CD Hub. This was a Sign out button that looked like close;
+       signing out is on CD Hub itself. -->
+  <a class="btn house-ib" id="cdClose" href="./index.html#/compliance" aria-label="Close Temperatures" title="Close" onclick="return closeTemps()">
+    <svg class="ti" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </a>
+  <span id="cdSignout" hidden></span>
 </div></header>
 
 <div class="wrap"><main id="main">
@@ -309,7 +316,8 @@ function youngestCalc(aid,day){
   });
   return young;
 }
-function bandOn(day,aid){
+/* The limit rows that apply to a room on a day (shared by bandOn and adultBandOn). */
+function bandRows(day,aid){
   day=isoDay(day)||String(day||'').slice(0,10);
   var on=BLDCapacity.inForce(BANDS,day);
   /* A limit whose from_date is later than this day (typed in after the reading) still colours it, unless a row already in force covers the same room and age. A puppy row in force must not leave July adult days with no band: those cells stay a pale empty colour. */
@@ -322,7 +330,11 @@ function bandOn(day,aid){
     if(!covered) on.push(b);
   });
   var own=aid?on.filter(function(b){ return b.area_id===aid; }):[];
-  var rows=own.length?own:on.filter(function(b){ return !b.area_id; });
+  return own.length?own:on.filter(function(b){ return !b.area_id; });
+}
+function bandOn(day,aid){
+  day=isoDay(day)||String(day||'').slice(0,10);
+  var rows=bandRows(day,aid);
   if(!rows.length) return null;
   var aged=rows.some(function(b){ return b.age_from!==null||b.age_to!==null; });
   var young=aged&&aid?youngestIn(aid,day):null;
@@ -334,20 +346,28 @@ function bandOn(day,aid){
   fits.sort(function(a,b){ return (b.age_from||0)-(a.age_from||0)||String(b.from_date).localeCompare(String(a.from_date)); });
   return fits[0]||null;
 }
+/* The open-ended (adult) row in force for a room on a day: the room itself is always judged on it (Temps A, 17 Nov 2026). */
+function adultBandOn(day,aid){
+  day=isoDay(day)||String(day||'').slice(0,10);
+  var rows=bandRows(day,aid).filter(function(b){ return b.age_to===null; });
+  rows.sort(function(a,b){ return String(b.from_date).localeCompare(String(a.from_date)); });
+  return rows[0]||null;
+}
 /* A saved value must be a plain number (OV11 15 Nov 2026): "25,3" or other text in the sheet is never read as 25; a reading
    with one side blank or not a number is "Check: not a number", counted with the problems, so text never hides from the counts. */
 function tempNum(v){ v=String(v==null?'':v).trim(); if(!v) return null; return /^-?\d+(\.\d+)?$/.test(v)?parseFloat(v):undefined; }
 function tempUnreadable(min,max){ var a=tempNum(min), b=tempNum(max); if(a===null&&b===null) return false; return a===undefined||b===undefined||a===null||b===null; }
 function tempSwapped(min,max){ var lo=tempNum(min), hi=tempNum(max); return typeof lo==='number'&&typeof hi==='number'&&hi<lo; }
-function tempCls(min,max,day,aid){
+function tempCls(min,max,day,aid,spot){
   var lo=parseFloat(min),hi=parseFloat(max), B=bandOn(day||TODAY_STR,aid);
   if(isNaN(lo)&&isNaN(hi)&&!tempUnreadable(min,max))return'';
   if(tempUnreadable(min,max))return'unread';
   if(tempSwapped(min,max))return'swap';   /* max lower than min: typed the wrong way round, checked before hot/cold */
   if(!B)return'unknown';
-  if(!isNaN(lo)&&lo<B.min)return'cold';
-  if(!isNaN(hi)&&hi>B.max)return'hot';
-  return'ok';
+  /* Temps A (Lisa 17 Nov 2026), staff/lib/temp-judge.js: the room on the adult row (over its max = cooling action, not
+     outside); puppies under four weeks: the bed spot on their own row; no bed spot = "not recorded", not outside. */
+  var k=window.BLDTempJudge?BLDTempJudge.judge({min:min,max:max,spot:spot},B,adultBandOn(day||TODAY_STR,aid),B.age_to!==null):((!isNaN(lo)&&lo<B.min)?'cold':(!isNaN(hi)&&hi>B.max)?'warm':'ok');
+  return k;
 }
 async function loadBand(){
   BANDS=[]; BAND=null;
@@ -393,7 +413,7 @@ async function loadAreaData(){
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         var u=unitFor(r.area_id,r.thermometer_id);
         if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
-        var v={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
+        var v={min:r.min_c,max:r.max_c,spot:r.spot_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes',from:r.linked_from?[r.linked_from]:[]};
         var was=AREA_DAYS[date][u][slot];
         /* A merged room: two old rooms' readings in one slot. Never averaged: the lowest MIN and highest MAX, so a breach stays visible. */
         /* A reading taken in the room itself wins over linked copies (same rule as Compliance, SOPS 12 Nov). */
@@ -459,6 +479,12 @@ function onError(){pill('sign-in failed','bad');showSignIn();}
 function onSilentFail(){}
 var auth=DashAuth.bind({clientId:CLIENT_ID,scope:SCOPE,onToken:onToken,onError:onError,onSilentFail:onSilentFail});
 function signIn(){auth.requestInteractive();}
+/* Close: back to the CD Hub page this was opened from (keeps its place), else CD Hub's Compliance. */
+function closeTemps(){
+  try{ var r=document.referrer?new URL(document.referrer):null;
+    if(r&&r.origin===location.origin&&/\/cdhub\/?(index\.html)?$/.test(r.pathname)&&history.length>1){ history.back(); return false; } }catch(e){}
+  return true;
+}
 function signOut(){
   var t=TOKEN;TOKEN=null;TOKEN_EXP=0;DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(t,function(){});
@@ -590,13 +616,13 @@ function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* Room empty (Lisa 11 Nov 2026) = no dog present, a flag on the slot's reading. With no reading the slot is covered
    ('empty', never missed). Outside the limit while empty is flagged with "Room empty" but never counted as outside
    ('eout'). */
-function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'; }
+function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'||k==='swap'||k==='warm'||k==='nospot'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max,day,unitArea(aid)), k=cls==='ok'?'in':cls==='unknown'?'nolimit':(cls==='swap'||cls==='unread')?'swap':'out';
+    var cls=tempCls(t.min,t.max,day,unitArea(aid),t.spot), k=cls==='ok'?'in':cls==='unknown'?'nolimit':(cls==='swap'||cls==='unread')?'swap':cls==='warm'?'warm':cls==='nospot'?'nospot':'out';
     if(t.empty&&k==='out') k='eout';
     if(cls==='unread') return {k:k, unread:true, empty:!!t.empty, lo:String(t.min==null?'':t.min).trim(), hi:String(t.max==null?'':t.max).trim(), note:t.note||''};
-    return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
+    return {k:k, why:cls, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), spot:hasVal(t.spot)?dpIndoor(t.spot):'', note:t.note||''};
   }
   if(t&&t.empty) return {k:'empty'};
   if(!neededOn(aid,day)) return {k:'none'};
@@ -616,7 +642,7 @@ function dayRooms(day){
   });
 }
 function daySummary(day){
-  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0,swap:0};
+  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0,swap:0,warm:0,nospot:0};
   dayRooms(day).forEach(function(x){ [x.am,x.pm].forEach(function(s){ if(s.k in n) n[s.k]++; if(isRead(s.k)) n.read++; }); });
   return n;
 }
@@ -626,6 +652,7 @@ function indoorDayClass(day){
   if(n.out||n.swap) return 'warn';   /* a reading outside the limit (or min/max swapped) beats a miss on the same day */
   if(n.miss) return 'miss';
   if(!n.read) return 'nd';
+  if(n.warm) return 'warmd';   /* over the maximum: cooling action, a light warm tint, never orange */
   if(n.nolimit) return 'nolimit';
   return 'allok';
 }
@@ -636,7 +663,9 @@ function slotHtml(label,s){
   if(s.k==='empty') return '<span class="due">'+label+' empty</span>';
   var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
   if(s.k==='swap') return '<span class="warn"'+(s.unread?' data-unread':'')+'>'+esc(txt)+(s.unread?' · Check: not a number':' · max lower than min')+'</span>';
-  if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
+  if(s.k==='out') return '<span class="warn">'+esc(txt)+(s.why==='spotcold'?' · bed spot '+esc(s.spot)+' below the puppy limit':s.why==='spothot'?' · bed spot '+esc(s.spot)+' above the puppy limit':'')+'</span>';
+  if(s.k==='warm') return esc(txt)+' <span class="cool-act">· over the limit: cooling action</span>';
+  if(s.k==='nospot') return esc(txt)+' <span class="tick" aria-label="room inside limit">✓</span> <span class="cool-act">· puppies: bed spot not recorded</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
 }
@@ -645,7 +674,7 @@ function roomLine(x,withNotes){
   var parts=[slotHtml('AM',x.am),slotHtml('PM',x.pm)].filter(Boolean);
   var notes='';
   var name=withNotes?String(x.name||'').replace(/ \(from [^)]+\)$/,''):x.name;
-  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if(p[1].k==='out'&&p[1].note) notes+='<span class="note warn">'+p[0]+' what was done: '+esc(p[1].note)+'</span>'; });
+  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if((p[1].k==='out'||p[1].k==='warm')&&p[1].note) notes+='<span class="note'+(p[1].k==='out'?' warn':'')+'">'+p[0]+' what was done: '+esc(p[1].note)+'</span>'; });
   return '<div class="rl"><b>'+esc(name)+'</b> · '+parts.join(' · ')+notes+'</div>';
 }
 function outsideLine(day){
@@ -654,7 +683,7 @@ function outsideLine(day){
   return (hi||'–')+' / '+(lo||'–')+' °C'+(rain!==''?', rain '+rain+' mm':'');
 }
 function stateWord(cls){
-  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
+  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',warmd:'Warm: cooling action',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
 function monthCal(y, classOf, kind){
   var md=mdays(y);
@@ -710,7 +739,7 @@ function buildMonthCards(y){
   var cards=[];
   MONTHS.forEach(function(mn,mi){
     if(ds(y,mi,1)>TODAY_STR) return;
-    var t={in:0,out:0,nolimit:0,miss:0,read:0,swap:0}, hi=null, lo=null;
+    var t={in:0,out:0,nolimit:0,miss:0,read:0,swap:0,warm:0,nospot:0}, hi=null, lo=null;
     for(var d=1;d<=mdn[mi];d++){
       var date=ds(y,mi,d);
       if(date>TODAY_STR) continue;
@@ -724,11 +753,13 @@ function buildMonthCards(y){
       }); });
     }
     var h='<button type="button" class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'" data-swap="'+t.swap+'" onclick="openMonth('+(mi+1)+')"><span class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span>'
-      +(t.in+t.out+t.swap?'<span class="mitem-pct">'+Math.round(100*t.in/(t.in+t.out+t.miss+t.swap))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
+      +(t.in+t.out+t.swap+t.warm+t.nospot?'<span class="mitem-pct">'+Math.round(100*(t.in+t.warm+t.nospot)/(t.in+t.warm+t.nospot+t.out+t.miss+t.swap))+'% in limit</span>':'')+'</span><span class="mitem-stats">';
     if(!t.read&&!t.miss) h+='<span>No readings</span>';
     else{
-      h+='<span>'+t.in+' in limit</span>';
+      h+='<span>'+(t.in+t.warm+t.nospot)+' in limit</span>';
       h+='<span'+(t.out?' class="warn"':'')+'>'+t.out+' outside</span>';
+      if(t.warm) h+='<span data-warm>'+t.warm+' warm (cooling action)</span>';
+      if(t.nospot) h+='<span data-nospot>'+t.nospot+' puppies: bed spot not recorded</span>';
       if(t.swap) h+='<span class="warn">'+t.swap+' max lower than min</span>';
       h+='<span'+(t.miss?' class="warn"':'')+'>'+t.miss+' missed</span>';
       if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';

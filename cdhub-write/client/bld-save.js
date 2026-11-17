@@ -22,6 +22,8 @@
   var URL_OK = /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.\-]+|macros)\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
+  var OWNER_SKIP_KEY = 'bld.owner.skip';   // this tab chose "Use a staff code instead" (sessionStorage)
+  var READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
   var TIMEOUT_MS = 45000;   // the save script can take over 20 s when busy; a shorter wait said "could not reach" for saves that landed
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
@@ -71,6 +73,24 @@
   }
   function root_() { return (typeof window !== 'undefined') ? window : {}; }
 
+  /**
+   * Board A (Lisa 17 Nov 2026): an owner uses the SAME Google sign-in as CD Hub (auth.js keeps it in this browser),
+   * so no code is needed. Returns the live access token, or '' when there is none, it has expired, or this tab chose to
+   * use a staff code. The save script decides who is an owner (ADMIN_EMAILS); a token alone never grants anything.
+   */
+  function ownerToken() {
+    var g = root_(), A = g.DashAuth;
+    if (!A || typeof A.valid !== 'function') return '';
+    try { if (g.sessionStorage && g.sessionStorage.getItem(OWNER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
+    var s = A.valid();
+    if (!s || (A.hasScope && !A.hasScope(s, READ_SCOPE))) return '';
+    return s.access_token || '';
+  }
+  /** Stop (true) or allow again (false) the owner sign-in on this tab. */
+  function ownerSkip(on) {
+    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(OWNER_SKIP_KEY, '1'); else ss.removeItem(OWNER_SKIP_KEY); } } catch (e) { /* ignore */ }
+  }
+
   function create(opts) {
     opts = opts || {};
     var doFetch = opts.fetch || (typeof fetch !== 'undefined' ? fetch.bind(root_()) : null);
@@ -99,6 +119,11 @@
     function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
+    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
+    /** A staff code, or an owner's Google sign-in. */
+    function hasAuth() { return !!getCode() || !!googleFn(); }
+    /** Adds the owner's Google token to a request body when there is one (the code still goes too, as the fallback). */
+    function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; return body; }
     var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
     function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
@@ -271,13 +296,14 @@
       if (!spec) return Promise.resolve({ ok: false, code: 'BAD_REQUEST', message: 'Unknown table.' });
       var b = banner(tableKey);
       if (!b.canSave) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: b.text });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
       var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
+      withGoogle(body);
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
@@ -310,9 +336,9 @@
      */
     function act(action, fields, requestId) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
-      var body = { v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} };
+      var body = withGoogle({ v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} });
       return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
       })).then(function (r) { return r.json(); }); }); }).then(function (j) {
@@ -336,11 +362,11 @@
     function read(tableKey, filter) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
+        body: JSON.stringify(withGoogle(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey }))
       })).then(function (r) { return r.json(); }).then(function (j) {
         if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
@@ -397,7 +423,7 @@
     return {
       TABLES: TABLES,
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
-      setCode: setCode, getCode: getCode, clearCode: clearCode,
+      setCode: setCode, getCode: getCode, clearCode: clearCode, hasAuth: hasAuth, usingGoogle: function () { return !getCode() && !!googleFn(); },
       role: function () { return lastRole; },
       name: function () { return lastName; },
       setLookups: setLookups, lookupSize: lookupSize,
@@ -410,5 +436,5 @@
     };
   }
 
-  return { create: create, TABLES: TABLES, URL_OK: URL_OK };
+  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip };
 }));

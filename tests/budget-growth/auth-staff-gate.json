@@ -1,0 +1,10 @@
+{
+  "factory": 400,
+  "home": 400,
+  "food": 400,
+  "marketplace": 400,
+  "money": 400,
+  "studio": 400,
+  "privacy": 400,
+  "why": "Board A (Lisa 17 Nov 2026): auth.js lets a staff page opt out of the signed-out lock (data-dash-gate=\"off\"), about 250 bytes on every page that loads auth.js."
+}

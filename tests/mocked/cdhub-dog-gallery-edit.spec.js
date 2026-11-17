@@ -1,0 +1,132 @@
+// Dog gallery: Remove, Make main and Put back (Lisa 16 Nov 2026: "some are bad so need to be able to remove").
+// Nothing is deleted: Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link,
+// Make main adds a main link. Invented rows only; pretend save script.
+const { test, expect } = require('../support/test');
+const { HUBS } = require('../support/hubs');
+
+const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
+function put(world, name, content) {
+  const f = world.files.find((x) => x.name === name && !x.trashed);
+  if (f) { f.content = content; f.size = String(content.length); return; }
+  const like = world.files.find((x) => x.name === 'BLD-area.csv' && !x.trashed);
+  world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
+}
+const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+
+async function setUp(page, guard, today) {
+  await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} }, URL_);
+  const sent = [];
+  await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
+    const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
+    const id = b.action === 'file_add' ? 'fil-new' : 'lnk-new-' + sent.length;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id, drive_file_id: b.action === 'file_add' ? 'DRIVEeditedNew9' : undefined } }) });
+  });
+  const w = guard.world;
+  put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status,photo', [
+    'sub-g1,t,Pretend Gallery,Female,2021-03-02,Breeding,entire,', 'sub-g2,t,Pretend Plain,Male,2022-01-01,Stud,entire,']));
+  put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-g1,Active', 's2,t,sub-g2,Active']));
+  put(w, 'BLD-files.csv', csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on', [
+    'fil-1,t,photo,DRIVEmainPhoto01,,image/jpeg,,,2026-06-01,,camera,owner,2026-06-01T10:00:00Z',
+    'fil-2,t,photo,DRIVEbadPhoto002,,image/jpeg,,,2025-01-01,,camera,owner,2025-01-01T10:00:00Z',
+    `fil-3,t,photo,DRIVEnewPhoto003,,image/jpeg,,,${today},,camera,owner,${today}T10:00:00Z`]));
+  put(w, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,to_table,to_id,role,sort,note,from_date,to_date,source,set_by,set_on,end_reason', [
+    'l1,t,subjects,sub-g1,files,fil-1,gallery,,,2026-06-01,,dog card,owner,2026-06-01T10:00:00Z,',
+    'l2,t,subjects,sub-g1,files,fil-2,gallery,,,2025-01-01,,dog card,owner,2025-01-01T10:00:00Z,',
+    `l3,t,subjects,sub-g1,files,fil-3,gallery,,,${today},,dog card,owner,${today}T10:00:00Z,`,
+    'm1,t,subjects,sub-g1,files,fil-1,main,,,2026-06-01,,dog card,owner,2026-06-01T11:00:00Z,']));
+  put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date', [
+    'k1,t,link_kind.gallery,Photos,2026-01-01,Pretend,,,,', 'k2,t,link_kind.main,Main photo,2026-01-01,Pretend,,,,']));
+  for (const id of ['DRIVEmainPhoto01', 'DRIVEbadPhoto002', 'DRIVEnewPhoto003', 'DRIVEeditedNew9']) { w.file(id, id + '.png', '', { mimeType: 'image/png' }); w.byId(id).thumbnailLink = 'https://example.com/pretend-' + id + '.png'; }
+  await HUBS.cdhub.open(page, guard);
+  await page.evaluate(() => go('dogs'));
+  const gal = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
+  await gal.locator('> summary').click();
+  return { sent, gal };
+}
+
+test('Remove takes a bad photo out of the gallery at once (to Ended); Put back brings it back; nothing is deleted', async ({ page, guard }) => {
+  const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())).catch(() => null) || new Date().toISOString().slice(0, 10);
+  const { sent, gal } = await setUp(page, guard, today);
+  await expect(gal.locator('> summary')).toHaveText('Photos (3)');
+  await gal.locator('.gi[data-file="fil-2"] [data-gal-end]').click();
+  await expect(gal.locator('[data-gal-msg]')).toHaveText('✓ Saved');
+  expect(sent).toHaveLength(1);
+  expect(sent[0]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Removed from gallery' } });
+  expect(sent[0].fields.to_date < today).toBe(true);   // an older photo ends yesterday, so it is gone from today
+  const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
+  await expect(g2.locator('> summary')).toHaveText('Photos (2)');
+  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
+
+  await g2.locator('details[data-k="ended"] > summary').click();
+  await g2.locator('details[data-k="ended"] [data-gal-back="fil-2"]').click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent[1]).toMatchObject({ action: 'link_add', fields: { from_table: 'subjects', from_id: 'sub-g1', role: 'gallery', to_table: 'files', to_id: 'fil-2', from_date: today } });
+  await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] > summary')).toHaveText('Photos (3)');
+});
+
+test('a photo added today is removed at once too (end date today, marked removed)', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent, gal } = await setUp(page, guard, today);
+  await gal.locator('.gi[data-file="fil-3"] [data-gal-end]').click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].fields).toMatchObject({ id: 'l3', to_date: today, reason: 'Removed from gallery' });
+  await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] > summary')).toHaveText('Photos (2)');
+});
+
+test('Make main sets another photo as the card photo; the main photo has no Make main button', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent, gal } = await setUp(page, guard, today);
+  await expect(gal.locator('.gi[data-file="fil-1"] [data-gal-main]')).toHaveCount(0);
+  await gal.locator('.gi[data-file="fil-2"] [data-gal-main]').click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'link_add', fields: { role: 'main', to_id: 'fil-2', from_id: 'sub-g1', from_date: today } });
+  await expect(page.locator('.dc[data-dog="sub-g1"] img.dogphoto')).toHaveAttribute('data-photo-id', 'DRIVEbadPhoto002');
+  await expect(page.locator('.dc[data-dog="sub-g1"] .gi[data-file="fil-2"] [data-k="main"]')).toHaveText('Main');
+});
+
+// ✎ Crop or adjust (Lisa 17 Nov 2026): the saved picture opens in the same crop tool; the edited picture is saved as a
+// new file and takes the old one's place; the original is kept (its link ends, so it is in Ended).
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8z8DAwMDAxMDAwMAAACYABTxrpVkAAAAASUVORK5CYII=';
+async function driveBytes(page) {
+  await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/files\/DRIVE[A-Za-z0-9]+\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PNG, 'base64') }));
+}
+
+test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old photo\'s place, the original kept', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent, gal } = await setUp(page, guard, today);
+  await driveBytes(page);
+  await expect(gal.locator('.gi[data-file="fil-2"] .gph .gx')).toHaveAttribute('aria-label', 'Remove this photo from the gallery');
+  await expect(gal.locator('.gi[data-file="fil-2"] .gph .ged')).toBeVisible();
+  await gal.locator('.gi[data-file="fil-2"] .ged').click();
+  await expect(page.getByRole('dialog', { name: 'Crop and edit the photo' })).toBeVisible();
+  await page.locator('[data-crop-rotate]').click();
+  await page.locator('[data-crop-use]').click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent[0]).toMatchObject({ action: 'file_add', fields: { kind: 'photo', mime: 'image/jpeg', taken_on: '2025-01-01' } });
+  expect(sent[0].fields.data_base64.length).toBeGreaterThan(50);
+  expect(sent[1]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Replaced by edited copy' } });
+  expect(sent[2]).toMatchObject({ action: 'link_add', fields: { role: 'gallery', to_id: 'fil-new', from_id: 'sub-g1', from_date: today } });
+  const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
+  await expect(g2.locator('[data-gal-msg]')).toHaveText('✓ Edited copy saved');
+  await expect(g2.locator('> summary')).toHaveText('Photos (3)');
+  await expect(g2.locator('.gi[data-file="fil-new"]')).toHaveCount(1);
+  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
+});
+
+test('card: ✎ Edit on the main photo saves an edited copy that becomes the main photo; Cancel saves nothing', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent } = await setUp(page, guard, today);
+  await driveBytes(page);
+  const card = page.locator('.dc[data-dog="sub-g1"]');
+  await card.locator('[data-photo-edit]').click();
+  await page.locator('[data-crop-cancel]').click();
+  await expect(page.getByRole('dialog', { name: 'Crop and edit the photo' })).toHaveCount(0);
+  expect(sent).toHaveLength(0);
+  await card.locator('[data-photo-edit]').click();
+  await page.locator('[data-crop-use]').click();
+  await expect.poll(() => sent.length).toBe(4);
+  expect(sent.map((b) => b.action)).toEqual(['file_add', 'link_end', 'link_add', 'link_add']);   // fil-1 is in the gallery and is main
+  expect(sent[3].fields).toMatchObject({ role: 'main', to_id: 'fil-new' });
+  await expect(page.locator('.dc[data-dog="sub-g1"] img.dogphoto')).toHaveAttribute('data-photo-id', 'DRIVEeditedNew9');
+  await expect(page.locator('.dc[data-dog="sub-g1"] [data-photo-msg]')).toHaveText('✓ Edited copy saved');
+});

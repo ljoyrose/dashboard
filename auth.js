@@ -78,7 +78,10 @@
   })();
   function gate() {
     try {
-      global.document.documentElement.classList.toggle('dash-locked', !valid());
+      var html = global.document.documentElement;
+      // Staff pages (The Board, Checks) work with a staff code and no Google sign-in: <html data-dash-gate="off"> never locks.
+      if (html.getAttribute('data-dash-gate') === 'off') { html.classList.remove('dash-locked'); return; }
+      html.classList.toggle('dash-locked', !valid());
     } catch (e) {}
   }
 
