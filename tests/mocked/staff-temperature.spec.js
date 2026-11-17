@@ -397,3 +397,36 @@ test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 N
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { max_c: '18.5', min_c: '12.0' } });
 });
+
+// Never lose an entry (Lisa 17 Nov 2026: most of a day's readings were typed but never reached the records). A save with
+// no answer is kept on the phone, says so, shows "waiting to send", and goes with the SAME request id on Send now.
+test.describe('never lose an entry', () => {
+  test.use({ allowedConsole: [/404|net::ERR_FAILED/] });
+  test('a reading with no answer is kept and sent again with the same request id; nothing is kept once it is saved', async ({ page }) => {
+    const sent = await setup(page);
+    let down = true;
+    const tries = [];
+    await page.route(SCRIPT, (route) => {
+      const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData() || '{}') : {};
+      if (b.table === 'area_reading' && b.action === 'add') { tries.push(b.request_id); if (down) return route.abort(); }
+      return route.fallback();
+    });
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.locator('.cards .card').first().click();
+    await page.getByLabel('Room empty').check();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('kept on this phone and sent again by itself')).toBeVisible();
+    await expect(page.locator('#outbox [data-outbox-waiting]')).toHaveAttribute('data-outbox-waiting', '1');
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('bld.outbox')));
+    expect(kept).toHaveLength(1);
+    expect(kept[0].body).not.toHaveProperty('code');   // the staff code is never kept on the phone
+    down = false;
+    await page.locator('[data-outbox-send]').click();
+    await expect(page.locator('#outbox')).toBeHidden();
+    expect(tries).toHaveLength(2);
+    expect(tries[1]).toBe(tries[0]);
+    expect(sent.filter((b) => b.table === 'area_reading')).toHaveLength(1);
+    expect(sent.filter((b) => b.table === 'area_reading')[0].code).toBe('FAKE-CODE-1');   // the code is added again when sent
+    expect(await page.evaluate(() => localStorage.getItem('bld.outbox'))).toBeNull();
+  });
+});

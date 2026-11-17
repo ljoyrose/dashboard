@@ -24,6 +24,36 @@
   var screen = document.getElementById('screen'), tabs = document.getElementById('tabs');
   var save = BLDSave.create({});
   save.deviceCode = true;
+  /* Never lose an entry (Lisa 17 Nov 2026): what is kept on this phone waiting to send, and anything the records refused,
+     shown above every screen. "Send now" tries at once; the phone also tries by itself every minute. */
+  (function outboxLine() {
+    if (!save.outbox) return;
+    var box = document.createElement('div'); box.id = 'outbox'; box.className = 'outbox'; box.hidden = true; box.setAttribute('role', 'status');
+    screen.parentNode.insertBefore(box, screen);
+    var st = document.createElement('style');
+    st.textContent = '.outbox{margin:8px 16px;padding:10px 12px;border-radius:12px;border:2px solid var(--ljr-3);background:var(--card);display:grid;gap:8px}'
+      + '.outbox[hidden]{display:none}.outbox p{margin:0}.outbox .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.outbox button{min-height:44px}';
+    document.head.appendChild(st);
+    function draw() {
+      var n = save.outbox.count(), rf = save.outbox.refused();
+      box.textContent = ''; box.hidden = !n && !rf.length;
+      if (n) {
+        var p1 = document.createElement('p'); p1.setAttribute('data-outbox-waiting', String(n));
+        p1.textContent = n + (n === 1 ? ' entry is' : ' entries are') + ' waiting to send. They are kept on this phone and sent by themselves: do not type them again.';
+        var go = document.createElement('button'); go.type = 'button'; go.className = 'btn'; go.textContent = 'Send now'; go.setAttribute('data-outbox-send', '');
+        go.onclick = function () { go.disabled = true; go.textContent = 'Sending\u2026'; save.outbox.flush().then(draw, draw); };
+        var r1 = document.createElement('div'); r1.className = 'row'; r1.appendChild(p1); r1.appendChild(go); box.appendChild(r1);
+      }
+      rf.forEach(function (x) {
+        var p2 = document.createElement('p'); p2.setAttribute('data-outbox-refused', x.id);
+        var what = (x.fields && (x.fields.area_id || x.fields.check_type_id || x.fields.subject_id)) || x.table || 'an entry';
+        p2.textContent = 'Not saved: ' + what.replace(/^(area|cty|sub)-/, '') + ' (' + String(x.at || '').slice(11, 16) + '). ' + (x.message || x.code || '') + ' Enter it again with the fix.';
+        var ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn quiet'; ok.textContent = 'OK'; ok.onclick = function () { save.outbox.dismissRefused(x.id); };
+        var r2 = document.createElement('div'); r2.className = 'row'; r2.appendChild(p2); r2.appendChild(ok); box.appendChild(r2);
+      });
+    }
+    save.outbox.onChange(draw); draw();
+  }());
   var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '';
   var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
   var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';

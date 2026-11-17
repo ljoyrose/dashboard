@@ -127,7 +127,7 @@ test('a network failure is honest and a retry reuses the same request id', async
   srv.state.fail = true;
   const a = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21', max_c: '22' }, { requestId: 'r-fixed-0001' });
   assert.equal(a.code, 'NETWORK');
-  assert.match(a.message, /not confirmed as saved/);
+  assert.match(a.message, /kept on this phone and sent again by itself/);
   assert.equal(a.requestId, 'r-fixed-0001');
   srv.state.fail = false;
   await s.submit('area_reading', { area_id: 'area-t1', min_c: '21', max_c: '22' }, { requestId: 'r-fixed-0001' });
@@ -706,7 +706,7 @@ domTest('location check: if the daily log is switched off the button says so and
   srv2.st.fail = true;
   restBtn(host).click();
   await new Promise((r) => setTimeout(r, 30));
-  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /not confirmed as saved/);
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /kept on this phone and sent again by itself/);
   assert.equal(restBtn(host).disabled, false);
   srv2.st.fail = false;
   restBtn(host).click();
