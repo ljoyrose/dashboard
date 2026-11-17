@@ -235,7 +235,7 @@ async function panelIsOn(page) {
   const box = page.locator('#sinkcard');
   await expect(box).toContainText('Saving on this device: on');
   await expect(page.locator('#sinkcode')).toHaveValue('••••••');
-  await expect(box.locator('[data-device-line]')).toHaveText('This device: app mode no · code kept yes · save address yes');
+  await expect(box.locator('[data-device-line]')).toHaveText('On this device: opened in the browser · your code is remembered · saving is set up');
   expect(await box.evaluate((e) => e.outerHTML)).not.toContain(CODE);
 }
 
@@ -252,7 +252,7 @@ test('Switch off here forgets the code and the address on this device, and the n
   await panelIsOn(page);
   await page.locator('#sinkoff').click();
   await expect(page.locator('#sinkcard')).toContainText('Saving on this device: off');
-  await expect(page.locator('#sinkcard [data-device-line]')).toHaveText('This device: app mode no · code kept no · save address no');
+  await expect(page.locator('#sinkcard [data-device-line]')).toHaveText('On this device: opened in the browser · no code remembered · saving is not set up yet');
   await expect(page.locator('#sinkcode')).toHaveValue('');
   expect(await page.evaluate(() => ['cdhub.staff.code', 'cdhub.save.url', 'cdhub.sink.code', 'cdhub.sink.url'].map((k) => localStorage.getItem(k)))).toEqual([null, null, null, null]);
   expect(await page.evaluate(() => staffCodeNow())).toBe('');
