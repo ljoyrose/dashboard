@@ -66,12 +66,12 @@ test('flap set to limited but limits only recorded for free access: unknown, and
   assert.doesNotMatch(ok.message, /flap is set/);
 });
 
-// The Space Rules poster (v9) as rows. Invented ids; the figures are the poster's.
+// The Space Rules poster as BLD-breeding_rule holds it (rule keys as in the live sheet, 11 Nov 2026). Invented ids.
 const POSTER = [];
 [['free', { small: [2.5, 2.5, 4.5, 6.0], medium: [2.5, 4.5, 6.0], large: [4.5, 6.0] }, { small: 5, medium: 5, large: 9 }],
  ['limited', { small: [4.5, 4.5, 6.5, 8.5], medium: [4.5, 6.5, 8.5], large: [6.5, 8.5] }, { small: 9, medium: 9, large: 13 }]].forEach(([mode, t, p]) => {
-  Object.keys(t).forEach((sz) => t[sz].forEach((v, i) => POSTER.push({ rule_key: `space.${mode}.${sz}.${i + 1}`, value: String(v), effective_from: '2026-11-05' })));
-  Object.keys(p).forEach((sz) => POSTER.push({ rule_key: `space.${mode}.${sz}+pups`, value: String(p[sz]), effective_from: '2026-11-05' }));
+  Object.keys(t).forEach((sz) => t[sz].forEach((v, i) => POSTER.push({ rule_key: `space.${mode}.adult.${sz}.${i + 1}`, value: String(v), effective_from: '2026-11-11' })));
+  Object.keys(p).forEach((sz) => POSTER.push({ rule_key: `space.${mode}.mum_with_pups.${sz}.1`, value: String(p[sz]), effective_from: '2026-11-11' }));
 });
 
 test('space rules: 3A.1/2 (9 m²) with the flap shut gets 4 small, 3 medium or 2 large, small/medium mum with pups but not large', () => {

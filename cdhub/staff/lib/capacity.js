@@ -90,23 +90,25 @@
     return rows.filter(function (r) { return ymd(r.from_date) === top[String(r.access_type).toLowerCase() + '|' + band(r.size_band)]; });
   }
   /**
-   * SPACE RULES (Lisa 17 Nov 2026: "should be calculated automatically"). The poster's table is kept as dated rows in
-   * BLD-breeding_rule: rule_key space.<free|limited>.<small|medium|large>.<number of dogs> = m² needed, and
-   * space.<free|limited>.<size>+pups = m² needed for a mum with her litter. Nothing about the figures is coded here.
+   * SPACE RULES (Lisa 17 Nov 2026: "should be calculated automatically"; "it should be in compliance rules already").
+   * The poster's table is already dated rows in BLD-breeding_rule (set 11 Nov 2026): rule_key
+   * space.<free|limited>.adult.<small|medium|large>.<number of dogs> = m² needed, and
+   * space.<free|limited>.mum_with_pups.<size>.1 = m² needed for a mum with her litter. Nothing about the figures is coded here.
    * spaceRules(ruleRows, date) -> {free:{small:{1:2.5,...}, 'small+pups':5}, limited:{...}} (the row in force that day).
    */
+  var SPACE_KEY = /^space\.(free|limited)\.(adult|mum_with_pups)\.(small|medium|large)\.(\d+)$/;
   function spaceRules(ruleRows, date) {
     var best = {}, out = {};
-    inForce((ruleRows || []).filter(function (r) { return /^space\.(free|limited)\.(small|medium|large)(\+pups|\.\d+)$/.test(String(r.rule_key || '').trim()); }), date, 'effective_from')
+    inForce((ruleRows || []).filter(function (r) { return SPACE_KEY.test(String(r.rule_key || '').trim()); }), date, 'effective_from')
       .forEach(function (r) {
         var k = String(r.rule_key).trim(), f = ymd(r.effective_from), v = parseFloat(r.value);
         if (isNaN(v)) return;
         if (!(k in best) || f >= best[k].f) best[k] = { f: f, v: v };
       });
     Object.keys(best).forEach(function (k) {
-      var p = k.split('.'), mode = p[1], size = p[2], n = p[3];
+      var m = SPACE_KEY.exec(k), mode = m[1], who = m[2], size = m[3], n = m[4];
       out[mode] = out[mode] || {};
-      if (/\+pups$/.test(size)) out[mode][size] = best[k].v;
+      if (who === 'mum_with_pups') { if (n === '1') out[mode][size + '+pups'] = best[k].v; }
       else { out[mode][size] = out[mode][size] || {}; out[mode][size][n] = best[k].v; }
     });
     return out;
