@@ -2840,7 +2840,7 @@ function photoSquareB64(draw){
  for(var q=0.8;q>0.05;q=Math.round((q-0.1)*10)/10){ var u=c.toDataURL('image/jpeg',q); b=u.slice(u.indexOf(',')+1); if(b.length<=PHOTO_MAX_B64) return b; }
  return b.length<=PHOTO_MAX_B64?b:'';
 }
-/* The crop step. Resolves {mime,b64} on Use photo, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
+/* The crop step. Resolves {mime,b64} on Save photo, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
 function photoCrop(src,was){
  return new Promise(function(resolve){
   var box=document.createElement('div');
@@ -2853,12 +2853,12 @@ function photoCrop(src,was){
    +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
    +'<div class="pcrop-btns"><button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
-   +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Use photo</button></div></div>';
+   +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save photo</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
   var bright=box.querySelector('[data-crop-bright]'), contrast=box.querySelector('[data-crop-contrast]'), sizeEl=box.querySelector('[data-crop-size]'), sizeT=0;
   function tone(g,size){ photoTone(g,size,bright.value,contrast.value); }
-  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Use photo) */
+  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Save photo) */
   function sizeNote(){ clearTimeout(sizeT); sizeT=setTimeout(function(){ var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    sizeEl.textContent=b?'Saves as '+PHOTO_OUT+' \u00d7 '+PHOTO_OUT+', about '+photoKB(b)+(was?' (picture was '+was+')':''):'Too large to save. Zoom in or crop closer.'; },250); }
   var rot=0, z=1, ox=0, oy=0, V=0, dpr=Math.min(3,window.devicePixelRatio||1), pts={}, last=null, pinch=null;
