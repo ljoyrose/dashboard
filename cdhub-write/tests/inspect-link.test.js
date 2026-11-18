@@ -331,3 +331,45 @@ test('fit to breed with no old file still shows the job\'s records', () => {
   const r = read(env, m.result.code, 'fit_to_breed');
   assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)), [{ subject_id: 'sub-test-a', done_on: '2026-08-13', valid_until: '' }]);   // as needed: no end shown
 });
+
+test('demo 3b: a temperatures link shows every room\'s readings with the room code, no dogs needed; empty-room days and corrected rows left out; data dates kept', () => {
+  const env = setup();
+  const AR = fx.AREA_READING_HEADER;
+  const rr = (o) => AR.map((c) => (o[c] === undefined ? '' : o[c])).join(',');
+  const f = env.file('BLD-area_reading.csv')[0];
+  f.content = crlf([AR.join(','),
+    rr({ id: 'rdg-old', tenant_id: fx.TENANT, area_id: 'area-t1', min_c: '15.0', max_c: '19.0', period_start: '2026-10-10T07:00:00+01:00', taken_by: 'Staff A' }),
+    rr({ id: 'rdg-1', tenant_id: fx.TENANT, area_id: 'area-t1', min_c: '16.0', max_c: '20.0', period_start: '2026-10-14T07:00:00+01:00', taken_by: 'Staff A' }),
+    rr({ id: 'rdg-e', tenant_id: fx.TENANT, area_id: 'area-t2', min_c: '9.0', max_c: '12.0', period_start: '2026-10-14T07:00:00+01:00', taken_by: 'Staff A' }),
+    rr({ id: 'rdg-w', tenant_id: fx.TENANT, area_id: 'area-t3-1', min_c: '30.0', max_c: '31.0', period_start: '2026-10-14T07:00:00+01:00', taken_by: 'Staff A' }),
+    rr({ id: 'rdg-c', tenant_id: fx.TENANT, area_id: 'area-t3-1', min_c: '17.0', max_c: '21.0', period_start: '2026-10-14T07:00:00+01:00', taken_by: 'Owner', corrects_id: 'rdg-w' }),
+    rr({ id: 'rdg-x', tenant_id: 'other-tenant', area_id: 'area-t1', min_c: '99.0', max_c: '99.0', period_start: '2026-10-14T07:00:00+01:00', taken_by: 'X' })
+  ]);
+  f.sheet = undefined;
+  env.addFile('BLD-requirement.csv', crlf(['id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on',
+    `req-e,${fx.TENANT},room.empty,area,area-t2,2026-10-01,,test,t,2026-10-01`]));
+
+  const m = make(env, { subjects: [], fields: { area_reading: ['period_start', 'min_c', 'max_c', 'taken_by'] } });
+  assert.equal(m.ok, true, JSON.stringify(m));
+  const code = m.result.code;
+  assert.equal(read(env, code, 'subject').code, 'NOT_ALLOWED');   // no dogs on this link
+  const t = read(env, code, 'area_reading');
+  assert.equal(t.ok, true, JSON.stringify(t));
+  assert.deepEqual(Array.from(t.result.fields), ['area_id', 'room', 'min_c', 'max_c', 'period_start', 'taken_by']);   // in the file's column order
+  const ids = (res) => Array.from(res.result.rows, (r) => r.room + ' ' + r.min_c);
+  assert.deepEqual(ids(t), ['T3.1 17.0', 'T1 16.0', 'T1 15.0']);   // newest first; T2 empty that day; the wrong T3.1 row replaced
+  assert.equal(t.result.scope, 'every room');
+
+  // the link's data dates, when set, narrow it
+  const L = env.file('BLD-inspect_link.csv')[0];
+  L.content = L.content.replace(/,,\r\n$/, ',2026-10-12,\r\n');
+  assert.deepEqual(ids(read(env, code, 'area_reading')), ['T3.1 17.0', 'T1 16.0']);
+
+  // the owner's picker offers it, keyed on the room, with the room code as a column
+  const ch = env.ctx.sinkInspectChoices_();
+  assert.equal(ch.keys.area_reading, 'area_id');
+  assert.ok(ch.lists.area_reading.includes('room'));
+  assert.deepEqual(Array.from(ch.room_lists), ['area_reading']);
+  // a link with no dogs and no room list is still refused
+  assert.equal(make(env, { subjects: [], fields: { health_screen: ['test'] } }).code, 'INVALID');
+});

@@ -277,9 +277,10 @@
   }
 
   /* ---- inspector links (Inspect.gs) ---- */
-  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status'};
+  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status',area_reading:'Temperatures (every room)'};
   // Suggested set (Breed Better spec S10): name, sex, DOB, chip last 4, health and Fit to Breed results, litters with date of birth
-  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob']};
+  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],
+    area_reading:['period_start','min_c','max_c','spot_c','taken_by','mitigation_note']};   // demo 3b (18 Nov 2026): the temperature log
   function inMsg(t){ document.getElementById('in-msg').textContent=t; }
   function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }
   document.getElementById('in-new').onclick=function(){
@@ -309,7 +310,8 @@
       Object.keys(ch.lists).forEach(function(list){
         var fs=el('fieldset'); fs.appendChild(el('legend',null,IN_NAMES[list]||list));
         var def=IN_DEFAULT[list]||[];
-        ch.lists[list].filter(function(c){ return c!=='id' && c!==ch.keys[list]; }).forEach(function(col){
+        var roomList=(ch.room_lists||[]).indexOf(list)>=0;   // the room's code always comes with a room list
+        ch.lists[list].filter(function(c){ return c!=='id' && c!==ch.keys[list] && !(roomList && c==='room'); }).forEach(function(col){
           var t=tick(col, def==='*' || def.indexOf(col)>=0); var f={list:list,field:col,t:t};
           fs.appendChild(t.label);
           if(col==='chip_number'){ var s=el('select'); s.setAttribute('aria-label','How much of '+col); s.innerHTML='<option value="last4">Last 4 digits only</option><option value="">Whole number</option>'; f.red=s; fs.appendChild(s); }

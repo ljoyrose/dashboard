@@ -20,7 +20,7 @@ async function route(page, opts) {
     const b = JSON.parse(r.request().postData());
     asked.push(b.table);
     if (opts && opts.ended) return r.fulfill({ headers: CORS, json: { ok: false, code: 'BAD_CODE', message: 'ended' } });
-    const t = DATA[b.table];
+    const t = ((opts && opts.data) || DATA)[b.table];
     if (!t) return r.fulfill({ headers: CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'no' } });
     return r.fulfill({ headers: CORS, json: { ok: true, result: Object.assign({ ends: '2026-11-19T17:00:00' }, t) } });
   });
@@ -58,10 +58,29 @@ test('S10 an ended or stopped link says so and shows nothing', async ({ page }) 
 test('S10 lists not ticked for the link say "not shared"; a missing set-up says so', async ({ page }) => {
   await route(page);
   await page.goto(LINK);
-  await expect(page.locator('#screen')).toContainText('Not shared on this link: Microchip, Status, Fit to Breed, Litters.');
+  await expect(page.locator('#screen')).toContainText('Not shared on this link: Microchip, Status, Fit to Breed, Litters, Temperatures.');
 });
 
 test('S10 a broken link says it is not complete', async ({ page }) => {
   await page.goto('cdhub/staff/inspect/#c=FAKEINSPECTCODEX');
   await expect(page.locator('#screen')).toContainText('This link is not complete.');
+});
+
+test('demo 3b: a temperatures-only link shows every room\'s log, a card per room, newest first, London times', async ({ page }) => {
+  const asked = await route(page, { data: { area_reading: {
+    fields: ['area_id', 'room', 'period_start', 'min_c', 'max_c', 'taken_by'],
+    rows: [
+      { area_id: 'area-test-2', room: 'T2', period_start: '2026-11-17T07:00:00Z', min_c: '15.0', max_c: '19.5', taken_by: 'Staff A' },
+      { area_id: 'area-test-1', room: 'T1', period_start: '2026-11-17T07:00:00Z', min_c: '16.0', max_c: '20.0', taken_by: 'Staff A' },
+      { area_id: 'area-test-1', room: 'T1', period_start: '2026-11-17T16:00:00Z', min_c: '17.5', max_c: '21.0', taken_by: 'Staff B' }
+    ] } } });
+  await page.goto(LINK);
+  await expect(page.locator('.ins-room h2')).toHaveText(['T1', 'T2']);
+  const t1 = page.locator('.ins-room').first().locator('.ins-row');
+  await expect(t1).toHaveCount(2);
+  await expect(t1.first()).toHaveText(/For 17 Nov 2026 16:00.*Min °C 17\.5.*Max °C 21\.0.*By Staff B/);
+  await expect(page.locator('#screen')).not.toContainText('No records');
+  await expect(page.locator('#screen')).not.toContainText('area-test');
+  expect(asked).toContain('area_reading');
+  await expect(page.locator('button, input, form')).toHaveCount(0);
 });

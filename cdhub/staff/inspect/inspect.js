@@ -24,7 +24,13 @@
     { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },   // done_on: a job record (15 Nov 2026)
     { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' }
   ];
-  var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1 };
+  /* Lists about rooms, not dogs (demo 3b, 18 Nov 2026): every room's temperature log, a card per room, newest first. */
+  var ROOMS = [
+    { key: 'area_reading', title: 'Temperatures', room: 'room', date: 'period_start|taken_at' }
+  ];
+  var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1, area_id: 1, room: 1 };
+  /* plain names for the temperature columns; any other column shows its own name */
+  var SAYCOL = { period_start: 'For', taken_at: 'Taken', taken_by: 'By', min_c: 'Min °C', max_c: 'Max °C', spot_c: 'Now °C', mitigation_note: 'Action' };
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function day(v) {
@@ -32,14 +38,28 @@
     return m ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : String(v || '');
   }
   function words(col) {
+    if (SAYCOL[col]) return SAYCOL[col];
     var s = String(col).replace(/_/g, ' ');
     if (s === 'dob') return 'DOB';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
   /* the first date column a row has, of those named by | */
   function dateOf(r, cols) { var c = String(cols || '').split('|').filter(function (k) { return r[k]; })[0]; return c ? r[c] : ''; }
-  function isDateCol(c) { return /(^dob$|_on$|_date$|_until$|_at$)/.test(c); }
-  function show(c, v) { return isDateCol(c) ? day(v) : String(v === undefined || v === null ? '' : v); }
+  function isDateCol(c) { return /(^dob$|_on$|_date$|_until$)/.test(c); }
+  /* a moment (taken_at, period_start): its London day and time, e.g. 2 Mar 2026 07:00 */
+  function isTimeCol(c) { return /(_at$|^period_start$)/.test(c); }
+  function when(v) {
+    var d = new Date(String(v || ''));
+    if (!/T\d\d:\d\d/.test(String(v || '')) || isNaN(d.getTime())) return day(v);   // a date with no time stays a date
+    var p = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+      .formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+    return day(p.year + '-' + p.month + '-' + p.day) + ' ' + p.hour + ':' + p.minute;
+  }
+  function show(c, v) {
+    if (v === undefined || v === null || v === '') return '';
+    return isTimeCol(c) ? when(v) : isDateCol(c) ? day(v) : String(v);
+  }
 
   /** Read the link from the address. Returns {script, code} or null. */
   function parseHash(hash) {
@@ -70,6 +90,30 @@
     });
   }
 
+  /** Group the room lists by room: [{name, lists:[{title, rows}]}], rooms A to Z, readings newest first. Pure, for tests. */
+  function buildRooms(res) {
+    var by = {};
+    ROOMS.forEach(function (L) {
+      if (!res[L.key] || !res[L.key].rows) return;
+      var fields = res[L.key].fields.filter(function (c) { return !HIDE[c]; });
+      res[L.key].rows.forEach(function (r) {
+        var name = r[L.room] || 'Room';
+        var room = by[name] || (by[name] = { name: name, lists: {} });
+        (room.lists[L.title] || (room.lists[L.title] = { title: L.title, date: L.date, fields: fields, rows: [] })).rows.push(r);
+      });
+    });
+    return Object.keys(by).sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true }); }).map(function (n) {
+      return {
+        name: n,
+        lists: Object.keys(by[n].lists).map(function (t) {
+          var l = by[n].lists[t];
+          return { title: t, rows: l.rows.slice().sort(function (a, b) { return String(dateOf(b, l.date)).localeCompare(String(dateOf(a, l.date))); })
+            .map(function (r) { return l.fields.map(function (c) { return { label: words(c), value: show(c, r[c]) }; }); }) };
+        })
+      };
+    });
+  }
+
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
   /* the save app's own words for the codes an inspector can meet (PR 442) */
@@ -85,23 +129,30 @@
     screen.textContent = '';
     screen.appendChild(el('h1', '', 'Breeding records'));
     if (ends) screen.appendChild(el('p', 'ins-ends', 'Read only. This link ends ' + day(ends) + '.'));
-    var dogs = build(res);
+    var dogs = build(res), rooms = buildRooms(res);
     if (notShared && notShared.length) screen.appendChild(el('p', 'ins-ends ins-not', 'Not shared on this link: ' + notShared.join(', ') + '.'));
-    if (!dogs.length) { screen.appendChild(el('p', 'sub', 'No dogs have been shared on this link.')); return; }
+    if (!dogs.length && !rooms.length) { screen.appendChild(el('p', 'sub', 'No records have been shared on this link.')); return; }
+    function listBox(l) {
+      var box = el('div', 'ins-list');
+      box.appendChild(el('h3', '', l.title));
+      l.rows.forEach(function (cells) {
+        var row = el('div', 'ins-row');
+        cells.forEach(function (c) { if (c.value === '') return; var s = el('span'); s.appendChild(el('b', '', c.label + ' ')); s.appendChild(document.createTextNode(c.value)); row.appendChild(s); });
+        box.appendChild(row);
+      });
+      return box;
+    }
+    rooms.forEach(function (r) {
+      var card = el('section', 'ins-dog ins-room');
+      card.appendChild(el('h2', '', r.name));
+      r.lists.forEach(function (l) { card.appendChild(listBox(l)); });
+      screen.appendChild(card);
+    });
     dogs.forEach(function (d) {
       var card = el('section', 'ins-dog');
       card.appendChild(el('h2', '', d.name));
       if (d.facts.length) card.appendChild(el('p', 'ins-facts', d.facts.join(' · ')));
-      d.lists.forEach(function (l) {
-        var box = el('div', 'ins-list');
-        box.appendChild(el('h3', '', l.title));
-        l.rows.forEach(function (cells) {
-          var row = el('div', 'ins-row');
-          cells.forEach(function (c) { if (c.value === '') return; var s = el('span'); s.appendChild(el('b', '', c.label + ' ')); s.appendChild(document.createTextNode(c.value)); row.appendChild(s); });
-          box.appendChild(row);
-        });
-        card.appendChild(box);
-      });
+      d.lists.forEach(function (l) { card.appendChild(listBox(l)); });
       screen.appendChild(card);
     });
   }
@@ -123,7 +174,7 @@
     link = null;
     message(screen, 'Loading…');
     var res = {}, ends = '', notShared = [];
-    var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; }));
+    var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; }), ROOMS.map(function (L) { return L.key; }));
     var chain = Promise.resolve(true);
     keys.forEach(function (k) {
       chain = chain.then(function (go) {
@@ -131,8 +182,8 @@
         return save.read(k).then(function (r) {
           if (r.ok) { res[k] = r; if (r.ends) ends = r.ends; return true; }
           if (r.code === 'NOT_ALLOWED') {
-            if (k === 'subject') { message(screen, 'No dogs have been shared on this link.'); return false; }
-            notShared.push(title(k)); return true;   // that list was not ticked for this link
+            if (k !== 'subject') notShared.push(title(k));   // that list was not ticked (a temperatures-only link has no dogs)
+            return true;
           }
           message(screen, SAY[r.code] || 'These records cannot be shown right now.');
           return false;
@@ -141,9 +192,9 @@
     });
     chain.then(function (ok) { if (ok) render(screen, res, ends, notShared); save.clearCode(); });
   }
-  function title(k) { var L = LISTS.filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
+  function title(k) { var L = LISTS.concat(ROOMS).filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
   function root_BLDSave() { return (typeof self !== 'undefined' ? self : this).BLDSave; }
 
   if (typeof document !== 'undefined' && document.getElementById('screen')) start();
-  return { parseHash: parseHash, build: build, day: day };
+  return { parseHash: parseHash, build: build, buildRooms: buildRooms, day: day, when: when };
 }));

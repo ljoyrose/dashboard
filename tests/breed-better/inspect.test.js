@@ -28,3 +28,19 @@ test('records group under each dog, dogs A to Z, newest first, dates read like 2
   assert.deepStrictEqual(hs.rows[0], [{ label: 'Test', value: 'elbows' }, { label: 'Grade', value: '0' }, { label: 'Tested on', value: '1 Jun 2025' }]);
   assert.deepStrictEqual(dogs[1].lists.find((l) => l.title === 'Litters').rows[0], [{ label: 'DOB', value: '2 Mar 2026' }]);
 });
+
+test('demo 3b: temperature readings group by room, rooms in number order, newest first, London day and time', () => {
+  const res = { area_reading: { fields: ['id', 'area_id', 'room', 'period_start', 'min_c', 'max_c', 'mitigation_note'], rows: [
+    { id: 'r1', area_id: 'a10', room: 'T10', period_start: '2026-03-02T07:00:00Z', min_c: '15.0', max_c: '19.0', mitigation_note: '' },
+    { id: 'r2', area_id: 'a2', room: 'T2', period_start: '2026-07-01T06:00:00Z', min_c: '18.0', max_c: '24.5', mitigation_note: 'Fan on' },
+    { id: 'r3', area_id: 'a2', room: 'T2', period_start: '2026-07-01T15:00:00Z', min_c: '19.0', max_c: '23.0', mitigation_note: '' }
+  ] } };
+  const rooms = I.buildRooms(res);
+  assert.deepStrictEqual(rooms.map((r) => r.name), ['T2', 'T10']);
+  assert.deepStrictEqual(rooms[0].lists[0].title, 'Temperatures');
+  assert.deepStrictEqual(rooms[0].lists[0].rows[0], [{ label: 'For', value: '1 Jul 2026 16:00' }, { label: 'Min °C', value: '19.0' }, { label: 'Max °C', value: '23.0' }, { label: 'Action', value: '' }]);
+  assert.deepStrictEqual(rooms[0].lists[0].rows[1][3], { label: 'Action', value: 'Fan on' });
+  assert.deepStrictEqual(rooms[1].lists[0].rows[0][0], { label: 'For', value: '2 Mar 2026 07:00' });   // GMT in March
+  assert.deepStrictEqual(I.buildRooms({}), []);
+  assert.strictEqual(I.when('2025-06-01'), '1 Jun 2025');   // a date with no time stays a date
+});
