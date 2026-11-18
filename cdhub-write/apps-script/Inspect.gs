@@ -144,6 +144,16 @@ function inspectSiteData_(key, tenant) {
   var dam = key === 'check_log' ? names(READABLE.litter.file, 'dam_subject_id') : {};   // a litter's mum, to scope its pups' records
   var replaced = {};
   f.records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
+  // a temperature on a day an owner row (BLD-requirement, need_type room.empty) says the room was empty is left out,
+  // as the staff pages do (TEMPS, 18 Nov 2026)
+  var empty = [];
+  if (key === 'area_reading') {
+    var q = store_read_(READABLE.requirement.file, false);
+    ((q && q.records) || []).forEach(function (e) {
+      if ((!e.tenant_id || e.tenant_id === tenant) && e.need_type === 'room.empty' && e.target_table === 'area' && e.target_id) empty.push(e);
+    });
+  }
+  var emptyOn = function (aid, day) { return !!day && empty.some(function (e) { return e.target_id === aid && inspectCovers_(e, day); }); };
   var header = f.header.slice();
   site.extra.forEach(function (c) { if (header.indexOf(c) < 0) header.push(c); });
   var recs = f.records.filter(function (r) { return (!r.tenant_id || r.tenant_id === tenant) && !replaced[r.id]; }).map(function (r) {
@@ -153,9 +163,11 @@ function inspectSiteData_(key, tenant) {
     if (key === 'check_log') { o.job = job[r.check_type_id] || ''; o.dog = r.subject_id ? (dog[r.subject_id] || '') : ''; }
     o.__dam = r.litter_id ? (dam[r.litter_id] || '') : '';
     o.__day = inspectRowDay_(r, site.dateCols);
+    o.__empty = key === 'area_reading' && emptyOn(r.area_id, o.__day);
     o.__at = String(r[site.dateCols[0]] || r[site.dateCols[1]] || '');
     return o;
   });
+  recs = recs.filter(function (r) { return !r.__empty; });
   recs.sort(function (a, b) { return a.__at < b.__at ? 1 : a.__at > b.__at ? -1 : 0; });
   return { header: header, records: recs };
 }

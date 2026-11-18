@@ -403,3 +403,14 @@ test('the owner choices list the readable columns for temperatures and jobs', ()
   assert.ok(ch.lists.check_log.includes('dog'));
   assert.equal(ch.keys.area_reading, '');
 });
+
+test('a temperature on a day the room was marked empty is left out, as on the staff pages', () => {
+  const env = siteSetup();
+  const lines = ['id,tenant_id,need_type,target_table,target_id,from_date,to_date', `req-e1,${fx.TENANT},room.empty,area,area-r2,2026-10-12,2026-10-12`];
+  const f = env.file('BLD-requirement.csv');
+  if (f.length) { f[0].content = crlf(lines); f[0].sheet = undefined; } else env.addFile('BLD-requirement.csv', crlf(lines));
+  const m = make(env, { fields: { subject: ['name'], area_reading: ['room', 'min_c'] } });
+  assert.equal(m.ok, true, JSON.stringify(m));
+  const r = read(env, m.result.code, 'area_reading');
+  assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)).map((x) => x.room), ['Test Room 1']);
+});
