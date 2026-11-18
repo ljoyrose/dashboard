@@ -39,7 +39,8 @@
   /**
    * Size from weight (Lisa's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
    * never fixed here: size_from_kg.medium = the weight (kg) at which a dog counts as medium, size_from_kg.large = the
-   * weight at which it counts as large. A row needs a value and a source; the newest row in force on `today` wins.
+   * weight a dog must be OVER to count as large (SOP Care Rounds: "small under 10 kg, medium 10-25 kg, large over 25 kg",
+   * so exactly 25 kg is medium; OV12 17 Nov 2026). A row needs a value and a source; the newest row in force on `today` wins.
    * Returns null unless both are set and medium < large, so a half-set pair never sorts a dog.
    */
   function sizeCutoffs(rules, today) {
@@ -57,7 +58,28 @@
   /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. */
   function sizeFromKg(kg, cut) {
     kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
-    return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+    return kg > cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+  }
+
+  /**
+   * Midpoint of a kg range typed in a size cell, e.g. "Mini 8-12kg" gives 10 and "Lge Mini/Sml Med 12-16kg" gives 14
+   * (Lisa 15 Nov 2026: with no weighing, use the breed size range midpoint). NaN when the text has no "a-b kg" range.
+   */
+  function rangeMidKg(text) {
+    var m = /(\d+(?:[.,]\d+)?)\s*(?:-|\u2013|to)\s*(\d+(?:[.,]\d+)?)\s*kg/i.exec(String(text == null ? '' : text));
+    if (!m) return NaN;
+    var a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[2].replace(',', '.'));
+    return a > 0 && b >= a ? (a + b) / 2 : NaN;
+  }
+  /**
+   * The size of one dog: the latest weighing against the cut-off rows, else the midpoint of the kg range in its size
+   * cell. { size: 'small'|'medium'|'large'|'', from: 'weight'|'range'|'', kg }. No cut-off rows: no size (never a fixed default).
+   */
+  function sizeOf(latestKg, sizeText, cut) {
+    var b = sizeFromKg(latestKg, cut);
+    if (b) return { size: b, from: 'weight', kg: parseFloat(latestKg) };
+    var mid = rangeMidKg(sizeText); b = sizeFromKg(mid, cut);
+    return b ? { size: b, from: 'range', kg: mid } : { size: '', from: '', kg: null };
   }
 
   /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
@@ -211,6 +233,6 @@
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));

@@ -104,8 +104,9 @@ test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old
   await expect.poll(() => sent.length).toBe(3);
   expect(sent[0]).toMatchObject({ action: 'file_add', fields: { kind: 'photo', mime: 'image/jpeg', taken_on: '2025-01-01' } });
   expect(sent[0].fields.data_base64.length).toBeGreaterThan(50);
-  expect(sent[1]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Replaced by edited copy' } });
-  expect(sent[2]).toMatchObject({ action: 'link_add', fields: { role: 'gallery', to_id: 'fil-new', from_id: 'sub-g1', from_date: today } });
+  // the copy joins the gallery before the old photo is ended, so a refused add never loses a photo (17 Nov 2026)
+  expect(sent[1]).toMatchObject({ action: 'link_add', fields: { role: 'gallery', to_id: 'fil-new', from_id: 'sub-g1', from_date: today } });
+  expect(sent[2]).toMatchObject({ action: 'link_end', fields: { id: 'l2', reason: 'Replaced by edited copy' } });
   const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
   await expect(g2.locator('[data-gal-msg]')).toHaveText('✓ Edited copy saved');
   await expect(g2.locator('> summary')).toHaveText('Photos (3)');
@@ -125,8 +126,26 @@ test('card: ✎ Edit on the main photo saves an edited copy that becomes the mai
   await card.locator('[data-photo-edit]').click();
   await page.locator('[data-crop-use]').click();
   await expect.poll(() => sent.length).toBe(4);
-  expect(sent.map((b) => b.action)).toEqual(['file_add', 'link_end', 'link_add', 'link_add']);   // fil-1 is in the gallery and is main
+  expect(sent.map((b) => b.action)).toEqual(['file_add', 'link_add', 'link_end', 'link_add']);   // fil-1 is in the gallery and is main
   expect(sent[3].fields).toMatchObject({ role: 'main', to_id: 'fil-new' });
   await expect(page.locator('.dc[data-dog="sub-g1"] img.dogphoto')).toHaveAttribute('data-photo-id', 'DRIVEeditedNew9');
   await expect(page.locator('.dc[data-dog="sub-g1"] [data-photo-msg]')).toHaveText('✓ Edited copy saved');
+});
+
+test('a refused gallery add leaves the old photo in the gallery (17 Nov 2026: 5 photos were lost this way)', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { gal } = await setUp(page, guard, today);
+  await driveBytes(page);
+  const sent = [];
+  await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
+    const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
+    if (b.action === 'link_add') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'INVALID', message: 'Choose a kind of link on the list.' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'fil-new', drive_file_id: 'DRIVEeditedNew9' } }) });
+  });
+  await gal.locator('.gi[data-file="fil-2"] .ged').click();
+  await page.locator('[data-crop-use]').click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent.map((b) => b.action)).toEqual(['file_add', 'link_add']);   // no link_end: the old photo stays
+  await expect(gal.locator('[data-gal-msg]')).toContainText('not shown yet');
+  await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] .gi[data-file="fil-2"]')).toHaveCount(1);
 });
