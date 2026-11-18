@@ -13,12 +13,19 @@ const RULES = [
 ].join('\n') + '\n';
 const CODES = 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\ncr-1,ten-x,sc-aaaaaa,Test Person,STAFF,2026-10-01,,\ncr-2,ten-x,sc-bbbbbb,Old Helper,STAFF,2026-01-01,2026-06-30,Test Owner\n';
 
+// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
+const setTable = (d, id, name, content) => {
+  const f = d.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); }
+  else d.file(id, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
+
 function world({ owner = true } = {}) {
   const d = buildWorld();
-  d.file('bin-rules', 'BLD-breeding_rule.csv', RULES, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+  setTable(d, 'bin-rules', 'BLD-breeding_rule.csv', RULES);
   if (!owner) return d;
-  d.file('bin-fv', 'BLD-field_visibility.csv', FV, { parents: [IDS.bld], driveId: 'drv-alpha1' });
-  d.file('bin-codes', 'BLD-code_register.csv', CODES, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+  setTable(d, 'bin-fv', 'BLD-field_visibility.csv', FV);
+  setTable(d, 'bin-codes', 'BLD-code_register.csv', CODES);
   return d;
 }
 const asOwner = base.extend({ world: async ({}, use) => use(world()) });
