@@ -92,6 +92,7 @@ test.describe('CD Hub: items', () => {
     const row = pop.locator('tbody tr', { hasText: 'E-01' });
     await expect(row).toContainText('Pretend CO2 extinguisher');
     await expect(row).toContainText('1 Jul 2030');
+    await expect(row).toContainText('18 Nov 2026');            // the photo's date
     await expect(row.locator('img.ph')).toHaveAttribute('src', /drive\.google\.com\/thumbnail\?id=PRETENDdrivePhotoId000001/);
     await expect(pop.locator('tbody tr', { hasText: 'E-02' }).locator('img')).toHaveCount(0);
     await pop.close();
