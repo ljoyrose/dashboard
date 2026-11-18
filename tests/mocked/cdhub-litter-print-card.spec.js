@@ -66,29 +66,28 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await expect(card.locator('[data-k="Room"] dd')).toHaveText('Room A');
   await expect(card).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
   await expect(card.locator('.code svg')).toHaveCount(1);
+  await expect(page.locator('.sheet')).toHaveClass(/\bper2\b/);   // two per A4 to start (Lisa's dog card, 18 Nov 2026)
+  await page.getByRole('button', { name: 'Full A4' }).click();
   await expect(page.locator('.sheet')).toHaveClass(/\bper1\b/);
   await page.getByRole('button', { name: '2 per A4' }).click();
   await expect(page.locator('.sheet')).toHaveClass(/\blitters\b.*\bper2\b|\bper2\b.*\blitters\b/);
   await expect(card.locator('[data-k="jobs"] li')).toHaveText(['Socialisationdaily']);
-  // kennel card: Colour from the lookup rows, Microchip in threes, the job strip by group (retired job left out)
-  await page.getByRole('button', { name: 'Dog kennel cards' }).click();
+  // Lisa's dog card (18 Nov 2026): name, Sex, Date of birth, photo in the size colour, Size, code, microchip in threes
+  await page.getByRole('button', { name: 'Dog cards' }).click();
   const dam = page.locator('.dcard[data-dog="dam1"]');
-  await expect(dam.locator('[data-k="Colour"] dd')).toHaveText('Pretend Gold parti');
+  await expect(dam.locator('.name')).toHaveText('Pretend Dam');
   await expect(dam.locator('[data-k="chip"] b')).toHaveText('123 456 789 012 345');
-  await expect(dam.locator('[data-k="BFFs:"] dd')).toHaveText('Pretend Pup A');   // BFFs from the link rows, read both ways
-  // Lisa 13 Nov 2026: the print checks name, size, classification, microchip, photo, colour and DOB
-  await expect(dam.locator('[data-k="Class"] dd')).toHaveText('Pretend Breeding Bitch');   // kept from the older row; the move row is blank
-  await expect(dam.locator('[data-k="DOB"] dd')).toHaveText('2 Mar 2021');   // one date format everywhere (Lisa 13 Nov 2026): never DD/MM/YY
+  await expect(dam.locator('[data-k="dob"] dd')).toHaveText('2 Mar 2021');   // one date format everywhere (Lisa 13 Nov 2026): never DD/MM/YY
   await expect(dam.locator('[data-k="photo"] img')).toHaveAttribute('src', /thumbnail\?id=FAKEmainFromLink9/);
-  await expect(dam.locator('[data-k="jobs"] .job')).toHaveText(['Grooming', 'Weigh']);
+  await expect(dam.locator('.code svg')).toHaveCount(1);
   await expect(page.locator('.dcard[data-dog="sire1"] [data-k="chip"]')).toHaveCount(0);
-  // room sign: room jobs and how often
-  await page.getByRole('button', { name: 'Room signs' }).click();
-  await expect(page.locator('.rcard [data-k="jobs"] li')).toHaveText(['Daily cleandaily', 'Deep cleanweekly']);
+  // room card: Lisa's design, the footer line
+  await page.getByRole('button', { name: 'Room cards' }).click();
+  await expect(page.locator('.rcard .foot').first()).toHaveText('Unsure? Don\u2019t Move. Ask.');
   // no address on any print-out (Lisa 13 Nov 2026): no printed text holds the site address, and the page margin is 0 so the
   // browser has no room for its own header and footer (which print the page address)
   const origin = new URL(page.url()).origin;
-  for (const b of ['Room signs', 'Dog kennel cards', 'Litter cards']) {
+  for (const b of ['Room cards', 'Dog cards', 'Litter cards']) {
     await page.emulateMedia({ media: 'screen' });
     await page.getByRole('button', { name: b }).click();
     await page.emulateMedia({ media: 'print' });
