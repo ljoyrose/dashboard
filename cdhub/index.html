@@ -725,7 +725,7 @@ function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><d
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
 function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
 /* a dog's documents: files linked from the dog, labelled by BLD-doc_type (Lisa 17 Nov 2026) */
-function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
+function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],records:function(t){ return T['BLD-'+t+'.csv']||T['BLD-'+String(t).replace(/s$/,'')+'.csv']||[]; },recordLabel:function(t,r){ var ct=(T['BLD-check_type.csv']||[]).filter(function(x){ return x.id===r.check_type_id; })[0]; return ct?ct.label:''; },today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
