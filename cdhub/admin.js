@@ -90,6 +90,19 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
+  /* The phone set-up QR opens the public staff page (Lisa 18 Nov 2026: staff phones have no Cloudflare sign-in, so a QR shown
+     on the Cloudflare copy must not point at it). The owner's qr.base_url rule row in force wins (https, ending in /), as on
+     the print page; this is only the starting default. */
+  var QR_BASE_START = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
+  function qrBase(T, today) {
+    var best = null;
+    rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
+      var f = String(r.from_date || r.effective_from || ''), val = String(r.value || '').trim();
+      if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(val) || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
+      if (!best || f >= best.f) best = { f: f, v: val };
+    });
+    return best ? best.v : QR_BASE_START;
+  }
   function ownerPage(v, label, section) {
     var u = scriptUrl();
     return u ? '<a class="btn" href="' + v.esc(u + '?page=approve' + (section ? '&section=' + section : '')) + '" target="_blank" rel="noopener">' + (label || 'Open owner page') + '</a>'
@@ -168,7 +181,7 @@ var AdminView = (function () {
 
   /* ---- the cards ---- */
   function body(v, id) {
-    var T = v.T, u = scriptUrl(), host = location.host;
+    var T = v.T, u = scriptUrl(), host = location.host, qrHost = String(qrBase(T, v.today)).replace(/^https:\/\/([^/]+).*$/, '$1');
     if (id === 'codes') {
       var C = rows(T, 'BLD-code_register.csv').filter(function (r) { return r.code_id; }), byCode = {};
       C.forEach(function (r) { (byCode[r.code_id] = byCode[r.code_id] || []).push(r); });
@@ -191,7 +204,7 @@ var AdminView = (function () {
         + '<p class="mut">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
     }
     if (id === 'phone') {
-      var link = u ? staffBase() + '#setup=' + encodeURIComponent(u) : '', qr = '';
+      var link = u ? qrBase(T, v.today) + '#setup=' + encodeURIComponent(u) : '', qr = '';
       // the QR drawer loads only when asked for (keeps the hub's first load small). 15 Nov 2026: it stuck on "Drawing..." when
       // the redraw after loading did not happen, so the QR now goes straight into its own box, and a failed load says so.
       var qrHtml = function () { try { return '<div class="adm-qr">' + BLDQr.svg(link, 'Phone set-up QR') + '<small>Show on screen. Do not pin up or photograph.</small></div>'; } catch (e) { return '<p class="mut">QR could not be drawn.</p>'; } };
@@ -208,7 +221,7 @@ var AdminView = (function () {
           qr = '<div id="adm-qr-box"><p class="mut">Drawing\u2026</p></div>';
         }
       } else if (S.qr && link) qr = qrHtml();
-      return '<p>Sets up <b>' + v.esc(host) + '</b> only. Each address needs its own set-up.</p>'
+      return '<p>Sets up the staff page at <b>' + v.esc(qrHost) + '</b>.</p>'
         + (u ? '<p><button type="button" class="btn" data-adm-qr="1">' + icon('qr') + (S.qr ? ' Hide QR' : ' Show QR') + '</button></p>' + qr
           : '<p class="mut">No save address in this browser. <button type="button" class="cb" data-go="round">Set it up</button></p>')
         + steps(['They scan the QR', 'They type their own code', 'Done: their phone remembers it'])
@@ -250,8 +263,8 @@ var AdminView = (function () {
     }
     if (id === 'print') {
       return '<p><a class="btn" href="' + v.esc(staffBase() + 'print/') + '">' + icon('print') + ' Open Print</a></p>'
-        + '<p class="mut">Room signs · dog cards · litter cards · set-up QRs. Needs an owner code on this device.</p>'
-        + '<p class="mut">QRs carry <b>' + v.esc(host) + '</b>: print from the address staff use.</p>';
+        + '<p class="mut">Room cards · dog cards · litter cards · set-up QRs. Needs an owner code on this device.</p>'
+        + '<p class="mut">QRs open <b>' + v.esc(qrHost) + '</b>, whichever address you print from.</p>';
     }
     if (id === 'rules') {
       var R = rows(T, 'BLD-breeding_rule.csv').filter(function (r) { return r.rule_key; }), by = {};
@@ -294,7 +307,7 @@ var AdminView = (function () {
   function sub(v, id) {
     var u = !!scriptUrl();
     if (id === 'codes') { var cr = rows(v.T, 'BLD-code_register.csv').filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }); return v.hasTable('BLD-code_register.csv') ? cr.length + ' live' : 'Who has one'; }
-    if (id === 'phone') return u ? 'Show QR · ' + v.esc(location.host) : 'Needs a save address';
+    if (id === 'phone') return u ? 'Show QR · ' + v.esc(String(qrBase(v.T, v.today)).replace(/^https:\/\/([^/]+).*$/, '$1')) : 'Needs a save address';
     if (id === 'saving') return v.sinkOn() ? 'Saving on ✓' : 'Saving off';
     if (id === 'staff') { var n = rows(v.T, 'BLD-role.csv').filter(function (r) { return r.code; }).length; return n ? n + ' roles' : 'Steps'; }
     if (id === 'visitor') return 'Ends by itself';

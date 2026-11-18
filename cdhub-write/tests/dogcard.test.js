@@ -51,26 +51,47 @@ test('vaccination: one row per vaccination, so a dog can have several; card link
   assert.equal(post(e, 'vaccination', { subject_id: 'sub-test-a', given_on: '2026-01-15', product: '=SUM(A1)' }).code, 'INVALID');
 });
 
-test('vaccination_void: only the newest row, marked removed (never deleted); then the one before becomes newest', () => {
+test('vaccination_void (Archive): owner only, ANY row of the dog, the row stays; staff refused', () => {
   const T = 'ten-x';
   const e = env({}, [
     'vax-old,' + T + ',sub-test-a,vaccination,DHP,DHP,distemper,,,2024-01-01,,,,,,,,,,,,,,',
     'vax-new,' + T + ',sub-test-a,vaccination,L4,L4,leptospirosis,,,2025-01-01,,,,,,,,,,,,,,'
   ]);
-  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }).code, 'NOT_ALLOWED');
-  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-new' });
+  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }).code, 'NOT_ALLOWED');   // staff
+  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-b', id: 'vax-old' }, e.codes.owner).code, 'NOT_FOUND');   // another dog
+  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }, e.codes.owner);   // not the newest: allowed now
   assert.equal(r.ok, true, JSON.stringify(r));
   const rows = text(e, 'BLD-vaccination.csv').trim().split(/\r?\n/);
   assert.equal(rows.length, 3);   // nothing deleted
-  assert.match(rows[2], /^vax-new,.*,\d{4}-\d{2}-\d{2}T[^,]+,Sam Staff$/);
-  assert.match(rows[1], /,,$/);   // the older row is untouched
-  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }).ok, true);
+  assert.match(rows[1], /^vax-old,.*,\d{4}-\d{2}-\d{2}T[^,]+,Olive Owner$/);
+  assert.match(rows[2], /,,$/);   // the other row is untouched
+});
+
+test('vaccination_delete (Delete forever): owner only; that one row leaves the sheet, the rest byte for byte the same', () => {
+  const T = 'ten-x';
+  const e = env({}, [
+    'vax-a,' + T + ',sub-test-a,vaccination,DHP,DHP,distemper,,,2024-01-01,,,,,,,,,,,,,,',
+    'vax-b,' + T + ',sub-test-a,vaccination,"L4, boost",L4,leptospirosis,,,2025-01-01,,,,,,,,,,,,,,',
+    'vax-c,' + T + ',sub-test-b,vaccination,KC,KC,bordetella,,,2025-02-01,,,,,,,,,,,,,,'
+  ]);
+  const before = text(e, 'BLD-vaccination.csv');
+  assert.equal(post(e, 'vaccination_delete', { subject_id: 'sub-test-a', id: 'vax-b' }).code, 'NOT_ALLOWED');   // staff
+  assert.equal(post(e, 'vaccination_delete', { subject_id: 'sub-test-a', id: 'vax-c' }, e.codes.owner).code, 'NOT_FOUND');   // not this dog's
+  assert.equal(text(e, 'BLD-vaccination.csv'), before);
+  const r = post(e, 'vaccination_delete', { subject_id: 'sub-test-a', id: 'vax-b' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.deleted, true);
+  const lines = before.split('\r\n');
+  assert.equal(text(e, 'BLD-vaccination.csv'), [lines[0], lines[1], lines[3]].join('\r\n') + '\r\n');
+  // the last row can go too
+  assert.equal(post(e, 'vaccination_delete', { subject_id: 'sub-test-b', id: 'vax-c' }, e.codes.owner).ok, true);
+  assert.equal(text(e, 'BLD-vaccination.csv'), [lines[0], lines[1]].join('\r\n') + '\r\n');
 });
 
 test('vaccination_void refuses plainly when the sheet has no voided_on / voided_by columns', () => {
   const H = VAX_H.replace(',voided_on,voided_by', '');
   const e = env({}, ['vax-1,t,sub-test-a,vaccination,DHP,DHP,distemper,,,2024-01-01,,,,,,,,,,,,'], H);
-  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-1' });
+  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-1' }, e.codes.owner);
   assert.equal(r.code, 'HEADER_MISMATCH');
   assert.match(r.message, /voided_on, voided_by/);
 });

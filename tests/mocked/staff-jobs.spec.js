@@ -137,11 +137,11 @@ test('Problem (was Report) is on every screen and carries the dog just scanned',
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-report', subject_id: 'dog-1', outcome: 'recorded', note: 'Pretend note' } });
 });
 
-test('jobs are listed A-Z, with a group where its name falls, whatever is late', async ({ page }) => {
+test('jobs: daily first, then less often (a group by its most frequent job), as needed last; A-Z within, whatever is late', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.locator('[data-group="Grooming"]')).toBeVisible();
-  await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Walk', 'Weigh']);
+  await expect(page.locator('.job .nm')).toHaveText(['Walk', 'Grooming', 'Weigh']);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
 });
@@ -158,6 +158,20 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   expect(sent[0].fields.dog_ids).toBe('dog-1');
   expect(sent[0].fields.area_id).toBe('area-1');
   expect(sent[0].fields.how_recorded).toBe('scanned');
+});
+
+test('a room scan shows who is in the room now; a name opens that dog\'s jobs', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const here = page.locator('[data-k="here"]');
+  await expect(here.locator('h3')).toHaveText('Here now');
+  await expect(here.locator('.chip')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Move dogs' })).toBeVisible();
+  const tagged = here.locator('button.chip').first();
+  await expect(tagged).toBeVisible();
+  await tagged.click();
+  await expect(page).toHaveURL(/#s\/[A-Z2-9]+$/);
+  await expect(page.locator('[data-k="here"]')).toHaveCount(0);   // a dog screen has no room list
 });
 
 test('a scanned room has a Temperature button that opens the temperature screen', async ({ page }) => {
@@ -574,6 +588,28 @@ test('Earlier, several days: a row per room per day, each judged and saved for i
   await rows.first().getByRole('button', { name: /^Done:/ }).click();
   await expect.poll(() => sent.length).toBe(4);
   expect(sent[3]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-bowls' } });
+});
+
+test('Earlier, several days: dogs as they were on each day, and a job group enters every job in it', async ({ page }) => {
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const day = (n) => london(new Date(Date.now() - n * 86400000));
+  // Pretend B arrived yesterday: two days ago only Pretend A was here
+  const sent = await setup(page, { occupancy: [{ subject_id: 'dog-1', area_id: 'area-1', moved_in: '2026-10-01' }, { subject_id: 'dog-2', area_id: 'area-1', moved_in: day(1) }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await page.getByLabel('Job').selectOption('group:Grooming');
+  await page.getByLabel('First day').fill(day(2));
+  await page.getByLabel('Days').selectOption('7');
+  await page.getByRole('button', { name: 'Show' }).click();
+  const rows = page.locator('.job-row');
+  await expect(rows).toHaveCount(2 + 4 + 4);   // 2 jobs x 1 dog, then 2 jobs x 2 dogs on each of the last two days
+  await expect(page.locator('.job-row[data-day="' + day(2) + '"]')).toHaveCount(2);
+  await expect(page.locator('.job-row[data-day="' + day(2) + '"]').filter({ hasText: 'Pretend B' })).toHaveCount(0);
+  await expect(page.locator('.job-row[data-day="' + day(1) + '"]').filter({ hasText: 'Nails: Pretend B' })).toHaveCount(1);
+  await page.locator('.job-row[data-day="' + day(2) + '"]').filter({ hasText: 'Ears: Pretend A' }).getByRole('button', { name: /^Done:/ }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-ears', subject_id: 'dog-1', how_recorded: 'bulk' });
+  expect(london(new Date(sent[0].fields.happened_at))).toBe(day(2));
 });
 
 test('check types starting round. belong to The round and never show as jobs, nor in Earlier', async ({ page }) => {

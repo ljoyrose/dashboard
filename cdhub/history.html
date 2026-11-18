@@ -405,7 +405,12 @@ async function loadAreaData(){
       AREA_HDR_BAD=(rows.length&&(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])))?'row 1 is not the heading row'
         :rows.some(function(r){ return r.id==='id'||r.area_id==='area_id'; })?'a heading row is also lower down':'';
       rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
+      /* Lisa 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty with its temperatures hidden;
+         the readings stay in the records. Before and after the link copies, so a copy never carries them into another room. */
+      var hideE=function(x){ var O=window.BLDOccupancy; return O&&O.hideEmpty?O.hideEmpty(x,REQ,function(r){ return readingWhen(r.period_start||r.taken_at).day; }):x; };
+      rows=hideE(rows);
       if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
+      rows=hideE(rows);
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
         var at=String(r.period_start||r.taken_at||''), when=readingWhen(at); if(!r.area_id||!when.day)return;   /* period_start: a reading typed later belongs to its own slot */
@@ -550,14 +555,16 @@ var YEAR=2026;
 /* Round order comes from BLD-area rows: group_sort, then code. When a room is in use and a thermometer is needed
    comes only from BLD-requirement rows through the shared lib (staff/lib/needs.js, thermometer.js, occupancy.js;
    Lisa 11 Nov 2026, "A standard"). A room whose room.in_use rows have all ended is retired: left out of the round
-   after its end day, shown as "3A.1 (retired 11/11/26)", and its past readings still show. */
+   after its end day, shown by its own name (and the room it became), and its past readings still show. */
 function areaEnd(aid){ var N=window.BLDNeeds; return N?N.endDay(REQ,'room.in_use','area',aid):''; }
 function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
 /* Lisa 12 Nov 2026: a retired room shows its own name without the ZZ_ filing mark, and the room it became (BLD-area_link). */
 function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')).replace(/^ZZ_/,''); }
 function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_area_id===aid&&l.to_area_id&&l.to_area_id!==aid) to=l.to_area_id; }); return to; }
+/* Lisa 18 Nov 2026: no "(retired 2 Nov 2026)" after a renamed cabin's name in the calendar; it still sorts last */
 function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
-  return areaCode(aid)+(to?', now '+areaCode(to):'')+' (retired '+dayWords(areaEnd(aid))+')'; }
+  return areaCode(aid)+(to?', now '+areaCode(to):''); }
+function roomEmptyOn(aid,day){ var O=window.BLDOccupancy; return !!(O&&O.emptyOn&&O.emptyOn(aid,day,REQ)); }
 function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
 function thermoNeeded(aid,day){
   var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;
@@ -626,6 +633,7 @@ function slotState(t,aid,day,slot){
   }
   if(t&&t.empty) return {k:'empty'};
   if(!neededOn(aid,day)) return {k:'none'};
+  if(roomEmptyOn(unitArea(aid),day)) return {k:'empty'};   /* marked empty all day (room.empty row): never missed */
   if(day===TODAY_STR&&(slot==='pm'||new Date().getHours()<12)) return {k:'due'};
   if(day>TODAY_STR) return {k:'due'};
   return {k:'miss'};
@@ -665,7 +673,8 @@ function slotHtml(label,s){
   if(s.k==='swap') return '<span class="warn"'+(s.unread?' data-unread':'')+'>'+esc(txt)+(s.unread?' · Check: not a number':' · max lower than min')+'</span>';
   if(s.k==='out') return '<span class="warn">'+esc(txt)+(s.why==='spotcold'?' · bed spot '+esc(s.spot)+' below the puppy limit':s.why==='spothot'?' · bed spot '+esc(s.spot)+' above the puppy limit':'')+'</span>';
   if(s.k==='warm') return esc(txt)+' <span class="cool-act">· over the limit: cooling action</span>';
-  if(s.k==='nospot') return esc(txt)+' <span class="tick" aria-label="room inside limit">✓</span> <span class="cool-act">· puppies: bed spot not recorded</span>';
+  /* Lisa 18 Nov 2026: no "puppies: bed spot not recorded" words in any room; the room inside its limit shows its tick */
+  if(s.k==='nospot') return esc(txt)+' <span class="tick" aria-label="room inside limit">✓</span>';
   if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
   return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
 }
@@ -759,7 +768,6 @@ function buildMonthCards(y){
       h+='<span>'+(t.in+t.warm+t.nospot)+' in limit</span>';
       h+='<span'+(t.out?' class="warn"':'')+'>'+t.out+' outside</span>';
       if(t.warm) h+='<span data-warm>'+t.warm+' warm (cooling action)</span>';
-      if(t.nospot) h+='<span data-nospot>'+t.nospot+' puppies: bed spot not recorded</span>';
       if(t.swap) h+='<span class="warn">'+t.swap+' max lower than min</span>';
       h+='<span'+(t.miss?' class="warn"':'')+'>'+t.miss+' missed</span>';
       if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';
