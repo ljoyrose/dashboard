@@ -12,7 +12,7 @@
   var FILES = ['BLD-person.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-subject_owner.csv', 'BLD-sale.csv', 'BLD-match_candidate.csv'];
   var VIEWS = [['home', 'Home'], ['today', 'Today'], ['all', 'All'], ['litters', 'Litters'], ['add', 'Add']];
   var WORD = { young: 'young_word', female: 'adult_female_word', male: 'adult_male_word', birth: 'birth_event_word' };
-  var state = { view: 'home', key: '', litter: '', stage: '', msg: '', tabs: null, example: true };
+  var state = { view: 'home', key: '', litter: '', stage: '', msg: '', tabs: null, example: true, demo: false };
 
   function t(v) { return v == null ? '' : String(v).trim(); }
   function esc(s) {
@@ -96,9 +96,14 @@
   function ensureTabs() {
     var c = cfg();
     state.example = !t(c.sheetId);
-    if (state.example) { state.tabs = Examples.build(); return; }
-    if (!state.tabs) state.tabs = { Enquiries: [], People: [], Litters: [], Deposits: [], FollowUps: [], Drafts: [], Events: [] };
+    /* Lisa 16 Nov 2026 ("A"): no sheet connected = no enquiries, never the invented examples. The examples show only
+       when this browser asks for them (localStorage cdhub.enquiries.examples = 1), for a demo or a test. */
+    state.demo = state.example && showExamples();
+    if (state.demo) { state.tabs = Examples.build(); return; }
+    if (!state.tabs || state.example) state.tabs = { Enquiries: [], People: [], Litters: [], Deposits: [], FollowUps: [], Drafts: [], Events: [] };
   }
+
+  function showExamples() { try { return root.localStorage && root.localStorage.getItem('cdhub.enquiries.examples') === '1'; } catch (e) { return false; } }
 
   function shown(list, litters) {
     return (list || []).filter(function (e) {
@@ -157,12 +162,13 @@
   }
 
   function shell(body) {
-    var stamp = state.example ? '<p><span class="pill" data-enq-stamp>TEST</span></p>' : '';
+    var stamp = state.demo ? '<p><span class="pill" data-enq-stamp>TEST</span></p>' : '';
     return '<h2>Enquiries</h2>' + seg() + stamp + stageSeg() +
       '<p class="mut" data-enq-msg role="status">' + esc(state.msg) + '</p>' + body;
   }
 
   function pageHome(v, litters, subjects, speciesRows) {
+    if (state.example && !state.demo) return shell('<div class="card" data-enq-empty><p><b>No enquiries yet</b></p><p class="mut">They show here once the enquiries sheet is connected.</p></div>');
     var hv = Core.hubView(state.tabs, {});
     var list = shown(state.tabs.Enquiries, litters);
     return shell(litterSelect(litters) +

@@ -314,6 +314,30 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));    // R3 PM 07/01, R1 and R2 AM 08/01 covered
 });
 
+// Lisa 18 Nov 2026 ("mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just hide them"): a room.empty
+// need row makes the room Room empty AM and PM on every day it covers. Its readings stay in the file but no figure shows,
+// nothing is outside and nothing is missed. Rule-driven: the row, never a room name in code.
+test('audit: a room marked empty by a room.empty row shows empty AM and PM, its temperatures hidden, never outside or missed', async ({ page, guard }) => {
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard);
+  put('BLD-requirement.csv', NEEDS + 'req-e,t,room.empty,area,area-r1,2025-01-01,,test,,\n');
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await openDay(page, '2026-01-10');   // R1 had 11.0-15.0 and 9.0-14.0 (outside) that day
+  const r1 = page.locator('#drill .rl', { hasText: 'R1' });
+  await expect(r1).toContainText('AM empty');
+  await expect(r1).toContainText('PM empty');
+  await expect(r1).not.toContainText(/\d+\.\d/);
+  await expect(r1.locator('.warn')).toHaveCount(0);
+  await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');   // other rooms unchanged
+  await page.locator('#drill .dclose').click();
+  expect((await day(page, '2026-01-10').getAttribute('class')).split(' ')[1]).toBe('allok');   // R1's outside reading is hidden
+  await openDay(page, '2026-01-08');   // no reading in R1 that day: empty, never missed
+  await expect(page.locator('#drill .rl', { hasText: 'R1' })).toContainText('AM empty');
+  await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.miss')).toHaveCount(0);
+});
+
 // Two named thermometers in one room (Lisa 11 Nov 2026, H5/6): one line each, "H5/6 · H5" and "H5/6 · H6", each
 // missed on its own. An older reading with no thermometer_id still counts for a room with only one thermometer.
 test('audit: a room with two thermometers has a line per thermometer; a blank thermometer_id counts for a one-thermometer room', async ({ page, guard }) => {

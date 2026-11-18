@@ -153,8 +153,8 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Dog kennel cards' }).click();
-  await expect(page.locator('.dcard .who b')).toHaveText(['Test here', 'Test offsite']);
+  await page.getByRole('button', { name: 'Dog cards' }).click();
+  await expect(page.locator('.dcard .name')).toHaveText(['Test here', 'Test offsite']);
 });
 
 test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card', async ({ page }) => {
@@ -199,8 +199,8 @@ test('room signs are never made for a room whose room.in_use rows have ended', a
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Room signs' }).click();
-  await expect(page.locator('.rcard > b')).toHaveText(['T1']);
+  await page.getByRole('button', { name: 'Room cards' }).click();
+  await expect(page.locator('.rcard .name')).toHaveText(['T1']);
 });
 
 // Lisa 11 Nov 2026: "+ Thermometer" on the hub opens the print page straight at Add thermometer; the place list has

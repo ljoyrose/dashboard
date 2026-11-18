@@ -75,4 +75,26 @@ test.describe('CD Hub: items', () => {
     await expect(late).not.toContainText('next 28 May 2021');
     await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend lamp' })).toContainText('next 1 Jan 2100');
   });
+
+  test('the printed report shows each item with its photo, kind and expiry (18 Nov 2026)', async ({ page, guard }) => {
+    addTable(guard.world, 'BLD-item_kinds.csv', csv('id,tenant_id,kind_key,label,source,set_by,set_on', ['k2,t,pretend_ext,Pretend CO2 extinguisher,x,o,2026-01-01']));
+    addTable(guard.world, 'BLD-items.csv', csv('id,tenant_id,item_no,name,kind_key,make,model,serial_no,size,made_on,expires_on,photo,note,corrects_id,created_at,created_by',
+      ['i2,t,E-01,Pretend CO2,pretend_ext,,,,2 kg,,2030-07-01,,,,2026-01-01T00:00:00Z,o', 'i3,t,E-02,Pretend foam,pretend_ext,,,,,,2030-07-01,,,,2026-01-01T00:00:00Z,o']));
+    addTable(guard.world, 'BLD-files.csv', csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on',
+      ['fl1,t,photo,PRETENDdrivePhotoId000001,,image/jpeg,e01.jpg,1,2026-11-18,,x,o,2026-11-18']));
+    addTable(guard.world, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,source,set_by,set_on,sort,note,created_at,updated_at',
+      ['n9,t,items,i2,main,files,fl1,2026-11-18,,x,o,2026-11-18,,,,']));
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => { location.hash = '#/items'; });
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(2);
+    const [pop] = await Promise.all([page.waitForEvent('popup'), page.locator('[data-itm-report="print"]').click()]);
+    await expect(pop.locator('thead')).toContainText('Photo');
+    const row = pop.locator('tbody tr', { hasText: 'E-01' });
+    await expect(row).toContainText('Pretend CO2 extinguisher');
+    await expect(row).toContainText('1 Jul 2030');
+    await expect(row).toContainText('18 Nov 2026');            // the photo's date
+    await expect(row.locator('img.ph')).toHaveAttribute('src', /drive\.google\.com\/thumbnail\?id=PRETENDdrivePhotoId000001/);
+    await expect(pop.locator('tbody tr', { hasText: 'E-02' }).locator('img')).toHaveCount(0);
+    await pop.close();
+  });
 });
