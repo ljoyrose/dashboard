@@ -1031,7 +1031,10 @@ function readSet(titles,byTitle,live){
   });
 }
 function refused(e){ return !!(e&&(e.status===401||e.status===403||e.status===404)); }
-function showTables(){ BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
+/* Lisa 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty on every screen, with its
+   temperatures hidden. Only this page's copy is changed; the readings stay in the records. */
+function hideEmptyReadings(){ if(T['BLD-area_reading.csv']&&BLDOccupancy.hideEmpty) T['BLD-area_reading.csv']=BLDOccupancy.hideEmpty(T['BLD-area_reading.csv'],T['BLD-requirement.csv']||[]); }
+function showTables(){ BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; hideEmptyReadings(); foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
 async function load(){
   var ticket=++bootTicket;
   function live(){ return ticket===bootTicket; }
@@ -4548,7 +4551,7 @@ function compTemps(win){   /* win: {n,set}; Urgent passes one day (today) so it 
   if(st==='ok'||st==='unknown'||st==='warm'||st==='nospot'){ out.ok++; return; }   /* Temps A: warm = cooling action, nospot = bed spot not recorded; neither is outside */
   var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',from:(r.from||[]).map(function(a){ return code[a]||a; }),min:r.min_c,max:r.max_c,st:st};
   (roomEmpty(r)?out.empty:out.bad).push(x); });
- if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
+ if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).filter(function(t){ return !BLDOccupancy.emptyOn(t.area_id,d,req); }).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
  out.on=!!th; out.win=win; return out;
 }
 function compTempsHtml(){
