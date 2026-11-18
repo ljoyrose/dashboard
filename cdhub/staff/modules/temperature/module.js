@@ -302,6 +302,12 @@
    * a reading outside the limit in an empty room is flagged "Room empty" and never counted as non-compliant, so no
    * "What was done" is asked. Staff only (area_reading), never guests.
    */
+  /* who saved it and when, from the save reply (Lisa's demo, 18 Nov 2026: "shows who did it and when"): " · Grace · 09:14" */
+  function whoWhen(r) {
+    var at = r && r.at ? new Date(r.at) : null, t = '';
+    if (at && !isNaN(at.getTime())) t = at.toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
+    return (r && r.who ? ' · ' + r.who : '') + (t ? ' · ' + t : '');
+  }
   function entry(host, o) {
     var stopCam = null, cam = null, stopEv = null;   // cam = {max, min} as the camera read them; stopEv = the keep-photo camera
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
@@ -316,7 +322,9 @@
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
     // An earlier reading comes from paper, a photo or an app (e.g. Govee): the thermometer no longer shows that day's numbers.
-    if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn, typeBtn]));
+    // Demo 18 Nov 2026 (Lisa: "temperatures ... one tap each"): the MAX and MIN boxes are open at once, so a reading is one
+    // entry and one Save; the camera stays as a choice, and "Type it" is no longer needed.
+    if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
     if (table === 'area_reading') {
       host.appendChild(h('label', { class: 'tg-empty' }, [emptyIn, h('span', { text: 'Room empty' })]));
@@ -342,7 +350,7 @@
       checkMsg, noteRow, saveBtn, msg
     ]);
     host.appendChild(form);
-    if (past) form.hidden = false;
+    form.hidden = false;
     [maxIn, minIn, spotIn].forEach(function (i) { i.addEventListener('input', check); });
     var requestId = null, anyway = null, none = false;   // none: Room empty with no temperatures (set by send)
 
@@ -417,7 +425,7 @@
         if (o.onSaved) o.onSaved(f);
         var clrHint = past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' });
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
-          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') }), clrHint
+          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') + whoWhen(r) }), clrHint
         ]));
         // Keep a photo with the reading only while the owner's dated setting is on (evidence.js). A queued reading
         // has no record id yet, so no photo is offered for it.
