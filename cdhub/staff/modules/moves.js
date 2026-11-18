@@ -29,14 +29,18 @@
     var h = c.h, tag = c.params.tag;
     function say(text, kind) { return h('p', { class: 'msg ' + (kind || ''), role: 'status', text: text }); }
     host.textContent = 'Loading...';
-    Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting'), c.readOptional('weight'), c.readOptional('breeding_rule')]).then(function (v) {
       var d = v[0], tags = v[1], capacity = v[2].rows, access = v[3].rows, litters = v[4].rows, settings = v[5].rows;
+      // size from the latest weight (Lisa, 12 Nov 2026), the same rule as the dog cards. Until the save script lets
+      // this page read weights, the size on the dog's record is still used.
+      var cut = BLDCapacity.sizeCutoffs(v[7].rows, c.today()), lastKg = {}, byWeight = !!(v[6].ok && cut);
+      v[6].rows.forEach(function (w) { var o = lastKg[w.subject_id]; if (!o || String(w.performed_on) >= o.on) lastKg[w.subject_id] = { on: String(w.performed_on), kg: w.weight_kg }; });
       host.textContent = '';
       if (!d.ok) { host.appendChild(say(d.message, 'bad')); return; }
       var action = (settings.filter(function (s) { return s.setting_key === 'over_capacity_action'; }).pop() || {}).value === 'refuse' ? 'refuse' : 'reason';
       var subj = {}; d.raw.subject.forEach(function (s) { subj[s.id] = s; });
       var damOfLitter = {}; litters.forEach(function (l) { damOfLitter[l.id] = l.dam_subject_id; });
-      function fact(id) { var s = subj[id] || {}; return { id: id, size: s.size_band, damId: damOfLitter[s.birth_litter_id] || '' }; }
+      function fact(id) { var s = subj[id] || {}; return { id: id, size: byWeight ? BLDCapacity.sizeFromKg((lastKg[id] || {}).kg, cut) : s.size_band, damId: damOfLitter[s.birth_litter_id] || '' }; }
       function labelOf(id) { return (subj[id] || {}).name || id; }
       function area(id) { return d.areas.filter(function (a) { return a.id === id; })[0]; }
       function inRoom(areaId, extra) {
@@ -66,11 +70,16 @@
       if (row.kind === 'area') drawRoom(row.ref_id);
       else if (row.kind === 'subject') drawDog(row.ref_id);
       else if (row.kind === 'litter') drawLitter(row.ref_id);
+      else if (row.kind === 'thermometer') {   // the temperature round (NEW: TEMPS) opens at this thermometer's place
+        try { localStorage.setItem('bld.temp.thermometer', JSON.stringify({ thermometerId: row.ref_id, at: Date.now() })); } catch (e) { /* the round still opens */ }
+        c.go('m/temperature');
+      }
       else host.appendChild(say('This QR code is not one the page knows.', 'bad'));
 
       function drawRoom(areaId) {
         var a = area(areaId);
         if (!a) { host.appendChild(say('That room is not in the room list.', 'bad')); return; }
+        if (a.dogs === false) { host.appendChild(say(a.label + ': dogs are not placed here.', 'bad')); return; }   // a room.no_dogs row (e.g. a corridor)
         var prev = getRoom(), added = prev && prev.areaId === areaId ? prev.added || [] : [];
         setRoom({ areaId: areaId, label: a.label, at: Date.now(), added: added });
         var ids = inRoom(areaId, added), r = checkRoom(areaId, ids);
@@ -88,7 +97,9 @@
             });
           } });
         }
-        host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, [flapBtn('free'), flapBtn('limited')]));
+        host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, [flapBtn('free'), flapBtn('limited'),
+          // the temperature screen opens this room first (it reads bld.move.room, set just above)
+          h('button', { class: 'btn quiet', type: 'button', text: 'Temperature', onclick: function () { c.go('m/temperature'); } })]));
         host.appendChild(msg);
         host.appendChild(h('h3', { text: 'In this room' }));
         var list = h('div', { class: 'cards' });
@@ -152,7 +163,7 @@
       }
 
       function removeBox(id) {
-        var why = h('select', { class: 'inp', 'aria-label': 'Why is this dog leaving' }, [['', 'Choose why'], ['temporary', 'Away for now (vet, groomer)'], ['sold', 'Sold'], ['owned_by_family', 'Gone to family'], ['deceased', 'Died']].map(function (o) { return h('option', { value: o[0], text: o[1] }); }));
+        var why = h('select', { class: 'inp', 'aria-label': 'Why is this dog leaving' }, [['', 'Choose why'], ['temporary', 'Off-site'], ['sold', 'Sold'], ['owned_by_family', 'Gone to family'], ['deceased', 'Died']].map(function (o) { return h('option', { value: o[0], text: o[1] }); }));
         var msg = say('');
         var box = h('details', { class: 'card', style: 'margin-top:14px' }, [h('summary', { text: 'Take this dog out of its room' }), why,
           h('button', { class: 'btn quiet', type: 'button', text: 'Save', onclick: function () {
@@ -182,5 +193,5 @@
       }
     });
   }
-  StaffPage.register({ id: 'moves', title: 'Scan and move', desc: 'Room sign, then each dog card', icon: ctxIcons.scan, order: 10, open: open });
+  StaffPage.register({ id: 'moves', title: 'Scan', icon: ctxIcons.scan, order: 10, open: open });
 }());

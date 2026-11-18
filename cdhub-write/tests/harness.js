@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Sink', 'Read', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -34,6 +34,7 @@ function makeEnv(opts = {}) {
   const env = {
     nowMs: opts.nowMs || DEFAULT_NOW,
     props: Object.assign({}, opts.props || {}),
+    fetches: [], google: opts.google || null, ranges: [],
     cache: {},
     email: opts.email || '',
     drive: [],          // [{id,title,content}]
@@ -60,14 +61,29 @@ function makeEnv(opts = {}) {
   env.sheetWrites = [];
   const lastRow = (f) => { for (let i = f.sheet.length - 1; i >= 0; i--) if ((f.sheet[i] || []).some((x) => x !== '')) return i + 1; return 0; };
   const lastCol = (f) => f.sheet.reduce((m, r) => { let c = 0; (r || []).forEach((x, j) => { if (x !== '') c = j + 1; }); return Math.max(m, c); }, 0);
-  const tabOf = (f) => ({
+  // London wall-clock text of a real date, as a Sheet in Europe/London shows yyyy-mm-dd hh:mm
+  const london = (d) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map((x) => [x.type, x.value])); return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute; };
+  const shown = (v, fm) => {
+    if (v === undefined || v === null || v === '') return '';
+    if (v instanceof Date) return london(v);
+    if (typeof v === 'number') return fm === '0.0' ? v.toFixed(1) : fm === '0' ? v.toFixed(0) : String(v);
+    return String(v);
+  };
+  const tabOf = (f) => {
+    f.cfmt = f.cfmt || {};
+    const cell = (rr, cc) => (f.sheet[rr - 1] || [])[cc - 1];
+    return {
     getLastRow: () => lastRow(f), getLastColumn: () => lastCol(f), getMaxRows: () => Math.max(f.maxRows, f.sheet.length),
     insertRowsAfter: (after, n) => { f.maxRows = Math.max(f.maxRows, after + n); },
     deleteRow: (n) => { f.sheet.splice(n - 1, 1); },
     setName: (n) => { f.tabName = n; },
-    getRange: (r, c, nr, nc) => ({
-      getDisplayValues: () => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(((f.sheet[r - 1 + i] || [])[c - 1 + j]) || ''); out.push(row); } return out; },
-      setNumberFormat: (fm) => { for (let i = 0; i < nr; i++) f.fmt[r + i] = fm; },
+    getRange: (r, c, nr, nc) => { env.ranges.push([f.title, r, c, nr || 1, nc || 1]); const grid = (fn) => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(fn(i, j)); out.push(row); } return out; }; return {
+      // cells may hold text, real numbers or real dates (as Sheets does); shown the way the cell's number format says
+      getDisplayValues: () => grid((i, j) => shown(cell(r + i, c + j), f.cfmt[(r + i) + ':' + (c + j)])),
+      getValues: () => grid((i, j) => { const v = cell(r + i, c + j); return v === undefined ? '' : v; }),
+      getNumberFormats: () => grid((i, j) => f.cfmt[(r + i) + ':' + (c + j)] || 'General'),
+      setNumberFormats: (fs) => { for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) f.cfmt[(r + i) + ':' + (c + j)] = fs[i][j]; },
+      setNumberFormat: (fm) => { for (let i = 0; i < nr; i++) { f.fmt[r + i] = fm; for (let j = 0; j < nc; j++) f.cfmt[(r + i) + ':' + (c + j)] = fm; } },
       clearContent: () => { for (let i = 0; i < nr; i++) if (f.sheet[r - 1 + i]) f.sheet[r - 1 + i] = f.sheet[r - 1 + i].map(() => ''); },
       setValues: (vals) => {
         env.sheetWrites.push({ title: f.title, row: r, vals });
@@ -76,12 +92,13 @@ function makeEnv(opts = {}) {
         for (let i = 0; i < nr; i++) {
           while (f.sheet.length < r + i) f.sheet.push([]);
           const row = f.sheet[r - 1 + i];
-          for (let j = 0; j < nc; j++) row[c - 1 + j] = String(vals[i][j]);
+          for (let j = 0; j < nc; j++) { const v = vals[i][j]; row[c - 1 + j] = (typeof v === 'number' || v instanceof Date) ? v : String(v); }
           if (bad && i === 0) row[c - 1] = row[c - 1] + 'X';
         }
       }
-    })
-  });
+    }; }
+    };
+  };
   env.tabOf = tabOf;
 
   const wrap = (f) => ({
@@ -96,10 +113,13 @@ function makeEnv(opts = {}) {
       const bad = hit && (env.breakSetContent === true || (env.breakSetContent === 'once' && !env.brokeOnce && (env.brokeOnce = true)));
       f.content = bad ? s.slice(0, -1) : s;
     },
+    setTrashed(v) { if (f.failTrash) throw new Error('trash failed'); f.trashed = !!v; return this; },
+    isTrashed: () => !!f.trashed,
     makeCopy(name, dest) { env.copies.push({ from: f.title, name }); const c = { id: 'copy' + (++idc), title: name, content: f.content }; dest.files.push(c); return wrap(c); }
   });
   const subFolderObj = (sf) => ({
     files: sf.files,
+    getFiles() { const m = sf.files.map(wrap); let i = 0; return { hasNext: () => i < m.length, next: () => m[i++] }; },
     getFilesByName(t) { const m = sf.files.filter((f) => f.title === t).map(wrap); let i = 0; return { hasNext: () => i < m.length, next: () => m[i++] }; }
   });
   const folder = {
@@ -135,8 +155,49 @@ function makeEnv(opts = {}) {
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
+    // Google's answers for the owner sign-in check (Auth.gs authOwnerGoogle_). Tests set env.google; none = Google unreachable.
+    UrlFetchApp: { fetch: (url, o) => {
+      env.fetches.push({ url, headers: (o && o.headers) || {} });
+      if (!env.google) throw new Error('no network in tests');
+      const resp = (code, body) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(body) });
+      if (url.indexOf('https://oauth2.googleapis.com/tokeninfo?access_token=') === 0) {
+        const t = env.google.tokens[decodeURIComponent(url.split('=')[1])];
+        return t ? resp(200, { aud: t.aud, azp: t.aud, expires_in: String(t.expires_in == null ? 3000 : t.expires_in) }) : resp(400, { error: 'invalid_token' });
+      }
+      if (url.indexOf('https://www.googleapis.com/drive/v3/about') === 0) {
+        const t = env.google.tokens[String((o && o.headers && o.headers.Authorization) || '').replace('Bearer ', '')];
+        return t ? resp(200, { user: { emailAddress: t.email, displayName: t.name } }) : resp(401, {});
+      }
+      return resp(404, {});
+    } },
     DriveApp: {
-      getFolderById: (id) => { if (id !== 'FOLDER-TEST') throw new Error('no folder'); return folder; },
+      getFolderById: (id) => {
+        if (id === 'FOLDER-TEST') return folder;
+        if (id && id === env.props.DOG_PHOTOS_FOLDER_ID) {
+          if (!env.photos) env.photos = [];
+          return {
+            createFile(blob) {
+              const name = blob && blob.getName ? blob.getName() : String(blob);
+              const bytes = blob && blob.getBytes ? Buffer.from(blob.getBytes()) : Buffer.alloc(0);
+              const f = { id: 'photo' + (++idc), title: name, content: '', bytes, mime: blob && blob.getContentType ? blob.getContentType() : '', parent: 'photos' };
+              env.photos.push(f);
+              env.created.push(name);
+              return wrap(f);
+            }
+          };
+        }
+        if (id && id === env.props.FILES_FOLDER_ID) {
+          if (!env.stored) env.stored = [];
+          return {
+            createFile(blob) {
+              const f = { id: 'stored' + (++idc), title: blob.getName(), content: '', bytes: Buffer.from(blob.getBytes()), mime: blob.getContentType(), parent: 'files' };
+              env.stored.push(f); env.drive.push(f); env.created.push(f.title);
+              return wrap(f);
+            }
+          };
+        }
+        throw new Error('no folder');
+      },
       getFileById: (id) => { const f = env.drive.find((x) => x.id === id); if (!f) throw new Error('no file'); return wrap(f); }
     },
     SpreadsheetApp: {
@@ -154,10 +215,24 @@ function makeEnv(opts = {}) {
     },
     Utilities: {
       DigestAlgorithm: { SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
-      computeDigest: (alg, str) => Array.from(crypto.createHash('sha256').update(String(str), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
+      computeDigest: (alg, str) => Array.from(crypto.createHash('sha256').update(Buffer.isBuffer(str) ? str : String(str), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
       getUuid: () => crypto.randomUUID(),
+      base64Decode(s) {
+        const str = String(s || '');
+        if (!/^[A-Za-z0-9+/]+=*$/.test(str)) throw new Error('bad base64');
+        return Buffer.from(str, 'base64');
+      },
+      newBlob(data, mime, name) {
+        const bytes = Buffer.from(data);
+        return { getName: () => name, getContentType: () => mime, getBytes: () => bytes, getDataAsString: () => bytes.toString('utf8') };
+      },
       formatDate(d, tz, pattern) {
         const p = londonParts(d.getTime());
+        if (tz === 'UTC') {
+          const u = new Date(d.getTime()).toISOString();
+          if (pattern === "yyyy-MM-dd'T'HH:mm:ss'Z'") return u.slice(0, 19) + 'Z';
+          if (pattern === 'yyyyMMdd-HHmmss') return u.slice(0, 10).replace(/-/g, '') + '-' + u.slice(11, 19).replace(/:/g, '');
+        }
         if (pattern === 'yyyy-MM-dd') return `${p.y}-${p.mo}-${p.d}`;
         if (pattern === 'yyyyMMdd-HHmmss') return `${p.y}${p.mo}${p.d}-${p.h}${p.mi}${p.s}`;
         if (pattern === "yyyy-MM-dd'T'HH:mm:ssXXX") return `${p.y}-${p.mo}-${p.d}T${p.h}:${p.mi}:${p.s}${p.off}`;

@@ -18,7 +18,18 @@
  *         (empty)               every row of this kennel
  *         rows_days<=N          rows from the last N days (needs a date column on that list)
  *         own_rows_days<=N      only rows this person entered, from the last N days
+ *         key_prefix=<p>        only rows whose key column starts with <p> (e.g. key_prefix=job. on breeding_rule:
+ *                               staff phones read the job.* owner settings and nothing else; 15 Nov 2026, SOPJOBS S8)
  *     No * row, or one we cannot understand, means no rows at all.
+ *   - DATED HIDING (Lisa 15 Nov 2026, Q3; optional columns at the end of the file, read only when they are there):
+ *         from_date / to_date   the row is in force only from .. to (both days included, London); blank = no limit.
+ *                               A date that is not a real date: a hide row (visible = no) still counts, a show row does not.
+ *         role_code             OWNER / STAFF / GUEST: the row is for that role when audience_id is blank.
+ *         row_id                hides ONE record (its id column): field_name * hides the whole record, a column name
+ *                               hides that one cell (sent blank). Only visible = no rows count here: a row_id row never
+ *                               shows anything Lisa has not allowed. Hides from the person's and the role's rows both apply.
+ *         source                why the row is there; not read.
+ *     No such columns, or blank: everything works as before.
  * Staff never get the tenant_id column, the permissions file, the approvals queue or any list that is not in READABLE.
  */
 
@@ -28,6 +39,8 @@ function readEnabled_() { return prop_(BLD.PROP.READ_ENABLED) === 'true'; }
 function parseScope_(cond, rd) {
   cond = String(cond || '').trim();
   if (cond === '') return { kind: 'all', rank: 2 };
+  var kp = /^key_prefix=([a-z][a-z0-9_]{0,39}\.)$/.exec(cond);
+  if (kp) return rd.keyCol ? { kind: 'prefix', prefix: kp[1], rank: 1 } : null;
   var m = /^(own_rows_days|rows_days)<=(\d{1,3})$/.exec(cond);
   if (!m) return null;
   var days = parseInt(m[2], 10);
@@ -44,11 +57,18 @@ function parseScope_(cond, rd) {
  *   star                         true if it has a row-rule (field *); scope = the narrowest understood rule, or null; bad = a rule we cannot understand
  */
 function readLayer_(policy, rd, audience) {
-  var L = { fields: {}, hasRows: false, star: false, scope: null, bad: false };
+  var L = { fields: {}, hasRows: false, star: false, scope: null, bad: false, hideRows: {}, hideCells: {} };
   policy.forEach(function (r) {
     if (r.table_name !== rd.vis || r.audience_id !== audience) return;
-    L.hasRows = true;
     var yes = String(r.visible || '').toLowerCase() === 'yes';
+    var rowId = String(r.row_id || '').trim();
+    if (rowId) {                                                  // Q3: one record or one cell, hide only
+      if (yes) return;
+      if (r.field_name === '*') L.hideRows[rowId] = true;
+      else (L.hideCells[rowId] = L.hideCells[rowId] || {})[r.field_name] = true;
+      return;
+    }
+    L.hasRows = true;
     if (r.field_name === '*') {
       L.star = true;
       if (!yes) { L.bad = true; return; }
@@ -71,8 +91,9 @@ function readLayer_(policy, rd, audience) {
  * row, the role's row applies; where neither has one, nothing is shown.
  */
 function readAccess_(policy, rd, audiences) {
-  var P = audiences.person ? readLayer_(policy, rd, audiences.person) : { fields: {}, hasRows: false, star: false, scope: null, bad: false };
-  var R = audiences.role ? readLayer_(policy, rd, audiences.role) : { fields: {}, hasRows: false, star: false, scope: null, bad: false };
+  var none = function () { return { fields: {}, hasRows: false, star: false, scope: null, bad: false, hideRows: {}, hideCells: {} }; };
+  var P = audiences.person ? readLayer_(policy, rd, audiences.person) : none();
+  var R = audiences.role ? readLayer_(policy, rd, audiences.role) : none();
   var chosen = P.star ? P : R;                                   // the row-rule: the person's if there is one
   if (chosen.bad || !chosen.scope) return null;
   var cols = {}, name;
@@ -82,29 +103,80 @@ function readAccess_(policy, rd, audiences) {
   var fields = {};
   for (name in cols) if (Object.prototype.hasOwnProperty.call(cols, name) && cols[name] === 'yes') fields[name] = true;
   if (!Object.keys(fields).length) return null;
-  return { fields: fields, scope: chosen.scope };
+  var hideRows = {}, hideCells = {};                             // Q3: hides from both layers apply (the narrower view wins)
+  [R, P].forEach(function (L) {
+    for (var id in L.hideRows) if (Object.prototype.hasOwnProperty.call(L.hideRows, id)) hideRows[id] = true;
+    for (var rid in L.hideCells) if (Object.prototype.hasOwnProperty.call(L.hideCells, rid)) {
+      hideCells[rid] = hideCells[rid] || {};
+      for (var c in L.hideCells[rid]) if (Object.prototype.hasOwnProperty.call(L.hideCells[rid], c)) hideCells[rid][c] = true;
+    }
+  });
+  return { fields: fields, scope: chosen.scope, hideRows: hideRows, hideCells: hideCells };
 }
 
-function readPolicy_(tenant) {
+/**
+ * Q3 (15 Nov 2026): is a visibility row in force on this London day? Blank dates = no limit; both days included.
+ * A date we cannot read: a hide row counts (the safe side), a show row does not.
+ */
+function visInForce_(r, day) {
+  var from = String(r.from_date || '').trim(), to = String(r.to_date || '').trim();
+  var hide = String(r.visible || '').toLowerCase() !== 'yes';
+  if ((from && !isRealDate_(from)) || (to && !isRealDate_(to))) return hide;
+  return (!from || from <= day) && (!to || to >= day);
+}
+
+/** Q3: role_code names the role a row is for when audience_id is blank (OWNER -> aud-admin and so on). */
+function visAudience_(r) {
+  var a = String(r.audience_id || '').trim();
+  if (a) return a;
+  var role = String(r.role_code || '').trim().toUpperCase();
+  return role ? audienceFor_(role) : '';
+}
+
+function readPolicy_(tenant, day) {
   var f = store_read_(BLD.VISIBILITY_FILE, false);
   if (!f) throw err_('READ_NOT_CONFIGURED', 'Reading is not set up yet (the permissions file was not found), so nothing can be read.');
   ['table_name', 'field_name', 'audience_id', 'visible', 'condition', 'redaction'].forEach(function (c) {
     if (f.header.indexOf(c) < 0) throw err_('READ_NOT_CONFIGURED', 'The permissions file does not have the columns the read system expects, so nothing can be read.');
   });
-  return f.records.filter(function (r) { return !r.tenant_id || r.tenant_id === tenant; });
+  return f.records.filter(function (r) { return (!r.tenant_id || r.tenant_id === tenant) && (!day || visInForce_(r, day)); })
+    .map(function (r) { var o = {}; for (var k in r) if (Object.prototype.hasOwnProperty.call(r, k)) o[k] = r[k]; o.audience_id = visAudience_(r); return o; });
+}
+
+/**
+ * An optional narrowing of a read: {area_id, from, to}. It can only ever show FEWER rows than the permissions allow.
+ * from/to are London days (YYYY-MM-DD, both included) on the list's date column. Anything not understood is refused.
+ */
+function readFilter_(f, rd, header) {
+  var out = { area_id: '', from: '', to: '' };
+  if (f === undefined || f === null) return out;
+  var bad = err_('BAD_FILTER', 'That filter was not understood.');
+  if (typeof f !== 'object' || Array.isArray(f)) throw bad;
+  for (var k in f) {
+    if (!Object.prototype.hasOwnProperty.call(f, k)) continue;
+    if (!Object.prototype.hasOwnProperty.call(out, k)) throw bad;
+    var v = f[k] === undefined || f[k] === null ? '' : String(f[k]).trim();
+    if (v === '') continue;
+    if (k === 'area_id') { if (!ID_RE_.test(v) || header.indexOf('area_id') < 0) throw bad; }
+    else if (!isRealDate_(v) || !rd.dateCol) throw bad;
+    out[k] = v;
+  }
+  if (out.from && out.to && out.from > out.to) throw bad;
+  return out;
 }
 
 /** Main entry for a read. Returns {table, fields, rows, ...} or throws err_. */
 function sinkRead_(req) {
   var now = new Date(), nowMs = now.getTime();
   if (!readEnabled_()) throw err_('READ_OFF', 'Reading from the records is switched off.');
-  var who = authStaff_(req.code);                       // a bad code stops here and gets nothing
+  var who = authSaver_(req);                       // a bad code stops here and gets nothing
+  if (who.role === ROLE_INSPECTOR) return inspectSinkRead_(req, who, now);   // Inspect.gs: only its own link rows, never this file's rules
 
   var key = typeof req.table === 'string' ? req.table : '';
   if (!Object.prototype.hasOwnProperty.call(READABLE, key)) {
     throw err_('FILE_NOT_ALLOWED', 'That is not a list the system can show you.');
   }
-  if (who.role === ROLE_GUEST && key !== 'area') throw err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
+  if (who.role === ROLE_GUEST && key !== 'area' && key !== 'requirement') throw err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
   var rd = READABLE[key];
   var audiences = { role: audienceFor_(who.role), person: who.id ? 'person:' + who.id : '' };
   var denied = err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
@@ -112,7 +184,7 @@ function sinkRead_(req) {
 
   var tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
-  var access = readAccess_(readPolicy_(tenant), rd, audiences);
+  var access = readAccess_(readPolicy_(tenant, todayLondon_(now)), rd, audiences);
   if (!access) throw denied;
 
   var data = store_read_(rd.file, false);
@@ -121,6 +193,7 @@ function sinkRead_(req) {
   var fields = data.header.filter(function (c) { return access.fields[c] === true && c !== 'tenant_id'; });
   if (!fields.length) throw denied;
 
+  var flt = readFilter_(req.filter, rd, data.header);
   var sc = access.scope, cutoff = sc.days ? nowMs - sc.days * 86400000 : 0;
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0;
   var rows = [], truncated = false;
@@ -128,18 +201,26 @@ function sinkRead_(req) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
     if (sc.kind === 'own' && r[rd.authorCol] !== who.who) continue;
+    if (sc.kind === 'prefix' && String(r[rd.keyCol] || '').indexOf(sc.prefix) !== 0) continue;
     if (sc.kind === 'own' || sc.kind === 'recent') {
       var t = Date.parse(r[rd.dateCol]);
       if (isNaN(t) || t < cutoff) continue;
     }
+    if (access.hideRows[r.id]) continue;                       // Q3: a record hidden by a dated row
+    if (flt.area_id && r.area_id !== flt.area_id) continue;
+    if (flt.from || flt.to) {
+      var day = String(r[rd.dateCol] || '').slice(0, 10);     // dates are saved in London time, so this is the London day
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || (flt.from && day < flt.from) || (flt.to && day > flt.to)) continue;
+    }
     if (rows.length >= BLD.LIMITS.READ_MAX_ROWS) { truncated = true; break; }
     var o = {};
-    fields.forEach(function (c) { o[c] = r[c]; });
+    var cellsOff = access.hideCells[r.id] || {};
+    fields.forEach(function (c) { o[c] = cellsOff[c] ? '' : r[c]; });
     rows.push(o);
   }
   return {
-    table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated,
-    scope: sc.kind === 'all' ? 'all rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
+    table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated, role: who.role, name: who.who,   // the caller's own role and name (Welcome line, buttons); never anyone else's
+    scope: sc.kind === 'all' ? 'all rows' : sc.kind === 'prefix' ? 'the ' + sc.prefix + '* rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
     as_of: londonIso_(now)
   };
 }

@@ -9,7 +9,7 @@
 <title>Money Hub</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="manifest" href="../manifest.webmanifest">
+<link rel="manifest" href="../manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#3A3632">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,7 +62,7 @@
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }
   details[open] > summary::after { content: "\25B4"; }
   details[open] > summary { margin-bottom: 12px; }
-  @media (hover: hover) { a.ent:hover, details > summary:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) { a.ent:hover, details > summary:hover { background:var(--hov); } }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   @media (max-width: 600px) { html { scroll-padding-bottom: 120px; } }
@@ -201,10 +201,10 @@
     th, td { padding: 6px 4px; font-size: var(--fs-small); }
   }
 
-  /* Calm focus: a typing box shows a slightly darker line; keyboard focus is a 2px ink ring (never the browser blue). */
+  /* Calm focus: a typing box shows a slightly darker line; keyboard focus is the 1px ink line inside (never the browser blue). */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus, summary:focus { outline: none; }
-  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   header a:focus-visible, header button:focus-visible { outline-color: var(--frame-ink); }
 </style>
 </head>
@@ -725,7 +725,7 @@
       '</ul></section>';
     return h;
   }
-  function whenOf(s) { var t = new Date(s); return s && !isNaN(t) ? whenFmt.format(t) : String(s || ''); }
+  function whenOf(s) { var t = new Date(s); return s && !isNaN(t) ? whenFmt.format(t).replace(/\bSept\b/, 'Sep') : String(s || ''); }
 
   // ---- Router ----
   var TITLES = { now: 'Now', money: 'Money', e: 'Entity', dates: 'Dates', todo: 'To-do', register: 'To-do', accountant: 'Accountant', control: 'Control' };

@@ -9,7 +9,7 @@
 })(this, function () {
   'use strict';
 
-  var VERSION = '1.2.1';
+  var VERSION = '1.3.0';
 
   // ---- CSV ----
   // RFC 4180 style: quoted fields may hold commas, quotes ("") and new lines. Drops a start-of-file marker.
@@ -273,12 +273,23 @@
     return d !== null && d <= (within || 60);
   }
 
-  // Email sending faults. "not found" for DKIM is not "missing": selectors can hide it.
+  // mail.js owns the fault words. This reads them so the page and the alerts stay on one list.
+  function mailLib() {
+    if (typeof module === 'object' && module.exports) return require('./mail.js');
+    return typeof EstateMail === 'undefined' ? null : EstateMail;
+  }
+
+  // Email sending faults. "not found" for DKIM is not "missing", except when the MX is Google Workspace.
   function emailProblems(row) {
+    var M = mailLib();
+    if (M && M.rowFaults) return M.rowFaults(row || {});
+    row = row || {};
     var out = [], spf = String(row.spf || '').toLowerCase(), dmarc = String(row.dmarc || '').toLowerCase(), dkim = String(row.dkim || '').toLowerCase();
     if (/two|multiple|2 records/.test(spf)) out.push('two SPF records');
+    else if (/broken/.test(spf)) out.push('SPF broken');
     else if (/missing|fail/.test(spf)) out.push('SPF missing');
     if (/missing/.test(dmarc)) out.push('DMARC missing');
+    else if (/weak/.test(dmarc)) out.push('DMARC weak');
     if (/^missing/.test(dkim)) out.push('DKIM missing');
     return out;
   }

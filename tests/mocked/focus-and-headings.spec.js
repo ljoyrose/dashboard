@@ -49,6 +49,7 @@ test.describe('CD Hub headings', () => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await tabClick(page, '#nav button[data-go="dogs"]');
+    await page.locator('[data-fpanel="fp-dogs"]').click();   // status chips sit in Filter (quality review 12 Nov 2026)
     const chip = page.locator('.sfb').nth(1);
     expect(await chip.evaluate((b) => getComputedStyle(b).opacity)).toBe('1');
     await chip.click();

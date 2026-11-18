@@ -20,7 +20,7 @@ const ALL = {
     },
   },
 };
-const ROSE = 'rgb(230, 68, 61)', GREY = 'rgb(138, 127, 112)';
+const ROSE = 'rgb(230, 68, 61)', GREY = 'rgb(138, 127, 112)', BLACK = 'rgb(30, 28, 26)';   // black = broken (Lisa, 3 Nov 2026)
 const CLEAR = /^(transparent|rgba\(0, 0, 0, 0\))$/;
 
 // Every tab on the bar: its box, its word's room, its icon, its count (box, colours, whether a number shows) and its name.
@@ -33,7 +33,7 @@ function read() {
       word: w.innerText.trim(), full: (w.querySelector(':scope > .htl-long') || w).textContent.trim(), w: r.width, h: r.height, wordRoom: w.scrollWidth + parseFloat(ws.marginLeft) + parseFloat(ws.marginRight),
       wordFits: w.scrollWidth <= w.clientWidth + 1, wordPx: parseFloat(ws.fontSize), name: t.getAttribute('aria-label') || t.textContent.trim(),
       icon: { l: i.left - r.left, t: i.top - r.top, r: i.right - r.left, b: i.bottom - r.top },
-      n: n ? { text: n.textContent.trim(), need: n.classList.contains('need'), shown: nr.width > 0 && nr.height > 0 && ns.display !== 'none',
+      n: n ? { text: n.textContent.trim(), need: n.classList.contains('need'), broken: n.classList.contains('broken'), why: n.getAttribute('data-why'), shown: nr.width > 0 && nr.height > 0 && ns.display !== 'none',
         l: nr.left - r.left, t: nr.top - r.top, r: nr.right - r.left, b: nr.bottom - r.top, w: nr.width, h: nr.height,
         bg: ns.backgroundColor, ring: ns.borderTopWidth === '0px' || ns.borderTopStyle === 'none' ? 'none' : ns.borderTopColor, radius: ns.borderTopLeftRadius,
         px: parseFloat(ns.fontSize), color: ns.color } : null,
@@ -77,7 +77,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect([t.n.w, t.n.h], `${hub} ${t.word}: an 8px dot`).toEqual([8, 8]);
       expect(t.n.radius, `${hub} ${t.word}: round`).toBe('50%');
       expect(t.n.ring, `${hub} ${t.word}: a dot, not a ring`).toBe('none');
-      expect(t.n.bg, `${hub} ${t.word}: rose = late, grey = waiting`).toBe(t.n.need ? ROSE : GREY);
+      expect(t.n.bg, `${hub} ${t.word}: rose = late, black = broken, grey = waiting`).toBe(t.n.need ? ROSE : t.n.broken ? BLACK : GREY);
       expect(t.n.px, `${hub} ${t.word}: no number shows`).toBe(0);
       expect(t.n.color, `${hub} ${t.word}: no number shows`).toMatch(CLEAR);
       // Top right of the icon: just off its right edge, level with its top, clear of it and inside the tab.
@@ -85,7 +85,8 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect(t.n.l - t.icon.r, `${hub} ${t.word}: ...right beside it`).toBeLessThanOrEqual(3);
       expect(Math.abs(t.n.t - t.icon.t), `${hub} ${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
       expect(t.n.r, `${hub} ${t.word}: inside the tab`).toBeLessThanOrEqual(t.w);
-      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full}, ${t.n.text} ${t.n.need ? 'late' : 'waiting'}`);
+      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full}, ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
+      if (t.n.broken) expect(t.n.why, `${hub} ${t.word}: a black count says what is broken`).toMatch(/^(down|expired|stuck|failed)$/);
     }
     expect(dots, `${hub}: the sample data shows at least one tab count`).toBeGreaterThan(0);
   });
@@ -125,11 +126,13 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect([t.n.w, t.n.h], `${hub} ${t.word}: the 24px ring`).toEqual([24, 24]);
       expect(t.n.px, `${hub} ${t.word}: a 14px number`).toBe(14);
       expect(t.n.color, `${hub} ${t.word}: the number shows`).not.toMatch(CLEAR);
-      expect(t.n.bg, `${hub} ${t.word}: no fill`).toMatch(CLEAR);
-      expect(t.n.ring, `${hub} ${t.word}: rose ring = late, grey ring = waiting`).toBe(t.n.need ? ROSE : GREY);
+      if (t.n.broken) expect([t.n.bg, t.n.ring], `${hub} ${t.word}: broken = the black badge, the same 24px box`).toEqual([BLACK, BLACK]);
+      else expect(t.n.bg, `${hub} ${t.word}: no fill`).toMatch(CLEAR);
+      if (!t.n.broken) expect(t.n.ring, `${hub} ${t.word}: rose ring = late, grey ring = waiting`).toBe(t.n.need ? ROSE : GREY);
       expect(t.w - t.n.r, `${hub} ${t.word}: in the tab's top-right corner`).toBeLessThan(5);
       expect(t.n.t, `${hub} ${t.word}: in the tab's top-right corner`).toBeLessThan(5);
-      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full}, ${t.n.text} ${t.n.need ? 'late' : 'waiting'}`);
+      expect(t.name, `${hub} ${t.word}: the name says the number`).toBe(`${t.full}, ${t.n.text} ${t.n.need ? 'late' : t.n.broken ? t.n.why : 'waiting'}`);
+      if (t.n.broken) expect(t.n.why, `${hub} ${t.word}: a black count says what is broken`).toMatch(/^(down|expired|stuck|failed)$/);
     }
     expect(rings, `${hub}: the sample data shows at least one tab count`).toBeGreaterThan(0);
   });

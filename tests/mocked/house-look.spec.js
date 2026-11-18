@@ -2,9 +2,8 @@
 // The rules live once in tokens.css (numbers) and house.css (the shared parts); this one spec holds every hub to them:
 // one 12px radius (dots round), 1px lines (3px left colour bars), Lexend 400/600 at 13px or more, sentence case, no coloured
 // words, one control line, 36px buttons (44px on a phone), counts a fixed 30 x 22 pill, date pills ringed, deep frame top and
-// bottom with light tab buttons, 12px card padding and gaps, no solid fills, and the hover rule (a meaning colour keeps its own
-// colour; neutral = 1px ink line; never a fill (Lisa's sweep, 3 Nov 2026); nothing moves; read-only pills never hover; bottom tabs
-// only widen their bar).
+// bottom with light tab buttons, 12px card padding and gaps, no solid fills, and the hover rule (Lisa, 12 Nov 2026: hover = the
+// pale grey fill --hov and no line, meaning colours too; nothing moves; read-only pills never hover; bottom tabs only widen their bar).
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 //
 // HOUSE_AUDIT=<file.json> runs every combination (light/dark x warm/cool x 1280/390, plus Look > Dark) and writes every
@@ -43,7 +42,6 @@ async function hoverRule(page, phone) {
     return [...neutral.map((e) => tag(e, 'neutral')), ...meaning.map((e) => tag(e, 'meaning')), ...ro.map((e) => tag(e, 'readonly')), ...tabs.map((e) => tag(e, 'tab'))];
   });
   const out = [];
-  const chroma = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); const x = m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || [0, 0, 0]).map(Number); return Math.max(x[0], x[1], x[2]) - Math.min(x[0], x[1], x[2]); };
   const near = (a, b) => { const p = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).map(Number); }; const x = p(a), y = p(b); return Math.abs(x[0] - y[0]) + Math.abs(x[1] - y[1]) + Math.abs(x[2] - y[2]) <= 10; };
   for (const p of picks) {
     const loc = page.locator(p.sel);
@@ -67,12 +65,10 @@ async function hoverRule(page, phone) {
       await loc.hover({ timeout: 1500 }).catch(() => {}); await settle(loc);
     }
     if (p.kind === 'neutral' || p.kind === 'meaning') {
-      if (after.os === 'none' || after.ow !== '1px' || after.offset !== '-1px') add('hover line', after.outline + ' offset ' + after.offset);
-      if (p.kind === 'neutral' && after.os !== 'none' && !near(after.oc, p.ink)) add('hover line', 'neutral line not ink: ' + after.oc);
-      if (p.kind === 'meaning' && after.os !== 'none' && near(after.oc, p.ink)) add('hover line', 'meaning control turned ink');
-      if (p.kind === 'meaning' && after.os !== 'none' && !(chroma(after.oc) > 45)) add('hover line', 'meaning line ' + after.oc + ' is not a colour');
-      if (p.kind === 'meaning' && after.os !== 'none' && !near(after.oc, before.border)) add('hover line', 'meaning hover line ' + after.oc + ' is not its resting line ' + before.border);
-      if (after.bg !== before.bg) add('hover fill', 'hover fills: ' + before.bg + ' > ' + after.bg);   // the sweep (3 Nov 2026): a line, never a fill
+      // Lisa (12 Nov 2026): "purple outline on hover/click is a lot". Hover = the pale grey fill, no line; a meaning colour too.
+      if (after.os !== 'none' && after.ow !== '0px' && after.outline !== before.outline) add('hover line', 'hover draws a line: ' + after.outline);
+      if (!near(after.bg, after.hov)) add('hover fill', 'hover is not the pale grey fill: ' + before.bg + ' > ' + after.bg + ' (want ' + after.hov + ')');
+      if (p.kind === 'meaning' && !near(after.border, before.border)) add('hover line', 'meaning resting line changed on hover: ' + before.border + ' > ' + after.border);
     }
     if (p.kind === 'readonly' && (after.os !== 'none' && after.ow !== '0px') && after.outline !== before.outline) add('read-only hover', after.outline);
     if (p.kind === 'tab') {

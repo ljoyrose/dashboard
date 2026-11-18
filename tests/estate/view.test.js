@@ -35,6 +35,8 @@ test('email faults: two SPF records is a fault; DKIM "not found" is not "missing
   assert.deepEqual(E.emailProblems({ spf: 'two records', dkim: 'not found', dmarc: 'missing' }), ['two SPF records', 'DMARC missing']);
   assert.deepEqual(E.emailProblems({ spf: 'pass', dkim: 'found', dmarc: 'none' }), []);
   assert.deepEqual(E.emailProblems({ spf: 'missing', dkim: 'missing' }), ['SPF missing', 'DKIM missing']);
+  assert.deepEqual(E.emailProblems({ spf: 'fail' }), ['SPF missing']);
+  assert.deepEqual(E.emailProblems({}), []);
 });
 
 test('counts match the fixture', () => {

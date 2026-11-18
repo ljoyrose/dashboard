@@ -103,26 +103,46 @@
   }
   function qRefresh() { X.Q().binStatus = 'idle'; qLoadGen++; render(); loadQCandidates(); }
   function qNewName(f) { return PCP_PREFIX + f.name; }
+  // Bin list (Lisa, 13 Nov 2026): each file the Rename step just renamed was re-checked live as an exact copy (md5 + size)
+  // of a shared-drive file, so the page writes its ledger row itself: one AA_DELETE-LEDGER-ROWS_ slip per Rename press,
+  // surface drive-personal, in the same CHANGES folder as the Canva card's slips (work account, write access).
+  // A failed write leaves the renamed files waiting (no row, never binned); the note says so.
+  function qLog(files) {
+    if (!files.length) return Promise.resolve();
+    var now = Date.now(), day = X.ukNameStamp(now).slice(0, 10);
+    var text = 'date,old_name,file_id,merged_into,agent,surface\n' + files.map(function (f) {
+      return [day, f.name, f.id, 'exact copy in a shared drive (md5 + size checked live before rename)', 'dashboard Personal Drive rename', PB_SURFACE].map(X.csvCell).join(',');
+    }).join('\n') + '\n';
+    return X.driveUpload(X.slipPrefix + X.ukNameStamp(now) + '_01.csv', 'text/csv', text).then(function () {
+      X.Q().marked.logged = files.length; X.resetLedger();
+    }, function (err) {
+      X.Q().marked.logFailed = friendlyError(err).text;
+    });
+  }
   function qMark() {
     if (X.busy() || !qLive()) return;
     var items = pickedItems('qmark');
     if (!items.length) return;
+    if (!X.writeGranted()) { X.requestWrite(); return; }
     var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included. Zero-byte files are not included.');
     if (!ok) return;
     var tok = personalAuth.binToken();
     if (!tok) return;
     X.setBusy(true); X.Q().marked = { done: 0, failed: 0, skipped: 0 }; render();
+    var renamed = [];
     var doneIds = {}, halted = false;
     mapLimit(items, 4, function (f) {
       if (halted) { X.Q().marked.skipped++; return; }
       return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS, tok).then(function (live) {
         if (!live || live.trashed || live.ownedByMe === false || live.driveId || isZeroByte(live) || nameHasRr(live.name) || isZzFamilyName(live.name) || live.name !== f.name) { X.Q().marked.skipped++; return; }
         if (String(live.size) !== String(f.size) || (live.md5Checksum || '') !== (f.md5Checksum || '')) { X.Q().marked.skipped++; return; }
-        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: qNewName(f) }, tok).then(function () { X.Q().marked.done++; doneIds[f.id] = true; }, function () { X.Q().marked.failed++; });
+        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: qNewName(f) }, tok).then(function () { X.Q().marked.done++; doneIds[f.id] = true; renamed.push(f); }, function () { X.Q().marked.failed++; });
       }, function (err) {
         if (friendlyError(err).expired) halted = true;
         X.Q().marked.failed++;
       });
+    }).then(function () {
+      return qLog(renamed);
     }).then(function () {
       X.setBusy(false); X.pick().qmark = {};
       if (halted) { var m = X.Q().marked; qExpired(); X.Q().marked = m; render(); return; }
@@ -171,7 +191,9 @@
     var html = '<div data-qbin-block>';
     html += '<ul class="notes"><li>Bin actions allowed for your personal account until you sign out or close this tab.</li><li>Only renames, and moves to the bin after a fresh check. Nothing is deleted for good.</li></ul>';
     if (PB_DRY) html += '<p class="note" data-qbin-dry>Dry run: nothing is renamed or binned. Switching it on is your call.</p>';
-    if (X.Q().marked) html += '<p class="res ' + (X.Q().marked.failed ? 'bad' : 'ok') + '" data-q-marked>Renamed ' + num(X.Q().marked.done) + (X.Q().marked.failed ? ', ' + X.Q().marked.failed + ' failed' : '') + (X.Q().marked.skipped ? ', ' + X.Q().marked.skipped + ' skipped' : '') + '.</p>';
+    if (X.Q().marked) html += '<p class="res ' + (X.Q().marked.failed ? 'bad' : 'ok') + '" data-q-marked>Renamed ' + num(X.Q().marked.done) + (X.Q().marked.failed ? ', ' + X.Q().marked.failed + ' failed' : '') + (X.Q().marked.skipped ? ', ' + X.Q().marked.skipped + ' skipped' : '') + '.</p>' +
+      (X.Q().marked.logged ? '<p class="note" data-q-logged>Added ' + num(X.Q().marked.logged) + ' to the bin list.</p>' : '') +
+      (X.Q().marked.logFailed ? '<p class="note fail" data-q-logged>Not added to the bin list: ' + esc(X.Q().marked.logFailed) + ' They wait and are never binned.</p>' : '');
     if (X.Q().binned) {
       var b = X.Q().binned;
       html += b.cancelled ? '<p class="res" data-q-binned>Cancelled. Nothing binned.</p>'

@@ -1,0 +1,9 @@
+/* Inspector page: read-only. House look: 1px lines, no fills at rest, ink text. */
+.ins-ends { color: var(--muted); font-size: var(--fs-small); margin: 0 0 12px; }
+.ins-dog { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 0 0 12px; background: var(--card); }
+.ins-dog h2 { margin: 0 0 4px; font-size: var(--fs-head); }
+.ins-facts { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-small); }
+.ins-list { margin: 8px 0 0; }
+.ins-list h3 { margin: 0 0 4px; font-size: var(--fs-body); }
+.ins-row { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-small); }
+.ins-row span b { font-weight: 600; }

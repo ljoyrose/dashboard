@@ -18,8 +18,9 @@
       subject_id: { type: 'text', label: 'Dog' },
       item: { type: 'text', label: 'What' },
       amount: { type: 'text', label: 'Amount' },
-      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded'], required: true, label: 'Outcome' },
-      note: { type: 'text', label: 'Note' }
+      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note', 'part_done'], required: true, label: 'Outcome' },   // note = a note added to a job already done
+      note: { type: 'text', label: 'Note' },
+      note_for_id: { type: 'text', label: 'Note for' }
     }
   };
   var OUTCOMES = [['ok', 'Done, all fine'], ['concern', 'Done, with a concern'], ['not_done', 'Not done']];
@@ -32,7 +33,7 @@
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
     return Object.keys(best).map(function (k) { return best[k]; })
-      .filter(function (r) { return r.active !== 'false'; })
+      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter' && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; })   // litter jobs open from a litter card's code; round.* rows are written by the Round itself, never a job
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
   }
 
@@ -53,10 +54,12 @@
     if (type.target === 'area' && !entry.area_id) e.area_id = 'Choose the room.';
     if (type.target === 'dog' && !entry.subject_id) e.subject_id = 'Choose the dog.';
     if (type.target === 'either' && !entry.area_id && !entry.subject_id) e.area_id = 'Choose a room or a dog.';
+    if (type.target === 'litter' && !entry.litter_id) e.litter_id = 'Scan the litter card.';
     if (a.item && !entry.item) e.item = 'This is needed.';
     if (a.amount && !entry.amount) e.amount = 'This is needed.';
     if (!entry.outcome) e.outcome = 'Choose one.';
-    if ((entry.outcome === 'concern' || entry.outcome === 'not_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
+    if ((entry.outcome === 'concern' || entry.outcome === 'not_done' || entry.outcome === 'part_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
+    else if (entry.outcome === 'note' && !entry.note) e.note = 'Write the note.';
     else if (a.noteRequired && !entry.note) e.note = 'This is needed.';
     return e;
   }
@@ -72,6 +75,12 @@
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now || new Date());
   }
 
+  /** The dogs on site now, A-Z: the same list as The Board, so dogs that have left are not offered. */
+  function onSite(t) {
+    if (typeof BLDOccupancy === 'undefined') return t.subject || [];
+    return BLDOccupancy.dailyList(t).dogs.map(function (d) { return { id: d.id, name: d.label }; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
   function register(save) { if (!save.TABLES.check_log) save.TABLES.check_log = CHECK_LOG; }
 
   /** Draw the form. opts.type = a type_key to open that check directly (from a QR code). Returns a promise. */
@@ -89,11 +98,11 @@
       var b = save.banner('check_log');
       msg.textContent = b.text;
       if (!b.canSave) return { ok: false, reason: 'off' };
-      return save.readMany(['check_type', 'area', 'subject'], ['subject']).then(function (all) {
+      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status', 'requirement'], ['subject', 'occupancy', 'subject_status', 'requirement']).then(function (all) {
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
         if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
-        draw(host, save, types, all.tables.area, all.tables.subject, opts.type, msg);
+        draw(host, save, types, (all.tables.area || []).filter(function (a) { return typeof BLDOccupancy === 'undefined' || BLDOccupancy.inUse(a, londonToday(opts.now), all.tables.requirement); }), onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });

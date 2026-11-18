@@ -39,7 +39,7 @@ const HELPERS = () => {
 };
 
 test.describe('Home: house look', () => {
-  test('hover only turns the 1px edge ink: no element grows, shrinks or moves', async ({ page }) => {
+  test('hover only shows the pale grey fill: no element grows, shrinks or moves', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     // Drives, Bin and Changes sit under More now (Lisa's tab picks, 2 Nov): the bottom-bar check uses More itself.
@@ -102,13 +102,13 @@ test.describe('Home: house look', () => {
         expect(bad, `${look} ${title}`).toEqual([]);
       }
       await goTab(page, 'map', 'Dashboard');
-      // Hover: the same 1px edge turns ink (an outline over it), on a button, a tile and a link card.
+      // Hover (Lisa, 12 Nov 2026): the pale grey fill and no line, on a button, a tile and a link card.
       for (const sel of ['#urgentOne a.btn', 'a.hometile >> nth=0', 'a.keytile >> nth=0']) {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
         await el.hover(); await settle(el);
-        const o = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === getComputedStyle(document.body).color]; });
-        expect(o, sel + ' hover').toEqual(['solid', '1px', '-1px', true]);
+        const o = await el.evaluate((e) => { const c = getComputedStyle(e); const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return [c.outlineStyle, c.backgroundColor === hov]; });
+        expect(o, sel + ' hover').toEqual(['none', true]);
       }
       // Read-only pills: hovering changes nothing.
       for (const sel of ['#needsToday .mtag >> nth=0']) {
@@ -119,25 +119,25 @@ test.describe('Home: house look', () => {
         const after = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
         expect(after, sel + ' changed on hover').toBe(before);
       }
-      // The Needs you pills open what they count (Lisa, 2 Nov): each is a link to Do for its group; hover = 1px line inside
-      // (rose for urgent, ink for the plain ones), never thicker, never moves.
+      // The Needs you pills open what they count (Lisa, 2 Nov): each is a link to Do for its group; hover = the pale grey fill,
+      // no line, urgent ones too (12 Nov 2026), never moves.
       for (const el of await page.locator('#needsSplit .cnt').all()) {
         expect(await el.evaluate((e) => e.tagName)).toBe('A');
         await expect(el).toHaveAttribute('href', /^#\/do\/(urgent|soon|todo)$/);
         const box = await el.boundingBox();
         await el.hover(); await settle(el);
-        const o = await el.evaluate((e) => { const c = getComputedStyle(e); return { o: [c.outlineStyle, c.outlineWidth, c.outlineOffset].join(' '), ink: c.outlineColor === getComputedStyle(document.body).color, risk: e.classList.contains('k-risk') }; });
-        expect(o.o).toBe('solid 1px -1px');
-        expect(o.ink, 'urgent keeps its rose line; the others turn ink').toBe(!o.risk);
+        const o = await el.evaluate((e) => { const c = getComputedStyle(e); const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { os: c.outlineStyle, grey: c.backgroundColor === hov }; });
+        expect(o.os, 'no line on hover').toBe('none');
+        expect(o.grey, 'the pale grey fill on hover').toBe(true);
         expect(await el.boundingBox()).toEqual(box);
       }
     });
   }
 
-  // House hover rule (28 Oct): a meaning-coloured control keeps its own colour on hover (1px line inside + pale tint of it), never ink;
-  // a neutral control gets the 1px ink line + a pale muted tint. Checked in light and dark.
+  // House hover rule (Lisa, 12 Nov 2026, replaces 28 Oct): every control, meaning-coloured or neutral, hovers with the pale grey fill
+  // (--hov) and no line; a meaning colour keeps its resting line. Checked in light and dark.
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: hover keeps a coloured control in its own colour (line, never ink); neutral = ink line; never a fill (Lisa\'s sweep, 3 Nov)`, async ({ page }) => {
+    test(`${scheme}: hover is the pale grey fill and no line, coloured and neutral controls alike (Lisa, 12 Nov 2026)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto('./');
       await signIn(page);
@@ -154,7 +154,8 @@ test.describe('Home: house look', () => {
           const col = (v) => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d); const x = getComputedStyle(d).color; d.remove(); return x; };
           const ink = getComputedStyle(document.body).color, card = col(root.getPropertyValue('--card').trim());
           const hc = col(c.getPropertyValue('--hc').trim() || 'transparent');
-          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, ink, bg: c.backgroundColor, card, hc,
+          const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, os: c.outlineStyle, oc: c.outlineColor, ink, bg: c.backgroundColor, card, hc, hov,
             rest, coloured };
         }, [coloured, rest]);
       };
@@ -162,16 +163,15 @@ test.describe('Home: house look', () => {
       const coloured = [['a.ment.bad', 'rose money entity'], ['a.ment:not(.bad)', 'copper money entity']];
       const run = async (list) => { for (const [sel, name] of list) {
         const r = await check(sel, true);
-        expect(r.outline, name).toBe('solid 1px -1px');
-        expect(r.oc, name + ': hover line is not ink').not.toBe(r.ink);
-        expect(r.bg, name + ': no fill on hover').toBe(r.rest);
+        expect(r.os, name + ': no coloured line on hover').toBe('none');
+        expect(r.bg, name + ': the pale grey fill on hover').toBe(r.hov);
       } };
       for (const sel of ['#urgentOne a.btn']) {
         const r = await check(sel, false);
-        expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
-        expect(r.bg, sel + ': no fill on hover').toBe(r.rest);
+        expect(r.os, sel + ': no line on hover').toBe('none');
+        expect(r.bg, sel + ': the pale grey fill on hover').toBe(r.hov);
       }
-      // A hub tile's links (its name and its 3 numbers) take the tile's own colour on hover: a 1px ring only, no fill (Lisa, 2 Nov).
+      // A hub tile's links (its name and its 3 numbers): the pale grey fill on hover, no ring (Lisa, 12 Nov 2026).
       for (const sel of ['.hubtile a.hgo', '.hubtile a.hk']) {
         const el = page.locator(sel).first();
         await el.scrollIntoViewIfNeeded();
@@ -180,10 +180,11 @@ test.describe('Home: house look', () => {
           const c = getComputedStyle(e), d = document.createElement('i');
           d.style.color = getComputedStyle(e.closest('.hubtile')).getPropertyValue('--sc').trim() || getComputedStyle(document.body).color;
           document.body.appendChild(d); const sc = getComputedStyle(d).color; d.remove();
-          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, sc, bg: c.backgroundColor };
+          const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+          return { os: c.outlineStyle, oc: c.outlineColor, sc, bg: c.backgroundColor, hov };
         });
-        expect([r.outline, r.oc], sel + ': hover = 1px ring in the tile colour').toEqual(['solid 1px -1px', r.sc]);
-        expect(r.bg, sel + ': no fill on hover').toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+        expect(r.os, sel + ': no ring on hover').toBe('none');
+        expect(r.bg, sel + ': the pale grey fill on hover').toBe(r.hov);
       }
       await goTab(page, 'money', 'Money'); // the money entity cards moved off Main into More (Lisa, 2 Nov)
       await run(coloured);
@@ -274,7 +275,9 @@ test.describe('Home: house look', () => {
         const v = (n) => { const d = document.createElement('i'); d.style.color = root.getPropertyValue(n).trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
         const allowed = new Set([v('--ink'), v('--muted'), v('--frame-ink')]);
         const fills = new Set(['--ljr-2', '--ljr-3', '--ljr-4', '--ljr-5', '--ljr-6', '--ljr-7', '--ljr-8', '--ljr-2-solid', '--ljr-7-solid', '--ljr-8-solid', '--ljr-2-text', '--ljr-7-text'].map(v));
-        const words = L.visibleText().filter((e) => !allowed.has(getComputedStyle(e).color)).map((e) => getComputedStyle(e).color + ' "' + e.textContent.trim().slice(0, 30) + '"');
+        // The one exception (Lisa, 3 Nov 2026): a broken count is the black badge, its number --house-broken-ink on --house-broken-fill.
+        const badge = (e) => e.matches('.broken') && getComputedStyle(e).color === v('--house-broken-ink') && getComputedStyle(e).backgroundColor === v('--house-broken-fill');
+        const words = L.visibleText().filter((e) => !allowed.has(getComputedStyle(e).color) && !badge(e)).map((e) => getComputedStyle(e).color + ' "' + e.textContent.trim().slice(0, 30) + '"');
         const solid = Array.from(document.querySelectorAll('.mtag, .cnt, .chip, .btn, nav.main .n, .stat, a.hometile, a.keytile, .ment, .banner'))
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => fills.has(getComputedStyle(e).backgroundColor)).map((e) => e.className + ' ' + getComputedStyle(e).backgroundColor);

@@ -1,0 +1,1 @@
+{"cdhub": 9500, "why": "Need rows (A standard): the hub loads the shared staff/lib/needs.js and occupancy.js (8.7 KB) so rooms in use come from BLD-requirement, not ZZ_ names; measured 392464 against 383350 allowed"}

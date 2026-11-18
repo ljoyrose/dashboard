@@ -66,7 +66,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     }
   });
 
-  test('the selected view under More has one clean edge and no fill (the tab picks have no fills); the "You are here" title has no box @regression', async ({ page }) => {
+  test('the selected view under More has one clean edge and the pale grey selected fill (Lisa, 12 Nov 2026); the "You are here" title has no box @regression', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['bar', 'changes', 'Changes · Recent'], ['bar', 'bin', 'Bin']]) {
@@ -75,8 +75,8 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       await expect(page.locator('#hereTitle')).toHaveText(title);
       const sel = page.locator('#mainNav a[aria-current="page"]');
       await expect(sel).toHaveCount(1);
-      const st = await sel.evaluate((e) => { const c = getComputedStyle(e); return { bg: c.backgroundColor, l: c.borderLeftWidth + c.borderLeftColor, t: c.borderTopWidth + c.borderTopColor, r: c.borderRightWidth + c.borderRightColor, b: c.borderBottomWidth + c.borderBottomColor }; });
-      expect(st.bg, title + ': no fill on the selected view').toBe('rgba(0, 0, 0, 0)');
+      const st = await sel.evaluate((e) => { const c = getComputedStyle(e), p = document.createElement('span'); p.style.background = 'var(--sel-fill)'; e.parentElement.appendChild(p); const want = getComputedStyle(p).backgroundColor; p.remove(); return { want, bg: c.backgroundColor, l: c.borderLeftWidth + c.borderLeftColor, t: c.borderTopWidth + c.borderTopColor, r: c.borderRightWidth + c.borderRightColor, b: c.borderBottomWidth + c.borderBottomColor }; });
+      expect(st.bg, title + ': the pale grey selected fill').toBe(st.want);
       expect([st.t, st.r, st.b], title + ': one even border all round').toEqual([st.l, st.l, st.l]);
       const o = await sel.evaluate((e) => { const c = getComputedStyle(e); return c.outlineStyle + ' ' + c.outlineWidth; });
       expect(o, title + ': the selected view under More shows a 1px line').toBe('solid 1px');

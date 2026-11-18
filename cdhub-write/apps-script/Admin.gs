@@ -55,7 +55,7 @@ function adminRevokeStaff() {
 /** 4b. Run once on a project that had codes BEFORE ids existed: gives each code without one a public id (sc-xxxxxx). Changes nothing else. */
 function adminAssignCodeIds() {
   var reg = registry_(), n = 0;
-  Object.keys(reg).forEach(function (h) { if (!reg[h].id) { reg[h].id = newCodeId_(); n++; } });
+  Object.keys(reg).forEach(function (h) { if (!reg[h].id && !reg[h].was_id) { reg[h].id = newCodeId_(); n++; } });   // was_id: an old code replaced by a new one (Codes.gs) keeps no id
   setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
   Logger.log(n ? ('Gave ' + n + ' code(s) a public id. Run adminListStaff to see them.') : 'Every code already has an id. Nothing changed.');
 }
@@ -66,7 +66,7 @@ function adminAssignCodeIds() {
  */
 function adminStartMovesQueue() {
   setProp_(BLD.PROP.MOVES_QUEUE_UNTIL, addDays_(todayLondon_(), BLD.LIMITS.MOVES_QUEUE_DAYS - 1));   // 14 days counting today
-  Logger.log('Dog moves go to the approvals queue up to and including ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ', then straight in (unless MODE_occupancy is set).');
+  Logger.log('Occupancy moves go straight in. MOVES_QUEUE_UNTIL was set to ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ' but is ignored for moves.');
 }
 
 /**
@@ -81,7 +81,7 @@ function adminCreateEmptyTables() {
     return;
   }
   TO_CREATE.forEach(function (title) {
-    var header = title === BLD.PENDING_FILE ? BLD.PENDING_COLUMNS : (specFor_(title) || {}).columns;
+    var header = title === BLD.PENDING_FILE ? BLD.PENDING_COLUMNS : ((specFor_(title) || {}).columns || inspectHeader_(title) || codeRegisterHeader_(title));
     if (!header) { Logger.log('Skipped ' + title + ': not on the allow-list.'); return; }
     try { store_createEmpty_(title, header); Logger.log('Created ' + title + ' (header only).'); }
     catch (e) { Logger.log('Not created ' + title + ': ' + (e.userMessage || e)); }
@@ -101,17 +101,18 @@ function adminCheckSetup() {
     try {
       var r = store_read_(title, false);
       if (!r) { Logger.log('--   ' + title + ' does not exist yet (fine until you switch that table on)'); return; }
-      var spec = specFor_(title), want = spec ? spec.columns : BLD.PENDING_COLUMNS;
+      var spec = specFor_(title), want = spec ? spec.columns : (inspectHeader_(title) || codeRegisterHeader_(title) || BLD.PENDING_COLUMNS);
       say(sameHeader_(r.header, want), title + ' exists with ' + r.records.length + ' row(s); header ' + (sameHeader_(r.header, want) ? 'matches' : 'DOES NOT MATCH'));
     } catch (e) { say(false, title + ': ' + (e.userMessage || e)); }
   });
   Object.keys(TABLES).forEach(function (k) {
     Logger.log('--   table ' + k + ': ' + (tableOn_(TABLES[k]) ? 'ON' : 'off') + ', mode ' + modeFor_(TABLES[k]));
   });
-  Logger.log('--   dog moves: ' + (prop_(BLD.PROP.MOVES_QUEUE_UNTIL) ? ('queue up to and including ' + prop_(BLD.PROP.MOVES_QUEUE_UNTIL) + ', then straight in') : 'always queue (MOVES_QUEUE_UNTIL not set; run adminStartMovesQueue on go-live day)'));
-  var noId = Object.keys(registry_()).filter(function (h) { return !registry_()[h].id; }).length;
+  Logger.log('--   dog moves: straight in (MOVES_QUEUE_UNTIL is ignored for occupancy)');
+  var noId = Object.keys(registry_()).filter(function (h) { return !registry_()[h].id && !registry_()[h].was_id; }).length;
   if (noId) Logger.log('FIX  ' + noId + ' staff code(s) have no public id yet (run adminAssignCodeIds)');
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));
+  Logger.log('--   dog photos: ' + (prop_(BLD.PROP.DOG_PHOTOS_FOLDER) ? 'folder id is set in Script Properties' : 'not set (create a Shared Drive folder and set DOG_PHOTOS_FOLDER_ID)'));
   Logger.log('--   OWNER_EDIT_ENABLED is ' + (ownerEditEnabled_() ? 'TRUE (the owner page can overwrite an entry in place; no record of the old value is kept)' : 'not true (owner edit is OFF)'));
   Logger.log('--   READ_ENABLED is ' + (readEnabled_() ? 'TRUE (staff codes can read what the permissions file allows)' : 'not true (staff cannot read)'));
   try {
@@ -126,7 +127,9 @@ function adminCheckSetup() {
  * Copies each existing allow-listed file into a sub-folder BLD-backups, once a day, named
  * <file>.pre-daily-<YYYY-MM-DD>.bak (the pattern in the naming protocol, N-14). The copies are .bak
  * files in a sub-folder, so CD Hub (which reads .csv files in the main folder) never loads them.
- * Old copies pile up: tidying them is Lisa's call (the script will not delete or rename them).
+ * After each run, older <file>.pre-daily-<date>.bak copies go to Drive TRASH (setTrashed, never deleted for ever):
+ * the newest copy of each file is kept. Only that exact pattern is touched; BACKUP_*, BAK_*, *.pre-cdhub-core-* and
+ * anything else in BLD-backups are left alone (Lisa, 15 Nov 2026, card answer A).
  * ---------------------------------------------------------------------------------------------- */
 
 var BACKUP_FOLDER_NAME = 'BLD-backups';
@@ -146,6 +149,41 @@ function adminDailyBackup() {
     file.makeCopy(name, dest);
     Logger.log('Copied ' + title + ' to ' + BACKUP_FOLDER_NAME + '/' + name);
   });
+  backupTrashOld_(dest);
+}
+
+var PRE_DAILY_RE = /^(.+)\.pre-daily-(\d{4}-\d{2}-\d{2})\.bak$/;
+
+/**
+ * Moves older daily copies to Drive TRASH, keeping the newest copy of each live file. Exact pattern only.
+ * Returns { trashed: [names], kept: [names] }. A file whose copy could not be trashed is logged and kept.
+ */
+function backupTrashOld_(dest) {
+  var newest = {}, all = [], it = dest.getFiles();
+  while (it.hasNext()) {
+    var f = it.next();
+    if (f.isTrashed && f.isTrashed()) continue;
+    var m = PRE_DAILY_RE.exec(f.getName());
+    if (!m) continue;
+    all.push({ file: f, name: f.getName(), base: m[1], day: m[2] });
+    if (!newest[m[1]] || m[2] > newest[m[1]]) newest[m[1]] = m[2];
+  }
+  var out = { trashed: [], kept: [] };
+  all.forEach(function (c) {
+    if (c.day === newest[c.base]) { out.kept.push(c.name); return; }
+    try { c.file.setTrashed(true); out.trashed.push(c.name); }
+    catch (e) { out.kept.push(c.name); Logger.log('Could not move to trash (kept): ' + c.name); }
+  });
+  out.trashed.sort(); out.kept.sort();
+  Logger.log('Older daily copies moved to trash: ' + out.trashed.length + '. Kept: ' + out.kept.length + ' (' + out.kept.join(', ') + ').');
+  return out;
+}
+
+/** Run once by hand: the same tidy as after each nightly run, without copying anything. */
+function adminTrashOldDailyBackups() {
+  var it = store_folder_().getFoldersByName(BACKUP_FOLDER_NAME);
+  if (!it.hasNext()) { Logger.log('No ' + BACKUP_FOLDER_NAME + ' folder. Nothing to tidy.'); return { trashed: [], kept: [] }; }
+  return backupTrashOld_(it.next());
 }
 
 /** Run once to have the backup run every night about 03:00. Also set BACKUP_ON to true. */
@@ -161,4 +199,37 @@ function adminRemoveDailyBackup() {
   var n = 0;
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'adminDailyBackup') { ScriptApp.deleteTrigger(t); n++; } });
   Logger.log(n ? 'Stopped the nightly backup. Existing copies were not touched.' : 'No nightly backup was scheduled.');
+}
+
+/**
+ * 7. Dry run (15 Nov 2026): how many rows are waiting in the approvals queue (BLD-_pending.csv), per file and per state.
+ * Changes nothing: it reads the queue file only. It does not apply waiting room moves (doPost and a plain GET do that).
+ * Rows waiting on a phone (not yet sent) are not in this file and cannot be counted from here.
+ */
+function adminCountQueued() {
+  var p;
+  try { p = loadPending_(); }
+  catch (e) { Logger.log('Could not read ' + BLD.PENDING_FILE + ': ' + (e.userMessage || e)); return { total: 0, byFile: {}, byState: {} }; }
+  var st = pendingState_(p.records), out = { total: 0, byFile: {}, byState: {}, moves: 0 };
+  Object.keys(st).forEach(function (id) {
+    var s = st[id];
+    if (!s.waiting) return;
+    var file = s.queued.target_file || '(none)', state = s.last.event;
+    out.total++;
+    out.byFile[file] = (out.byFile[file] || 0) + 1;
+    out.byState[state] = (out.byState[state] || 0) + 1;
+    if (file === TABLES.occupancy.file && s.queued.kind !== 'correction' && !s.queued.corrects_id && isRoomMove_(s.queued)) out.moves++;
+  });
+  Logger.log('Waiting in ' + BLD.PENDING_FILE + ': ' + out.total + ' (nothing was changed).');
+  Object.keys(out.byFile).sort().forEach(function (f) { Logger.log('--   ' + f + ': ' + out.byFile[f]); });
+  Object.keys(out.byState).sort().forEach(function (s) { Logger.log('--   state ' + s + ': ' + out.byState[s]); });
+  Logger.log('--   room moves a plain GET or a save would apply now (while TABLE_ON_occupancy is true): ' + out.moves);
+  return out;
+}
+
+// A room move (area set, not off site): the only queued occupancy rows applyWaitingOccupancyMoves_ applies.
+function isRoomMove_(queued) {
+  var row = null;
+  try { row = JSON.parse(queued.payload_json || '{}'); } catch (e) { row = null; }
+  return !!row && !String(row.off_site_kind || '') && !!String(row.area_id || '');
 }

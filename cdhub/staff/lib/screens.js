@@ -79,7 +79,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Room temperatures' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner \u2013 she can fix it.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner.' }));
 
     var cards = el(doc, 'div', { class: 'bs-cards' });
     var header = mountHeader(doc, host, save, 'area_reading', refreshButtons);
@@ -94,7 +94,7 @@
     }
 
     if (!areas.length) {
-      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No rooms are loaded, so nothing can be entered. The room list comes from BLD-area.csv: sign in to Drive and reload.' }));
+      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No rooms loaded. Sign in to Drive and reload.' }));
       return { refresh: refreshButtons };
     }
 
@@ -138,7 +138,7 @@
       btn.addEventListener('click', function () {
         showErrors(errs, null);
         result.textContent = ''; result.className = 'bs-result';
-        var fields = { area_id: a.id, min_c: minIn.value, max_c: maxIn.value };
+        var fields = { area_id: a.id, min_c: minIn.value, max_c: maxIn.value, read_method: 'typed' };
         if (spotIn.value.trim()) fields.spot_c = spotIn.value;
         if (!noteRow.hidden) {
           if (!noteIn.value.trim()) { errs.mitigation_note.textContent = 'Say what was done about it.'; return; }
@@ -154,7 +154,7 @@
             requestId = null;
             [minIn, maxIn, spotIn, noteIn].forEach(function (i) { i.value = ''; });
             noteRow.hidden = true;
-            result.appendChild(el(doc, 'div', { class: 'bs-sub bs-wrong', text: 'Wrong entry? Tell the owner \u2013 she can fix it.' }));
+            result.appendChild(el(doc, 'div', { class: 'bs-sub bs-wrong', text: 'Wrong entry? Tell the owner.' }));
           } else {
             result.className = 'bs-result bs-bad';
             result.textContent = r.message;
@@ -194,7 +194,7 @@
 
     var people = o.people || [];
     if (!people.length) {
-      form.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No people are loaded, so the roster cannot be filled in. The list comes from BLD-person.csv: sign in to Drive and reload.' }));
+      form.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No people loaded. Sign in to Drive and reload.' }));
       return { refresh: refresh };
     }
     var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': 'Person' }, [el(doc, 'option', { value: '', text: 'Choose a person' })]
@@ -236,22 +236,24 @@
    * Every dog on site, with the room it was last recorded in. Staff change ONLY the dogs that moved ("Moved", pick the
    * room, "Save move": that appends a new occupancy row, nothing is overwritten), then press ONE button,
    * "All the rest unmoved", which appends ONE row to the daily check log listing every dog that did not move.
-   * Dogs that are Away (vets, groomers...) keep their room and are not asked to move, and are not in the list.
+   * Off-site dogs (vets, groomers...) are listed apart and are not asked to move. One recorded as off-site through this screen has a Back button.
    * @param {Object} o
    *   save     BLDSave instance (required)
-   *   dogs     [{id, label, areaId, areaLabel, known, away}]   from BLDOccupancy.dailyList
+   *   dogs     [{id, label, areaId, areaLabel, known, away, out}]   from BLDOccupancy.dailyList
    *   areas    [{id, label, group}]                            the rooms to pick from
    *   skipped  number of dogs left out because nothing says they are on site
+   *   offSite  true adds an Off-site button beside Save move (the page must have the occupancy_out table)
    *   loader   optional function() -> Promise<{ok, message?}>   "Load the dogs" with the staff code (no Google sign-in)
    *   document (tests only)
    */
+  var OFF_SITE = '__off_site__';   // the picker's Off-site choice; never saved
   function locationConfirm(host, o) {
     var doc = o.document || host.ownerDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs'); host.classList.add('bs-board');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Where is everyone?' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Each dog shows the room it was last recorded in. Only tap Moved for a dog that has moved, and pick its new room. Then press All the rest unmoved once. A move is added as a new entry; nothing is overwritten.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Tap Moved for any dog that moved. Then All the rest unmoved.' }));
     var header = mountHeader(doc, host, save, 'occupancy', refreshButtons);
 
     var all = o.dogs || [], areas = o.areas || [];
@@ -285,12 +287,12 @@
     function noRoom() { return dogs.filter(function (d) { return !d.known && moves.indexOf(d.id) < 0; }).length; }
     function paintProgress() {
       var n = dogs.length, did = confirmed ? n - noRoom() : moves.length;
-      progText.textContent = n ? did + ' of ' + n + ' dogs done' + (away.length ? ' (' + away.length + ' away)' : '') : '';
+      progText.textContent = n ? did + ' of ' + n + ' dogs done' + (away.length ? ' (' + away.length + ' off-site)' : '') : '';
       progBar.style.width = n ? Math.round(did / n * 100) + '%' : '0%';
     }
     function refreshButtons() {
       var b = header.paint(), cb = save.banner('occupancy_check');
-      btns.forEach(function (x) { x.btn.disabled = x.done || confirmed || !b.canSave || (x.needsRoom && !x.btn.hasAttribute('data-moved')); x.btn.setAttribute('aria-disabled', String(x.btn.disabled)); });
+      btns.forEach(function (x) { x.btn.disabled = x.done || (confirmed && !x.out) || !b.canSave || (x.needsRoom && !x.btn.hasAttribute('data-moved')); x.btn.setAttribute('aria-disabled', String(x.btn.disabled)); });
       var ids = restIds().length;
       restBtn.textContent = 'All the rest unmoved' + (ids ? ' (' + ids + ')' : '');
       restBtn.disabled = confirmed || !cb.canSave || !ids;
@@ -298,65 +300,74 @@
       if (!confirmed && !cb.canSave && !restMsg.getAttribute('data-sent')) { restMsg.className = 'bs-result bs-warn'; restMsg.textContent = cb.text; }
     }
     if (!all.length) {
-      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No dogs are loaded, so there is nothing to confirm. ' + (o.loader ? 'Enter your staff code and press the Load button.' : 'The list comes from BLD-occupancy.csv and BLD-subject.csv: sign in to Drive and reload.') }));
+      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No dogs are loaded, so there is nothing to confirm. ' + (o.loader ? 'Enter your staff code and press the Load button.' : 'Sign in to Drive and reload.') }));
       paintProgress();
       return { refresh: refreshButtons };
     }
     if (o.skipped) host.insertBefore(el(doc, 'p', { class: 'bs-sub', text: o.skipped + ' dog(s) are not listed because nothing records them as on site.' }), cards);
 
-    dogs.forEach(function (d) {
+    function dogCard(d) {
       var result = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
-      var was = el(doc, 'div', { class: 'bs-dog-was', text: d.known ? 'Last recorded: ' + d.areaLabel : 'Room not recorded yet. Pick where it is now.' });
-      var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: 'Moved ✕' });
+      var was = el(doc, 'div', { class: 'bs-dog-was', text: d.out ? 'Off-site' : d.known ? 'Last recorded: ' + d.areaLabel : 'Room not recorded yet. Pick where it is now.' });
+      var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: d.out ? 'Back' : 'Moved' });
+      // the room code only (Lisa 12 Nov 2026: "just 4A"); Off-site is its own button, not a room
       var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': d.label + ' new room' }, [el(doc, 'option', { value: '', text: 'Pick the new room' })]
-        .concat(areas.filter(function (a) { return a.id !== d.areaId; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label + (a.group ? '  ·  ' + a.group : '') }); })));
+        .concat(areas.filter(function (a) { return a.id !== d.areaId && a.dogs !== false; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label }); })));
       var err = el(doc, 'span', { class: 'bs-err' });
       var go = el(doc, 'button', { class: 'bs-btn bs-big', type: 'button', text: 'Save move' });
-      var movePane = el(doc, 'div', { class: 'bs-move' }, [sel, err, go]);
-      movePane.hidden = !!d.known;               // an unknown room goes straight to "pick a room"
-      if (!d.known) no.hidden = true;
-      var card = el(doc, 'section', { class: 'bs-card bs-dog', 'data-dog': d.id }, [
+      var offBtn = o.offSite && !d.out ? el(doc, 'button', { class: 'bs-btn', type: 'button', 'data-off-site': '1', text: 'Off-site' }) : null;
+      var movePane = el(doc, 'div', { class: 'bs-move' }, [sel, err, go].concat(offBtn ? [offBtn] : []));
+      movePane.hidden = d.known || !!d.out;      // an unknown room goes straight to "pick a room"
+      if (!d.known && !d.out) no.hidden = true;
+      var card = el(doc, 'section', { class: 'bs-card bs-dog' + (d.out ? ' bs-away' : ''), 'data-dog': d.id }, [
         el(doc, 'h3', { class: 'bs-dog-name', text: d.label }), was,
         el(doc, 'div', { class: 'bs-yn bs-one' }, [no]), movePane, result
       ]);
       cards.appendChild(card);
-      var rec = { btn: no, done: false }, rec2 = { btn: go, done: false, needsRoom: true };
+      var rec = { btn: no, done: false, out: d.out }, rec2 = { btn: go, done: false, needsRoom: true, out: d.out };
       btns.push(rec, rec2);
 
       no.addEventListener('click', function () { movePane.hidden = !movePane.hidden; if (!movePane.hidden) go.setAttribute('data-moved', '1'); refreshButtons(); });
       sel.addEventListener('input', function () { if (sel.value) go.setAttribute('data-moved', '1'); else go.removeAttribute('data-moved'); refreshButtons(); });
 
       var mrid = null;
-      go.addEventListener('click', function () {
+      go.addEventListener('click', function () { send(sel.value); });
+      if (offBtn) offBtn.addEventListener('click', function () { send(OFF_SITE); });
+      function send(to) {
         err.textContent = ''; result.textContent = '';
-        if (!sel.value) { err.textContent = 'Pick the new room first.'; return; }
-        go.disabled = true;
+        if (!to) { err.textContent = 'Pick the new room first.'; return; }
+        go.disabled = true; if (offBtn) offBtn.disabled = true;
         mrid = mrid || save.newRequestId();
-        save.submit('occupancy', { subject_id: d.id, area_id: sel.value }, { requestId: mrid }).then(function (r) {
+        var leaving = to === OFF_SITE;   // off-site is a new occupancy row with no room
+        (leaving ? save.submit('occupancy_out', { subject_id: d.id, off_site_kind: 'temporary' }, { requestId: mrid })
+          : save.submit('occupancy', { subject_id: d.id, area_id: to }, { requestId: mrid })).then(function (r) {
           if (r.ok) {
-            var room = (areas.filter(function (a) { return a.id === sel.value; })[0] || {}).label || sel.value;
-            moves.push(d.id); rec.done = true; rec2.done = true;
+            var room = leaving ? 'Off-site' : (areas.filter(function (a) { return a.id === to; })[0] || {}).label || to;
+            if (!d.out) moves.push(d.id);
+            rec.done = true; rec2.done = true;
             card.className += ' bs-done';
             result.className = 'bs-result bs-ok';
-            result.textContent = r.status === 'queued' ? 'Move to ' + room + ' sent: ' + r.message : 'Moved to ' + room + '.';
+            result.textContent = r.status === 'queued' ? (leaving ? 'Off-site' : 'Move to ' + room) + ' sent: ' + r.message : leaving ? 'Off-site.' : 'Moved to ' + room + '.';
             movePane.hidden = true;
             paintProgress(); refreshButtons();
           } else {
-            go.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
+            go.disabled = false; if (offBtn) offBtn.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
             if (r.fields) Object.keys(r.fields).forEach(function (k) { err.textContent += r.fields[k] + ' '; });
             if (r.code !== 'NETWORK') mrid = null;
           }
         });
-      });
-    });
+      }
+    }
+    dogs.forEach(dogCard);
 
-    // Away dogs: shown, keep their room, no buttons
+    // Off-site dogs: not asked to move
     if (away.length) {
-      cards.appendChild(el(doc, 'h3', { class: 'bs-sub bs-away-h', text: 'Away (not asked to move)' }));
+      cards.appendChild(el(doc, 'h3', { class: 'bs-sub bs-away-h', text: 'Off-site' }));
       away.forEach(function (d) {
+        if (d.out) { dogCard(d); return; }
         cards.appendChild(el(doc, 'section', { class: 'bs-card bs-dog bs-away', 'data-dog': d.id }, [
           el(doc, 'h3', { class: 'bs-dog-name', text: d.label }),
-          el(doc, 'div', { class: 'bs-dog-was', text: 'Away · keeps its room' + (d.known ? ': ' + d.areaLabel : '') })
+          el(doc, 'div', { class: 'bs-dog-was', text: 'Off-site · keeps its room' + (d.known ? ': ' + d.areaLabel : '') })
         ]));
       });
     }

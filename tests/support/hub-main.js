@@ -127,14 +127,16 @@ async function steadyRows(page, rowSel, iconSel) {
 }
 
 // A group of numbers (Lisa, 2 Nov): same size (18px / 600) on one baseline; a late one has a rose ring sized to it, others none;
-// hover, press and focus show a ring only: no background fill and no layout change. links = the number links, v = the number inside.
+// hover shows the pale grey fill, no line (Lisa, 12 Nov 2026); focus the 1px ink line, no fill; no layout change. links = the number
+// links, v = the number inside.
 async function numberGroup(page, links, v) {
   const els = page.locator(links);
   const n = await els.count();
   expect(n).toBeGreaterThan(0);
   const look = (i) => els.nth(i).evaluate((a, sel) => {
     const b = a.querySelector(sel), cs = getComputedStyle(b), r = b.getBoundingClientRect(), ar = a.getBoundingClientRect();
-    return { size: cs.fontSize, weight: cs.fontWeight, h: r.height, y: r.y + scrollY, bg: getComputedStyle(a).backgroundColor, box: [ar.x + scrollX, ar.y + scrollY, ar.width, ar.height].map((x) => Math.round(x * 2) / 2).join(','), ring: cs.borderTopColor, late: b.classList.contains('need') };
+    const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; a.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
+    return { hov, os: getComputedStyle(a).outlineStyle, size: cs.fontSize, weight: cs.fontWeight, h: r.height, y: r.y + scrollY, bg: getComputedStyle(a).backgroundColor, box: [ar.x + scrollX, ar.y + scrollY, ar.width, ar.height].map((x) => Math.round(x * 2) / 2).join(','), ring: cs.borderTopColor, late: b.classList.contains('need') };
   }, v);
   const rest = [];
   for (let i = 0; i < n; i++) rest.push(await look(i));
@@ -142,8 +144,10 @@ async function numberGroup(page, links, v) {
   for (let i = 0; i < n; i++) {
     await els.nth(i).hover();
     const h = await look(i);
-    expect(h.bg, 'no fill on hover').toBe(rest[i].bg);
+    expect(h.bg, 'the pale grey fill on hover').toBe(h.hov);
+    expect(h.os, 'no line on hover').toBe('none');
     expect(h.box, 'nothing moves on hover').toBe(rest[i].box);
+    await page.mouse.move(0, 0);
     await els.nth(i).focus();
     const f = await look(i);
     expect(f.bg, 'no fill on focus').toBe(rest[i].bg);

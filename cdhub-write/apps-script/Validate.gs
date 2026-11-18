@@ -27,12 +27,18 @@ function isRealDate_(s) {
  * Check browser input against a table spec.
  * @return {{clean:Object, errors:Object}} errors maps field name -> message.
  */
-function validateInput_(spec, fields, lookups, nowMs) {
+function validateInput_(spec, fields, lookups, nowMs, opts) {
   var errors = {}, clean = {};
   fields = fields || {};
   var name;
 
+  // "Save anyway" (overseer 12 Nov 2026): an unusual value (temperature outside TEMP_MIN..TEMP_MAX, a time more than
+  // PERIOD_MAX_AGE_HOURS ago) is a warning, not a stop. Any table takes confirm_unusual = yes; it is never a column.
+  var confirmed = String(fields.confirm_unusual == null ? '' : fields.confirm_unusual).trim() === 'yes', warn = false;
+  if (!Object.prototype.hasOwnProperty.call(spec.input, 'confirm_unusual') && fields.confirm_unusual != null &&
+      String(fields.confirm_unusual).trim() !== '' && !confirmed) errors.confirm_unusual = 'Not one of: yes.';
   for (name in fields) {
+    if (name === 'confirm_unusual') continue;
     if (Object.prototype.hasOwnProperty.call(fields, name) &&
         !Object.prototype.hasOwnProperty.call(spec.input, name)) {
       errors[name] = 'This is not a field you can set. The system fills it in.';
@@ -63,8 +69,9 @@ function validateInput_(spec, fields, lookups, nowMs) {
           errors[name] = 'Type a temperature in degrees C with at most 1 decimal, e.g. 21.4.';
         } else {
           var n = parseFloat(v);
-          if (n < BLD.LIMITS.TEMP_MIN || n > BLD.LIMITS.TEMP_MAX) errors[name] = 'That is outside ' + BLD.LIMITS.TEMP_MIN + ' to ' + BLD.LIMITS.TEMP_MAX + ' C. Check the number.';
-          else clean[name] = n.toFixed(1);
+          if ((n < BLD.LIMITS.TEMP_MIN || n > BLD.LIMITS.TEMP_MAX) && !confirmed) {
+            errors[name] = 'Unusual: outside ' + BLD.LIMITS.TEMP_MIN + ' to ' + BLD.LIMITS.TEMP_MAX + ' C. Check the number, or save anyway.'; warn = true;
+          } else clean[name] = n.toFixed(1);
         }
         break;
       case 'bool':
@@ -86,9 +93,17 @@ function validateInput_(spec, fields, lookups, nowMs) {
         } else {
           var t = Date.parse(v);
           if (t > nowMs + 5 * 60000) errors[name] = 'That time is in the future.';
-          else if (t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) errors[name] = 'That is more than 7 days ago. Ask Lisa to add it.';
+          else if (opts && opts.oldestMs && t < opts.oldestMs) {
+            errors[name] = 'That is older than these records are kept (' + opts.keepYears + ' years).';   // retention: a stop
+          } else if (!(opts && opts.oldestMs) && t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000 && !confirmed) {
+            errors[name] = 'That is more than ' + Math.round(BLD.LIMITS.PERIOD_MAX_AGE_HOURS / 24) + ' days ago. Check the date, or save anyway.'; warn = true;
+          }
           else clean[name] = v;
         }
+        break;
+      case 'number':   // any measured value (readings, 14 Nov 2026): no unit in the number, no range here (limits are rows)
+        if (!/^-?\d{1,9}(\.\d{1,6})?$/.test(v)) errors[name] = 'Type a number, e.g. 0.05 or 21.4.';
+        else clean[name] = v;
         break;
       case 'count':
         if (!/^\d{1,3}$/.test(v)) errors[name] = 'Use a whole number from 0 to 999.';
@@ -127,7 +142,8 @@ function validateInput_(spec, fields, lookups, nowMs) {
         errors[name] = 'Unknown field type.';
     }
   }
-  if (spec.checkRow) spec.checkRow(clean, errors);
+  if (spec.checkRow) spec.checkRow(clean, errors, lookups);
+  if (warn && !errors.confirm_unusual) errors.confirm_unusual = 'Save anyway?';   // the page shows a "Save anyway" button
   return { clean: clean, errors: errors };
 }
 
@@ -147,12 +163,17 @@ function rowValues_(columns, row) {
   return columns.map(function (c) { return row[c] === undefined ? '' : row[c]; });
 }
 
-/** Readable id: rdg-20261015-223107-k3f9 (London time) */
-function newId_(prefix, d) {
-  var stamp = Utilities.formatDate(d, BLD.TZ, 'yyyyMMdd-HHmmss');
-  var rnd = '', chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-  for (var i = 0; i < 4; i++) rnd += chars.charAt(Math.floor(Math.random() * chars.length));
-  return prefix + '-' + stamp + '-' + rnd;
+/**
+ * A new row's id: the table prefix and 8 random letters/digits, e.g. "sub-7k2q9xbm" (Lisa, 15 Nov 2026, Q4: every record
+ * has a permanent meaningless id; the name is a separate, editable column). Never built from a name or a date, so the id
+ * says nothing about the row and never needs to change. Existing ids are kept as they are. The second argument is
+ * ignored (it was the date). Random bytes from two UUIDs, skipping their fixed version and variant digits.
+ */
+function newId_(prefix) {
+  var chars = 'abcdefghjkmnpqrstuvwxyz23456789', raw = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var at = [0, 2, 4, 6, 8, 10, 20, 22], id = '';
+  for (var i = 0; i < at.length; i++) id += chars.charAt(parseInt(raw.substr(at[i], 2), 16) % chars.length);
+  return prefix + '-' + id;
 }
 
 function londonIso_(d) {

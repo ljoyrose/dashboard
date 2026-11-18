@@ -12,6 +12,22 @@ async function signIn(page) {
   await page.locator('#view [data-action="signin"]').click();
 }
 
+// Record later sheet writes (the hub's pretend Sheets route still answers reads).
+async function sheetWrites(page, opts = {}) {
+  const writes = [];
+  await page.route(SHEETS, (route) => {
+    const req = route.request(), url = decodeURIComponent(req.url());
+    if (req.method() !== 'PUT' && req.method() !== 'POST') return route.fallback();
+    const raw = (/values\/([^?]+)/.exec(url) || [])[1] || '';
+    writes.push({ method: req.method(), range: raw.replace(/:append$/, ''), body: JSON.parse(req.postData() || '{}') });
+    if (opts.missingComments && req.method() === 'POST' && /Comments/.test(raw)) {
+      return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { code: 400, message: 'Unable to parse range: Comments!A:E' } }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+  return writes;
+}
+
 test.describe('GA Hub (JOB 34)', () => {
   test('Sign out in the header: back to the sign-in card, tabs and Refresh hidden, the button says Sign in again', async ({ page }) => {
     await HUBS.food.open(page);
@@ -184,5 +200,86 @@ test.describe('GA Hub (JOB 34)', () => {
     }
     // GA sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, and it is in the menu.
     expect(await tabTo(page, 'nav.tabs a[data-nav="ga"]', 60), 'Tab reaches GA under More').toBe(true);
+  });
+
+  // Card notes (11 Nov 2026). Invented rows only. Who is the pretend signed-in account, never a name in this file.
+  test('a note saved with the answer is written in column H (answer, note, time, who)', async ({ page }) => {
+    let who = '';
+    page.on('response', async (res) => {
+      if (!/\/drive\/v3\/about/.test(res.url())) return;
+      try { who = ((await res.json()).user || {}).emailAddress || who; } catch (e) { /* unread body */ }
+    });
+    await HUBS.food.open(page);
+    const writes = await sheetWrites(page);
+    await go(page, 'do');
+    const card = page.locator('#view .card[data-key^="PRICE-"]');
+    await card.locator('[data-note]').fill('Sample note');
+    await card.locator('button[data-v="Apply"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Cards!G2:J2');
+    expect(writes[0].body.values[0][0]).toBe('Apply');
+    expect(writes[0].body.values[0][1]).toBe('Sample note');
+    expect(writes[0].body.values[0][2]).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(writes[0].body.values[0][3]).toBe(who);
+    expect(who).not.toBe('');
+    expect(writes.some((w) => /Comments/.test(w.range))).toBe(false);
+  });
+
+  test('Save note with no answer appends one Comments row (at, key, title, text, by)', async ({ page }) => {
+    let who = '';
+    page.on('response', async (res) => {
+      if (!/\/drive\/v3\/about/.test(res.url())) return;
+      try { who = ((await res.json()).user || {}).emailAddress || who; } catch (e) { /* unread body */ }
+    });
+    await HUBS.food.open(page);
+    const writes = await sheetWrites(page);
+    await go(page, 'do');
+    const card = page.locator('#view .card[data-key^="PRICE-"]');
+    await card.locator('[data-note]').fill('Sample note');
+    await card.locator('[data-savenote]').click();
+    await expect(page.locator('#banner')).toContainText('Note saved');
+    await expect.poll(() => writes.filter((w) => w.method === 'POST').length).toBe(1);
+    const row = writes.find((w) => w.method === 'POST').body.values[0];
+    expect(writes.find((w) => w.method === 'POST').range).toBe('Comments!A:E');
+    expect(row[0]).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(row[1]).toMatch(/^PRICE-/);
+    expect(row[2]).toContain('GA price up');
+    expect(row[3]).toBe('Sample note');
+    expect(row[4]).toBe(who);
+    expect(who).not.toBe('');
+    expect(writes.some((w) => w.method === 'PUT')).toBe(false);
+  });
+
+  test('an empty note writes nothing', async ({ page }) => {
+    await HUBS.food.open(page);
+    const writes = await sheetWrites(page);
+    await go(page, 'do');
+    const card = page.locator('#view .card[data-key^="PRICE-"]');
+    const save = card.locator('[data-savenote]');
+    await expect(save).toBeDisabled();
+    await card.locator('[data-note]').fill('   ');
+    await expect(save).toBeDisabled();
+    await save.click({ force: true });
+    await page.waitForTimeout(150);
+    expect(writes).toEqual([]);
+    await card.locator('[data-note]').fill('');
+    await card.locator('button[data-v="Apply"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][1]).toBe('');
+    expect(writes.some((w) => /Comments/.test(w.range))).toBe(false);
+  });
+
+  test('a missing Comments tab shows the missing-tab notice and the page stays up', async ({ page, allowedConsole }) => {
+    allowedConsole.push(/status of 400/);
+    await HUBS.food.open(page);
+    const writes = await sheetWrites(page, { missingComments: true });
+    await go(page, 'do');
+    const card = page.locator('#view .card[data-key^="PRICE-"]');
+    await card.locator('[data-note]').fill('Sample note');
+    await card.locator('[data-savenote]').click();
+    await expect(page.locator('#banner')).toContainText('missing a tab');
+    await expect(card).toBeVisible();
+    await expect(card.locator('[data-savenote]')).toBeEnabled();
+    expect(writes.some((w) => w.method === 'PUT')).toBe(false);
   });
 });
