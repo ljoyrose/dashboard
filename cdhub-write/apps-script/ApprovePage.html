@@ -280,8 +280,8 @@
   var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status',area_reading:'Temperatures',check_log:'Jobs: health checks, bowls, cleaning'};
   // Suggested set (Breed Better spec S10): name, sex, DOB, chip last 4, health and Fit to Breed results, litters with date of birth
   var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],
-    area_reading:['room','reading_type','min_c','max_c','spot_c','taken_at','taken_by','in_range','mitigation_note'],
-    check_log:['job','room','dog','outcome','amount','happened_at','note','taken_by']};
+    area_reading:['room','reading_type','min_c','max_c','spot_c','taken_at','in_range','mitigation_note'],   // who typed it: off unless ticked
+    check_log:['job','room','dog','outcome','amount','happened_at','note']};
   function inMsg(t){ document.getElementById('in-msg').textContent=t; }
   function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }
   document.getElementById('in-new').onclick=function(){

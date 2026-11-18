@@ -141,6 +141,7 @@ function inspectSiteData_(key, tenant) {
   };
   var room = names(READABLE.area.file, 'name'), job = key === 'check_log' ? names(READABLE.check_type.file, 'label') : {};
   var dog = key === 'check_log' ? names(READABLE.subject.file, 'name') : {};
+  var dam = key === 'check_log' ? names(READABLE.litter.file, 'dam_subject_id') : {};   // a litter's mum, to scope its pups' records
   var replaced = {};
   f.records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
   var header = f.header.slice();
@@ -150,6 +151,7 @@ function inspectSiteData_(key, tenant) {
     for (var k in r) if (Object.prototype.hasOwnProperty.call(r, k)) o[k] = r[k];
     o.room = r.area_id ? (room[r.area_id] || r.area_id) : '';
     if (key === 'check_log') { o.job = job[r.check_type_id] || ''; o.dog = r.subject_id ? (dog[r.subject_id] || '') : ''; }
+    o.__dam = r.litter_id ? (dam[r.litter_id] || '') : '';
     o.__day = inspectRowDay_(r, site.dateCols);
     o.__at = String(r[site.dateCols[0]] || r[site.dateCols[1]] || '');
     return o;
@@ -221,7 +223,10 @@ function inspectSinkRead_(req, who, now) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
     if (site) {
-      if (r.subject_id && !dogs[r.subject_id]) continue;   // a record about one dog: only the link's dogs
+      // a record about one dog: only the link's dogs. A litter's record: only if its mum, or that pup, is on the link
+      // (an unknown litter is never shown).
+      if (r.litter_id) { if (!(r.subject_id && dogs[r.subject_id]) && !(r.__dam && r.__dam !== r.litter_id && dogs[r.__dam])) continue; }
+      else if (r.subject_id && !dogs[r.subject_id]) continue;
       if ((dFrom || dTo) && (!r.__day || (dFrom && r.__day < dFrom) || (dTo && r.__day > dTo))) continue;
     } else if (!dogs[r[subjCol]]) continue;
     if (rows.length >= BLD.LIMITS.READ_MAX_ROWS) { truncated = true; break; }

@@ -347,6 +347,13 @@ function siteSetup() {
     `clg-1,${fx.TENANT},cty-w,,,done,2026-10-11T09:00:00+01:00,Test Staff,`,
     `clg-2,${fx.TENANT},cty-h,area-r1,sub-test-a,ok,2026-10-11T08:00:00+01:00,Test Staff,`,
     `clg-3,${fx.TENANT},cty-h,area-r1,sub-test-b,ok,2026-10-11T08:01:00+01:00,Test Staff,`]);
+  // litter records: lit-a's mum (sub-test-a) is on the link, lit-c's mum is not, lit-zz is unknown
+  const cl = env.file('BLD-check_log.csv')[0];
+  cl.content = cl.content.replace('id,tenant_id,check_type_id,area_id,subject_id,outcome', 'id,tenant_id,check_type_id,area_id,subject_id,litter_id,outcome')
+    .replace(/^(clg-[0-9]+,[^,]*,[^,]*,[^,]*,[^,]*,)/gm, '$1,')
+    + crlf([`clg-4,${fx.TENANT},cty-h,,,lit-a,ok,2026-10-11T07:00:00+01:00,Test Staff,`,
+      `clg-5,${fx.TENANT},cty-h,,,lit-c,ok,2026-10-11T07:01:00+01:00,Test Staff,`,
+      `clg-6,${fx.TENANT},cty-h,,,lit-zz,ok,2026-10-11T07:02:00+01:00,Test Staff,`]);
   return env;
 }
 
@@ -367,7 +374,8 @@ test('job records: names not ids; a record about one dog only for the link dogs;
   const r = read(env, m.result.code, 'check_log');
   assert.equal(r.ok, true, JSON.stringify(r));
   const rows = JSON.parse(JSON.stringify(r.result.rows));
-  assert.deepEqual(rows.map((x) => x.job), ['Water bowls washed', 'Health check: all dogs']);
+  assert.deepEqual(rows.map((x) => x.job), ['Water bowls washed', 'Health check: all dogs', 'Health check: all dogs']);
+  assert.equal(r.result.rows.length, 3, 'only lit-a of the litter records: its mum is on the link');
   assert.equal(rows[1].dog, 'Test A');
   assert.equal(rows[1].room, 'Test Room 1');
   assert.equal(JSON.stringify(rows).includes('sub-test-b'), false);
@@ -379,7 +387,7 @@ test('the owner may limit the days shown; a bad range is refused; inspectors sti
   const m = make(env, { data_from_date: '2026-10-11', data_to_date: '2026-10-11', fields: { subject: ['name'], area_reading: ['room', 'taken_at'], check_log: ['job'] } });
   assert.equal(m.ok, true, JSON.stringify(m));
   assert.equal(read(env, m.result.code, 'area_reading').result.rows.length, 0);
-  assert.equal(read(env, m.result.code, 'check_log').result.rows.length, 2);
+  assert.equal(read(env, m.result.code, 'check_log').result.rows.length, 3);
   const bad = make(env, { data_from_date: '2026-10-12', data_to_date: '2026-10-11', fields: { subject: ['name'] } });
   assert.equal(bad.ok, false);
   assert.equal(bad.code, 'INVALID');
