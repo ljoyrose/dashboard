@@ -56,7 +56,7 @@ test.describe('Size band from the kg range midpoint', () => {
     const card = (id) => page.locator('.dcard[data-dog="' + id + '"]');
     await expect(card('d1').locator('.band small')).toHaveAttribute('data-size', 'medium');
     await expect(card('d1')).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
-    await expect(card('d1').locator('.band small')).toHaveText('Mini 8-12kg');
+    await expect(card('d1').locator('.band small')).toHaveText('Medium');   // the size word only, never the typed kg range
     await expect(card('d2').locator('.band small')).toHaveAttribute('data-size', 'medium');
     await expect(card('d2')).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
     await expect(card('d3').locator('.band small')).toHaveAttribute('data-size', 'small');   // latest weighing 7.2 kg

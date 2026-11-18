@@ -2478,24 +2478,14 @@ var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='';
 /* one size band to its colour key (small, medium, large) */
 var SIZE_WORD={small:'Toy/Mini',medium:'Medium',large:'Standard'};
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
-function sizeOverrideOf(d){
- var k='size_override.'+d.id, hit=null, from='';
- (T['BLD-breeding_rule.csv']||[]).forEach(function(r){
-  if(String(r.rule_key||'')!==k) return;
-  if(!BLDCapacity.inForce([r], todayISO(), 'effective_from').length) return;
-  var f=String(r.effective_from||'');
-  if(hit==null||f>=from){ hit=String(r.value||'').trim().toLowerCase(); from=f; }
- });
- return /^(small|medium|large)$/.test(hit||'')?hit:'';
-}
+function sizeOverrideOf(d){ return BLDCapacity.sizeOverride(T['BLD-breeding_rule.csv']||[], d.id, todayISO()); }
+/* size: the one shared rule (staff/lib/capacity.js sizeForDog), also used by the print cards: override, latest weight, kg-range middle */
 function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1]:null;
- var bw=lw?BLDCapacity.sizeFromKg(lw.kg,CD.sizeCut):'';
- var ov=sizeOverrideOf(d);
- if(ov){ d.sizeWord=ov; d.sizeFrom='override'; d.sizeWhy='set as '+sizeName(ov)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''); return; }
- if(bw){ d.sizeWord=bw; d.sizeFrom='weight'; d.sizeWhy=lw.kg+' kg on '+dmyShort(lw.on); return; }
- /* no weighing: the midpoint of the kg range in the size cell, e.g. "Mini 8-12kg" counts as 10 kg (Lisa 15 Nov 2026) */
- var by=BLDCapacity.sizeOf(null,d.size,CD.sizeCut);
- d.sizeWord=by.size; d.sizeFrom=by.from; d.sizeWhy=by.size?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
+ var by=BLDCapacity.sizeForDog({id:d.id,kg:lw?lw.kg:null,sizeText:d.size,rules:T['BLD-breeding_rule.csv']||[],today:todayISO(),cut:CD.sizeCut});
+ d.sizeWord=by.size; d.sizeFrom=by.from;
+ d.sizeWhy=by.from==='override'?('set as '+sizeName(by.size)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''))
+  :by.from==='weight'?(lw.kg+' kg on '+dmyShort(lw.on))
+  :by.from==='range'?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
 function sizeName(k){ return SIZE_WORD[k]||''; }
 function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
 function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }

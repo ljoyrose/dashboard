@@ -63,26 +63,21 @@
      room limits from area_capacity for the room's current access. Nothing kennel-specific is fixed here. */
   var per = 1;   // cards per A4: 1, 2 or 4
   function sizeKey(b) { var m = /(small|medium|large)/i.exec(String(b || '')); return m ? m[1].toLowerCase() : ''; }
-  /* the dog's size: latest weighing, else the middle of the kg range in its size cell ("Mini 8-12kg" = 10 kg), both
-     against the owner's size_from_kg rows (staff/lib/capacity.js); else a size word typed in the cell. Lisa 15 Nov 2026 */
+  /* the dog's size: the one shared rule with the CD Hub dog page (staff/lib/capacity.js sizeForDog): an owner
+     size_override row, else the latest weighing, else the middle of the kg range in its size cell, all against the
+     owner's size_from_kg rows (Lisa 15 Nov 2026); last, a size word typed in the cell. Never any kg on the card. */
   function sizeOfDog(s) {
     if (!s) return '';
     var w = null;
     (T.weight || []).forEach(function (r) { if (r.subject_id === s.id && !isNaN(parseFloat(r.weight_kg)) && (!w || String(r.performed_on || '') >= String(w.performed_on || ''))) w = r; });
-    var cut = BLDCapacity.sizeCutoffs(T.breeding_rule || [], BLDNeeds.today());
-    return BLDCapacity.sizeOf(w ? w.weight_kg : null, s.size_band, cut).size || sizeKey(s.size_band);
+    return BLDCapacity.sizeForDog({ id: s.id, kg: w ? w.weight_kg : null, sizeText: s.size_band, rules: T.breeding_rule || [], today: BLDNeeds.today() }).size || sizeKey(s.size_band);
   }
+  /* the size word only (Small, Medium, Large): never the kg range typed in the old size cell */
+  function sizeWord(k) { return k ? k.charAt(0).toUpperCase() + k.slice(1) : ''; }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
     return c ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : '';
-  }
-  /* "10-25kg (medium)" prints as "Medium" over "10–25 kg", as on the mock-up; anything else prints as typed */
-  function sizeLines(b) {
-    var m = /^\s*([^()]*?)\s*\(([^)]+)\)\s*$/.exec(String(b || ''));
-    if (!m) return [String(b || '')];
-    var w = m[2].charAt(0).toUpperCase() + m[2].slice(1), kg = m[1].replace(/-/g, '\u2013').replace(/kg/i, ' kg').replace(/\s+/g, ' ').trim();
-    return [w, h('br'), kg];
   }
   /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -137,7 +132,7 @@
     if (it.room) rows.push(['Room', it.room]);
     linksOf(s.id).forEach(function (g) { rows.push([g.label, g.names]); });
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band || sz ? h('small', { 'data-size': sz }, s.size_band ? sizeLines(s.size_band) : [sz.charAt(0).toUpperCase() + sz.slice(1)]) : null]),
+      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), sz ? h('small', { 'data-size': sz, 'data-k': 'size' }, [sizeWord(sz)]) : null]),
       h('div', { class: 'dbody' }, [
         h('div', { class: 'cside' }, [photoBox(s),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),

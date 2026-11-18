@@ -80,6 +80,33 @@
     var mid = rangeMidKg(sizeText); b = sizeFromKg(mid, cut);
     return b ? { size: b, from: 'range', kg: mid } : { size: '', from: '', kg: null };
   }
+  /**
+   * The owner's size_override.<dog id> rule row in force on `today` (newest effective_from wins; a later row on the
+   * same day wins a tie). 'small' | 'medium' | 'large', or '' (no row, or the row says 'weight').
+   */
+  function sizeOverride(rules, id, today) {
+    var k = 'size_override.' + id, hit = null, from = '';
+    (rules || []).forEach(function (r) {
+      if (String(r.rule_key || '') !== k) return;
+      if (today && !inForce([r], today, 'effective_from').length) return;
+      var f = String(r.effective_from || '');
+      if (hit == null || f >= from) { hit = String(r.value || '').trim().toLowerCase(); from = f; }
+    });
+    return /^(small|medium|large)$/.test(hit || '') ? hit : '';
+  }
+  /**
+   * One dog's size: the ONE rule for the CD Hub dog page and the print cards (Lisa 15 Nov 2026), so they never differ.
+   * 1. an owner size_override row; 2. the latest weight against the size_from_kg rows in force on `today`;
+   * 3. no weighing: the middle of the kg range typed in the size cell (#653). Never a fixed default.
+   * o = { id, kg: latest weight, sizeText: the typed size cell, rules: breeding_rule rows, today: YYYY-MM-DD, cut: optional }.
+   * Returns { size: 'small'|'medium'|'large'|'', from: 'override'|'weight'|'range'|'', kg }.
+   */
+  function sizeForDog(o) {
+    o = o || {};
+    var ov = o.id ? sizeOverride(o.rules, o.id, o.today) : '', kg = parseFloat(o.kg);
+    if (ov) return { size: ov, from: 'override', kg: isNaN(kg) ? null : kg };
+    return sizeOf(o.kg, o.sizeText, o.cut !== undefined ? o.cut : sizeCutoffs(o.rules, o.today));
+  }
 
   /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
   function accessOf(rows, areaId) {
@@ -232,6 +259,6 @@
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, sizeOverride: sizeOverride, sizeForDog: sizeForDog, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));

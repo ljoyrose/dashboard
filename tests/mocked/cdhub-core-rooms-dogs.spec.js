@@ -410,7 +410,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(one.locator('[data-k="DOB"] dd')).toHaveText('5 Jan 2022');
     await expect(one).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
-    await expect(one.locator('.band small')).toHaveText('Medium10–25 kg');
+    await expect(one.locator('.band small')).toHaveText('Medium');   // size word only: no kg range on the card (Lisa 15 Nov 2026)
     await expect(page.locator('[data-k="Room"]')).toHaveCount(1);   // off-site and retired-room dogs: no room line
     await expect(page.locator('.sheet')).not.toContainText('Room C');
     await page.getByRole('button', { name: 'Room signs' }).click();
