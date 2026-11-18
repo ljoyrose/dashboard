@@ -86,7 +86,7 @@
     var byId = {};
     rows(T, 'BLD-files.csv').forEach(function (f) { byId[f.id] = f; });
     return linksFrom(T, fromTable, fromId, kinds).filter(function (l) { return tbl(l.to_table) === 'file' && byId[l.to_id] && !t(l.to_date); })
-      .map(function (l) { var f = byId[l.to_id]; return { href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
+      .map(function (l) { var f = byId[l.to_id]; return { id: t(f.drive_file_id), href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
   }
 
   /** Test rows in force on a day for an item kind: latest effective_from per type_key, active, target item. */
@@ -577,6 +577,15 @@
     }
   }
 
+  /** The item's latest main photo for the printed report (18 Nov 2026, Lisa: list, photo, type, expiry, then a PDF).
+      A Drive photo prints from Drive's thumbnail, as the print cards do (print.js); a web link prints as given. */
+  function photoCell(v, it) {
+    var pics = filesFor(v.T, 'items', it.id, ['main']), p = pics[pics.length - 1], id = p ? p.id : '', raw = p ? '' : t(it.photo);
+    if (!id && /^[A-Za-z0-9_\-]{20,}$/.test(raw)) id = raw;
+    var src = id ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w400' : /^https:\/\//.test(raw) ? raw : (p && /^https:\/\//.test(p.href) && !/drive\.google\.com/.test(p.href) ? p.href : '');
+    return src ? '<img class="ph" src="' + v.esc(src) + '" alt="" referrerpolicy="no-referrer">' : '';
+  }
+
   function report(v, how) {
     var on = v.today;
     if (how === 'csv') {
@@ -587,17 +596,17 @@
     var e = v.esc, xs = filtered(list(v.T, on)), w = window.open('', '_blank');
     if (!w) { S.msg = 'Allow pop-ups to print the report.'; v.redraw(); return; }
     var body = '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
-      + '<table><thead><tr><th>No.</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>No.</th><th>Photo</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
       + xs.map(function (x) {
         var ls = x.s.lines.length ? x.s.lines : [null];
         return ls.map(function (l, i) {
           var rec = l ? records(v.T, x.it.id, x.it.kind_key).filter(function (r) { return r.type.type_key === l.key; })[0] : null;
-          return '<tr>' + (i ? '<td></td><td></td><td></td><td></td><td></td>' : '<td>' + e(x.it.item_no) + '</td><td>' + e(x.it.name) + (x.it.size ? ' ' + e(x.it.size) : '') + '</td><td>' + e(x.kind) + '</td><td>' + e(x.place) + '</td><td>' + e(x.it.expires_on ? v.dmy(x.it.expires_on) : '') + '</td>')
+          return '<tr>' + (i ? '<td></td><td></td><td></td><td></td><td></td><td></td>' : '<td>' + e(x.it.item_no) + '</td><td>' + photoCell(v, x.it) + '</td><td>' + e(x.it.name) + (x.it.size ? ' ' + e(x.it.size) : '') + '</td><td>' + e(x.kind) + '</td><td>' + e(x.place) + '</td><td>' + e(x.it.expires_on ? v.dmy(x.it.expires_on) : '') + '</td>')
             + '<td>' + e(l ? l.label : '') + '</td><td>' + e(l && l.last ? v.dmy(l.last) : '') + '</td><td>' + e(l && l.next ? v.dmy(l.next) : '') + '</td><td>' + e(x.archived ? 'Archived' : WORD[l ? l.st : x.s.st]) + '</td>'
             + '<td>' + e(rec ? rec.values.map(function (val) { return val.label + ' ' + val.value + (val.unit ? ' ' + val.unit : '') + (val.inr === false ? ' (outside)' : ''); }).join(', ') : '') + '</td><td>' + (rec ? rec.files.map(function (f) { return '<a href="' + e(f.href) + '">' + e(f.label) + '</a>'; }).join(' ') : '') + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table>';
-    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
+    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}img.ph{width:90px;max-height:90px;object-fit:cover;display:block}tr{break-inside:avoid}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
     w.document.close();
   }
 
