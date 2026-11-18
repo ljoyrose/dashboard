@@ -116,7 +116,7 @@ async function openCards(page) {
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Dog kennel cards' }).click();
+  await page.getByRole('button', { name: 'Dog cards' }).click();
   await expect(page.locator('.dcard')).toHaveCount(CARDS);
 }
 const PER_LABEL = { 1: 'Full A4', 2: '2 per A4', 4: '4 per A4' };
@@ -125,7 +125,7 @@ async function cardsFit(page) {
   await page.emulateMedia({ media: 'print' });
   const r = await page.evaluate(() => Array.from(document.querySelectorAll('.dcard')).map((c) => {
     const b = c.getBoundingClientRect();
-    const out = Array.from(c.querySelectorAll('.band,.cside,.code svg,.chipline,.jobs,.lst,.tag')).filter((e) => { const x = e.getBoundingClientRect(); return x.bottom > b.bottom + 1 || x.right > b.right + 1; }).map((e) => e.className.baseVal !== undefined ? 'svg' : e.className);
+    const out = Array.from(c.querySelectorAll('.name,.dtop,.szb,.band,.cside,.code svg,.chipline,.jobs,.lst,.tag')).filter((e) => { const x = e.getBoundingClientRect(); return x.bottom > b.bottom + 1 || x.right > b.right + 1; }).map((e) => e.className.baseVal !== undefined ? 'svg' : e.className);
     const qr = c.querySelector('.code svg').getBoundingClientRect();
     return { id: c.getAttribute('data-dog'), out, qr: Math.round(Math.min(qr.width, qr.height)), status: getComputedStyle(document.querySelector('.msg')).display };
   }));

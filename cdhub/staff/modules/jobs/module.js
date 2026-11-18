@@ -19,8 +19,15 @@
   }
   function isDue(j) { return j.status === 'late' || j.status === 'today' || j.status === 'never'; }
   function byRank(a, b) { return (RANK[a.status] - RANK[b.status]) || String(a.label).localeCompare(String(b.label)); }
-  /* A-Z, matching the printed card; a group sits where its name falls */
-  function aToZ(a, b) { return String(a.group || a.label).localeCompare(String(b.group || b.label)) || String(a.label).localeCompare(String(b.label)); }
+  /* Lisa 18 Nov 2026: daily jobs first (feed, health check), then the less often ones (grooming, ears), as needed last;
+     A-Z within the same frequency. The frequency is the owner's every_days on the job row; a group goes by its most frequent job. */
+  function every(j) { var n = parseInt(j.every_days, 10); return n > 0 ? n : 1e6; }
+  function byFrequency(list) {
+    var g = {};
+    list.forEach(function (j) { if (j.group) g[j.group] = Math.min(g[j.group] || 1e6, every(j)); });
+    var f = function (j) { return j.group ? g[j.group] : every(j); };
+    return function (a, b) { return (f(a) - f(b)) || String(a.group || a.label).localeCompare(String(b.group || b.label)) || (every(a) - every(b)) || String(a.label).localeCompare(String(b.label)); };
+  }
   function worst(list) { return list.slice().sort(byRank)[0]; }
   function isOn(r) { return String(r.active).toLowerCase() !== 'false'; }
   /* how a late entry came in: one at a time (paper) or several days at once (bulk). Owner-only; staff never see it */
@@ -152,6 +159,16 @@
       if (tag && !BLDDue.forTarget(types, logs, target, today).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
+      /* a room scan: who is in the room now, each opening that dog's own jobs (Lisa 18 Nov 2026); Move dogs is below */
+      if (target.area_id) {
+        var dogTag = {};
+        (tags.rows || []).forEach(function (t) { if (t.kind === 'subject' && isOn(t)) dogTag[t.ref_id] = t.tag; });
+        host.appendChild(h('div', { class: 'here-now', 'data-k': 'here' }, [h('h3', { text: 'Here now' })].concat(roomDogs.length
+          ? roomDogs.slice().sort(function (x, y) { return String(x.label).localeCompare(String(y.label)); }).map(function (x) {
+            return dogTag[x.id] ? h('button', { class: 'chip', type: 'button', 'data-dog': x.id, text: x.label, onclick: function () { c.go('s/' + dogTag[x.id]); } })
+              : h('span', { class: 'chip', 'data-dog': x.id, text: x.label }); })
+          : [h('p', { class: 'sub', text: 'No dogs here.' })])));
+      }
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
       /* Lisa 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
          code (ask Lisa), or no answer in time (slow saves: try again), with a Try again button for the second. */
@@ -447,7 +464,8 @@
       }
       function catchUp() {
         /* on the whole-site screen every job (rooms and dogs too, a row each); on a dog, room or litter screen that one's jobs */
-        var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today)).slice().sort(aToZ);
+        var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today)).slice();
+        jobs.sort(byFrequency(jobs));
         list.textContent = ''; say('');
         list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { draw(); } }));
         list.appendChild(h('h3', { text: 'Earlier' }));
@@ -495,7 +513,8 @@
       }
 
       function draw() {
-        var jobs = BLDDue.forTarget(types, logs, target, today).sort(aToZ);
+        var jobs = BLDDue.forTarget(types, logs, target, today);
+        jobs.sort(byFrequency(jobs));
         list.textContent = '';
         if (group) {
           list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { group = ''; say(''); draw(); } }));
