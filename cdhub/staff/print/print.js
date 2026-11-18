@@ -11,19 +11,22 @@
   save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   function newTag() { var a = new Uint8Array(LEN), s = ''; crypto.getRandomValues(a); for (var i = 0; i < LEN; i++) s += ALPHABET.charAt(a[i] % ALPHABET.length); return s; }
-  function say(t, k) { msg.className = 'msg ' + (k || ''); msg.textContent = t; }
+  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
-  if (!save.getScriptUrlSet() || !code) { screen.appendChild(h('p', { class: 'sub', text: 'Set up this device on the staff page first, with an owner code.' })); return; }
-  save.setCode(code, false);
+  // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
+  var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
+  if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
+  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
+  if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' });
   screen.appendChild(opts); screen.appendChild(msg); screen.appendChild(sheet);
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files'], ['subject_link', 'links', 'files', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files', 'weight'], ['subject_link', 'links', 'files', 'weight', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -33,6 +36,12 @@
   function make(kind, items, draw) {
     sheet.textContent = '';
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
+    // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
+    var role = typeof save.role === 'function' ? save.role() : '';
+    if (missing.length && role && role !== 'OWNER') {
+      say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
+      return;
+    }
     (function next() {
       if (i < missing.length && !failed) {
         say('Making code ' + (i + 1) + ' of ' + missing.length + '...');
@@ -43,14 +52,26 @@
         });
         return;
       }
+      // only codes already saved are drawn (a code whose save failed is never shown); the rest are named as not printed
       items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room)); });
-      say(failed ? 'Stopped: ' + failed : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
+      var left = items.filter(function (it) { return !current(kind, it.id); }).length;
+      say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
+        : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
     }());
   }
   /* Lisa's "Dog Card Print-outs" layout (v4). Every value prints from rows: size colours from size_colour.* rule rows,
      room limits from area_capacity for the room's current access. Nothing kennel-specific is fixed here. */
   var per = 1;   // cards per A4: 1, 2 or 4
   function sizeKey(b) { var m = /(small|medium|large)/i.exec(String(b || '')); return m ? m[1].toLowerCase() : ''; }
+  /* the dog's size: latest weighing, else the middle of the kg range in its size cell ("Mini 8-12kg" = 10 kg), both
+     against the owner's size_from_kg rows (staff/lib/capacity.js); else a size word typed in the cell. Lisa 15 Nov 2026 */
+  function sizeOfDog(s) {
+    if (!s) return '';
+    var w = null;
+    (T.weight || []).forEach(function (r) { if (r.subject_id === s.id && !isNaN(parseFloat(r.weight_kg)) && (!w || String(r.performed_on || '') >= String(w.performed_on || ''))) w = r; });
+    var cut = BLDCapacity.sizeCutoffs(T.breeding_rule || [], BLDNeeds.today());
+    return BLDCapacity.sizeOf(w ? w.weight_kg : null, s.size_band, cut).size || sizeKey(s.size_band);
+  }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
@@ -109,14 +130,14 @@
       onerror: function () { box.textContent = 'Photo'; } }));
     return box; }
   function dogCard(tag, it) {
-    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s), cls = classOf(s);
+    var s = it.s, sz = sizeOfDog(s), col = sizeColour(sz), rows = [], colour = colourOf(s), chip = chipOf(s), cls = classOf(s);
     if (cls) rows.push(['Class', cls]);
     if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
     linksOf(s.id).forEach(function (g) { rows.push([g.label, g.names]); });
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band ? h('small', { 'data-size': sizeKey(s.size_band) }, sizeLines(s.size_band)) : null]),
+      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band || sz ? h('small', { 'data-size': sz }, s.size_band ? sizeLines(s.size_band) : [sz.charAt(0).toUpperCase() + sz.slice(1)]) : null]),
       h('div', { class: 'dbody' }, [
         h('div', { class: 'cside' }, [photoBox(s),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
@@ -127,7 +148,7 @@
   }
   /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
   function litterCard(tag, it) {
-    var l = it.l, dam = it.dam || {}, col = sizeColour(dam.size_band), rows = [], born = l.born_on || l.dob || '';
+    var l = it.l, dam = it.dam || {}, col = sizeColour(sizeOfDog(dam)), rows = [], born = l.born_on || l.dob || '';
     if (it.sire) rows.push(['Sire', it.sire]);
     if (it.pups) rows.push(['Pups', String(it.pups)]);
     if (it.room) rows.push(['Room', it.room]);

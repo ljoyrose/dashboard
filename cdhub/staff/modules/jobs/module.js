@@ -82,6 +82,25 @@
         return pick(key + '.' + typeKey) || pick(key);
       }
       function paperTime(typeKey, day) { var t = rule('job.paper_default_time', typeKey, day); return /^\d{1,2}:\d{2}$/.test(t) ? t : START_TIME; }
+      /* Earlier, how the time is given (owner rows): job.paper_time_options = a pipe list of exact|part|none|now, the first preselected;
+         job.day_part.<code>.label/.at/.sort = the parts of the day. No options row = the optional time box, as before. */
+      function timeOptions(typeKey, day) {
+        var ok = { exact: 1, part: 1, none: 1, now: 1 }, seen = {};
+        var list = rule('job.paper_time_options', typeKey, day).split('|').map(function (x) { return x.trim().toLowerCase(); })
+          .filter(function (x) { if (!ok[x] || seen[x]) return false; seen[x] = 1; return true; });
+        if (!dayParts(typeKey, day).length) list = list.filter(function (x) { return x !== 'part'; });
+        if (day !== today) list = list.filter(function (x) { return x !== 'now'; });
+        return list;
+      }
+      function dayParts(typeKey, day) {
+        var codes = {};
+        rules.forEach(function (r) { var m = /^job\.day_part\.([a-z0-9_-]+)\.at$/i.exec(r.rule_key || ''); if (m) codes[m[1]] = true; });
+        return Object.keys(codes).map(function (code) {
+          var p = 'job.day_part.' + code + '.';
+          return { code: code, label: rule(p + 'label', typeKey, day) || code, at: rule(p + 'at', typeKey, day), sort: parseFloat(rule(p + 'sort', typeKey, day)) };
+        }).filter(function (x) { return /^\d{1,2}:\d{2}$/.test(x.at); })
+          .sort(function (a, b) { return ((isNaN(a.sort) ? 1e9 : a.sort) - (isNaN(b.sort) ? 1e9 : b.sort)) || a.code.localeCompare(b.code); });
+      }
       function oldestDay(typeKey, day) { var n = parseInt(rule('job.paper_back_days', typeKey, day), 10); return n > 0 ? addDays(day, -n) : ''; }
       var nameOf = {};
       (d.dogs || []).forEach(function (x) { nameOf[x.id] = x.label; });
@@ -114,7 +133,7 @@
       function showDone(card, key, dogIds) {
         var all = todays(key).filter(function (x) { return dogIds ? dogIds.indexOf(x.subject_id) >= 0 : here(x); });
         var l = all.filter(function (x) { return x.outcome !== 'note'; })[0];
-        if (!l && paperDone[key]) { var pd = paperDone[key]; BLDDone.mark(card, { outcome: pd.outcome, at: pd.happened_at, who: pd.taken_by, extra: dmy(BLDDue.londonDate(pd.happened_at)), note: pd.note }); return; }
+        if (!l && paperDone[key]) { var pd = paperDone[key]; BLDDone.mark(card, { outcome: pd.outcome, at: pd.time_given ? '' : pd.happened_at, who: pd.taken_by, extra: [dmy(BLDDue.londonDate(pd.happened_at)), pd._part].filter(Boolean).join(' '), note: pd.note }); return; }
         if (!l) return;
         if (l._queued) { BLDDone.wait(card, l._queued); return; }
         var n = dogIds ? Object.keys(doneToday(key)).filter(function (x) { return dogIds.indexOf(x) >= 0; }).length : 0;
@@ -134,7 +153,15 @@
 
       host.appendChild(h('h2', { text: title }));
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
-      if (!v[2].ok) host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: 'This phone cannot read past records yet, so "Due" may already be done. Ask Lisa.' }));
+      /* Lisa 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
+         code (ask Lisa), or no answer in time (slow saves: try again), with a Try again button for the second. */
+      if (!v[2].ok) {
+        var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
+        host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
+          ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
+          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask Lisa.' }));
+        if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
+      }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
       host.appendChild(status); host.appendChild(list);
       if (tag && !site) host.appendChild(h('button', { class: 'btn quiet job-move', type: 'button', text: 'Move dogs', onclick: moves }));
@@ -170,9 +197,24 @@
           var then = BLDDue.jobsInForce(types, day).filter(function (x) { return x.type_key === t.type_key; })[0];
           if (!then) { stop('This job was not set up on ' + dmy(day) + '.'); return; }
           t = then; entry.check_type_id = then.id;
-          entry.happened_at = londonIso(day, paper.time.value || paperTime(t.type_key, day));
+          var mode = paper.mode && !paper.mode.hidden ? paper.mode.value : '', partLabel = '';
+          if (mode === 'now') {
+            if (day !== today) { stop('Now is only for today.'); return; }
+            entry.happened_at = new Date().toISOString();
+          } else if (mode === 'part') {
+            var pt = dayParts(t.type_key, day).filter(function (x) { return x.code === paper.part.value; })[0];
+            if (!pt) { stop('Pick a part of the day.'); return; }
+            entry.happened_at = londonIso(day, pt.at); entry.time_given = 'part:' + pt.code; partLabel = pt.label;
+            if (Date.parse(entry.happened_at) > Date.now()) entry.happened_at = new Date().toISOString();   // today, a part not yet at its usual time: now
+          } else if (mode === 'exact') {
+            if (!paper.time.value) { stop('Type the time.'); return; }
+            entry.happened_at = londonIso(day, paper.time.value);
+          } else {
+            entry.happened_at = londonIso(day, paper.time.value || paperTime(t.type_key, day));
+            if (!paper.time.value) entry.time_given = 'false';   // the owner's default time was used: the owner sees "time not given"
+          }
+          if (Date.parse(entry.happened_at) > Date.now() + 60000) { stop('That time is still to come.'); return; }
           entry.how_recorded = PAPER_HOW;
-          if (!paper.time.value) entry.time_given = 'false';   // the owner's default time was used: the owner sees "time not given"
           entry.confirm_unusual = 'yes';   // the day was picked on purpose, so an older day is not a slip
           if (noteFor) { noteFor = null; delete entry.note_for_id; }   // a note on today's done row does not belong to an earlier day
         }
@@ -206,7 +248,7 @@
             if (r.code !== 'NETWORK') state.rid = null; return;
           }
           (state.form || []).forEach(function (x) { x.input.value = ''; });
-          if (paper) { paperDone[job.type_key] = Object.assign({}, entry, { taken_by: r.who || '' }); paper.date.value = ''; paper.time.value = ''; }
+          if (paper) { paperDone[job.type_key] = Object.assign({}, entry, { taken_by: r.who || '', _part: partLabel }); paper.date.value = ''; paper.time.value = ''; paper.refresh(); }
           var at = r.at || new Date().toISOString(), mine = { taken_at: at, taken_by: r.who || '', _queued: r.status === 'queued' ? (r.message || 'Waiting for signal') : '' };
           var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [], real = r.ids && r.ids.length === dogs.length;   // a row id we can point a note at only when the reply gives one per dog
           logs = logs.concat(dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, entry, mine, { id: real ? r.ids[i] : r.id + '-' + i, _noId: !real, subject_id: dog }); })
@@ -274,11 +316,28 @@
           h('button', { class: 'btn quiet', type: 'button', text: 'Part done', onclick: function () { send(job, t, 'part_done', inputs, panelMsg, state); } })   // needs a note; not counted as done
         ]));
         /* Earlier (Lisa 13 Nov, option B): the day and time it was really done, then any button saves for that day */
-        var paperRow = h('div', { class: 'job-paper', hidden: true }, [
-          h('input', { class: 'inp', type: 'date', max: today, 'aria-label': 'Day done', onchange: function () { state.rid = null; } }),
-          h('input', { class: 'inp', type: 'time', 'aria-label': 'Time done (optional)', onchange: function () { state.rid = null; } })
-        ]);
-        state.paper = { date: paperRow.children[0], time: paperRow.children[1] };
+        var WHEN = { exact: 'Time', part: 'Part of day', none: 'Not known', now: 'Now' };
+        var pDate = h('input', { class: 'inp', type: 'date', max: today, 'aria-label': 'Day done', onchange: function () { state.rid = null; refresh(); } });
+        var pTime = h('input', { class: 'inp', type: 'time', 'aria-label': 'Time done (optional)', onchange: function () { state.rid = null; } });
+        var pMode = h('select', { class: 'inp', 'aria-label': 'When', hidden: true, onchange: function () { state.rid = null; show(); } });
+        var pPart = h('select', { class: 'inp', 'aria-label': 'Part of day', hidden: true, onchange: function () { state.rid = null; } });
+        function show() {
+          var m = pMode.hidden ? '' : pMode.value;
+          pTime.hidden = !!m && m !== 'exact'; pPart.hidden = m !== 'part';
+          pTime.setAttribute('aria-label', m === 'exact' ? 'Time done' : 'Time done (optional)');
+        }
+        /* the choices in force on the picked day (today until a day is picked); a choice still offered stays picked */
+        function refresh() {
+          var day = pDate.value || today, opts = timeOptions(t.type_key, day), was = pMode.value, wasPart = pPart.value;
+          pMode.textContent = ''; opts.forEach(function (o) { pMode.appendChild(h('option', { value: o, text: WHEN[o] })); });
+          pMode.hidden = !opts.length; if (opts.indexOf(was) >= 0) pMode.value = was;
+          pPart.textContent = ''; dayParts(t.type_key, day).forEach(function (p) { pPart.appendChild(h('option', { value: p.code, text: p.label })); });
+          if (wasPart) pPart.value = wasPart; if (!pPart.value && pPart.options.length) pPart.selectedIndex = 0;
+          show();
+        }
+        var paperRow = h('div', { class: 'job-paper', hidden: true }, [pDate, pMode, pTime, pPart]);
+        refresh();
+        state.paper = { date: pDate, time: pTime, mode: pMode, part: pPart, refresh: refresh };
         panel.insertBefore(paperRow, panel.firstChild);
         panel.appendChild(problems); panel.appendChild(panelMsg);
         var head = h('div', { class: 'job-head' }, [

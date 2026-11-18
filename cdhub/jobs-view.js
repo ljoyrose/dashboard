@@ -51,6 +51,13 @@
     return Object.keys(m).sort().map(function (k) { return m[k]; });
   }
 
+  /** The owner's name for a part of the day (row job.day_part.<code>.label in force that day); no row = the code. */
+  function partLabel(v, code, day) {
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.day_part.' + code + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    return (best && String(best.value || '').trim()) || code;
+  }
+
   /** The file a record's link points at, as a Drive link: the file row's url when it is https, else its Drive file id. */
   function fileUrl(f) {
     var u = String(f.url || '').trim(), id = String(f.drive_file_id || '').trim();
@@ -78,7 +85,8 @@
     return v.logs.filter(function (l) {
       return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
     }).map(function (l) {
-      return { at: l.happened_at || l.taken_at || '', noTime: String(l.time_given).toLowerCase() === 'false', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
+      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '';
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -96,6 +104,12 @@
       var inner = n ? '<span class="pill ' + cls + '">' + n + '</span>' : '<span class="mut">0</span>';
       return '<td data-n="' + k + '">' + (href ? '<a href="' + e(href) + '" aria-label="' + n + ' ' + k + ', open ' + e(r.sop) + '">' + inner + '</a>' : inner) + '</td>';
     }
+    // Lisa 17 Nov 2026 (checks A): an owner's note covering a past period (how_recorded owner_note) is shown as written,
+    // with the day it was entered, so anyone reading sees it was recorded afterwards.
+    var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'owner_note' && l.note; });
+    var seenNote = {};
+    notes.forEach(function (l) { var k = l.note; if (seenNote[k]) return; seenNote[k] = 1;
+      h += '<p class="note" data-owner-note>Owner\u2019s note: ' + e(l.note) + (l.taken_at ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
     h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
@@ -136,7 +150,7 @@
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(Due.londonDate(r.at) || String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
-          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
+          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.part, r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
           + r.files.map(function (f) { return '<a href="' + e(f.url) + '" target="_blank" rel="noopener noreferrer" data-record-file title="' + e(f.name) + '">' + e(f.role) + '</a>'; }).join('') + '</div>';
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }

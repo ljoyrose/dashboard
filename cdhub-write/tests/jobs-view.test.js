@@ -83,3 +83,18 @@ test('Compliance counts a breeding-only job for breeding dogs only', () => {
   assert.equal(row.due, 1);
   assert.equal(row.late, 0);
 });
+
+test('an owner note covering a past period shows once on the Jobs card, with the day it was entered (checks A, 17 Nov 2026)', () => {
+  const note = 'All daily and weekly checks were done 1 Jan 2025 to 16 Nov 2026; not recorded at the time.';
+  const v = Object.assign({}, base, {
+    litters: [{ id: 'lit1' }], esc: (s) => String(s), dmy: (s) => s,
+    logs: logs.concat([
+      { id: 'n1', check_type_id: 'cty-socialise', outcome: 'ok', how_recorded: 'owner_note', note, taken_at: '2026-11-17T10:00:00Z', taken_by: 'Pat' },
+      { id: 'n2', check_type_id: 'cty-socialise', outcome: 'ok', how_recorded: 'owner_note', note, taken_at: '2026-11-17T10:00:00Z', taken_by: 'Pat' },
+    ]),
+  });
+  const html = V.complianceHtml(v, () => '');
+  assert.equal(html.split('data-owner-note').length - 1, 1);
+  assert.match(html, /Owner’s note: All daily and weekly checks/);
+  assert.match(html, /entered 2026-11-17 by Pat/);
+});
