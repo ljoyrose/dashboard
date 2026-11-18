@@ -36,6 +36,15 @@ test('sizeCutoffs: a row past its to_date no longer counts', () => {
   assert.equal(C.sizeCutoffs(rules, '2026-11-12').large, 20);
 });
 
+test('sizeFromKg follows SOP Care Rounds: small under 10, medium 10 to 25, large OVER 25 (exactly 25 kg is medium)', () => {
+  const cut = { medium: 10, large: 25 };
+  assert.equal(C.sizeFromKg('9.99', cut), 'small');
+  assert.equal(C.sizeFromKg('10', cut), 'medium');
+  assert.equal(C.sizeFromKg('25', cut), 'medium');
+  assert.equal(C.sizeFromKg('25.01', cut), 'large');
+  assert.equal(C.sizeFromKg('', cut), '');
+});
+
 test('freePlaces: lists remaining places of the incoming size, and 0 when the room would be over', () => {
   const cap = [
     { area_id: 'r1', access_type: 'free', size_band: 'small', max_dogs: '3', from_date: '2026-01-01' },

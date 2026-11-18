@@ -59,3 +59,19 @@ test('the waiting-room-moves pass runs at most once a minute from saves', () => 
   assert.ok(b.ok || b.code, 'second save answered');
   assert.equal(env.text ? env.text('BLD-_pending.csv') : '', pendBefore, 'a save inside the minute leaves the queue alone');
 });
+
+test('a save returns how long its steps took (numbers only), and ?status=1 lists the last saves\' timings', () => {
+  const { req } = require('./harness');
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  const out = JSON.parse(env.ctx.doPost({ postData: { contents: JSON.stringify(req(env, {})) } }).getContent());
+  assert.equal(out.ok, true, JSON.stringify(out));
+  const t = out.result.timing;
+  assert.equal(t.table, 'area_reading');
+  ['sign_in', 'lock_wait', 'work', 'write'].forEach((k) => assert.equal(typeof t[k], 'number', k));
+  const st = JSON.parse(env.ctx.doGet({ parameter: { status: '1' } }).getContent());
+  assert.equal(st.lastSaveTimings.length, 1);
+  assert.equal(st.lastSaveTimings[0].table, 'area_reading');
+  assert.equal(typeof st.lastSaveTimings[0].total, 'number');
+  const words = JSON.stringify(st.lastSaveTimings);
+  assert.ok(!/@|tenant|area-|rdg-/.test(words), 'no data or names in the timings: ' + words);
+});

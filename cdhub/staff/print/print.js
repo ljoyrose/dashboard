@@ -26,7 +26,7 @@
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files'], ['subject_link', 'links', 'files', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files', 'weight'], ['subject_link', 'links', 'files', 'weight', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -63,6 +63,15 @@
      room limits from area_capacity for the room's current access. Nothing kennel-specific is fixed here. */
   var per = 1;   // cards per A4: 1, 2 or 4
   function sizeKey(b) { var m = /(small|medium|large)/i.exec(String(b || '')); return m ? m[1].toLowerCase() : ''; }
+  /* the dog's size: latest weighing, else the middle of the kg range in its size cell ("Mini 8-12kg" = 10 kg), both
+     against the owner's size_from_kg rows (staff/lib/capacity.js); else a size word typed in the cell. Lisa 15 Nov 2026 */
+  function sizeOfDog(s) {
+    if (!s) return '';
+    var w = null;
+    (T.weight || []).forEach(function (r) { if (r.subject_id === s.id && !isNaN(parseFloat(r.weight_kg)) && (!w || String(r.performed_on || '') >= String(w.performed_on || ''))) w = r; });
+    var cut = BLDCapacity.sizeCutoffs(T.breeding_rule || [], BLDNeeds.today());
+    return BLDCapacity.sizeOf(w ? w.weight_kg : null, s.size_band, cut).size || sizeKey(s.size_band);
+  }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
@@ -121,14 +130,14 @@
       onerror: function () { box.textContent = 'Photo'; } }));
     return box; }
   function dogCard(tag, it) {
-    var s = it.s, col = sizeColour(s.size_band), rows = [], colour = colourOf(s), chip = chipOf(s), cls = classOf(s);
+    var s = it.s, sz = sizeOfDog(s), col = sizeColour(sz), rows = [], colour = colourOf(s), chip = chipOf(s), cls = classOf(s);
     if (cls) rows.push(['Class', cls]);
     if (colour) rows.push(['Colour', colour]);
     if (s.dob) rows.push(['DOB', dmy(s.dob)]);
     if (it.room) rows.push(['Room', it.room]);
     linksOf(s.id).forEach(function (g) { rows.push([g.label, g.names]); });
     return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band ? h('small', { 'data-size': sizeKey(s.size_band) }, sizeLines(s.size_band)) : null]),
+      h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: s.name || s.id }), sexIcon(s.sex)]), s.size_band || sz ? h('small', { 'data-size': sz }, s.size_band ? sizeLines(s.size_band) : [sz.charAt(0).toUpperCase() + sz.slice(1)]) : null]),
       h('div', { class: 'dbody' }, [
         h('div', { class: 'cside' }, [photoBox(s),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
@@ -139,7 +148,7 @@
   }
   /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
   function litterCard(tag, it) {
-    var l = it.l, dam = it.dam || {}, col = sizeColour(dam.size_band), rows = [], born = l.born_on || l.dob || '';
+    var l = it.l, dam = it.dam || {}, col = sizeColour(sizeOfDog(dam)), rows = [], born = l.born_on || l.dob || '';
     if (it.sire) rows.push(['Sire', it.sire]);
     if (it.pups) rows.push(['Pups', String(it.pups)]);
     if (it.room) rows.push(['Room', it.room]);
