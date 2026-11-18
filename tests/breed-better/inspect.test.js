@@ -28,3 +28,22 @@ test('records group under each dog, dogs A to Z, newest first, dates read like 2
   assert.deepStrictEqual(hs.rows[0], [{ label: 'Test', value: 'elbows' }, { label: 'Grade', value: '0' }, { label: 'Tested on', value: '1 Jun 2025' }]);
   assert.deepStrictEqual(dogs[1].lists.find((l) => l.title === 'Litters').rows[0], [{ label: 'DOB', value: '2 Mar 2026' }]);
 });
+
+test('demo 3b: a dog\'s daily checks sit under the dog; room, litter and whole-site records get their own cards; ids hidden', () => {
+  const res = {
+    subject: { fields: ['id', 'name'], rows: [{ id: 'a', name: 'Test Dog One' }] },
+    check_log: { fields: ['subject_id', 'litter', 'room', 'job', 'done_on', 'time', 'outcome'], rows: [
+      { subject_id: '', room: '', litter: '', job: 'Whole-site clean', done_on: '2026-11-18', time: '17:00', outcome: 'ok' },
+      { subject_id: '', room: '', litter: 'Litter of Test Dog One, born 2026-09-01', job: 'Puppy check', done_on: '2026-11-18', time: '10:00', outcome: 'ok' },
+      { subject_id: '', room: '3A', litter: '', job: 'Bowls and water', done_on: '2026-11-18', time: '09:00', outcome: 'ok' },
+      { subject_id: 'a', room: '', litter: '', job: 'Daily health check', done_on: '2026-11-18', time: '08:00', outcome: 'ok' }] },
+    area_reading: { fields: ['room', 'done_on', 'min_c', 'max_c'], rows: [{ room: '3A', done_on: '2026-11-18', min_c: '18.0', max_c: '21.0' }] }
+  };
+  const dogs = I.build(res);
+  assert.deepStrictEqual(dogs[0].lists.map((l) => l.title), ['Daily checks']);
+  assert.strictEqual(dogs[0].lists[0].rows.length, 1);
+  const places = I.buildSite(res);
+  assert.deepStrictEqual(places.map((p) => p.place), ['Room 3A', 'Litter of Test Dog One, born 2026-09-01', 'Whole site']);
+  assert.deepStrictEqual(places[0].lists.map((l) => l.title), ['Temperatures', 'Daily jobs']);
+  assert.deepStrictEqual(places[0].lists[0].rows[0].map((c) => c.label + ' ' + c.value), ['Date 18 Nov 2026', 'Min °C 18.0', 'Max °C 21.0']);
+});

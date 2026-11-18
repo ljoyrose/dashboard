@@ -277,9 +277,9 @@
   }
 
   /* ---- inspector links (Inspect.gs) ---- */
-  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status'};
+  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status',check_log:'Daily checks and jobs',area_reading:'Room temperatures'};
   // Suggested set (Breed Better spec S10): name, sex, DOB, chip last 4, health and Fit to Breed results, litters with date of birth
-  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob']};
+  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],check_log:'*',area_reading:'*'};
   function inMsg(t){ document.getElementById('in-msg').textContent=t; }
   function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }
   document.getElementById('in-new').onclick=function(){
