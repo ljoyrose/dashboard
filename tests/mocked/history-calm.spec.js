@@ -614,7 +614,7 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   const rep = page.locator('#report');
   await expect(rep.locator('.rp-page')).toHaveCount(2);
   await expect(rep.locator('[data-rp="summary"]')).toHaveAttribute('data-month', '2026-01');
-  await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4 (retired 10 Jan 2026)']);   // the page's own name for a retired room
+  await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4']);   // the page's own room names (no "(retired …)" since Lisa 18 Nov 2026)
   const want = expected();
   await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · missed: ${want.miss} · outside the limit: ${want.out}`);
   await expect(rep.locator('.rp-out li', { hasText: 'R1' }).first()).toContainText('nothing recorded');
