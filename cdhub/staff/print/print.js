@@ -6,7 +6,19 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  var base = location.origin + location.pathname.replace(/print\/(index\.html)?$/, '');
+  /* Where every printed QR points (Lisa 18 Nov 2026): the public staff page, never this page's own address. Lisa and Grace
+     may print from the Cloudflare copy, which needs a Cloudflare sign-in; staff, guests, vets and inspectors scan without one.
+     The owner's rule row qr.base_url (dated, with a source) wins; this is only the starting default. */
+  var QR_BASE_START = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
+  function qrBase() {
+    var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
+    ((T && T.breeding_rule) || []).forEach(function (r) {
+      var f = String(r.from_date || r.effective_from || ''), v = String(r.value || '').trim();
+      if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(v) || (f && f > day) || (r.to_date && String(r.to_date) < day)) return;
+      if (!best || f >= best.f) best = { f: f, v: v };
+    });
+    return best ? best.v : QR_BASE_START;
+  }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
@@ -32,7 +44,7 @@
     });
   }
   function current(kind, refId) { return (T.qr_tag || []).filter(function (t) { return t.kind === kind && t.ref_id === refId && String(t.active).toLowerCase() !== 'false'; })[0]; }
-  function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
+  function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
   function make(kind, items, draw) {
     sheet.textContent = '';
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
@@ -120,7 +132,7 @@
       h('h2', { class: 'name', text: s.name || s.id }),
       h('div', { class: 'dtop' }, [h('dl', {}, facts), photoBox(s)]),
       sz ? h('div', { class: 'szb', 'data-size': sz, 'data-k': 'size' }, ['Size: ', h('b', { text: sizeWord(sz) })]) : null,
-      h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
+      h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
       chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,
       h('small', { class: 'tag', text: tag })]);
   }
@@ -135,7 +147,7 @@
       h('div', { class: 'dbody' }, [
         h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
-        h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) }),
+        h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + it.label) }),
         jobList(['litter']),
         h('small', { class: 'tag', text: tag })])]);
   }
@@ -185,7 +197,7 @@
         fact('access', 'Access', acc ? acc.charAt(0).toUpperCase() + acc.slice(1) + ' access' : 'Not set'),
         fact('area', 'Room size', roomSize(a) || '–'),
         fact('pups', 'Mum + pups', lim.pups.length ? 'Yes' : 'No', lim.pups.map(function (k) { return k.charAt(0).toUpperCase(); }).join('/'))]),
-      h('div', { class: 'rbody' }, [h('div', { class: 'rows' }, rows), h('div', { class: 'code', html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + it.label) })]),
+      h('div', { class: 'rbody' }, [h('div', { class: 'rows' }, rows), h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + it.label) })]),
       h('p', { class: 'foot', text: footer() }),
       h('small', { class: 'tag', text: tag })]);
   }
@@ -199,7 +211,7 @@
     var holder = h('div');
     function clear() { clearTimeout(timer); window.removeEventListener('beforeprint', clear); input.value = ''; holder.textContent = ''; say('QR removed.'); }
     var show = h('button', { class: 'btn', type: 'button', text: 'Show QR', onclick: function () {
-      var c = input.value.trim(), link = base + '#join=' + encodeURIComponent(c) + '&url=' + url;
+      var c = input.value.trim(), link = qrBase() + '#join=' + encodeURIComponent(c) + '&url=' + url;
       input.value = '';
       if (!c) { say('Paste their staff code first.', 'bad'); return; }
       try { holder.innerHTML = BLDQr.svg(link, 'Private set-up QR'); } catch (e) { holder.textContent = ''; say('That is too long for a QR code. Use the normal set-up QR.', 'bad'); return; }
@@ -277,7 +289,7 @@
     opts.appendChild(btn('Phone set-up QR', function () { sheet.className = 'sheet';
       var url = ''; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
       sheet.textContent = '';
-      sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(base + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
+      sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(qrBase() + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
     opts.appendChild(btn('Private set-up QR', privateQr));
