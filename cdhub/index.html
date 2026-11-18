@@ -4924,7 +4924,9 @@ function labelControls(root){
   el.setAttribute('aria-label',t);
  });
 }
-function render(){ go((location.hash||'#/map').replace('#/',''),false); }
+/* no address: the owner's start row (nav.start.OWNER), else Main */
+function startView(){ var v=''; try{ v=navLayout().start||''; }catch(e){} return v&&viewOn(v)?v:'map'; }
+function render(){ go((location.hash||('#/'+startView())).replace('#/',''),false); }
 
 
 function levelHeadings(root){
@@ -4960,7 +4962,7 @@ function navCurrent(id){
 }
 function go(id,push){
  var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
- var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=String(id||''); chipsDraw('');
+ var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=LOAD.state==='ok'?String(id||''):''; chipsDraw('');   /* a page drawn before the rows land is not kept: the start row decides once they do */
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
@@ -5255,7 +5257,7 @@ DashKit.search.register(function(q){
   return out;
  },function(){ return out; });
 });
-function followHash(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } }
+function followHash(){ if(LOAD.state==='ok'){ go((location.hash||('#/'+startView())).replace('#/',''),false); focusView(); } }
 try{ history.scrollRestoration='manual'; }catch(e){}
 /* a plain link (#/...) also gets a Back step from the browser: note how far down this page was first */
 document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a[href^="#/"]'); if(!a) return;
