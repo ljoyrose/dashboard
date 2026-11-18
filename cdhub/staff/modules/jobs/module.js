@@ -42,7 +42,8 @@
     function moves() { c.go('mv/' + tag); }
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'),
+      tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]).then(function (v) {
       /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
       var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
@@ -73,6 +74,7 @@
 
       /* owner rule rows (the shared rule list): key.<type_key> beats key; the row in force on that day; none = the starting default */
       var rules = (v[6] && v[6].rows) || [];
+      var today0 = c.today();
       function rule(key, typeKey, day) {
         function pick(k) {
           var best = null;
@@ -152,6 +154,12 @@
       if (tag && !BLDDue.forTarget(types, logs, target, today).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
+      /* a room's jobs show its capacity too (LD-SC audit, 15 Nov 2026): the rows in force today, the same check as Move dogs */
+      if (target.area_id && window.BLDCapacity && v[7] && v[7].ok && (v[7].rows || []).some(function (r) { return r.area_id === target.area_id; })) {
+        var fact = BLDCapacity.facts({ subjects: d.raw.subject, litters: (v[4] && v[4].rows) || [], weights: (v[9] && v[9].rows) || [], weightsRead: !!(v[9] && v[9].ok), rules: rules, today: today0 });
+        var capR = BLDCapacity.check({ areaId: target.area_id, access: BLDCapacity.accessOn((v[8] && v[8].rows) || [], target.area_id, today0), capacity: v[7].rows, dogs: roomDogs.map(function (x) { return fact(x.id); }), date: today0 });
+        host.appendChild(h('p', { class: capR.status === 'over' ? 'msg bad' : 'sub', 'data-k': 'capacity', text: capR.status === 'over' ? capR.message : BLDCapacity.summary(capR) }));
+      }
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
       /* Lisa 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
          code (ask Lisa), or no answer in time (slow saves: try again), with a Try again button for the second. */
