@@ -398,20 +398,28 @@
           return ['subject_id', 'area_id', 'litter_id'].every(function (k) { return !tg.fields[k] || l[k] === tg.fields[k]; });
         })[0];
       }
+      /* the dogs and rooms as they were on that day, from the occupancy rows (not today's list) */
+      var onDayMemo = {};
+      function onDay(day) {
+        if (!onDayMemo[day]) onDayMemo[day] = d.raw && typeof BLDOccupancy !== 'undefined' ? BLDOccupancy.dailyList(d.raw, day) : { dogs: d.dogs, areas: d.areas };
+        return onDayMemo[day];
+      }
       function targetsFor(t, day) {
+        var on = onDay(day), here = on.dogs.filter(function (x) { return !x.away && x.areaId; });
         if (BLDDue.perDogSite(t) || BLDDue.perDogRoom(t)) {
-          var dogs = target.subject_id ? d.dogs.filter(function (x) { return x.id === target.subject_id; }) : target.area_id ? roomDogs : d.dogs.filter(function (x) { return !x.away && x.areaId; });
+          var dogs = target.subject_id ? here.filter(function (x) { return x.id === target.subject_id; }) : target.area_id ? here.filter(function (x) { return x.areaId === target.area_id; }) : here;
           var list2 = dogs.map(function (x) { return { id: x.id, area_id: x.areaId }; });
           if (BLDDue.perDogSite(t)) list2 = BLDDue.dogsFor(t, { dogs: list2 });
           return list2.map(function (x) { return { label: nameOf[x.id] || 'Dog', dog: x.id, fields: BLDDue.perDogRoom(t) ? { area_id: x.area_id } : {} }; });
         }
         if (t.target === 'dog' && !target.subject_id) {
-          return (target.dogs || []).map(function (x) { return { label: nameOf[x.id] || 'Dog', fields: { subject_id: x.id } }; });
+          return here.filter(function (x) { return site || x.areaId === target.area_id; }).map(function (x) { return { label: nameOf[x.id] || x.label || 'Dog', fields: { subject_id: x.id } }; });
         }
         if (t.target === 'area' && !target.area_id) {
-          return (d.areas || []).filter(function (a) { return BLDDue.forTarget([t], [], { area_id: a.id }, day).length; })
+          return (on.areas || []).filter(function (a) { return BLDDue.forTarget([t], [], { area_id: a.id }, day).length; })
             .map(function (a) { return { label: a.label, fields: { area_id: a.id } }; });
         }
+        if (target.subject_id && !target.litter_id && !here.some(function (x) { return x.id === target.subject_id; })) return [];   // not here that day
         var f = {};
         ['subject_id', 'area_id', 'litter_id'].forEach(function (k) { if (target[k]) f[k] = target[k]; });
         if (t.target === 'none') delete f.area_id;
@@ -461,7 +469,12 @@
         list.textContent = ''; say('');
         list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { draw(); } }));
         list.appendChild(h('h3', { text: 'Earlier' }));
-        var pick = h('select', { class: 'inp', 'aria-label': 'Job' }, jobs.map(function (j) { return h('option', { value: j.type_key, text: j.label }); }));
+        /* a job group (the owner's group on the job rows) enters every job in it, day by day */
+        var groups = [];
+        jobs.forEach(function (j) { if (j.group && groups.indexOf(j.group) < 0) groups.push(j.group); });
+        var pick = h('select', { class: 'inp', 'aria-label': 'Job' }, groups.sort().map(function (g) { return h('option', { value: 'group:' + g, text: g + ' (all)' }); })
+          .concat(jobs.map(function (j) { return h('option', { value: j.type_key, text: j.label }); })));
+        if (groups.length) pick.value = jobs[0].type_key;
         var from = h('input', { class: 'inp', type: 'date', max: today, 'aria-label': 'First day' });
         var span = h('select', { class: 'inp', 'aria-label': 'Days' }, [h('option', { value: '1', text: '1 day' }), h('option', { value: '7', text: '7 days' })]);
         var rows = h('div', { class: 'cards job-grid' });
@@ -469,17 +482,21 @@
         list.appendChild(rows);
         function build() {
           rows.textContent = '';
-          var key = pick.value, first = from.value, oldest = oldestDay(key, today), made = 0;
+          var g = pick.value.indexOf('group:') === 0 ? pick.value.slice(6) : '', first = from.value, made = 0;
+          var keys = g ? jobs.filter(function (j) { return j.group === g; }).map(function (j) { return j.type_key; }) : [pick.value];
           function note(text, cls) { rows.appendChild(h('p', { class: cls || 'sub', text: text })); }
           if (!first) { note('Pick the first day.', 'msg bad'); return; }
           if (first > today) { note('Pick today or an earlier day.', 'msg bad'); return; }
-          if (oldest && first < oldest) { note('Too far back for this job.', 'msg bad'); return; }
+          keys = keys.filter(function (key) { var oldest = oldestDay(key, today); return !(oldest && first < oldest); });
+          if (!keys.length) { note('Too far back for this job.', 'msg bad'); return; }
           for (var i = 0; i < Number(span.value); i++) {
             var day = addDays(first, i);
             if (day > today) break;
-            var t = BLDDue.jobsInForce(types, day).filter(function (x) { return x.type_key === key; })[0];
-            if (!t) { note(dmy(day) + ': not set up then.'); continue; }
-            targetsFor(t, day).forEach(function (tg) { rows.appendChild(gridRow(t, day, tg)); made++; });
+            keys.forEach(function (key) {
+              var t = BLDDue.jobsInForce(types, day).filter(function (x) { return x.type_key === key; })[0];
+              if (!t) { if (!g) note(dmy(day) + ': not set up then.'); return; }
+              targetsFor(t, day).forEach(function (tg) { rows.appendChild(gridRow(t, day, g ? Object.assign({}, tg, { label: t.label + ': ' + tg.label }) : tg)); made++; });
+            });
           }
           if (!made) { note('Nothing to enter.'); return; }
           rows.appendChild(h('button', { class: 'btn', type: 'button', text: 'Done all', onclick: function () {
