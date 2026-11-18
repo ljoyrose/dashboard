@@ -37,6 +37,7 @@
 <script src="enquiries-view.js"></script>
 <script src="admin.js"></script>
 <script src="items-view.js"></script>
+<script src="bin-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -528,6 +529,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
 ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--fs-small)}ul.notes li{margin:2px 0}
+ul.bin-list{margin:4px 0 12px;padding-left:20px}ul.bin-list li{margin:6px 0}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
@@ -714,7 +716,7 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 wantLater('BLD-subject-Archive.csv');
 wantLater('BLD-litter-Archive.csv');   /* Lisa 17 Nov 2026: old litters (paper books) kept as history, so their vet visits resolve */
 wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
-var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
+var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
@@ -4843,6 +4845,9 @@ if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(it
 PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Money</h2><p class="mut">Nothing here yet.</p></section>'; };
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
+/* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
+function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin'}; }
+if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){
@@ -4850,6 +4855,7 @@ function navHas(id){
  if(id==='temps') return true;
  if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
+ if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
  return !!PAGES[id];
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
@@ -4991,6 +4997,7 @@ function go(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
+ if(id==='bin') CDBin.bind(main);
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){

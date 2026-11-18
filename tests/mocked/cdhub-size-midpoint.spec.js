@@ -52,14 +52,14 @@ test.describe('Size band from the kg range midpoint', () => {
     });
     await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
-    await page.getByRole('button', { name: 'Dog kennel cards' }).click();
+    await page.getByRole('button', { name: 'Dog cards' }).click();
     const card = (id) => page.locator('.dcard[data-dog="' + id + '"]');
-    await expect(card('d1').locator('.band small')).toHaveAttribute('data-size', 'medium');
+    await expect(card('d1').locator('[data-k="size"]')).toHaveAttribute('data-size', 'medium');
     await expect(card('d1')).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
-    await expect(card('d1').locator('.band small')).toHaveText('Medium');   // the size word only, never the typed kg range
-    await expect(card('d2').locator('.band small')).toHaveAttribute('data-size', 'medium');
+    await expect(card('d1').locator('[data-k="size"]')).toHaveText('Size: Medium');
+    await expect(card('d2').locator('[data-k="size"]')).toHaveAttribute('data-size', 'medium');
     await expect(card('d2')).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
-    await expect(card('d3').locator('.band small')).toHaveAttribute('data-size', 'small');   // latest weighing 7.2 kg
+    await expect(card('d3').locator('[data-k="size"]')).toHaveAttribute('data-size', 'small');   // latest weighing 7.2 kg
     await expect(card('d3')).toHaveAttribute('style', /--c:var\(--sz-blue, blue\)/);
   });
 

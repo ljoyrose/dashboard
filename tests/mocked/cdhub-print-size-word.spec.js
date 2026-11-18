@@ -65,13 +65,13 @@ test.describe('Print card size word from weight and the dated size rows', () => 
     });
     await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
-    await page.getByRole('button', { name: 'Dog kennel cards' }).click();
+    await page.getByRole('button', { name: 'Dog cards' }).click();
     const card = (id) => page.locator('.dcard[data-dog="' + id + '"]');
     const want = { e1: ['small', 'Small', 'orange'], e2: ['medium', 'Medium', 'green'], e3: ['medium', 'Medium', 'green'], e4: ['medium', 'Medium', 'green'], e5: ['large', 'Large', 'blue'],
       n1: ['medium', 'Medium', 'green'], n2: ['large', 'Large', 'blue'] };
     for (const [id, [key, word, colour]] of Object.entries(want)) {
       await expect(card(id).locator('[data-k="size"]')).toHaveAttribute('data-size', key);
-      await expect(card(id).locator('[data-k="size"]')).toHaveText(word);
+      await expect(card(id).locator('[data-k="size"]')).toHaveText('Size: ' + word);
       await expect(card(id)).toHaveAttribute('style', new RegExp('--c:var\\(--sz-' + colour + ', ' + colour + '\\)'));
     }
     await expect(card('n3').locator('[data-k="size"]')).toHaveCount(0);   // no weight and no size typed: no size, never a guess

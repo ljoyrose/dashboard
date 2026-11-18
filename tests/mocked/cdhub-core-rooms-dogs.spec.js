@@ -406,19 +406,28 @@ test.describe('CD Hub core: rooms and dogs', () => {
     });
     await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
-    await page.getByRole('button', { name: 'Dog kennel cards' }).click();
-    await expect(page.locator('.dcard .who b')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
+    await page.getByRole('button', { name: 'Dog cards' }).click();
+    // Lisa's dog card (18 Nov 2026): name, Sex, Date of birth, photo, Size block, code, chip. No room line on it.
+    await expect(page.locator('.dcard .name')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
     const one = page.locator('.dcard[data-dog="d1"]');
-    await expect(one.locator('[data-k="Room"] dd')).toHaveText('Room A');
-    await expect(one.locator('[data-k="DOB"] dd')).toHaveText('5 Jan 2022');
+    await expect(one.locator('[data-k="dob"] dd')).toHaveText('5 Jan 2022');
     await expect(one).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
+    await expect(one.locator('[data-k="sex"] dd')).toHaveText('Female');
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
-    await expect(one.locator('.band small')).toHaveText('Medium');   // size word only: no kg range on the card (Lisa 15 Nov 2026)
-    await expect(page.locator('[data-k="Room"]')).toHaveCount(1);   // off-site and retired-room dogs: no room line
+    await expect(one.locator('[data-k="size"]')).toHaveText('Size: Medium');
+    await expect(one.locator('[data-k="size"]')).toHaveAttribute('data-size', 'medium');
     await expect(page.locator('.sheet')).not.toContainText('Room C');
-    await page.getByRole('button', { name: 'Room signs' }).click();
-    await expect(page.locator('.rcard > b')).toHaveText(['Room A']);
-    // limits for the room's current access (limited, the later row), small first, none at 0, no pups line
-    await expect(page.locator('.rcard .sz')).toHaveText(['3 small', 'or 2 medium']);
+    await page.getByRole('button', { name: 'Room cards' }).click();
+    const room = page.locator('.rcard[data-room="ar-a"]');
+    await expect(page.locator('.rcard .name')).toHaveText(['Room A']);
+    // the room's current access (limited, the later row): small 3, medium 2, large 0 shows dashed "No large dogs"
+    await expect(room.locator('[data-k="access"] dd')).toHaveText('Limited access');
+    await expect(room.locator('[data-k="pups"] dd')).toHaveText('Yes');
+    await expect(room.locator('[data-k="pups"] small')).toHaveText('S');
+    await expect(room.locator('.szrow[data-size="small"] .n')).toHaveText('= 3');
+    await expect(room.locator('.szrow[data-size="small"] .dogs i')).toHaveCount(3);
+    await expect(room.locator('.szrow[data-size="medium"] .n')).toHaveText('= 2');
+    await expect(room.locator('.szrow.none[data-size="large"]')).toContainText('No large dogs');
+    await expect(room.locator('.foot')).toHaveText('Unsure? Don\u2019t Move. Ask.');
   });
 });
