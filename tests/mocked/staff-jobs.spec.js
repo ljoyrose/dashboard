@@ -434,6 +434,28 @@ test('when this code cannot read past records, the list says so instead of a sil
   await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
 });
 
+// Lisa 17 Nov 2026: jobs she had saved still said Due because the records read got no answer in time (slow saves).
+// That is said as "did not load in time" with Try again, never as "this code cannot read".
+test.describe('records read with no answer', () => {
+  test.use({ allowedConsole: [/404|net::ERR_FAILED/] });   // the pretend "no answer" is a failed load
+test('when the past records do not load in time, it says so and Try again reads them again', async ({ page }) => {
+  await setup(page);
+  let fail = true;
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData() || '{}') : {};
+    if (fail && String(b.action).indexOf('read') === 0 && b.table === 'check_log') return route.abort();
+    return route.fallback();
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-no-history]')).toContainText('did not load in time');
+  await expect(page.locator('[data-no-history]')).not.toContainText('cannot read');
+  fail = false;
+  await page.locator('[data-retry-history]').click();
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-no-history]')).toHaveCount(0);
+});
+});
+
 test('with past records readable there is no warning', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');

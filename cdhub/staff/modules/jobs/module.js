@@ -153,7 +153,15 @@
 
       host.appendChild(h('h2', { text: title }));
       /* this code cannot read past records (no read rows for check_log): say so, never a silent "Due" */
-      if (!v[2].ok) host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: 'This phone cannot read past records yet, so "Due" may already be done. Ask Lisa.' }));
+      /* Lisa 17 Nov 2026: jobs she had just saved still said Due. Say WHY the records were not read: not allowed for this
+         code (ask Lisa), or no answer in time (slow saves: try again), with a Try again button for the second. */
+      if (!v[2].ok) {
+        var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
+        host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
+          ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
+          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask Lisa.' }));
+        if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
+      }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
       host.appendChild(status); host.appendChild(list);
       if (tag && !site) host.appendChild(h('button', { class: 'btn quiet job-move', type: 'button', text: 'Move dogs', onclick: moves }));
