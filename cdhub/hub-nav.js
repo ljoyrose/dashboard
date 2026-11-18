@@ -126,7 +126,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin'; };   /* pages without the rows (temperature history) */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin'; };   /* pages without the rows (temperature history); Bin is the owner's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
