@@ -144,24 +144,17 @@
   /* a dated row counts from its from_date (older rows: effective_from) until its to_date */
   function fromOf(r) { return String(r.from_date || r.effective_from || ''); }
   function inForceOn(r, day) { var f = fromOf(r); return (!f || f <= day) && (!r.to_date || String(r.to_date) >= day); }
-  /* the room's access today: the latest access row in force (a later row of the same day wins) */
-  function accessNow(areaId) {
-    var day = BLDNeeds.today(), acc = '', last = null;
-    (T.area_access || []).forEach(function (r) { if (r.area_id === areaId && r.access_type && inForceOn(r, day) && (last === null || fromOf(r) >= last)) { last = fromOf(r); acc = String(r.access_type).toLowerCase(); } });
-    return acc;
-  }
-  /* the limits for the room's access today: size -> dogs, and size -> mum with pups, from area_capacity rows in force */
+  /* The room card's limits: the flap setting and capacity rows in force today, by the shared rule in capacity.js
+     (accessOn / limitsOn, LD-SC audit 15 Nov 2026). Mum + pups: the "+ pups" rows in force for that setting. */
   function limitsOf(areaId) {
-    var day = BLDNeeds.today(), acc = accessNow(areaId), best = {}, any = false;
-    (T.area_capacity || []).forEach(function (r) {
-      if (r.area_id !== areaId || String(r.access_type || '').toLowerCase() !== acc || !inForceOn(r, day)) return;
-      var k = sizeKey(r.size_band); if (!k) return;
-      var key = (/pups/i.test(r.size_band || '') ? 'pups.' : '') + k;
-      if (!best[key] || fromOf(r) >= best[key].f) best[key] = { f: fromOf(r), n: parseInt(r.max_dogs, 10) || 0 };
-      any = true;
-    });
-    var out = { access: acc, any: any, dogs: {}, pups: [] };
-    ['small', 'medium', 'large'].forEach(function (k) { out.dogs[k] = best[k] ? best[k].n : 0; if (best['pups.' + k] && best['pups.' + k].n > 0) out.pups.push(k); });
+    var day = BLDNeeds.today(), acc = BLDCapacity.accessOn(T.area_access || [], areaId, day), out = { access: acc, any: false, dogs: { small: 0, medium: 0, large: 0 }, pups: [] };
+    if (!acc) return out;
+    var mine = (T.area_capacity || []).filter(function (r) { return r.area_id === areaId && String(r.access_type || '').toLowerCase() === acc && inForceOn(r, day); });
+    out.any = mine.length > 0;
+    BLDCapacity.limitsOn(T.area_capacity || [], areaId, acc, day).forEach(function (l) { out.dogs[l.band] = l.n; });
+    var pups = {};
+    mine.forEach(function (r) { var k = sizeKey(r.size_band); if (k && /pups/i.test(r.size_band || '') && (!pups[k] || fromOf(r) >= pups[k].f)) pups[k] = { f: fromOf(r), n: parseInt(r.max_dogs, 10) || 0 }; });
+    ['small', 'medium', 'large'].forEach(function (k) { if (pups[k] && pups[k].n > 0) out.pups.push(k); });
     return out;
   }
   var DOG = '<svg viewBox="0 0 32 24" aria-hidden="true"><path d="M3 9l3-5 2 4h9l3-6 3 3h4l2 3-3 2h-3l-1 3v9h-3l-1-6h-9l-2 6H7l1-8-3-3z"/></svg>';
