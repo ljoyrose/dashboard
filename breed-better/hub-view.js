@@ -63,13 +63,15 @@
 
   /** One result per enrolled animal, best first. { results, error, byId } */
   function compute(v) {
-    var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv'])
+    var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv', 'BLD-breeding_rule.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
     if (memo && memo.key === key) return memo;
     var all = enrolments(T);
-    var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
+    var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, young: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
+    var showFrom = showFromMonths(T, v.today);
+    Object.keys(subjects).forEach(function (k) { if (tooYoung(showFrom, subjects[k].dob, v.today)) out.young[k] = 1; });
     var logs = null;
     var evidence = new Proxy({}, { get: function (o, name) {
       if (name !== 'BLD-check_log') return T[name + '.csv'];
@@ -80,7 +82,7 @@
     /* kept for the Archive: an animal whose every enrolment has ended, with the latest one's dates and reason */
     var last = {};
     all.forEach(function (e) {
-      if (isOpen[e.subject_id] || !(e.off || (e.to && e.to < v.today)) || !subjects[e.subject_id]) return;
+      if (out.young[e.subject_id] || isOpen[e.subject_id] || !(e.off || (e.to && e.to < v.today)) || !subjects[e.subject_id]) return;
       if (!last[e.subject_id] || (e.to || '') > (last[e.subject_id].to || '')) last[e.subject_id] = e;
     });
     Object.keys(last).forEach(function (k) { var e = last[k]; out.ended.push({ id: k, name: t(subjects[k].name), from: e.from, to: e.to, reason: e.reason, scheme_id: e.scheme_id }); });
@@ -89,6 +91,7 @@
       out.enrol[e.subject_id] = e;
       var subject = subjects[e.subject_id];
       if (!subject) { out.error = 'An enrolled animal is not in the animal list: check BLD-score_enrolment.'; return; }
+      if (out.young[e.subject_id]) return;   /* still enrolled; shown once old enough */
       /* the enrolment names one scheme; a later version of it (same name, species and breed) takes over on its own date */
       var schemes = T['BLD-score_scheme.csv'] || [];
       var named = schemes.filter(function (s) { return s.id === e.scheme_id; })[0];
@@ -282,6 +285,21 @@
     }).filter(function (x) { return isFinite(x.from) && x.from >= 0 && !isNaN(x.to) && x.to > x.from; })
       .sort(function (a, b) { return a.from - b.from || a.label.localeCompare(b.label); });
   }
+  /* Owner setting (Lisa, 18 Nov 2026: "puppies not appear til 12 months"): one dated rule row,
+     breed_better.show_from_months = whole months. An animal younger than that (by date of birth) is left out of every
+     Breed Better list, count and card; its enrolment stays and it appears on the day it reaches that age.
+     No row, 0 or no date of birth = shown. The newest row in force today wins. */
+  var SHOW_KEY = 'breed_better.show_from_months';
+  function showFromMonths(T, today) {
+    var best = null;
+    (T['BLD-breeding_rule.csv'] || []).forEach(function (r) {
+      var from = t(r.effective_from), to = t(r.to_date);
+      if (t(r.rule_key) !== SHOW_KEY || !/^\d+$/.test(t(r.value)) || !from || from > today || (to && to < today)) return;
+      if (!best || from > t(best.effective_from) || (from === t(best.effective_from) && t(r.set_at) >= t(best.set_at))) best = r;
+    });
+    return best ? Number(t(best.value)) : 0;
+  }
+  function tooYoung(n, dob, today) { var m = n > 0 ? months(dob, today) : null; return m !== null && m < n; }
   function inAge(grp, dob, today) { var m = months(dob, today); return m !== null && m >= grp.from && m < grp.to; }
   function subLine(v, r) {
     var d = hubDog(v, r.subject_id);
@@ -794,6 +812,7 @@
   function section(v, id) {
     last = v; css();
     var c = compute(v), r = c.byId[id];
+    if (c.young[id]) return '';
     if (!r) return notInHtml(v, c, id);
     var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
     var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
@@ -1051,5 +1070,5 @@
   function open(id) { state.dog = t(id); state.edit = ''; state.editPushed = false; }
   function setTab(k) { state.tab = k; state.dog = ''; state.edit = ''; }
 
-  return { withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
+  return { withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, showFromMonths: showFromMonths, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
 }));
