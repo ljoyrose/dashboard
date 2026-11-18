@@ -6,6 +6,14 @@
  * Corrections are ALWAYS queued, never written straight in.
  */
 
+/* Save timings (17 Nov 2026: live saves took 17-127 s). Numbers only (milliseconds per step), never data or names.
+ * Logged, returned with the save's answer, and the last one kept for ?status=1, so a slow save can be traced. */
+var SAVE_TIMING_ = null;
+function timing_(name, ms) {
+  console.log('save timing: ' + name + ' ' + ms + ' ms');
+  if (SAVE_TIMING_) SAVE_TIMING_[name] = (SAVE_TIMING_[name] || 0) + ms;
+}
+
 function withLock_(fn) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(BLD.LIMITS.LOCK_WAIT_MS); }
@@ -235,7 +243,9 @@ function sinkHandle_(req) {
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
+  var tAuth = Date.now();
   var who = authSaver_(req);
+  timing_('sign_in', Date.now() - tAuth);
   if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
 
   var asked = String(req.table || req.file || '');
@@ -254,7 +264,12 @@ function sinkHandle_(req) {
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
 
-  var result = withLock_(function () { return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
+  // 17 Nov 2026: live saves took 17-127 s. Each save logs where its time went (no data, no names): before the lock,
+  // waiting for the lock, and the work inside it, so a slow save can be traced in Executions.
+  var tLock = Date.now(), tIn = 0;
+  var result = withLock_(function () { tIn = Date.now(); return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
+  timing_('before_lock', tLock - nowMs); timing_('lock_wait', tIn - tLock); timing_('work', Date.now() - tIn);
+  if (SAVE_TIMING_) SAVE_TIMING_.table = spec.key;
   cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
   return result;
 }
@@ -352,13 +367,17 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   // only the columns the repeat and id checks look at, so the checks still cover the whole table. A correction needs
   // the whole row it points at, so it reads everything as before.
   var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
+  var tRead = Date.now();
   var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec)) : store_read_(spec.file, true);
+  timing_(fast ? 'read_fast' : 'read', Date.now() - tRead);
   if (!sameHeader_(target.header, spec.columns)) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var all = target.tail ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read)
+  var tLook = Date.now();
   var lookups = store_lookups_(spec, tenant);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
+  timing_('lookups_rules', Date.now() - tLook);
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -426,9 +445,11 @@ function sinkProcess_(spec, req, who, now, nowMs) {
       try { store_appendMany_(vSpec.file, vSpec.columns, vRows, form.read); }
       catch (e) { logWriteFailure_(e, vSpec, rowId, who.who, now); throw e; }
     }
+    var tWrite = Date.now();
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
+    timing_('write', Date.now() - tWrite);
     var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
     if (form) out.answers = form.answers.length;
     return out;

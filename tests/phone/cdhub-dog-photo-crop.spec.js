@@ -1,5 +1,5 @@
 // Dog photo crop on a phone (Lisa, 12 Nov 2026): the crop fits the screen, a finger drag moves the picture, the
-// buttons are phone-sized, and Use photo sends a square JPEG within the limit. Invented dog, pretend save script.
+// buttons are phone-sized, and Save photo sends a square JPEG within the limit. Invented dog, pretend save script.
 const { test, expect } = require('../support/test');
 const { openOneDog, recordSaves, bigPhoto, jpegSize } = require('../support/dog-photo-world');
 
@@ -11,7 +11,7 @@ async function touchDrag(page, x, y, dx) {
 }
 
 test.describe('Phone: dog photo crop', () => {
-  test('fits the screen, drags by touch, and Use photo sends 800 x 800 within 350,000 characters', async ({ page, guard }) => {
+  test('fits the screen, drags by touch, and Save photo sends 800 x 800 within 350,000 characters', async ({ page, guard }) => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     const big = await bigPhoto(page, 2400, 1600);

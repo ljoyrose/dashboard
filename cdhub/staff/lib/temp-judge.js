@@ -51,7 +51,7 @@
     if (k === 'warm') return 'over ' + (adult || band ? (adult || band).max : '') + ' °C: cooling action';
     if (k === 'spotcold') return 'bed spot below ' + (band ? band.min : '') + ' °C';
     if (k === 'spothot') return 'bed spot above ' + (band ? band.max : '') + ' °C';
-    if (k === 'nospot') return 'puppies: bed spot not recorded';
+    if (k === 'nospot') return '';   // Lisa 18 Nov 2026: no "bed spot not recorded" words anywhere
     return '';
   }
   return { judge: judge, isBreach: isBreach, words: words, num: num };

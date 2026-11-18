@@ -21,11 +21,24 @@ function store_folder_() {
 
 /** Find exactly one file by exact title. null if none. Two with the same title = refuse (like CD Hub). */
 function store_findOne_(title) {
+  // 17 Nov 2026 (saves took 17-127 s): a save looks up several files by name, and each search of the folder is slow.
+  // The id found is remembered for 5 minutes. A remembered id is used only if that file still has this exact name and
+  // is not in the bin; otherwise the folder is searched again, with the two-files-one-name check, as before.
+  var cache = null, key = 'fileid:' + title;
+  try { cache = CacheService.getScriptCache(); } catch (e) { cache = null; }
+  var known = cache ? cache.get(key) : null;
+  if (known) {
+    try {
+      var f = DriveApp.getFileById(known);
+      if (f.getName() === title && !f.isTrashed()) return f;
+    } catch (e) { /* gone or unreadable: search again */ }
+  }
   var it = store_folder_().getFilesByName(title), found = [];
   while (it.hasNext()) found.push(it.next());
   if (found.length > 1) {
     throw err_('DUPLICATE_TITLE', 'There are two files called ' + title + ' in the folder. Lisa needs to rename one before saving can use it.');
   }
+  if (found.length && cache) { try { cache.put(key, found[0].getId(), 300); } catch (e) { /* remembering is only a speed-up */ } }
   return found.length ? found[0] : null;
 }
 
@@ -445,6 +458,56 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
   var after = head + csvLine_(rowValues) + tail;
   return store_commit_(file, title, before, beforeHash, after, function (check) {
     return check.slice(0, head.length) === head && check.slice(check.length - tail.length) === tail;
+  });
+}
+
+/**
+ * OWNER DELETE (Lisa 17 Nov 2026): take ONE existing record out of a table for good. Same safeguards as the in-place
+ * edit: allow-list, exact header, unchanged since read, read-back by hash, exact restore on failure; every other record
+ * must be byte-identical afterwards. `index` is the position in read.records (0 = first data row).
+ */
+function store_deleteRow_(title, expectedHeader, index, read) {
+  if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE) {
+    throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  }
+  if (!sameHeader_(read.header, expectedHeader)) {
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. Lisa needs to check the file header.');
+  }
+  if (index < 0 || index >= read.records.length) {
+    throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the delete cannot handle safely, so nothing was changed.');
+  }
+  if (read.kind === 'sheet') {
+    if (read.tail) throw err_('UNEXPECTED_LAYOUT', title + ' was read in part, so nothing was changed. Try again.');
+    var sh = read.tab, beforeHash = textHash_(read.text);
+    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) !== beforeHash) {
+      throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
+    }
+    var rows = (read.shown || csvRecordsRows_(read)).slice(), rowNum = read.rowNums[index + 1], w = read.width;
+    var old = sh.getRange(rowNum, 1, 1, w).getValues();
+    rows.splice(index + 1, 1);
+    sh.deleteRow(rowNum); SpreadsheetApp.flush();
+    var want = textHash_(store_rowsText_(rows));
+    if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === want) return store_rowsText_(rows);
+    var restored = false;
+    try { sh.insertRowBefore(rowNum); sh.getRange(rowNum, 1, 1, w).setValues(old); SpreadsheetApp.flush();
+      restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash; } catch (e) { restored = false; }
+    throw err_('VERIFY_FAILED', restored
+      ? 'The table did not read back as expected after the delete, so the row was put back and nothing was changed. Try again; if it repeats, tell Lisa.'
+      : 'The table did not read back as expected after the delete AND putting the row back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+      { restored: restored, file: title });
+  }
+  var file = read.file, before = read.text, bh = textHash_(before);
+  if (textHash_(file.getBlob().getDataAsString('UTF-8')) !== bh) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
+  }
+  var spans = csvSpans_(before);
+  if (spans.length !== read.records.length + 1) {
+    throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the delete cannot handle safely, so nothing was changed.');
+  }
+  var sp = spans[index + 1], head = before.slice(0, sp.start), tail = before.slice(sp.next === undefined ? sp.end : sp.next);
+  var after = head + tail;
+  return store_commit_(file, title, before, bh, after, function (check) {
+    return check.slice(0, head.length) === head && check.slice(check.length - tail.length) === tail && check.length === head.length + tail.length;
   });
 }
 

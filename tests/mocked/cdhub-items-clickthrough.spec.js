@@ -9,7 +9,12 @@ const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
 const SINK = 'https://script.google.com/macros/s/PRETENDSCRIPT/exec';
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
-const addTable = (world, name, content) => world.file('bld-clk-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
+const addTable = (world, name, content) => {
+  const f = world.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); }
+  else world.file('bld-clk-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
 
 const ITEM_H = 'id,tenant_id,item_no,name,kind_key,make,model,serial_no,size,made_on,expires_on,photo,note,corrects_id,created_at,created_by';
