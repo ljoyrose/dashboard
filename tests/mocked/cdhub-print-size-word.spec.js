@@ -34,7 +34,7 @@ test.describe('Print card size word from weight and the dated size rows', () => 
     expect(r.backToWeight).toBe('small');
   });
 
-  test('kennel cards: size word only, colour from size_colour rows, no kg anywhere; no weight and no size prints none', async ({ page }) => {
+  test('kennel cards: size word only, colour from size_colour rows, no kg anywhere; no weight and no size prints none @regression', async ({ page }) => {
     const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
     const CORS = { 'access-control-allow-origin': '*' };
     const ids = ['e1', 'e2', 'e3', 'e4', 'n1', 'n2', 'n3'];
