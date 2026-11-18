@@ -460,3 +460,17 @@ test('Checks records score: a check_log row carries the values typed on its form
   assert.equal(r.gate_result, 'pass', JSON.stringify(r.lines));
   assert.deepEqual(r.lines.map((l) => [l.answer_then, l.date_then]), [['ok', '2026-08-13'], ['Good', '2026-09-01']]);
 });
+
+test('owner age setting: animals younger than breed_better.show_from_months are left out until they reach it', () => {
+  const R = (v, from, extra) => Object.assign({ rule_key: 'breed_better.show_from_months', value: v, effective_from: from || '2026-01-01', source: 'Owner' }, extra || {});
+  const subs = [{ id: 'a1', name: 'Alpha', dob: '2020-01-01' }, { id: 'a2', name: 'Pup', dob: '2026-10-15' }, { id: 'a3', name: 'NotEnrolled' }];
+  const T = (rules) => tables({ 'BLD-subject.csv': subs, 'BLD-breeding_rule.csv': rules });
+  assert.equal(View.showFromMonths(T([R('12'), R('6', '2027-06-01')]), '2026-11-18'), 12);   // the row in force that day
+  assert.equal(View.showFromMonths(T([R('12', '2026-01-01', { to_date: '2026-03-01' })]), '2026-11-18'), 0);   // ended
+  const c = View.compute({ T: T([R('12')]), today: '2026-11-18', esc });
+  assert.deepEqual(c.results.map((r) => r.name), ['Alpha']);   // the pup stays enrolled but is not shown
+  assert.equal(View.section({ T: T([R('12')]), today: '2026-11-18', esc }, 'a2'), '');
+  assert.equal(View.chip({ T: T([R('12')]), today: '2026-11-18', esc }, 'a2'), '');
+  assert.deepEqual(View.compute({ T: T([R('12')]), today: '2027-10-15', esc }).results.map((r) => r.name).sort(), ['Alpha', 'Pup']);   // 12 months old
+  assert.equal(View.compute({ T: T([]), today: '2026-11-19', esc }).results.length, 2);   // no row: everyone shows
+});
