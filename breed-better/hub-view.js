@@ -50,14 +50,19 @@
     return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d);
   }
 
-  function wordsFor(scheme) {
-    var w = Object.assign({}, VERDICT, EXTRA_WORDS);
+  /* the scheme row's verdict_words over a set of default words (only keys the set already has) */
+  function wordsOver(base, scheme) {
+    var w = Object.assign({}, base);
     t(scheme && scheme.verdict_words).split(';').forEach(function (pair) {
       var at = pair.indexOf('='), k = pair.slice(0, at).trim().toLowerCase().replace(/\s+/g, '_');
       if (at > 0 && w[k] && t(pair.slice(at + 1))) w[k] = t(pair.slice(at + 1));
     });
     return w;
   }
+  /** The four verdict words only (main, #491). */
+  function wordsFor(scheme) { return wordsOver(VERDICT, scheme); }
+  /** The other words (to_prove), kept apart from the verdict words. */
+  function extraWordsFor(scheme) { return wordsOver(EXTRA_WORDS, scheme); }
   function verdictOf(r) { return r.verdict || r.gate_result; }
 
   /** "field=value" pairs joined by ';' (the calculator's own form). Blank matches everything. */
@@ -104,9 +109,11 @@
   function compute(v) {
     var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
-    if (memo && memo.key === key && memo.T === T) return memo;
+    /* the same row counts can hold different rows (a re-read after an edit): reuse only when every table is the very same one */
+    var names = Object.keys(T).sort(), held = names.map(function (f) { return T[f]; });
+    if (memo && memo.key === key && memo.names === names.join('|') && memo.held.every(function (x, i) { return x === held[i]; })) return memo;
     var all = enrolments(T);
-    var out = { key: key, T: T, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
+    var out = { key: key, T: T, names: names.join('|'), held: held, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var logs = null;
@@ -144,7 +151,7 @@
         var input = { scheme: scheme, bands: bands, criteria: criteria, points: points, subject: subject, evidence: evidence,
           judgements: judgementsFor(T, subject.id, criteria, v.today), asOf: v.today };
         var r = Score.score(input);
-        r.name = t(subject.name); r.dob = t(subject.dob); r.bands = bands; r.words = wordsFor(scheme); r.scheme = scheme; r.input = input;
+        r.name = t(subject.name); r.dob = t(subject.dob); r.bands = bands; r.words = wordsFor(scheme); r.extra = extraWordsFor(scheme); r.scheme = scheme; r.input = input;
         out.words = r.words;
         out.results.push(r); out.byId[r.subject_id] = r;
       } catch (err) { out.error = err.message; }
@@ -508,7 +515,7 @@
     var lost = Math.max(0, all - r.points_earned - r.points_unverified);
     var bar = all ? st.map(function (o) {
       return (o.earned ? '<span style="width:' + (100 * o.earned / all) + '%;background:' + bandColour(o.band) + '" title="' + o.band.label + ': ' + fmt(o.earned) + ' of ' + o.max + '"></span>' : '')
-        + (o.unv ? '<span class="bb-tp" style="width:' + (100 * o.unv / all) + '%;--c:' + bandColour(o.band) + '" title="' + o.band.label + ': ' + o.unv + ' ' + r.words.to_prove + '"></span>' : '');
+        + (o.unv ? '<span class="bb-tp" style="width:' + (100 * o.unv / all) + '%;--c:' + bandColour(o.band) + '" title="' + o.band.label + ': ' + o.unv + ' ' + r.extra.to_prove + '"></span>' : '');
     }).join('') : '';
     var pl = pctLine(r);
     return '<div class="card bb-vbox" style="--v:var(' + VTEXT[k] + ')"><div class="bb-vtop"><span class="bb-vl">' + ic(ICON[k], 28, 'var(' + VTEXT[k] + ')')
@@ -516,7 +523,7 @@
       + '<span class="bb-vr"><span class="bb-huge">' + fmt(r.points_earned) + '</span><br><span class="bb-pts">of ' + all + ' points</span>'
       + (pl ? '<br><span class="bb-pts bb-pct">' + pl + '</span>' : hasTarget(r) ? '<br><span class="bb-pts">Target ' + r.target + '</span>' : '') + '</span></div>'
       + (all ? '<div class="bb-barw"><div class="bb-bar">' + bar + '</div>' + (hasTarget(r) ? '<span class="bb-tmark" style="left:' + Math.min(100, 100 * r.target / all) + '%" title="Target ' + r.target + '"></span>' : '') + '</div>' : '')
-      + '<div class="bb-three"><span>' + fmt(r.points_earned) + ' earned</span><span>' + r.points_unverified + ' ' + r.words.to_prove + '</span><span>' + fmt(lost) + ' lost</span></div>'
+      + '<div class="bb-three"><span>' + fmt(r.points_earned) + ' earned</span><span>' + r.points_unverified + ' ' + r.extra.to_prove + '</span><span>' + fmt(lost) + ' lost</span></div>'
       + '<p class="bb-why">' + whyHtml(r) + '</p><p class="bb-pts bb-scored">Scored on ' + day(r.as_of) + '</p></div>';
   }
 

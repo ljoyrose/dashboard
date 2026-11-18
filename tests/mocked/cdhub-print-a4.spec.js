@@ -49,8 +49,8 @@ test.describe('CD Hub print on A4', () => {
       await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif!important}' });
       await page.getByRole('button', { name: P.PER_LABEL[per] }).click();
       await expect(page.locator('.sheet')).toHaveClass(new RegExp('\\bper' + per + '\\b'));
-      // paper width: portrait, or the landscape sheet that holds two A5 cards
-      await page.setViewportSize(per === 2 ? P.PAPER.landscape : P.PAPER.portrait);
+      // paper width: A4 portrait (Lisa's dog card, 18 Nov 2026: two a page one above the other, cut line between)
+      await page.setViewportSize(P.PAPER.portrait);
       const fit = await P.cardsFit(page);
       fit.forEach((c) => {
         expect(c.out, c.id + ': nothing past the card edge').toEqual([]);
@@ -58,32 +58,32 @@ test.describe('CD Hub print on A4', () => {
       });
       expect(fit[0].status, 'the "cards ready" line does not print').toBe('none');
       const pdf = await P.printPdf(page, 'cdhub-kennel-cards-' + per + '-per-A4');
-      expect(pdf.boxes.every((b) => P.isA4(b, per === 2)), per === 2 ? 'A4 landscape' : 'A4 portrait').toBe(true);
+      expect(pdf.boxes.every((b) => P.isA4(b)), 'A4 portrait').toBe(true);
       expect(pdf.count, P.CARDS + ' cards, ' + per + ' a page').toBe(Math.ceil(P.CARDS / per));
     });
   }
 
-  test('room signs print four a sheet, two a row, each whole @regression', async ({ page }) => {
+  test('room cards print two a sheet, each whole, QR at least 50 mm (Lisa 18 Nov 2026) @regression', async ({ page }) => {
     await P.openCards(page);
-    // the wide fallback font (as on CI, or a printer with no web font) makes the tallest signs
+    // the wide fallback font (as on CI, or a printer with no web font) makes the tallest cards
     await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif!important}' });
-    await page.getByRole('button', { name: 'Room signs' }).click();
+    await page.getByRole('button', { name: 'Room cards' }).click();
     await expect(page.locator('.rcard')).toHaveCount(P.SIGNS);
-    await expect(page.locator('.rcard').first().locator('.sz')).toHaveCount(3);
-    await expect(page.locator('.rcard').first().locator('[data-k="jobs"] li')).toHaveCount(3);
+    await expect(page.locator('.rcard').first().locator('.szrow')).toHaveCount(3);
     await page.setViewportSize(P.PAPER.portrait);
     await page.emulateMedia({ media: 'print' });
     const signs = await page.evaluate(() => Array.from(document.querySelectorAll('.rcard')).map((c) => {
       const b = c.getBoundingClientRect(), q = c.querySelector('.code svg').getBoundingClientRect();
-      return { out: Array.from(c.querySelectorAll('b,.limits,.code svg,.lst,.tag')).filter((e) => e.getBoundingClientRect().bottom > b.bottom + 1).length, qr: Math.min(q.width, q.height) };
+      const past = Array.from(c.querySelectorAll('.name,.facts,.rows,.code svg,.foot,.tag')).filter((e) => e.getBoundingClientRect().bottom > b.bottom + 1);
+      return { out: past.length, what: past.map((e) => String(e.className.baseVal !== undefined ? 'svg' : e.className)), qr: Math.min(q.width, q.height) };
     }));
     await page.emulateMedia({ media: 'screen' });
     signs.forEach((x, i) => {
-      expect(x.out, 'sign ' + i + ': nothing past its edge').toBe(0);
-      expect(x.qr, 'sign ' + i + ': QR at least 50 mm').toBeGreaterThanOrEqual(Math.round(50 * P.MM));
+      expect(x.out, 'card ' + i + ': nothing past its edge ' + JSON.stringify(x)).toBe(0);
+      expect(x.qr, 'card ' + i + ': QR at least 50 mm').toBeGreaterThanOrEqual(Math.round(50 * P.MM));
     });
-    const pdf = await P.printPdf(page, 'cdhub-room-signs');
-    expect(pdf.count, P.SIGNS + ' signs with limits and jobs, 4 a sheet (one row a page wasted two-thirds of each sheet)').toBe(Math.ceil(P.SIGNS / 4));
+    const pdf = await P.printPdf(page, 'cdhub-room-cards');
+    expect(pdf.count, P.SIGNS + ' room cards, 2 a sheet').toBe(Math.ceil(P.SIGNS / 2));
     expect(pdf.boxes.every((b) => P.isA4(b))).toBe(true);
   });
 });
