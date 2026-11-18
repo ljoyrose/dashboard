@@ -117,7 +117,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .sd.comp-flag{background:var(--ljr-2);opacity:.8}.sd.comp-warn{background:var(--ljr-3);opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
 /* view mode toggle */
 .vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
-.vt-btn{padding:4px 12px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
+.vt-btn{padding:4px 12px;min-height:40px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
 .vt-btn.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 /* compact indoor table in drill panel */
 .itable{width:100%;border-collapse:collapse;font-size:var(--fs-small);margin-top:4px}
@@ -568,13 +568,7 @@ function openDrill(isoDate){
   var parts=isoDate.split('-');
   var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
   el('d-title').textContent=dLabel;
-  var show=function(v){var s=dpOutdoor(v);return s?s+'°C':'—';};
-  el('d-max').textContent=show(r.max_temp);
-  el('d-min').textContent=show(r.min_temp);
-  el('d-feels').textContent=show(r.realfeel_max_temp);
-  el('d-rain').textContent=r.rain_value!==undefined&&r.rain_value!==''?dpOutdoor(r.rain_value)+' mm':'—';
-  el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
-  el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?dpOutdoor(r.wind_kmh)+' km/h':'—';
+  el('d-out').textContent=outsideLine(isoDate)||'—';
   var dayAreas=AREA_DAYS[isoDate]||{};
   var areaIds=areasInWalk(Object.keys(dayAreas));
   var areasEl=el('d-areas');
