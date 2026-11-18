@@ -52,7 +52,7 @@ function makeScheme(r, opts = {}) {
   for (let i = 0; i < nG; i++) {
     const id = 'g' + i;
     gates.push({ id, band_id: 'G', label: id, evidence_source: 'exam', evidence_match: 'kind=' + id, answer_field: 'result', date_field: 'on',
-      when_missing: opts.gateMissing ?? r.pick(['unknown', 'zero', 'fail', '']) });
+      when_missing: opts.gateMissing ?? r.pick(['unknown', 'zero', '']) });
     points.push({ id: id + 'p', criterion_id: id, answer_match: 'is:ok', gate_outcome: 'pass' },
       { id: id + 'f', criterion_id: id, answer_match: 'is:bad', gate_outcome: 'fail' },
       { id: id + 'u', criterion_id: id, answer_match: 'is:nr', gate_outcome: 'unverified' });
@@ -105,7 +105,7 @@ forAll('property: one failed gate makes the verdict Fail, whatever else is true'
 
 /* 3. An answer that matches no rule is flagged, never scored 0 and never a Fail */
 forAll('property: an answer no rule matches is flagged and held as unverified, never 0 and never Fail', (r) => {
-  const set = makeScheme(r, { gateMissing: r.pick(['unknown', 'zero', 'fail']), lineMissing: r.pick(['unknown', 'zero', 'fail']) });
+  const set = makeScheme(r, { gateMissing: r.pick(['unknown', 'zero']), lineMissing: r.pick(['unknown', 'zero']) });
   const odd = 'odd-' + r.int(1, 999);
   const rows = set.gates.map((g, i) => exam('e' + i, g.id, i === 0 ? odd : 'ok', recent(r)))
     .concat(set.lines.map((l, i) => exam('l' + i, l.id, i === 0 ? odd : 'top', recent(r))));
@@ -379,13 +379,27 @@ forAll('property: a rule row with a broken value is refused, never scored', (r) 
 });
 
 /* pinned regressions for the fixes made in this job */
-test('@regression an unmatched gate answer with when_missing fail is Unverified, not Fail', () => {
-  const set = makeScheme(rng(1), { gates: 1, lines: 1, gateMissing: 'fail' });
+test('@regression an unmatched gate answer is Unverified, never Fail', () => {
+  const set = makeScheme(rng(1), { gates: 1, lines: 1, gateMissing: 'unknown' });
   const out = run(set, [exam('e', 'g0', 'Grade Q', '2025-01-01'), exam('l', 'p0', 'top', '2025-01-01')]);
   assert.equal(out.lines[0].gate_outcome, 'unverified');
   assert.equal(out.verdict, 'unverified');
-  // but a missing record with when_missing fail still fails, as the row says
-  assert.equal(run(set, [exam('l', 'p0', 'top', '2025-01-01')]).verdict, 'fail');
+  // and a missing record is Unverified too, never Fail (D7)
+  assert.equal(run(set, [exam('l', 'p0', 'top', '2025-01-01')]).verdict, 'unverified');
+});
+
+/* D7 (Lisa, 18 Nov 2026): when_missing = fail is refused on every line, so a missing record can never make a Fail */
+forAll('property: when_missing fail is refused on any line; a missing record is never a Fail', (r) => {
+  const set = makeScheme(r);
+  const all = set.criteria;
+  all[r.int(0, all.length - 1)].when_missing = 'fail';
+  assert.match(validateScheme(set).join(';'), /cannot be fail/);
+  assert.throws(() => run(set, []), /The rules have problems/);
+  // with no fail setting, records missing everywhere never give a Fail
+  all.forEach((c) => { c.when_missing = r.pick(['unknown', '', c.band_id === 'P' ? 'zero' : 'unknown']); });
+  const none = run(set, []);
+  assert.notEqual(none.verdict, 'fail');
+  assert.notEqual(none.gate_result, 'fail');
 });
 
 test('@regression an unmatched points answer with when_missing zero is held, a missing record is 0', () => {
