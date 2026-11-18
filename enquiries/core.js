@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.14.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.15.0 (2026-11-13)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -1212,18 +1212,18 @@
     Enquiries: ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'channel', 'kind', 'brand', 'country',
       'country_basis', 'breed_interest', 'size', 'colour', 'coat', 'sex', 'timing', 'household_flags', 'question_summary',
       'score', 'band', 'stage', 'next_step', 'next_due_uk', 'owner', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
-      'lost_reason', 'flag', 'ref', 'score_reasons', 'updated_uk'],
+      'lost_reason', 'flag', 'ref', 'score_reasons', 'updated_uk', 'bld_litter_id', 'bld_subject_id'],
     People: ['person_key', 'ref', 'name', 'email', 'phone_e164', 'country', 'country_basis', 'sources', 'first_contact_uk',
-      'last_touch_uk', 'touches', 'repeat_buyer', 'past_deposit', 'do_not_contact', 'consent', 'match_confidence', 'check', 'updated_uk'],
+      'last_touch_uk', 'touches', 'repeat_buyer', 'past_deposit', 'do_not_contact', 'consent', 'match_confidence', 'check', 'updated_uk', 'bld_person_id'],
     Events: ['event_key', 'enquiry_key', 'person_key', 'at_uk', 'channel', 'type', 'detail', 'source_ref'],
     Drafts: ['draft_key', 'enquiry_key', 'person_key', 'case', 'version', 'text', 'links', 'made_uk', 'status', 'blocked_by'],
     FollowUps: ['followup_key', 'enquiry_key', 'person_key', 'rule', 'try', 'due_uk', 'status', 'snoozed_to_uk', 'draft_key', 'updated_uk'],
     Litters: ['litter_key', 'litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'status_since_uk', 'person_key',
-      'list', 'list_order', 'deposit_date', 'flag', 'source_sheet', 'read_uk'],
+      'list', 'list_order', 'deposit_date', 'flag', 'source_sheet', 'read_uk', 'bld_litter_id', 'bld_subject_id'],
     'Sale Replies': ['reply_key', 'group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
     // Stage 11: deposit_key, status (held, suggested, collected, refunded, closed) and check added. Private amounts.
     Deposits: ['deposit_key', 'litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
-      'collection_date', 'status', 'basis', 'check', 'read_uk'],
+      'collection_date', 'status', 'basis', 'check', 'read_uk', 'bld_litter_id'],
     Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
     Settings: ['setting', 'value', 'note'],
     Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
@@ -1246,16 +1246,37 @@
     band: [BANDS, true], consent: [CONSENT, true], country_basis: [BASIS, true], breed_interest: [BREEDS, true]
   };
 
+  // Trailing columns an older sheet may omit. A sheet that has them must keep them in this order, after the required columns.
+  var OPTIONAL_TAIL = {
+    Enquiries: ['bld_litter_id', 'bld_subject_id'],
+    People: ['bld_person_id'],
+    Litters: ['bld_litter_id', 'bld_subject_id'],
+    Deposits: ['bld_litter_id']
+  };
+
   // Check one header row against the contract. Returns [] when it matches, else plain-English problems.
+  // Required columns must be present in order. The trailing optional columns may be left off the end.
   function checkHeader(tab, header) {
     var want = COLUMNS[tab];
     if (!want) return ['unknown tab "' + tab + '"'];
     var got = (header || []).map(function (h) { return String(h == null ? '' : h).trim(); });
-    var problems = [];
-    want.forEach(function (c, i) {
+    var tail = OPTIONAL_TAIL[tab] || [];
+    var need = want.length - tail.length;
+    var problems = [], i, c, idx;
+    for (i = 0; i < need; i++) {
+      c = want[i];
       if (got.indexOf(c) < 0) problems.push(tab + ': column "' + c + '" is missing or renamed');
       else if (got[i] !== c) problems.push(tab + ': column "' + c + '" has moved (column ' + (got.indexOf(c) + 1) + ', expected ' + (i + 1) + ')');
-    });
+    }
+    for (i = 0; i < tail.length; i++) {
+      c = tail[i];
+      idx = need + i;
+      if (idx >= got.length) break;
+      if (got[idx] !== c) {
+        if (got.indexOf(c) < 0) problems.push(tab + ': column "' + c + '" is missing or renamed');
+        else problems.push(tab + ': column "' + c + '" has moved (column ' + (got.indexOf(c) + 1) + ', expected ' + (idx + 1) + ')');
+      }
+    }
     return problems;
   }
 
@@ -2075,6 +2096,131 @@
     });
   }
 
+  // ---- Links into the BLD tables (pure: no reading or writing) ---------------------------------------------
+  // Plain words only. lost and parked map to closed, which is not one of the four.
+  var PLAIN_STAGES = ['enquiry', 'deposit', 'working to collection', 'after collection'];
+  var BLD_COLUMNS = {
+    person: ['id', 'tenant_id', 'full_name', 'known_as'],
+    household: ['id', 'tenant_id', 'name', 'primary_person_id', 'stage'],
+    household_member: ['id', 'tenant_id', 'household_id', 'person_id'],
+    subject_owner: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'role'],
+    sale: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'deposit', 'deposit_date', 'sold_on', 'price'],
+    match_candidate: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'score']
+  };
+  var ENQUIRY_STAGES = { 'new': 1, replied: 1, 'call-booked': 1, 'call-held': 1, offered: 1 };
+
+  function cellText(v) { return v == null ? '' : String(v).trim(); }
+
+  // BLD litter id when external_ref matches and the system is the allocation sheet. Else ''.
+  function bldLitterFor(litterRef, litterRows) {
+    var ref = cellText(litterRef);
+    if (!ref) return '';
+    var i, r, hit = '';
+    for (i = 0; i < (litterRows || []).length; i++) {
+      r = litterRows[i] || {};
+      if (cellText(r.external_ref) !== ref) continue;
+      if (cellText(r.external_ref_system).toLowerCase() !== 'allocation sheet') continue;
+      if (hit) return '';
+      hit = cellText(r.id);
+    }
+    return hit;
+  }
+
+  function pupNumber(pupRef) {
+    var m = cellText(pupRef).match(/(?:^|[^0-9])(\d+)\s*$/);
+    return m ? m[1] : '';
+  }
+  // Same pup number as its own token. 01 matches 1 and 01, and does not match 001.
+  function samePupToken(token, num) {
+    if (token === num) return true;
+    if (!/^\d+$/.test(token) || !/^\d+$/.test(num)) return false;
+    var a = token.replace(/^0+/, '') || '0', b = num.replace(/^0+/, '') || '0';
+    if (a !== b) return false;
+    return token === num || token === a || num === b;
+  }
+  // Subject id for a pup: birth litter matches, and the pup number is a token in the subject id. Else ''.
+  function bldSubjectFor(pupRef, litterId, subjectRows) {
+    var num = pupNumber(pupRef), lid = cellText(litterId);
+    if (!num || !lid) return '';
+    var hits = [];
+    (subjectRows || []).forEach(function (r) {
+      if (cellText(r.birth_litter_id) !== lid) return;
+      var id = cellText(r.id);
+      var toks = id.split(/[^A-Za-z0-9]+/).filter(Boolean);
+      if (toks.some(function (t) { return samePupToken(t, num); })) hits.push(id);
+    });
+    return hits.length === 1 ? hits[0] : '';
+  }
+
+  // One plain word. A row with bld_subject_id set is working to collection, unless it is already collected or closed.
+  function plainStage(stage, row) {
+    var s, sub = '';
+    if (stage && typeof stage === 'object') { row = stage; s = cellText(row.stage); sub = cellText(row.bld_subject_id); }
+    else { s = cellText(stage); sub = row ? cellText(row.bld_subject_id) : ''; }
+    if (s === 'collected') return 'after collection';
+    if (s === 'lost' || s === 'parked') return 'closed';
+    if (s === 'balance' || sub) return 'working to collection';
+    if (s === 'deposit') return 'deposit';
+    if (ENQUIRY_STAGES[s]) return 'enquiry';
+    return '';
+  }
+
+  function bldFill(table, src) {
+    var o = {};
+    BLD_COLUMNS[table].forEach(function (c) { o[c] = src && src[c] != null ? String(src[c]) : ''; });
+    return o;
+  }
+  function bldPersonRow(person, opts) {
+    person = person || {}; opts = opts || {};
+    return bldFill('person', {
+      id: opts.id || person.id || person.bld_person_id || '',
+      tenant_id: opts.tenant_id || person.tenant_id || '',
+      full_name: person.full_name || person.name || '',
+      known_as: person.known_as || ''
+    });
+  }
+  function bldHouseholdRow(input) {
+    input = input || {};
+    var stage = cellText(input.stage);
+    if (PLAIN_STAGES.indexOf(stage) < 0) stage = plainStage(input);
+    if (PLAIN_STAGES.indexOf(stage) < 0) return null;
+    return bldFill('household', {
+      id: input.id || '', tenant_id: input.tenant_id || '', name: input.name || '',
+      primary_person_id: input.primary_person_id || input.person_id || '', stage: stage
+    });
+  }
+  function bldHouseholdMemberRow(input) {
+    input = input || {};
+    return bldFill('household_member', {
+      id: input.id || '', tenant_id: input.tenant_id || '',
+      household_id: input.household_id || '', person_id: input.person_id || ''
+    });
+  }
+  function bldSubjectOwnerRow(input) {
+    input = input || {};
+    var role = cellText(input.role);
+    if (role !== 'assigned' && role !== 'owner') role = plainStage(input) === 'after collection' ? 'owner' : 'assigned';
+    if (role !== 'assigned' && role !== 'owner') return null;
+    if (!cellText(input.subject_id || input.bld_subject_id)) return null;
+    return bldFill('subject_owner', {
+      id: input.id || '', tenant_id: input.tenant_id || '',
+      subject_id: input.subject_id || input.bld_subject_id || '',
+      person_id: input.person_id || '', household_id: input.household_id || '', role: role
+    });
+  }
+  function bldSaleRow(input) {
+    input = input || {};
+    var own = input.role === 'owner' || plainStage(input) === 'after collection' || input.atOwnership === true;
+    return bldFill('sale', {
+      id: input.id || '', tenant_id: input.tenant_id || '',
+      subject_id: input.subject_id || '', person_id: input.person_id || '', household_id: input.household_id || '',
+      deposit: input.deposit == null ? '' : String(input.deposit),
+      deposit_date: input.deposit_date || '',
+      sold_on: own ? (input.sold_on || '') : '',
+      price: own && input.price != null ? String(input.price) : ''
+    });
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -2104,7 +2250,11 @@
     hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS,
     RESULT_COUNTS: RESULT_COUNTS, RESULT_STEPS: RESULT_STEPS, median: median, pct: pct, resultsRows: resultsRows, resultRates: resultRates,
     monthsBetween: monthsBetween, resultsView: resultsView, hubspotStage: hubspotStage, hubspotHistoryFrom: hubspotHistoryFrom,
-    depositHistoryFrom: depositHistoryFrom, ALERT_KINDS: ALERT_KINDS, lastRun: lastRun, alertsView: alertsView, openWorkRows: openWorkRows
+    depositHistoryFrom: depositHistoryFrom, ALERT_KINDS: ALERT_KINDS, lastRun: lastRun, alertsView: alertsView, openWorkRows: openWorkRows,
+    PLAIN_STAGES: PLAIN_STAGES, OPTIONAL_TAIL: OPTIONAL_TAIL, BLD_COLUMNS: BLD_COLUMNS,
+    bldLitterFor: bldLitterFor, bldSubjectFor: bldSubjectFor, plainStage: plainStage,
+    bldPersonRow: bldPersonRow, bldHouseholdRow: bldHouseholdRow, bldHouseholdMemberRow: bldHouseholdMemberRow,
+    bldSubjectOwnerRow: bldSubjectOwnerRow, bldSaleRow: bldSaleRow
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -18,11 +18,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
+<script src="../toolkit.js"></script>
+<script src="hub-nav.js"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
 a{color:inherit;text-underline-offset:2px}
-.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:60px}
+.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:140px}
 .hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 h1,h2{font-weight:600}
@@ -31,7 +33,7 @@ p{margin:0 0 16px}
 .btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media(hover:hover){header .btn:hover{background:var(--frame-hov);}}
-@media(max-width:544px){.btn{min-height:44px}header.top{position:static}}
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}.wrap{padding-bottom:170px}}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
 </style>
@@ -42,7 +44,7 @@ header .btn{color:var(--frame-ink);background:transparent;border-color:var(--fra
 </svg>
 <a class="skip" href="#main">Skip to content</a>
 <header class="top house-head"><div class="hin house-row">
-  <a class="btn house-ib" href="./history.html" aria-label="Back to temperature history" title="Back to temperature history">
+  <a class="btn house-ib" href="./index.html" aria-label="CD Hub" title="Back to CD Hub">
     <svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>
   </a>
   <h1>Temperature archive</h1>
@@ -52,4 +54,6 @@ header .btn{color:var(--frame-ink);background:transparent;border-color:var(--fra
   <p>Older years live on Archive.</p>
   <p><a class="btn" href="./history.html">Temperatures</a></p>
 </main></div>
+<nav id="nav" class="house-tabs" aria-label="Sections"></nav>
+<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href'});</script>
 </body></html>

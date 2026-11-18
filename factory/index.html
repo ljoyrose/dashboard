@@ -9,7 +9,7 @@
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="manifest" href="../manifest.webmanifest">
+<link rel="manifest" href="../manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#3A3632">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1480,7 +1480,7 @@
       (S.health || []).map(function (h) {
         var last = Date.parse(h.last), okNow = h.result === 'OK' && (!WINDOW_H[h.job] || now - last < WINDOW_H[h.job] * 36e5);
         return '<div class="row"><span class="bar" style="--c:var(--ljr-' + (okNow ? 5 : 2) + ')"></span><div class="txt"><b>' + esc(JOB[h.job] || h.job) + '</b><div class="why">' + esc(h.schedule) + (h.note ? ' · ' + esc(String(h.note).slice(0, 80)) : '') + '</div></div><span class="meta">' +
-          (okNow ? ic('tick') + 'ok' : ic('warn') + esc(word(h))) + '<br>' + (isNaN(last) ? '' : new Date(last).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</span></div>';
+          (okNow ? ic('tick') + 'ok' : ic('warn') + esc(word(h))) + '<br>' + (isNaN(last) ? '' : new Date(last).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\bSept\b/, 'Sep')) + '</span></div>';
       }).join('') + '<p class="muted">Data read ' + new Date(S.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '.</p><p><a href="#/rooms">← Rooms</a></p></div>';
   }
   function vApps(title, list) {

@@ -1,5 +1,5 @@
 // CD Hub dog card summary (Lisa's dog card mock-up, 7 Nov 2026): weight change, last medication date,
-// DNA clear/carrier/affected pills, and litters as dam with a link. Invented rows only. Dates DD/MM/YY.
+// DNA clear/carrier/affected pills, and litters as dam with a link. Invented rows only. Dates as "2 Mar 2026" (13 Nov 2026).
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
@@ -49,13 +49,13 @@ test.describe('CD Hub dog card summary', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
     await expect(card).toHaveCount(1);
-    await expect(card.locator('[data-k="weight"]')).toHaveText('8.4 kg ↑ 0.3 · 12/01/26 BCS 5');
-    await expect(card.locator('[data-k="bcs"]')).toHaveAttribute('title', 'BCS 5/9 on 12/01/26');
-    await expect(card.locator('[data-k="meds"]')).toHaveText('2 medications · last 03/11/26');
+    await expect(card.locator('[data-k="weight"]')).toHaveText('8.4 kg ↑ 0.3 · 12 Jan 2026 BCS 5');
+    await expect(card.locator('[data-k="bcs"]')).toHaveAttribute('title', 'BCS 5/9 on 12 Jan 2026');
+    await expect(card.locator('[data-k="meds"]')).toHaveText('2 medications · last 3 Nov 2026');
     await expect(card.locator('[data-k="dna"] [data-dna="clear"]')).toHaveText('PRA clear');
     await expect(card.locator('[data-k="dna"] [data-dna="carrier"]')).toHaveText('VWD carrier');
     await expect(card.locator('[data-k="dna"] [data-dna="affected"]')).toHaveText('DM affected');
-    await expect(card.locator('[data-k="litters"]')).toHaveText('2 litters · last 02/06/25');
+    await expect(card.locator('[data-k="litters"]')).toHaveText('2 litters · last 2 Jun 2025');
 
     // layout A (Lisa 12 Nov 2026): weight, medications and chip show; DNA, litters and the rest sit behind More
     await expect(card.locator('[data-k="weight"]')).toBeVisible();
@@ -73,7 +73,7 @@ test.describe('CD Hub dog card summary', () => {
     // a weight drop shows a down arrow; a dog with no litters, meds or DNA shows no such rows
     await page.evaluate(() => go('dogs/sub-x2'));
     const stud = page.locator('#rows article.dc');
-    await expect(stud.locator('[data-k="weight"]')).toHaveText('14.1 kg ↓ 0.5 · 15/02/26');
+    await expect(stud.locator('[data-k="weight"]')).toHaveText('14.1 kg ↓ 0.5 · 15 Feb 2026');
     await expect(stud.locator('[data-k="meds"]')).toHaveText('no medications');
     await expect(stud.locator('[data-k="dna"]')).toHaveCount(0);
     await expect(stud.locator('[data-k="litters"]')).toHaveCount(0);
@@ -87,7 +87,7 @@ test.describe('CD Hub dog card summary', () => {
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
-    await expect(card.locator('[data-k="dob"]')).toHaveText('\u00b7 DOB 01/01/21');
+    await expect(card.locator('[data-k="dob"]')).toHaveText('\u00b7 DOB 1 Jan 2021');
     await expect(card.locator('[data-k="colour"]')).not.toContainText('Colour');   // the word itself is gone (12 Nov)
     const box = await card.locator('.dc-info .ricon').boundingBox();
     expect(box.width).toBeLessThanOrEqual(16);
@@ -121,8 +121,8 @@ test.describe('CD Hub dog card summary', () => {
     const card = page.locator('#rows article.dc');
     await expect(card).toHaveAttribute('data-size', 'small');          // 8.4 kg beats the record's medium
     await expect(card).toHaveAttribute('data-size-from', 'weight');
-    await expect(card.locator('[data-k="size"]')).toHaveText('Toy/Mini');
-    await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12\/01\/26/);
+    await expect(card.locator('[data-k="size"]')).toHaveText('Small');
+    await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12 Jan 2026/);
     expect(await card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('3px');   // the photo has the size-coloured frame (12 Nov)
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows article.dc')).toHaveAttribute('data-size', 'medium');   // 14.1 kg; the future row is not in force
@@ -130,6 +130,23 @@ test.describe('CD Hub dog card summary', () => {
     await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);  // no weight: no size (never the record, 12 Nov)
     await expect(page.locator('#rows [data-k="size"]')).toHaveCount(0);
     expect(await page.evaluate(() => roomDogs(['sub-x1', 'sub-x2']).map((d) => d.size))).toEqual(['small', 'medium']);
+  });
+
+  test('size words are the owner\'s size_label rows (newest in force); without them Small / Medium / Large', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status', ['sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire']));
+    put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active']));
+    put(w, 'BLD-weight.csv', csv('id,subject_id,performed_on,weight_kg', ['w1,sub-x1,2026-01-12,25']));
+    put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+      'r3,t,size_from_kg.medium,10,2026-01-01,Pretend SOP,,,', 'r4,t,size_from_kg.large,25,2026-01-01,Pretend SOP,,,',
+      'l1,t,size_label.medium,Pretend Old Word,2026-01-01,Pretend SOP,,,', 'l2,t,size_label.medium,Pretend Mid,2026-06-01,Pretend SOP,,,',
+      'l3,t,size_label.medium,Pretend Future,2099-01-01,Pretend SOP,,,']));
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => go('dogs/sub-x1'));
+    const card = page.locator('#rows article.dc');
+    await expect(card).toHaveAttribute('data-size', 'medium');   // exactly 25 kg is medium (SOP: large is over 25 kg)
+    await expect(card.locator('[data-k="size"]')).toHaveText('Pretend Mid');
+    expect(await page.evaluate(() => [sizeName('small'), sizeName('large')])).toEqual(['Small', 'Large']);
   });
 
   test('size: no cut-off rows means no size from weight; a row without a source does not count', async ({ page, guard }) => {
@@ -158,11 +175,11 @@ test.describe('CD Hub dog card summary', () => {
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     const v = page.locator('#rows [data-k="vacc"]');
-    await expect(v).toHaveText('2 vaccinations \u00b7 last 03/02/25 due 03/02/26');
+    await expect(v).toHaveText('2 vaccinations \u00b7 last 3 Feb 2025 due 3 Feb 2026');
     await expect(v.locator('[data-due]')).toHaveAttribute('data-due', 'late');
     await page.locator('#rows details.vacc').locator('xpath=ancestor::details[@data-k="more"]').first().locator('summary').first().click();
     await page.locator('#rows details.vacc summary').click();
-    await expect(page.locator('#rows details.vacc .dcs-row').first()).toContainText('03/02/25');
+    await expect(page.locator('#rows details.vacc .dcs-row').first()).toContainText('3 Feb 2025');
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows [data-k="vacc"] [data-due]')).toHaveAttribute('data-due', 'ok');
     // next due is blank by design on some rows: say so (licence audit 12 Nov, item 28)

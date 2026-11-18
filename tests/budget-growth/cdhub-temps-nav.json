@@ -1,0 +1,5 @@
+{
+  "cdhub": 3000,
+  "marketplace": 200,
+  "why": "Temperature pages share the hub tab list (cdhub/hub-nav.js, about 3 KB). The thermometer icon sits in the shared sprite, which every hub loads."
+}

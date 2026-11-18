@@ -22,24 +22,101 @@ const sheetEnv = (props) => {
   asSheets(env, ['BLD-area_reading.csv', 'BLD-_pending.csv']);
   return env;
 };
-const recs = (env, t) => { const [h, ...rows] = env.rows(t); return rows.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i] || '']))); };
+const recs = (env, t) => { const [h, ...rows] = env.rows(t); return rows.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i] === undefined ? '' : r[i]]))); };
+/** The rows as the Sheet shows them (getDisplayValues), as records. */
+const shownRecs = (env, t) => {
+  const f = env.file(t)[0], tab = env.tabOf(f), n = f.sheet.length, w = f.sheet[0].length;
+  const [h, ...rows] = tab.getRange(1, 1, n, w).getDisplayValues();
+  return rows.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i]])));
+};
+const fmtOf = (env, t, row, col) => env.file(t)[0].cfmt[row + ':' + col];
 
-test('Sheet: a reading is added as ONE plain-text row under the last row, 1 decimal place, range filled in', () => {
+test('Sheet: a reading is added as ONE row under the last row: temperatures real numbers (1dp), times real dates (UK time)', () => {
   const env = sheetEnv();
-  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2' } }));
+  const ps = new Date(env.nowMs - 3600000).toISOString().slice(0, 13) + ':00:00+00:00';
+  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2', period_start: ps } }));
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.result.status, 'saved');
   const rows = env.rows('BLD-area_reading.csv');
   assert.equal(rows.length, 2);
   assert.deepEqual([...rows[0]], fx.AREA_READING_HEADER);        // header untouched
   const row = recs(env, 'BLD-area_reading.csv')[0];
-  assert.equal(row.min_c, '11.3');
-  assert.equal(row.max_c, '14.2');
-  assert.equal(row[''], '2.9');                                  // the unnamed range column, as in the live Sheet
-  assert.equal(row.precision_dp, '1');
-  assert.equal(env.file('BLD-area_reading.csv')[0].fmt[2], '@'); // stored as plain text
+  assert.equal(row.min_c, 11.3);                                 // real numbers, like the rows typed by hand
+  assert.equal(row.max_c, 14.2);
+  assert.equal(row[''], 2.9);                                    // the range column
+  assert.equal(row.precision_dp, 1);
+  assert.ok(row.period_start instanceof Date && row.period_start.getTime() === Date.parse(ps));
+  assert.ok(row.taken_at instanceof Date && row.taken_at.getTime() === env.nowMs - (env.nowMs % 1000));
+  assert.equal(typeof row.area_id, 'string');                    // every other column stays text
+  assert.equal(typeof row.id, 'string');
+  const shown = shownRecs(env, 'BLD-area_reading.csv')[0];
+  assert.equal(shown.min_c, '11.3');
+  assert.equal(shown[''], '2.9');
+  assert.match(shown.period_start, /^\d{4}-\d{2}-\d{2} \d{2}:00$/);   // shown as UK time, like 2025-01-01 08:00
+  assert.equal(fmtOf(env, 'BLD-area_reading.csv', 2, 5), '0.0');
+  assert.equal(fmtOf(env, 'BLD-area_reading.csv', 2, 3), '@');   // area_id stays plain text
   assert.equal(env.writes.length, 0);                            // no CSV write at all
   assert.equal(env.sheetWrites.length, 1);
+});
+
+test('Sheet: area_reading read back gives the same text the hub and staff page send (period_start, numbers)', () => {
+  const env = sheetEnv();
+  const ps = '2026-10-15T21:00:00+01:00';                        // London slot as the hub sends it (BST here)
+  save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22.5', period_start: ps } }));
+  const rec = env.ctx.store_read_('BLD-area_reading.csv', true).records[0];
+  assert.equal(rec.period_start, ps);
+  assert.match(rec.taken_at, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+  assert.equal(rec.min_c, '20.0');
+  assert.equal(rec.max_c, '22.5');
+  // the same slot again is still caught as a repeat
+  const again = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22.5', period_start: ps } }));
+  assert.equal(again.code, 'DUPLICATE', JSON.stringify(again));
+  assert.equal(env.rows('BLD-area_reading.csv').length, 2);
+  // the same instant written another way (UTC) is the same slot too
+  const utc = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22.5', period_start: '2026-10-15T20:00:00Z' } }));
+  assert.equal(utc.code, 'DUPLICATE', JSON.stringify(utc));
+  assert.equal(env.rows('BLD-area_reading.csv').length, 2);
+});
+
+test('Sheet: rows typed by hand (real numbers and real dates) are read as before and left untouched by a save', () => {
+  const env = sheetEnv();
+  const h = fx.AREA_READING_HEADER, old = h.map(() => '');
+  old[0] = 'rdg-old'; old[1] = fx.TENANT; old[2] = 'area-t2'; old[4] = 18; old[5] = 21.5; old[6] = 3.5; old[8] = 1;
+  old[9] = new Date('2025-01-01T08:00:00Z'); old[10] = new Date('2025-01-01T08:05:00Z');
+  const f = env.file('BLD-area_reading.csv')[0]; f.sheet.push(old); f.cfmt = f.cfmt || {};
+  [5, 6, 7, 9].forEach((c) => { f.cfmt['2:' + c] = '0.0'; }); f.cfmt['2:10'] = 'yyyy-mm-dd hh:mm'; f.cfmt['2:11'] = 'yyyy-mm-dd hh:mm';
+  const before = old.slice();
+  const read = env.ctx.store_read_('BLD-area_reading.csv', true);
+  assert.equal(read.records[0].period_start, '2025-01-01T08:00:00+00:00');
+  assert.equal(read.records[0].min_c, '18.0');
+  const r = save(env, req(env));
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(env.rows('BLD-area_reading.csv')[1], before);
+});
+
+test('Sheet: other tables still write exactly as before - every cell plain text ("@"), no numbers or dates', () => {
+  const env = sheetEnv();
+  env.breakSetValues = 'once'; env.breakTitle = 'BLD-area_reading.csv';   // makes a line in the _pending log
+  save(env, req(env));
+  const w = env.sheetWrites.filter((x) => x.title === 'BLD-_pending.csv');
+  assert.equal(w.length, 1);
+  w[0].vals.forEach((row) => row.forEach((v) => assert.equal(typeof v, 'string')));
+  const f = env.file('BLD-_pending.csv')[0];
+  assert.equal(f.fmt[w[0].row], '@');
+  Object.keys(f.cfmt).filter((k) => k.startsWith(w[0].row + ':')).forEach((k) => assert.equal(f.cfmt[k], '@'));
+  // only area_reading has sheetTypes
+  const typed = Object.keys(env.ctx.TABLES).filter((k) => env.ctx.TABLES[k].sheetTypes);
+  assert.deepEqual(typed, ['area_reading']);
+});
+
+test('Sheet: the 7th column named variance_c in the live Sheet is accepted and filled; blank still works', () => {
+  const env = sheetEnv();
+  env.rows('BLD-area_reading.csv')[0][6] = 'variance_c';
+  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2' } }));
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const row = recs(env, 'BLD-area_reading.csv')[0];
+  assert.equal(row.variance_c, 2.9);
+  assert.equal(env.rows('BLD-area_reading.csv')[0][6], 'variance_c');   // the header is left as Lisa named it
 });
 
 test('Sheet: a second save leaves the first row exactly as it was', () => {
@@ -61,7 +138,7 @@ test('Sheet: 2 decimals are refused (room temperatures are 1 decimal place)', ()
   assert.equal(env.rows('BLD-area_reading.csv').length, 1);
 });
 
-test('Sheet: a header that differs from the live one (e.g. the unnamed column given a name) stops the save', () => {
+test('Sheet: a header that differs from the live one (any other name for the 7th column) stops the save', () => {
   const env = sheetEnv();
   env.rows('BLD-area_reading.csv')[0][6] = 'range_c';
   const r = save(env, req(env));
@@ -116,7 +193,7 @@ test('Sheet: owner edit changes ONE row in place and every other cell is identic
   const after = env.rows('BLD-area_reading.csv');
   assert.deepEqual(after[1], before[1]);
   assert.deepEqual(after[3], before[3]);
-  assert.equal(recs(env, 'BLD-area_reading.csv')[1].min_c, '18.5');
+  assert.equal(recs(env, 'BLD-area_reading.csv')[1].min_c, 18.5);
 });
 
 test('Sheet: a CSV table still works the old way (mixed folder while the last tables are converted)', () => {
@@ -141,5 +218,32 @@ test('Sheet: max equal to min is allowed and the range column is 0.0, never nega
   const env = sheetEnv();
   const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '19.5', max_c: '19.5' } }));
   assert.equal(r.ok, true, JSON.stringify(r));
-  assert.equal(recs(env, 'BLD-area_reading.csv')[0][''], '0.0');
+  assert.equal(recs(env, 'BLD-area_reading.csv')[0][''], 0);
+  assert.equal(shownRecs(env, 'BLD-area_reading.csv')[0][''], '0.0');
+});
+
+test('Sheet: with the 7th column named variance_c, an owner edit keeps it exactly as with the blank name (not emptied)', () => {
+  const env = sheetEnv({ OWNER_EDIT_ENABLED: 'true' });
+  env.rows('BLD-area_reading.csv')[0][6] = 'variance_c';
+  const id = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).result.id;
+  env.email = 'owner@example.test';
+  const r = env.ctx.ui_edit('area_reading', id, { min_c: '18.5' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const row = recs(env, 'BLD-area_reading.csv')[0];
+  assert.equal(row.min_c, 18.5);
+  assert.equal(row.variance_c, 2);           // as the blank-named column does today: an edit does not recompute it
+});
+
+// Lisa 16 Nov 2026: saves took about 25 s on the 30,000-row temperature log and blocked anyone else saving. An append
+// now reads the whole tab ONCE; the checks before and after writing look only at the header, the last row and the new row.
+test('Sheet: one save reads the whole tab once, not three times', () => {
+  const env = sheetEnv();
+  const f = env.file('BLD-area_reading.csv')[0];
+  for (let i = 0; i < 30; i++) f.sheet.push([`rdg-old-${i}`, fx.TENANT, 'area-t2', 'temperature', '20.0', '21.0']);
+  env.ranges.length = 0;
+  const r = save(env, req(env));
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const whole = env.ranges.filter(([name, , , nr, nc]) => name === 'BLD-area_reading.csv' && nr > 3 && nc > 1);
+  assert.equal(whole.length, 1, JSON.stringify(env.ranges.filter((x) => x[0] === 'BLD-area_reading.csv')));
+  assert.equal(env.rows('BLD-area_reading.csv').length, 32);
 });

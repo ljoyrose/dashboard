@@ -23,9 +23,16 @@
     return 'expires in ' + d + ' day' + (d === 1 ? '' : 's');
   }
 
-  // rows, today ('2026-10-29' or a Date), previousRows (last scan, optional) -> [{ key, kind, level, text }].
-  // Red first, then amber; inside a level the row order is kept.
-  function alerts(rows, today, previousRows) {
+  function bare(r) {
+    return String(r.url_or_domain || r.key || '').trim().toLowerCase().replace(/^https?:\/\//, '').split(/[\/?#]/)[0].replace(/^www\./, '');
+  }
+  function mailRow(r) { return r.kind === 'email-domain' || r.spf || r.dmarc || r.dkim || r.mx; }
+
+  // rows, today ('2026-10-29' or a Date), previousRows (last scan, optional), mailMap (Mail map rows that passed the
+  // header contract, optional) -> [{ key, kind, level, text }]. Red first, then amber; inside a level the row order is kept.
+  // With a Mail map: no MX is only flagged on a domain that has addresses on it (2.5), and each address on a mail
+  // domain is followed (2.6): a loop is red, an unknown target or 3 or more stops is amber.
+  function alerts(rows, today, previousRows, mailMap) {
     var out = [], prev = {};
     (previousRows || []).forEach(function (p) { if (p && p.key) prev[p.key] = p; });
     (rows || []).forEach(function (r) {
@@ -35,7 +42,10 @@
         var d = E.daysUntil(r[x[0]], today);
         if (d !== null && d <= WITHIN) add(x[1], d <= RED_WITHIN ? 'red' : 'amber', x[2] + ' ' + dayWords(d));
       });
-      var mail = E.emailProblems(r);
+      var chains = (mailMap && M && M.domainHops && mailRow(r)) ? M.domainHops(bare(r), mailMap) : [];
+      var mr = r;
+      if (mailMap && mailRow(r)) { mr = {}; Object.keys(r).forEach(function (k) { mr[k] = r[k]; }); mr.mail_addresses = chains.length; }
+      var mail = E.emailProblems(mr);
       if (mail.indexOf('DMARC missing') !== -1) add('dmarc', 'amber', 'DMARC missing');
       if (mail.indexOf('DMARC weak') !== -1) add('dmarc', 'amber', 'DMARC weak (p=none, no report address)');
       if (mail.indexOf('two SPF records') !== -1) add('spf', 'amber', 'two SPF records (mail can fail)');
@@ -47,6 +57,11 @@
         add('forward', 'amber', chain && chain.text ? chain.text : 'more than one forward hop');
       }
       if (mail.indexOf('target unknown, needs registrar export') !== -1) add('forward', 'amber', 'target unknown, needs registrar export');
+      chains.forEach(function (c) {
+        if (c.loop) add('forward-loop', 'red', c.text);
+        else if (c.unknown) add('forward', 'amber', c.address + ': target unknown: needs Namecheap export');
+        else if (c.hops >= 2) add('forward', 'amber', c.text);
+      });
       var p = prev[r.key];
       if (S) {
         var prevNs = (p && S.nameserverList(p.nameservers).length) ? p.nameservers : (S.nameserverList(r.nameservers_previous).length ? r.nameservers_previous : '');

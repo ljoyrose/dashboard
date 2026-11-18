@@ -1,0 +1,4 @@
+{
+  "cdhub": 600,
+  "why": "PR 672: the hub counts saves still waiting and the browser asks \"Leave site?\" before they are dropped (cdhub/index.html, about 0.4 KB)."
+}
