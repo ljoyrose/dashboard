@@ -31,11 +31,7 @@ var INSPECT = {
   ACCESS_FILE: 'BLD-inspect_access.csv',
   ACCESS_COLUMNS: ['id', 'tenant_id', 'link_id', 'code_id', 'table_name', 'rows', 'at'],
   // the lists a link may show, and the column on each that names the dog
-  LISTS: { subject: 'id', subject_status: 'subject_id', health_screen: 'subject_id', fit_to_breed: 'subject_id', litter: 'dam_subject_id', microchip: 'subject_id',
-           check_log: 'subject_id', area_reading: '' },
-  // 18 Nov 2026 (demo 3b): daily jobs and room temperatures. A dog's rows show only for the link's dogs; a room or whole-site
-  // row (no dog) shows on every link that ticks the list; a litter's row shows when its mum is on the link.
-  SITE_LISTS: { check_log: true, area_reading: true },
+  LISTS: { subject: 'id', subject_status: 'subject_id', health_screen: 'subject_id', fit_to_breed: 'subject_id', litter: 'dam_subject_id', microchip: 'subject_id' },
   REDACTIONS: ['', 'last4'],
   // how long a link lasts is NOT here: rule rows external.default_hours.<role> and external.max_hours.<role> (externalRule_)
   MAX_DOGS: 200,
@@ -115,68 +111,8 @@ function inspectJobRows_(key, tenant) {
   });
 }
 
-/* 18 Nov 2026 (demo 3b): the daily jobs and room temperatures an inspector may see. Only these columns are made: names, not
-   ids, and never who typed it or how it was entered (those stay the owner's, as for Fit to Breed). Corrected rows show as corrected. */
-var INSPECT_DAILY_COLUMNS = ['id', 'tenant_id', 'subject_id', 'job', 'room', 'litter', 'done_on', 'time', 'outcome', 'item', 'amount', 'note'];
-var INSPECT_TEMP_COLUMNS = ['id', 'tenant_id', 'room', 'done_on', 'slot', 'time', 'min_c', 'max_c', 'spot_c', 'in_range', 'room_empty', 'mitigation_note'];
-
-function inspectNames_(file, col, tenant) {
-  var f = store_read_(file, false), out = {};
-  ((f && f.records) || []).forEach(function (r) { if (!r.tenant_id || r.tenant_id === tenant) out[r.id] = r; });
-  return out;
-}
-function inspectWhen_(at) {
-  var d = new Date(String(at || ''));
-  if (isNaN(d.getTime())) return { day: String(at || '').slice(0, 10), time: '' };
-  var iso = londonIso_(d);
-  return { day: iso.slice(0, 10), time: iso.slice(11, 16) };
-}
-function inspectLatest_(records) {
-  var replaced = {};
-  records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
-  return records.filter(function (r) { return !replaced[r.id]; });
-}
-
-/** Rows for the two site lists, newest first, each with _dam (a litter row's mum) for the dog check. null = no file. */
-function inspectSiteRows_(key, tenant) {
-  var f = store_read_(READABLE[key].file, false);
-  if (!f) return null;
-  var areas = inspectNames_(READABLE.area.file, 'code', tenant), mine = f.records.filter(function (r) { return !r.tenant_id || r.tenant_id === tenant; });
-  var room = function (id) { var a = areas[id]; return id ? String((a && (a.code || a.name)) || '') : ''; };
-  var rows;
-  if (key === 'area_reading') {
-    rows = inspectLatest_(mine).map(function (r) {
-      var w = inspectWhen_(r.taken_at), day = /^\d{4}-\d{2}-\d{2}/.test(String(r.period_start || '')) ? String(r.period_start).slice(0, 10) : w.day;
-      return { id: r.id, tenant_id: r.tenant_id || tenant, room: room(r.area_id), done_on: day, slot: r.reading_type || '', time: w.time,
-        min_c: r.min_c || '', max_c: r.max_c || '', spot_c: r.spot_c || '', in_range: r.in_range || '', room_empty: r.room_empty || '', mitigation_note: r.mitigation_note || '' };
-    });
-    rows.header = INSPECT_TEMP_COLUMNS;
-  } else {
-    var types = inspectNames_(READABLE.check_type.file, 'label', tenant), litters = inspectNames_(READABLE.litter.file, 'dam_subject_id', tenant);
-    var subjects = inspectNames_(READABLE.subject.file, 'name', tenant);
-    var litterName = function (l) { var d = l && subjects[l.dam_subject_id]; return l ? ('Litter of ' + ((d && d.name) || 'unknown') + (l.dob ? ', born ' + l.dob : '')) : ''; };
-    rows = inspectLatest_(mine).filter(function (r) {
-      var t = types[r.check_type_id];
-      if (!t) return false;
-      if (Object.prototype.hasOwnProperty.call(INSPECT.LISTS, t.type_key)) return false;   // a job with its own list (Fit to Breed) shows there
-      return true;
-    }).map(function (r) {
-      var t = types[r.check_type_id], w = inspectWhen_(r.happened_at || r.taken_at), lit = r.litter_id ? litters[r.litter_id] : null;
-      var o = { id: r.id, tenant_id: r.tenant_id || tenant, subject_id: r.subject_id || '', job: t.label || t.type_key || '', room: room(r.area_id),
-        litter: litterName(lit), done_on: w.day, time: r.time_given === 'false' ? '' : w.time,
-        outcome: r.outcome || '', item: r.item || '', amount: r.amount || '', note: r.note || '' };
-      Object.defineProperty(o, '_dam', { value: r.litter_id ? String((lit && lit.dam_subject_id) || '\u0000') : '', enumerable: false });
-      return o;
-    });
-    rows.header = INSPECT_DAILY_COLUMNS;
-  }
-  rows.sort(function (a, b) { var x = a.done_on + ' ' + a.time, y = b.done_on + ' ' + b.time; return x < y ? 1 : x > y ? -1 : 0; });
-  return { header: rows.header, records: rows };
-}
-
 /** The rows a list shows: its own file, plus the job's records when the key is also a job. null = neither exists. */
 function inspectListData_(key, tenant) {
-  if (INSPECT.SITE_LISTS[key]) return inspectSiteRows_(key, tenant);
   var f = store_read_(READABLE[key].file, false), jobs = inspectJobRows_(key, tenant);
   if (!jobs) return f;
   var header = f ? f.header.slice() : [];
@@ -215,28 +151,22 @@ function inspectSinkRead_(req, who, now) {
   });
   var access = inspectRead_(INSPECT.ACCESS_FILE);
 
-  if (!Object.keys(cols).some(function (c) { return cols[c] !== null; })) throw denied;   // nothing ticked on this list: say so before any file is read
   var data = inspectListData_(key, tenant);
   if (!data) throw err_('FILE_MISSING', 'That list does not exist yet.');
   var fields = data.header.filter(function (c) {
     return c !== 'tenant_id' && Object.prototype.hasOwnProperty.call(cols, c) && cols[c] !== null;
   });
-  if (!fields.length || (subjCol && data.header.indexOf(subjCol) < 0)) throw denied;
-  // the column naming the dog always comes too (an internal id, never redacted), so the page can put each dog's rows together;
-  // on the site lists the room and litter names come too, for the same reason
-  var site = !!INSPECT.SITE_LISTS[key];
-  (site ? ['litter', 'room'] : []).concat(subjCol ? [subjCol] : []).forEach(function (c) {
-    if (data.header.indexOf(c) < 0) return;
-    if (fields.indexOf(c) < 0) fields.unshift(c);
-    cols[c] = '';
-  });
+  if (!fields.length || data.header.indexOf(subjCol) < 0) throw denied;
+  // the column naming the dog always comes too (an internal id, never redacted), so the page can put each dog's rows together
+  if (fields.indexOf(subjCol) < 0) fields.unshift(subjCol);
+  cols[subjCol] = '';
 
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0, rows = [], truncated = false, redacted = {};
   fields.forEach(function (c) { if (cols[c]) redacted[c] = cols[c]; });
   for (var i = 0; i < data.records.length; i++) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
-    if (site ? !inspectSiteRowOk_(r, dogs) : !dogs[r[subjCol]]) continue;
+    if (!dogs[r[subjCol]]) continue;
     if (rows.length >= BLD.LIMITS.READ_MAX_ROWS) { truncated = true; break; }
     var o = {};
     fields.forEach(function (c) {
@@ -258,13 +188,6 @@ function inspectSinkRead_(req, who, now) {
     table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated, redacted: redacted,
     scope: 'the dogs on this link', ends: who.ends || '', as_of: londonIso_(now)
   };
-}
-
-/** A site-list row: a dog's row only for the link's dogs, a litter's row only when its mum is on the link, room and site rows always. */
-function inspectSiteRowOk_(r, dogs) {
-  if (r.subject_id) return !!dogs[r.subject_id];
-  if (r._dam) return !!dogs[r._dam];
-  return true;
 }
 
 /** The end of London day `ymd` as a London time with its offset, e.g. 2026-11-19T23:59:59Z. */

@@ -22,15 +22,9 @@
     { key: 'subject_status', title: 'Status', dog: 'subject_id', date: 'from_date' },
     { key: 'health_screen', title: 'Health tests', dog: 'subject_id', date: 'tested_on' },
     { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },   // done_on: a job record (15 Nov 2026)
-    { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' },
-    { key: 'check_log', title: 'Daily checks', dog: 'subject_id', date: 'done_on', time: 'time' }   // demo 3b, 18 Nov 2026
+    { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' }
   ];
-  /* Rooms and the whole site (demo 3b): rows with no dog, grouped by room, a litter, or "Whole site". */
-  var SITE = [
-    { key: 'area_reading', title: 'Temperatures' },
-    { key: 'check_log', title: 'Daily jobs' }
-  ];
-  var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1, room: 1, litter: 1 };
+  var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1 };
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function day(v) {
@@ -40,8 +34,6 @@
   function words(col) {
     var s = String(col).replace(/_/g, ' ');
     if (s === 'dob') return 'DOB';
-    var named = { 'done on': 'Date', 'min c': 'Min °C', 'max c': 'Max °C', 'spot c': 'Spot °C' };
-    if (named[s]) return named[s];
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
   /* the first date column a row has, of those named by | */
@@ -71,30 +63,10 @@
         lists: LISTS.filter(function (L) { return res[L.key] && res[L.key].rows; }).map(function (L) {
           var fields = res[L.key].fields.filter(function (c) { return !HIDE[c]; });
           var rows = res[L.key].rows.filter(function (r) { return r[L.dog] === d.id; })
-            .sort(function (a, b) { return String(dateOf(b, L.date) + (L.time ? ' ' + (b[L.time] || '') : '')).localeCompare(String(dateOf(a, L.date) + (L.time ? ' ' + (a[L.time] || '') : ''))); });
+            .sort(function (a, b) { return String(dateOf(b, L.date)).localeCompare(String(dateOf(a, L.date))); });
           return { title: L.title, rows: rows.map(function (r) { return fields.map(function (c) { return { label: words(c), value: show(c, r[c]) }; }); }) };
         }).filter(function (l) { return l.rows.length; })
       };
-    });
-  }
-
-  /** Rows with no dog, grouped: [{place, lists:[{title, rows}]}], rooms A to Z, then litters, then Whole site. Rows keep the order sent (newest first). Pure, for tests. */
-  function buildSite(res) {
-    var groups = {}, order = [];
-    SITE.forEach(function (L) {
-      var got = res[L.key];
-      if (!got || !got.rows) return;
-      var fields = got.fields.filter(function (c) { return !HIDE[c]; });
-      got.rows.forEach(function (r) {
-        if (r.subject_id) return;
-        var place = r.room ? 'Room ' + r.room : (r.litter || 'Whole site');
-        if (!groups[place]) { groups[place] = {}; order.push(place); }
-        (groups[place][L.title] = groups[place][L.title] || []).push(fields.map(function (c) { return { label: words(c), value: show(c, r[c]) }; }));
-      });
-    });
-    var rank = function (p) { return p === 'Whole site' ? 2 : /^Litter /.test(p) ? 1 : 0; };
-    return order.sort(function (a, b) { return rank(a) - rank(b) || a.localeCompare(b); }).map(function (p) {
-      return { place: p, lists: SITE.filter(function (L) { return groups[p][L.title]; }).map(function (L) { return { title: L.title, rows: groups[p][L.title] }; }) };
     });
   }
 
@@ -113,11 +85,10 @@
     screen.textContent = '';
     screen.appendChild(el('h1', '', 'Breeding records'));
     if (ends) screen.appendChild(el('p', 'ins-ends', 'Read only. This link ends ' + day(ends) + '.'));
-    var dogs = build(res), places = buildSite(res);
+    var dogs = build(res);
     if (notShared && notShared.length) screen.appendChild(el('p', 'ins-ends ins-not', 'Not shared on this link: ' + notShared.join(', ') + '.'));
-    if (!dogs.length && !places.length) { screen.appendChild(el('p', 'sub', 'No dogs have been shared on this link.')); return; }
-    dogs.map(function (d) { return { name: d.name, facts: d.facts, lists: d.lists }; })
-      .concat(places.map(function (p) { return { name: p.place, facts: [], lists: p.lists }; })).forEach(function (d) {
+    if (!dogs.length) { screen.appendChild(el('p', 'sub', 'No dogs have been shared on this link.')); return; }
+    dogs.forEach(function (d) {
       var card = el('section', 'ins-dog');
       card.appendChild(el('h2', '', d.name));
       if (d.facts.length) card.appendChild(el('p', 'ins-facts', d.facts.join(' · ')));
@@ -152,7 +123,7 @@
     link = null;
     message(screen, 'Loading…');
     var res = {}, ends = '', notShared = [];
-    var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; }), ['area_reading']);
+    var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; }));
     var chain = Promise.resolve(true);
     keys.forEach(function (k) {
       chain = chain.then(function (go) {
@@ -170,9 +141,9 @@
     });
     chain.then(function (ok) { if (ok) render(screen, res, ends, notShared); save.clearCode(); });
   }
-  function title(k) { var L = LISTS.concat(SITE).filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
+  function title(k) { var L = LISTS.filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
   function root_BLDSave() { return (typeof self !== 'undefined' ? self : this).BLDSave; }
 
   if (typeof document !== 'undefined' && document.getElementById('screen')) start();
-  return { parseHash: parseHash, build: build, buildSite: buildSite, day: day };
+  return { parseHash: parseHash, build: build, day: day };
 }));
