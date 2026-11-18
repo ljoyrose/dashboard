@@ -135,7 +135,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
   await expect(drill.locator('#d-out')).toHaveText('5.3 / -1.9 °C, rain 0 mm');
   await expect(drill.locator('#d-out')).toHaveText(RULES.words.outsideLine);
   const lines = drill.locator('.rl');
-  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 (retired 10 Jan 2026) · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
+  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);   // Lisa 18 Nov 2026: no "(retired …)" in the calendar
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
   for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
@@ -392,7 +392,8 @@ test('audit: a room holding a puppy under 4 weeks is judged by the puppy band th
   const r1 = page.locator('#drill .rl', { hasText: 'R1' });
   await expect(r1.locator('.warn')).toHaveCount(0);
   await expect(r1).toContainText('AM 12.0–15.0 ✓');
-  await expect(r1.locator('.cool-act').first()).toHaveText('· puppies: bed spot not recorded');
+  await expect(r1.locator('.cool-act')).toHaveCount(0);   // Lisa 18 Nov 2026: no "bed spot not recorded" words
+  await expect(r1).not.toContainText('bed spot not recorded');
   // R2 has no dogs: the adult band, 12.0–15.0 is in
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
   await expect(page.locator('#drill .rl', { hasText: 'R2' }).locator('.warn')).toHaveCount(0);
