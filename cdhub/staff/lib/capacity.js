@@ -82,22 +82,33 @@
     return b ? { size: b, from: 'range', kg: mid } : { size: '', from: '', kg: null };
   }
 
-  /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
-  function accessOf(rows, areaId) {
+  /**
+   * Whether one access row counts. A row whose to_date is before its from_date was voided (it never applied; OV12 18 Nov
+   * 2026, 3A.1/2) and never counts. With a date, the row must also be in force that day (inForce: started, not ended).
+   */
+  function accessRowCounts(r, date) {
+    var f = ymd(r && r.from_date), t = ymd(r && r.to_date);
+    if (f && t && t < f) return false;
+    return !ymd(date) || inForce([r], date, 'from_date').length === 1;
+  }
+  /** The flap setting in force: the last counting row for that room with a value (rows are only ever added). */
+  function accessOf(rows, areaId, date) {
     var a = '';
-    (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type) a = String(r.access_type).toLowerCase(); });
+    (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type && accessRowCounts(r, date)) a = String(r.access_type).toLowerCase(); });
     return a === 'free' || a === 'limited' ? a : '';
   }
   /**
    * The flap setting in force on a date (LD-SC audit, OV11 15 Nov 2026). area_access rows are dated: from_date (older
    * rows may carry effective_from) and to_date, the shared rule above. Of the rows in force that day the latest start
-   * wins; on the same start, the later row. An undated row counts as the oldest. No date: every row (as accessOf).
+   * wins; on the same start, the later row. An undated row counts as the oldest. A voided row (to_date before from_date)
+   * never counts. No date: every other row.
    */
   function accessOn(rows, areaId, iso) {
     var a = '', best = null, d = ymd(iso);
     (rows || []).forEach(function (r) {
       if (!r || r.area_id !== areaId || !r.access_type) return;
       var f = ymd(r.from_date || r.effective_from), t = ymd(r.to_date);
+      if (f && t && t < f) return; // voided: to_date before from_date never counts (OV12 18 Nov 2026)
       if (d && ((f && f > d) || (t && d > t))) return;
       if (best === null || f >= best) { best = f; a = String(r.access_type).toLowerCase(); }
     });
@@ -277,6 +288,6 @@
     if (r.limit === null) return takes + (r.count ? r.count + ' here. ' : '') + r.notes.join(' ');
     return takes + r.count + ' of ' + r.limit + ' now.' + (r.notes.length ? ' ' + r.notes.join(' ') : '');
   }
-  return { check: check, audit: audit, accessOf: accessOf, accessOn: accessOn, limitsOn: limitsOn, facts: facts, summary: summary, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, accessOn: accessOn, limitsOn: limitsOn, facts: facts, summary: summary, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));
