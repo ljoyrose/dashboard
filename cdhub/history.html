@@ -597,12 +597,12 @@ function openDrill(isoDate){
           var lo=parseFloat(t.min),hi=parseFloat(t.max);
           var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
           var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
-          var color=err?'var(--ljr-2)':warn?'var(--ljr-3)':'var(--ink)';
+          var color=err?'var(--muted)':warn?'var(--muted)':'var(--ink)';
           return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
         };
         var ast=areaStatusForArea(ar,range);
         var spill=ast==='flag'?'<span class="pill ph">flag</span>'
-          :ast==='warn'?'<span class="pill" style="border-color:var(--ljr-3);color:var(--ljr-3-text)">warn</span>'
+          :ast==='warn'?'<span class="pill po">warn</span>'
           :'<span class="pill po">ok</span>';
         return'<tr>'
           +'<td style="font-weight:600;text-transform:capitalize">'+esc(areaName(aid))+'</td>'
@@ -814,7 +814,7 @@ function monthCal(y, classOf, kind){
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
       var ist=date<=TODAY_STR?areaStatus(date):'';
-      var dotHtml=(kind==='out')?(ist==='flag'?'<span class="d-dot idot-flag"></span>':ist==='warn'?'<span class="d-dot idot-warn"></span>':''):'';
+      var dotHtml=(kind==='out')?(ist==='flag'?'<span class="d-dot idot-flag"></span>':''):'';
       var cellCls=(kind==='out'&&VIEW_MODE==='compliance'&&date<=TODAY_STR)?(ist?'comp-'+ist:'comp-nd'):cls;
       h+='<button type="button" class="d '+cellCls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'>'+dotHtml+'</button>';
     }
