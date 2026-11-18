@@ -331,3 +331,67 @@ test('fit to breed with no old file still shows the job\'s records', () => {
   const r = read(env, m.result.code, 'fit_to_breed');
   assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)), [{ subject_id: 'sub-test-a', done_on: '2026-08-13', valid_until: '' }]);   // as needed: no end shown
 });
+
+// 18 Nov 2026 (CD Hub demo): temperatures and job records through the same link
+function siteSetup() {
+  const env = setup();
+  const put = (name, lines) => { const f = env.file(name); if (f.length) { f[0].content = crlf(lines); f[0].sheet = undefined; } else env.addFile(name, crlf(lines)); };
+  put('BLD-area.csv', ['id,tenant_id,name', `area-r1,${fx.TENANT},Test Room 1`, `area-r2,${fx.TENANT},Test Room 2`]);
+  put('BLD-area_reading.csv', ['id,tenant_id,area_id,min_c,max_c,taken_at,taken_by,corrects_id',
+    `rdg-1,${fx.TENANT},area-r1,18,21,2026-10-10T08:00:00+01:00,Test Staff,`,
+    `rdg-2,${fx.TENANT},area-r2,19,22,2026-10-12T08:00:00+01:00,Test Staff,`,
+    `rdg-3,${fx.TENANT},area-r2,19.5,22,2026-10-12T09:00:00+01:00,Test Staff,rdg-2`,
+    `rdg-x,other-tenant,area-r1,1,2,2026-10-12T08:00:00+01:00,Other,`]);
+  put('BLD-check_type.csv', ['id,tenant_id,type_key,label', `cty-w,${fx.TENANT},water_bowls,Water bowls washed`, `cty-h,${fx.TENANT},health_check_all,Health check: all dogs`]);
+  put('BLD-check_log.csv', ['id,tenant_id,check_type_id,area_id,subject_id,outcome,happened_at,taken_by,corrects_id',
+    `clg-1,${fx.TENANT},cty-w,,,done,2026-10-11T09:00:00+01:00,Test Staff,`,
+    `clg-2,${fx.TENANT},cty-h,area-r1,sub-test-a,ok,2026-10-11T08:00:00+01:00,Test Staff,`,
+    `clg-3,${fx.TENANT},cty-h,area-r1,sub-test-b,ok,2026-10-11T08:01:00+01:00,Test Staff,`]);
+  return env;
+}
+
+test('temperatures: every room, newest first, room names, corrected readings only as their correction', () => {
+  const env = siteSetup();
+  const m = make(env, { fields: { subject: ['name'], area_reading: ['room', 'min_c', 'max_c', 'taken_at'] } });
+  assert.equal(m.ok, true, JSON.stringify(m));
+  const r = read(env, m.result.code, 'area_reading');
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(Array.from(r.result.fields), ['min_c', 'max_c', 'taken_at', 'room']);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)).map((x) => [x.room, x.min_c]), [['Test Room 2', '19.5'], ['Test Room 1', '18']]);
+});
+
+test('job records: names not ids; a record about one dog only for the link dogs; site jobs always', () => {
+  const env = siteSetup();
+  const m = make(env, { fields: { subject: ['name'], check_log: ['job', 'room', 'dog', 'outcome', 'happened_at'] } });
+  assert.equal(m.ok, true, JSON.stringify(m));
+  const r = read(env, m.result.code, 'check_log');
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = JSON.parse(JSON.stringify(r.result.rows));
+  assert.deepEqual(rows.map((x) => x.job), ['Water bowls washed', 'Health check: all dogs']);
+  assert.equal(rows[1].dog, 'Test A');
+  assert.equal(rows[1].room, 'Test Room 1');
+  assert.equal(JSON.stringify(rows).includes('sub-test-b'), false);
+  assert.equal(JSON.stringify(rows).includes('cty-'), false);
+});
+
+test('the owner may limit the days shown; a bad range is refused; inspectors still cannot save', () => {
+  const env = siteSetup();
+  const m = make(env, { data_from_date: '2026-10-11', data_to_date: '2026-10-11', fields: { subject: ['name'], area_reading: ['room', 'taken_at'], check_log: ['job'] } });
+  assert.equal(m.ok, true, JSON.stringify(m));
+  assert.equal(read(env, m.result.code, 'area_reading').result.rows.length, 0);
+  assert.equal(read(env, m.result.code, 'check_log').result.rows.length, 2);
+  const bad = make(env, { data_from_date: '2026-10-12', data_to_date: '2026-10-11', fields: { subject: ['name'] } });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, 'INVALID');
+  const s = ok(() => env.ctx.sinkHandle_ ? env.ctx.sinkHandle_({ v: 1, code: m.result.code, table: 'check_log', action: 'add', fields: { check_type_id: 'cty-w' } }) : null);
+  assert.equal(JSON.stringify(s).includes('"ok":true,"result":{"saved"'), false);
+});
+
+test('the owner choices list the readable columns for temperatures and jobs', () => {
+  const env = siteSetup();
+  const ch = env.ctx.sinkInspectChoices_();
+  assert.ok(ch.lists.area_reading.includes('room'));
+  assert.ok(ch.lists.check_log.includes('job'));
+  assert.ok(ch.lists.check_log.includes('dog'));
+  assert.equal(ch.keys.area_reading, '');
+});
