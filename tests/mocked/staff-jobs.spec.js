@@ -137,11 +137,11 @@ test('Problem (was Report) is on every screen and carries the dog just scanned',
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-report', subject_id: 'dog-1', outcome: 'recorded', note: 'Pretend note' } });
 });
 
-test('jobs are listed A-Z, with a group where its name falls, whatever is late', async ({ page }) => {
+test('jobs: daily first, then less often (a group by its most frequent job), as needed last; A-Z within, whatever is late', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.locator('[data-group="Grooming"]')).toBeVisible();
-  await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Walk', 'Weigh']);
+  await expect(page.locator('.job .nm')).toHaveText(['Walk', 'Grooming', 'Weigh']);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
 });
@@ -158,6 +158,20 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   expect(sent[0].fields.dog_ids).toBe('dog-1');
   expect(sent[0].fields.area_id).toBe('area-1');
   expect(sent[0].fields.how_recorded).toBe('scanned');
+});
+
+test('a room scan shows who is in the room now; a name opens that dog\'s jobs', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const here = page.locator('[data-k="here"]');
+  await expect(here.locator('h3')).toHaveText('Here now');
+  await expect(here.locator('.chip')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Move dogs' })).toBeVisible();
+  const tagged = here.locator('button.chip').first();
+  await expect(tagged).toBeVisible();
+  await tagged.click();
+  await expect(page).toHaveURL(/#s\/[A-Z2-9]+$/);
+  await expect(page.locator('[data-k="here"]')).toHaveCount(0);   // a dog screen has no room list
 });
 
 test('a scanned room has a Temperature button that opens the temperature screen', async ({ page }) => {
