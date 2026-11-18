@@ -573,3 +573,42 @@ test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) 
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
 });
+
+// Lisa 18 Nov 2026: "PDF A and B and also both month and year - all options selectable by user". Print / PDF builds the
+// pages from the same day rules as the screen: B summary calendars, A room tables, for one month or a whole year.
+test('Print / PDF: summary and room table for a month, totals and outside list from the records; the year skips months not begun', async ({ page, guard }) => {
+  await open(page, guard);
+  await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
+  await page.locator('[data-rp-open]').click();
+  const panel = page.locator('#rpPanel');
+  await expect(panel).toBeVisible();
+  await panel.locator('#rpMonth').selectOption('0');
+  await panel.locator('#rpYear').selectOption('2026');
+  await panel.locator('#rpGo').click();
+  expect(await page.evaluate(() => window.__printed)).toBe(1);
+  const rep = page.locator('#report');
+  await expect(rep.locator('.rp-page')).toHaveCount(2);
+  await expect(rep.locator('[data-rp="summary"]')).toHaveAttribute('data-month', '2026-01');
+  await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4 (retired 10 Jan 2026)']);   // the page's own name for a retired room
+  const want = expected();
+  await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · missed: ${want.miss} · outside the limit: ${want.out}`);
+  await expect(rep.locator('.rp-out li', { hasText: 'R1' }).first()).toContainText('nothing recorded');
+  await expect(rep.locator('[data-rp="table"] td.miss').first()).toHaveText('MISS');
+  // whole year, tables only: January only (the rest of 2026 has not begun on the pretend date)
+  await panel.locator('input[name="rpPeriod"][value="year"]').check();
+  await panel.locator('#rpSummary').uncheck();
+  await panel.locator('#rpGo').click();
+  await expect(rep.locator('.rp-page')).toHaveCount(1);
+  await expect(rep.locator('[data-rp="table"]')).toHaveCount(1);
+  // nothing ticked: says so, prints nothing
+  await panel.locator('#rpTable').uncheck();
+  await panel.locator('#rpGo').click();
+  await expect(panel.locator('#rpMsg')).toContainText('Tick at least one');
+  expect(await page.evaluate(() => window.__printed)).toBe(2);
+  // a sample PDF of the month for a person to look at (invented rows only)
+  await panel.locator('#rpTable').check(); await panel.locator('#rpSummary').check();
+  await panel.locator('input[name="rpPeriod"][value="month"]').check();
+  await panel.locator('#rpGo').click();
+  await page.emulateMedia({ media: 'print' });
+  if (process.env.RP_SAMPLE) await page.pdf({ path: process.env.RP_SAMPLE, format: 'A4', landscape: true, printBackground: true });
+});

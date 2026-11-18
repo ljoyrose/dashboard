@@ -840,6 +840,7 @@ function renderPage(){
     +'<button class="tab" onclick="setView(\'b\',this)">Year strip</button>'
     +'<button class="tab" onclick="setView(\'c\',this)">Month cards</button>'
     +'<a class="btn" href="./index.html#/round">Back to the round</a>'
+    +'<button class="btn" type="button" data-rp-open onclick="TempsReport.open()">Print / PDF</button>'
     +'</div>'
     +'<div id="view-d" class="view on">'+buildRound(ROUND_DATE)+'</div>'
     +'<div id="view-a" class="view">'+buildHeatMap(YEAR)+'</div>'
@@ -847,4 +848,5 @@ function renderPage(){
     +'<div id="view-c" class="view">'+buildMonthCards(YEAR)+'</div>';
 }
 </script>
+<script src="temps-report.js"></script>
 </body></html>
