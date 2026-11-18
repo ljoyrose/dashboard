@@ -212,6 +212,10 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
     <p class="dsec">Outside</p>
     <p class="oline" id="d-out">—</p>
   </section>
+  <section class="dblock" id="d-rooms" style="display:none">
+    <p class="dsec">Rooms</p>
+    <div id="d-rooms-inner"></div>
+  </section>
   <section class="dblock" id="d-areas" style="display:none">
     <p class="dsec">Indoors °C</p>
     <div id="d-areas-inner"></div>
@@ -569,6 +573,15 @@ function openDrill(isoDate){
   var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
   el('d-title').textContent=dLabel;
   el('d-out').textContent=outsideLine(isoDate)||'—';
+  var rooms=dayRooms(isoDate);
+  var roomsEl=el('d-rooms');
+  if(rooms.length){
+    el('d-rooms-inner').innerHTML=rooms.map(function(x){ return roomLine(x,true); }).join('');
+    roomsEl.style.display='';
+  }else{
+    roomsEl.style.display='none';
+    el('d-rooms-inner').innerHTML='';
+  }
   var dayAreas=AREA_DAYS[isoDate]||{};
   var areaIds=areasInWalk(Object.keys(dayAreas));
   var areasEl=el('d-areas');
