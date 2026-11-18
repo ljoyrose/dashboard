@@ -75,3 +75,32 @@ test('a save returns how long its steps took (numbers only), and ?status=1 lists
   const words = JSON.stringify(st.lastSaveTimings);
   assert.ok(!/@|tenant|area-|rdg-/.test(words), 'no data or names in the timings: ' + words);
 });
+
+test('a refused save is listed in ?status=1 with its reason, table, room and slot, but no code, token or name', () => {
+  const { req } = require('./harness');
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  const post = (r) => JSON.parse(env.ctx.doPost({ postData: { contents: JSON.stringify(r) } }).getContent());
+  const first = req(env, {});
+  assert.equal(post(first).ok, true);
+  const again = Object.assign({}, first, { request_id: first.request_id + 'x' });
+  const out = post(again);                                  // the same reading again: turned down
+  assert.equal(out.ok, false, JSON.stringify(out));
+  const st = JSON.parse(env.ctx.doGet({ parameter: { status: '1' } }).getContent());
+  assert.equal(st.lastRefusals.length, 1);
+  const x = st.lastRefusals[0];
+  assert.equal(x.code, out.code);
+  assert.equal(x.table, 'area_reading');
+  assert.equal(x.room, first.fields.area_id);
+  assert.ok(x.message);
+  const words = JSON.stringify(st.lastRefusals);
+  assert.ok(!words.includes(String(first.code)), 'no staff code');
+  assert.ok(!/@/.test(words), 'no emails');
+});
+
+test('a request that cannot be read is listed without failing', () => {
+  const env = standardEnv();
+  const out = JSON.parse(env.ctx.doPost({ postData: { contents: 'not json' } }).getContent());
+  assert.equal(out.code, 'BAD_REQUEST');
+  const st = JSON.parse(env.ctx.doGet({ parameter: { status: '1' } }).getContent());
+  assert.equal(st.lastRefusals[0].code, 'BAD_REQUEST');
+});
