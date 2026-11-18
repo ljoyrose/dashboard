@@ -43,7 +43,7 @@
 .szrow .dogs{display:flex;gap:3px;flex-wrap:wrap}.szrow .dogs i svg{width:24px;height:18px;fill:var(--c);display:block}
 .szrow .n{font-size:24px;font-weight:600}
 .szrow.none{border-style:dashed}.szrow.none small{grid-column:1/-1;font-size:11px}
-.rcard .nolim{border:3px dashed #B3261E;border-radius:8px;padding:10px;font-weight:600;margin:0}
+.rcard .nolim{border:3px dashed var(--ljr-2-icon);border-radius:8px;padding:10px;font-weight:600;margin:0}
 .rcard .foot{margin:0;text-align:center;font-weight:600;font-size:13px}
 .rcard>*,.dcard>*{flex:none}
 /* margin 0: the browser then has no room for its own header and footer, which print the page address and title (Lisa 13 Nov 2026: no address on any print-out). The 8mm moves into the body. */
