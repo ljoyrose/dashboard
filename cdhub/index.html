@@ -727,7 +727,7 @@ function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><d
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
 function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
 /* a dog's documents: files linked from the dog, labelled by BLD-doc_type (Lisa 17 Nov 2026) */
-function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
+function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],records:function(t){ return T['BLD-'+t+'.csv']||T['BLD-'+String(t).replace(/s$/,'')+'.csv']||[]; },recordLabel:function(t,r){ var ct=(T['BLD-check_type.csv']||[]).filter(function(x){ return x.id===r.check_type_id; })[0]; return ct?ct.label:''; },today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -1433,6 +1433,8 @@ function isISODate(v){
  return dt.getUTCFullYear()===y && dt.getUTCMonth()===m-1 && dt.getUTCDate()===d;
 }
 function isISOStamp(v){ return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v); }
+/* year-month (2023-03) is ISO 8601 too: batch use-by dates are month-only in any trade (Lisa 18 Nov 2026, "resolve"). Never given a day here. */
+function isISOMonth(v){ return /^\d{4}-(0[1-9]|1[0-2])$/.test(v); }
 
 var REFMAP={subject_id:'BLD-subject.csv',dam_subject_id:'BLD-subject.csv',sire_subject_id:'BLD-subject.csv',
  dam_id:'BLD-subject.csv',sire_id:'BLD-subject.csv',birth_litter_id:'BLD-litter.csv',litter_id:'BLD-litter.csv',
@@ -1540,7 +1542,7 @@ function dateAudit(){
    var offenders=0, sample='';
    for(var i=0;i<rows.length;i++){
     var v=(rows[i][c]||'').trim(); if(!v) continue;
-    if(!isISODate(v) && !isISOStamp(v)){ offenders++; if(!sample) sample=v; }
+    if(!isISODate(v) && !isISOStamp(v) && !isISOMonth(v)){ offenders++; if(!sample) sample=v; }
    }
    if(offenders) bad.push(f.replace(/^BLD-|\.csv$/g,'')+'.'+c+' ('+offenders+', e.g. '+sample+')');
   });
@@ -1769,7 +1771,7 @@ function checks(){
      :plural(rc.checked,'reference')+' checked, all resolve'+(rc.archived?' ('+rc.archived+' point at archived records, kept as history)':'')});
  var dc=dateAudit();
  out.push({k:'dates',ok:!dc.bad.length,
-   msg:dc.bad.length? plural(dc.bad.length,'date column')+(dc.bad.length===1?' is':' are')+' not written as year-month-day (2026-03-02): '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')
+   msg:dc.bad.length? plural(dc.bad.length,'date column')+(dc.bad.length===1?' is':' are')+' not written as year-month-day (2026-03-02) or year-month (2026-03): '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')
      :plural(dc.n,'date column')+' checked across '+plural(dc.t,'table')+', all written the same way'});
  var ra=ruleAudit();
  out.push({k:'rule changes',ok:!ra.bad.length,
