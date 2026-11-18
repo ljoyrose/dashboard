@@ -81,8 +81,8 @@ test('the dog page shows the percent line, Scored on, n of m met, x of y and a T
   View.open('');
   assert.match(html, /Target 60%\. This dog \d+%\./);
   assert.match(html, /Scored on 13 Nov 2026/);
-  assert.match(html, /Section G<\/span> <span class="cnt wide bb-cnt bb-att">1 of 2 met/);
-  assert.match(html, /Section B<\/span> <span class="cnt wide bb-cnt">10 of 10/);
+  assert.match(html, /Section G<\/span>[\s\S]{0,800}?<span class="cnt wide bb-cnt bb-att">1 of 2 met/);
+  assert.match(html, /Section B<\/span>[\s\S]{0,800}?<span class="cnt wide bb-cnt">10 of 10/);
   assert.match(html, /To prove: a dated record of Check Two/);
   assert.doesNotMatch(html, /Unproven/i);
   // a check's own proof_label names the evidence still needed
@@ -101,7 +101,7 @@ test('done lines fold under Show done when the section also has things to do', (
   View.open('score.f1');
   const html = View.page(v(notDue({ 'BLD-exam2.csv': [] })));
   View.open('');
-  assert.match(html, /data-bb-band="g"[\s\S]*Check Two[\s\S]*<details class="bb-done"[^>]*><summary>Show done <span class="cnt">1<\/span><\/summary>[\s\S]*Check One/);
+  assert.match(html, /data-bb-band="g"[\s\S]*Check Two[\s\S]*<details class="bb-showdone"[^>]*><summary>Show done <span class="cnt">1<\/span><\/summary>[\s\S]*Check One/);
 });
 
 test('Calendar: Due, Done and All counts (All = Due + Done); done = a valid dated record; overdue and due from the rules', () => {
@@ -139,25 +139,19 @@ test('the Calendar page: Due chosen first, live counts, Monday-start month, days
   assert.doesNotMatch(day, /Test Dog B, Check One/);
 });
 
-test('band colours and icons come from the band row; blank cells fall back to the colour word; an unknown icon is a plain mark', () => {
-  const b = T()['BLD-score_band.csv'];
-  assert.deepEqual(View.bandPaint(b[0]), { line: '#ee4035', light: '#ca362d', dark: '#f0625a' });
-  assert.deepEqual(View.bandPaint(b[1]), { line: 'var(--ljr-7)', light: 'var(--ljr-7-icon)', dark: 'var(--ljr-7-icon)' });
-  assert.deepEqual(View.bandPaint({ colour: 'pink', line_colour: 'url(x)', icon_light: 'ljr-6' }), { line: 'var(--line)', light: 'var(--ljr-6)', dark: 'var(--ljr-6)' });
-  assert.equal(View.bandIcon(b[0]), View.BAND_ICON.star);
-  assert.equal(View.bandIcon(b[1]), View.BAND_ICON.target);
-  assert.notEqual(View.bandIcon(b[2]), View.BAND_ICON.target);
-  assert.equal(View.bandIcon({ kind: 'gate' }), View.BAND_ICON.star);
-  assert.equal(View.bandIcon({ kind: 'points' }), View.bandIcon(b[2]));
+test('section colours and icons (main): a colour word or #hex from the row; the icon cell, else the key, else a plain circle', () => {
+  assert.equal(View.bandColour({ colour: 'purple' }), 'var(--ljr-7)');
+  assert.equal(View.bandColour({ colour: '#abcdef' }), '#abcdef');
+  assert.equal(View.bandColour({ colour: 'url(x)' }), 'var(--line)');
+  assert.equal(View.secIcon({ key: 'zz', icon: 'family' }), View.secIcon({ key: 'breeding' }));
+  assert.equal(View.secIcon({ key: 'zz', kind: 'gate' }), View.secIcon({ key: 'gate' }));
 });
 
-test('a list row has one section icon per must-pass or points band, grey when nothing is scored, each opening that section', () => {
+test('a list row opens that animal\'s Score tab at its own address, with a section icon per band', () => {
   const html = View.page(v(T({ 'BLD-score_judgement.csv': [] })));
-  const row = html.split('class="bb-dog bb-row"')[1];
-  const icons = row.match(/class="bb-sic(?: bb-off)?"/g);
-  assert.deepEqual(icons, ['class="bb-sic"', 'class="bb-sic bb-off"', 'class="bb-sic"']);
-  assert.match(row, /data-go="breed\/score\.f1" data-bb-sec="f1" data-bb-band-go="g"/);
-  assert.match(row, /aria-label="Section A: 0 of 5\. Open Test Dog A at Section A"/);
+  const row = html.split('class="bb-dog" data-bb-open="f1"')[1];
+  assert.match(row, /^ data-go="breed\/score\.f1"/);
+  assert.match(row.split('</button>')[0], /class="bb-secs"/);
 });
 
 test('every tab has its own address; an animal id alone opens its Score tab', () => {
@@ -174,7 +168,7 @@ test('every tab has its own address; an animal id alone opens its Score tab', ()
 test('the Score tab with no animal chosen opens the first in the list; the tabs stay on an animal page', () => {
   View.setState({ dog: '', tab: 'score' });
   const html = View.page(v());
-  assert.match(html, /<h3 class="bb-dname">Test Dog A<\/h3>/);
+  assert.match(html, /<div class="bb-head"><h3>Test Dog A<\/h3>/);
   assert.match(html, /<nav class="bb-tabs"[\s\S]*data-bb-tab="score" data-go="breed\/score\.f1" aria-current="page"/);
   View.open('');
 });
@@ -217,14 +211,9 @@ test('More: My system, Archive with its count, History, DNA panel and Who sees w
   assert.match(html, /My system[\s\S]*Archive<\/span><span class="cnt">0[\s\S]*History[\s\S]*DNA panel[\s\S]*Who sees what/);
 });
 
-test('the dog card section is one folded line that unfolds to must-pass first, then each points band, things to do first', () => {
+test('the dog card heading (main) opens that dog\'s Score tab: it names the dog for the hub\'s click', () => {
   const html = View.section(v(notDue({ 'BLD-exam2.csv': [] })), 'f1');
-  assert.match(html, /<details class="bb-secd"[^>]*><summary class="bb-chip bb-sechd"/);
-  assert.doesNotMatch(html, /<details class="bb-secd"[^>]* open/);
-  assert.match(html, /bb-secpts">15 of 15<\/span>/);
-  assert.match(html, /Section G <span class="cnt wide bb-cnt">1 of 2 met[\s\S]*Check Two[\s\S]*Missing[\s\S]*Check One[\s\S]*Passed[\s\S]*Section A[\s\S]*Section B/);
-  assert.match(html, /data-go="breed\/score\.f1" data-bb-sec="f1" data-bb-band-go="g"/);
-  assert.doesNotMatch(html, /bb-bar/);
+  assert.match(html, /class="bb-chip bb-sechd" data-go="breed" data-bb-dog="f1"/);
 });
 
 test('look: only Lexend 400, 500 and 600; the name is 16px (a Breed Better size), the score 18px; nothing under 14px', () => {
@@ -236,11 +225,12 @@ test('look: only Lexend 400, 500 and 600; the name is 16px (a Breed Better size)
   assert.match(css, /\.bb-name\{[^}]*font-size:var\(--bb-fs-name\)/);
   assert.match(css, /\.bb-big\{[^}]*font-size:var\(--fs-figure\)/);
   for (const px of css.match(/font-size:\s*(\d+)px/g) || []) assert.ok(Number(px.replace(/\D/g, '')) >= 14, px);
-  assert.doesNotMatch(css, /outline:\s*[1-9]/);
+  // the house selected look (main, 15 Nov 2026) is a 1px outline in the hub; at rest there is no outline
+  assert.doesNotMatch(css.replace(/[^{}]*:(hover|active)[^{}]*\{[^}]*\}/g, ''), /outline:\s*[1-9]/);
 });
 
 test('no hard-coded colours or section names in the view: every hex and section word comes from rows', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'breed-better', 'hub-view.js'), 'utf8');
+  const src = fs.readFileSync(path.join(ROOT, 'breed-better', 'hub-view.js'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.deepEqual(src.match(/#[0-9a-fA-F]{6}\b/g) || [], []);
   assert.deepEqual(src.match(/#[0-9a-fA-F]{3}\b(?![\w-])/g) || [], []);
   for (const name of ['Programme', 'Health screening', 'Temperament', 'Breeding record', 'Fit to Breed', 'Hips', 'Elbows', 'Patella']) {
@@ -257,10 +247,11 @@ test('mustPassFor gives an inspector the must-pass words, answer, date and due d
   for (const x of mp) assert.deepEqual(Object.keys(x).sort(), ['answer', 'date', 'due_date', 'evidence_id', 'evidence_table', 'label', 'outcome', 'subject_id']);
 });
 
-test('viewer levels: a placeholder set; the inspector default shows must-pass words; points, target and ranking never', () => {
+test('viewer levels: the owner\'s two levels (A records; B records and must-pass words); inspector B, vet and breeder A; points, target and ranking never', () => {
   const set = Levels.levels({}, TODAY);
-  assert.equal(set.placeholder, true);
-  assert.deepEqual(set.viewers.map((w) => w.type), ['inspector', 'vet', 'breeder']);
+  assert.equal(set.fromRows, false);
+  assert.deepEqual(set.viewers.map((w) => [w.type, w.level]), [['inspector', 'level_b'], ['vet', 'level_a'], ['breeder', 'level_a']]);
+  assert.equal(Object.keys(set.byKey).length, 2);
   const ins = Levels.showsFor({}, 'inspector', TODAY), vet = Levels.showsFor({}, 'vet', TODAY);
   assert.equal(ins.must_pass, true);
   assert.equal(!!vet.must_pass, false);
@@ -275,7 +266,8 @@ test('viewer levels: a placeholder set; the inspector default shows must-pass wo
   View.setTab('viewers');
   const html = View.page(v());
   View.setTab('dogs');
-  assert.match(html, /placeholder set/);
+  assert.match(html, /Two levels: A, records only; B, records and Pass, Unverified or Fail/);
+  assert.doesNotMatch(html, /placeholder/i);
   assert.match(html, /data-bb-viewer="inspector"[\s\S]*Level B[\s\S]*data-on="true"[^>]*>[\s\S]*Pass, Unverified or Fail/);
   assert.match(html, /Points<\/li>/);
   assert.doesNotMatch(html.split('data-bb-viewer="inspector"')[1].split('data-bb-viewer="vet"')[0], /data-on="true"[^>]*>(?:(?!<\/li>).)*Points</);

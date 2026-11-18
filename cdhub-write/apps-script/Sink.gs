@@ -6,6 +6,14 @@
  * Corrections are ALWAYS queued, never written straight in.
  */
 
+/* Save timings (17 Nov 2026: live saves took 17-127 s). Numbers only (milliseconds per step), never data or names.
+ * Logged, returned with the save's answer, and the last one kept for ?status=1, so a slow save can be traced. */
+var SAVE_TIMING_ = null;
+function timing_(name, ms) {
+  console.log('save timing: ' + name + ' ' + ms + ' ms');
+  if (SAVE_TIMING_) SAVE_TIMING_[name] = (SAVE_TIMING_[name] || 0) + ms;
+}
+
 function withLock_(fn) {
   var lock = LockService.getScriptLock();
   try { lock.waitLock(BLD.LIMITS.LOCK_WAIT_MS); }
@@ -94,11 +102,35 @@ function waitingRows_(pendState, spec) {
   return out;
 }
 
+/** The local day of a datetime, or '' when blank or unreadable. */
+function dupDay_(v) {
+  var t = Date.parse(String(v || ''));
+  return isNaN(t) ? '' : todayLondon_(new Date(t));
+}
+
+/** Is key k the same on both rows? Text compared exactly; a column the table writes as a real date (sheetTypes datetime,
+ *  area_reading only) compared as the same instant, so 08:00:00+00:00 read back from a date cell equals what was sent. */
+function dupSame_(spec, k, a, b) {
+  var x = a[k] || '', y = b[k] || '';
+  if (x === y) return true;
+  if (!(spec.sheetTypes && spec.sheetTypes[k] === 'datetime') || !x || !y) return false;
+  var tx = Date.parse(x), ty = Date.parse(y);
+  return !isNaN(tx) && tx === ty;
+}
+
 function findDuplicate_(spec, clean, rows, nowMs, today) {
+  if (spec.dupSkip && spec.dupSkip(clean)) return null;          // e.g. a note added to a check already done
+  if (spec.dupNewestBy) return newestDuplicate_(spec, clean, rows, nowMs);
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i], same = true;
+    if (spec.dupSkip && spec.dupSkip(r)) continue;
     for (var k = 0; k < spec.dupKey.length; k++) {
-      if ((r[spec.dupKey[k]] || '') !== (clean[spec.dupKey[k]] || '')) { same = false; break; }
+      if (!dupSame_(spec, spec.dupKey[k], r, clean)) { same = false; break; }
+    }
+    // dupDateCols: these datetimes must fall on the same local day to be a repeat (paper catch-up: a week of one job
+    // for one room, typed in one go, is seven records, not one record and six duplicates; SOPJOBS S2, 14 Nov 2026)
+    for (k = 0; same && spec.dupDateCols && k < spec.dupDateCols.length; k++) {
+      if (dupDay_(r[spec.dupDateCols[k]]) !== dupDay_(clean[spec.dupDateCols[k]])) same = false;
     }
     if (!same) continue;
     if (spec.dupDayCol) { if ((r[spec.dupDayCol] || '') === today) return r; continue; }   // same calendar day (London)
@@ -107,6 +139,34 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
     if (!isNaN(t) && Math.abs(nowMs - t) < BLD.LIMITS.DUP_WINDOW_MIN * 60000) return r;
   }
   return null;
+}
+
+/**
+ * dupNewestBy (15 Nov 2026, TEMPS round toggle): a tap is a repeat only of the NEWEST record for the same thing
+ * (the dupNewestBy columns, same dupDateCols day) inside the window, and only when that newest record matches the
+ * whole dupKey. So present, not here, present saves three records; present, present is one record and a repeat.
+ */
+function newestDuplicate_(spec, clean, rows, nowMs) {
+  var best = null, bestT = -Infinity, k;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], same = true;
+    if (spec.dupSkip && spec.dupSkip(r)) continue;
+    for (k = 0; same && k < spec.dupNewestBy.length; k++) {
+      if ((r[spec.dupNewestBy[k]] || '') !== (clean[spec.dupNewestBy[k]] || '')) same = false;
+    }
+    for (k = 0; same && spec.dupDateCols && k < spec.dupDateCols.length; k++) {
+      if (dupDay_(r[spec.dupDateCols[k]]) !== dupDay_(clean[spec.dupDateCols[k]])) same = false;
+    }
+    if (!same) continue;
+    var t = Date.parse(r[spec.dupTimeCol]);
+    if (isNaN(t) || Math.abs(nowMs - t) >= BLD.LIMITS.DUP_WINDOW_MIN * 60000) continue;
+    if (t >= bestT) { best = r; bestT = t; }                     // ties: the later row in the file is newer
+  }
+  if (!best) return null;
+  for (k = 0; k < spec.dupKey.length; k++) {
+    if (!dupSame_(spec, spec.dupKey[k], best, clean)) return null;
+  }
+  return best;
 }
 
 /**
@@ -163,7 +223,13 @@ function retentionYears_(section, tenant, ymd) {
 /** A reading typed in more than 7 days late may never fill a slot already filled: the same room, thermometer (blank = none named) and period_start at any time is a repeat. */
 function sameSlot_(late, clean, rows, nowMs) {
   if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
-  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && (rows[i].thermometer_id || '') === (clean.thermometer_id || '') && rows[i][late.field] === clean[late.field]) return rows[i];
+  // the slot is compared as the same instant (16 Nov 2026): 07:00Z and 08:00+01:00 are one slot
+  var want = Date.parse(clean[late.field]);
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (r.area_id !== clean.area_id || (r.thermometer_id || '') !== (clean.thermometer_id || '')) continue;
+    if (r[late.field] === clean[late.field] || (!isNaN(want) && Date.parse(r[late.field]) === want)) return r;
+  }
   return null;
 }
 
@@ -177,7 +243,9 @@ function sinkHandle_(req) {
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
-  var who = authStaff_(req.code);
+  var tAuth = Date.now();
+  var who = authSaver_(req);
+  timing_('sign_in', Date.now() - tAuth);
   if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
 
   var asked = String(req.table || req.file || '');
@@ -196,7 +264,12 @@ function sinkHandle_(req) {
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
 
-  var result = withLock_(function () { return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
+  // 17 Nov 2026: live saves took 17-127 s. Each save logs where its time went (no data, no names): before the lock,
+  // waiting for the lock, and the work inside it, so a slow save can be traced in Executions.
+  var tLock = Date.now(), tIn = 0;
+  var result = withLock_(function () { tIn = Date.now(); return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
+  timing_('before_lock', tLock - nowMs); timing_('lock_wait', tIn - tLock); timing_('work', Date.now() - tIn);
+  if (SAVE_TIMING_) SAVE_TIMING_.table = spec.key;
   cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
   return result;
 }
@@ -266,16 +339,45 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at, who: who.who };
 }
 
+/** The columns a fast append reads for every row: id and whatever the repeat checks compare (sameSlot_ included). */
+function fastCols_(spec) {
+  var c = ['id'].concat(spec.dupKey || [], spec.dupNewestBy || [], spec.dupDateCols || []);
+  if (spec.dupTimeCol) c.push(spec.dupTimeCol);
+  if (spec.dupDayCol) c.push(spec.dupDayCol);
+  if (spec.ageCap) c.push('area_id', 'thermometer_id', spec.ageCap.field);
+  return c.filter(function (x, i) { return c.indexOf(x) === i; });
+}
+
+/** Every row of a fast read, as records holding only the columns read for every row. */
+function fastRecords_(read) {
+  var cols = Object.keys(read.full), n = cols.length ? read.full[cols[0]].length : 0, out = [];
+  for (var i = 0; i < n; i++) {
+    var o = {}, blank = true;
+    for (var k = 0; k < cols.length; k++) { o[cols[k]] = read.full[cols[k]][i]; if (o[cols[k]] !== '') blank = false; }
+    if (!blank) out.push(o);
+  }
+  return out;
+}
+
 function sinkProcess_(spec, req, who, now, nowMs) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
 
-  var target = store_read_(spec.file, true);
+  // fastAppend (16 Nov 2026, saves took ~25 s on ~31,000 rows): an add reads the last rows in full and, for EVERY row,
+  // only the columns the repeat and id checks look at, so the checks still cover the whole table. A correction needs
+  // the whole row it points at, so it reads everything as before.
+  var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
+  var tRead = Date.now();
+  var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec)) : store_read_(spec.file, true);
+  timing_(fast ? 'read_fast' : 'read', Date.now() - tRead);
   if (!sameHeader_(target.header, spec.columns)) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
+  var all = target.tail ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read)
+  var tLook = Date.now();
   var lookups = store_lookups_(spec, tenant);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
+  timing_('lookups_rules', Date.now() - tLook);
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -312,7 +414,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting), nowMs) : null);
+    var dup = findDuplicate_(spec, v.clean, all.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, all.concat(waiting), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
@@ -320,7 +422,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   var ids = {};
-  target.records.forEach(function (r) { ids[r.id] = true; });
+  all.forEach(function (r) { ids[r.id] = true; });
   var rowId = newId_(spec.idPrefix, now);
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
 
@@ -343,9 +445,11 @@ function sinkProcess_(spec, req, who, now, nowMs) {
       try { store_appendMany_(vSpec.file, vSpec.columns, vRows, form.read); }
       catch (e) { logWriteFailure_(e, vSpec, rowId, who.who, now); throw e; }
     }
+    var tWrite = Date.now();
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
+    timing_('write', Date.now() - tWrite);
     var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
     if (form) out.answers = form.answers.length;
     return out;
@@ -378,6 +482,9 @@ function formAnswers_(req, clean, tenant, today, needPending, errors) {
   if (errors.check_type_id) return null;
   var type = store_read_(TABLES.check_type.file, true).records.filter(function (r) { return r.id === clean.check_type_id && r.tenant_id === tenant; })[0];
   var fRead = store_read_(TABLES.check_field.file, false);
+  // the questions in force on the record's own day (an Earlier entry is judged by the form and limits of its day, 14 Nov 2026)
+  var happened = String(clean.happened_at || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(happened) && happened < today) today = happened;
   var now = {};
   if (type && fRead) fRead.records.forEach(function (r) {
     if (r.tenant_id !== tenant || r.type_key !== type.type_key || !r.effective_from || r.effective_from > today) return;
@@ -447,6 +554,11 @@ function applyWaitingOccupancyMoves_() {
     if (!s.waiting || !s.queued) continue;
     if (s.queued.kind === 'correction' || s.queued.corrects_id) continue;
     if (s.queued.target_file !== spec.file) continue;
+    // 15 Nov 2026 (J2 R2): occupancy_out shares the file. A move out (sold, deceased, off site) has no room and an
+    // off_site_kind; it always waits for the owner's approval and is never applied here.
+    var row = null;
+    try { row = JSON.parse(s.queued.payload_json || '{}'); } catch (e) { row = null; }
+    if (!row || String(row.off_site_kind || '') || !String(row.area_id || '')) continue;
     ids.push(k);
   }
   ids.forEach(function (id) {
@@ -478,6 +590,10 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
 
     var spec = specFor_(q.target_file);
     if (!spec) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+    // 15 Nov 2026 (J2 R5): an approval writes, so the same switches apply as to a save
+    if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off, so nothing was written.');
+    var fileOn = Object.keys(TABLES).some(function (key) { return TABLES[key].file === q.target_file && tableOn_(TABLES[key]); });
+    if (!fileOn) throw err_('TABLE_OFF', 'Saving to ' + q.target_file + ' is switched off, so nothing was written.');
     var tenant = prop_(BLD.PROP.TENANT_ID);
     var row;
     try { row = JSON.parse(q.payload_json); } catch (e) { throw err_('BAD_PAYLOAD', 'The queued item could not be read.'); }

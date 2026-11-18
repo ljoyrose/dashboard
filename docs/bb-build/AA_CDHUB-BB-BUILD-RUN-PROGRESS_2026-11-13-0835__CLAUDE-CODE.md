@@ -2,28 +2,35 @@
 
 Rewritten after each stage (not appended). Code words only.
 
-- Started from main 9ca0866 (13 Nov 2026). Branch: claude/serene-curie-pcau08.
-- Stage now: S11. Pull request #526 open (draft until CI is green on the head commit). Main merged in (f3754e1).
+- Branch: claude/serene-curie-pcau08 (PR #526). Job CDHUB-BB-BUILD.2 (18 Nov 2026): main merged in (merge commit, main wins
+  where both changed the same thing), then the owner's pieces main lacks re-added on top of main's code.
+- Merge order (owner): #491, then #660, then #644, then #526 last. Main is merged in again as each lands.
 
-## Done
-| Stage | What | Files |
-|---|---|---|
-| S1 | Five tabs at the bottom (Score, Evidence, Dogs, Calendar, More), always shown, above the house bar; each tab has its own address (#/breed/calendar, #/breed/score.<id>) | breed-better/hub-view.js, cdhub/index.html (keeps the #/breed sub-address) |
-| S2 | Calendar: Due / Done / All with counts (All = Due + Done), month pager, Monday grid, today outlined, coloured dots, tappable days and a clear control, rows open the Score tab at that section | breed-better/hub-view.js |
-| S3 | Subtle look on every screen; name 16px as a Breed Better size; weights 400/500/600; section icons and colours from score_band rows (icon_key, line_colour, icon_light, icon_dark; fall back to the colour word) | breed-better/hub-view.js, tests/fixtures/breed-better/BLD-score_band.csv |
-| S4 | Dog page: percent line worked out from the scheme row, Scored on, "n of m met" and "x of y" headers, things to do first, done lines under Show done, a "To prove" line on each unverified check; judged answers now reach the score | breed-better/hub-view.js |
-| S5 | Dog card: one folded line that unfolds to grouped checks; each line opens the Score tab at that section | breed-better/hub-view.js |
-| S6 | Evidence tab (read only), More: My system, Archive, History (worked out on load), DNA panel, Who sees what | breed-better/hub-view.js, cdhub/staff/lib/viewer-levels.js |
-| S7 | DNA Kit renamed DNA panel (file moved with its test); grade-to-colour bands from rows; read-only set-up view | breed-better/dna-panel.js |
-| S8 | Inspector page laid out to the inspector design; must-pass words only when a summary is sent and the viewer level shows them; litters against the rule row | cdhub/staff/inspect/* |
+## Kept from main (main wins)
+Back via HubNav ("Back to <dog>" on a dog card), enrol and un-enrol, Checks records with their typed values, final-only checks,
+age groups, section icons by band key or the optional `icon` cell, section colour by result, `#hex` band colours, logo header,
+previous and next, the house selected look, the dog card section (score always shown, must-pass list folded), Inspector links
+under More, species words (the Dogs tab).
 
-| S9 | Kept live behaviour listed in the pull request side-by-side table | (pull request text) |
-| S10 | tests/mocked/bb-design-click-through.spec.js: every Breed Better button and tab at 360px and 1280px; unit tests tests/breed-better/hub-design.test.js; house button rule skips Breed Better buttons (class bb-...) | tests, cdhub/index.html |
+## Re-added on top (owner's design)
+| Piece | Where |
+|---|---|
+| Five tabs at the bottom (Score, Evidence, Dogs, Calendar, More), own address per tab under #/breed | breed-better/hub-view.js, cdhub/index.html |
+| After a dog card, steps inside Breed Better use HubNav.back.replace, so "Back to <dog>" still returns in one step | breed-better/hub-view.js |
+| Calendar: n due in 30 days, Due / Done / All, pager, Monday grid, day buttons, No record yet fold | breed-better/hub-view.js |
+| Evidence tab (read only), Checks records read with their typed values | breed-better/hub-view.js |
+| Dog page: percent line, Scored on, n of m met / x of y, things to do first, Show done, To prove | breed-better/hub-view.js |
+| Judged answers reach the score (judgementsFor) | breed-better/hub-view.js |
+| More: My system, Archive, History, DNA panel, Who sees what, Inspector links | breed-better/hub-view.js |
+| DNA panel name, grade bands from rows, set-up view (keeps main's pupOdds) | breed-better/dna-panel.js |
+| Viewer levels: the owner's two (A records; B records and must-pass words); inspector B, vet and breeder A | cdhub/staff/lib/viewer-levels.js |
+| Inspector layout (approved); Fit to Breed reads assessed_on or done_on (main) | cdhub/staff/inspect/* |
+| `icon` as an optional score_band column | tests/fixtures/breed-better/headers.json, tests/breed-better/contract.test.js |
 
 ## Tests
-- node --test tests/breed-better/*.test.js: 99 pass.
-- Mocked browser specs: click-through (26), acceptance, dog card, inspector (7): pass locally.
+- node --test tests/breed-better/*.test.js: 122 pass.
+- Mocked: bb-design-click-through (360px and 1280px), bb-inspect, breed-better-acceptance, cdhub-dog-card-bb-section: 65 pass.
+- Lint: 0 new.
 
 ## Next
-- Mark #526 ready when CI is green on its head commit. Live signed-in click-through: done by the owner's hub steward, on the preview and after merge.
-- Open for the owner: inspector view approval, viewer level names, the inspector must-pass summary from the save script, when evidence counts.
+- Merge main again after #491, #660 and #644 land; History prefers #644's saved scores when its switch is on.

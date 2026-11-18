@@ -79,7 +79,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Room temperatures' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner \u2013 she can fix it.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner.' }));
 
     var cards = el(doc, 'div', { class: 'bs-cards' });
     var header = mountHeader(doc, host, save, 'area_reading', refreshButtons);
@@ -94,7 +94,7 @@
     }
 
     if (!areas.length) {
-      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No rooms are loaded, so nothing can be entered. The room list comes from BLD-area.csv: sign in to Drive and reload.' }));
+      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No rooms loaded. Sign in to Drive and reload.' }));
       return { refresh: refreshButtons };
     }
 
@@ -154,7 +154,7 @@
             requestId = null;
             [minIn, maxIn, spotIn, noteIn].forEach(function (i) { i.value = ''; });
             noteRow.hidden = true;
-            result.appendChild(el(doc, 'div', { class: 'bs-sub bs-wrong', text: 'Wrong entry? Tell the owner \u2013 she can fix it.' }));
+            result.appendChild(el(doc, 'div', { class: 'bs-sub bs-wrong', text: 'Wrong entry? Tell the owner.' }));
           } else {
             result.className = 'bs-result bs-bad';
             result.textContent = r.message;
@@ -194,7 +194,7 @@
 
     var people = o.people || [];
     if (!people.length) {
-      form.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No people are loaded, so the roster cannot be filled in. The list comes from BLD-person.csv: sign in to Drive and reload.' }));
+      form.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No people loaded. Sign in to Drive and reload.' }));
       return { refresh: refresh };
     }
     var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': 'Person' }, [el(doc, 'option', { value: '', text: 'Choose a person' })]
@@ -300,7 +300,7 @@
       if (!confirmed && !cb.canSave && !restMsg.getAttribute('data-sent')) { restMsg.className = 'bs-result bs-warn'; restMsg.textContent = cb.text; }
     }
     if (!all.length) {
-      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No dogs are loaded, so there is nothing to confirm. ' + (o.loader ? 'Enter your staff code and press the Load button.' : 'The list comes from BLD-occupancy.csv and BLD-subject.csv: sign in to Drive and reload.') }));
+      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No dogs are loaded, so there is nothing to confirm. ' + (o.loader ? 'Enter your staff code and press the Load button.' : 'Sign in to Drive and reload.') }));
       paintProgress();
       return { refresh: refreshButtons };
     }

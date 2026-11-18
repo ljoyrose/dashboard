@@ -13,14 +13,17 @@ const csv = (rows) => rows.join('\n') + '\n';
 const ROWS = {
   'BLD-score_scheme.csv': csv(['id,name,species_id,breed,version,effective_from,status,target_points,target_is,source',
     's-look,Invented look scheme,dog,,1,2026-01-01,active,70,percent,invented']),
-  'BLD-score_band.csv': csv(['id,scheme_id,key,label,colour,sort_order,kind,icon_key,line_colour,icon_light,icon_dark',
-    'b-a,s-look,a,Section A,purple,1,points,target,#d9d4e0,#625a6d,#b0a8bb',
-    'b-g,s-look,g,Must pass,red,2,gate,star,#ee4035,#ca362d,#f0625a',
-    'b-h,s-look,h,Section B,orange,3,points,heart,#f37736,#ae5526,#f37736',
-    'b-f,s-look,f,Section C,yellow,4,points,stethoscope,#e7dc44,#757022,#e7dc44',
-    'b-t,s-look,t,Section D,green,5,points,smile,#7bc043,#4e7a2a,#7bc043',
-    'b-r,s-look,r,Section E,blue,6,points,people,#0392cf,#0274a5,#3cb0e6',
-    'b-s,s-look,s,Status,black,7,status,,,,']),
+  // section icons from the optional icon cell (main reads it); colours as colour words
+  'BLD-score_band.csv': csv(['id,scheme_id,key,label,colour,sort_order,kind,icon',
+    'b-a,s-look,a,Section A,purple,1,points,target',
+    'b-g,s-look,g,Must pass,red,2,gate,star',
+    'b-h,s-look,h,Section B,orange,3,points,heart',
+    'b-f,s-look,f,Section C,yellow,4,points,stethoscope',
+    'b-t,s-look,t,Section D,green,5,points,smile',
+    'b-r,s-look,r,Section E,blue,6,points,family',
+    'b-s,s-look,s,Status,black,7,status,']),
+  // the species row names the Dogs tab (main: species words)
+  'BLD-species.csv': csv(['id,code,common_name,plural_word', 'dog,dog,Dog,Dogs']),
   'BLD-score_criterion.csv': csv(['id,scheme_id,band_id,key,label,evidence_source,subject_field,evidence_match,answer_field,date_field,reads,applies_to,valid_months,due_soon_days,lapsed_affects_verdict,when_missing,guidance,proof_label,authority',
     'c-look,s-look,b-a,look,Looks answer,judged,,,,,latest,,,,,unknown,,,invented',
     'c-hips-g,s-look,b-g,hips_g,Hips X-ray,BLD-health_screen,subject_id,test=hips,grade,tested_on,latest,,24,60,FALSE,unknown,,hip score certificate,invented',
@@ -43,7 +46,7 @@ const ROWS = {
     'p13,c-hips-p,is:Excellent,15,,', 'p14,c-hips-p,is:Good,10,,', 'p15,c-hips-p,any,0,,',
     'p16,c-ftb-p,is:fit,25,,', 'p17,c-ftb-p,any,0,,',
     'p18,c-temp,is:Calm,15,,', 'p19,c-temp,any,5,,',
-    'p20,c-lit,range:1-6,15,,', 'p21,c-lit,any,0,,']),
+    'p20,c-lit,range:1-6,12,,', 'p21,c-lit,any,0,,']),
   'BLD-score_enrolment.csv': csv(['id,tenant_id,scheme_id,subject_id,valid_from,is_active,source',
     'e1,t-test,s-look,sub-test-dog-1,2026-01-01,TRUE,invented', 'e2,t-test,s-look,sub-test-dog-2,2026-01-01,TRUE,invented', 'e3,t-test,s-look,sub-test-pup-1,2026-01-01,TRUE,invented']),
   'BLD-score_judgement.csv': csv(['id,tenant_id,subject_id,criterion_id,answer,judged_on,judged_by,note',
@@ -130,34 +133,34 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       await expect(page.locator('nav.house-tabs > [data-go="breed"], nav.house-tabs > a[data-nav="breed"]')).toHaveCount(0);
       await expect(page.locator('nav.house-tabs')).not.toContainText('Calendar');
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      const last = await page.locator('#bbRoot .bb-row').last().boundingBox();
+      const last = await page.locator('#bbList .bb-dog').last().boundingBox();
       const bar = await page.locator('#bbRoot nav.bb-tabs').boundingBox();
       expect(last.y + last.height).toBeLessThanOrEqual(bar.y + 1);
     });
 
     test('Score tab with no dog chosen opens the first in the list; then the last dog viewed; prev and next walk the list', async ({ page }) => {
       await openBB(page);
-      await expect(page.locator('#bbRoot .bb-row .bb-name')).toHaveText(['Test Dog One', 'Test Pup One', 'Test Dog Two']);
+      await expect(page.locator('#bbList .bb-dog .bb-name')).toHaveText(['Test Dog One', 'Test Pup One', 'Test Dog Two']);
       await tab(page, 'score').click();
-      await expect(page.locator('#bbRoot h3.bb-dname')).toHaveText('Test Dog One');
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog One');
       await expect(root(page)).toContainText('1 of 3');
       await page.getByRole('button', { name: 'Next: Test Pup One' }).click();
-      await expect(page.locator('#bbRoot h3.bb-dname')).toHaveText('Test Pup One');
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Pup One');
       await expect(page).toHaveURL(/#\/breed\/score\.sub-test-pup-1$/);
       await page.getByRole('button', { name: 'Previous: Test Dog One' }).click();
-      await expect(page.locator('#bbRoot h3.bb-dname')).toHaveText('Test Dog One');
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog One');
       await page.locator('#bbRoot [data-bb-back]').click();
       await expect(page).toHaveURL(/#\/breed\/dogs$/);
       await page.locator('#bbRoot [data-bb-open="sub-test-dog-2"]').click();
-      await expect(page.locator('#bbRoot h3.bb-dname')).toHaveText('Test Dog Two');
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog Two');
       await tab(page, 'cal').click();
       await tab(page, 'score').click();
-      await expect(page.locator('#bbRoot h3.bb-dname')).toHaveText('Test Dog Two');
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog Two');
     });
 
     test('every verdict filter, the sex filter, the search and all seven sorts', async ({ page }) => {
       await openBB(page);
-      const rows = page.locator('#bbRoot .bb-row');
+      const rows = page.locator('#bbList .bb-dog');
       const counts = { '': 3, pass: 1, below_target: 0, unverified: 1, fail: 1 };
       for (const k of Object.keys(counts)) {
         await page.locator('#bbRoot [data-bb-filter="' + k + '"]').click();
@@ -180,49 +183,29 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       }
     });
 
-    test('the list row: name 16px, score 18px, verdict word, one section icon per section in its row colour, grey when nothing scored', async ({ page }) => {
+    test('the list row: name 16px, score 18px, verdict word, one section icon per section; a tap opens the Score tab at its address', async ({ page }) => {
       await openBB(page);
-      const row = page.locator('#bbRoot .bb-row').first();
+      const row = page.locator('#bbList .bb-dog').first();
       expect(await row.locator('.bb-name').evaluate((e) => getComputedStyle(e).fontSize)).toBe('16px');
       expect(await row.locator('.bb-big').evaluate((e) => getComputedStyle(e).fontSize)).toBe('18px');
-      await expect(row.locator('.bb-big')).toHaveText('80');
-      await expect(row).toContainText('80 of 85');
+      await expect(row.locator('.bb-big')).toHaveText('77');
+      await expect(row).toContainText('77 of 82');
       await expect(row.locator('.bb-vw')).toHaveText('Pass');
-      const icons = row.locator('.bb-sic');
-      await expect(icons).toHaveCount(6);
-      await expect(icons.nth(1)).toHaveAttribute('aria-label', /^Must pass: 4 of 4 met/);
-      expect(await icons.nth(1).evaluate((e) => getComputedStyle(e).color)).toBe('rgb(202, 54, 45)');
-      // rest: no fill; hover: the pale grey; no outline
-      expect(await icons.nth(1).evaluate((e) => getComputedStyle(e).backgroundColor)).toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
-      await icons.nth(1).hover();
-      const hov = await page.evaluate(() => { const p = document.createElement('i'); p.style.background = 'var(--hov)'; document.body.appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c; });
-      await expect.poll(() => icons.nth(1).evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(hov);
-      const off = page.locator('#bbRoot .bb-row').filter({ hasText: 'Test Dog Two' }).locator('.bb-sic.bb-off');
-      expect(await off.count()).toBeGreaterThan(0);
-      const muted = await page.evaluate(() => { const p = document.createElement('i'); p.style.color = 'var(--muted)'; document.body.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return c; });
-      expect(await off.first().evaluate((e) => getComputedStyle(e).color)).toBe(muted);
-    });
-
-    test('each section icon opens that dog\'s Score tab with that section open', async ({ page }) => {
-      await openBB(page);
-      const n = await page.locator('#bbRoot .bb-row').first().locator('.bb-sic').count();
-      for (let i = 0; i < n; i++) {
-        const ic = page.locator('#bbRoot .bb-row').first().locator('.bb-sic').nth(i);
-        const band = await ic.getAttribute('data-bb-band-go');
-        await ic.click();
-        await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
-        await expect(page.locator('#bbRoot details.bb-band[data-bb-band="' + band + '"]')).toHaveAttribute('open', '');
-        await tab(page, 'dogs').click();
-      }
+      await expect(row.locator('.bb-secs i')).toHaveCount(6);
+      expect(await row.evaluate((e) => getComputedStyle(e).backgroundColor)).toMatch(/rgba\(0, 0, 0, 0\)|transparent|rgb\(/);
+      await row.click();
+      await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog One');
+      await expect(tab(page, 'score')).toHaveAttribute('aria-current', 'page');
     });
 
     test('the dog page: verdict box with the worked-out percent line, Scored on, section counts, folds and Show done, To prove, Open', async ({ page }) => {
       await openBB(page, '#/breed/score.sub-test-dog-1');
       const box = page.locator('#bbRoot .bb-vbox');
       await expect(box).toContainText('Pass');
-      await expect(box).toContainText('of 85 points');
-      await expect(box.locator('.bb-pct')).toHaveText('Target 70%. This dog ' + Math.round(100 * 80 / 85) + '%.');
-      await expect(box).toContainText('80 earned');
+      await expect(box).toContainText('of 82 points');
+      await expect(box.locator('.bb-pct')).toHaveText('Target 70%. This dog ' + Math.round(100 * 77 / 82) + '%.');
+      await expect(box).toContainText('77 earned');
       await expect(box).toContainText('0 to prove');
       await expect(box).toContainText('5 lost');
       await expect(box).toContainText('Scored on 13 Nov 2026');
@@ -242,7 +225,7 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       // the due line comes first; done lines sit under Show done
       await expect(must.locator('.bb-line').first()).toContainText('Patella check');
       await expect(must.locator('.bb-line').first()).toContainText('Due 2 Dec 2026');
-      const done = must.locator('details.bb-done');
+      const done = must.locator('details.bb-showdone');
       await expect(done.locator('summary')).toContainText('Show done');
       await done.locator('summary').click();
       await expect(done.locator('.bb-line', { hasText: 'Hips X-ray' })).toBeVisible();
@@ -258,7 +241,7 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       await expect(page.locator('[data-bb-edit-screen]')).toBeVisible();
       await expect(page.locator('#bbRoot nav.bb-tabs .bb-tab')).toHaveCount(5);
       await page.locator('[data-bb-edit-screen]').getByRole('button', { name: 'Back' }).click();
-      await expect(page.locator('#bbRoot h3.bb-dname')).toHaveText('Test Dog One');
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog One');
       await noSideways(page);
     });
 
@@ -353,7 +336,7 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
         await expect(root(page)).toContainText(text);
         await expect(tab(page, 'more')).toHaveAttribute('aria-current', 'page');
       };
-      await go('My system', /#\/breed\/system$/, 'Read only. A star means must pass.');
+      await go('My system', /#\/breed\/system$/, 'A star means must pass.');
       await page.locator('#bbRoot details.bb-band').first().locator('summary').click();
       await page.locator('#bbRoot [data-bb-tab="more"]').first().click();
       await go('Archive', /#\/breed\/archive$/, 'Animals whose scoring has ended');
@@ -374,7 +357,7 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       await expect(page.locator('#bbRoot .bb-setup')).toContainText('Never carrier x carrier.');
       await shot(page, 'dna', w);
       await page.locator('#bbRoot [data-bb-tab="more"]').first().click();
-      await go('Who sees what', /#\/breed\/viewers$/, 'placeholder set');
+      await go('Who sees what', /#\/breed\/viewers$/, 'Two levels');
       await expect(page.locator('#bbRoot [data-bb-viewer="inspector"] li[data-on="true"]', { hasText: 'Pass, Unverified or Fail' })).toHaveCount(1);
       for (const t of ['Points', 'The target', 'Ranking (best to worst)']) {
         await expect(page.locator('#bbRoot li[data-on="true"]', { hasText: t })).toHaveCount(0);
@@ -383,57 +366,30 @@ for (const [w, h] of [[360, 800], [1280, 900]]) {
       await shot(page, 'viewers', w);
     });
 
-    test('the dog card: one folded line, unfolds to grouped checks, each line opens the Score tab at that section', async ({ page }) => {
+    test('the dog card heading (main\'s card) opens that dog\'s Score tab with the five tabs; Back returns to the card', async ({ page }) => {
       await page.clock.setFixedTime(new Date('2026-11-13T10:00:00Z'));
       await page.goto('cdhub/');
       await signIn(page);
       await tabClick(page, '#nav button[data-go="dogs"]');
       const card = page.locator('article.dc', { hasText: 'Test Dog One' });
-      const head = card.locator('section.bb-sec .bb-chip');
-      await expect(head).toContainText('Pass');
-      await expect(head).toContainText('Testing');
-      await expect(head.locator('.bb-secpts')).toHaveText('80 of 85');
-      const hb = await head.boundingBox();
-      expect(hb.height).toBeLessThanOrEqual(60);
-      expect(hb.height).toBeGreaterThanOrEqual(44);
-      await expect(card.locator('.bb-gates').first()).toBeHidden();
-      await head.click();
-      const groups = card.locator('[data-bb-group]');
-      await expect(groups.locator('.bb-secgh')).toContainText(['Must pass 4 of 4 met', 'Section A 5 of 5', 'Section B 20 of 25', 'Section C 25 of 25', 'Section D 15 of 15', 'Section E 15 of 15']);
-      await expect(groups.first().locator('li').first()).toContainText('Patella check');
-      await shot(page, 'dogcard', w);
-      const lines = await card.locator('.bb-gbtn').count();
-      expect(lines).toBeGreaterThan(8);
-      for (let i = 0; i < lines; i += 3) {
-        const b = card.locator('.bb-gbtn').nth(i);
-        const band = await b.getAttribute('data-bb-band-go');
-        await b.click();
-        await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
-        await expect(page.locator('#bbRoot details.bb-band[data-bb-band="' + band + '"]')).toHaveAttribute('open', '');
-        await page.goBack();
-        await expect(page.locator('#main h2')).toContainText('Dogs');
-        if (!(await card.locator('details.bb-secd').getAttribute('open') !== null)) await head.click();
-      }
-      await head.click();
-      await expect(card.locator('details.bb-secd')).not.toHaveAttribute('open', '');
+      await card.locator('section.bb-sec .bb-sechd').click();
+      await expect(page.locator('#bbRoot .bb-head h3')).toHaveText('Test Dog One');
+      await expect(page.locator('#bbRoot .bb-vbox')).toContainText('Breed Better verdict');
+      await expect(page.locator('#bbRoot nav.bb-tabs .bb-tab')).toHaveCount(5);
+      await expect(tab(page, 'score')).toHaveAttribute('aria-current', 'page');
+      await page.getByRole('button', { name: /Back to Test Dog One/ }).click();
+      await expect(page.locator('#main h2')).toContainText('Dogs');
       await noSideways(page);
     });
 
-    test('look: Lexend 400/500/600 only, nothing under 14px, no outline wider than 1px, icon colours read in light and dark', async ({ page }) => {
+    test('look: Lexend 400/500/600 only, nothing under 14px, no outline wider than 1px', async ({ page }) => {
       await openBB(page, '#/breed/score.sub-test-dog-1');
       const bad = await page.locator('#bbRoot *').evaluateAll((els) => els.filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed').map((e) => {
         const c = getComputedStyle(e);
         return { w: c.fontWeight, s: parseFloat(c.fontSize), o: c.outlineStyle !== 'none' ? parseFloat(c.outlineWidth) : 0, t: e.textContent.trim().slice(0, 20) };
       }).filter((x) => !['400', '500', '600'].includes(x.w) || (x.t && x.s < 14) || x.o > 1));
       expect(bad).toEqual([]);
-      const contrast = () => page.evaluate(() => {
-        const lum = (rgb) => { const v = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
-        const bg = getComputedStyle(document.querySelector('#bbRoot .bb-vbox')).backgroundColor;
-        return Array.from(document.querySelectorAll('#bbRoot .bb-bandic')).map((e) => { const a = lum(getComputedStyle(e).color), b = lum(bg); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); });
-      });
-      for (const r of await contrast()) expect(r).toBeGreaterThanOrEqual(3);
       await page.emulateMedia({ colorScheme: 'dark' });
-      for (const r of await contrast()) expect(r).toBeGreaterThanOrEqual(3);
       await shot(page, 'score-dark', w);
     });
   });

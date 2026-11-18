@@ -17,7 +17,7 @@
   var COLOUR = { clear: '--ljr-5', carrier: '--ljr-3', affected: '--ljr-2', unknown: '--line' };
   var TEXT = { clear: '--ljr-5-text', carrier: '--ljr-3-text', affected: '--ljr-2-text', unknown: '--muted' };
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  function day(d) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d)); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d); }
+  function day(d) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d)); if (m && typeof BLDDates !== 'undefined') return BLDDates.long(t(d)); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d); }
 
   /** Marker rows by code (case kept, matched without case). */
   function markers(T) {
@@ -235,6 +235,19 @@
     ].join('');
   }
 
-  return { markers: markers, copiesOf: copiesOf, kindOf: kindOf, results: results, worst: worst, card: card, key: key, perPuppy: perPuppy, calcMarkers: calcMarkers, calc: calc, css: css,
+  /** A pup's chances per test from its parents' results (each passes the variant at copies / 2). Only tests the calculator
+   *  can work and where both parents have a known result. [{code, name, kinds:{clear,carrier,affected}}], percentages. */
+  function pupOdds(T, sireId, damId) {
+    if (!sireId || !damId) return [];
+    var got = function (id) { var o = {}; results(T, id).forEach(function (x) { if (x.copies !== null) o[x.code.toLowerCase()] = x.copies; }); return o; };
+    var s = got(sireId), d = got(damId);
+    return calcMarkers(T).filter(function (m) { var k = t(m.code).toLowerCase(); return s[k] !== undefined && d[k] !== undefined; }).map(function (m) {
+      var k = t(m.code).toLowerCase(), p = perPuppy(s[k], d[k]), kinds = { clear: 0, carrier: 0, affected: 0 };
+      [0, 1, 2].forEach(function (c) { kinds[kindOf(m, c)] += p[c]; });
+      Object.keys(kinds).forEach(function (x) { kinds[x] = Math.round(kinds[x] * 100); });
+      return { code: t(m.code), name: t(m.name) || t(m.code), kinds: kinds };
+    });
+  }
+  return { pupOdds: pupOdds, markers: markers, copiesOf: copiesOf, kindOf: kindOf, results: results, worst: worst, card: card, key: key, perPuppy: perPuppy, calcMarkers: calcMarkers, calc: calc, css: css,
     gradeBands: gradeBands, bandFor: bandFor, grades: grades, bandsHtml: bandsHtml, setupHtml: setupHtml, screen: screen, matchRule: matchRule };
 }));

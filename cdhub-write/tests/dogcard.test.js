@@ -51,26 +51,47 @@ test('vaccination: one row per vaccination, so a dog can have several; card link
   assert.equal(post(e, 'vaccination', { subject_id: 'sub-test-a', given_on: '2026-01-15', product: '=SUM(A1)' }).code, 'INVALID');
 });
 
-test('vaccination_void: only the newest row, marked removed (never deleted); then the one before becomes newest', () => {
+test('vaccination_void (Archive): owner only, ANY row of the dog, the row stays; staff refused', () => {
   const T = 'ten-x';
   const e = env({}, [
     'vax-old,' + T + ',sub-test-a,vaccination,DHP,DHP,distemper,,,2024-01-01,,,,,,,,,,,,,,',
     'vax-new,' + T + ',sub-test-a,vaccination,L4,L4,leptospirosis,,,2025-01-01,,,,,,,,,,,,,,'
   ]);
-  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }).code, 'NOT_ALLOWED');
-  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-new' });
+  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }).code, 'NOT_ALLOWED');   // staff
+  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-b', id: 'vax-old' }, e.codes.owner).code, 'NOT_FOUND');   // another dog
+  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }, e.codes.owner);   // not the newest: allowed now
   assert.equal(r.ok, true, JSON.stringify(r));
   const rows = text(e, 'BLD-vaccination.csv').trim().split(/\r?\n/);
   assert.equal(rows.length, 3);   // nothing deleted
-  assert.match(rows[2], /^vax-new,.*,\d{4}-\d{2}-\d{2}T[^,]+,Sam Staff$/);
-  assert.match(rows[1], /,,$/);   // the older row is untouched
-  assert.equal(post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-old' }).ok, true);
+  assert.match(rows[1], /^vax-old,.*,\d{4}-\d{2}-\d{2}T[^,]+,Olive Owner$/);
+  assert.match(rows[2], /,,$/);   // the other row is untouched
+});
+
+test('vaccination_delete (Delete forever): owner only; that one row leaves the sheet, the rest byte for byte the same', () => {
+  const T = 'ten-x';
+  const e = env({}, [
+    'vax-a,' + T + ',sub-test-a,vaccination,DHP,DHP,distemper,,,2024-01-01,,,,,,,,,,,,,,',
+    'vax-b,' + T + ',sub-test-a,vaccination,"L4, boost",L4,leptospirosis,,,2025-01-01,,,,,,,,,,,,,,',
+    'vax-c,' + T + ',sub-test-b,vaccination,KC,KC,bordetella,,,2025-02-01,,,,,,,,,,,,,,'
+  ]);
+  const before = text(e, 'BLD-vaccination.csv');
+  assert.equal(post(e, 'vaccination_delete', { subject_id: 'sub-test-a', id: 'vax-b' }).code, 'NOT_ALLOWED');   // staff
+  assert.equal(post(e, 'vaccination_delete', { subject_id: 'sub-test-a', id: 'vax-c' }, e.codes.owner).code, 'NOT_FOUND');   // not this dog's
+  assert.equal(text(e, 'BLD-vaccination.csv'), before);
+  const r = post(e, 'vaccination_delete', { subject_id: 'sub-test-a', id: 'vax-b' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.deleted, true);
+  const lines = before.split('\r\n');
+  assert.equal(text(e, 'BLD-vaccination.csv'), [lines[0], lines[1], lines[3]].join('\r\n') + '\r\n');
+  // the last row can go too
+  assert.equal(post(e, 'vaccination_delete', { subject_id: 'sub-test-b', id: 'vax-c' }, e.codes.owner).ok, true);
+  assert.equal(text(e, 'BLD-vaccination.csv'), [lines[0], lines[1]].join('\r\n') + '\r\n');
 });
 
 test('vaccination_void refuses plainly when the sheet has no voided_on / voided_by columns', () => {
   const H = VAX_H.replace(',voided_on,voided_by', '');
   const e = env({}, ['vax-1,t,sub-test-a,vaccination,DHP,DHP,distemper,,,2024-01-01,,,,,,,,,,,,'], H);
-  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-1' });
+  const r = post(e, 'vaccination_void', { subject_id: 'sub-test-a', id: 'vax-1' }, e.codes.owner);
   assert.equal(r.code, 'HEADER_MISMATCH');
   assert.match(r.message, /voided_on, voided_by/);
 });
@@ -93,4 +114,135 @@ test('dog_details: owner only, behind its own switch; changes the header fields 
   assert.equal(post(e, 'dog_details', { subject_id: 'sub-test-a', name: 'Test A2' }, e.codes.owner).code, 'NOTHING_CHANGED');
   const off = env();
   assert.equal(post(off, 'dog_details', { subject_id: 'sub-test-a', name: 'X' }, off.codes.owner).code, 'TABLE_OFF');
+});
+
+// subject_create (13 Nov 2026): add one dog. Invented dogs and invented rows only.
+function createEnv(props) {
+  const e = env(Object.assign({ TABLE_ON_subject_create: 'true' }, props || {}));
+  const T = e.props.TENANT_ID;
+  e.file('BLD-subject.csv')[0].content = 'id,tenant_id,name,sex,dob,size_band,coat_type,kind,neuter_status,source,species,breed,coat_colour_id,coat_pattern_id,nose_pigment_id,birth_litter_id,photo\r\n' +
+    'sub-test-a,' + T + ',Test A,Female,2021-01-01,,,Adult,entire,seed,Dog,Pretend Breed,,,,,\r\n' +
+    'sub-test-p,' + T + ',Test P,Male,2026-01-01,,,Pup,entire,seed,Dog,Pretend Breed,,,,,\r\n';
+  e.addFile('BLD-species.csv', 'id,code,common_name,young_word,adult_female_word,adult_male_word,active\r\nsp-dog,dog,Dog,puppy,bitch,stud,yes\r\n');
+  e.addFile('BLD-coat_colour.csv', 'id,name\r\ncol-choc,Pretend Chocolate\r\n');
+  e.addFile('BLD-litter.csv', 'id,tenant_id,dam_subject_id,born_on\r\nltr-1,' + T + ',sub-test-a,2026-03-01\r\n');
+  e.addFile('BLD-microchip.csv', 'id,tenant_id,subject_id,chip_number,source\r\n');
+  const st = e.file('BLD-subject_status.csv');
+  const sth = 'id,tenant_id,subject_id,state,from_date,to_date,reason\r\nsst-a,' + T + ',sub-test-a,Active,,,\r\n';
+  if (st.length) { st[0].content = sth; st[0].sheet = undefined; } else e.addFile('BLD-subject_status.csv', sth);
+  return e;
+}
+
+test('subject_create: owner only, behind its own switch; one dog row, one Active status row, optional chip row', () => {
+  const off = createEnv({ TABLE_ON_subject_create: '' });
+  assert.equal(post(off, 'subject_create', { name: 'New One', sex: 'Female', species: 'dog', kind: 'Adult' }, off.codes.owner).code, 'TABLE_OFF');
+  const e = createEnv();
+  assert.equal(post(e, 'subject_create', { name: 'New One', sex: 'Female', species: 'dog', kind: 'Adult' }).code, 'NOT_ALLOWED');   // staff code
+  const r = post(e, 'subject_create', { name: 'New One', sex: 'female', species: 'Dog', kind: 'adult', breed: 'Pretend Breed', coat_colour_id: 'col-choc', chip_number: '000 000 000 000 009', host: 'Breed Better' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  // Q4 (15 Nov 2026): a new dog's id is sub- and random letters, never built from its name
+  assert.equal(r.result.status, 'saved');
+  const id = r.result.id;
+  assert.match(id, /^sub-[a-z2-9]{8}$/);
+  assert.ok(!id.includes('new') && !id.includes('one'));
+  const row = text(e, 'BLD-subject.csv').trim().split(/\r?\n/)[3];
+  assert.ok(row.startsWith(id + ','));
+  assert.match(row, /^sub-[a-z2-9]{8},[^,]+,New One,Female,,,,Adult,entire,"?added in Breed Better by OWNER, \d{4}-\d{2}-\d{2}"?,Dog,Pretend Breed,col-choc,,,,$/);
+  assert.match(text(e, 'BLD-subject_status.csv'), new RegExp(',' + id + ',Active,')); assert.match(text(e, 'BLD-subject_status.csv'), /,Active,\d{4}-\d{2}-\d{2},,/);
+  assert.ok(text(e, 'BLD-microchip.csv').includes(',' + id + ',000000000000009,'));
+  // the same name with no date of birth is the same dog again; a second New One with a dob gets its own id
+  assert.equal(post(e, 'subject_create', { name: 'new one', sex: 'Female', species: 'dog', kind: 'Adult' }, e.codes.owner).code, 'DUPLICATE');
+  const r2 = post(e, 'subject_create', { name: 'New One', sex: 'Male', species: 'dog', kind: 'Adult', dob: '2024-02-02' }, e.codes.owner);
+  assert.match(r2.result.id, /^sub-[a-z2-9]{8}$/);
+  assert.notEqual(r2.result.id, id);
+  assert.equal(post(e, 'subject_create', { name: 'Other', sex: 'Male', species: 'dog', kind: 'Adult', chip_number: '000000000000009' }, e.codes.owner).code, 'DUPLICATE');
+});
+
+test('subject_create: sex, kind, species and every id come from rows; a pup needs a date of birth', () => {
+  const e = createEnv();
+  const bad = post(e, 'subject_create', { name: 'X', sex: 'Other', species: 'cat', kind: 'Senior', coat_colour_id: 'col-none', birth_litter_id: 'ltr-none', chip_number: '12' }, e.codes.owner);
+  assert.equal(bad.code, 'INVALID');
+  assert.deepEqual(Object.keys(bad.fields).sort(), ['birth_litter_id', 'chip_number', 'coat_colour_id', 'dob', 'kind', 'sex', 'species']);
+  assert.equal(post(e, 'subject_create', { name: 'Pup One', sex: 'Male', species: 'dog', kind: 'Pup', birth_litter_id: 'ltr-1' }, e.codes.owner).fields.dob, 'A puppy needs a date of birth.');
+  assert.equal(post(e, 'subject_create', { name: 'Pup One', sex: 'stud', species: 'dog', kind: 'Pup', birth_litter_id: 'ltr-1', dob: '2026-03-01' }, e.codes.owner).ok, true);   // the species row's word is allowed too
+  assert.equal(post(e, 'subject_create', { name: 'Late', sex: 'Male', species: 'dog', kind: 'Adult', dob: '2999-01-01' }, e.codes.owner).code, 'INVALID');
+  assert.equal(post(e, 'subject_create', { name: '=SUM(A1)', sex: 'Male', species: 'dog', kind: 'Adult' }, e.codes.owner).code, 'INVALID');
+});
+
+test('subject_create: a sold dog with the same name and dob is not a duplicate', () => {
+  const e = createEnv();
+  e.file('BLD-subject_status.csv')[0].content += 'sst-a2,' + e.props.TENANT_ID + ',sub-test-a,Sold,2025-01-01,,\r\n';
+  assert.equal(post(e, 'subject_create', { name: 'Test A', sex: 'Female', species: 'dog', kind: 'Adult', dob: '2021-01-01' }, e.codes.owner).ok, true);
+});
+
+// subject_link (13 Nov 2026, DOGCARD): BFFs / Fren. links between two dogs. Invented dogs and rows only.
+const LINK_H = 'id,tenant_id,subject_id,other_subject_id,kind,from_date,to_date,source,note,set_at,set_by';
+const RULE_H = 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date';
+function linkEnv(props) {
+  const e = env(Object.assign({ TABLE_ON_subject_link: 'true' }, props || {}));
+  e.addFile('BLD-subject_link.csv', LINK_H + '\r\n');
+  const t = e.props.TENANT_ID;
+  const rules = [RULE_H, `brl-1,${t},link_kind.bff,BFFs,2026-01-01,test,,,,`, `brl-2,${t},link_kind.not_with,Fren.,2026-01-01,test,,,,`,
+    `brl-3,${t},link_kind.old,Old,2026-01-01,test,,,,2026-02-01`].join('\r\n') + '\r\n';
+  const f = e.file('BLD-breeding_rule.csv');
+  if (f.length) { f[0].content = rules; f[0].sheet = undefined; } else e.addFile('BLD-breeding_rule.csv', rules);
+  return e;
+}
+const linkRows = (e) => text(e, 'BLD-subject_link.csv').trim().split(/\r?\n/).slice(1);
+
+test('subject_link: owner only, behind its own switch; one row, kind from link_kind rows in force', () => {
+  const off = linkEnv({ TABLE_ON_subject_link: '' });
+  assert.equal(post(off, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff' }, off.codes.owner).code, 'TABLE_OFF');
+  const e = linkEnv();
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff' }).code, 'NOT_ALLOWED');
+  const r = post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff', from_date: '2026-11-13' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.match(r.result.id, /^slk/);
+  const rows = linkRows(e);
+  assert.equal(rows.length, 1);
+  assert.match(rows[0], /^slk[^,]*,[^,]+,sub-test-a,sub-test-b,bff,2026-11-13,,/);
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'old' }, e.codes.owner).code, 'INVALID');
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'best' }, e.codes.owner).code, 'INVALID');
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-a', kind: 'bff' }, e.codes.owner).code, 'INVALID');
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-nobody', kind: 'bff' }, e.codes.owner).code, 'NOT_FOUND');
+});
+
+test('subject_link: the same pair and kind either way round is a DUPLICATE while open; a different kind is fine', () => {
+  const e = linkEnv();
+  const first = post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff', from_date: '2026-11-01' }, e.codes.owner);
+  const dup = post(e, 'subject_link', { subject_id: 'sub-test-b', other_subject_id: 'sub-test-a', kind: 'bff' }, e.codes.owner);
+  assert.equal(dup.code, 'DUPLICATE');
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-b', other_subject_id: 'sub-test-a', kind: 'not_with' }, e.codes.owner).ok, true);
+  assert.equal(linkRows(e).length, 2);
+  assert.ok(first.ok);
+});
+
+test('subject_link_end: owner only; fills to_date, never before the start, never twice; nothing deleted', () => {
+  const e = linkEnv();
+  const id = post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff', from_date: '2026-11-10' }, e.codes.owner).result.id;
+  assert.equal(post(e, 'subject_link_end', { id }).code, 'NOT_ALLOWED');
+  assert.equal(post(e, 'subject_link_end', { id, to_date: '2026-11-09' }, e.codes.owner).code, 'INVALID');
+  assert.equal(post(e, 'subject_link_end', { id: 'slk-nope' }, e.codes.owner).code, 'NOT_FOUND');
+  const r = post(e, 'subject_link_end', { id, to_date: '2026-11-12' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.match(linkRows(e)[0], /,bff,2026-11-10,2026-11-12,/);
+  assert.equal(post(e, 'subject_link_end', { id }, e.codes.owner).code, 'NOT_ALLOWED');
+  assert.equal(linkRows(e).length, 1);
+  // after it ends, the pair can be linked again from a later date
+  assert.equal(post(e, 'subject_link', { subject_id: 'sub-test-a', other_subject_id: 'sub-test-b', kind: 'bff', from_date: '2026-11-13' }, e.codes.owner).ok, true);
+});
+
+test('new row ids (Q4, 15 Nov 2026): table prefix and 8 random letters, never a date or a name; 5,000 in a row are all different', () => {
+  const e = standardEnv({});
+  const seen = new Set();
+  for (let i = 0; i < 5000; i++) {
+    const id = e.ctx.newId_('rdg', new Date(Date.UTC(2026, 9, 15, 22, 30)));
+    assert.match(id, /^rdg-[a-z2-9]{8}$/);
+    assert.ok(!/2026|1015|2230/.test(id), id);
+    seen.add(id);
+  }
+  assert.equal(seen.size, 5000);
+  // the subject id ignores the name and steps round an id already in the file
+  const one = e.ctx.dogcardSubjectId_({});
+  assert.match(one, /^sub-[a-z2-9]{8}$/);
 });

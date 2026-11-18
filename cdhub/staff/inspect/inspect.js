@@ -28,7 +28,7 @@
     { key: 'microchip', title: 'Microchip', dog: 'subject_id', date: '' },
     { key: 'subject_status', title: 'Status', dog: 'subject_id', date: 'from_date' },
     { key: 'health_screen', title: 'Health tests', dog: 'subject_id', date: 'tested_on' },
-    { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on' },
+    { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },   // done_on: a job record (15 Nov 2026)
     { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' }
   ];
   var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1 };
@@ -49,6 +49,8 @@
     if (s === 'dob') return 'DOB';
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
+  /* the first date column a row has, of those named by | */
+  function dateOf(r, cols) { var c = String(cols || '').split('|').filter(function (k) { return r[k]; })[0]; return c ? r[c] : ''; }
   function isDateCol(c) { return /(^dob$|_on$|_date$|_until$|_at$)/.test(c); }
   function show(c, v) { return isDateCol(c) ? day(v) : String(v === undefined || v === null ? '' : v); }
 
@@ -65,7 +67,7 @@
 
   function txt(v) { return v === undefined || v === null ? '' : String(v).trim(); }
   function addMonths(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); }
-  function newest(rows, col) { return rows.slice().sort(function (a, b) { return txt(b[col]).localeCompare(txt(a[col])); }); }
+  function newest(rows, col) { return rows.slice().sort(function (a, b) { return txt(dateOf(b, col)).localeCompare(txt(dateOf(a, col))); }); }
   function clean(fields) { return (fields || []).filter(function (c) { return !HIDE[c] && !NEVER_FIELDS.test(c); }); }
 
   /** Group what came back by dog, dogs A to Z: [{name, facts, word, checks:[{label, word, sub, open:[cells]}], litters, lists}].
@@ -108,12 +110,12 @@
       }
       var ftb = res.fit_to_breed && (res.fit_to_breed.rows || []).filter(function (r) { return r.subject_id === d.id; });
       if (ftb && ftb.length && !(mp && mp.length)) {
-        var fr = newest(ftb, 'assessed_on'), f = fr[0];
-        checks.push({ label: 'Fit to Breed', word: '', sub: [txt(f.outcome), txt(f.assessed_on) ? day(f.assessed_on) : '', txt(f.valid_until) ? 'due ' + day(f.valid_until) : ''].filter(Boolean).join(' \u00b7 '),
+        var fr = newest(ftb, 'assessed_on|done_on'), f = fr[0], fon = txt(dateOf(f, 'assessed_on|done_on'));
+        checks.push({ label: 'Fit to Breed', word: '', sub: [txt(f.outcome), fon ? day(fon) : '', txt(f.valid_until) ? 'due ' + day(f.valid_until) : ''].filter(Boolean).join(' \u00b7 '),
           open: fr.map(function (x) { return cells(res.fit_to_breed.fields, x); }) });
       } else if (ftb && ftb.length) {
         var fit = checks.filter(function (c) { return /fit to breed/i.test(c.label); })[0];
-        if (fit) fit.open = newest(ftb, 'assessed_on').map(function (x) { return cells(res.fit_to_breed.fields, x); });
+        if (fit) fit.open = newest(ftb, 'assessed_on|done_on').map(function (x) { return cells(res.fit_to_breed.fields, x); });
       }
       var lit = res.litter && (res.litter.rows || []).filter(function (r) { return r.dam_subject_id === d.id; });
       var litters = null;
@@ -128,7 +130,7 @@
       return {
         name: d.name || 'Dog', facts: facts, word: word, checks: checks, litters: litters,
         lists: LISTS.filter(function (L) { return L.key === 'subject_status' && res[L.key] && res[L.key].rows; }).map(function (L) {
-          var rows = res[L.key].rows.filter(function (r) { return r[L.dog] === d.id; }).sort(function (a, b) { return String(b[L.date] || '').localeCompare(String(a[L.date] || '')); });
+          var rows = res[L.key].rows.filter(function (r) { return r[L.dog] === d.id; }).sort(function (a, b) { return String(dateOf(b, L.date)).localeCompare(String(dateOf(a, L.date))); });
           return { title: L.title, rows: rows.map(function (r) { return cells(res[L.key].fields, r); }) };
         }).filter(function (l) { return l.rows.length; })
       };

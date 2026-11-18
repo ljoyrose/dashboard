@@ -30,7 +30,9 @@ function world() {
 
 const test = base.extend({ world: async ({}, use) => use(world()) });
 
-async function openEnquiries(page) {
+async function openEnquiries(page, examples = true) {
+  // the invented examples show only when this browser asks for them (Lisa 16 Nov 2026: none by default)
+  if (examples) await page.addInitScript(() => localStorage.setItem('cdhub.enquiries.examples', '1'));
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
   await tabClick(page, '#nav button[data-go="enquiries"]');
@@ -47,15 +49,15 @@ test.describe('CD Hub enquiries', () => {
     const options = page.locator('#enqLitter option');
     await expect(options).toHaveCount(3);
     await expect(options.nth(1)).toContainText('Pair A');
-    await expect(options.nth(1)).toContainText('02/03/26');
+    await expect(options.nth(1)).toContainText('2 Mar 2026');
     await expect(options.nth(2)).toContainText('Pair B');
-    await expect(options.nth(2)).toContainText('15/01/26');
-    await expect(page.locator('[data-enq="K-a000000000000001"] [data-litter-label]')).toHaveText('Pair A 02/03/26');
+    await expect(options.nth(2)).toContainText('15 Jan 2026');
+    await expect(page.locator('[data-enq="K-a000000000000001"] [data-litter-label]')).toHaveText('Pair A 2 Mar 2026');
     await expect(page.locator('[data-litter-label]', { hasText: 'not linked' }).first()).toBeVisible();
     await page.locator('#enqLitter').selectOption('lit-a');
     await expect(page.locator('[data-litter-label]', { hasText: 'not linked' })).toHaveCount(0);
     await expect(page.locator('[data-enq]')).toHaveCount(2);
-    await expect(page.locator('[data-litter-label]').first()).toHaveText('Pair A 02/03/26');
+    await expect(page.locator('[data-litter-label]').first()).toHaveText('Pair A 2 Mar 2026');
     const text = await page.locator('#main').innerText();
     for (const word of ['enquiry', 'deposit', 'working to collection', 'after collection']) expect(text).toContain(word);
     for (const code of CODES) expect(text).not.toContain(code);
@@ -68,6 +70,15 @@ test.describe('CD Hub enquiries', () => {
     await expect(page.locator('article.dc', { hasText: 'Test Dog One' })).toContainText('Owner');
     await expect(page.locator('article.dc', { hasText: 'Test Dog One' })).toContainText('Sample Home A');
     expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('no sheet connected: "No enquiries yet", no invented rows and no TEST mark (Lisa 16 Nov 2026)', async ({ page }) => {
+    await openEnquiries(page, false);
+    await expect(page.locator('[data-enq-empty]')).toContainText('No enquiries yet');
+    await expect(page.locator('[data-enq]')).toHaveCount(0);
+    await expect(page.locator('[data-enq-stamp]')).toHaveCount(0);
+    await page.locator('button[data-go="enquiries/all"]').click();
+    await expect(page.locator('[data-enq]')).toHaveCount(0);
   });
 
   test('phone: the section fits 390px and tap targets are at least 44px', async ({ page }) => {
