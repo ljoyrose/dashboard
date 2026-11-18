@@ -14,7 +14,7 @@ Fix these seven gaps from the audit (GAPS.csv rows with fix = "successor BB-FIN.
    Add a small label map for the columns the save script can share; keep the fallback. Extend tests/breed-better/inspect.test.js.
 4. Phone: add a mocked Playwright test that #/breed (list and one dog) has no sideways scroll at 360px.
 5. Keyboard: add a test that Tab moves search -> sort -> filters -> first dog row on #/breed in that order.
-6. House look: `hub-view.js` CSS around lines 194-210 uses font-weight 500; house is Lexend 400/600 only. Change to 600.
+6. DROPPED (Lisa, 18 Nov 2026): do not change font weights. The approved design keeps Lexend 400/500/600, and Breed Better keeps weight 500.
 7. House look: `.bb-band summary` (section headers) needs the hover/tap pale grey fill, no outline, 12px corners (PR #408 rule).
 
 Done when: all Breed Better node + Playwright suites green, each fix has a test, PRs open and green, slip numbered from
