@@ -11,7 +11,7 @@
   save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   function newTag() { var a = new Uint8Array(LEN), s = ''; crypto.getRandomValues(a); for (var i = 0; i < LEN; i++) s += ALPHABET.charAt(a[i] % ALPHABET.length); return s; }
-  function say(t, k) { msg.className = 'msg ' + (k || ''); msg.textContent = t; }
+  function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
@@ -72,8 +72,8 @@
     (T.weight || []).forEach(function (r) { if (r.subject_id === s.id && !isNaN(parseFloat(r.weight_kg)) && (!w || String(r.performed_on || '') >= String(w.performed_on || ''))) w = r; });
     return BLDCapacity.sizeForDog({ id: s.id, kg: w ? w.weight_kg : null, sizeText: s.size_band, rules: T.breeding_rule || [], today: BLDNeeds.today() }).size || sizeKey(s.size_band);
   }
-  /* the size word only (Small, Medium, Large): never the kg range typed in the old size cell */
-  function sizeWord(k) { return k ? k.charAt(0).toUpperCase() + k.slice(1) : ''; }
+  /* the size word only, in the owner's size_label.* words (default Small, Medium, Large, shared with the hub): never the kg range typed in the old size cell */
+  function sizeWord(k) { return k ? (BLDCapacity.sizeLabels(T.breeding_rule || [], BLDNeeds.today())[k] || '') : ''; }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });

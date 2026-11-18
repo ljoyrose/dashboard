@@ -216,3 +216,41 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
     });
   }
 });
+
+// Lisa 17 Nov 2026, "yes all" to the audit questions: a touch screen of any width gets the 44px phone tap size.
+test.describe('touch screen at 860px (folding phone open)', () => {
+  test.use({ viewport: { width: 860, height: 900 }, hasTouch: true, isMobile: true });
+  test('house buttons are 44px tall on a touch screen wider than a phone', async ({ page }) => {
+    await page.goto('cdhub/');
+    const h = await page.evaluate(() => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'x'; document.body.appendChild(b); return Math.round(b.getBoundingClientRect().height); });
+    expect(h).toBe(44);
+  });
+});
+test('a mouse screen at 860px keeps 36px house buttons', async ({ page }) => {
+  await page.setViewportSize({ width: 860, height: 900 });
+  await page.goto('cdhub/');
+  const h = await page.evaluate(() => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'x'; document.body.appendChild(b); return Math.round(b.getBoundingClientRect().height); });
+  expect(h).toBe(36);
+});
+
+test('plain names: data checks say Links between records, Date formats and Rule history; Settings is the page heading', async ({ page }) => {
+  await page.goto('cdhub/');
+  await expect(page.locator('#signinbtn')).toBeEnabled();
+  await page.locator('#signinbtn').click();
+  await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
+  const names = await page.evaluate(() => [CHECKNAME.joins, CHECKNAME.dates, CHECKNAME['rule changes']]);
+  expect(names).toEqual(['Links between records', 'Date formats', 'Rule history']);
+});
+
+test('an enquiry card shows the buyer\'s name, with the reference small beside it', async ({ page }) => {
+  // Example enquiries show only with this flag (no sheet connected = "No enquiries yet").
+  await page.addInitScript(() => localStorage.setItem('cdhub.enquiries.examples', '1'));
+  await page.goto('cdhub/');
+  await expect(page.locator('#signinbtn')).toBeEnabled();
+  await page.locator('#signinbtn').click();
+  await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
+  await page.evaluate(() => go('enquiries/all', false));
+  const card = page.locator('[data-enq]').first();
+  await expect(card.locator('a.btn').first()).toHaveText(/^Example\d/);
+  await expect(card.locator('[data-enq-ref]')).toHaveText(/^E-\d+/);
+});

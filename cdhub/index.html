@@ -26,6 +26,7 @@
 <script src="staff/lib/links.js"></script>
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
+<script src="docs-view.js"></script>
 <script src="../breed-better/score.js"></script>
 <script src="../breed-better/dna-kit.js"></script>
 <script src="../breed-better/hub-view.js"></script>
@@ -146,7 +147,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
-@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
+/* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
+@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -602,6 +604,53 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 .dc .nmrow{display:flex;align-items:flex-start;gap:8px;min-width:0}.dc .nmrow>.nm{flex:1;min-width:0}.dc .nmrow>.dedit{margin-left:0;flex:none}
 /* Menu option A (14 Nov 2026) has 5 tabs: on a phone they stay square (Lisa's pick b, 2 Nov), a long word still keeps its room. */
 @media (max-width: 600px) { #nav.house-tabs > .ht, #nav.house-tabs > .ht-more { max-width: calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)); } }
+/* Print (13 Nov 2026): A4 from the browser's Print or Save as PDF. Bars, buttons and forms stay off the paper; no card
+   splits across pages. The round prints as a two-column round sheet with blank min/max boxes; Dogs prints two cards a row.
+   Inline-block, not grid, so Safari and Chrome break pages the same way. Screen is unchanged. */
+@media print{
+@page{size:A4;margin:0}   /* no room for the browser's header and footer: no page address on the paper */
+html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
+body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+*{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
+.wrap{padding:0!important;margin:0!important;max-width:none!important}
+#main{max-width:none!important;margin:0!important;padding:0!important}
+#main [data-house-folded]>[data-fold-part]{display:revert!important}
+#main .card,#main .mcard,#main .dc{background:#fff!important}
+.card,.mcard,.dc{break-inside:avoid;page-break-inside:avoid}
+h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
+#main h2{margin:0 0 3mm}
+#main[data-view="round"]{font-size:9pt;line-height:1.25}
+#main[data-view="round"] .filt>a.btn,#main[data-view="round"] .radd,#main[data-view="round"] .racc,#main[data-view="round"] .herebtns,#main[data-view="round"] .rempty,#main[data-view="round"] [data-over-move],#main[data-view="round"] [data-unshow]{display:none!important}
+#main[data-view="round"] #rdate{border:0;padding:0;height:auto;min-height:0;background:none;font:inherit;font-weight:600;width:auto}
+#main[data-view="round"] #rdate::-webkit-calendar-picker-indicator{display:none}
+#main[data-view="round"] .card{padding:2mm 2.5mm;margin:0 0 2.5mm;border:1px solid var(--ljr-0-icon)}
+#main[data-view="round"] .card h3,#main[data-view="round"] .card h4{margin:0 0 1mm}
+.rcabins{font-size:0;orphans:1;widows:1}   /* each row of cards is one line: without this a page keeps two rows back */
+#main[data-view="round"] .rcabins>.card{display:inline-block;vertical-align:top;box-sizing:border-box;width:calc(50% - 1.5mm);font-size:9pt;margin:0 0 2.5mm}
+#main[data-view="round"] .rcabins>.card:nth-child(odd){margin-right:3mm}
+#main[data-view="round"] .rcabins h4{margin:0 0 1mm;font-size:10.5pt}
+#main[data-view="round"] .rcabins .filt{margin:0!important;min-height:0}
+#main[data-view="round"] .chips{margin:0 0 1mm!important}
+#main[data-view="round"] .drow{display:block;margin:0 0 0.8mm}
+#main[data-view="round"] .dchip{display:inline-block!important;min-height:0!important;height:auto!important;padding:0 0 0 1.5mm!important;margin:0!important;border:0!important;border-left:1.2mm solid var(--sz,var(--ljr-0-icon))!important;border-radius:0!important;font-size:9pt;font-weight:600;background:none!important;text-align:left;white-space:normal;color:var(--ljr-8)}
+#main[data-view="round"] .dchip .mut{font-weight:400}
+#main[data-view="round"] .tmp{grid-template-columns:auto 1fr 1fr;gap:1mm 2mm;padding-top:1mm;margin-top:1mm}
+#main[data-view="round"] .tmp input{height:7mm;min-height:0!important;width:100%;box-sizing:border-box;border:1px solid var(--house-muted);border-radius:2mm;background:#fff;font-size:9pt}
+#main[data-view="round"] .tmp input::placeholder{color:var(--ljr-0-text)}
+#main[data-view="round"] .tmsg{grid-column:1/-1;margin:0;min-height:0}
+#main[data-view="round"] .tmsg:empty{display:none}
+#main[data-view="dogs"] #rows{display:block;font-size:0;orphans:1;widows:1}
+#main[data-view="dogs"] #rows>.dc{display:inline-flex;vertical-align:top;box-sizing:border-box;width:calc(50% - 2mm);margin:0 0 4mm;font-size:10pt}
+#main[data-view="dogs"] #rows>.dc:nth-child(odd){margin-right:4mm}
+.dc .wtc{margin:0;padding:0}
+.dc .ph{break-inside:avoid}
+#main .dc .nm{display:block;-webkit-line-clamp:unset;line-clamp:none;overflow:visible}   /* the whole name on paper, never cut to "…" */
+#main[data-view="dogs"] .dc .ph{width:30mm!important;height:30mm!important;aspect-ratio:auto}
+#main[data-view="dogs"] .dc .dogphoto-col{width:30mm!important}
+#main[data-view="dogs"] .dc .dc-top{flex-direction:row;align-items:flex-start}
+#main .dc button.cb[data-cabin-move]{border:0!important;padding:0!important;min-height:0!important;height:auto!important;background:none!important;font:inherit;font-weight:600;color:inherit}
+}
 </style>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></symbol><symbol id="i-female" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="M12 14v7M9 18h6"/></symbol><symbol id="i-male" viewBox="0 0 24 24"><circle cx="10" cy="14" r="5"/><path d="M19 5l-5.5 5.5M19 5h-5M19 5v5"/></symbol><symbol id="i-neuter" viewBox="0 0 24 24"><circle cx="12" cy="10" r="5"/><path d="M12 15v6M9 18h6M4 4l16 16" stroke-linecap="round"/></symbol><symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7V4M12 7V4M15 7V4M9 20v-3M12 20v-3M15 20v-3M4 9h3M4 12h3M4 15h3M17 9h3M17 12h3M17 15h3"/></symbol><symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v1M6 7l-3 7h6l-3-7zM18 7l-3 7h6l-3-7zM3 20h18M12 4a2 2 0 0 0-2 2M12 4a2 2 0 0 1 2 2M6 14c0 1.1-.9 2-2 2s-2-.9-2-2M18 14c0 1.1.9 2 2 2s2-.9 2-2"/></symbol><symbol id="i-pill" viewBox="0 0 24 24"><path d="M4.5 12.5l8-8a4.95 4.95 0 1 1 7 7l-8 8a4.95 4.95 0 1 1-7-7zM12 12l-3.5-3.5"/></symbol></svg>
@@ -620,6 +669,14 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 </div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
+/* Print in the light look (13 Nov 2026): a phone or Mac in dark mode, or Look > Dark, printed pale text and a black
+   margin on white paper. Light for the print only, then back. Same in ../cdhub/staff/look.js. */
+(function(){ var r=document.documentElement, was=null, on=false;
+ function light(){ if(on) return; on=true; was=r.getAttribute('data-theme'); r.setAttribute('data-theme','light'); }
+ function back(){ if(!on) return; on=false; if(was===null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme',was); }
+ window.addEventListener('beforeprint',light); window.addEventListener('afterprint',back);
+ if(window.matchMedia){ var mq=window.matchMedia('print'); if(mq.addListener) mq.addListener(function(e){ if(e.matches) light(); else back(); }); }
+}());
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;
 var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
@@ -655,6 +712,7 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 /* Joins A (Lisa 17 Nov 2026): dogs moved to the archive keep their history (vaccinations, vet visits, litters). The archive
    is read so those records point at a real dog; nothing is deleted. Read after the first screen; absent is fine. */
 wantLater('BLD-subject-Archive.csv');
+wantLater('BLD-litter-Archive.csv');   /* Lisa 17 Nov 2026: old litters (paper books) kept as history, so their vet visits resolve */
 wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
 var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
@@ -666,6 +724,8 @@ function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
 function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
+/* a dog's documents: files linked from the dog, labelled by BLD-doc_type (Lisa 17 Nov 2026) */
+function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -1026,7 +1086,10 @@ function readSet(titles,byTitle,live){
   });
 }
 function refused(e){ return !!(e&&(e.status===401||e.status===403||e.status===404)); }
-function showTables(){ BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
+/* Lisa 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty on every screen, with its
+   temperatures hidden. Only this page's copy is changed; the readings stay in the records. */
+function hideEmptyReadings(){ if(T['BLD-area_reading.csv']&&BLDOccupancy.hideEmpty) T['BLD-area_reading.csv']=BLDOccupancy.hideEmpty(T['BLD-area_reading.csv'],T['BLD-requirement.csv']||[]); }
+function showTables(){ BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; hideEmptyReadings(); foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
 async function load(){
   var ticket=++bootTicket;
   function live(){ return ticket===bootTicket; }
@@ -1124,10 +1187,12 @@ function build(){
     (DNA[r.subject_id]=DNA[r.subject_id]||[]).push({code:r.marker_code,genotype:r.genotype,
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
-  var VAC={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id||String(r.voided_on||'').trim()) return;   /* a removed row stays in the sheet, marked voided_on */
-    (VAC[r.subject_id]=VAC[r.subject_id]||[]).push({id:r.id||'',vet:r.practice||r.administered_by||'',card:r.certificate_media_id||'',on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
+  var VAC={}, VACA={}; (T['BLD-vaccination.csv']||[]).forEach(function(r){ if(!r.subject_id) return;
+    var arch=!!String(r.voided_on||'').trim();   /* Archive (owner, 17 Nov 2026): the row stays in the sheet, marked voided_on, shown under Archived */
+    ((arch?VACA:VAC)[r.subject_id]=(arch?VACA:VAC)[r.subject_id]||[]).push({id:r.id||'',vet:r.practice||r.administered_by||'',card:r.certificate_media_id||'',on:r.given_on||'',kind:r.event_kind||'',product:r.product_shorthand||r.product||'',
       covers:r.diseases_covered||'',titre:r.titre_result||'',protective:r.titre_protective||'',due:r.next_due_on_card||'',dueSrc:r.next_due_source||''}); });
-  Object.keys(VAC).forEach(function(k){ VAC[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); });
+  [VAC,VACA].forEach(function(M){ Object.keys(M).forEach(function(k){ M[k].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); }); });
+  CD.vaxArch=VACA;
   CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
     min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source,
     rain:r.rain_value,wind:r.wind_kmh}; });
@@ -1177,7 +1242,8 @@ function build(){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
   CD.cap=CAP;
-  CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ CD.accessCsv[r.area_id]=r; });
+  /* the last row per room that counts today: a voided row (to_date before from_date) or an ended one never wins (OV12 18 Nov 2026) */
+  CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ if(BLDCapacity.accessRowCounts(r,_day)) CD.accessCsv[r.area_id]=r; });
 
   var _an={}; CD.areas.forEach(function(a){ _an[a.id]=a.code||a.id; });
   CD.dogs.forEach(function(d){
@@ -1190,8 +1256,10 @@ function build(){
   /* size from the latest weight (dog card mock-up, 7 Nov 2026): cut-offs are Lisa's size_from_kg.* rows with a source.
      12 Nov 2026 (Lisa): size is ALWAYS worked out from the latest weight, never kept separately. No weight, or no
      cut-off rows: no size. The card frame, lists, filters and the room check all read d.sizeWord. Colours: Lisa's
-     size_colour.* rows; without one, Toy/Mini (small) orange, Medium green, Standard (large) blue. */
+     size_colour.* rows; without one, small orange, medium green, large blue. The words are the owner's size_label.* rows
+     (OV12 17 Nov 2026, never fixed in code); without one, Small, Medium, Large as in SOP Care Rounds. */
   ['small','medium','large'].forEach(function(k,i){ if(!CD.sizeColour[k]) CD.sizeColour[k]=['var(--ljr-3)','var(--ljr-5)','var(--ljr-6)'][i]; });
+  CD.sizeLabel=BLDCapacity.sizeLabels(T['BLD-breeding_rule.csv']||[],todayISO());   /* shared with the print cards (staff/lib/capacity.js) */
   CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
   CD.dogs.forEach(sizeFromWeight);
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
@@ -1360,6 +1428,8 @@ function isISODate(v){
  return dt.getUTCFullYear()===y && dt.getUTCMonth()===m-1 && dt.getUTCDate()===d;
 }
 function isISOStamp(v){ return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v); }
+/* year-month (2023-03) is ISO 8601 too: batch use-by dates are month-only in any trade (Lisa 18 Nov 2026, "resolve"). Never given a day here. */
+function isISOMonth(v){ return /^\d{4}-(0[1-9]|1[0-2])$/.test(v); }
 
 var REFMAP={subject_id:'BLD-subject.csv',dam_subject_id:'BLD-subject.csv',sire_subject_id:'BLD-subject.csv',
  dam_id:'BLD-subject.csv',sire_id:'BLD-subject.csv',birth_litter_id:'BLD-litter.csv',litter_id:'BLD-litter.csv',
@@ -1378,7 +1448,9 @@ function refAudit(){
   if(!rows||!rows.length){ absent[f]=1; return; }
   var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
  /* Joins A: a record of an archived dog resolves (it is history, not an error); counted separately */
- var arch={}; (T['BLD-subject-Archive.csv']||[]).forEach(function(r){ if(r.id&&!(idsOf['BLD-subject.csv']||{})[r.id]) arch[r.id]=1; });
+ /* Any table's "<name>-Archive.csv" (dogs, litters, 17 Nov 2026) holds history: a record pointing there resolves. */
+ var arch={}; Object.keys(idsOf).forEach(function(f){ var a=f.replace(/\.csv$/,'-Archive.csv'), s=arch[f]={};
+  (T[a]||[]).forEach(function(r){ if(r.id&&!idsOf[f][r.id]) s[r.id]=1; }); });
  var archived=0;
  var seen={};
  Object.keys(T||{}).forEach(function(f){
@@ -1396,7 +1468,7 @@ function refAudit(){
    for(var i=0;i<rows.length;i++){
     var v=(rows[i][c]||'').trim(); if(!v) continue;
     checked++;
-    if(!idsOf[tgt][v]){ if(tgt==='BLD-subject.csv'&&arch[v]){ archived++; continue; } miss++; n++; if(!eg) eg=v; }
+    if(!idsOf[tgt][v]){ if(arch[tgt]&&arch[tgt][v]){ archived++; continue; } miss++; n++; if(!eg) eg=v; }
    }
    if(miss){ var k=f.replace(/^BLD-|\.csv$/g,'')+'.'+c;
      if(!seen[k]){ seen[k]=1; bad.push(k+' ('+miss+', e.g. '+eg+')'); } }
@@ -1465,7 +1537,7 @@ function dateAudit(){
    var offenders=0, sample='';
    for(var i=0;i<rows.length;i++){
     var v=(rows[i][c]||'').trim(); if(!v) continue;
-    if(!isISODate(v) && !isISOStamp(v)){ offenders++; if(!sample) sample=v; }
+    if(!isISODate(v) && !isISOStamp(v) && !isISOMonth(v)){ offenders++; if(!sample) sample=v; }
    }
    if(offenders) bad.push(f.replace(/^BLD-|\.csv$/g,'')+'.'+c+' ('+offenders+', e.g. '+sample+')');
   });
@@ -1482,7 +1554,7 @@ function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
 function inWhelp(onISO){
  var today=onISO||todayISO(), out=[], bydam={};
 
- (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
+ (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||'',due:m.due_from_this_mating||''}; })
   .forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
  Object.keys(bydam).forEach(function(dam){
   var ms=bydam[dam].slice().sort(function(a,b){return (a.on||'')<(b.on||'')?-1:1;});
@@ -1497,8 +1569,10 @@ function inWhelp(onISO){
   if(day===null||day<0) return;
   if(!g){ out.push({dog:d,dam:dam,matings:open.length,on:first.on,due:'',from:'',to:'',day:day,unset:true}); return; }
   if(day>g.to) return;
-  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,
-    due:addDays(first.on,g.due),from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
+  /* SOP Mating Plan: the mating's own due date wins; else first mating + gestation.due_days (17 Nov 2026) */
+  var due=isoDay(first.due)||addDays(first.on,g.due);
+  out.push({dog:d,dam:dam,matings:open.length,on:first.on,g:g,dueDay:daysBetween(first.on,due),dueOwn:!!isoDay(first.due),
+    due:due,from:addDays(first.on,g.from),to:addDays(first.on,g.to),day:day,
     sires:open.map(function(m){var x=CD._byId[m.sire];return x?x.name:(m.sire||'?');}),
     methods:open.map(function(m){return m.method||'not recorded';})});
  });
@@ -1516,8 +1590,7 @@ var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','da
  ['staffing.adults_per_full_time','Adult dogs per full-time carer','dogs'],['staffing.adults_per_part_time','Adult dogs per part-time carer','dogs'],
  ['dog.adult_from_months','Age a dog counts as an adult','months'],
  ['gestation.due_days','Days from first mating to working due date','days'],['gestation.window_from_days','Whelping window opens (days from mating)','days'],
- ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days'],
- ['litters.recent_days','Days the Litters card looks back','days']];
+ ['gestation.window_to_days','Whelping window closes (days from mating)','days'],['gestation.alert_from_day','Day of pregnancy to start alerting','days']];
 /* RULES BY TOPIC (Lisa 17 Nov 2026, option A): one foldable card per topic instead of one long list. The topic comes from
    the start of the rule's name, so a new rule joins its group with no code change; anything unmatched goes in "Other".
    Each row: rule, value, from. Source and versions sit behind the (i). Search and "Not set only" filter the rows. */
@@ -1690,10 +1763,10 @@ function checks(){
  var rc=refAudit();
  out.push({k:'joins',ok:!rc.bad.length,
    msg:rc.bad.length? plural(rc.n,'reference')+(rc.n===1?' does':' do')+' not resolve: '+rc.bad.slice(0,5).join(', ')+(rc.bad.length>5?' \u2026':'')
-     :plural(rc.checked,'reference')+' checked, all resolve'+(rc.archived?' ('+rc.archived+' are records of archived dogs, kept as history)':'')});
+     :plural(rc.checked,'reference')+' checked, all resolve'+(rc.archived?' ('+rc.archived+' point at archived records, kept as history)':'')});
  var dc=dateAudit();
  out.push({k:'dates',ok:!dc.bad.length,
-   msg:dc.bad.length? plural(dc.bad.length,'date column')+(dc.bad.length===1?' is':' are')+' not written as year-month-day (2026-03-02): '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')
+   msg:dc.bad.length? plural(dc.bad.length,'date column')+(dc.bad.length===1?' is':' are')+' not written as year-month-day (2026-03-02) or year-month (2026-03): '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')
      :plural(dc.n,'date column')+' checked across '+plural(dc.t,'table')+', all written the same way'});
  var ra=ruleAudit();
  out.push({k:'rule changes',ok:!ra.bad.length,
@@ -1720,7 +1793,7 @@ function strip(){
 /* ---------- Live feed: the Bloodline home screens, built only from what this page already reads. ---------- */
 var BREED_CHECKS={'litter gap':1,'dam age':1,'litter count':1,'breeding rules':1};
 var CHECKNAME={'time zone':'Time zone','room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
- 'placed in an area':'Placed in a cabin','joins':'Joins','dates':'Dates','rule changes':'Rule changes','saving off':'Saving'};
+ 'placed in an area':'Placed in a cabin','joins':'Links between records','dates':'Date formats','rule changes':'Rule history','saving off':'Saving'};
 function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
 function dmyShort(iso){ return BLDDates.long(iso||''); }
 /* foundation: date on a record. Every date pill wears a plain ring; late = rose ring + tint, soon = amber ring + tint. */
@@ -1787,7 +1860,7 @@ function needsToday(){
   if(x.unset){ out.push({title:x.dog.name+': gestation timings not set',sub:'Add the gestation rows in Compliance',go:'compliance',tone:'',kind:'kit'}); return; }
   if(x.g.alert===null||x.day<x.g.alert) return;   /* no alert-day row: no alert */
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
-   tone:x.day>x.g.due?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
+   tone:x.day>x.dueDay?'late':(x.day>=x.g.from?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
  areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id),date);
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
@@ -1841,16 +1914,25 @@ function onSiteCard(){
   +row('Off site',c.offsite.length,'','offsite')
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
-/* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
+/* A puppy still here: born in a litter, not collected or deceased, not off site, and (when the owner's adult-age row is
+   set) under that age. */
+function pupOnSite(d){ var c=statusOf(d).code; if(!d.birthLitter||c==='CL'||c==='DE'||d.off) return false;
+ var a=adultMonths(), m=months(d.dob); return a===null||m===null||m<a; }
+/* Current litters (SOP Puppy Handover: puppies stay until handed over): a litter counts while any of its puppies is
+   still on site. No day count; litters.recent_days was withdrawn 15 Nov 2026. */
+function currentLitters(){
+ var on={}; (CD.dogs||[]).forEach(function(d){ if(pupOnSite(d)) on[d.birthLitter]=1; });
+ return (CD.litters||[]).filter(function(l){ return !!on[l.id]; });
+}
+/* kit: animal (Litters card: pregnancies from the mating rows, and litters with a puppy still on site) */
 function littersCard(title){
- var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown&&!x.unset;}), rd=ruleNum('litters.recent_days',date);
- var recent=rd===null?[]:(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=rd; })
+ var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown&&!x.unset;});
+ var recent=currentLitters()
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
  var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>'+(title||'Litters')+cntPill(n)+'</h3>';
- h+=w.map(function(x){ var tone=x.day>x.g.due?'late':(x.day>=x.g.from?'soon':'');
+ h+=w.map(function(x){ var tone=x.day>x.dueDay?'late':(x.day>=x.g.from?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of '+x.g.from+'\u2013'+x.g.to+' \u00b7 working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
- if(rd===null) h+='<p class="mut" data-unset="litters.recent_days"><span class="pill w">not set</span> Days the Litters card looks back</p>';
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
    return '<div class="mrow"><span class="t">'+esc(litName(l))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
@@ -2424,7 +2506,7 @@ function dEditForm(d){
   +'<label>Neutered<select name="neuter_status"><option value="entire"'+(isEntire(d)?' selected':'')+'>entire</option><option value="'+(d.sex==='Male'?'neutered':'spayed')+'"'+(isEntire(d)?'':' selected')+'>'+(d.sex==='Male'?'neutered':'spayed')+'</option></select></label>'
   +'<label>Microchip<input name="chip_number" type="text" inputmode="numeric" autocomplete="off" maxlength="19" value="'+esc(d.chip||'')+'"></label>'
   +'<label>Size<select name="size_override"><option value=""'+(d.sizeFrom!=='override'?' selected':'')+'>from weight</option>'
-    +[['small','Toy/Mini'],['medium','Medium'],['large','Standard']].map(function(x){ return '<option value="'+x[0]+'"'+(d.sizeFrom==='override'&&d.sizeWord===x[0]?' selected':'')+'>'+x[1]+'</option>'; }).join('')
+    +['small','medium','large'].map(function(k){ return '<option value="'+k+'"'+(d.sizeFrom==='override'&&d.sizeWord===k?' selected':'')+'>'+esc(sizeName(k))+'</option>'; }).join('')
     +'</select></label>'
   +'</div><div class="dcs-row"><button type="submit" class="btn yes">Save details</button><button type="button" class="btn" data-dedit-cancel>Cancel</button></div>'
   +'<p class="mut" data-dedit-msg role="status"></p></form>';
@@ -2476,7 +2558,7 @@ function showTreats(id){
 }
 var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='';
 /* one size band to its colour key (small, medium, large) */
-var SIZE_WORD={small:'Toy/Mini',medium:'Medium',large:'Standard'};
+var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
 function sizeOverrideOf(d){ return BLDCapacity.sizeOverride(T['BLD-breeding_rule.csv']||[], d.id, todayISO()); }
 /* size: the one shared rule (staff/lib/capacity.js sizeForDog), also used by the print cards: override, latest weight, kg-range middle */
@@ -2486,7 +2568,7 @@ function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1
  d.sizeWhy=by.from==='override'?('set as '+sizeName(by.size)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''))
   :by.from==='weight'?(lw.kg+' kg on '+dmyShort(lw.on))
   :by.from==='range'?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
-function sizeName(k){ return SIZE_WORD[k]||''; }
+function sizeName(k){ return (CD.sizeLabel&&CD.sizeLabel[k])||SIZE_WORD[k]||''; }
 function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
 function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }
 
@@ -2521,7 +2603,11 @@ function dnaRow(d){ var x=d.dna||[]; if(!x.length) return '';
     return '<div class="dcs-row">'+dnaPill(r)+'<span class="mut">'+esc([m.name||'',r.genotype||'',r.lab||'',r.on?dmyShort(r.on):''].filter(Boolean).join(' · '))+'</span></div>'; }).join('')
   +'</div></details>'; }
 /* vaccinations (licence check item): count, the last one, and the next due date written on the card */
-function vaccRow(d){ var x=d.vacc||[], newest=x[x.length-1];
+/* Lisa 17 Nov 2026: the records are the owner's, so the owner may Archive (hide, kept) or Delete forever any entry */
+function vaxBtns(v,d,arch){ if(!v.id) return '';
+ return (arch?'':'<button type="button" class="cb" data-vax-void="'+esc(v.id)+'" data-dog="'+esc(d.id)+'">Archive</button>')
+  +'<button type="button" class="cb" data-vax-del="'+esc(v.id)+'" data-dog="'+esc(d.id)+'">Delete forever</button>'; }
+function vaccRow(d){ var x=d.vacc||[], ax=(CD.vaxArch||{})[d.id]||[];
  var last='', due='', dueSrc=''; x.forEach(function(v){ if(v.on&&v.on>=last){ last=v.on; } if(v.due&&v.due>due){ due=v.due; dueSrc=v.dueSrc; } });
  var late=due&&due<BLDNeeds.today();
  return '<details class="dcs vacc"><summary>'
@@ -2533,9 +2619,11 @@ function vaccRow(d){ var x=d.vacc||[], newest=x[x.length-1];
     +(v.covers?'<span class="mut" data-k="covers">'+esc(vaxWords(v.covers))+'</span>':'')
     +(v.vet?'<span class="mut">'+esc(v.vet)+'</span>':'')
     +(vaxCardUrl(v.card)?'<a class="cb" href="'+esc(vaxCardUrl(v.card))+'" target="_blank" rel="noopener" data-k="vcard">Card</a>':'')
-    +(v===newest&&v.id?'<button type="button" class="cb" data-vax-void="'+esc(v.id)+'" data-dog="'+esc(d.id)+'">Remove</button>':'')
     +(v.titre?'<span class="pill">titre '+esc(v.titre)+'</span>':'')
-    +(v.due?'<span class="mut">due '+esc(dmyShort(v.due))+'</span>':'')+'</div>'; }).join('')
+    +(v.due?'<span class="mut">due '+esc(dmyShort(v.due))+'</span>':'')+vaxBtns(v,d,false)+'</div>'; }).join('')
+  +(ax.length?'<details class="dcs" data-k="vax-arch"><summary>Archived ('+ax.length+')</summary><div class="dcs-bd">'
+    +ax.slice().reverse().map(function(v){ return '<div class="dcs-row" data-vax-arch="'+esc(v.id)+'"><span class="mut">'+esc(dmyShort(v.on))+'</span><b>'+esc(v.product||v.kind||'\u2014')+'</b>'+vaxBtns(v,d,true)+'</div>'; }).join('')
+    +'</div></details>':'')
   +vaxForm(d)
   +'<p class="mut" data-vax-msg role="status"></p>'
   +'</div></details>'; }
@@ -2729,18 +2817,22 @@ async function photoEdit(dog,fileId,msg){
   if(!(k.ok&&k.result&&k.result.status==='saved')) throw new Error(sinkMsg(k));
   if(role==='main') links.forEach(function(l){ if(l.from_table==='subjects'&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
   links.push({id:k.result.id||'',from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:nid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); };
+ var done='\u2713 Edited copy saved';
  try{
   var gl=f?links.filter(function(l){ return l.from_table==='subjects'&&l.from_id===dog&&l.role==='gallery'&&l.to_id===f.id&&!l.to_date; })[0]:null;
+  /* 17 Nov 2026 (Lisa: "edits to photos not saving"): add the copy to the gallery FIRST and only then end the old photo,
+     so a refused add never leaves the gallery a photo short (the old order ended 5 photos whose copies could not be added). */
   if(gl){ var y=dayMinus(day,1), to=String(gl.from_date||'').slice(0,10)<=y?y:day;
+   await add('gallery');
    var e=await sinkAct('link_end',{id:gl.id,to_date:to,reason:GAL_EDITED});
    if(!(e.ok&&e.result&&e.result.status==='saved')) throw new Error(sinkMsg(e));
-   gl.to_date=to; gl.end_reason=GAL_EDITED; await add('gallery'); }
+   gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
- }catch(err){ say('The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.')); drawDogs(); return; }
- drawDogs();
+ }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
+ drawDogs();   /* the message is set after the redraw, so it is not wiped by it (17 Nov 2026) */
  var again=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(again&&fileId) again.open=true;
  var card=document.querySelector('.dc[data-dog="'+dog+'"]'), m=(again&&fileId)?again.querySelector('[data-gal-msg]'):card&&card.querySelector('[data-photo-msg]');
- if(m) m.textContent='\u2713 Edited copy saved';
+ if(m) m.textContent=done;
 }
 document.addEventListener('click',function(ev){
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-edit],[data-photo-edit]'):null; if(!b) return;
@@ -2827,7 +2919,7 @@ function photoSquareB64(draw){
  for(var q=0.8;q>0.05;q=Math.round((q-0.1)*10)/10){ var u=c.toDataURL('image/jpeg',q); b=u.slice(u.indexOf(',')+1); if(b.length<=PHOTO_MAX_B64) return b; }
  return b.length<=PHOTO_MAX_B64?b:'';
 }
-/* The crop step. Resolves {mime,b64} on Use photo, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
+/* The crop step. Resolves {mime,b64} on Save, null on Cancel. Drag to move, pinch / wheel / slider to zoom, Rotate 90. */
 function photoCrop(src,was){
  return new Promise(function(resolve){
   var box=document.createElement('div');
@@ -2840,12 +2932,12 @@ function photoCrop(src,was){
    +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
    +'<div class="pcrop-btns"><button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
-   +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Use photo</button></div></div>';
+   +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
   var view=box.querySelector('[data-crop-view]'), cv=box.querySelector('[data-crop-canvas]'), zoom=box.querySelector('[data-crop-zoom]');
   var bright=box.querySelector('[data-crop-bright]'), contrast=box.querySelector('[data-crop-contrast]'), sizeEl=box.querySelector('[data-crop-size]'), sizeT=0;
   function tone(g,size){ photoTone(g,size,bright.value,contrast.value); }
-  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Use photo) */
+  /* what will be saved: always the shrunk square, never the original (shown so the shrink is visible before Save) */
   function sizeNote(){ clearTimeout(sizeT); sizeT=setTimeout(function(){ var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    sizeEl.textContent=b?'Saves as '+PHOTO_OUT+' \u00d7 '+PHOTO_OUT+', about '+photoKB(b)+(was?' (picture was '+was+')':''):'Too large to save. Zoom in or crop closer.'; },250); }
   var rot=0, z=1, ox=0, oy=0, V=0, dpr=Math.min(3,window.devicePixelRatio||1), pts={}, last=null, pinch=null;
@@ -3021,15 +3113,19 @@ document.addEventListener('click',async function(ev){
   var open=(eb.hasAttribute('data-dog-edit')||eb.hasAttribute('data-dog-edit-at'))&&host.hidden; host.innerHTML=open?dEditForm(ed):''; host.hidden=!open;
   var tb=art.querySelector('[data-dog-edit]'); if(tb) tb.setAttribute('aria-expanded',open?'true':'false');
   if(open){ var nm=host.querySelector('input[name="'+(eb.getAttribute('data-focus')||'name')+'"]')||host.querySelector('input[name=name]'); if(nm) nm.focus(); } return; }
- var b=ev.target&&ev.target.closest?ev.target.closest('[data-vax-void]'):null; if(!b) return;
+ var b=ev.target&&ev.target.closest?ev.target.closest('[data-vax-void],[data-vax-del]'):null; if(!b) return;
  ev.preventDefault(); ev.stopPropagation();
- var id=b.getAttribute('data-dog'), rid=b.getAttribute('data-vax-void'), d=CD._byId[id]; if(!d) return;
- var last=d.vacc[d.vacc.length-1]; if(!last||last.id!==rid) return;   /* only the newest row can be removed */
- if(!window.confirm('Remove the '+dmy(last.on)+' '+(last.product||'vaccination')+'? It stays in the sheet, marked removed, and you can add it again.')) return;
+ var del=b.hasAttribute('data-vax-del'), id=b.getAttribute('data-dog'), rid=b.getAttribute(del?'data-vax-del':'data-vax-void'), d=CD._byId[id]; if(!d) return;
+ var live=d.vacc||[], arch=(CD.vaxArch=CD.vaxArch||{})[id]=(CD.vaxArch[id]||[]);
+ var v=live.filter(function(x){return x.id===rid;})[0]||arch.filter(function(x){return x.id===rid;})[0]; if(!v) return;
+ var what=dmy(v.on)+' '+(v.product||'vaccination');
+ if(!window.confirm(del?'Delete the '+what+' forever? This cannot be undone.':'Archive the '+what+'? It is hidden from the card and kept.')) return;
  b.disabled=true;
- var r=await sinkAct('vaccination_void',{subject_id:id,id:rid});
- if(!r.ok){ b.disabled=false; var m=b.closest('.dcs-bd'); m=m&&m.querySelector('[data-vax-msg]'); if(m) showSave(m,sinkMsg(r)); return; }
- d.vacc.pop(); drawDogs(); vaxReopen(id,'Removed '+hhmmNow());
+ var r=await sinkAct(del?'vaccination_delete':'vaccination_void',{subject_id:id,id:rid});
+ if(!r.ok){ b.disabled=false; var m=b.closest('details.vacc'); m=m&&m.querySelector('[data-vax-msg]'); if(m) showSave(m,sinkMsg(r)); return; }
+ d.vacc=live.filter(function(x){return x!==v;}); CD.vaxArch[id]=arch.filter(function(x){return x!==v;});
+ if(!del){ CD.vaxArch[id].push(v); CD.vaxArch[id].sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); }
+ drawDogs(); vaxReopen(id,(del?'Deleted ':'Archived ')+hhmmNow());
 },true);
 function weighReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
  var w=c.querySelector('details.wtc'); if(w) w.open=true;
@@ -3123,7 +3219,7 @@ function drawDogs(){
         +'<span class="whor" role="img" aria-label="'+esc(who)+'" title="'+esc(who)+'"><svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
         +(d.room&&!away?'<button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="'+esc(d.room)+'">'+esc(d.where)+'</button>'
           :'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
-           /* no room yet (pups too) or off site: Place opens the same cabin picker (Lisa 13 Nov 2026) */
+           /* no room yet (pups too) or off site: Place opens the same cabin picker (13 Nov 2026) */
            +(st.code==='DE'||st.code==='CL'?'':' <button type="button" class="cb" data-cabin-move="'+esc(d.id)+'" data-from="">Place</button>'))
         +(CD._moved&&CD._moved.id===d.id?' <span class="mut" data-k="moved" role="status">'+saveHtml(CD._moved.text)+'</span>':'')
       +'</div>'
@@ -3185,6 +3281,7 @@ function drawDogs(){
 
     /* Lisa 12 Nov 2026: layout A (weight, medications, chip) with B's sections behind More */
     +'<details class="dcs more" data-k="more"><summary><svg class="ricon" aria-hidden="true"><use href="#i-dots"/></svg><span class="dcs-label">More</span></summary><div class="dc-more">'
+    +docsRow(d)
     +(d.findings.length?
       '<details class="dcs"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-stethoscope"/></svg>'
@@ -3820,6 +3917,7 @@ function pageRound(){
   +(unplaced.length?'<div class="chips" style="margin-bottom:0">'+unplaced.slice(0,unN).map(function(d){ var w=unplacedWhy(d,date);
       return '<span class="drow">'+dogMoveChip(d,w.from,d.id)+(w.text?' <span class="mut">\u00b7 '+esc(w.text)+'</span>':'')+'</span>'; }).join(' ')+(unN<unplaced.length?' \u2026':'')+'</div><div data-move-host=""></div>'
     +(unN<unplaced.length?'<p class="mut">Showing '+unN+' of '+unplaced.length+'.</p><button type="button" class="cb" data-unshow="more">Show more</button> <button type="button" class="cb" data-unshow="all">Show all</button>':''):'')+'</div>';
+ h+='<div class="rcabins">';   /* the cabins together: two a row on the printed round sheet */
  w.forEach(function(c){
   var a=c.area, aid=a.id;
   var k=roundKey(date,aid), r=ROUND[k]||{}, sel=inCabin(aid, date), savedRound=savedSeen(aid,date);
@@ -3875,6 +3973,7 @@ function pageRound(){
    +(over?' <button type="button" class="pill no" data-over-move="'+esc(aid)+'">over its limit</button>':'')+'</div>'
    +'</div>';
  });
+ h+='</div>';
  return h;
 }
 function ageDays(iso,onISO){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -3972,7 +4071,8 @@ function forgetHere(){ STAFF_MEM='';
 /* One line on the panel that says what this device holds. It never shows the code, only whether one is kept. */
 function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
  var yn=function(b){ return b?'yes':'no'; };
- return 'This device: app mode '+yn(app)+' \u00b7 code kept '+yn(!!codeKept())+' \u00b7 save address '+yn(SINK_RE.test(sinkGet(SINK_URL_KEY))); }
+ /* plain words (Lisa 17 Nov 2026, "yes all") */
+ return 'On this device: '+(app?'opened as an app':'opened in the browser')+' \u00b7 '+(codeKept()?'your code is remembered':'no code remembered')+' \u00b7 '+(SINK_RE.test(sinkGet(SINK_URL_KEY))?'saving is set up':'saving is not set up yet'); }
 function askStaffCode(){
  var have=staffCodeNow(); if(have) return Promise.resolve(have);
  if(STAFF_ASK) return STAFF_ASK;
@@ -4015,9 +4115,10 @@ async function sinkGate(){
 function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:function(x){ for(var i=0;i<x.length;i++) x[i]=Math.floor(Math.random()*256); return x; }}).getRandomValues(a);
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
-/* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved): no answer in 40 s = NOT saved, said plainly. */
+/* One POST with a time limit (Lisa 12 Nov 2026: "saving..." never resolved). 17 Nov 2026: 40 s became 150 s - live saves took 17-127 s
+   (the server finished and wrote the row after the phone had said "no answer"). No answer in 150 s = said plainly, may still have saved. */
 /* Saves go one at a time from this device (Lisa 16 Nov 2026: the round sent every room at once and all but the first
-   gave up with "Someone else is saving right now"). The 40 s limit starts when a save is sent, not while it waits. */
+   gave up with "Someone else is saving right now"). The time limit starts when a save is sent, not while it waits. */
 var sinkTurn=Promise.resolve(), sinkWaiting=0;
 function sinkFetch(body,url){ sinkWaiting++; var p=sinkTurn.then(function(){ return sinkFetchBusy(body,url,0); }); sinkTurn=p.then(function(){},function(){});
  p.then(function(){ sinkWaiting--; },function(){ sinkWaiting--; }); return p; }
@@ -4028,10 +4129,10 @@ window.addEventListener('beforeunload',function(e){ if(sinkWaiting>0){ e.prevent
 function sinkFetchBusy(body,url,n){ return sinkFetchNow(body,url).then(function(j){
  if(j&&j.ok===false&&j.code==='BUSY'&&n<3) return new Promise(function(r){ setTimeout(r,1500+Math.floor(Math.random()*2500)); }).then(function(){ return sinkFetchBusy(body,url,n+1); });
  return j; }); }
-function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },40000):0;
+function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortController():null, tm=ac?setTimeout(function(){ ac.abort(); },150000):0;
  return fetch(url||sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac?ac.signal:undefined})
   .then(function(res){ clearTimeout(tm); return res.json().catch(function(){ return {ok:false,code:'BAD_ANSWER',message:'The save script did not answer properly (signed out of Google, or the address is wrong). Nothing is known to be saved.'}; }); },
-   function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 40 seconds. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
+   function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 2½ minutes. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
 function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOGLE_NOT_OWNER'||j.code==='NO_CODE')); }
 async function sinkSend(body){
  var g=await sinkGate();
@@ -4061,7 +4162,7 @@ function hhmmNow(){ return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Lon
 var SV_TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>',
     SV_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 function saveHtml(text){ text=String(text||''); if(!text) return '';
- var k=/^(Saved|Moved|Removed)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
+ var k=/^(Saved|Moved|Removed|Archived|Deleted)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
  if(!k) return esc(text);
  return '<span class="sv-line '+k+'" data-saved="'+k+'"><span class="sv-ic">'+(k==='good'?SV_TICK:k==='wait'?SV_CLOCK:'')+'</span><span>'+esc(text)+'</span></span>'; }
 function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
@@ -4497,7 +4598,7 @@ function compTemps(win){   /* win: {n,set}; Urgent passes one day (today) so it 
   if(st==='ok'||st==='unknown'||st==='warm'||st==='nospot'){ out.ok++; return; }   /* Temps A: warm = cooling action, nospot = bed spot not recorded; neither is outside */
   var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',from:(r.from||[]).map(function(a){ return code[a]||a; }),min:r.min_c,max:r.max_c,st:st};
   (roomEmpty(r)?out.empty:out.bad).push(x); });
- if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
+ if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).filter(function(t){ return !BLDOccupancy.emptyOn(t.area_id,d,req); }).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
  out.on=!!th; out.win=win; return out;
 }
 function compTempsHtml(){
@@ -4545,7 +4646,7 @@ function pageCompliance(){
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
-  +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
+  +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only the owner can save.</p>'
   +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
   +'<input id="brVal" type="number" inputmode="numeric" min="1" max="999" step="1" placeholder="number" aria-label="number" style="width:7em"> '
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
@@ -4733,7 +4834,7 @@ function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sink
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Admin']);
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Settings']);   /* the tab says Settings; the page and its chip say the same (17 Nov 2026) */
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
@@ -4846,6 +4947,7 @@ function go(id,push){
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
  if(id!=='compliance') REHEARSAL=null;   /* leaving Compliance ends a rehearsal: nothing kept (H-04) */
  var main=document.getElementById('main');
+ main.setAttribute('data-view',id);   /* print rules per page (round sheet, dog cards) */
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
    +'<ul class="notes"><li>Read-only. One sign-in for the whole site.</li></ul>'

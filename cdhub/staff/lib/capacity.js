@@ -39,7 +39,8 @@
   /**
    * Size from weight (Lisa's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
    * never fixed here: size_from_kg.medium = the weight (kg) at which a dog counts as medium, size_from_kg.large = the
-   * weight at which it counts as large. A row needs a value and a source; the newest row in force on `today` wins.
+   * weight a dog must be OVER to count as large (SOP Care Rounds: "small under 10 kg, medium 10-25 kg, large over 25 kg",
+   * so exactly 25 kg is medium; OV12 17 Nov 2026). A row needs a value and a source; the newest row in force on `today` wins.
    * Returns null unless both are set and medium < large, so a half-set pair never sorts a dog.
    */
   function sizeCutoffs(rules, today) {
@@ -57,7 +58,7 @@
   /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. */
   function sizeFromKg(kg, cut) {
     kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
-    return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+    return kg > cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
   }
 
   /**
@@ -108,10 +109,35 @@
     return sizeOf(o.kg, o.sizeText, o.cut !== undefined ? o.cut : sizeCutoffs(o.rules, o.today));
   }
 
-  /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
-  function accessOf(rows, areaId) {
+  /**
+   * The owner's words for the sizes: size_label.small|medium|large rule rows (OV12 17 Nov 2026), newest row in force on
+   * `today` wins; a word over 30 characters is ignored. Without a row, Small, Medium, Large. Hub and print share this.
+   */
+  function sizeLabels(rules, today) {
+    var out = { small: 'Small', medium: 'Medium', large: 'Large' }, from = {}, day = String(today || '').slice(0, 10);
+    (rules || []).forEach(function (r) {
+      var m = /^size_label\.(small|medium|large)$/.exec(String(r.rule_key || '').trim()); if (!m) return;
+      var v = String(r.value || '').trim(), f = String(r.effective_from || '').slice(0, 10), t = String(r.to_date || '').slice(0, 10);
+      if (!v || v.length > 30 || (day && f && f > day) || (day && t && t < day)) return;
+      if (from[m[1]] !== undefined && f < from[m[1]]) return;
+      from[m[1]] = f; out[m[1]] = v;
+    });
+    return out;
+  }
+
+  /**
+   * Whether one access row counts. A row whose to_date is before its from_date was voided (it never applied; OV12 18 Nov
+   * 2026, 3A.1/2) and never counts. With a date, the row must also be in force that day (inForce: started, not ended).
+   */
+  function accessRowCounts(r, date) {
+    var f = ymd(r && r.from_date), t = ymd(r && r.to_date);
+    if (f && t && t < f) return false;
+    return !ymd(date) || inForce([r], date, 'from_date').length === 1;
+  }
+  /** The flap setting in force: the last counting row for that room with a value (rows are only ever added). */
+  function accessOf(rows, areaId, date) {
     var a = '';
-    (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type) a = String(r.access_type).toLowerCase(); });
+    (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type && accessRowCounts(r, date)) a = String(r.access_type).toLowerCase(); });
     return a === 'free' || a === 'limited' ? a : '';
   }
   /** The limit for one alternative. With two flap settings possible, the stricter. null = no row. */
@@ -259,6 +285,6 @@
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, sizeOverride: sizeOverride, sizeForDog: sizeForDog, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, sizeOverride: sizeOverride, sizeForDog: sizeForDog, sizeLabels: sizeLabels, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));

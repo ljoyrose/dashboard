@@ -434,6 +434,28 @@ test('when this code cannot read past records, the list says so instead of a sil
   await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
 });
 
+// Lisa 17 Nov 2026: jobs she had saved still said Due because the records read got no answer in time (slow saves).
+// That is said as "did not load in time" with Try again, never as "this code cannot read".
+test.describe('records read with no answer', () => {
+  test.use({ allowedConsole: [/404|net::ERR_FAILED/] });   // the pretend "no answer" is a failed load
+test('when the past records do not load in time, it says so and Try again reads them again', async ({ page }) => {
+  await setup(page);
+  let fail = true;
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData() || '{}') : {};
+    if (fail && String(b.action).indexOf('read') === 0 && b.table === 'check_log') return route.abort();
+    return route.fallback();
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-no-history]')).toContainText('did not load in time');
+  await expect(page.locator('[data-no-history]')).not.toContainText('cannot read');
+  fail = false;
+  await page.locator('[data-retry-history]').click();
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-no-history]')).toHaveCount(0);
+});
+});
+
 test('with past records readable there is no warning', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');
@@ -552,6 +574,28 @@ test('Earlier, several days: a row per room per day, each judged and saved for i
   await rows.first().getByRole('button', { name: /^Done:/ }).click();
   await expect.poll(() => sent.length).toBe(4);
   expect(sent[3]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-bowls' } });
+});
+
+test('Earlier, several days: dogs as they were on each day, and a job group enters every job in it', async ({ page }) => {
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const day = (n) => london(new Date(Date.now() - n * 86400000));
+  // Pretend B arrived yesterday: two days ago only Pretend A was here
+  const sent = await setup(page, { occupancy: [{ subject_id: 'dog-1', area_id: 'area-1', moved_in: '2026-10-01' }, { subject_id: 'dog-2', area_id: 'area-1', moved_in: day(1) }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await page.getByLabel('Job').selectOption('group:Grooming');
+  await page.getByLabel('First day').fill(day(2));
+  await page.getByLabel('Days').selectOption('7');
+  await page.getByRole('button', { name: 'Show' }).click();
+  const rows = page.locator('.job-row');
+  await expect(rows).toHaveCount(2 + 4 + 4);   // 2 jobs x 1 dog, then 2 jobs x 2 dogs on each of the last two days
+  await expect(page.locator('.job-row[data-day="' + day(2) + '"]')).toHaveCount(2);
+  await expect(page.locator('.job-row[data-day="' + day(2) + '"]').filter({ hasText: 'Pretend B' })).toHaveCount(0);
+  await expect(page.locator('.job-row[data-day="' + day(1) + '"]').filter({ hasText: 'Nails: Pretend B' })).toHaveCount(1);
+  await page.locator('.job-row[data-day="' + day(2) + '"]').filter({ hasText: 'Ears: Pretend A' }).getByRole('button', { name: /^Done:/ }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-ears', subject_id: 'dog-1', how_recorded: 'bulk' });
+  expect(london(new Date(sent[0].fields.happened_at))).toBe(day(2));
 });
 
 test('check types starting round. belong to The round and never show as jobs, nor in Earlier', async ({ page }) => {

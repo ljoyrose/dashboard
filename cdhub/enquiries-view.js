@@ -12,7 +12,7 @@
   var FILES = ['BLD-person.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-subject_owner.csv', 'BLD-sale.csv', 'BLD-match_candidate.csv'];
   var VIEWS = [['home', 'Home'], ['today', 'Today'], ['all', 'All'], ['litters', 'Litters'], ['add', 'Add']];
   var WORD = { young: 'young_word', female: 'adult_female_word', male: 'adult_male_word', birth: 'birth_event_word' };
-  var state = { view: 'home', key: '', litter: '', stage: '', msg: '', tabs: null, example: true };
+  var state = { view: 'home', key: '', litter: '', stage: '', msg: '', tabs: null, example: true, demo: false };
 
   function t(v) { return v == null ? '' : String(v).trim(); }
   function esc(s) {
@@ -96,9 +96,14 @@
   function ensureTabs() {
     var c = cfg();
     state.example = !t(c.sheetId);
-    if (state.example) { state.tabs = Examples.build(); return; }
-    if (!state.tabs) state.tabs = { Enquiries: [], People: [], Litters: [], Deposits: [], FollowUps: [], Drafts: [], Events: [] };
+    /* Lisa 16 Nov 2026 ("A"): no sheet connected = no enquiries, never the invented examples. The examples show only
+       when this browser asks for them (localStorage cdhub.enquiries.examples = 1), for a demo or a test. */
+    state.demo = state.example && showExamples();
+    if (state.demo) { state.tabs = Examples.build(); return; }
+    if (!state.tabs || state.example) state.tabs = { Enquiries: [], People: [], Litters: [], Deposits: [], FollowUps: [], Drafts: [], Events: [] };
   }
+
+  function showExamples() { try { return root.localStorage && root.localStorage.getItem('cdhub.enquiries.examples') === '1'; } catch (e) { return false; } }
 
   function shown(list, litters) {
     return (list || []).filter(function (e) {
@@ -137,25 +142,33 @@
       }).join('') + '</select></label></div>';
   }
 
+  /** The buyer's name for a card (Lisa 17 Nov 2026, "yes all"): known-as, else full name, from the People tab; '' when none. */
+  function buyerName(e) {
+    var p = ((state.tabs && state.tabs.People) || []).filter(function (x) { return e && x.person_key && x.person_key === e.person_key; })[0];
+    return p ? t(p.known_as || p.full_name || p.name) : '';
+  }
   function rowHtml(e, litters, subjects, speciesRows) {
     var stage = Core.plainStage(e);
     var sub = subjectFor(e, litters, subjects);
     var pup = '';
     if (sub) pup = ' <a class="btn" href="#/dogs/' + esc(sub.id) + '">' + esc(pupLabel(sub, speciesRows) || sub.id) + '</a>';
     else if (t(e.pup_ref)) pup = ' <span>' + esc(e.pup_ref) + '</span>';
-    return '<div class="card" data-enq="' + esc(e.key) + '"><p><a class="btn" href="#/enquiries/' + esc(e.key) + '">' + esc(e.ref || e.key) + '</a>' +
+    var who = buyerName(e);
+    return '<div class="card" data-enq="' + esc(e.key) + '"><p><a class="btn" href="#/enquiries/' + esc(e.key) + '">' + esc(who || e.ref || e.key) + '</a>' +
+      (who && e.ref ? ' <small class="mut" data-enq-ref>' + esc(e.ref) + '</small>' : '') +
       (stage ? ' <span class="pill" data-plain-stage>' + esc(stage) + '</span>' : '') +
       ' <span data-litter-label>' + esc(litterWords(e, litters)) + '</span>' + pup + '</p>' +
       '<p class="mut">' + esc(Core.summary(e.question_summary || e.kind || '', 120)) + '</p>' + writeButton(e) + '</div>';
   }
 
   function shell(body) {
-    var stamp = state.example ? '<p><span class="pill" data-enq-stamp>TEST</span></p>' : '';
+    var stamp = state.demo ? '<p><span class="pill" data-enq-stamp>TEST</span></p>' : '';
     return '<h2>Enquiries</h2>' + seg() + stamp + stageSeg() +
       '<p class="mut" data-enq-msg role="status">' + esc(state.msg) + '</p>' + body;
   }
 
   function pageHome(v, litters, subjects, speciesRows) {
+    if (state.example && !state.demo) return shell('<div class="card" data-enq-empty><p><b>No enquiries yet</b></p><p class="mut">They show here once the enquiries sheet is connected.</p></div>');
     var hv = Core.hubView(state.tabs, {});
     var list = shown(state.tabs.Enquiries, litters);
     return shell(litterSelect(litters) +

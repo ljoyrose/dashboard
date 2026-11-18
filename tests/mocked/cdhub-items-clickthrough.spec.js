@@ -9,7 +9,12 @@ const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
 const SINK = 'https://script.google.com/macros/s/PRETENDSCRIPT/exec';
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
-const addTable = (world, name, content) => world.file('bld-clk-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
+const addTable = (world, name, content) => {
+  const f = world.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); }
+  else world.file('bld-clk-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
 
 const ITEM_H = 'id,tenant_id,item_no,name,kind_key,make,model,serial_no,size,made_on,expires_on,photo,note,corrects_id,created_at,created_by';
@@ -248,5 +253,28 @@ test.describe('CD Hub: items, click by click', () => {
     const small = await page.evaluate(() => Array.from(document.querySelectorAll('#itmCard button')).filter((b) => b.offsetParent && b.getBoundingClientRect().height < 44).map((b) => b.textContent.trim()));
     expect(small).toEqual([]);
     await shot(page, 'phone-test-form');
+  });
+
+  test('phone: Photo on any item takes a photo with its date; only the file and its link are saved, then a tick (18 Nov 2026)', async ({ page, guard }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sent = await open(page, guard);
+    await page.locator('#itmPage .itm-row', { hasText: 'Pretend heater' }).click();
+    await card(page).locator('[data-itm-form="photo"]').click();
+    const f = page.locator('form[data-itm-save="photo"]');
+    await expect(f.locator('input[type="file"]')).toHaveAttribute('capture', 'environment');
+    await f.locator('input[type="file"]').setInputFiles({ name: 'heater.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await f.locator('input[name="on"]').fill('2026-11-17');
+    await f.locator('button[type="submit"]').click();
+    await expect(card(page).locator('.itm-tick')).toBeVisible();
+    await expect(card(page)).toContainText('Saved.');
+    const fa = sent.find((b) => b.action === 'file_add');
+    expect(fa.fields.taken_on).toBe('2026-11-17');
+    expect(fa.fields.kind).toBe('photo');
+    const la = sent.find((b) => b.action === 'link_add');
+    expect(la.fields).toMatchObject({ from_table: 'items', role: 'main', to_table: 'files', to_id: 'fil-new' });
+    expect(sent.some((b) => b.table === 'items')).toBe(false);
+    await expect(card(page)).toContainText('17 Nov 2026');
+    const box = await card(page).locator('[data-itm-form="photo"]').boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
   });
 });

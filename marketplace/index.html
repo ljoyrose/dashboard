@@ -467,8 +467,8 @@
   // one place to work from; never leave her guessing what a card is about).
   var MAIL = 'https://mail.google.com/mail/u/0/#all/';
   // Lisa 27 Oct: every card says when it was last updated (the engine's updated_at when it refreshed the card, else when it was made).
-  function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>'; }
-  function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\bSept\b/, 'Sep')) + '</div>'; }
+  function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\bSept\b/, 'Sep'); }
   // v11.10 Fix 6: ONE source for the post step words, used by the card, the band and packing mode.
   var STEP = { find: 'Find it', found: 'Found ✓', buy: 'Buy postage on the eBay order', label: 'Print the label from the email', qr: 'Show the QR at the drop-off', pack: 'Pack it, write the parcel number on it, post it, tap Posted' };
   function postSteps(d) {
