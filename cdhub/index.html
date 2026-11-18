@@ -1239,7 +1239,8 @@ function build(){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
   CD.cap=CAP;
-  CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ CD.accessCsv[r.area_id]=r; });
+  /* the last row per room that counts today: a voided row (to_date before from_date) or an ended one never wins (OV12 18 Nov 2026) */
+  CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ if(BLDCapacity.accessRowCounts(r,_day)) CD.accessCsv[r.area_id]=r; });
 
   var _an={}; CD.areas.forEach(function(a){ _an[a.id]=a.code||a.id; });
   CD.dogs.forEach(function(d){
