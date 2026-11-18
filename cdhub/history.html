@@ -405,7 +405,12 @@ async function loadAreaData(){
       AREA_HDR_BAD=(rows.length&&(!('area_id' in rows[0])||!('min_c' in rows[0])||!('max_c' in rows[0])))?'row 1 is not the heading row'
         :rows.some(function(r){ return r.id==='id'||r.area_id==='area_id'; })?'a heading row is also lower down':'';
       rows=rows.filter(function(r){ return r.id!=='id'&&r.area_id!=='area_id'; });
+      /* Lisa 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty with its temperatures hidden;
+         the readings stay in the records. Before and after the link copies, so a copy never carries them into another room. */
+      var hideE=function(x){ var O=window.BLDOccupancy; return O&&O.hideEmpty?O.hideEmpty(x,REQ,function(r){ return readingWhen(r.period_start||r.taken_at).day; }):x; };
+      rows=hideE(rows);
       if(window.BLDAreaLink) rows=window.BLDAreaLink.expand(rows,LINKS);   /* copies marked linked_from; originals unchanged */
+      rows=hideE(rows);
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
         var at=String(r.period_start||r.taken_at||''), when=readingWhen(at); if(!r.area_id||!when.day)return;   /* period_start: a reading typed later belongs to its own slot */
@@ -559,6 +564,7 @@ function areaNow(aid){ var to=''; (LINKS||[]).forEach(function(l){ if(l&&l.from_
 /* Lisa 18 Nov 2026: no "(retired 2 Nov 2026)" after a renamed cabin's name in the calendar; it still sorts last */
 function areaName(aid){ if(!isRetired(aid)) return areaCode(aid); var to=areaNow(aid);
   return areaCode(aid)+(to?', now '+areaCode(to):''); }
+function roomEmptyOn(aid,day){ var O=window.BLDOccupancy; return !!(O&&O.emptyOn&&O.emptyOn(aid,day,REQ)); }
 function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
 function thermoNeeded(aid,day){
   var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;
@@ -627,6 +633,7 @@ function slotState(t,aid,day,slot){
   }
   if(t&&t.empty) return {k:'empty'};
   if(!neededOn(aid,day)) return {k:'none'};
+  if(roomEmptyOn(unitArea(aid),day)) return {k:'empty'};   /* marked empty all day (room.empty row): never missed */
   if(day===TODAY_STR&&(slot==='pm'||new Date().getHours()<12)) return {k:'due'};
   if(day>TODAY_STR) return {k:'due'};
   return {k:'miss'};
