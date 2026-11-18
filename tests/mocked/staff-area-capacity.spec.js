@@ -77,8 +77,10 @@ test('a room\'s jobs show its capacity: the rows in force today, the same line a
 test('the printed room sign reads the dated flap and limit rows (from_date), never the old open row', async ({ page }) => {
   await setup(page, 'OWNER');
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Room signs' }).click();
-  await expect(page.locator('.rcard[data-room="area-1"] .sz')).toHaveText(['2 small']);
+  await page.getByRole('button', { name: 'Room cards' }).click();
+  const card = page.locator('.rcard[data-room="area-1"]');
+  await expect(card.locator('.szrow:not(.none) .n')).toHaveText(['= 2']);
+  await expect(card.locator('.szrow:not(.none)')).toHaveAttribute('data-size', 'small');
 });
 
 test('room sign: one limit per size, only rows in force today; an ended row and an undated repeat never print twice (OV11 15 Nov)', async ({ page }) => {
@@ -92,6 +94,9 @@ test('room sign: one limit per size, only rows in force today; an ended row and 
       { id: 'lim-l', area_id: 'area-1', access_type: 'limited', size_band: 'large', max_dogs: '2', from_date: '2026-01-01' }]          // other flap setting
   });
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Room signs' }).click();
-  await expect(page.locator('.rcard[data-room="area-1"] .sz')).toHaveText(['4 small', 'or 3 medium']);
+  await page.getByRole('button', { name: 'Room cards' }).click();
+  const card = page.locator('.rcard[data-room="area-1"]');
+  await expect(card.locator('.szrow[data-size="small"] .n')).toHaveText('= 4');
+  await expect(card.locator('.szrow[data-size="medium"] .n')).toHaveText('= 3');
+  await expect(card.locator('.szrow.none[data-size="large"]')).toHaveCount(1);   // the limited-only large row is not today's setting
 });
