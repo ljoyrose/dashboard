@@ -1,1 +1,1 @@
-{"cdhub": 6100, "why": "CD Hub Bin Restore (Lisa 18 Nov 2026, answer A): restore buttons, ask-first, owner switch, save wiring; measured +6084 bytes"}
+{"cdhub": 7200, "why": "PR 707 Bin Restore: bin-view.js restore plan, ask-first and save. Was 6100; at 39d4e75 the page measured 1058 bytes over budget+10%, so 7200 covers it with a small margin."}
