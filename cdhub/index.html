@@ -967,6 +967,7 @@ function signOut(){
   var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
   if(window.DashAuth) DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
+  bootTicket++;   /* a read still under way stops here: it must not put an error card, or the tables, back after Sign out (20 Nov 2026) */
   T={}; CD={}; copyWipe(); LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
 }
 function initGoogle(){
