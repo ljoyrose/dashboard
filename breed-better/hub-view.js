@@ -795,11 +795,25 @@
       }).join('') : '<p class="mut">No records yet.</p>') + '</div>';
   }
 
-  /* ---- History: the animal's dated entries, and its score worked out again as of each date. Nothing is stored. ---- */
+  /* ---- History: the animal's dated entries, and its score worked out again as of each date. Nothing is stored here.
+     When saved scores are switched on (#644, the host gives saveScore), a score saved for a date is shown for that date
+     instead of the worked-out one, marked Saved: it is what the page said then. ---- */
+  function savedByDate(v, r) {
+    var out = {};
+    if (!v.saveScore) return out;
+    (v.T['BLD-score_assessment.csv'] || []).filter(function (a) { return t(a.subject_id) === r.subject_id && t(a.scheme_id) === r.scheme_id && isDate(t(a.period).slice(0, 10)); })
+      .sort(function (a, b) { return t(a.calculated_at).localeCompare(t(b.calculated_at)); })
+      .forEach(function (a) { out[t(a.period).slice(0, 10)] = a; });   /* the latest save for a date wins */
+    return out;
+  }
   function historyRows(v, r) {
     var items = evidenceItems(v, r).filter(function (x) { return x.date; });
     var dates = {}; items.forEach(function (x) { (dates[x.date] = dates[x.date] || []).push(x); });
+    var saved = savedByDate(v, r);
+    Object.keys(saved).forEach(function (d) { if (d <= v.today && !dates[d]) dates[d] = []; });
     return Object.keys(dates).sort().reverse().map(function (d) {
+      var a = saved[d];
+      if (a) return { date: d, entries: dates[d], verdict: t(a.verdict), earned: Number(t(a.points_earned)) || 0, available: t(a.points_available), saved: true };
       var input = Object.assign({}, r.input, { asOf: d, judgements: judgementsFor(v.T, r.subject_id, r.input.criteria, d) });
       var s = null;
       try { s = Score.score(input); } catch (e) { s = null; }
@@ -812,7 +826,7 @@
       + '<div class="card bb-hnow"><span class="bb-strong">Today</span> ' + vpill(verdictOf(r), r.words) + ' <span class="bb-pts">' + fmt(r.points_earned) + ' of ' + r.points_available + '</span></div>'
       + (rows.length ? rows.map(function (h) {
         return '<div class="card bb-hist" data-bb-hist="' + h.date + '"><div class="bb-l1"><span class="bb-strong">' + day(h.date) + '</span>'
-          + (h.verdict ? '<span>' + vpill(h.verdict, r.words) + ' <span class="bb-pts">' + fmt(h.earned) + ' of ' + h.available + '</span></span>' : '') + '</div>'
+          + (h.verdict && (r.words || words)[h.verdict] ? '<span>' + vpill(h.verdict, r.words) + ' <span class="bb-pts">' + fmt(h.earned) + ' of ' + esc(String(h.available)) + (h.saved ? ', saved' : '') + '</span></span>' : '') + '</div>'
           + h.entries.map(function (x) { return '<p class="bb-pts">' + esc(x.checks.join(', ')) + (x.answer ? ': ' + esc(x.answer) : '') + '</p>'; }).join('') + '</div>';
       }).join('') : '<p class="mut">No dated records yet.</p>');
   }
