@@ -414,3 +414,22 @@ test('a temperature on a day the room was marked empty is left out, as on the st
   const r = read(env, m.result.code, 'area_reading');
   assert.deepEqual(JSON.parse(JSON.stringify(r.result.rows)).map((x) => x.room), ['Test Room 1']);
 });
+
+test('a column named like a score is never offered, never accepted and never shown (DOCS, 20 Nov 2026)', () => {
+  const env = setup();
+  env.file('BLD-health_screen.csv')[0].content = crlf(['id,tenant_id,subject_id,test,grade,tested_on,body_score',
+    `hs-a,${fx.TENANT},sub-test-a,Hips,4/5,2025-06-01,7`]);
+  env.file('BLD-health_screen.csv')[0].sheet = undefined;
+  assert.equal(env.ctx.sinkInspectChoices_().lists.health_screen.includes('body_score'), false);
+  const bad = make(env, { fields: { subject: ['name'], health_screen: ['test', 'body_score'] } });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, 'INVALID');
+  // a field row written by hand is still not served
+  const m = make(env, { fields: { subject: ['name'], health_screen: ['test'] } });
+  const ff = env.file('BLD-inspect_link_field.csv')[0];
+  ff.content += crlf([`hand-1,${fx.TENANT},${m.result.link_id},health_screen,body_score,`]);
+  ff.sheet = undefined;
+  const r = read(env, m.result.code, 'health_screen');
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(Array.from(r.result.fields).includes('body_score'), false);
+});

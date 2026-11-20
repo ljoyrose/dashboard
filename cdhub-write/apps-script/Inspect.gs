@@ -217,7 +217,7 @@ function inspectSinkRead_(req, who, now) {
   var data = site ? inspectSiteData_(key, tenant) : inspectListData_(key, tenant);
   if (!data) throw err_('FILE_MISSING', 'That list does not exist yet.');
   var fields = data.header.filter(function (c) {
-    return c && c !== 'tenant_id' && Object.prototype.hasOwnProperty.call(cols, c) && cols[c] !== null;
+    return c && c !== 'tenant_id' && !/score/i.test(c) && Object.prototype.hasOwnProperty.call(cols, c) && cols[c] !== null;   // never a score column
   });
   if (!fields.length) throw denied;
   if (!site) {
@@ -290,7 +290,7 @@ function sinkInspectChoices_() {
   Object.keys(INSPECT.LISTS).forEach(function (k) {
     if (!inspectListOk_(k)) return;
     var f = INSPECT_SITE[k] ? inspectSiteData_(k, tenant) : inspectListData_(k, tenant);
-    if (f) lists[k] = f.header.filter(function (c) { return c && c !== 'tenant_id'; });
+    if (f) lists[k] = f.header.filter(function (c) { return c && c !== 'tenant_id' && !/score/i.test(c); });
   });
   return {
     dogs: dogs, lists: lists, keys: INSPECT.LISTS, today: today, now: londonIso_(new Date()).slice(0, 16),
@@ -342,6 +342,7 @@ function sinkInspectMake_(spec, adminEmail) {
       var name = typeof w === 'string' ? w : (w && typeof w === 'object' ? String(w.field || '') : '');
       var red = w && typeof w === 'object' ? String(w.redaction || '') : '';
       if (!name || name === 'tenant_id' || f.header.indexOf(name) < 0) throw bad('fields', 'One of the ticked fields was not found. Reload the page.');
+      if (/score/i.test(name)) throw bad('fields', 'A link never shows scores.');
       if (INSPECT.REDACTIONS.indexOf(red) < 0) throw bad('fields', 'That way of hiding part of a value is not known.');
       if (done[name]) return;
       done[name] = true;

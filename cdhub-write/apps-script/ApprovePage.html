@@ -282,6 +282,8 @@
   var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],
     area_reading:['room','reading_type','min_c','max_c','spot_c','taken_at','in_range','mitigation_note'],   // who typed it: off unless ticked
     check_log:['job','room','dog','outcome','amount','happened_at','note']};
+  // never ticked by default on any list (Lisa can still tick them): who typed it and how, and old score or axis columns (DOCS, 20 Nov 2026)
+  var IN_NEVER_DEFAULT=/(^taken_by$|^created_by$|^how_recorded$|score|axis)/;
   function inMsg(t){ document.getElementById('in-msg').textContent=t; }
   function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }
   document.getElementById('in-new').onclick=function(){
@@ -316,7 +318,7 @@
         var fs=el('fieldset'); fs.appendChild(el('legend',null,IN_NAMES[list]||list));
         var def=IN_DEFAULT[list]||[];
         ch.lists[list].filter(function(c){ return c!=='id' && c!==ch.keys[list]; }).forEach(function(col){
-          var t=tick(col, def==='*' || def.indexOf(col)>=0); var f={list:list,field:col,t:t};
+          var t=tick(col, !IN_NEVER_DEFAULT.test(col) && (def==='*' || def.indexOf(col)>=0)); var f={list:list,field:col,t:t};
           fs.appendChild(t.label);
           if(col==='chip_number'){ var s=el('select'); s.setAttribute('aria-label','How much of '+col); s.innerHTML='<option value="last4">Last 4 digits only</option><option value="">Whole number</option>'; f.red=s; fs.appendChild(s); }
           fieldTicks.push(f);
