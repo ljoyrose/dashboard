@@ -95,7 +95,7 @@
           var cur = flapOf(areaId) === mode;
           return flaps[mode] = h('button', { class: cur ? 'btn' : 'btn quiet', type: 'button', 'aria-pressed': String(cur), text: mode === 'free' ? 'Flap free' : 'Flap limited', onclick: function () {
             msg.className = 'msg'; msg.textContent = 'Saving...';
-            c.save.submit('area_access', { area_id: areaId, access_type: mode }).then(function (res) {
+            c.save.submit('area_access', { area_id: areaId, access_type: mode }, { onTurn: function (n) { msg.textContent = BLDDone.turn(n); } }).then(function (res) {
               if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode, from_date: today }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '. ' + BLDDone.by(res);
                 if (res.status !== 'queued') Object.keys(flaps).forEach(function (m) { flaps[m].className = m === mode ? 'btn' : 'btn quiet'; flaps[m].setAttribute('aria-pressed', String(m === mode)); }); }
               else { msg.className = 'msg bad'; msg.textContent = res.message; }
@@ -176,7 +176,7 @@
           h('button', { class: 'btn quiet', type: 'button', text: 'Save', onclick: function () {
             if (!why.value) { msg.className = 'msg bad'; msg.textContent = 'Choose why.'; return; }
             msg.className = 'msg'; msg.textContent = 'Saving...';
-            c.save.submit('occupancy_out', { subject_id: id, off_site_kind: why.value }, { requestId: c.save.newRequestId() }).then(function (res) {
+            c.save.submit('occupancy_out', { subject_id: id, off_site_kind: why.value }, { requestId: c.save.newRequestId(), onTurn: function (n) { msg.textContent = BLDDone.turn(n); } }).then(function (res) {
               msg.className = 'msg ' + (res.ok ? 'good' : 'bad'); msg.textContent = res.ok ? (res.status === 'queued' ? res.message : BLDDone.by(res)) : res.message;
             });
           } }), msg]);
