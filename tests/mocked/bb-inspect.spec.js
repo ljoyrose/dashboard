@@ -61,7 +61,7 @@ test('S10 an ended or stopped link says so and shows nothing', async ({ page }) 
 test('S10 lists not ticked for the link say "not shared"; a missing set-up says so', async ({ page }) => {
   await route(page);
   await page.goto(LINK);
-  await expect(page.locator('#screen')).toContainText('Not shared on this link: Microchip, Status, Fit to Breed, Litters.');
+  await expect(page.locator('#screen')).toContainText('Not shared on this link: Microchip, Status, Fit to Breed, Litters, Temperatures, Jobs: health checks, bowls, cleaning.');
 });
 
 test('S10 a broken link says it is not complete', async ({ page }) => {
@@ -125,4 +125,29 @@ test('S10 without a must-pass summary the inspector sees the records only, with 
   await expect(page.locator('.ins-v')).toHaveCount(0);
   await expect(page.locator('.ins-dog').nth(0).locator('.ins-check', { hasText: 'Hips' })).toContainText('Good · 14 Jun 2022');
   await expect(page.locator('#screen')).not.toContainText(/Not shared on this link:.*(Must pass|Breeding)/);
+});
+
+test('18 Nov 2026: temperatures and job records show after the dogs, by day, newest first, with names not ids', async ({ page }) => {
+  DATA.area_reading = { fields: ['room', 'min_c', 'max_c', 'taken_at', 'taken_by'], rows: [
+    { room: 'Test Room 1', min_c: '18.5', max_c: '21', taken_at: '2026-11-18T08:05:00', taken_by: 'Test Staff' },
+    { room: 'Test Room 2', min_c: '19', max_c: '22', taken_at: '2026-11-17T08:10:00', taken_by: 'Test Staff' }] };
+  DATA.check_log = { fields: ['job', 'room', 'dog', 'outcome', 'happened_at', 'check_type_id'], rows: [
+    { job: 'Water bowls washed', room: '', dog: '', outcome: 'done', happened_at: '2026-11-18T09:00:00', check_type_id: 'cty-x' },
+    { job: 'Health check: all dogs', room: 'Test Room 1', dog: 'Test Dog One', outcome: 'ok', happened_at: '2026-11-18T08:30:00', check_type_id: 'cty-y' }] };
+  try {
+    await route(page);
+    await page.goto(LINK);
+    await expect(page.locator('.ins-site h2')).toHaveText(['Temperatures', 'Jobs: health checks, bowls, cleaning']);
+    const temps = page.locator('.ins-site').first();
+    await expect(temps.locator('summary')).toHaveText(['18 Nov 2026 (1)', '17 Nov 2026 (1)']);
+    await expect(temps.locator('details').first()).toHaveAttribute('open', '');
+    await expect(temps.locator('.ins-row').first()).toContainText('Room Test Room 1');
+    await expect(temps.locator('.ins-row').first()).toContainText('Taken at 08:05');
+    const jobs = page.locator('.ins-site').nth(1);
+    await expect(jobs.locator('.ins-row')).toHaveCount(2);
+    await expect(jobs).toContainText('Job Water bowls washed');
+    await expect(jobs).toContainText('Dog Test Dog One');
+    await expect(jobs).not.toContainText('cty-');
+    await expect(page.locator('button, input, form')).toHaveCount(0);
+  } finally { delete DATA.area_reading; delete DATA.check_log; }
 });

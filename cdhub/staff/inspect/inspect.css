@@ -1,7 +1,7 @@
 /* Inspector page: read-only. House look: 1px lines, no fills at rest, ink text. */
 .ins-ends { color: var(--muted); font-size: var(--fs-small); margin: 0 0 12px; }
-.ins-dog { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 0 0 12px; background: var(--card); }
-.ins-dog h2 { margin: 0 0 4px; font-size: var(--fs-head); }
+.ins-dog, .ins-site { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 0 0 12px; background: var(--card); }
+.ins-dog h2, .ins-site h2 { margin: 0 0 4px; font-size: var(--fs-head); }
 .ins-facts { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-small); }
 .ins-list { margin: 8px 0 0; }
 .ins-list h3 { margin: 0 0 4px; font-size: var(--fs-body); }
@@ -21,3 +21,4 @@
 .ins-open[open] { flex: 1 1 100%; }
 .ins-v { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-small); font-weight: 500; white-space: nowrap; color: var(--ink); background: transparent; }
 .ins-pass { border-color: var(--ljr-5); } .ins-unverified { border-color: var(--ljr-6); } .ins-fail { border-color: var(--ljr-2); }
+.ins-site summary { cursor: pointer; padding: 6px 0; font-size: var(--fs-body); font-weight: 600; }

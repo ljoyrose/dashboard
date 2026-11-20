@@ -31,7 +31,13 @@
     { key: 'fit_to_breed', title: 'Fit to Breed', dog: 'subject_id', date: 'assessed_on|done_on' },   // done_on: a job record (15 Nov 2026)
     { key: 'litter', title: 'Litters', dog: 'dam_subject_id', date: 'dob' }
   ];
-  var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1 };
+  /* 18 Nov 2026: records for a room or the whole site, shown after the dogs, grouped by day, newest first.
+     The script sends them newest first and adds readable names (room, job, dog). */
+  var SITE = [
+    { key: 'area_reading', title: 'Temperatures', date: 'taken_at|period_start' },
+    { key: 'check_log', title: 'Jobs: health checks, bowls, cleaning', date: 'happened_at|taken_at' }
+  ];
+  var HIDE = { id: 1, subject_id: 1, dam_subject_id: 1, tenant_id: 1, area_id: 1, check_type_id: 1, corrects_id: 1, litter_id: 1, item_id: 1, note_for_id: 1, applied_limit_id: 1, thermometer_id: 1, device_id: 1 };
   /* lists this page asks for quietly: when a link does not share them, nothing is said (the script does not send them yet) */
   var QUIET = [{ key: 'must_pass', dog: 'subject_id' }, { key: 'breeding_rule', dog: '' }];
   /* never shown to an outside viewer, whatever comes back */
@@ -53,6 +59,24 @@
   function dateOf(r, cols) { var c = String(cols || '').split('|').filter(function (k) { return r[k]; })[0]; return c ? r[c] : ''; }
   function isDateCol(c) { return /(^dob$|_on$|_date$|_until$|_at$)/.test(c); }
   function show(c, v) { return isDateCol(c) ? day(v) : String(v === undefined || v === null ? '' : v); }
+  function time(v) { var m = /[T ](\d{2}:\d{2})/.exec(String(v || '')); return m ? m[1] : ''; }
+
+  /** Room and site records: [{title, days:[{day, rows:[[{label,value}]]}]}]. Pure, for tests. */
+  function buildSite(res) {
+    return SITE.filter(function (L) { return res[L.key] && res[L.key].rows && res[L.key].rows.length; }).map(function (L) {
+      var fields = res[L.key].fields.filter(function (c) { return !HIDE[c]; }), days = [], at = {};
+      res[L.key].rows.forEach(function (r) {
+        var when = dateOf(r, L.date), d = String(when || '').slice(0, 10) || '';
+        if (!(d in at)) { at[d] = days.length; days.push({ day: d ? day(d) : 'No date', rows: [] }); }
+        days[at[d]].rows.push(fields.map(function (c) {
+          var v = r[c];
+          if (isDateCol(c) && /_at$/.test(c)) return { label: words(c), value: time(v) || day(v) };   // the day is the heading
+          return { label: words(c), value: show(c, v) };
+        }));
+      });
+      return { title: L.title, days: days };
+    });
+  }
 
   /** Read the link from the address. Returns {script, code} or null. */
   function parseHash(hash) {
@@ -162,7 +186,7 @@
     if (ends) screen.appendChild(el('p', 'ins-ends', 'Read only. This link ends ' + day(ends) + '.'));
     var dogs = build(res, null, shows);
     if (notShared && notShared.length) screen.appendChild(el('p', 'ins-ends ins-not', 'Not shared on this link: ' + notShared.join(', ') + '.'));
-    if (!dogs.length) { screen.appendChild(el('p', 'sub', 'No dogs have been shared on this link.')); return; }
+    if (!dogs.length) screen.appendChild(el('p', 'sub', 'No dogs have been shared on this link.'));
     dogs.forEach(function (d) {
       var card = el('section', 'ins-dog' + (d.word ? ' ins-l-' + d.word : ''));
       var head = el('div', 'ins-head');
@@ -206,6 +230,22 @@
       });
       screen.appendChild(card);
     });
+    buildSite(res).forEach(function (l) {
+      var sec = el('section', 'ins-site');
+      sec.appendChild(el('h2', '', l.title));
+      l.days.forEach(function (d, i) {
+        var det = el('details', 'ins-list');
+        if (i === 0) det.open = true;
+        det.appendChild(el('summary', '', d.day + ' (' + d.rows.length + ')'));
+        d.rows.forEach(function (cells) {
+          var row = el('div', 'ins-row');
+          cells.forEach(function (c) { if (c.value === '') return; var s = el('span'); s.appendChild(el('b', '', c.label + ' ')); s.appendChild(document.createTextNode(c.value)); row.appendChild(s); });
+          det.appendChild(row);
+        });
+        sec.appendChild(det);
+      });
+      screen.appendChild(sec);
+    });
   }
 
   function message(screen, text) {
@@ -225,7 +265,7 @@
     link = null;
     message(screen, 'Loading…');
     var res = {}, ends = '', notShared = [];
-    var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; })).concat(QUIET.map(function (q) { return q.key; }));
+    var keys = ['subject'].concat(LISTS.map(function (L) { return L.key; }), SITE.map(function (L) { return L.key; })).concat(QUIET.map(function (q) { return q.key; }));
     var quiet = {}; QUIET.forEach(function (q) { quiet[q.key] = 1; });
     var chain = Promise.resolve(true);
     keys.forEach(function (k) {
@@ -252,10 +292,10 @@
       save.clearCode();
     });
   }
-  function title(k) { var L = LISTS.filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
+  function title(k) { var L = LISTS.concat(SITE).filter(function (x) { return x.key === k; })[0]; return L ? L.title : k; }
   function root_BLDSave() { return (typeof self !== 'undefined' ? self : this).BLDSave; }
   function root_Levels() { return (typeof self !== 'undefined' ? self : this).BLDViewerLevels; }
 
   if (typeof document !== 'undefined' && document.getElementById('screen')) start();
-  return { parseHash: parseHash, build: build, day: day };
+  return { parseHash: parseHash, build: build, buildSite: buildSite, day: day };
 }));
