@@ -1,41 +1,48 @@
 # JOB CDH-HT.1 · CD Hub human click test and fix · run progress
 
-Rewritten after each stage (not appended). Last rewrite: 17 Nov 2026.
+Rewritten after each stage (not appended). Last rewrite: 20 Nov 2026 (second session).
 
 ## Where things are
 
 | Stage | State | Proof |
 |---|---|---|
-| S0 Read | done | repo map below |
-| S1 Crawler | built; **hub walk switched off on today's hub** | `tests/mocked/cdhub-crawl.spec.js`, engine `tests/support/click-crawl.js`. 13 Nov: hub 884 of 884 controls on desktop and on a 360px phone, 0 findings. 17 Nov: Temperatures and staff walks pass; the hub walk cannot finish (see `HANDOVER.md`) |
-| S2 The Round | done | `tests/mocked/cdhub-round.spec.js`, 19 tests, save OK / out of reach / refused; passes on today's hub |
-| S3 Fix | done for what was found by 13 Nov | PRs 512, 515, 516 merged; 506 (medicine) open |
-| S4 Style | built; **switched off on today's hub** | `tests/mocked/cdhub-hover.spec.js`. 13 Nov: 67 kinds of control, 0 problems, 1 parked for Lisa. 17 Nov: runs past its time, cause not found |
-| S5 Click map | done on 13 Nov, not remade since | `docs/cdhub/CLICK-MAP.md`, written by `tools/cdhub-click-map/make.js` |
-| S6 Full suite | not green | PR 641: the two switched-off tests are the gap. A successor is needed: `docs/cdhub/CONTINUE_PROMPT.md` |
+| S0 Reproduce | done | full desktop walk froze for 14 minutes on a screen reached one tap in |
+| S1 Open by address, cap waits | done | `tests/support/click-crawl.js` |
+| S2 One walk per start screen, both sizes | done | `tests/mocked/cdhub-crawl.spec.js`, 11 start screens today |
+| S3 Hover test | done | stall found and fixed; about 25 seconds; no `test.fixme` |
+| S4 Fix what the walk finds | done | PRs 718, 725, 726, each with a test that fails without the fix; all merged |
+| S5 Three runs in a row, click map, notes | done | below |
 
-## Repo map (CD Hub only)
+## The done test
 
-- `cdhub/index.html` the hub: one page, screens are `#/map` Main, `#/work` Do, `#/today`, `#/dogs`, `#/sops`, and under More `#/compliance`, `#/round`, `#/areas`, `#/breed` (owner only), plus the newer `#/staff`, `#/items`, `#/enquiries` and Admin, and `#/shape`, `#/litters`, `#/buyers`, `#/vet` which are switched off (their addresses open Main). `go(id)` draws a screen; `PAGES` is the wired list.
-- `cdhub/history.html` the Temperatures page (The round, Heat map, year chips, day panel).
-- `cdhub/staff/` the staff page ("The Board"): `shell.js`, `modules/temperature/module.js` (the temperature round), `modules/moves.js` (scan and move), `modules/where.js`, `modules/jobs/module.js`. It reads and saves through the save script only.
-- Shared: `toolkit.js` (tabs, folds, search, Main), `house.css`, `tokens.css`.
-- Tests: `tests/mocked/*.spec.js` (pretend Google and Drive), `tests/phone/`, `tests/support/` (pretend Drive, sign-in stand-in), `tools/ci-local/run-all.sh`, `tools/lint`, `tools/privacy-guard`, `tests/support/budgets.js` + `tests/budget-growth/*.json` (page-size rule: one new file per PR).
+| What | Result |
+|---|---|
+| Hub walk, desktop 1280px | 1,354 of 1,361 controls (99.5%) on 39 screens · LOOP 0 · DEAD 0 · ERROR 0 · ESCAPE 0 · WORDING 0 |
+| Hub walk, phone 360px | 1,354 of 1,361 controls (99.5%) on 39 screens · LOOP 0 · DEAD 0 · ERROR 0 · ESCAPE 0 · WORDING 0 |
+| Temperatures page | 52 of 52, desktop and phone, 0 findings (102 repeated calendar days sampled) |
+| Staff page | 102 of 104 (98.1%), desktop and phone, 0 findings |
+| Hover | 69 to 71 kinds of control on 11 screens, 0 problems |
+| Three runs in a row | 20 Nov 2026, one worker, Cloudflare layout: 29 passed each time (29.2, 29.0 and 27.3 minutes), 0 findings |
+| `test.fixme` in the crawl and hover specs | none |
+| Click map | remade 20 Nov from the third run: `docs/cdhub/CLICK-MAP.md` |
 
-## What was found and fixed
+Every start screen on its own was between 98.4% and 100%. The 7 controls not reached are on Main.
 
-1. February medicine loop (Lisa's report): with two or more dogs in the medicine list nothing opened and the rows could not be tapped. PR 506 (open).
-2. Sensor CSV on the staff temperature round threw an error and stopped at its title. PR 512 (merged).
-3. Temperatures heat map: later days and no-reading days were buttons that did nothing. PR 515 (merged).
-4. (i) marks showed nothing when tapped; Clear filters did nothing with no filter set; headings stopped folding after Skip to content; Compliance and The round scrolled sideways at 360px; a raw column name in a message; two controls with no hover fill; buttons to switched-off screens. PR 516 (merged).
-5. Scan and move: the lit flap button did not follow a save that landed. In the crawler PR 641 (found by The Round spec).
-6. Items screen: the empty message named two raw table names. Main has since reworded it; nothing left to do.
+## Time in CI
 
-## Not done here (each is a row in the slip)
+"Browser tests" on main alone: about 23 minutes. With the hub walk and hover test on: about 38 minutes (2,414 tests). The walk adds about 15 minutes to every run. Whether to move the hub walk to a nightly run is Lisa's decision (it needs a workflow change).
 
-- The hub walk and the hover test on today's hub: switched off with a dated reason, for the successor.
-- The new screens (Staff, Items, Enquiries, Admin) have not had a full walk.
-- The shared `[tabindex]` rule in `toolkit.js` that made item 4's heading bug possible is still there (fixed at the hub's end only).
-- Main's Next card has no hover fill (shared `house.css`, every hub): parked for Lisa.
-- Filled-in save forms on the dog card (Add medication, Add weight, Save details) are only pressed empty by the crawl.
-- A live check with Lisa's own sign-in: not possible from here; a 6-step phone test is in the slip.
+## What was found and fixed this session
+
+1. Compliance: the "choose a rule" list had no grey fill on hover. PR 718.
+2. Sign out pressed while the hub was still reading left an error card ("Sign in again") or a blank page: the unfinished read carried on. PR 725.
+3. The round on a 360px phone scrolled sideways: the "add a dog" list grew as wide as its longest name. Seen in CI only (wider fallback font). PR 726.
+
+Earlier findings (first session) are in the first session's slip and in PRs 506, 512, 515, 516 and 641.
+
+## Not done here
+
+- Enquiries and Admin are not walked (not offered as start screens for the invented data set).
+- Breed Better's own hover look on the dog card: left as is, for Lisa.
+- Main's Next card has no hover fill (shared `house.css`): still parked for Lisa from the first session.
+- A live check with Lisa's own sign-in: not possible from a cloud session.
