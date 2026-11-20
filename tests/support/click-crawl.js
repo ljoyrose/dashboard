@@ -373,6 +373,7 @@ async function crawl(site) {
     const withChrome = !chromeDone; chromeDone = true;
     const hrefDone = new Map();
     log('SCREEN ' + screen + ' · ' + list.length + ' controls');
+    const twice = new Set();
     const tapOne = async (c0) => {
       if (cap && taps >= cap) return;
       const id = (c0.chrome ? 'chrome' : key) + ' ¦ ' + c0.sig + ' ¦ ' + c0.k;
@@ -491,6 +492,13 @@ async function crawl(site) {
       else if (c.chrome && aft.nav) { target = 'same screen'; result = 'already here'; }
       else if (c.chosen) { target = 'same screen'; result = 'already chosen'; }
       else if (site.deadOk && site.deadOk(c, aft)) { target = 'same screen'; result = site.deadOk(c, aft); }
+      else if (!twice.has(id)) {
+        // "Nothing happened" is only believed the second time, from a fresh load: a tap that landed while the page was
+        // still drawing is the walk's doing, not a dead control. A control that is really dead stays dead and is reported.
+        twice.add(id); done.delete(id); taps--; cold = true;
+        log('AGAIN ' + c.kind + ' · ' + short(c.label, 60) + ' · nothing changed: tapping once more from a fresh load');
+        return tapOne(c0);
+      }
       else { flag('DEAD', screen, c.label || c.sig, 'nothing changed and nothing was said (' + c.kind + ' ' + c.tag + ')'); result = 'nothing happens'; target = 'same screen'; }
       if (plain && !hrefDone.has(c.href)) hrefDone.set(c.href, { label: c.label, target });
       if (site.dirty && site.dirty(c)) cold = true;   // this tap changed something the page remembers: start the next one from a fresh load
