@@ -12,7 +12,7 @@
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso)); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : iso; }
   function dueLine(j) {
     if (j.status === 'late') return j.days_late === 1 ? '1 day late' : j.days_late + ' days late';
-    if (j.status === 'today') return 'Due today';
+    if (j.status === 'today') return j.times_per_day > 1 ? 'Due today: ' + (j.done_today || 0) + ' of ' + j.times_per_day : 'Due today';
     if (j.status === 'never') return 'Due';
     if (j.status === 'ok') return 'Next ' + dmy(j.next_due);
     return 'As needed';
@@ -158,7 +158,7 @@
       });
       Object.keys(latestField).forEach(function (k) { var r = latestField[k]; if (isOn(r)) (formOf[r.type_key] = formOf[r.type_key] || []).push(r); });
       Object.keys(formOf).forEach(function (k) { formOf[k].sort(function (a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.label).localeCompare(String(b.label)); }); });
-      if (tag && !BLDDue.forTarget(types, logs, target, today).length) { moves(); return; }
+      if (tag && !BLDDue.forTarget(types, logs, target, today, null, { rules: rules }).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
       /* a room's jobs show its capacity too (LD-SC audit, 15 Nov 2026): the rows in force today, the same check as Move dogs */
@@ -472,7 +472,7 @@
       }
       function catchUp() {
         /* on the whole-site screen every job (rooms and dogs too, a row each); on a dog, room or litter screen that one's jobs */
-        var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today)).slice();
+        var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today, null, { rules: rules })).slice();
         jobs.sort(byFrequency(jobs));
         list.textContent = ''; say('');
         list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { draw(); } }));
@@ -533,7 +533,7 @@
         ]);
       }
       function draw() {
-        var jobs = BLDDue.forTarget(types, logs, target, today), freq = byFrequency(jobs);
+        var jobs = BLDDue.forTarget(types, logs, target, today, null, { rules: rules }), freq = byFrequency(jobs);
         jobs.sort(function (a, b) { return (pos(a) - pos(b)) || freq(a, b); });
         list.textContent = '';
         if (group) {
