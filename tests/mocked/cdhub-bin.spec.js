@@ -81,3 +81,62 @@ asOwner.describe('CD Hub Bin: owner', () => {
     await expect(page.locator('#binCount')).toHaveText('3');
   });
 });
+
+// ---- Restore (Lisa 18 Nov 2026, answer A): ended rules/settings and links only; a NEW row from today; owner switch OFF by default.
+const SINK = 'https://script.google.com/macros/s/PRETENDSCRIPT/exec';
+const ON = 'r-on,ten-x,bin.restore.on,1,2020-01-01,Owner setting,,2020-01-01T00:00:00Z,sc-aaaaaa,,';
+const LIVE_COPY = 'r-5,ten-x,pretend.live_rule,7,2019-01-01,Pretend,,2019-01-01T00:00:00Z,sc-aaaaaa,2019-12-31,';
+const todayLondon = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const withRules = (extra) => base.extend({ world: async ({}, use) => { const d = world(); setTable(d, 'bin-rules', 'BLD-breeding_rule.csv', RULES + extra.join('\n') + '\n'); use(d); } });
+
+async function openBin(page, fail) {
+  const sent = [];
+  await page.route(SINK, async (route) => {
+    const b = JSON.parse(route.request().postData() || '{}');
+    sent.push(b);
+    if (fail) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'BUSY_FOR_GOOD', message: 'Pretend failure' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'brl-new-' + sent.length } }) });
+  });
+  await open(page);
+  await page.evaluate((url) => { localStorage.setItem('cdhub.sink.url', url); localStorage.setItem('cdhub.sink.code', 'pretend-code'); }, SINK);
+  await tabClick(page, '#nav button[data-go="bin"]');
+  await expect(page.locator('#binPage h2')).toHaveText('Bin');
+  return sent;
+}
+
+asOwner('restore: switch off by default, so no Restore buttons', async ({ page }) => {
+  await openBin(page);
+  await expect(page.locator('#binPage [data-bin-row]')).not.toHaveCount(0);
+  await expect(page.locator('[data-bin-restore]')).toHaveCount(0);
+});
+
+const asOn = withRules([ON, LIVE_COPY]);
+asOn('restore: rules only, asks first, Cancel undoes, Yes saves one new row from today and ticks', async ({ page }) => {
+  const sent = await openBin(page);
+  // ended rules r-1 and r-2 can be restored; r-5 is already in force (same key and value); the code row cannot
+  await expect(page.locator('[data-bin-kind="Breeding rule"] [data-bin-restore]')).toHaveCount(2);
+  await expect(page.locator('[data-bin-kind="Breeding rule"] [data-bin-live]')).toHaveCount(1);
+  await expect(page.locator('[data-bin-kind="Code register"] [data-bin-restore]')).toHaveCount(0);
+  const row = page.locator('[data-bin-kind="Breeding rule"] [data-bin-row]').filter({ hasText: 'pretend.old_rule = 6' });
+  await row.locator('[data-bin-restore]').click();
+  await expect(row).toContainText('Bring back from today?');
+  await row.locator('[data-bin-no]').click();
+  await expect(row.locator('[data-bin-restore]')).toBeVisible();
+  expect(sent).toHaveLength(0);
+  await row.locator('[data-bin-restore]').click();
+  await row.locator('[data-bin-yes]').click();
+  await expect(row.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d\. Restored from today\.$/);
+  expect(sent).toHaveLength(1);
+  expect(sent[0].table).toBe('breeding_rule');
+  expect(sent[0].action).toBe('add');
+  expect(sent[0].fields).toEqual({ rule_key: 'pretend.old_rule', value: '6', effective_from: todayLondon(), source: 'Restored from Bin (r-2)' });
+});
+
+asOn('restore: a failed save says so and nothing is shown as saved', async ({ page }) => {
+  await openBin(page, true);
+  const row = page.locator('[data-bin-kind="Breeding rule"] [data-bin-row]').filter({ hasText: 'pretend.old_rule = 5' });
+  await row.locator('[data-bin-restore]').click();
+  await row.locator('[data-bin-yes]').click();
+  await expect(row.locator('[data-saved="bad"]')).toHaveText('Not saved: Pretend failure. Nothing changed; try again.');
+  await expect(row.locator('[data-saved="good"]')).toHaveCount(0);
+});
