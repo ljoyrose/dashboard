@@ -70,6 +70,7 @@
     r.classList.toggle('look-cool', o.bg === 'cool');
     r.classList.toggle('sel-soft', o.sel === 'soft');
     if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
+    r.classList.toggle('show-help', o.help === 'on');   // Show help (Lisa 18 Nov 2026): off unless this person turns it on
   }
   applyLook();
   if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') { applyLook(); syncLookMenu(); } });
@@ -83,6 +84,7 @@
     palette: '<path d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.58 9 8 0 1.06-.47 2.08-1.32 2.83-.84.75-1.99 1.17-3.18 1.17H14a2 2 0 0 0-1 3.75A1.3 1.3 0 0 1 12 21"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="12.5" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
     logout: '<path d="M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/><path d="M9 12h12l-3-3"/><path d="M18 15l3-3"/>',
     plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    filter: '<path d="M4 6h16M7 12h10M10 18h4"/>', // the Filter button of a find bar (Dashboard Tech, TECH-HUB-1)
     apps: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path d="M14 7h6M17 4v6"/>',
     // The bottom tabs' icons (Lisa's picks, 2 Nov): <span class="hic"><svg class="hi"><use href="#hi-t-NAME"/></svg></span>.
     't-main': '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
@@ -100,6 +102,7 @@
     't-room': '<path d="M4 20v-10l8-6l8 6v10z"/>',
     't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
     't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
+    't-temp': '<path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0z"/><path d="M10 9h4"/>',
     // Status icons for badges (quality review, 12 Nov 2026: house icons, not emoji). Tabler shapes, the same stroke.
     's-check': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/>',
     's-x': '<circle cx="12" cy="12" r="9"/><path d="M10 10l4 4m0-4l-4 4"/>',
@@ -132,7 +135,9 @@
   // The menu offers what applyLook supports and saves it in 'dash-look', merged, so Studio's own keys (words, text, space) stay.
   // On a phone it also shows the read time and a Sign out item that presses the page's own Sign out (both leave the bar there).
   var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
-    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
+    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]],
+    // Show help (Lisa 18 Nov 2026): help and explanation lines (class "help") are hidden, not deleted, until this is on.
+    ['help', 'Help', [['off', 'Hidden'], ['on', 'Show help']]]];
   function readLook() { var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; } return typeof o === 'object' ? o : {}; }
   function lookVal(o, row) { return row[2].some(function (x) { return x[0] === o[row[0]]; }) ? o[row[0]] : row[2][0][0]; }
   function setLook(key, val) {
@@ -142,6 +147,7 @@
     if (key === 'bg') r.classList.toggle('look-cool', val === 'cool');
     else if (key === 'sel') r.classList.toggle('sel-soft', val === 'soft');
     else if (key === 'mode') { if (val === 'light' || val === 'dark') r.setAttribute('data-theme', val); else r.removeAttribute('data-theme'); }
+    else if (key === 'help') r.classList.toggle('show-help', val === 'on');
   }
   // The page's own Sign out in the top bar, when it is there (signed in). Hidden only by the phone rule counts as there.
   function headSignout() {
@@ -349,6 +355,8 @@
         if (e) e.preventDefault();
         o.focus();
         root.close();
+        // A phone or an installed app may refuse to close this tab: then the tap would do nothing, so go to the dashboard here.
+        root.setTimeout(function () { if (!root.closed) root.location.href = SITE; }, 400);
         return true;
       }
     } catch (x) { /* another site or closed: fall through to the link */ }
