@@ -74,6 +74,8 @@ for (const view of VIEWS) {
       await page.locator('#signinbtn').click();
     };
     const ready = async (page) => { await expect(page.locator('#nav button[data-go]').first()).toBeVisible({ timeout: 20000 }); };
+    // the first tables and the later ones are in: only then is the More list complete
+    const loaded = (page) => page.waitForFunction(() => typeof LOAD !== 'undefined' && LOAD.state === 'ok' && LOAD.later !== 'wait' && !document.getElementById('cdWait'), null, { timeout: 20000 }).catch(() => {});
     const startScreens = async (page) => {
       const ids = await page.evaluate(() => Array.from(document.querySelectorAll('#nav [data-go]')).map((b) => b.dataset.go));
       return [...new Set(ids)].filter((id) => !HIDDEN.includes(id));
@@ -81,7 +83,7 @@ for (const view of VIEWS) {
     for (let slot = 1; slot <= SLOTS; slot++) {
       test(`the hub, start screen ${slot}: every control on it and one and two taps in`, async ({ page, guard }) => {
         test.setTimeout(900_000);
-        await signIn(page); await ready(page);
+        await signIn(page); await ready(page); await loaded(page);
         const all = await startScreens(page);
         expect(all.length, 'the bottom bar and More list offer screens').toBeGreaterThanOrEqual(5);
         expect(all.length, 'more start screens than this walk has slots for: raise SLOTS in this file').toBeLessThanOrEqual(SLOTS);
@@ -121,7 +123,7 @@ for (const view of VIEWS) {
 
     test('the hub: a switched-off screen\'s old address opens Main, and Sign out signs out', async ({ page }) => {
       test.setTimeout(120_000);
-      await signIn(page); await ready(page);
+      await signIn(page); await ready(page); await loaded(page);
       const rows = [];
       // Old addresses of the hidden screens: Main, or (while one is still wired) the old screen. Never an error, never a blank page.
       for (const id of HIDDEN) {
