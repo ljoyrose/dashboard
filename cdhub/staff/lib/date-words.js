@@ -24,7 +24,7 @@
     var w;
     try { w = new Intl.DateTimeFormat(tag || undefined, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, n - 1, 15))); }
     catch (e) { w = new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, n - 1, 15))); }
-    return (cache[n] = w.replace(/\.$/, ''));
+    return (cache[n] = w.replace(/\.$/, '').replace(/^Sept$/, 'Sep'));  // Lisa's standard is 3 letters: "2 Sep 2026"
   }
   function parts(v) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(String(v == null ? '' : v).trim());

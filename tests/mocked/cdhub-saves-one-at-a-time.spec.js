@@ -22,3 +22,21 @@ test('hub: four saves sent together reach the save script one at a time, each an
   expect(order).toEqual(['r1', 'r2', 'r3', 'r4']);
   expect(most).toBe(1);
 });
+
+// OV12 16 Nov 2026: leaving the page while saves wait their turn dropped them. The page now asks "Leave site?" first.
+test('hub: leaving while saves are still waiting asks first; once answered it does not', async ({ page }) => {
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await page.route(SINK, async (route) => {
+    await held;
+    await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'x' } }) });
+  });
+  await page.goto('cdhub/');
+  const asks = () => page.evaluate(() => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; });
+  expect(await asks()).toBe(false);
+  await page.evaluate((url) => { window.__p = Promise.all([sinkFetch({ request_id: 'w1' }, url), sinkFetch({ request_id: 'w2' }, url)]); }, SINK);
+  expect(await asks()).toBe(true);
+  release();
+  await page.evaluate(() => window.__p);
+  expect(await asks()).toBe(false);
+});

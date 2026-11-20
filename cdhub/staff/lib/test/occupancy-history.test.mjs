@@ -99,3 +99,23 @@ test('a leave dated after today does not hide a pup who is still here', () => {
   assert.equal(O.rowOn(extra, 'sub-pup-c1', '2026-11-12').area_id, AREA);
   assert.equal(O.rowOn(extra, 'sub-pup-c1', '2026-11-25'), null);
 });
+
+// Lisa 18 Nov 2026: a room.empty need row hides a room's temperatures on the days it covers; the rows stay.
+test('room.empty: emptyOn follows the dated row; hideEmpty blanks only covered readings and never changes the records', () => {
+  const reqRows = [{ need_type: 'room.empty', target_table: 'area', target_id: 'area-x', from_date: '2025-01-01', to_date: '2025-06-30' },
+    { need_type: 'room.no_dogs', target_table: 'area', target_id: 'area-corr', from_date: '2025-01-01', to_date: '' }];
+  assert.equal(O.emptyOn('area-x', '2025-03-01', reqRows), true);
+  assert.equal(O.emptyOn('area-x', '2025-07-01', reqRows), false);
+  assert.equal(O.emptyOn('area-corr', '2025-03-01', reqRows), false);   // a corridor takes no dogs but is not empty
+  assert.equal(O.emptyOn('area-y', '2025-03-01', reqRows), false);      // no row: not empty
+  const rows = [
+    { id: 'r1', area_id: 'area-x', period_start: '2025-03-01T00:00:00Z', min_c: '9.0', max_c: '14.0', spot_c: '20.1', mitigation_note: 'x' },
+    { id: 'r2', area_id: 'area-x', period_start: '2025-07-01T00:00:00Z', min_c: '12.0', max_c: '15.0' },
+    { id: 'r3', area_id: 'area-corr', period_start: '2025-03-01T00:00:00Z', min_c: '12.0', max_c: '15.0' }];
+  const shown = O.hideEmpty(rows, reqRows);
+  assert.deepEqual([shown[0].min_c, shown[0].max_c, shown[0].spot_c, shown[0].room_empty, shown[0].mitigation_note], ['', '', '', 'yes', '']);
+  assert.equal(shown[1], rows[1]);
+  assert.equal(shown[2], rows[2]);
+  assert.equal(rows[0].min_c, '9.0');   // the record itself is untouched
+  assert.equal(O.hideEmpty(rows, []), rows);   // no room.empty rows: the same list
+});
