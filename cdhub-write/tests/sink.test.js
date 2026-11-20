@@ -324,6 +324,23 @@ test('the proposed staff table and the retired round_event are NOT on the allow-
   assert.throws(() => env.ctx.store_append_('BLD-staff.csv', fx.STAFF_HEADER, [], { header: fx.STAFF_HEADER, file: {}, text: '' }), (e) => e.code === 'FILE_NOT_ALLOWED');
 });
 
+// 15 Nov 2026: a code made on the owner page was refused on the hub. Codes are made in capitals; one typed in small
+// letters, with spaces or with a dash is the same code. A different code is still refused, and a switched-off one stays off.
+test('a code typed in small letters, with spaces or a dash is recognised; wrong and switched-off codes still are not', () => {
+  const env = standardEnv();
+  const c = env.codes.staff;
+  [c.toLowerCase(), ' ' + c.slice(0, 5) + ' ' + c.slice(5) + ' ', c.slice(0, 5) + '-' + c.slice(5).toLowerCase()].forEach((typed) => {
+    const r = save(env, req(env, { code: typed }));   // the 2nd and 3rd are repeats of the 1st reading: past the code check, refused as a repeat
+    assert.ok(r.ok || !/BAD_CODE|NO_CODE|TOO_MANY_TRIES/.test(r.code), typed.length + ': ' + r.code);
+  });
+  assert.equal(save(env, req(env, { code: c.toLowerCase() })).code === 'BAD_CODE', false);
+  assert.equal(save(env, req(env, { code: c.slice(1).toLowerCase() })).code, 'BAD_CODE');
+  const reg = JSON.parse(env.props.STAFF_REGISTRY);
+  Object.keys(reg).forEach((h) => { if (reg[h].who === 'Sam Staff') reg[h].active = false; });
+  env.props.STAFF_REGISTRY = JSON.stringify(reg);
+  assert.equal(save(env, req(env, { code: c.toLowerCase() })).code, 'BAD_CODE');
+});
+
 test('wrong, missing and switched-off staff codes are refused; the code is never stored in clear', () => {
   const env = standardEnv();
   assert.equal(save(env, req(env, { code: 'NOTACODE123' })).code, 'BAD_CODE');

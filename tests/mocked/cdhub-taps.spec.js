@@ -125,3 +125,36 @@ test.describe('CD Hub: every small control answers a tap', () => {
     await expect(page.locator('#main')).not.toContainText('effective_from');
   });
 });
+
+// Found by the hover test on 20 Nov 2026 (JOB CDH-HT.1): the "choose a rule" list on Compliance was the one list on the
+// hub with no hover fill. House rule (Lisa, 12 Nov 2026): hover shows the pale grey fill, no line.
+test('Compliance: the "choose a rule" list shows the pale grey fill on hover, and no line', async ({ page }) => {
+  await signIn(page);
+  await open(page, 'compliance');
+  const list = page.locator('#brKey');
+  await expect(list).toBeVisible({ timeout: 15000 });
+  const grey = await page.evaluate(() => { const p = document.createElement('i'); p.style.cssText = 'position:absolute;left:-99px;background:var(--hov)'; document.getElementById('main').appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c; });
+  await list.scrollIntoViewIfNeeded();
+  await list.hover();
+  await expect(list).toHaveCSS('background-color', grey);
+  await expect(list).toHaveCSS('outline-style', 'none');
+});
+
+// Found by the click-crawl on 20 Nov 2026 (JOB CDH-HT.1): Sign out pressed while the hub was still reading left an error
+// card ("Sign in again") or a blank page where the sign-in card should be, because the unfinished read carried on.
+test('Sign out while the hub is still reading: the sign-in card stays and nothing is read back in @regression', async ({ page }) => {
+  await signIn(page);
+  await page.waitForFunction(() => typeof LOAD !== 'undefined' && LOAD.state === 'ok' && LOAD.later !== 'wait');
+  // hold every file read until the test lets go
+  let letGo; const gate = new Promise((r) => { letGo = r; });
+  await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, async (route) => { await gate; await route.fallback(); });
+  await page.locator('#cdRefresh').click();          // Refresh reads again behind what is on screen
+  await page.waitForTimeout(300);                    // the read has started and is held
+  await page.locator('#cdSignout').click();
+  await expect(page.locator('#signinbtn')).toBeVisible();
+  letGo();
+  await page.waitForTimeout(1200);                   // the held reads come back (answered or refused)
+  await expect(page.locator('#signinbtn')).toBeVisible();
+  await expect(page.locator('#nav')).toBeEmpty();
+  expect(await page.evaluate(() => ({ state: LOAD.state, tables: Object.keys(T).length }))).toEqual({ state: 'signin', tables: 0 });
+});

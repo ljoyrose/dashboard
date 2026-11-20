@@ -1,0 +1,5 @@
+id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes
+mat-0,sub-a07,sub-a09,2024-05-01,1,natural,yes,2024-07-03,lit-0,yes,invented
+mat-1,sub-a01,sub-a09,2025-11-18,1,natural,yes,2026-01-20,lit-1,yes,invented
+mat-2,sub-a02,sub-a09,2025-12-16,1,natural,yes,2026-02-17,lit-2,yes,invented
+mat-3,sub-a03,sub-a10,2026-01-12,1,natural,yes,2026-03-16,,,invented

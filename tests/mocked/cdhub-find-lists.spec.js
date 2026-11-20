@@ -36,10 +36,10 @@ test.describe('CD Hub: find and sort on Areas and Do', () => {
     await signIn(page);
     await page.evaluate(() => go('work'));
     await expect(page.locator('[data-find-sort="work"] option')).toHaveText(['Sort: A to Z', 'Sort: As on file']);
-    await page.locator('[data-find-in="work"]').fill('finished');
+    await page.locator('[data-find-in="work"]').fill('waiting on Claude');
     await expect(page.locator('[data-find-of="work"] tr[data-find]:visible')).toHaveCount(1);
-    await expect(page.locator('[data-find-of="work"] tr[data-find]:visible')).toContainText('Sample finished item');
+    await expect(page.locator('[data-find-of="work"] tr[data-find]:visible')).toContainText('Sample item waiting on Claude');
     await expect(page.locator('[data-find-of="work"] [data-find-group]:visible')).toHaveCount(1);
-    await expect(page.locator('[data-find-count="work"]')).toHaveText('1 of 3');
+    await expect(page.locator('[data-find-count="work"]')).toHaveText('1 of 2');   // finished items are not listed (17 Nov 2026)
   });
 });
