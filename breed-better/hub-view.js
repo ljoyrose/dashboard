@@ -1,7 +1,8 @@
 /*!
  * Breed Better in CD Hub: reads rule rows and draws scores. It writes nothing and holds no animal data.
  * Everything specific to a species, breed or scheme comes from rows. Needs BreedBetterScore (score.js).
- * Scores are worked out when the page loads and carry a Testing label until the owner signs the scoring off.
+ * Scores are worked out when the page loads and carry a Testing label until the owner signs the scoring off
+ * (a date in BLD-score_scheme.signed_off_on, on or before today: D3, Lisa 18 Nov 2026).
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./score.js'), require('./dna-kit.js'));
@@ -27,6 +28,10 @@
   var state = { from: null, unenrol: '', filter: '', dog: '', edit: '', editPushed: false, open: {}, q: '', sort: 'verdict', tab: 'dogs', sex: '', age: '', month: '', cal: 'all', calc: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
+  /* D3 (Lisa, 18 Nov 2026): the Testing label stays until the scheme row's signed_off_on holds a date (YYYY-MM-DD) on or
+     before today. Blank, not a date, or a future date keeps the label. Signing off is that one cell; clearing it brings the label back. */
+  function signedOff(r, today) { var d = t(r && r.signed_off_on); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= t(today); }
+  var TESTING = '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>';
 
   /** 2026-03-02 -> "2 Mar 2026". Anything else is shown as it is. */
   function day(d) {
@@ -65,9 +70,11 @@
   function compute(v) {
     var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
-    if (memo && memo.key === key) return memo;
+    /* the same row counts can hold different rows (a re-read after an edit): reuse only when every table is the very same one */
+    var names = Object.keys(T).sort(), held = names.map(function (f) { return T[f]; });
+    if (memo && memo.key === key && memo.names === names.join('|') && memo.held.every(function (x, i) { return x === held[i]; })) return memo;
     var all = enrolments(T);
-    var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
+    var out = { key: key, names: names.join('|'), held: held, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var logs = null;
@@ -103,7 +110,7 @@
       var points = (T['BLD-score_point.csv'] || []).filter(function (p) { return ids[p.criterion_id]; });
       try {
         var r = Score.score({ scheme: scheme, bands: bands, criteria: criteria, points: points, subject: subject, evidence: evidence, judgements: {}, asOf: v.today });
-        r.name = t(subject.name); r.dob = t(subject.dob); r.bands = bands; r.words = wordsFor(scheme);
+        r.name = t(subject.name); r.dob = t(subject.dob); r.bands = bands; r.words = wordsFor(scheme); r.signed_off_on = t(scheme.signed_off_on);
         out.words = r.words;
         out.results.push(r); out.byId[r.subject_id] = r;
       } catch (err) { out.error = err.message; }
@@ -777,7 +784,9 @@
   /** The whole page. v = { T, today, esc } */
   function page(v) {
     last = v; css();
-    return '<h2 class="bb-top">' + LOGO + '<span>Breed Better</span> <span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></h2><div class="bb-rb" aria-hidden="true"></div><div id="bbRoot">' + inner(v) + '</div>';
+    /* the heading drops the label only when every scored animal's scheme is signed off; nothing scored keeps it */
+    var res = compute(v).results, done = res.length && res.every(function (r) { return signedOff(r, v.today); });
+    return '<h2 class="bb-top">' + LOGO + '<span>Breed Better</span>' + (done ? '' : ' ' + TESTING) + '</h2><div class="bb-rb" aria-hidden="true"></div><div id="bbRoot">' + inner(v) + '</div>';
   }
 
   /** The score on a dog card. Empty when that animal is not enrolled. */
@@ -785,7 +794,8 @@
     last = v; css();
     var r = compute(v).byId[id];
     if (!r) return '';
-    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing: trial scores, not yet signed off">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span></button>';
+    var off = signedOff(r, v.today);
+    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score' + (off ? '' : ', testing: trial scores, not yet signed off') + '">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span>' + (off ? '' : TESTING) + '</button>';
   }
 
   /* The Breed Better logo, as drawn in Lisa's mock-up (12 Nov 2026). No logo file is in the repo, so the mock-up's own SVG is used. */
@@ -811,10 +821,10 @@
     gates.forEach(function (l) { var o = l.gate_outcome || 'unverified'; cnt[o] = (cnt[o] || 0) + 1; });
     var miss = [cnt.unverified ? cnt.unverified + ' missing' : '', cnt.fail ? cnt.fail + ' failed' : ''].filter(Boolean).join(' · ')
       || 'All ' + gates.length + ' passed';
-    var acts = unenrolHtml(v, c.enrol[id]);
+    var acts = unenrolHtml(v, c.enrol[id]), off = signedOff(r, v.today);
     return '<section class="bb-sec" data-k="bb" aria-label="Breed Better">'
-      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc((r.words && r.words[k]) || VERDICT[k] || '') + ', ' + total(r) + '. Testing. Open the Breed Better page">'
-      + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>'
+      + '<button type="button" class="bb-chip bb-sechd" data-go="breed" data-bb-dog="' + esc(id) + '" aria-label="Breed Better: ' + esc((r.words && r.words[k]) || VERDICT[k] || '') + ', ' + total(r) + (off ? '' : '. Testing') + '. Open the Breed Better page">'
+      + LOGO + '<span class="bb-sect">Breed Better</span>' + pill(r) + (off ? '' : TESTING)
       + '<span class="bb-pts bb-secpts">' + total(r) + '</span>' + ic('M9 6l6 6l-6 6', 16) + '</button>'
       + (all ? '<div class="bb-secbar"><div class="bb-barw"><div class="bb-bar" role="img" aria-label="' + r.points_earned + ' of ' + all + ' points' + (hasT ? ', target ' + r.target : '') + '">'
         + '<span style="width:' + pc.toFixed(1) + '%;background:var(' + VTEXT[k] + ')"></span></div>'

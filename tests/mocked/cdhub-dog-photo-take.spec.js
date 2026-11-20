@@ -112,7 +112,7 @@ test.describe('CD Hub dog card photo: bigger, edit before save', () => {
 });
 
 test.describe('CD Hub dog card photo: Take photo on a laptop camera', () => {
-  test('Take photo opens the camera in the page; Take photo then Use photo saves an 800 x 800 JPEG', async ({ page, guard }) => {
+  test('Take photo opens the camera in the page; Take photo then Save photo saves an 800 x 800 JPEG', async ({ page, guard }) => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     await fakeCamera(page);

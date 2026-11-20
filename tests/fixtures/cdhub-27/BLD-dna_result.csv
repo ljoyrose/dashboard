@@ -1,0 +1,5 @@
+id,subject_id,marker_code,genotype,copies,interpretation,ruling_needed,lab,tested_on
+dna-1,sub-a01,PRA,N/N,0,Clear,,Sample Lab,2025-03-01
+dna-2,sub-a01,VWD,N/M,1,Carrier,,Sample Lab,2025-03-01
+dna-3,sub-a03,PRA,N/N,0,Clear,,Sample Lab,2025-05-01
+dna-4,sub-a09,PRA,M/M,2,Affected,,Sample Lab,2025-05-01

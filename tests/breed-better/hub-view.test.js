@@ -477,3 +477,21 @@ test('Checks records score by check type family: every version of a check type (
     criteria: [crit], points: [{ id: 'p1', criterion_id: 'ftb', answer_match: 'in:fit|yes|ok', gate_outcome: 'pass' }], evidence: { 'BLD-check_log': m } }).gate_result;
   assert.deepEqual([run('a1'), run('a2'), run('a3') === 'pass'], ['pass', 'pass', false]);   // old version, new version, not this family
 });
+
+/* D3 (Lisa, 18 Nov 2026): the Testing label follows the scheme row's signed_off_on date */
+test('Testing label: blank, not a date, or a future signed_off_on keeps it; a date on or before today removes it', () => {
+  const withSign = (value) => tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', signed_off_on: value }] });
+  const has = (value, today) => {
+    const v = { T: withSign(value), today, esc };
+    return { page: /bb-test/.test(View.page(v)), chip: /bb-test/.test(View.chip(v, 'a1')), aria: /testing/i.test(View.chip(v, 'a1')),
+      card: /bb-test|Testing/.test(View.section(v, 'a1')) };
+  };
+  for (const kept of ['', 'soon', '18 Nov 2026', '2026-06-21']) assert.deepEqual(has(kept, '2026-06-20'), { page: true, chip: true, aria: true, card: true }, 'kept: ' + kept);
+  assert.deepEqual(has('2026-06-20', '2026-06-20'), { page: false, chip: false, aria: false, card: false }, 'the sign-off day itself');
+  assert.deepEqual(has('2026-01-15', '2026-06-20'), { page: false, chip: false, aria: false, card: false });
+});
+
+test('Testing label: with nothing scored the heading keeps it, even if the scheme is signed off', () => {
+  const v = { T: tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', signed_off_on: '2026-02-01' }], 'BLD-score_enrolment.csv': [] }), today: '2026-06-22', esc };
+  assert.match(View.page(v), /bb-test/);
+});

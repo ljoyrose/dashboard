@@ -6,6 +6,7 @@
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
      nav.tab.person.<person_id>.<section>   the same for one person; wins over the role. Never a code: codes are secrets
                                        and no code may sit in a rule row (OV11, 14 Nov 2026).
+     nav.view.<view>                   1 on, 0 off: one view inside a section (starter: Assocs, Table map, Litters, Vet, Enquiries off)
      nav.first.<ROLE>.<section>        which view the section opens on: its place in the chip row (1 = first)
      nav.first.person.<person_id>.<section>   the same for one person; wins over the role
      nav.home.<ROLE>.<card>            Main's cards (Lisa 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
@@ -31,7 +32,8 @@
     temps: { label: 'Temps', icon: 't-temp', href: './history.html' },
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
-    admin: { label: 'Settings', icon: 't-box' }
+    admin: { label: 'Settings', icon: 't-box' },
+    bin: { label: 'Bin', icon: 't-box' }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
@@ -42,10 +44,19 @@
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin'] }
   ];
   /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
+  /* Views a pack starts with switched off (Lisa approved 13 Nov 2026, PR 472: hide Assocs, the Table map and Litters; the vet
+     link stays off). An owner switches one back on with a dated row nav.view.<id> = 1 (0 = off). Hidden views are off every
+     menu, chip row, Find and Main card, and their addresses open Main. Their pages and data stay. */
+  var STARTER_OFF = { buyers: 1, shape: 1, litters: 1, vet: 1, enquiries: 1 };
+  function viewOn(o) {
+    o = o || {};
+    var r = inForce(o.rows, o.iso)['nav.view.' + o.id];
+    return r ? r.value >= 1 : !STARTER_OFF[o.id];
+  }
   var PICKABLE = ['compliance', 'money', 'ops', 'people', 'sales', 'ideas'];
   var MAX_TABS = 3;
 
@@ -96,7 +107,14 @@
       var live = s.views.filter(has), v = r && live[r.value - 1];
       if (v) first[s.id] = v;
     });
-    return { tabs: tabs, on: on, set: set, first: first };
+    /* The view the hub opens on with no address (Lisa 18 Nov 2026 demo: the owner lands on Records). A dated row
+       nav.start.person.<id> or nav.start.<role> = the section's slot number (1 Main, 2 Compliance, 4 Records ...). No row: Main. */
+    var start = '', sr = (o.person && rows['nav.start.person.' + o.person]) || (o.role && rows['nav.start.' + o.role]);
+    SECTIONS.forEach(function (s) {
+      if (start || !sr || s.slot !== String(sr.value) || (s.id !== 'main' && !on[s.id])) return;
+      start = first[s.id] || (has(s.go) ? s.go : (s.views.filter(has)[0] || ''));
+    });
+    return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
   function viewItem(id, slot, opts, has) {
@@ -115,7 +133,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin'; };   /* pages without the rows (temperature history) */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin'; };   /* pages without the rows (temperature history); Bin is the owner's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
@@ -208,5 +226,5 @@
       || (o.starter || []).filter(function (id) { return cards.indexOf(id) >= 0; });
   }
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, sectionOf: sectionOf, html: html, chips: chips, back: back };
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, viewOn: viewOn, STARTER_OFF: STARTER_OFF, sectionOf: sectionOf, html: html, chips: chips, back: back };
 })(typeof window !== 'undefined' ? window : this);
