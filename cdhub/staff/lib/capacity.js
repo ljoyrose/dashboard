@@ -82,10 +82,19 @@
     return b ? { size: b, from: 'range', kg: mid } : { size: '', from: '', kg: null };
   }
 
-  /** The flap setting in force: the last row for that room with a value (rows are only ever added). */
-  function accessOf(rows, areaId) {
+  /**
+   * Whether one access row counts. A row whose to_date is before its from_date was voided (it never applied; OV12 18 Nov
+   * 2026, 3A.1/2) and never counts. With a date, the row must also be in force that day (inForce: started, not ended).
+   */
+  function accessRowCounts(r, date) {
+    var f = ymd(r && r.from_date), t = ymd(r && r.to_date);
+    if (f && t && t < f) return false;
+    return !ymd(date) || inForce([r], date, 'from_date').length === 1;
+  }
+  /** The flap setting in force: the last counting row for that room with a value (rows are only ever added). */
+  function accessOf(rows, areaId, date) {
     var a = '';
-    (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type) a = String(r.access_type).toLowerCase(); });
+    (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type && accessRowCounts(r, date)) a = String(r.access_type).toLowerCase(); });
     return a === 'free' || a === 'limited' ? a : '';
   }
   /** The limit for one alternative. With two flap settings possible, the stricter. null = no row. */
@@ -233,6 +242,6 @@
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));

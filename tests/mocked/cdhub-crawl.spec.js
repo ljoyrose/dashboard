@@ -160,6 +160,8 @@ for (const view of VIEWS) {
         busy: () => page.evaluate(() => /^(Loading|Checking)\.\.\.$/.test((document.getElementById('screen') || {}).textContent || '')),
         // Removing the code un-sets the phone, and Print opens the printer box: each has its own test.
         skip: (c) => (/Remove my code/.test(c.label) ? 'it un-sets the phone (it has its own test)' : /^Print/.test(c.label) ? 'it opens the printer box' : ''),
+        // MAX and MIN are the two words printed on the thermometer's own screen: staff copy them, they are not raw codes.
+        wordingOk: (w) => /^bare code "(MAX|MIN)" as a label$/.test(w.type),
         typeText: '18.5',
       });
       r.saves = script.sent.length;

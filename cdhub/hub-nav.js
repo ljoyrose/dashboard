@@ -32,7 +32,8 @@
     temps: { label: 'Temps', icon: 't-temp', href: './history.html' },
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
-    admin: { label: 'Settings', icon: 't-box' }
+    admin: { label: 'Settings', icon: 't-box' },
+    bin: { label: 'Bin', icon: 't-box' }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
@@ -43,7 +44,7 @@
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin'] }
   ];
   /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
@@ -106,7 +107,14 @@
       var live = s.views.filter(has), v = r && live[r.value - 1];
       if (v) first[s.id] = v;
     });
-    return { tabs: tabs, on: on, set: set, first: first };
+    /* The view the hub opens on with no address (Lisa 18 Nov 2026 demo: the owner lands on Records). A dated row
+       nav.start.person.<id> or nav.start.<role> = the section's slot number (1 Main, 2 Compliance, 4 Records ...). No row: Main. */
+    var start = '', sr = (o.person && rows['nav.start.person.' + o.person]) || (o.role && rows['nav.start.' + o.role]);
+    SECTIONS.forEach(function (s) {
+      if (start || !sr || s.slot !== String(sr.value) || (s.id !== 'main' && !on[s.id])) return;
+      start = first[s.id] || (has(s.go) ? s.go : (s.views.filter(has)[0] || ''));
+    });
+    return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
   function viewItem(id, slot, opts, has) {
@@ -125,7 +133,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin'; };   /* pages without the rows (temperature history) */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin'; };   /* pages without the rows (temperature history); Bin is the owner's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
