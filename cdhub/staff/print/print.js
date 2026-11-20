@@ -120,20 +120,30 @@
     if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
       onerror: function () { box.textContent = 'Photo'; } }));
     return box; }
-  /* Lisa's dog card (18 Nov 2026): big name, Sex with its sign, Date of birth, photo framed in the size colour,
-     "Size: Medium" block in the size colour, one large code, the microchip in groups of 3. Two per A4, cut line between. */
+  /* Lisa's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
+     its sign) and Date of birth labelled top-right; the photo left in a thick frame of the size colour, fitted whole (contain);
+     on the right a "Size" tile top-aligned with the photo and a 62 mm QR bottom-aligned with it; the microchip labelled across
+     the bottom in groups of three. No room, access, tag text or preview labels. Two per A4 with a dashed cut line. */
+  /* the QR's black squares, not its white border, are the printed size: --qz is the whole code over its squares (the white
+     quiet zone is 4 squares a side), so 2 per A4 prints 62 mm of squares with the quiet zone round them on the white card */
+  function qrBox(url, label) {
+    var svg = BLDQr.svg(url, label), m = /viewBox="0 0 (\d+) /.exec(svg), n = m ? +m[1] : 0;
+    return h('div', { class: 'code', html: svg, style: n > 8 ? '--qz:' + (n / (n - 8)).toFixed(4) : '' });
+  }
+  /* a long name steps down a size so it stays on two lines at most */
+  function nameFit(name) { var n = String(name).length; return n > 28 ? ' n3' : n > 16 ? ' n2' : ''; }
   function dogCard(tag, it) {
     var s = it.s, sz = sizeOfDog(s), col = sizeColour(sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
     var facts = [];
-    if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [f ? 'Female' : 'Male', sexIcon(s.sex)])]));
+    if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [sexIcon(s.sex), f ? 'Female' : 'Male'])]));
     if (s.dob) facts.push(h('div', { 'data-k': 'dob' }, [h('dt', { text: 'Date of birth' }), h('dd', { text: dmy(s.dob) })]));
-    return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('h2', { class: 'name', text: s.name || s.id }),
-      h('div', { class: 'dtop' }, [h('dl', {}, facts), photoBox(s)]),
-      sz ? h('div', { class: 'szb', 'data-size': sz, 'data-k': 'size' }, ['Size: ', h('b', { text: sizeWord(sz) })]) : null,
-      h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
-      chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,
-      h('small', { class: 'tag', text: tag })]);
+    return h('article', { class: 'dcard vcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
+      h('h2', { class: 'name' + nameFit(s.name || s.id), text: s.name || s.id }),
+      h('dl', { class: 'facts' }, facts),
+      photoBox(s),
+      sz ? h('div', { class: 'szb', 'data-size': sz, 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: sizeWord(sz) })]) : null,
+      qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
+      chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
   }
   /* Item cards (print any item, Lisa 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields
      that print are the owner's dated rule row print.fields.item.<kind_key> or print.fields.item (column names joined by |),
@@ -173,10 +183,11 @@
   function itemCard(tag, it) {
     var r = it.r, cols = itemPick || itemFields(r.kind_key), facts = [];
     cols.forEach(function (c) { var v = itemValue(c, r); if (v) facts.push(h('div', { 'data-k': c }, [h('dt', { text: itemLabel(c) }), h('dd', { text: v })])); });
-    return h('article', { class: 'dcard icard', 'data-item': it.id }, [
-      h('h2', { class: 'name', text: it.label }),
-      h('div', { class: 'dtop' }, [h('dl', {}, facts), photoBox({ id: it.id, photo: r.photo }, 'items')]),
-      h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + it.label) })]);
+    return h('article', { class: 'dcard vcard icard', 'data-item': it.id }, [
+      h('h2', { class: 'name' + nameFit(it.label), text: it.label }),
+      h('dl', { class: 'facts' }, facts),
+      photoBox({ id: it.id, photo: r.photo }, 'items'),
+      qrBox(qrBase() + '#s/' + tag, 'QR code for ' + it.label)]);
   }
   function itemCards() {
     sheet.className = 'sheet dogs per' + per;

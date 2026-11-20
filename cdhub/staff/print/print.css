@@ -24,6 +24,25 @@
 .dcard .chipline{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:#57504A}
 .dcard .chipline b{font-size:22px;color:#141413;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:.04em}
 .dcard .lst{width:100%;list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}.dcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
+/* Lisa's APPROVED dog card v4 (15 Nov 2026; 20 Nov 18:26): a grid, name and facts on top, photo left, Size tile and QR right
+   (top of the tile = top of the photo, bottom of the QR = bottom of the photo), microchip across the bottom. Item cards use the
+   same grid with their labelled fields in place of the tile. */
+.dcard.vcard{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"name facts" "photo size" "photo code" "chip chip";column-gap:24px;row-gap:12px;align-items:start;padding:18px 20px}
+.vcard .name{grid-area:name;margin:0;font-size:40px;font-weight:700;line-height:1.05;text-align:left;align-self:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.vcard .name.n2{font-size:32px}.vcard .name.n3{font-size:24px}
+.vcard .facts{grid-area:facts;margin:0;display:grid;grid-template-columns:auto auto;justify-content:space-between;gap:12px;align-self:center}
+.vcard .facts dt{color:#57504A;font-size:13px}.vcard .facts dd{margin:0;font-weight:600;font-size:22px;display:flex;align-items:center;gap:6px}
+.vcard .sex svg{width:20px;height:20px}
+.vcard .sex[aria-label="Female"]{color:#C2185B}.vcard .sex[aria-label="Male"]{color:#1565C0}
+.vcard .photo{grid-area:photo;width:100%;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:stretch}
+.vcard .szb{grid-area:size;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 16px 8px;border-radius:10px;box-sizing:border-box}
+.vcard .szb .lab{font-size:12px;font-weight:600;letter-spacing:.04em}.vcard .szb b{font-size:36px;line-height:1.1}
+.vcard .code{grid-area:code;align-self:end;justify-self:center;width:100%}
+.vcard .code svg{max-width:240px}
+.vcard .chipline{grid-area:chip;display:block;color:#141413}
+.vcard .chipline span{display:block;font-size:13px;color:#57504A}.vcard .chipline b{display:block;font-size:34px;letter-spacing:.08em;word-spacing:.25em}
+.dcard.vcard.icard{grid-template-areas:"name name" "photo facts" "photo code"}
+.vcard.icard .facts{grid-template-columns:1fr;justify-content:stretch;align-self:start}.vcard.icard .facts dd{font-size:18px}
 /* the litter card keeps its band */
 .dcard .band{align-self:stretch;margin:-14px -14px 0;background:var(--c);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 .dcard .who b{font-size:30px}.dcard .band small{font-size:16px;font-weight:600;text-align:right}
@@ -85,6 +104,36 @@
  .sheet.dogs.per4 .dcard .tag{font-size:8px}.sheet.dogs.per4 .dcard .photo{border-width:3px}
  .sheet.dogs.per4 .dcard .band{margin:-3mm -4mm 0;padding:2mm 3.5mm}.sheet.dogs.per4 .dcard .who b{font-size:20px}
  .sheet.dogs.per4 .dcard .lst{font-size:10px;gap:1px}
+
+ /* Lisa's dog card v4 on paper. Sizes in mm so the photo is square and its edges meet the tile and the QR exactly:
+    photo side = tile + gap + QR. 2 per A4: 194 x 138 mm cards one above the other, dashed cut line between, QR 62 mm. */
+ .sheet.dogs .dcard.vcard{display:inline-grid;box-sizing:border-box;border-radius:0;border-width:0;align-content:space-between}
+ .vcard .code{display:block;flex:none;height:auto;min-height:0}
+ .vcard .code svg{width:100%;height:100%;max-width:none;max-height:none}
+ .sheet.dogs.per2 .dcard.vcard{width:194mm;height:138mm;margin:0 -2mm;padding:4mm 6mm;column-gap:8mm;row-gap:4mm;grid-template-columns:88mm 1fr;grid-template-rows:auto 18mm 66mm auto;grid-template-areas:"name facts" "photo size" "photo code" "chip chip"}
+ .sheet.dogs.per2 .dcard.vcard:nth-child(odd){border-bottom:1px dashed #57504A}
+ .sheet.dogs.per2 .vcard .name{font-size:44px}.sheet.dogs.per2 .vcard .name.n2{font-size:34px}.sheet.dogs.per2 .vcard .name.n3{font-size:26px}.sheet.dogs.per2 .vcard .facts dt{font-size:13px}.sheet.dogs.per2 .vcard .facts dd{font-size:22px}
+ .sheet.dogs.per2 .vcard .photo{width:88mm;height:88mm}
+ .sheet.dogs.per2 .vcard .szb{width:100%;height:18mm;padding:2mm 4mm;justify-content:center}.sheet.dogs.per2 .vcard .szb b{font-size:30px}
+ .sheet.dogs.per2 .vcard .code{width:62mm;height:62mm;align-self:end;justify-self:center;overflow:visible}
+ /* 62 mm of black squares; the white quiet zone spills onto the white card round it (8 mm clear above, to the tile) */
+ .sheet.dogs.per2 .vcard .code svg{width:calc(100% * var(--qz,1));height:auto;margin:calc(50% - 50% * var(--qz,1))}
+ .sheet.dogs.per2 .vcard .chipline b{font-size:32px}
+ .sheet.dogs.per1 .dcard.vcard{width:100%;height:265mm;margin:0;padding:8mm;column-gap:8mm;row-gap:6mm;grid-template-columns:98mm 1fr;grid-template-rows:auto 24mm 68mm auto;grid-template-areas:"name facts" "photo size" "photo code" "chip chip";align-content:start;break-after:page;page-break-after:always}
+ .sheet.dogs.per1 .dcard.vcard:last-child{break-after:auto;page-break-after:auto}
+ .sheet.dogs.per1 .vcard .name{font-size:52px}.sheet.dogs.per1 .vcard .facts dd{font-size:26px}.sheet.dogs.per1 .vcard .facts dt{font-size:15px}
+ .sheet.dogs.per1 .vcard .photo{width:98mm;height:98mm}.sheet.dogs.per1 .vcard .szb{height:24mm;justify-content:center}.sheet.dogs.per1 .vcard .szb b{font-size:40px}
+ .sheet.dogs.per1 .vcard .code{width:68mm;height:68mm;align-self:end;justify-self:center}.sheet.dogs.per1 .vcard .chipline b{font-size:40px}
+ /* 4 per A4: name, facts and the Size tile across; photo and QR side by side; chip at the foot */
+ .sheet.dogs.per4 .dcard.vcard{width:calc(50% - 2mm);height:129mm;margin:0 0 4mm;padding:3mm 4mm;column-gap:4mm;row-gap:2mm;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto auto auto;grid-template-areas:"name name" "facts facts" "size size" "photo code" "chip chip";align-content:space-between}
+ .sheet.dogs.per4 .vcard .name{font-size:24px}.sheet.dogs.per4 .vcard .facts{grid-template-columns:auto auto}.sheet.dogs.per4 .vcard .facts dt{font-size:9px}.sheet.dogs.per4 .vcard .facts dd{font-size:14px}
+ .sheet.dogs.per4 .vcard .szb{padding:1mm 3mm}.sheet.dogs.per4 .vcard .szb .lab{font-size:8px}.sheet.dogs.per4 .vcard .szb b{font-size:18px}
+ .sheet.dogs.per4 .vcard .photo{width:100%;height:auto;aspect-ratio:1;border-width:3px}.sheet.dogs.per4 .vcard .code{width:100%;aspect-ratio:1;height:auto;align-self:center}
+ .sheet.dogs.per4 .vcard .chipline span{font-size:9px}.sheet.dogs.per4 .vcard .chipline b{font-size:16px}
+ .sheet.dogs.per4 .dcard.vcard.icard{grid-template-areas:"name name" "facts facts" "photo code"}
+ .sheet.dogs.per2 .dcard.vcard.icard{grid-template-rows:auto minmax(18mm,1fr) 66mm;grid-template-areas:"name name" "photo facts" "photo code"}
+ .sheet.dogs.per1 .dcard.vcard.icard{grid-template-rows:auto minmax(24mm,auto) 68mm;grid-template-areas:"name name" "photo facts" "photo code"}
+ .sheet.dogs.per2 .vcard.icard .photo{width:88mm;height:88mm}
  /* room cards: two a sheet, one above the other, the QR as big as the room on the right allows */
  .sheet.rooms .rcard{display:inline-flex;vertical-align:top;box-sizing:border-box;width:100%;height:132mm;margin:0 0 4mm;font-size:16px;overflow:hidden;border-radius:0;border-width:0 0 1px;border-bottom-style:dashed;justify-content:space-evenly;padding:5mm 6mm}
  .sheet.rooms .rcard .name{font-size:44px}.sheet.rooms .rcard .facts dt{font-size:13px}.sheet.rooms .rcard .facts dd{font-size:18px}.sheet.rooms .rcard .facts small{font-size:12px}
