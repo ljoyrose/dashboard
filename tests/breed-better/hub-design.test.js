@@ -305,3 +305,24 @@ test('every screen says DNA panel, never DNA Kit', () => {
     assert.doesNotMatch(fs.readFileSync(path.join(ROOT, f), 'utf8'), /DNA Kit|dna-kit|BBDnaKit/, f);
   }
 });
+
+test('History: with saved scores switched on, a score saved for a date replaces the worked-out one and says saved; off, nothing changes', () => {
+  const base = View.compute(v()).byId.f1;
+  const save = { 'BLD-score_assessment.csv': [
+    { subject_id: 'f1', scheme_id: 's1', period: '2025-11-20', verdict: 'fail', points_earned: '1', points_available: '15', calculated_at: '2025-11-20T10:00:00Z' },
+    { subject_id: 'f1', scheme_id: 's1', period: '2026-01-05', verdict: 'pass', points_earned: '7', points_available: '15', calculated_at: '2026-01-05T10:00:00Z' },
+    { subject_id: 'm1', scheme_id: 's1', period: '2026-01-06', verdict: 'pass', points_earned: '9', points_available: '15', calculated_at: '2026-01-06T10:00:00Z' }] };
+  const off = View.historyRows(v(T(save)), base);
+  assert.ok(off.every((h) => !h.saved));
+  assert.ok(!off.some((h) => h.date === '2026-01-05'));
+  const on = View.historyRows(v(T(save), { saveScore: () => {} }), base);
+  const nov = on.find((h) => h.date === '2025-11-20'), jan = on.find((h) => h.date === '2026-01-05');
+  assert.deepEqual([nov.saved, nov.verdict, nov.earned], [true, 'fail', 1]);   // the saved word wins over the worked-out one
+  assert.ok(nov.entries.length > 0);                                           // the records of that day still show
+  assert.deepEqual([jan.saved, jan.verdict, jan.entries.length], [true, 'pass', 0]);   // a save on a day with no record still shows
+  assert.ok(!on.some((h) => h.date === '2026-01-06'));                         // another animal's save never shows
+  View.open('history.f1');
+  const html = View.page(v(T(save), { saveScore: () => {} }));
+  View.open('');
+  assert.match(html, /data-bb-hist="2026-01-05"[\s\S]*?7 of 15, saved/);
+});

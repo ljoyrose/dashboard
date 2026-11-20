@@ -442,6 +442,29 @@ test('with no age_group rows, the two age groups come from the existing adult-ag
   assert.deepEqual(View.ageGroups({ 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '6', '2027-01-01')] }, '2026-11-15'), []);
 });
 
+test('Save score: shown only when the hub can save; sends what the page worked out today; shows the last saved one', async () => {
+  const T = tables({});
+  View.setTab('dogs');
+  const c = View.compute({ T, today: '2026-11-20', esc });
+  const r = c.results[0];
+  assert.ok(r, 'fixture has an enrolled animal');
+  View.open(r.subject_id);
+  assert.doesNotMatch(View.page({ T, today: '2026-11-20', esc }), /data-bb-score-save/);
+  let sent = null;
+  const v = { T, today: '2026-11-20', esc, canWrite: () => true, saveScore: (f) => { sent = f; return Promise.resolve(); } };
+  const html = View.page(v);
+  assert.match(html, /data-bb-score-save="[^"]+">Save score<\/button><span class="bb-pts">Not saved yet/);
+  T['BLD-score_assessment.csv'] = [{ id: 'sca-1', subject_id: r.subject_id, scheme_id: r.scheme_id, period: '2026-03-02', verdict: 'unverified', points_earned: '5', points_available: '25', calculated_at: '2026-03-02T10:00:00Z' }];
+  assert.match(View.page(v), /Last saved 2 Mar 2026, [^,]+, 5 of 25/);
+  assert.ok(View.FILES.indexOf('BLD-score_assessment.csv') >= 0);
+  const f = View.scoreFields(r);
+  assert.deepEqual([f.subject_id, f.scheme_id, f.period, f.lines.length], [r.subject_id, r.scheme_id, '2026-11-20', r.lines.length]);
+  assert.ok(['pass', 'below_target', 'unverified', 'fail'].includes(f.verdict));
+  assert.ok(f.lines.every((l) => l.criterion_id && typeof l.points === 'string'));
+  assert.equal(sent, null);   // nothing is sent until the button is pressed
+  View.open('');
+});
+
 test('Checks records score: a check_log row carries the values typed on its form (Fit to Breed, a hip X-ray), any industry', () => {
   const logs = [{ id: 'clg-1', check_type_id: 'cty-ftb', subject_id: 'a1', outcome: 'ok', happened_at: '2026-08-13T12:00:00Z' },
     { id: 'clg-2', check_type_id: 'cty-hips', subject_id: 'a1', outcome: 'ok', happened_at: '2026-09-01T10:00:00Z', grade: '' }];
@@ -459,6 +482,23 @@ test('Checks records score: a check_log row carries the values typed on its form
     evidence: { 'BLD-check_log': m } });
   assert.equal(r.gate_result, 'pass', JSON.stringify(r.lines));
   assert.deepEqual(r.lines.map((l) => [l.answer_then, l.date_then]), [['ok', '2026-08-13'], ['Good', '2026-09-01']]);
+});
+
+test('Checks records score by check type family: every version of a check type (cty-ftb-1, then -2) is read through its type_key', () => {
+  const types = [{ id: 'cty-ftb-1', type_key: 'fit_to_breed' }, { id: 'cty-ftb-2', type_key: 'fit_to_breed' }, { id: 'cty-other-1', type_key: 'other' }];
+  const logs = [{ id: 'c1', check_type_id: 'cty-ftb-1', subject_id: 'a1', outcome: 'ok', happened_at: '2026-08-13T12:00:00Z' },
+    { id: 'c2', check_type_id: 'cty-ftb-2', subject_id: 'a2', outcome: 'ok', happened_at: '2026-11-16T09:00:00Z' },
+    { id: 'c3', check_type_id: 'cty-other-1', subject_id: 'a3', outcome: 'ok', happened_at: '2026-11-16T09:00:00Z' },
+    { id: 'c4', check_type_id: 'cty-gone-1', subject_id: 'a1', outcome: 'ok' },
+    { id: 'c5', check_type_id: 'cty-ftb-2', subject_id: 'a4', outcome: 'ok', check_type_key: 'own' }];
+  const m = View.withValues(logs, [], types);
+  assert.deepEqual(m.map((r) => r.check_type_key), ['fit_to_breed', 'fit_to_breed', 'other', undefined, 'own']);   // a real column wins
+  assert.equal(logs[0].check_type_key, undefined);   // the loaded rows are not changed
+  const Score = require('../../breed-better/score.js');
+  const crit = { id: 'ftb', band_id: 'g', label: 'Fit to Breed', evidence_source: 'BLD-check_log', evidence_match: 'check_type_key=fit_to_breed', answer_field: 'outcome', date_field: 'happened_at' };
+  const run = (id) => Score.score({ scheme: { id: 's' }, bands: [{ id: 'g', kind: 'gate' }], subject: { id }, asOf: '2026-11-16', judgements: {},
+    criteria: [crit], points: [{ id: 'p1', criterion_id: 'ftb', answer_match: 'in:fit|yes|ok', gate_outcome: 'pass' }], evidence: { 'BLD-check_log': m } }).gate_result;
+  assert.deepEqual([run('a1'), run('a2'), run('a3') === 'pass'], ['pass', 'pass', false]);   // old version, new version, not this family
 });
 
 /* D3 (Lisa, 18 Nov 2026): the Testing label follows the scheme row's signed_off_on date */
