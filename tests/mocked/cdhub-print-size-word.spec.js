@@ -1,8 +1,8 @@
 // Print card size (Lisa 15 Nov 2026): the kennel card printed the typed size cell ("Medium" over "17–22 kg"). It now
 // shows the size word only, worked out by the SAME helper as the CD Hub dog page (staff/lib/capacity.js sizeForDog):
 // owner override row, else latest weight, else the middle of a typed kg range, against the dated size_from_kg rows.
-// Cut-offs as on main since PR 682 (SOP Care Rounds, 17 Nov 2026): small under 10 kg, medium 10 to 25 kg, large OVER 25 kg,
-// so exactly 25 kg is medium. (Lisa's 15 Nov 04:03 note said 25 kg is large: flagged for her in the PR.) Invented dogs and rows only.
+// Cut-offs from the size_from_kg rows: small under 10 kg, medium from 10 kg, large from 25 kg, so exactly 25 kg is large
+// (live row, Lisa 12 Nov 2026, council licence: "25.0 counts as large"). Invented dogs and rows only.
 const { test, expect } = require('../fixtures/job34/load');
 
 const RULES = [
@@ -27,7 +27,7 @@ test.describe('Print card size word from weight and the dated size rows', () => 
         backToWeight: BLDCapacity.sizeForDog({ id: 'x', kg: 5, rules: rules.concat([{ rule_key: 'size_override.x', value: 'large', effective_from: '2026-11-01' }, { rule_key: 'size_override.x', value: 'weight', effective_from: '2026-11-10' }]), today: '2026-11-18' }).size
       };
     }, RULES);
-    expect(r.edges).toEqual(['small', 'medium', 'medium', 'medium', 'large']);
+    expect(r.edges).toEqual(['small', 'medium', 'medium', 'large', 'large']);
     expect([r.newer, r.older]).toEqual(['medium', 'small']);
     expect(r.noWeight).toEqual({ size: '', from: '', kg: null });
     expect(r.noWeightRange).toBe('medium');
@@ -67,7 +67,7 @@ test.describe('Print card size word from weight and the dated size rows', () => 
     await page.goto('cdhub/staff/print/');
     await page.getByRole('button', { name: 'Dog cards' }).click();
     const card = (id) => page.locator('.dcard[data-dog="' + id + '"]');
-    const want = { e1: ['small', 'Small', 'orange'], e2: ['medium', 'Medium', 'green'], e3: ['medium', 'Medium', 'green'], e4: ['medium', 'Medium', 'green'], e5: ['large', 'Large', 'blue'],
+    const want = { e1: ['small', 'Small', 'orange'], e2: ['medium', 'Medium', 'green'], e3: ['medium', 'Medium', 'green'], e4: ['large', 'Large', 'blue'], e5: ['large', 'Large', 'blue'],
       n1: ['medium', 'Medium', 'green'], n2: ['large', 'Large', 'blue'] };
     for (const [id, [key, word, colour]] of Object.entries(want)) {
       await expect(card(id).locator('[data-k="size"]')).toHaveAttribute('data-size', key);

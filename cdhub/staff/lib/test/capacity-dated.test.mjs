@@ -36,11 +36,12 @@ test('sizeCutoffs: a row past its to_date no longer counts', () => {
   assert.equal(C.sizeCutoffs(rules, '2026-11-12').large, 20);
 });
 
-test('sizeFromKg follows SOP Care Rounds: small under 10, medium 10 to 25, large OVER 25 (exactly 25 kg is medium)', () => {
+test('sizeFromKg follows the size_from_kg rows: small under 10, medium from 10, large from 25 (exactly 25 kg is large, as the live row says)', () => {
   const cut = { medium: 10, large: 25 };
   assert.equal(C.sizeFromKg('9.99', cut), 'small');
   assert.equal(C.sizeFromKg('10', cut), 'medium');
-  assert.equal(C.sizeFromKg('25', cut), 'medium');
+  assert.equal(C.sizeFromKg('24.99', cut), 'medium');
+  assert.equal(C.sizeFromKg('25', cut), 'large');
   assert.equal(C.sizeFromKg('25.01', cut), 'large');
   assert.equal(C.sizeFromKg('', cut), '');
 });

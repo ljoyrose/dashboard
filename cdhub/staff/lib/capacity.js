@@ -55,10 +55,11 @@
     if (!got.medium || !got.large || !(got.medium.kg < got.large.kg)) return null;
     return { medium: got.medium.kg, large: got.large.kg, source: got.medium.source === got.large.source ? got.medium.source : got.medium.source + '; ' + got.large.source };
   }
-  /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. */
+  /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. Each cut-off starts its size
+   * (live row size_from_kg.large, Lisa 12 Nov 2026, council licence: "25.0 counts as large"). */
   function sizeFromKg(kg, cut) {
     kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
-    return kg > cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
+    return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
   }
 
   /**
