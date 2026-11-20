@@ -53,6 +53,8 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'record_edit') return jsonOut_({ ok: true, result: sinkRecordEdit_(req) });
     if (req && typeof req === 'object' && req.action === 'record_archive') return jsonOut_({ ok: true, result: sinkRecordArchive_(req) });
     if (req && typeof req === 'object' && req.action === 'record_delete') return jsonOut_({ ok: true, result: sinkRecordDelete_(req) });
+    // saved dated scores (15 Nov 2026, BB; OFF until TABLE_ON_score_assessment is true)
+    if (req && typeof req === 'object' && req.action === 'score_save') return jsonOut_({ ok: true, result: sinkScoreSave_(req) });
     // 17 Nov 2026: the waiting-room-moves pass reads the whole approvals queue. It runs at most once a minute from saves
     // (a plain GET, the owner page and the queue itself still run it), so an ordinary save does not pay for it each time.
     var tMoves = Date.now(), movesCache = null;
@@ -160,6 +162,7 @@ function switchesStatus_() {
     add({ name: n, action: actions[k] || k, file: DOGCARD_[k].file, on: on(n) });
   });
   add({ name: BLD.PROP.TABLE_ON_PREFIX + LINKS_.on, action: 'link_add, link_end', file: LINKS_.file, on: linksOn_() });
+  add({ name: BLD.PROP.TABLE_ON_PREFIX + SCORES_.on, action: 'score_save', file: SCORES_.file + ' + ' + SCORES_.lineFile, on: scoresOn_() });
   add({ name: BLD.PROP.TABLE_ON_PREFIX + CODE_REG.ON, action: 'owner page: code admin mirror', file: CODE_REG.FILE, on: codeRegisterOn_() });
   Object.keys(PROPOSED_TABLES).forEach(function (k) {
     var n = BLD.PROP.TABLE_ON_PREFIX + PROPOSED_TABLES[k].key;

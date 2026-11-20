@@ -968,6 +968,7 @@ function signOut(){
   var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
   if(window.DashAuth) DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
+  bootTicket++;   /* a read still under way stops here: it must not put an error card, or the tables, back after Sign out (20 Nov 2026) */
   T={}; CD={}; copyWipe(); LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
 }
 function initGoogle(){
@@ -4873,7 +4874,7 @@ function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) r
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
 function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve':'',
- canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
+ canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,saveScore:bbSaveScore,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
 /* Breed Better enrol / un-enrol (Lisa 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
    Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
 function bbSaved(j){ if(!(j&&j.ok&&j.result&&j.result.status==='saved')) throw new Error(sinkMsg(j||{})); return j.result; }
@@ -4891,6 +4892,11 @@ function bbUnenrol(e,reason,to){
  /* an older-list enrolment: copy it to a link from its own start, then end that link. Once a link exists the older row is not read. */
  var from=e.from&&e.from<=to?e.from:to;
  return bbEnrol(e.subject_id,e.scheme_id,from).then(function(){ var l=(T['BLD-links.csv']||[]).filter(function(x){ return x.from_id===e.subject_id&&x.to_id===e.scheme_id&&!x.to_date; }).pop(); return end(l.id); }); }
+/* Saved dated scores (15 Nov 2026): one score_assessment row and its score_line rows, behind TABLE_ON_score_assessment */
+function bbSaveScore(f){
+ return sinkAct('score_save',f).then(function(j){ var r=bbSaved(j);
+  (T['BLD-score_assessment.csv']=T['BLD-score_assessment.csv']||[]).push({id:r.id,subject_id:f.subject_id,scheme_id:f.scheme_id,period:f.period,verdict:f.verdict,
+   points_earned:f.points_earned,points_available:f.points_available,status:'saved',calculated_at:r.at||'',replaces_id:r.replaces_id||''}); }); }
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
 if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); }
