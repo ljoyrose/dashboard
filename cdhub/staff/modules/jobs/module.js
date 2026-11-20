@@ -567,7 +567,9 @@
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
     Promise.all([c.data(), c.readOptional('check_type')]).then(function (v) {
-      var d = v[0], type = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.type_key === REPORT_KEY; })[0] : null;
+      /* the kinds of report are the owner's job rows with target "optional" (incident, accident, lost dog...): no fixed key */
+      var d = v[0], kinds = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.target === 'optional' && isOn(t); })
+        .sort(function (a, b) { return (a.type_key === REPORT_KEY ? -1 : b.type_key === REPORT_KEY ? 1 : 0) || String(a.label).localeCompare(String(b.label)); }) : [], type = kinds[0];
       host.textContent = '';
       if (!d.ok) { host.appendChild(h('p', { class: 'msg bad', text: d.message })); return; }
       if (!type || !c.save.banner('check_log').canSave) { host.appendChild(h('p', { class: 'msg', text: 'Reports are not switched on yet.' })); return; }
@@ -578,24 +580,29 @@
       }
       var dog = select('Dog', 'Dog (optional)', d.subjects.map(function (x) { return [x.id, x.label]; }), was.subject_id);
       var room = select('Room', 'Room (optional)', d.areas.map(function (x) { return [x.id, x.label]; }), was.area_id);
+      var kind = kinds.length > 1 ? select('Kind', 'Kind', kinds.map(function (t) { return [t.id, t.label]; }), type.id) : null;
+      if (kind) kind.firstChild.disabled = true;
+      function picked() { return kind ? kinds.filter(function (t) { return t.id === kind.value; })[0] || type : type; }
       var note = h('textarea', { class: 'inp', rows: '4', 'aria-label': type.note_label || 'What happened?', placeholder: type.note_label || 'What happened?' });
+      if (kind) kind.addEventListener('change', function () { var t = picked(); note.placeholder = t.note_label || 'What happened?'; note.setAttribute('aria-label', note.placeholder); heading.textContent = t.label || 'Problem'; rid = null; });
       var msg = h('p', { class: 'msg', role: 'status' }), rid = null;
       note.addEventListener('input', function () { rid = null; });
       var btn = h('button', { class: 'btn', type: 'button', text: 'Send', onclick: function () {
         var text = note.value.trim();
         if (!text) { msg.className = 'msg bad'; msg.textContent = 'Say what happened.'; return; }
-        var f = { check_type_id: type.id, outcome: 'recorded', note: text, how_recorded: 'tapped' };
+        var f = { check_type_id: picked().id, outcome: 'recorded', note: text, how_recorded: 'tapped' };
         if (dog.value) f.subject_id = dog.value;
         if (room.value) f.area_id = room.value;
         rid = rid || c.save.newRequestId(); btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving...';
         c.save.submit('check_log', f, { requestId: rid }).then(function (r) {
           btn.disabled = false;
-          if (r.ok) { rid = null; note.value = ''; msg.className = 'msg good'; msg.textContent = r.status === 'queued' ? r.message : 'Sent.'; return; }
+          if (r.ok) { rid = null; note.value = ''; msg.className = 'msg good'; msg.textContent = r.status === 'queued' ? r.message : '✓ Sent'; return; }
           msg.className = 'msg bad'; msg.textContent = r.message;
           if (r.code !== 'NETWORK') rid = null;
         });
       } });
-      [h('h2', { text: type.label || 'Problem' }), dog, room, note, btn, msg].forEach(function (n) { host.appendChild(n); });
+      var heading = h('h2', { text: type.label || 'Problem' });
+      [heading, kind, dog, room, note, btn, msg].forEach(function (n) { if (n) host.appendChild(n); });
     });
   }
 
