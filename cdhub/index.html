@@ -1246,8 +1246,9 @@ function build(){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
   CD.cap=CAP;
-  /* the last row per room that counts today: a voided row (to_date before from_date) or an ended one never wins (OV12 18 Nov 2026) */
-  CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ if(BLDCapacity.accessRowCounts(r,_day)) CD.accessCsv[r.area_id]=r; });
+  /* the flap row in force today (from_date/to_date, latest start wins; LD-SC audit 15 Nov 2026), never just the last row */
+  CD.accessCsv={}; (function(){ var best={}; BLDCapacity.inForce((T['BLD-area_access.csv']||[]).map(function(r){ return Object.assign({},r,{from_date:r.from_date||r.effective_from||''}); }),_day,'from_date').forEach(function(r){
+   if(!r.area_id||!r.access_type) return; var f=String(r.from_date||'').slice(0,10); if(!(r.area_id in best)||f>=best[r.area_id]){ best[r.area_id]=f; CD.accessCsv[r.area_id]=r; } }); })();
 
   var _an={}; CD.areas.forEach(function(a){ _an[a.id]=a.code||a.id; });
   CD.dogs.forEach(function(d){
@@ -1263,10 +1264,7 @@ function build(){
      size_colour.* rows; without one, small orange, medium green, large blue. The words are the owner's size_label.* rows
      (OV12 17 Nov 2026, never fixed in code); without one, Small, Medium, Large as in SOP Care Rounds. */
   ['small','medium','large'].forEach(function(k,i){ if(!CD.sizeColour[k]) CD.sizeColour[k]=['var(--ljr-3)','var(--ljr-5)','var(--ljr-6)'][i]; });
-  CD.sizeLabel={}; var slFrom={}, slDay=todayISO(); (T['BLD-breeding_rule.csv']||[]).forEach(function(r){ var m=/^size_label\.(small|medium|large)$/.exec(String(r.rule_key||'').trim());
-   var v=String(r.value||'').trim(), f=String(r.effective_from||'').slice(0,10), t=String(r.to_date||'').slice(0,10);
-   if(!m||!v||v.length>30||(f&&f>slDay)||(t&&t<slDay)) return; if(slFrom[m[1]]!==undefined&&f<slFrom[m[1]]) return;   /* newest row in force wins */
-   slFrom[m[1]]=f; CD.sizeLabel[m[1]]=v; });
+  CD.sizeLabel=BLDCapacity.sizeLabels(T['BLD-breeding_rule.csv']||[],todayISO());   /* shared with the print cards (staff/lib/capacity.js) */
   CD.sizeCut=BLDCapacity.sizeCutoffs(T['BLD-breeding_rule.csv']||[],_day);
   CD.dogs.forEach(sizeFromWeight);
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
@@ -2567,24 +2565,14 @@ var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='';
 /* one size band to its colour key (small, medium, large) */
 var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
-function sizeOverrideOf(d){
- var k='size_override.'+d.id, hit=null, from='';
- (T['BLD-breeding_rule.csv']||[]).forEach(function(r){
-  if(String(r.rule_key||'')!==k) return;
-  if(!BLDCapacity.inForce([r], todayISO(), 'effective_from').length) return;
-  var f=String(r.effective_from||'');
-  if(hit==null||f>=from){ hit=String(r.value||'').trim().toLowerCase(); from=f; }
- });
- return /^(small|medium|large)$/.test(hit||'')?hit:'';
-}
+function sizeOverrideOf(d){ return BLDCapacity.sizeOverride(T['BLD-breeding_rule.csv']||[], d.id, todayISO()); }
+/* size: the one shared rule (staff/lib/capacity.js sizeForDog), also used by the print cards: override, latest weight, kg-range middle */
 function sizeFromWeight(d){ var lw=d.weights.length?d.weights[d.weights.length-1]:null;
- var bw=lw?BLDCapacity.sizeFromKg(lw.kg,CD.sizeCut):'';
- var ov=sizeOverrideOf(d);
- if(ov){ d.sizeWord=ov; d.sizeFrom='override'; d.sizeWhy='set as '+sizeName(ov)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''); return; }
- if(bw){ d.sizeWord=bw; d.sizeFrom='weight'; d.sizeWhy=lw.kg+' kg on '+dmyShort(lw.on); return; }
- /* no weighing: the midpoint of the kg range in the size cell, e.g. "Mini 8-12kg" counts as 10 kg (Lisa 15 Nov 2026) */
- var by=BLDCapacity.sizeOf(null,d.size,CD.sizeCut);
- d.sizeWord=by.size; d.sizeFrom=by.from; d.sizeWhy=by.size?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
+ var by=BLDCapacity.sizeForDog({id:d.id,kg:lw?lw.kg:null,sizeText:d.size,rules:T['BLD-breeding_rule.csv']||[],today:todayISO(),cut:CD.sizeCut});
+ d.sizeWord=by.size; d.sizeFrom=by.from;
+ d.sizeWhy=by.from==='override'?('set as '+sizeName(by.size)+(lw?' \u00b7 latest weight '+lw.kg+' kg on '+dmyShort(lw.on):''))
+  :by.from==='weight'?(lw.kg+' kg on '+dmyShort(lw.on))
+  :by.from==='range'?('no weighing \u00b7 '+by.kg+' kg, middle of '+String(d.size||'').trim()):''; }
 function sizeName(k){ return (CD.sizeLabel&&CD.sizeLabel[k])||SIZE_WORD[k]||''; }
 function sizeKey(b){ var m=/(small|medium|large)/i.exec(String(b||'')); return m?m[1].toLowerCase():''; }
 function sizeDot(b){ var c=CD.sizeColour&&CD.sizeColour[sizeKey(b)]; return c?'<span class="szd" data-size="'+esc(sizeKey(b))+'" style="border-color:'+esc(c)+'" title="'+esc(sizeKey(b))+'"></span>':''; }
@@ -3875,7 +3863,9 @@ function foldAreaReadings(rows){
   var at=String(r.period_start||r.taken_at||''); if(!r.area_id||at.length<10) return;   /* period_start = the slot the Round saved (Nov 2026) */
   var k=roundKey(at.slice(0,10),r.area_id), hr=parseInt(at.slice(11,13),10);
   var cur=ROUND[k]||(ROUND[k]={areaId:r.area_id,date:at.slice(0,10),subjects:null,access:''});
-  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c,spot:r.spot_c,at:r.taken_at||'',empty:roomEmpty(r)};
+  var sl=isNaN(hr)||hr<12?'am':'pm', v={min:r.min_c,max:r.max_c,spot:r.spot_c,at:r.taken_at||'',empty:roomEmpty(r)};
+  cur['t_'+sl]=v;
+  if(r.thermometer_id) cur['t_'+sl+'@'+r.thermometer_id]=v;   /* a room with two thermometers (H5/6) keeps one reading each */
  });
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
@@ -3914,6 +3904,37 @@ function unplacedWhy(d,date){
  else if(!BLDOccupancy.takesDogs(a,date,req)) why='no dogs';
  else if(BLDOccupancy.takesOvernight&&!BLDOccupancy.takesOvernight(a,date,req)) why='day pen';
  return {from:aid,text:'in '+code+(why?' ('+why+')':'')};
+}
+/* The round's temperature lines (OV11 15 Nov 2026): one line per thermometer needed that day (BLD-thermometer +
+   need rows), so a room with two (H5/6) keeps a reading each and every save names its thermometer_id. A room with
+   one thermometer keeps its single line; a room with none (no rows yet) saves by room as before. */
+function roundThermos(aid,date){ var all=T['BLD-thermometer.csv']||[];
+ if(!window.BLDThermometer||!all.length) return [];
+ return BLDThermometer.neededList(all.filter(function(t){ return t.area_id===aid; }),date,CD.req||[]); }
+function tSlotKey(slot,th,multi){ return 't_'+slot+(multi&&th?'@'+th:''); }
+function roundTempHtml(aid,label,sel,date,k){
+ var ths=roundThermos(aid,date), multi=ths.length>1, lines=multi?ths:[ths[0]||null];
+ return lines.map(function(tm){ var th=tm?tm.id:'', nm=multi?(tm.name||tm.id):'', thA=th?' data-th="'+esc(th)+'"':'', lab=label+(nm?' '+nm:'');
+  return (nm?'<div class="mut tline" data-th="'+esc(th)+'">'+esc(nm)+'</div>':'')
+   +'<div class="tmp"'+thA+'>'
+   +['am','pm'].map(function(slot){ var t=(ROUND[k]&&ROUND[k][tSlotKey(slot,th,multi)])||{};
+      var bd=bandFor(sel,date);
+      var vmin=tempVerdict(t.min,bd), vmax=tempVerdict(t.max,bd);
+      var flag=function(v,raw){ if(!v||v==='ok') return '';
+        var act=actionFor(parseFloat(raw));
+        return ' <span class="pill no" title="'+esc(act)+'">'+(v==='low'?'below band':'above band')+'</span>'
+          +(act?' <span class="mut">'+esc(act)+'</span>':''); };
+      return '<span class="sl">'+slot+'</span>'
+       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' inputmode="decimal" placeholder="min" aria-label="'+esc(lab+' '+slot+' min °C')+'" value="'+esc(t.min||'')+'">'
+       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' inputmode="decimal" placeholder="max °C" aria-label="'+esc(lab+' '+slot+' max °C')+'" value="'+esc(t.max||'')+'">'
+       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'"'+thA+'>'+(t.at?(t.empty?'empty, saved':'saved'):'<button type="button" class="btn rempty" data-area="'+aid+'" data-slot="'+slot+'"'+thA+' title="No dogs in here: no reading needed">Empty</button>')+(tempSwapped(t.min,t.max)?' <span class="pill no">max lower than min — tell Lisa</span>':flag(vmin,t.min)+flag(vmax,t.max))+'</span>'; }).join('')
+   +'</div>'; }).join(''); }
+/* Places with a thermometer that the cabin walk leaves out (corridors: room.no_dogs; day pens: room.no_overnight):
+   their own temperature-only cards at the end of the round, so every needed thermometer can be read here. */
+function roundTempOnly(date){
+ var walk={}; walkList().forEach(function(c){ walk[c.area.id]=1; });
+ return areasOn(date).filter(function(a){ return !walk[a.id]&&!isFieldsRow(a)&&roundThermos(a.id,date).length; })
+  .sort(function(x,y){ return String(x.code).localeCompare(String(y.code)); });
 }
 function pageRound(){
  var date=(CD._roundDate||todayISO());
@@ -3969,19 +3990,7 @@ function pageRound(){
        return '<div class="mut"><span class="pill '+(bd.b.stated?'i':'w')+'">'+bd.b.min.toFixed(1)+'\u2013'+bd.b.max.toFixed(1)+' \u00b0C</span> '
          +esc(bd.b.band)+' \u2014 youngest: '+esc(bd.dog.name)+', '+ageYM(bd.days)
          +'</div>'; })()
-   +'<div class="tmp">'
-   +['am','pm'].map(function(slot){ var t=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
-      var bd=bandFor(sel,date);
-      var vmin=tempVerdict(t.min,bd), vmax=tempVerdict(t.max,bd);
-      var flag=function(v,raw){ if(!v||v==='ok') return '';
-        var act=actionFor(parseFloat(raw));
-        return ' <span class="pill no" title="'+esc(act)+'">'+(v==='low'?'below band':'above band')+'</span>'
-          +(act?' <span class="mut">'+esc(act)+'</span>':''); };
-      return '<span class="sl">'+slot+'</span>'
-       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="min" aria-label="'+esc(c.cabin+' '+slot+' min \u00b0C')+'" value="'+esc(t.min||'')+'">'
-       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="max \u00b0C" aria-label="'+esc(c.cabin+' '+slot+' max \u00b0C')+'" value="'+esc(t.max||'')+'">'
-       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?(t.empty?'empty, saved':'saved'):'<button type="button" class="btn rempty" data-area="'+aid+'" data-slot="'+slot+'" title="No dogs in here: no reading needed">Empty</button>')+(tempSwapped(t.min,t.max)?' <span class="pill no">max lower than min \u2014 tell Lisa</span>':flag(vmin,t.min)+flag(vmax,t.max))+'</span>'; }).join('')
-   +'</div>'
+   +roundTempHtml(aid,c.cabin,sel,date,k)
    +'<div class="mut">'+(function(){
        if(!acc) return '';
        if(roomR.status==='over') return esc(roomR.message);
@@ -3991,6 +4000,9 @@ function pageRound(){
    +'</div>';
  });
  h+='</div>';
+ var only=roundTempOnly(date);
+ if(only.length) h+='<h3 class="rtonly">Temperature only</h3>'+only.map(function(a){ var k=roundKey(date,a.id);
+   return '<div class="card" data-area="'+esc(a.id)+'" data-temp-only=""><h4>'+esc(a.code||a.id)+'</h4>'+roundTempHtml(a.id,a.code||a.id,[],date,k)+'</div>'; }).join('');
  return h;
 }
 function ageDays(iso,onISO){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -4192,16 +4204,16 @@ function temp1dp(v){ v=String(v==null?'':v).trim().replace(',','.'); if(!v) retu
  var n=parseFloat(v); if(n<-30||n>60) return {ok:false};
  return {ok:true,val:n.toFixed(1)}; }
 var TYPED={};   /* min/max typed on this page but not yet saved as a pair: TYPED[date__area__slot]={min,max} */
-async function tempSave(areaId,slot,which,raw,el,msgEl){
+async function tempSave(areaId,slot,which,raw,el,msgEl,th){
  var c=temp1dp(raw);
  if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent=c.nan?'Not a number. Type e.g. 18.5':'1 decimal place only, e.g. 18.5'; return; }
  if(el&&el.classList) el.classList.remove('bad');
- var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), tk=k+'__'+slot;
- var have=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
+ th=th||''; var date=(CD._roundDate||todayISO()), multi=roundThermos(areaId,date).length>1, sk=tSlotKey(slot,th,multi), k=roundKey(date,areaId), tk=k+'__'+slot+(multi?'@'+th:'');
+ var have=(ROUND[k]&&ROUND[k][sk])||{}, thSel=multi&&th?'[data-th="'+th+'"]':'';
  var t=TYPED[tk]||(TYPED[tk]={min:'',max:''});
  if(!have.at){ t[which]=c.val; if(el) el.value=c.val; }
  /* max lower than min = typed the wrong way round: say so loudly, mark both boxes, save nothing (Lisa, 7 Nov 2026) */
- var pair=document.querySelectorAll('.tmin[data-area="'+areaId+'"][data-slot="'+slot+'"], .tmax[data-area="'+areaId+'"][data-slot="'+slot+'"]');
+ var pair=document.querySelectorAll('.tmin[data-area="'+areaId+'"][data-slot="'+slot+'"]'+thSel+', .tmax[data-area="'+areaId+'"][data-slot="'+slot+'"]'+thSel);
  var sw=!have.at&&window.BLDTempPair&&window.BLDTempPair.swapped(t.min,t.max);
  Array.prototype.forEach.call(pair,function(b){ if(!sw&&b.classList.contains('swap')) b.classList.remove('bad'); b.classList.toggle('swap',sw); if(sw) b.classList.add('bad'); });
  if(msgEl){ msgEl.classList.toggle('swapalert',sw); if(sw) msgEl.setAttribute('role','alert'); else msgEl.removeAttribute('role'); }
@@ -4212,13 +4224,15 @@ async function tempSave(areaId,slot,which,raw,el,msgEl){
  if(t.min===''||t.max===''){ if(msgEl) msgEl.textContent='type '+(t.min===''?'min':'max')+' too, then it saves'; return; }
  if(t.busy) return; t.busy=true;
  if(msgEl) msgEl.textContent='saving\u2026';
- var r=await sinkPost('area_reading',{area_id:areaId,min_c:t.min,max_c:t.max,period_start:ps});
+ var f={area_id:areaId,min_c:t.min,max_c:t.max,period_start:ps}; if(th) f.thermometer_id=th;   /* which thermometer (OV11 15 Nov): H5 and H6 apart */
+ var r=await sinkPost('area_reading',f);
  t.busy=false;
  if(msgEl) showSave(msgEl,sinkMsg(r));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
-  cur['t_'+slot]={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()}; delete TYPED[tk];
-  keptRow(areaId,ps,{min_c:t.min,max_c:t.max},r); roundRefresh(date); }
+  var nv={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()};
+  cur['t_'+slot]=nv; if(multi) cur[sk]=nv; delete TYPED[tk];
+  keptRow(areaId,ps,th?{min_c:t.min,max_c:t.max,thermometer_id:th}:{min_c:t.min,max_c:t.max},r); roundRefresh(date); }
 }
 /* After a save (Lisa 12 Nov 2026: "0 with a temperature" and "No readings" right after an H1 reading that HAD saved):
    the new row joins the page's copy of the sheet, and the count and Kept readings are drawn again at once. */
@@ -4229,18 +4243,20 @@ function roundRefresh(date){
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
 /* Empty cabin (Lisa, 12 Nov 2026): one area_reading row with room_empty = yes for that slot. It is the evidence (date,
    slot, who: the save script stamps taken_at and taken_by), needs no temperature, and Compliance counts it as covered. */
-async function roomEmptySave(areaId,slot,msgEl){
- var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), have=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
+async function roomEmptySave(areaId,slot,msgEl,th){
+ th=th||''; var date=(CD._roundDate||todayISO()), multi=roundThermos(areaId,date).length>1, sk=tSlotKey(slot,th,multi), k=roundKey(date,areaId), have=(ROUND[k]&&ROUND[k][sk])||{};
  if(have.at){ if(msgEl) msgEl.textContent='already saved'; return; }
  var ps=isoAt(date,slot==='am'?'00':'12');
  if(Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent=slot==='pm'?'the afternoon can be marked from 12:00':'That time has not arrived yet.'; return; }
  if(msgEl) msgEl.textContent='saving\u2026';
- var r=await sinkPost('area_reading',{area_id:areaId,room_empty:'yes',period_start:ps});
+ var f={area_id:areaId,room_empty:'yes',period_start:ps}; if(th) f.thermometer_id=th;
+ var r=await sinkPost('area_reading',f);
  if(msgEl) showSave(msgEl,sinkMsg(r));
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){
   var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
-  cur['t_'+slot]={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
-  keptRow(areaId,ps,{room_empty:'yes'},r); roundRefresh(date);
+  var ev={min:'',max:'',at:r.result.at||new Date().toISOString(),empty:true};
+  cur['t_'+slot]=ev; if(multi) cur[sk]=ev;
+  keptRow(areaId,ps,th?{room_empty:'yes',thermometer_id:th}:{room_empty:'yes'},r); roundRefresh(date);
   if(msgEl) msgEl.textContent='empty, saved'; }
 }
 /* a whole litter (and its dam) into one cabin: one move row each, through the same save as one dog */
@@ -4861,7 +4877,16 @@ PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
 /* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
-function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin'}; }
+function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin',showSave:showSave,
+ canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },restore:binRestore}; }
+/* Bin Restore (Lisa 18 Nov 2026, answer A): one NEW dated row from today; the ended row stays as history. The page's
+   own copy gets the new row so it redraws without a reload. */
+function binRestore(plan){
+ var send=plan.kind==='link'?sinkAct(plan.action,plan.fields):sinkPost(plan.table,plan.fields);
+ return send.then(function(j){ var r=bbSaved(j), f=plan.fields;
+  if(plan.kind==='link') (T['BLD-links.csv']=T['BLD-links.csv']||[]).push({id:r.id,from_table:f.from_table,from_id:f.from_id,role:f.role,to_table:f.to_table,to_id:f.to_id,from_date:f.from_date,to_date:'',source:f.source});
+  else (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.id,rule_key:f.rule_key,value:f.value,effective_from:f.effective_from,source:f.source,to_date:''});
+  return 'Saved '+hhmmNow()+'. Restored from today.'; }); }
 if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
@@ -5014,7 +5039,7 @@ function go(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
- if(id==='bin') CDBin.bind(main);
+ if(id==='bin') CDBin.bind(main,binV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
@@ -5122,7 +5147,7 @@ function go(id,push){
     roundSave(aid,{add:v},msg).then(done,done); }); });
   Array.prototype.forEach.call(document.querySelectorAll('.rempty'),function(el){ el.addEventListener('click',function(){
    /* One tap saves (Lisa 16 Nov 2026: no "Mark this cabin empty?" second click). */
-   roomEmptySave(el.dataset.area,el.dataset.slot,el.parentNode); }); });
+   roomEmptySave(el.dataset.area,el.dataset.slot,el.parentNode,el.dataset.th||''); }); });
   var sOn=document.getElementById('sinkon'), sOff=document.getElementById('sinkoff');
   if(sOn) sOn.addEventListener('click',function(){
    var u=(document.getElementById('sinkurl').value||'').trim(), c=document.getElementById('sinkcode').value||'', m=document.getElementById('sinkmsg');
@@ -5137,8 +5162,8 @@ function go(id,push){
   if(sOff) sOff.addEventListener('click',function(){ forgetHere(); go('round',false); });
   Array.prototype.forEach.call(document.querySelectorAll('.tmin, .tmax'),function(el){
    var which=(el.className.indexOf('tmin')>=0)?'min':'max';
-   var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]');
-   var h=function(){ tempSave(el.dataset.area,el.dataset.slot,which,el.value,el,msg); };
+   var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]'+(el.dataset.th?'[data-th="'+el.dataset.th+'"]':''));
+   var h=function(){ tempSave(el.dataset.area,el.dataset.slot,which,el.value,el,msg,el.dataset.th||''); };
    el.addEventListener('change',h); el.addEventListener('blur',h); });
   Array.prototype.forEach.call(document.querySelectorAll('.rdel'),function(el){
    el.addEventListener('click',function(){

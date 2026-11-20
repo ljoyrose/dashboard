@@ -25,7 +25,7 @@ test('only enrolled animals are scored, best first', () => {
 test('the chip is empty for an animal not enrolled', () => {
   const v = { T: tables(), today: '2026-06-02', esc };
   assert.equal(View.chip(v, 'a3'), '');
-  assert.match(View.chip(v, "a1"), /data-go="breed\/score\.a1"/);
+  assert.match(View.chip(v, 'a1'), /data-go="breed" data-bb-dog="a1"/);   // main's chip: the card's Back returns to it; the tap opens the Score tab
 });
 
 test('with no enrolment rows the page says not set up', () => {
@@ -459,4 +459,22 @@ test('Checks records score: a check_log row carries the values typed on its form
     evidence: { 'BLD-check_log': m } });
   assert.equal(r.gate_result, 'pass', JSON.stringify(r.lines));
   assert.deepEqual(r.lines.map((l) => [l.answer_then, l.date_then]), [['ok', '2026-08-13'], ['Good', '2026-09-01']]);
+});
+
+/* D3 (Lisa, 18 Nov 2026): the Testing label follows the scheme row's signed_off_on date */
+test('Testing label: blank, not a date, or a future signed_off_on keeps it; a date on or before today removes it', () => {
+  const withSign = (value) => tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', signed_off_on: value }] });
+  const has = (value, today) => {
+    const v = { T: withSign(value), today, esc };
+    return { page: /bb-test/.test(View.page(v)), chip: /bb-test/.test(View.chip(v, 'a1')), aria: /testing/i.test(View.chip(v, 'a1')),
+      card: /bb-test|Testing/.test(View.section(v, 'a1')) };
+  };
+  for (const kept of ['', 'soon', '18 Nov 2026', '2026-06-21']) assert.deepEqual(has(kept, '2026-06-20'), { page: true, chip: true, aria: true, card: true }, 'kept: ' + kept);
+  assert.deepEqual(has('2026-06-20', '2026-06-20'), { page: false, chip: false, aria: false, card: false }, 'the sign-off day itself');
+  assert.deepEqual(has('2026-01-15', '2026-06-20'), { page: false, chip: false, aria: false, card: false });
+});
+
+test('Testing label: with nothing scored the heading keeps it, even if the scheme is signed off', () => {
+  const v = { T: tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', signed_off_on: '2026-02-01' }], 'BLD-score_enrolment.csv': [] }), today: '2026-06-22', esc };
+  assert.match(View.page(v), /bb-test/);
 });

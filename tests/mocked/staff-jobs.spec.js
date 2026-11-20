@@ -133,8 +133,23 @@ test('Problem (was Report) is on every screen and carries the dog just scanned',
   await expect(page.getByText('Say what happened.')).toBeVisible();
   await page.getByLabel('What happened?').fill('Pretend note');
   await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByText('Sent.')).toBeVisible();
+  await expect(page.getByText('✓ Sent')).toBeVisible();
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-report', subject_id: 'dog-1', outcome: 'recorded', note: 'Pretend note' } });
+});
+
+test('Problem: the kinds are the owner\'s rows with target optional, with no fixed key; several kinds give a picker', async ({ page }) => {
+  const types = TYPES.filter((t) => t.type_key !== 'report').concat([J('incident', 'Pretend incident', 'optional', { note_label: 'What happened?' }), J('accident', 'Pretend accident', 'optional', { note_label: 'Who was hurt?' })]);
+  const sent = await setup(page, { check_type: types });
+  await page.goto('cdhub/staff/#m/report');
+  const kind = page.getByLabel('Kind');
+  await expect(kind.locator('option:not([disabled])')).toHaveText(['Pretend accident', 'Pretend incident']);
+  await kind.selectOption({ label: 'Pretend incident' });
+  await expect(page.getByRole('heading', { name: 'Pretend incident' })).toBeVisible();
+  await kind.selectOption({ label: 'Pretend accident' });
+  await page.getByLabel('Who was hurt?').fill('Pretend line');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByText('✓ Sent')).toBeVisible();
+  expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-accident', note: 'Pretend line', outcome: 'recorded' });
 });
 
 test('jobs: daily first, then less often (a group by its most frequent job), as needed last; A-Z within, whatever is late', async ({ page }) => {

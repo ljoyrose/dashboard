@@ -1,0 +1,1 @@
+{"cdhub": 7200, "why": "PR 707 Bin Restore: bin-view.js restore plan, ask-first and save. Was 6100; at 39d4e75 the page measured 1058 bytes over budget+10%, so 7200 covers it with a small margin."}
