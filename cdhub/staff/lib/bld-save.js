@@ -215,7 +215,7 @@
     var OUTBOX_AUTO_MS = 5 * 3600000;   // inside the script's 6-hour memory of request ids
     // Answers that mean "nothing was saved, and the entry itself is wrong": the entry leaves the box and is listed.
     // Every other answer (or none) keeps it for another try.
-    var REFUSE_ON = { INVALID: 1, NOT_ALLOWED: 1, BAD_REQUEST: 1, FILE_NOT_ALLOWED: 1, CORRECT_NOT_SUPPORTED: 1, NOT_FOUND: 1, BAD_PAYLOAD: 1 };
+    var REFUSE_ON = { BAD_CODE: 1, INVALID: 1, NOT_ALLOWED: 1, BAD_REQUEST: 1, FILE_NOT_ALLOWED: 1, CORRECT_NOT_SUPPORTED: 1, NOT_FOUND: 1, BAD_PAYLOAD: 1 };
     var outboxFns = [], inFlight = {};
     function jsonList(k) { try { var a = JSON.parse(get(local, k) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
     function outboxRead() { return jsonList(OUTBOX_KEY); }
