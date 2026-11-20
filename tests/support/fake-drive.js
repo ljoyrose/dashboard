@@ -123,6 +123,12 @@ class FakeDrive {
       }
       if (p === '/about') return json(200, { user: { emailAddress: this.email, displayName: 'Sample Person' } });
       if (p === '/drives') return json(200, { drives: this.drives });
+      // One shared drive by id (the private settings loader asks whether the drive is limited to its own domain).
+      const one = /^\/drives\/([^/]+)$/.exec(p);
+      if (one && req.method() === 'GET') {
+        const d = this.drives.find((x) => x.id === decodeURIComponent(one[1]));
+        return d ? json(200, d) : json(404, { error: { code: 404, message: 'Shared drive not found', errors: [{ reason: 'notFound' }] } });
+      }
       if (p === '/files' && req.method() === 'GET') return json(200, this._list(params));
       if (p === '/files/trash' && req.method() === 'DELETE') {
         const d = params.get('driveId');
