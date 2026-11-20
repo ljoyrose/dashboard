@@ -97,6 +97,34 @@
     (rows || []).forEach(function (r) { if (r.area_id === areaId && r.access_type && accessRowCounts(r, date)) a = String(r.access_type).toLowerCase(); });
     return a === 'free' || a === 'limited' ? a : '';
   }
+  /**
+   * The flap setting in force on a date (LD-SC audit, OV11 15 Nov 2026). area_access rows are dated: from_date (older
+   * rows may carry effective_from) and to_date, the shared rule above. Of the rows in force that day the latest start
+   * wins; on the same start, the later row. An undated row counts as the oldest. A voided row (to_date before from_date)
+   * never counts. No date: every other row.
+   */
+  function accessOn(rows, areaId, iso) {
+    var a = '', best = null, d = ymd(iso);
+    (rows || []).forEach(function (r) {
+      if (!r || r.area_id !== areaId || !r.access_type) return;
+      var f = ymd(r.from_date || r.effective_from), t = ymd(r.to_date);
+      if (f && t && t < f) return; // voided: to_date before from_date never counts (OV12 18 Nov 2026)
+      if (d && ((f && f > d) || (t && d > t))) return;
+      if (best === null || f >= best) { best = f; a = String(r.access_type).toLowerCase(); }
+    });
+    return a === 'free' || a === 'limited' ? a : '';
+  }
+  /**
+   * The room's alternatives for one flap setting on a date, for a sign or a card: [{band:'small', n:3}, ...], small first.
+   * Same rows as check(): in force that day, the latest from_date per size; "+ pups" rows left out.
+   */
+  function limitsOn(capacity, areaId, access, iso) {
+    var rows = (capacity || []).filter(function (r) { return r.area_id === areaId; });
+    if (iso) rows = latestPerBand(inForce(rows, iso, 'from_date'));
+    var out = [];
+    SIZES.forEach(function (s) { var n = limitFor(rows, [String(access || '').toLowerCase()], s); if (n > 0) out.push({ band: s, n: n }); });
+    return out;
+  }
   /** The limit for one alternative. With two flap settings possible, the stricter. null = no row. */
   function limitFor(rows, modes, b) {
     var limit = null;
@@ -242,6 +270,24 @@
     if (free < 0) free = 0;
     return { ok: free >= 1 && sim.status === 'ok', free: free, size: size, limit: sim.limit, count: sim.count - 1 };
   }
-  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
+  /**
+   * fact(id) -> {id, size, damId} for check(), the same on every screen (Move dogs, the room's jobs). Size from the latest
+   * weight with the owner's cut-off rows when weights can be read (Lisa, 12 Nov 2026), else the size on the dog's record.
+   * o: {subjects, litters, weights, weightsRead, rules, today}
+   */
+  function facts(o) {
+    var subj = {}, damOf = {}, lastKg = {}, cut = sizeCutoffs(o.rules || [], o.today), byWeight = !!(o.weightsRead && cut);
+    (o.subjects || []).forEach(function (x) { subj[x.id] = x; });
+    (o.litters || []).forEach(function (l) { damOf[l.id] = l.dam_subject_id; });
+    (o.weights || []).forEach(function (w) { var p = lastKg[w.subject_id]; if (!p || String(w.performed_on) >= p.on) lastKg[w.subject_id] = { on: String(w.performed_on), kg: w.weight_kg }; });
+    return function (id) { var x = subj[id] || {}; return { id: id, size: byWeight ? sizeFromKg((lastKg[id] || {}).kg, cut) : x.size_band, damId: damOf[x.birth_litter_id] || '' }; };
+  }
+  /** One plain line for a check() result: "Takes 3 small or 2 medium with limited access. 2 of 2 now." */
+  function summary(r) {
+    var takes = r.alternatives ? 'Takes ' + r.alternatives + (r.access ? ' with ' + r.access + ' access' : '') + '. ' : '';
+    if (r.limit === null) return takes + (r.count ? r.count + ' here. ' : '') + r.notes.join(' ');
+    return takes + r.count + ' of ' + r.limit + ' now.' + (r.notes.length ? ' ' + r.notes.join(' ') : '');
+  }
+  return { check: check, audit: audit, accessOf: accessOf, accessRowCounts: accessRowCounts, accessOn: accessOn, limitsOn: limitsOn, facts: facts, summary: summary, band: band, word: word, sizeCutoffs: sizeCutoffs, sizeFromKg: sizeFromKg, rangeMidKg: rangeMidKg, sizeOf: sizeOf, inForce: inForce, freePlaces: freePlaces, spaceRules: spaceRules, deriveRows: deriveRows };
 
 }));
