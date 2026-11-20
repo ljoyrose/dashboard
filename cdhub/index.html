@@ -4052,19 +4052,26 @@ var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KE
 /* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" forgets the code
    and the address kept on this device, and stops the staff page's copy being reused here (15 Nov 2026).
    #join=<code>&url=<address> still fills the card. */
-var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
+var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.save.off', SINK_OFF_OLD='cdhub.sink.off';
+/* Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): "Switch off here" is now kept as cdhub.save.off.
+   A phone switched off before this still has the old cdhub.sink.off, so either one means off. Only the new one is written;
+   switching back on clears both, or the old flag would keep the phone off for good. Old keys are removed in the last stage. */
+function offHere(){ return !!(sinkRaw(SINK_OFF_KEY)||sinkRaw(SINK_OFF_OLD)); }
+function setOffHere(on){ if(on){ sinkSet(SINK_OFF_KEY,'1'); return; } sinkSet(SINK_OFF_KEY,''); if(sinkRaw(SINK_OFF_OLD)) sinkSet(SINK_OFF_OLD,''); }
 var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
 /* A code the save script ACCEPTED is kept on this device (localStorage), so a phone is not asked again after the tab
    or the Home Screen app is closed. A refused code is removed. This tab's copy (sessionStorage) is only a fallback. */
 var STAFF_KEEP_KEY='cdhub.staff.code';
 function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) return;
- sinkSet(STAFF_KEEP_KEY,c); sinkSet(SINK_OFF_KEY,'');
+ sinkSet(STAFF_KEEP_KEY,c); setOffHere(false);
  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
 function sinkGet(k){ if(k===SINK_CODE_KEY) return staffCodeNow(); var v=sinkRaw(k); if(v) return v;
- if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(sinkRaw(SINK_OFF_KEY)?'':sinkRaw(SAVE_KEEP_KEY))||''; return ''; }
+ if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(offHere()?'':sinkRaw(SAVE_KEEP_KEY))||''; return ''; }
 /* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
-   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
+   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before.
+   The file may also carry set_at (a date) and set_by (a role, never a name); they are for people reading the file and
+   nothing here depends on them. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
 function saveUrlLoad(){
  if(SINK_RE.test(sinkGet(SINK_URL_KEY))) return Promise.resolve(sinkGet(SINK_URL_KEY));
@@ -4081,12 +4088,12 @@ function saveUrlLoad(){
  }).catch(function(){ return ''; }).then(function(u){ if(!u) CD.saveUrlPromise=null; return u; });   // nothing found: try again next time, never stuck for the visit
  return CD.saveUrlPromise;
 }
-function keepSaveUrl(u){ if(SINK_RE.test(u)&&!sinkRaw(SINK_OFF_KEY)) sinkSet(SAVE_KEEP_KEY,u); }
+function keepSaveUrl(u){ if(SINK_RE.test(u)&&!offHere()) sinkSet(SAVE_KEEP_KEY,u); }
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 /* ONE source for the code (live test 13 Nov 2026: the panel said "off" although the kept code saved fine). The panel, the
    saves and the photo all use staffCodeNow(). The staff page's copy (bld.*) is not reused after "Switch off here". */
 function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && (!!staffCodeNow() || !!sinkGoogle()); }   /* a signed-in owner needs no code (16 Nov 2026) */
-function codeKept(){ var off=!!sinkRaw(SINK_OFF_KEY);
+function codeKept(){ var off=offHere();
  return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
  var c=STAFF_MEM;
@@ -4111,7 +4118,7 @@ function noteBadCode(c){
 function forgetHere(){ STAFF_MEM='';
  try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
  [SINK_URL_KEY,SINK_CODE_KEY,STAFF_KEEP_KEY,SAVE_KEEP_KEY].forEach(function(k){ sinkSet(k,''); });
- sinkSet(SINK_OFF_KEY,'1'); }
+ setOffHere(true); }
 /* One line on the panel that says what this device holds. It never shows the code, only whether one is kept. */
 function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
  var yn=function(b){ return b?'yes':'no'; };
@@ -4141,7 +4148,7 @@ function askStaffCode(){
    Google sign-in and no code is asked. The save script checks it with Google and against its owner list. If it answers
    that this account is not an owner (or that route is off), this device goes back to asking for the code. */
 var SINK_GOOGLE_NO=false;
-function sinkGoogle(){ return !SINK_GOOGLE_NO&&!sinkRaw(SINK_OFF_KEY)&&TOKEN&&Date.now()<TOKEN_EXP?TOKEN:''; }   /* Switch off here wins */
+function sinkGoogle(){ return !SINK_GOOGLE_NO&&!offHere()&&TOKEN&&Date.now()<TOKEN_EXP?TOKEN:''; }   /* Switch off here wins */
 async function sinkGate(){
  if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
  var url=sinkGet(SINK_URL_KEY);
@@ -4155,7 +4162,7 @@ async function sinkGate(){
 (function sinkJoin(){ var raw=(location.hash||'').replace(/^#\/?/,''); if(raw.indexOf('join=')!==0) return;
  var at=raw.indexOf('&url='), c='', u=''; try{ c=decodeURIComponent(raw.slice(5,at>0?at:raw.length)).trim(); u=at>0?decodeURIComponent(raw.slice(at+5)).trim():''; }catch(e){ c=''; }
  try{ history.replaceState(null,'',location.pathname+'#/round'); }catch(e){ location.hash='#/round'; }
- if(c){ sinkSet(SINK_CODE_KEY,c); sinkSet(SINK_OFF_KEY,''); } if(SINK_RE.test(u)) sinkSet(SINK_URL_KEY,u); })();
+ if(c){ sinkSet(SINK_CODE_KEY,c); setOffHere(false); } if(SINK_RE.test(u)) sinkSet(SINK_URL_KEY,u); })();
 function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:function(x){ for(var i=0;i<x.length;i++) x[i]=Math.floor(Math.random()*256); return x; }}).getRandomValues(a);
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
@@ -5168,7 +5175,7 @@ function go(id,push){
    var u=(document.getElementById('sinkurl').value||'').trim(), c=document.getElementById('sinkcode').value||'', m=document.getElementById('sinkmsg');
    if(!u) u=sinkGet(SINK_URL_KEY);
    if(!SINK_RE.test(u)){ m.textContent='That is not a save script address (it ends in /exec).'; return; }
-   sinkSet(SINK_OFF_KEY,'');
+   setOffHere(false);
    c=String(c).trim();
    if(c&&c.indexOf('\u2022')<0){ sinkSet(SINK_CODE_KEY,c); if(sinkRaw(STAFF_KEEP_KEY)!==c) sinkSet(STAFF_KEEP_KEY,''); rememberStaffCode(c); }
    if(!staffCodeNow()){ m.textContent='Type your staff code too.'; return; }
