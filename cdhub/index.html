@@ -3542,10 +3542,11 @@ async function presenceSave(areaId,sid,state,date,pt,m){
  var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
  if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,subject_id:sid,item:state==='here'?'present':'not here',outcome:'recorded',happened_at:at,taken_at:new Date().toISOString()}); }
  var cur=ROUND[roundKey(date,areaId)];
- if(!ok&&cur&&cur.seen&&cur.seen[sid]===state){ delete cur.seen[sid];   /* not saved: the buttons go back, the line says why */
+ if(!ok&&!r.kept&&cur&&cur.seen&&cur.seen[sid]===state){ delete cur.seen[sid];   /* refused: the buttons go back, the line says why. Kept for retry: they stay pressed */
   var sel='[data-area="'+CSS.escape(areaId)+'"]', hb=document.querySelector('[data-here="'+CSS.escape(sid)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(sid)+'"]'+sel);
   var was=savedSeen(areaId,date)[sid], w=was?was.state:'';
   if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); } }
+ if(m&&r.kept&&r.requestId) m.setAttribute('data-rid',r.requestId);   /* the kept entry's later answer lands on this line */
  if(m) showSave(m,sinkMsg(r));
 }
 
@@ -4182,13 +4183,32 @@ function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:f
    (the server finished and wrote the row after the phone had said "no answer"). No answer in 150 s = said plainly, may still have saved. */
 /* Saves go one at a time from this device (Lisa 16 Nov 2026: the round sent every room at once and all but the first
    gave up with "Someone else is saving right now"). The time limit starts when a save is sent, not while it waits. */
-var sinkTurn=Promise.resolve(), sinkWaiting=0, sinkLine=[];
+var sinkWaiting=0, sinkLine=[], sinkSending=[], sinkQ=[], sinkPumping=false, sinkNoMany=false;
 /* 20 Nov 2026: each waiting save's line says "Waiting, N ahead", then "saving..." once it is sent (was "saving..." for minutes). */
-function sinkTell(){ sinkLine.forEach(function(rid,i){ var el=rid&&document.querySelector('[data-rid="'+rid+'"]'); if(el&&!el.querySelector('.sv-line')) el.textContent=i>0?'Waiting, '+i+' ahead':'saving\u2026'; }); }
+function sinkTell(){ sinkLine.forEach(function(rid,i){ var el=rid&&document.querySelector('[data-rid="'+rid+'"]'); if(el&&!el.querySelector('.sv-line')) el.textContent=(i===0||sinkSending.indexOf(rid)>=0)?'saving…':'Waiting, '+i+' ahead'; }); }
 function sinkFetch(body,url){ sinkWaiting++; var rid=body&&body.request_id||''; sinkLine.push(rid); sinkTell();
- var p=sinkTurn.then(function(){ return sinkFetchBusy(body,url,0); }); sinkTurn=p.then(function(){},function(){});
+ var p=new Promise(function(res){ sinkQ.push({body:body,url:url,res:res}); });
  var done=function(){ sinkWaiting--; var i=sinkLine.indexOf(rid); if(i>=0) sinkLine.splice(i,1); sinkTell(); };
- p.then(done,done); return p; }
+ p.then(done,done); sinkPump(); return p; }
+/* One request at a time from this phone. ONE REQUEST FOR A ROUND (OV12 20 Nov 2026): when several plain adds are waiting
+   (a round typed faster than it saves), up to 20 go together as one list save; each keeps its own request id and gets its
+   own answer. A script that does not know list saves yet (before v24) answers BAD_REQUEST once, and they go one by one. */
+function sinkPump(){ if(sinkPumping) return; sinkPumping=true;
+ (async function(){ while(sinkQ.length){
+  var first=sinkQ[0], group=[first];
+  if(!sinkNoMany&&first.body.action==='add'){ for(var i=1;i<sinkQ.length&&group.length<20;i++){ var q=sinkQ[i]; if(q.body.action!=='add'||q.url!==first.url||q.body.code!==first.body.code||q.body.google_token!==first.body.google_token) break; group.push(q); } }
+  sinkQ.splice(0,group.length);
+  var lead=group.map(function(q){ return q.body.request_id; }); sinkSending=lead; sinkTell();
+  if(group.length===1){ var j1; try{ j1=await sinkFetchBusy(first.body,first.url,0); }catch(e){ j1={ok:false,code:'NETWORK'}; } first.res(j1); continue; }
+  var many={v:1,request_id:sinkRid(),code:first.body.code,action:'add_many',items:group.map(function(q){ return {request_id:q.body.request_id,table:q.body.table,fields:q.body.fields}; })};
+  if(first.body.google_token) many.google_token=first.body.google_token;
+  var j; try{ j=await sinkFetchBusy(many,first.url,0); }catch(e){ j={ok:false,code:'NETWORK'}; }
+  if(j&&j.ok&&j.result&&Array.isArray(j.result.items)){
+   var by={}; j.result.items.forEach(function(x){ if(x&&x.request_id) by[x.request_id]=x; });
+   group.forEach(function(q){ var x=by[q.body.request_id]; q.res(!x?{ok:false,code:'NETWORK'}:x.ok?{ok:true,result:x.result}:{ok:false,code:x.code,message:x.message,fields:x.fields,duplicate_of:x.duplicate_of}); });
+  } else if(j&&j.code==='BAD_REQUEST'){ sinkNoMany=true; sinkQ=group.concat(sinkQ); }   /* this script has no list save yet: one by one */
+  else group.forEach(function(q){ q.res(j); });
+ } sinkSending=[]; sinkPumping=false; })(); }
 /* leaving the page while saves wait their turn would drop them (OV12 16 Nov 2026): the browser asks "Leave site?" first */
 window.addEventListener('beforeunload',function(e){ if(sinkWaiting>0){ e.preventDefault(); e.returnValue=''; return ''; } });
 /* Two people saving at once (Lisa 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
@@ -4210,7 +4230,7 @@ function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOG
    After 5 hours an entry is no longer sent by itself: the person checks the records, then sends or removes it.
    A refusal (a check failed) leaves the box and is listed as Not saved. The code and Google token are never kept. */
 var HUB_BOX='cdhub.outbox', HUB_REFUSED='cdhub.outbox.refused', HUB_BOX_AUTO=5*3600000,
-    HUB_REFUSE={BAD_CODE:1,INVALID:1,NOT_ALLOWED:1,BAD_REQUEST:1,FILE_NOT_ALLOWED:1,CORRECT_NOT_SUPPORTED:1,NOT_FOUND:1,BAD_PAYLOAD:1},
+    HUB_RETRY={NETWORK:1,UNREACHABLE:1,BAD_ANSWER:1,TIMEOUT:1,BUSY:1,CHANGED_DURING_WRITE:1,LOG_FAILED:1,SAVE_OFF:1,TABLE_OFF:1,NOT_CONFIGURED:1,NOT_SET_UP:1,GOOGLE_UNREACHABLE:1,FOLDER_UNREACHABLE:1,NO_CODE:1},   /* 'not this time': kept and tried again; any other answered error is a refusal */
     HUB_KEPT_MSG='Not sent yet, will retry. Kept on this phone: do not type it again.', hubInFlight={}, hubTimer=null, hubFlushing=null;
 function hubList(k){ try{ var a=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function hubPut(k,a){ try{ if(a.length) localStorage.setItem(k,JSON.stringify(a)); else localStorage.removeItem(k); }catch(e){} hubBoxDraw(); }
@@ -4218,10 +4238,10 @@ function hubKeep(body){ var b; try{ b=JSON.parse(JSON.stringify(body)); }catch(e
  if(JSON.stringify(b).length>60000) return;   /* a photo is too big to keep; it says so itself */
  var a=hubList(HUB_BOX).filter(function(x){ return x.id!==b.request_id; }); a.push({id:b.request_id,body:b,at:new Date().toISOString()}); hubPut(HUB_BOX,a); }
 function hubDrop(id){ var a=hubList(HUB_BOX), b=a.filter(function(x){ return x.id!==id; }); if(b.length!==a.length) hubPut(HUB_BOX,b); }
-/* After an answer: saved (or already saved) and refused leave the box; anything else keeps it. true = settled. */
+/* After an answer: saved (or already saved) and refused leave the box; 'not this time' (or no answer) keeps it. true = settled. */
 function hubSettle(id,j){
  if(j&&(j.ok||j.code==='DUPLICATE')){ hubDrop(id); return true; }
- if(j&&HUB_REFUSE[j.code]){ var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0];
+ if(j&&!j.ok&&j.code&&!HUB_RETRY[j.code]){ var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0];
   if(it){ var rf=hubList(HUB_REFUSED).filter(function(x){ return x.id!==id; }); rf.push({id:id,at:it.at,table:it.body.table||'',fields:it.body.fields||{},message:j.message||j.code||''}); hubPut(HUB_REFUSED,rf.slice(-50)); }
   hubDrop(id); return true; }
  hubRetry(60000); return false; }
