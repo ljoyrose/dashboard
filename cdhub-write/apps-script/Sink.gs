@@ -210,7 +210,7 @@ function latestInForce_(rows, ymd, fromKey) {
 
 /** Years a section's records are kept: its BLD-retention_setting row in force on the day, else the Config.gs default. */
 function retentionYears_(section, tenant, ymd) {
-  var r = store_read_(BLD.RETENTION_FILE, false);
+  var r = store_readSmall_(BLD.RETENTION_FILE);
   if (!r) return BLD.LIMITS.RETENTION_DEFAULT_YEARS;
   var ok = r.records.filter(function (x) {
     return (!x.tenant_id || x.tenant_id === tenant) && String(x.section || '').trim() === section &&

@@ -102,7 +102,7 @@ function inPage() {
       const disabled = !!el.disabled || el.getAttribute('aria-disabled') === 'true';
       const href = el.getAttribute('href') || '';
       const data = Object.keys(el.dataset).filter((k) => k !== 'cc').sort().map((k) => k + '=' + el.dataset[k]).join('&');
-      const sig = [kind, cut(label, 90), href, cut(data, 120), el.id || '', kind === 'row' ? el.tagName.toLowerCase() + '.' + String(el.className && el.className.baseVal == null ? el.className : '').trim().split(/\s+/).join('.') : ''].join('|');
+      const sig = [kind, cut(label, 90), href, cut(data, 120), (el.id || '').replace(/\d+/g, '#') /* a made-up id is renumbered at every redraw (hfp-31, hfp-71): its number is not part of who the control is */, kind === 'row' ? el.tagName.toLowerCase() + '.' + String(el.className && el.className.baseVal == null ? el.className : '').trim().split(/\s+/).join('.') : ''].join('|');
       count[sig] = (count[sig] || 0);
       const i = out.length;
       el.setAttribute('data-cc', String(i));
@@ -211,6 +211,11 @@ function inPage() {
 
 const FLAGS = ['LOOP', 'DEAD', 'ERROR', 'ESCAPE', 'WORDING'];
 const TAP_MS = 6000;   // how long a tap may wait for its control to be ready (a busy test machine is slow, not broken)
+const ASK_MS = 10000;  // how long the page may take to answer one question from the walk
+const SETTLE_MS = 15000;   // the longest one wait for the page to go quiet
+const OPEN_MS = 45000;     // the longest one cold load of a screen
+/** A promise that gives up: nothing in the walk may wait for ever. */
+const capped = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error('no answer in ' + ms + 'ms: ' + what)), ms); })]).finally(() => clearTimeout(t)); };
 const short = (s, n = 70) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
 /**
@@ -219,10 +224,13 @@ const short = (s, n = 70) => { s = String(s || '').replace(/\s+/g, ' ').trim(); 
  *   name, page, guard (from tests/support/test.js),
  *   roots: [route...]                      the screens to start from
  *   open(route)                            go to that screen from cold (reload) and wait until it is ready
+ *   addr(state) -> route | ''              optional: the route that opens this screen by its own address ('' = it has none).
+ *                                          A screen found one tap deep is then opened by address, not by replaying the taps
  *   redraw(route)                          optional, quick way back to that screen with no reload; return false if it cannot
  *   busy()                                 optional, true while the page is still loading its data
  *   inSite(url) -> name | ''               other pages of ours a tap may open ('' = not ours)
  *   hidden(state) -> bool                  a screen that is switched off for now: reaching it is noted, not judged
+ *   elsewhere(state) -> bool               optional: a screen another walk starts from; the tap is recorded, the screen is not walked here
  *   skip(control) -> reason | ''           controls left for their own check (sign out)
  *   wordingOk(w, state), deadOk(control)   optional, known and explained exceptions
  *   maxDepth, maxStates, typeText, typeDate
@@ -256,26 +264,30 @@ async function crawl(site) {
   };
   const newOutside = () => { const o = guard.outside.slice(outAt); outAt = guard.outside.length; return o; };
   /** Wait until the page has stopped changing (and has finished loading its data). */
+  const ask = (fn, arg, what) => capped(page.evaluate(fn, arg), ASK_MS, what || 'the page');
+  let waits = 0;
   const settle = async (q = 70) => {
     const t0 = Date.now();
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; Date.now() - t0 < SETTLE_MS; i++) {
       try {
-        await page.waitForLoadState('load', { timeout: 8000 });
-        await page.evaluate((ms) => window.__cc.quiet(ms, 3500), q);
-        if (!site.busy || !(await site.busy())) break;
+        await page.waitForLoadState('load', { timeout: 5000 });
+        await capped(page.evaluate((ms) => window.__cc.quiet(ms, 3500), q), 6000, 'going quiet');
+        if (!site.busy || !(await capped(Promise.resolve(site.busy()), 5000, 'busy'))) return Date.now() - t0;
       } catch (e) { if (i > 1) log('WAIT ' + i + ' · ' + String(e.message || e).split('\n')[0].slice(0, 90) + ' · at ' + page.url().slice(-40)); }
-      if (i > 2 && i % 5 === 0) log('WAIT ' + i + ' · still loading · at ' + page.url().slice(-40));
       await page.waitForTimeout(100);
     }
+    waits++;
+    log('WAIT gave up after ' + (Date.now() - t0) + 'ms · at ' + page.url().slice(-40));
     return Date.now() - t0;
   };
   const flag = (type, screen, control, detail) => { if (findings.some((f) => f.type === type && f.control === control && f.detail === detail && f.screen === screen)) return; findings.push({ type, screen, control, detail }); log('FLAG ' + type + ' · ' + screen + ' · ' + short(control, 60) + ' · ' + detail); };
-  const here = () => page.evaluate(() => ({ st: window.__cc.state(), controls: window.__cc.controls() }));
+  const here = () => ask(() => ({ st: window.__cc.state(), controls: window.__cc.controls() }), undefined, 'what is on screen');
   const pathOf = (u) => { try { return new URL(u).pathname; } catch (e) { return ''; } };
   const home = pathOf(page.url());
   let cold = true;
 
-  async function act(c) {
+  const act = (c) => capped(act0(c), TAP_MS + 4000, 'the tap');
+  async function act0(c) {
     const loc = page.locator('[data-cc="' + c.i + '"]');
     if (c.off) { await loc.focus(); return page.keyboard.press('Enter'); }   // off the side of the screen until focused (skip link): keyboard only
     if (c.kind === 'row') return loc.evaluate((e) => e.click());
@@ -293,20 +305,29 @@ async function crawl(site) {
   async function goto(node, force) {
     const away = pathOf(page.url()) !== home;
     let ok = false;
-    if (!force && !away && !cold && site.redraw) { try { ok = (await site.redraw(node.route)) !== false; } catch (e) { ok = false; } }
-    if (!ok) { await site.open(node.route); await settle(); } else await settle(30);
+    // a screen with its own address is opened by that address; only a panel with no address is rebuilt by its taps
+    const route = node.addr || node.route, steps = node.addr ? [] : node.path;
+    if (!force && !away && !cold && site.redraw) { try { ok = (await capped(Promise.resolve(site.redraw(route)), ASK_MS, 'redraw')) !== false; } catch (e) { ok = false; } }
+    if (!ok) { await capped(site.open(route), OPEN_MS, 'opening ' + route); await settle(); } else await settle(30);
     cold = false;
-    for (const step of node.path) {
-      const got = await page.evaluate(([sig, k]) => window.__cc.prep(sig, k), [step.sig, step.k]);
-      if (!got.c) return false;
-      try { await act(got.c); } catch (e) { return false; }
+    for (const step of steps) {
+      // A fresh page may draw the screen once more after it has gone quiet (late photos, late tables), and the marks the walk
+      // put on the controls go with the old drawing. So: find the control, tap it, and if it has gone, find it again.
+      let ok2 = false, why = '';
+      for (let tries = 0; tries < 4 && !ok2; tries++) {
+        const got = await ask(([sig, k]) => window.__cc.prep(sig, k), [step.sig, step.k], 'finding a control');
+        if (!got.c) { why = 'not on ' + got.st.key; await page.waitForTimeout(250); await settle(150); continue; }
+        try { await capped(page.locator('[data-cc="' + got.c.i + '"]').click({ timeout: 1500, trial: got.c.kind !== 'row' && !got.c.off && !/^(select|input:)/.test(got.c.kind) }), 3000, 'trial tap'); await act(got.c); ok2 = true; }
+        catch (e) { why = String(e.message || e).split('\n')[0].slice(0, 160); await settle(150); }
+      }
+      if (!ok2) { if (process.env.CRAWL_DEBUG) log('  step failed: ' + step.sig + ' ¦ ' + step.k + ' · ' + why); return false; }
       await settle();
     }
     return true;
   }
   const screenOf = (st) => (st.hash || '(start)') + ' · ' + (st.heading || '(no heading)') + (st.panels.length ? ' [' + st.panels.join(', ') + ']' : '');
   async function wordingCheck(st) {
-    const list = await page.evaluate(() => window.__cc.wording());
+    const list = await ask(() => window.__cc.wording(), undefined, 'the wording');
     list.forEach((w) => {
       if (site.wordingOk && site.wordingOk(w, st)) return;
       const k = w.type + '|' + w.text;
@@ -322,8 +343,18 @@ async function crawl(site) {
   let chromeDone = !!site.noChrome;   // the top bar and bottom tabs are walked once: a second part of the same walk leaves them out
   while (queue.length) {
     const node = queue.shift();
-    if (!(await goto(node, true))) continue;
-    let cur = await here();
+    let cur = null;
+    try {
+      if (!(await goto(node, true))) { log('LOST screen · ' + (node.addr || node.route) + ' · its taps could not be replayed'); continue; }
+      cur = await here();
+      // opened by address but it is not the screen the tap showed (the address is not enough): rebuild it by its taps
+      if (node.addr && node.expect && cur.st.key !== node.expect && !(cur.st.hash === node.expectSt.hash && cur.st.heading === node.expectSt.heading)) {
+        log('ADDR ' + node.addr + ' opens ' + cur.st.key + ' · the tap showed ' + node.expect + ' · replaying the taps');
+        node.addr = '';
+        if (!(await goto(node, true))) continue;
+        cur = await here();
+      }
+    } catch (e) { log('LOST screen · ' + (node.addr || node.route) + ' · ' + String(e.message || e).split('\n')[0].slice(0, 120)); cold = true; continue; }
     const key = cur.st.key;
     if (visited.has(key)) continue;
     visited.set(key, node);
@@ -342,45 +373,46 @@ async function crawl(site) {
     const withChrome = !chromeDone; chromeDone = true;
     const hrefDone = new Map();
     log('SCREEN ' + screen + ' · ' + list.length + ' controls');
-    for (const c0 of list) {
-      if (cap && taps >= cap) break;
+    const twice = new Set();
+    const tapOne = async (c0) => {
+      if (cap && taps >= cap) return;
       const id = (c0.chrome ? 'chrome' : key) + ' ¦ ' + c0.sig + ' ¦ ' + c0.k;
-      if (c0.chrome && site.noChrome && !node.chromePanel) continue;   // the top bar and tabs belong to the first part of this walk
+      if (c0.chrome && site.noChrome && !node.chromePanel) return;   // the top bar and tabs belong to the first part of this walk
       if (!reach.has(id)) reach.set(id, { screen, label: c0.label, kind: c0.kind });
-      if (done.has(id)) continue;
-      if (c0.chrome && !withChrome && !node.chromePanel) continue;
+      if (done.has(id)) return;
+      if (c0.chrome && !withChrome && !node.chromePanel) return;
       const why = site.skip && site.skip(c0);
-      if (why) { skipped.push({ screen, control: c0.label, why }); done.add(id); rows.push({ screen, control: c0.label, kind: c0.kind, target: '', result: 'not tapped here: ' + why }); continue; }
+      if (why) { skipped.push({ screen, control: c0.label, why }); done.add(id); rows.push({ screen, control: c0.label, kind: c0.kind, target: '', result: 'not tapped here: ' + why }); return; }
       if (c0.outside || c0.special) {
         done.add(id);
         const bad = c0.outside && (!/^https:\/\//.test(c0.href) || c0.target !== '_blank');
         if (bad) flag('ESCAPE', screen, c0.label, 'outside link is not https in a new tab: ' + c0.href.replace(/[?#].*$/, ''));
         rows.push({ screen, control: c0.label, kind: c0.kind, target: c0.special ? c0.href.split(':')[0] + ' link' : 'outside link (new tab)', result: 'checked, not followed' });
-        continue;
+        return;
       }
       // Many copies of one kind (the days of a year calendar): the first two and the last of each kind are tapped, the rest are counted apart.
       const grp = site.sample && site.sample(c0);
       if (grp) {
         const all = list.filter((x) => site.sample(x) === grp), at = all.indexOf(c0);
-        if (at > 1 && at !== all.length - 1) { reach.delete(id); sampled.set(grp + ' ¦ ' + key, (sampled.get(grp + ' ¦ ' + key) || 0) + 1); continue; }
+        if (at > 1 && at !== all.length - 1) { reach.delete(id); sampled.set(grp + ' ¦ ' + key, (sampled.get(grp + ' ¦ ' + key) || 0) + 1); return; }
       }
       // A plain link to an address already tapped on this screen goes to the same place: checked for its name, not tapped again.
       const plain = c0.kind === 'link' && /^#/.test(c0.href) && !c0.sig.split('|')[3];
       if (plain && hrefDone.has(c0.href)) {
         done.add(id); sameAddress++;
         rows.push({ screen, control: c0.label || '(no name)', kind: c0.kind, target: hrefDone.get(c0.href).target, result: 'same address as "' + short(hrefDone.get(c0.href).label, 40) + '"' });
-        continue;
+        return;
       }
       const t0 = Date.now(); taps++;
       let got = null;
       for (const force of [false, true]) {
         if (!(await goto(node, force))) continue;
-        got = await page.evaluate(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k]);
+        got = await ask(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k], 'finding a control');
         // the same address and heading is the same screen, even when the page remembers a fold from an earlier tap
         if (got.c && (got.st.key === key || (got.st.hash === cur.st.hash && got.st.heading === cur.st.heading))) break;
         got = null;
       }
-      if (!got || got.c.disabled) { const now = await here(); log((Date.now() - t0) + 'ms LOST ' + c0.kind + ' · ' + short(c0.label, 60) + ' · screen now ' + now.st.key + ' · wanted ' + key + ' · there ' + now.controls.some((x) => x.sig === c0.sig && x.k === c0.k)); continue; }
+      if (!got || got.c.disabled) { const now = await here(); log((Date.now() - t0) + 'ms LOST ' + c0.kind + ' · ' + short(c0.label, 60) + ' · screen now ' + now.st.key + ' · wanted ' + key + ' · there ' + now.controls.some((x) => x.sig === c0.sig && x.k === c0.k)); if (process.env.CRAWL_DEBUG) log('  was ' + c0.sig + ' ¦ ' + c0.k + ' · now ' + now.controls.filter((x) => x.label === c0.label || x.sig === c0.sig).map((x) => x.sig + ' ¦ ' + x.k + (x.disabled ? ' (disabled)' : '')).join(' ;; ')); return; }
       const c = got.c;
       done.add(id);
       newErrors(); newOutside();
@@ -391,13 +423,13 @@ async function crawl(site) {
         blocked = String(e.message || e).split('\n')[0];
         try {
           await goto(node, true); await settle(300);
-          const again = await page.evaluate(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k]);
+          const again = await ask(([sig, k]) => window.__cc.prep(sig, k), [c0.sig, c0.k], 'finding a control');
           if (again.c) { await act(again.c); blocked = ''; retried++; }
         } catch (e2) { blocked = String(e2.message || e2).split('\n')[0]; }
       }
       const ms = await settle();
       let aft;
-      try { aft = await page.evaluate(() => window.__cc.after()); } catch (e) { await settle(); aft = await page.evaluate(() => window.__cc.after()); }
+      try { aft = await ask(() => window.__cc.after()); } catch (e) { await settle(); aft = await ask(() => window.__cc.after()); }
       const errs = newErrors(), outs = newOutside();
       const asked = ev.dialog > evBefore.dialog, chooser = ev.chooser > evBefore.chooser, dl = ev.download > evBefore.download;
       const pops = ev.popup.slice(evBefore.popup);
@@ -416,7 +448,7 @@ async function crawl(site) {
       } else if (left) {
         const name = site.inSite(page.url());
         if (!name) flag('ESCAPE', screen, c.label, 'left for ' + page.url().replace(/[?#].*$/, ''));
-        else if (!(await page.evaluate(() => window.__cc.state())).heading) flag('WORDING', name, '(page)', 'the page has no heading');
+        else if (!(await ask(() => window.__cc.state())).heading) flag('WORDING', name, '(page)', 'the page has no heading');
         target = name || 'another site'; result = 'opens that page';
         cold = true;
       } else if (asked) { result = 'asks before doing it'; target = 'question box'; }
@@ -427,9 +459,11 @@ async function crawl(site) {
         const hid = site.hidden && site.hidden(aft.st);
         const closing = aft.st.hash === got.st.hash && aft.st.heading === got.st.heading && subset(aft.st.panels, got.st.panels);
         result = hid ? 'opens a screen that is switched off for now' : closing ? 'closes it' : 'opens it';
-        if (!hid && !closing && !visited.has(aft.st.key) && node.depth < maxDepth && !queue.some((q) => q.expect === aft.st.key)
+        const theirs = !!(site.elsewhere && site.elsewhere(aft.st));   // another start screen: walked by its own walk
+        if (!hid && !closing && !theirs && !visited.has(aft.st.key) && node.depth < maxDepth && !queue.some((q) => q.expect === aft.st.key)
           && (perRoot[node.route] || 0) + queue.filter((q) => q.route === node.route && q.depth > 0).length < maxStates) {
-          queue.push({ route: node.route, path: node.path.concat([{ sig: c.sig, k: c.k }]), depth: node.depth + 1, expect: aft.st.key,
+          queue.push({ route: node.route, path: (node.addr ? [] : node.path).concat([{ sig: c.sig, k: c.k }]), depth: node.depth + 1, expect: aft.st.key, expectSt: aft.st,
+            addr: (aft.st.hash !== got.st.hash && site.addr && site.addr(aft.st)) || '', from: node.addr || '',
             had: aft.st.hash === got.st.hash ? mine : null, chromePanel: c.chrome });
         }
         // follow the same item for up to 4 taps: it must not come back to a screen already seen on the way
@@ -440,11 +474,11 @@ async function crawl(site) {
             const nx = now.controls.find((x) => !x.chrome && !x.disabled && !x.outside && !x.chosen && x.kind !== 'row' && (x.subject || '').toLowerCase() === subj && !used.has(x.label) && !(site.skip && site.skip(x)));
             if (!nx) break;
             used.add(nx.label);
-            await page.evaluate((i) => window.__cc.arm(i), nx.i);
+            await ask((i) => window.__cc.arm(i), nx.i);
             try { await act(nx); } catch (e) { break; }
             await settle();
             if (pathOf(page.url()) !== home) { cold = true; break; }
-            const a2 = await page.evaluate(() => window.__cc.after());
+            const a2 = await ask(() => window.__cc.after());
             if (a2.same) { if (a2.textSame && !a2.focusMoved && !a2.scrolled) flag('LOOP', screenOf(now.st), nx.label, 'following "' + short(c.subject, 60) + '" stops here: the tap changes nothing'); break; }
             if (trail.includes(a2.st.key)) { flag('LOOP', screen, c.label, 'following "' + short(c.subject, 60) + '" comes back to ' + screenOf(a2.st) + ' after ' + (hop + 2) + ' taps'); break; }
             trail.push(a2.st.key);
@@ -458,18 +492,37 @@ async function crawl(site) {
       else if (c.chrome && aft.nav) { target = 'same screen'; result = 'already here'; }
       else if (c.chosen) { target = 'same screen'; result = 'already chosen'; }
       else if (site.deadOk && site.deadOk(c, aft)) { target = 'same screen'; result = site.deadOk(c, aft); }
+      else if (!twice.has(id)) {
+        // "Nothing happened" is only believed the second time, from a fresh load: a tap that landed while the page was
+        // still drawing is the walk's doing, not a dead control. A control that is really dead stays dead and is reported.
+        twice.add(id); done.delete(id); taps--; cold = true;
+        log('AGAIN ' + c.kind + ' · ' + short(c.label, 60) + ' · nothing changed: tapping once more from a fresh load');
+        return tapOne(c0);
+      }
       else { flag('DEAD', screen, c.label || c.sig, 'nothing changed and nothing was said (' + c.kind + ' ' + c.tag + ')'); result = 'nothing happens'; target = 'same screen'; }
       if (plain && !hrefDone.has(c.href)) hrefDone.set(c.href, { label: c.label, target });
       if (site.dirty && site.dirty(c)) cold = true;   // this tap changed something the page remembers: start the next one from a fresh load
       rows.push({ screen, control: c.label || '(no name)', kind: c.kind, target, result, ms });
       log((Date.now() - t0) + 'ms settle ' + ms + ' · ' + c.kind + ' · ' + short(c.label, 50) + ' -> ' + short(target, 50) + ' · ' + result);
       if (ev.popup.length > 20) ev.popup.length = 0;
+    };
+    for (const c0 of list) {
+      // one control that the page never answers costs seconds and is reported; it does not stop the walk
+      try { await tapOne(c0); } catch (e) {
+        const msg = String(e.message || e).split('\n')[0].slice(0, 140);
+        log('HUNG ' + c0.kind + ' · ' + short(c0.label, 60) + ' · ' + msg);
+        flag('ERROR', screen, c0.label || c0.sig, 'the walk could not finish this tap: ' + msg);
+        cold = true;
+      }
     }
   }
   page.off('dialog', onDialog); page.off('popup', onPopup); page.off('filechooser', onChooser); page.off('download', onDownload);
   const reachable = reach.size, tapped = Array.from(reach.keys()).filter((k) => done.has(k)).length;
   const left = Array.from(sampled.values()).reduce((a, b) => a + b, 0);
-  return { name: site.name, rows, findings, reachable, tapped, sameAddress, retried, sampledLeft: left, sampledKinds: sampled.size, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
+  // per screen, so walks that met the same screen from two start screens can be added without counting it twice
+  const per = new Map();
+  reach.forEach((v, k) => { const o = per.get(v.screen) || { screen: v.screen, reachable: 0, tapped: 0 }; o.reachable++; if (done.has(k)) o.tapped++; per.set(v.screen, o); });
+  return { name: site.name, screens: Array.from(per.values()), waits, rows, findings, reachable, tapped, sameAddress, retried, sampledLeft: left, sampledKinds: sampled.size, states: visited.size, skipped, slow, missed: Array.from(reach.entries()).filter(([k]) => !done.has(k)).map(([, v]) => v) };
 }
 
 /** One line a person can read in the test output. */

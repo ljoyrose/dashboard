@@ -197,7 +197,10 @@ function store_readTail_(title, n, fullCols) {
     if (j < 0 || lr < 2) { full[c] = []; return; }
     var dt = types && types[j] === 'datetime';
     var col = dt ? sh.getRange(2, j + 1, lr - 1, 1).getValues() : sh.getRange(2, j + 1, lr - 1, 1).getDisplayValues();
-    full[c] = col.map(function (x) { var v = x[0]; return dt ? (store_isDate_(v) ? store_isoOf_(v) : String(v === undefined || v === null ? '' : v)) : v; });
+    // 20 Nov 2026 (saves took 49-98 s, most of it here): every old date was turned into London text on every save,
+    // about 62,000 times. These columns are only ever compared as instants (Date.parse in Sink.gs), so the plain
+    // UTC form, which costs almost nothing, gives the same answers.
+    full[c] = col.map(function (x) { var v = x[0]; return dt ? (store_isDate_(v) ? v.toISOString() : String(v === undefined || v === null ? '' : v)) : v; });
   });
   var text = store_rowsText_(rows);
   return { file: file, kind: 'sheet', tab: sh, text: text, size: text.length, header: head, records: records,
@@ -529,11 +532,39 @@ function store_createEmpty_(title, header) {
 }
 
 /** Load id sets for the lookup tables a spec needs. Missing lookup file => null (honest "cannot check"). */
+/**
+ * SMALL LISTS READ ON EVERY SAVE (20 Nov 2026: the lookups and the kept-years row took 6-12 s of every save).
+ * The rooms, thermometers, jobs and kept-years lists are remembered for up to 2 minutes, and only while the file's
+ * Drive "last changed" time is the one they were read at, so an owner's edit is picked up on the next save once
+ * Drive shows it, and never more than 2 minutes late. Returns { records } or null when the file does not exist.
+ * A list too big to remember (over about 90 KB) is read every time, as before.
+ */
+function store_readSmall_(title) {
+  var file = store_findOne_(title);
+  if (!file) return null;
+  var cache = null, at = '';
+  try { cache = CacheService.getScriptCache(); at = String(file.getLastUpdated().getTime()); } catch (e) { cache = null; }
+  var key = 'small:' + file.getId();
+  if (cache) {
+    try {
+      var hit = cache.get(key);
+      if (hit) { var o = JSON.parse(hit); if (o.at === at) return { records: o.records, cached: true }; }
+    } catch (e) { /* unreadable: read the file */ }
+  }
+  var r = store_read_(title, false);
+  if (!r) return null;
+  if (cache && at) {
+    try { var text = JSON.stringify({ at: at, records: r.records }); if (text.length < 90000) cache.put(key, text, 120); }
+    catch (e) { /* remembering is only a speed-up */ }
+  }
+  return { records: r.records };
+}
+
 function store_lookups_(spec, tenantId) {
   var out = {};
   for (var i = 0; i < spec.lookups.length; i++) {
     var lk = spec.lookups[i];
-    var r = store_read_(lk.file, false);
+    var r = store_readSmall_(lk.file);
     if (!r) { out[lk.name] = null; continue; }
     var set = {};
     r.records.forEach(function (rec) {

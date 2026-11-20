@@ -38,6 +38,14 @@ const test = base.test.extend({
         route.fulfill({ status: 200, contentType: 'text/javascript', body: gisStub })
       );
       await world.install(context);
+      // Private settings look-up (config.js loader) made with a pretend sign-in the pretend Drive does not know (some specs
+      // save their own invented token): answered "no such file", as real Drive would for a signed-in account without one.
+      // The pretend Drive's own tokens fall through to it, so private-config.spec.js still sees every look.
+      await context.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/files\?q=name[^&]*DASH_CONFIG\.json/, (route) => {
+        const auth = route.request().headers()['authorization'] || '';
+        if (/^Bearer FAKE-(TEST|PERSONAL|PERSONAL-BIN)-TOKEN$/.test(auth)) return route.fallback();
+        return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ files: [] }) });
+      });
       // Anything else that leaves the machine: record it, answer it empty.
       await context.route(/^https?:\/\/(?!127\.0\.0\.1|localhost).*/, (route) => {
         const url = route.request().url();
