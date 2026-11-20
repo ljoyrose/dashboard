@@ -304,7 +304,6 @@ test('an unusual temperature is the script\'s warning: the screen shows it with 
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('65.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByLabel('What was done').fill('Thermometer checked');
@@ -331,7 +330,6 @@ test('min 22.0 and max 18.0 (min first) is flagged as the wrong way round and no
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MIN').fill('22.0');
   await page.getByLabel('MAX').fill('18.0');
   const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
@@ -350,7 +348,6 @@ test('min 22.0 and max 18.0 (max first) is flagged as the wrong way round and no
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('22.0');
   const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
@@ -390,7 +387,6 @@ test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 N
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18,5');
   await page.getByLabel('MIN').fill('12,0');
   await page.getByRole('button', { name: 'Save' }).click();

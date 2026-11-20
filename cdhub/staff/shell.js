@@ -230,7 +230,7 @@
   function ownerBox() {
     var box = h('div', { class: 'owner-in' }, [
       h('button', { class: 'btn', type: 'button', 'data-owner-signin': '', text: 'Owner: sign in with Google', onclick: ownerSignIn }),
-      h('p', { class: 'sub', text: 'The same sign-in as CD Hub. No code needed.' })
+      h('p', { class: 'sub help', text: 'The same sign-in as CD Hub. No code needed.' })
     ]);
     if (ownerNote) box.appendChild(h('p', { class: 'msg bad', role: 'status', text: ownerNote }));
     return box;
@@ -321,15 +321,30 @@
     ]));
     screen.appendChild(list);
   }
+  /* Show help (Lisa 18 Nov 2026): off unless this person turns it on. Kept with the Look on this phone ('dash-look', the same
+     place the hub's Look menu keeps it); house.css hides every .help line while it is off. */
+  function helpOn() { try { return (JSON.parse(localStorage.getItem('dash-look') || '{}') || {}).help === 'on'; } catch (e) { return false; } }
+  function setHelp(on) {
+    var o = {}; try { o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; }
+    o.help = on ? 'on' : 'off';
+    try { localStorage.setItem('dash-look', JSON.stringify(o)); } catch (e) { /* private window: this page still changes */ }
+    document.documentElement.classList.toggle('show-help', on);
+  }
+  function helpSwitch() {
+    var b = h('button', { class: 'btn quiet', type: 'button', role: 'switch', 'data-k': 'show-help', 'aria-checked': String(helpOn()), text: 'Show help' });
+    b.onclick = function () { var on = !helpOn(); setHelp(on); b.setAttribute('aria-checked', String(on)); };
+    return b;
+  }
   function drawDevice() {
     clearScreen(); setTabs('device');
     screen.appendChild(h('h2', { text: 'This phone' }));
+    screen.appendChild(helpSwitch());
     if (!storeGet(CODE_KEY) && owner()) {
-      screen.appendChild(h('p', { class: 'sub', text: 'Signed in with your Google account, the same as CD Hub. Signing out of CD Hub signs out here too.' }));
+      screen.appendChild(h('p', { class: 'sub help', text: 'Signed in with your Google account, the same as CD Hub. Signing out of CD Hub signs out here too.' }));
       screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Use a staff code instead', onclick: function () { BLDSave.ownerSkip(true); forget(); go('home'); } }));
       return;
     }
-    screen.appendChild(h('p', { class: 'sub', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
+    screen.appendChild(h('p', { class: 'sub help', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
     screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Remove my code from this phone', onclick: function () { forget(); go('home'); } }));
   }
   function openModule(id, params) {

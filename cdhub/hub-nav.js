@@ -107,7 +107,14 @@
       var live = s.views.filter(has), v = r && live[r.value - 1];
       if (v) first[s.id] = v;
     });
-    return { tabs: tabs, on: on, set: set, first: first };
+    /* The view the hub opens on with no address (Lisa 18 Nov 2026 demo: the owner lands on Records). A dated row
+       nav.start.person.<id> or nav.start.<role> = the section's slot number (1 Main, 2 Compliance, 4 Records ...). No row: Main. */
+    var start = '', sr = (o.person && rows['nav.start.person.' + o.person]) || (o.role && rows['nav.start.' + o.role]);
+    SECTIONS.forEach(function (s) {
+      if (start || !sr || s.slot !== String(sr.value) || (s.id !== 'main' && !on[s.id])) return;
+      start = first[s.id] || (has(s.go) ? s.go : (s.views.filter(has)[0] || ''));
+    });
+    return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
   function viewItem(id, slot, opts, has) {
