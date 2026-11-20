@@ -7,7 +7,7 @@
  */
 (function (root) {
   'use strict';
-  var CSS = '.outbox{margin:8px 16px;padding:10px 12px;border-radius:12px;border:2px solid var(--ljr-3,#b58a00);background:var(--card,#fff);display:grid;gap:8px}'
+  var CSS = '.outbox{margin:8px 16px;padding:10px 12px;border-radius:12px;border:2px solid var(--ljr-3);background:var(--card);display:grid;gap:8px}'
     + '.outbox[hidden]{display:none}.outbox p{margin:0}.outbox .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.outbox button{min-height:44px}';
 
   function el(doc, tag, cls, text) { var e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
