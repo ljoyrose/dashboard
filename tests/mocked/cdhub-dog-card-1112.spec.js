@@ -282,6 +282,46 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await page.evaluate(() => CD.tempUnread.map((x) => x.id))).toEqual(['r-x']);
   });
 
+  test('the round has one temperature line per thermometer (two in one room stay apart) and saves its thermometer_id; a corridor gets a temperature-only card (OV11 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
+    await page.evaluate(() => go('round'));
+    await page.locator('#rdate').fill('2026-11-11');
+    await page.locator('#rdate').dispatchEvent('change');
+    const ids = await page.evaluate(() => {
+      const hall = { id: 'area-hall-x', code: 'Pretend Hall', m2: '' };   // a pretend corridor: in use, no dogs
+      [CD.allAreas, CD.areas].forEach((l) => { if (l && !l.some((a) => a.id === hall.id)) l.push(hall); });
+      const w = walkList().map((c) => c.area.id); return { two: w[0], one: w[1], hall: hall.id };
+    });
+    await page.evaluate((x) => {
+      T['BLD-thermometer.csv'] = [{ id: 'thm-a', name: 'Pretend A', area_id: x.two }, { id: 'thm-b', name: 'Pretend B', area_id: x.two },
+        { id: 'thm-c', name: 'Pretend C', area_id: x.one }, { id: 'thm-h', name: 'Pretend Hall', area_id: x.hall }];
+      CD.req = (CD.req || []).concat([{ need_type: 'room.no_dogs', target_table: 'area', target_id: x.hall, from_date: '2026-01-01' }]);   // the hall becomes a corridor
+      go('round', false);
+    }, ids);
+    const card = page.locator(`.card[data-area="${ids.two}"]`);
+    await expect(card.locator('.tline')).toHaveText(['Pretend A', 'Pretend B']);
+    await expect(card.locator('.tmp')).toHaveCount(2);
+    await expect(page.locator(`.card[data-area="${ids.one}"] .tline`)).toHaveCount(0);   // one thermometer: one line, no name
+    await card.locator('.tmin[data-th="thm-b"][data-slot="am"]').fill('12.0');
+    await card.locator('.tmin[data-th="thm-b"][data-slot="am"]').blur();
+    await card.locator('.tmax[data-th="thm-b"][data-slot="am"]').fill('15.0');
+    await card.locator('.tmax[data-th="thm-b"][data-slot="am"]').blur();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: ids.two, thermometer_id: 'thm-b', min_c: '12.0', max_c: '15.0' } });
+    await expect(card.locator('.tmsg[data-th="thm-b"][data-slot="am"]')).toContainText('Saved');
+    await expect(card.locator('.tmin[data-th="thm-a"][data-slot="am"]')).toHaveValue('');   // the other thermometer is still due
+    const one = page.locator(`.card[data-area="${ids.one}"]`);
+    await one.locator('.tmin[data-slot="am"]').fill('11.0'); await one.locator('.tmin[data-slot="am"]').blur();
+    await one.locator('.tmax[data-slot="am"]').fill('14.0'); await one.locator('.tmax[data-slot="am"]').blur();
+    await expect.poll(() => bodies.length).toBe(2);
+    expect(bodies[1].fields).toMatchObject({ area_id: ids.one, thermometer_id: 'thm-c' });   // a single thermometer is named too
+    const hall = page.locator(`.card[data-temp-only][data-area="${ids.hall}"]`);
+    await expect(hall).toHaveCount(1);
+    await expect(hall.locator('.tmin[data-th="thm-h"]')).toHaveCount(2);
+    await expect(page.locator(`.card[data-area="${ids.hall}"]:not([data-temp-only])`)).toHaveCount(0);
+  });
+
   test('guard: the room temperatures sheet with its heading row moved (sorted or filtered) shows on Readings and Data checks (OV11 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     await page.evaluate(() => go('round'));

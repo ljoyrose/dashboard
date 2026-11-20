@@ -33,14 +33,12 @@
       var d = v[0], tags = v[1], capacity = v[2].rows, access = v[3].rows, litters = v[4].rows, settings = v[5].rows;
       // size from the latest weight (Lisa, 12 Nov 2026), the same rule as the dog cards. Until the save script lets
       // this page read weights, the size on the dog's record is still used.
-      var cut = BLDCapacity.sizeCutoffs(v[7].rows, c.today()), lastKg = {}, byWeight = !!(v[6].ok && cut);
-      v[6].rows.forEach(function (w) { var o = lastKg[w.subject_id]; if (!o || String(w.performed_on) >= o.on) lastKg[w.subject_id] = { on: String(w.performed_on), kg: w.weight_kg }; });
       host.textContent = '';
       if (!d.ok) { host.appendChild(say(d.message, 'bad')); return; }
       var action = (settings.filter(function (s) { return s.setting_key === 'over_capacity_action'; }).pop() || {}).value === 'refuse' ? 'refuse' : 'reason';
       var subj = {}; d.raw.subject.forEach(function (s) { subj[s.id] = s; });
       var damOfLitter = {}; litters.forEach(function (l) { damOfLitter[l.id] = l.dam_subject_id; });
-      function fact(id) { var s = subj[id] || {}; return { id: id, size: byWeight ? BLDCapacity.sizeFromKg((lastKg[id] || {}).kg, cut) : s.size_band, damId: damOfLitter[s.birth_litter_id] || '' }; }
+      var fact = BLDCapacity.facts({ subjects: d.raw.subject, litters: litters, weights: v[6].rows, weightsRead: v[6].ok, rules: v[7].rows, today: c.today() });
       function labelOf(id) { return (subj[id] || {}).name || id; }
       function area(id) { return d.areas.filter(function (a) { return a.id === id; })[0]; }
       function inRoom(areaId, extra) {
@@ -48,12 +46,17 @@
         (extra || []).forEach(function (x) { if (ids.indexOf(x) < 0) ids.push(x); });
         return ids;
       }
-      function checkRoom(areaId, ids) { return BLDCapacity.check({ areaId: areaId, access: BLDCapacity.accessOf(access, areaId), capacity: capacity, dogs: ids.map(fact) }); }
-      function capLine(r) {
-        var takes = r.alternatives ? 'Takes ' + r.alternatives + (r.access ? ' with ' + r.access + ' access' : '') + '. ' : '';
-        if (r.limit === null) return takes + (r.count ? r.count + ' here. ' : '') + r.notes.join(' ');
-        return takes + r.count + ' of ' + r.limit + ' now.' + (r.notes.length ? ' ' + r.notes.join(' ') : '');
-      }
+      /* judged by the rows in force today (LD-SC audit, 15 Nov 2026): capacity by from_date, flap by its dated row */
+      var today = c.today();
+      function flapOf(areaId) { return BLDCapacity.accessOn(access, areaId, today); }
+      function checkRoom(areaId, ids) { return BLDCapacity.check({ areaId: areaId, access: flapOf(areaId), capacity: capacity, dogs: ids.map(fact), date: today }); }
+      /* who may change a flap: the owner's setting rows (capacity_setting flap.who_may_change, a list of roles, the latest
+         row wins). Starting default: the owner only. Anyone else sees the setting and who to ask. */
+      var flapRoles = ((settings.filter(function (s) { return s.setting_key === 'flap.who_may_change'; }).pop() || {}).value || 'OWNER')
+        .split(/[\s,;]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+      var myRole = c.save && typeof c.save.role === 'function' ? String(c.save.role() || '').toUpperCase() : '';
+      var mayFlap = !!myRole && flapRoles.indexOf(myRole) >= 0;
+      var capLine = BLDCapacity.summary;
 
       function drawHome() {
         var room = getRoom();
@@ -88,18 +91,20 @@
         if (r.status === 'over') host.appendChild(say('This room is already over its limit.', 'bad'));
         var msg = say('');
         function flapBtn(mode) {
-          var cur = BLDCapacity.accessOf(access, areaId) === mode;
+          var cur = flapOf(areaId) === mode;
           return h('button', { class: cur ? 'btn' : 'btn quiet', type: 'button', 'aria-pressed': String(cur), text: mode === 'free' ? 'Flap free' : 'Flap limited', onclick: function () {
             msg.className = 'msg'; msg.textContent = 'Saving...';
             c.save.submit('area_access', { area_id: areaId, access_type: mode }).then(function (res) {
-              if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '. ' + BLDDone.by(res); }
+              if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode, from_date: today }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '. ' + BLDDone.by(res); }
               else { msg.className = 'msg bad'; msg.textContent = res.message; }
             });
           } });
         }
-        host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, [flapBtn('free'), flapBtn('limited'),
+        var flapNow = flapOf(areaId);
+        host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, (mayFlap ? [flapBtn('free'), flapBtn('limited')]
+          : [h('p', { class: 'sub', 'data-flap-locked': '1', text: (flapNow ? 'Flap ' + flapNow + '. ' : 'Flap not set. ') + 'Ask the owner to change it.' })]).concat([
           // the temperature screen opens this room first (it reads bld.move.room, set just above)
-          h('button', { class: 'btn quiet', type: 'button', text: 'Temperature', onclick: function () { c.go('m/temperature'); } })]));
+          h('button', { class: 'btn quiet', type: 'button', text: 'Temperature', onclick: function () { c.go('m/temperature'); } })])));
         host.appendChild(msg);
         host.appendChild(h('h3', { text: 'In this room' }));
         var list = h('div', { class: 'cards' });

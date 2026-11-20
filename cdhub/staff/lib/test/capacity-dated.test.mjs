@@ -66,6 +66,44 @@ test('freePlaces: lists remaining places of the incoming size, and 0 when the ro
   assert.equal(medOk.free, 1);
 });
 
+// LD-SC audit, OV11 15 Nov 2026: the flap and the sign's limits read the dated rows in force, never just the last row.
+test('accessOn: from_date (or an older effective_from), to_date ended, a future row ignored, latest start wins, undated is oldest', () => {
+  const A = [
+    { area_id: 'r1', access_type: 'limited', from_date: '2026-11-01' },
+    { area_id: 'r1', access_type: 'free' },                                        // undated: oldest, never beats a dated row
+    { area_id: 'r1', access_type: 'free', from_date: '2026-11-20' },               // not started yet on 15 Nov
+    { area_id: 'r2', access_type: 'free', effective_from: '2026-10-01', to_date: '2026-11-10' },
+    { area_id: 'r2', access_type: 'limited', effective_from: '2026-09-01' }];
+  assert.equal(C.accessOn(A, 'r1', '2026-11-15'), 'limited');
+  assert.equal(C.accessOn(A, 'r1', '2026-11-20'), 'free');
+  assert.equal(C.accessOn(A, 'r2', '2026-11-05'), 'free');
+  assert.equal(C.accessOn(A, 'r2', '2026-11-11'), 'limited');   // the free row ended on 10 Nov
+  assert.equal(C.accessOn(A, 'r3', '2026-11-11'), '');
+  assert.equal(C.accessOn([{ area_id: 'r1', access_type: 'free', from_date: '2026-11-01' }, { area_id: 'r1', access_type: 'limited', from_date: '2026-11-01' }], 'r1', '2026-11-15'), 'limited');   // same start: the later row
+});
+test('limitsOn: the sign shows the rows in force that day, small first, "+ pups" left out', () => {
+  const R = [
+    { area_id: 'r1', access_type: 'limited', size_band: 'medium', max_dogs: '1', from_date: '2026-01-01' },
+    { area_id: 'r1', access_type: 'limited', size_band: 'medium', max_dogs: '2', from_date: '2026-11-11' },
+    { area_id: 'r1', access_type: 'limited', size_band: 'small', max_dogs: '3', from_date: '2026-11-11' },
+    { area_id: 'r1', access_type: 'limited', size_band: 'large + pups', max_dogs: '1', from_date: '2026-11-11' },
+    { area_id: 'r1', access_type: 'free', size_band: 'small', max_dogs: '5', from_date: '2026-11-11' }];
+  assert.deepEqual(C.limitsOn(R, 'r1', 'limited', '2026-11-15'), [{ band: 'small', n: 3 }, { band: 'medium', n: 2 }]);
+  assert.deepEqual(C.limitsOn(R, 'r1', 'limited', '2026-11-10'), [{ band: 'medium', n: 1 }]);
+  assert.deepEqual(C.limitsOn(R, 'r1', '', '2026-11-15'), []);
+});
+test('facts and summary: size from the latest weight with the cut-off rows, the dam of a litter; one plain line', () => {
+  const rules = [{ rule_key: 'size_from_kg.medium', value: '10', source: 'invented', effective_from: '2026-01-01' },
+    { rule_key: 'size_from_kg.large', value: '25', source: 'invented', effective_from: '2026-01-01' }];
+  const f = C.facts({ subjects: [{ id: 'd1', size_band: 'large' }, { id: 'p1', birth_litter_id: 'l1' }], litters: [{ id: 'l1', dam_subject_id: 'd1' }],
+    weights: [{ subject_id: 'd1', performed_on: '2026-01-01', weight_kg: '30' }, { subject_id: 'd1', performed_on: '2026-11-01', weight_kg: '12' }], weightsRead: true, rules, today: '2026-11-15' });
+  assert.deepEqual(f('d1'), { id: 'd1', size: 'medium', damId: '' });
+  assert.equal(f('p1').damId, 'd1');
+  assert.equal(C.facts({ subjects: [{ id: 'd1', size_band: 'large' }], weightsRead: false, rules })('d1').size, 'large');
+  const r = C.check({ areaId: 'r1', access: 'limited', capacity: [{ area_id: 'r1', access_type: 'limited', size_band: 'small', max_dogs: '3' }], dogs: [{ id: 'x', size: 'small' }] });
+  assert.equal(C.summary(r), 'Takes 3 small with limited access. 1 of 3 now.');
+});
+
 test('flap set to limited but limits only recorded for free access: unknown, and the reason says so (3A.1/2, 17 Nov 2026)', () => {
   const rows = [{ area_id: 'r2', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
   const r = C.check({ areaId: 'r2', access: 'limited', capacity: rows, dogs: [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }], date: '2026-11-17' });
