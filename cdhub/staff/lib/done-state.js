@@ -3,7 +3,7 @@
  *   BLDDone.mark(el, {outcome, at, who, extra, note})  a tick line on the card: "Done 14:32 · Sam" (or "Concern noted", "Not done noted"),
  *                                                 and the card's main button greys (it still works, for a second time that day)
  *   BLDDone.saving(el)                            straight after the tap: "Saving..." and the button is off until the reply
- *   BLDDone.turn(n)                               "Waiting, n ahead" while other saves on this phone go first, then "Saving..." 
+ *   BLDDone.turn(n)                               "Waiting, n ahead" while other saves on this phone go first, then "Saving..."
  *   BLDDone.wait(el, text)                        sent but not received yet (no signal): a clock, never a tick
  *   BLDDone.fail(el, text)                        a red line; the button stays as it was
  *   BLDDone.clear(el)
