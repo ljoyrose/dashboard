@@ -45,3 +45,35 @@ test('a check opened by address lands on its own row', async ({ page }) => {
   await expect(row).toBeInViewport();
   await expect(row).toBeFocused();
 });
+
+test('a Today checklist line not done has its own button to where it is done', async ({ page }) => {
+  await signIn(page);
+  await page.goto('cdhub/#/today');
+  const rows = page.locator('#todayChecklist .ckrow');
+  await expect(rows.first()).toBeVisible();
+  const n = await rows.count();
+  for (let i = 0; i < n; i++) {
+    const r = rows.nth(i);
+    const bad = await r.locator('.mk.bad').count();
+    await expect(r.locator('button[data-go]')).toHaveCount(bad ? 1 : 0);
+  }
+  const am = rows.filter({ hasText: 'Morning temperature' });
+  if (await am.locator('.mk.bad').count()) {
+    await am.locator('button[data-go]').click();
+    await expect(page).toHaveURL(/#\/round$/);
+  }
+});
+
+test('every room link opens a room, never "Room not found"', async ({ page }) => {
+  await signIn(page);
+  for (const p of ['compliance', 'today', 'round']) {
+    await page.goto('cdhub/#/' + p);
+    await expect(page.locator('main h2').first()).toBeVisible();
+    const hrefs = await page.locator('main a[data-room-link]').evaluateAll((as) => [...new Set(as.map((a) => a.getAttribute('href')))]);
+    for (const h of hrefs.slice(0, 8)) {
+      await page.goto('cdhub/' + h);
+      await expect(page.locator('main h2').first()).toBeVisible();
+      await expect(page.locator('main')).not.toContainText('Room not found');
+    }
+  }
+});

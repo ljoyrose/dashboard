@@ -17,12 +17,23 @@ const SITES = [['hub', 'CD Hub (cdhub/)'], ['temperatures', 'Temperatures page (
 const FLAGS = ['LOOP', 'DEAD', 'ERROR', 'ESCAPE', 'WORDING'];
 
 const one = (name) => { const p = path.join(IN, name + '.json'); return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; };
-/** One result per place and screen size. A walk done in parts (hub-desktop-1, hub-desktop-2) is added together. */
+/** One result per place and screen size. A walk done in parts (hub-desktop-0 .. hub-desktop-24, one per start screen) is added
+ *  together. Two walks can meet the same screen (Main's walk and Today's walk both open a Today list): it is counted once. */
 const read = (name) => {
-  const parts = [one(name)].concat([1, 2, 3, 4].map((n) => one(name + '-' + n))).filter(Boolean);
+  const parts = [one(name)].concat(Array.from({ length: 25 }, (_, n) => one(name + '-' + n))).filter(Boolean);
   if (!parts.length) return null;
   const sum = (k) => parts.reduce((a, r) => a + (r[k] || 0), 0);
-  return { rows: [].concat(...parts.map((r) => r.rows)), findings: [].concat(...parts.map((r) => r.findings)), tapped: sum('tapped'), reachable: sum('reachable'), states: sum('states'), sampledLeft: sum('sampledLeft') };
+  const seen = new Map();   // screen -> its counts, from the first walk that met it
+  let loose = { reachable: 0, tapped: 0 };
+  parts.forEach((r) => {
+    if (!r.screens) { loose.reachable += r.reachable || 0; loose.tapped += r.tapped || 0; return; }   // an older result file: no per-screen counts
+    r.screens.forEach((x) => { if (!seen.has(x.screen)) seen.set(x.screen, x); });
+  });
+  const per = Array.from(seen.values());
+  const first = new Set();
+  const rows = [].concat(...parts.map((r) => { const mine = new Set(r.rows.map((x) => x.screen).filter((sc) => !first.has(sc))); const out = r.rows.filter((x) => mine.has(x.screen)); mine.forEach((sc) => first.add(sc)); return out; }));
+  return { rows, findings: [].concat(...parts.map((r) => r.findings)), tapped: loose.tapped + per.reduce((a, x) => a + x.tapped, 0), reachable: loose.reachable + per.reduce((a, x) => a + x.reachable, 0),
+    states: new Set(rows.map((x) => x.screen).filter((sc) => !/\(old address\)$/.test(sc))).size, sampledLeft: sum('sampledLeft') };
 };
 /** One pattern for every copy: Dog A07 -> Dog A.., Room 3 -> Room N, 12/02/26 -> a date, 14.5 -> a number. */
 const fold = (s) => String(s == null ? '' : s)
