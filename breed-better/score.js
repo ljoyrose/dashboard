@@ -171,7 +171,9 @@
       var when = text(c.when_missing) || 'unknown';
       if (WHEN_MISSING.indexOf(when) < 0) errors.push(c.id + ': when_missing cannot be "' + when + '"');
       /* a must-pass check that is skipped when its record is missing would let the animal Pass without it */
-      if (when === 'skip' && band.kind === 'gate') errors.push(c.id + ': a must-pass check cannot be skipped; use unknown or fail');
+      if (when === 'skip' && band.kind === 'gate') errors.push(c.id + ': a must-pass check cannot be skipped; use unknown');
+      /* D7 (Lisa, 18 Nov 2026): a missing record is never a Fail; it stays Unverified until the record exists */
+      if (when === 'fail') errors.push(c.id + ': when_missing cannot be fail (a missing record is never a Fail); use unknown, or zero on a points line');
       if (text(c.reads) && READS.indexOf(text(c.reads)) < 0) errors.push(c.id + ': cannot read "' + c.reads + '"');
       if (text(c.valid_months) && !/^\d+$/.test(text(c.valid_months))) errors.push(c.id + ': valid_months must be a whole number');
       if (text(c.valid_months) && !text(c.date_field)) errors.push(c.id + ': valid_months needs a date_field');
