@@ -58,10 +58,11 @@ async function openDogs(page, guard) {
     localStorage.getItem('cdhub.sink.code'),
     localStorage.getItem('cdhub.sink.url'),
     localStorage.getItem('cdhub.sink.off'),
+    localStorage.getItem('cdhub.save.off'),
     localStorage.getItem('bld.device.code'),
     localStorage.getItem('bld.staffCode'),
     sessionStorage.getItem('cdhub.staff.session')
-  ])).toEqual([null, null, null, null, null, null]);
+  ])).toEqual([null, null, null, null, null, null, null]);
   return sent;
 }
 
@@ -310,4 +311,119 @@ test('closing and reopening the browser keeps saving on: the panel says on and a
   await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
   expect(sent.map((b) => b.code)).toEqual([CODE, CODE]);
   await ctx.close();
+});
+
+// Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): new keys are written, every old key is still read,
+// and nothing old is deleted yet. A phone set up last week (old keys only) must carry on exactly as before.
+const OLD_SETUPS = {
+  'the staff page (bld.device.code, bld.scriptUrl)': { 'bld.device.code': CODE, 'bld.scriptUrl': SINK },
+  'the old round card (cdhub.sink.code, cdhub.sink.url)': { 'cdhub.sink.code': CODE, 'cdhub.sink.url': SINK }
+};
+
+async function openWithKeys(page, guard, keys) {
+  rooms(guard.world);   // no BLD-save-webapp.json and no address in the config: only what the phone kept can turn saving on
+  const sent = [];
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    if (body.code) sent.push(body);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
+  });
+  await page.goto('cdhub/');
+  await page.evaluate((kv) => { localStorage.clear(); sessionStorage.clear(); Object.keys(kv).forEach((k) => localStorage.setItem(k, kv[k])); }, keys);
+  await page.reload();
+  if (await page.locator('#signinbtn').isVisible()) await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="round"]');
+  return sent;
+}
+
+for (const [from, keys] of Object.entries(OLD_SETUPS)) {
+  test(`a phone set up last week with only the old keys from ${from} still says on and saves with no code prompt`, async ({ page, guard }) => {
+    const sent = await openWithKeys(page, guard, keys);
+    await panelIsOn(page);
+    await page.locator('.racc').first().selectOption('limited');
+    await expect(page.locator('.rsave').first()).toHaveText(/^Saved \d\d:\d\d$/);
+    await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
+    expect(sent.map((b) => b.code)).toEqual([CODE]);
+    // the old keys are still there (removed only in the last stage)
+    const kept = await page.evaluate((ks) => ks.map((k) => localStorage.getItem(k)), Object.keys(keys));
+    expect(kept).toEqual(Object.values(keys));
+  });
+}
+
+test('an old "Switch off here" (cdhub.sink.off) is still honoured: saving stays off and the staff page copy is not reused', async ({ page, guard }) => {
+  const sent = await openWithKeys(page, guard, { 'bld.device.code': CODE, 'bld.scriptUrl': SINK, 'cdhub.sink.off': '1' });
+  await expect(page.locator('#sinkcard')).toContainText('Saving on this device: off');
+  await expect(page.locator('#sinkcard [data-device-line]')).toHaveText('On this device: opened in the browser · no code remembered · saving is set up');
+  await expect(page.locator('#sinkcode')).toHaveValue('');
+  expect(await page.evaluate(() => staffCodeNow())).toBe('');
+  expect(sent).toHaveLength(0);
+});
+
+test('Switch off here writes only the new key cdhub.save.off; Use these clears it and the old one', async ({ page, guard }) => {
+  await openWithKeys(page, guard, { 'cdhub.sink.code': CODE, 'cdhub.sink.url': SINK });
+  await panelIsOn(page);
+  await page.locator('#sinkoff').click();
+  await expect(page.locator('#sinkcard')).toContainText('Saving on this device: off');
+  expect(await page.evaluate(() => [localStorage.getItem('cdhub.save.off'), localStorage.getItem('cdhub.sink.off')])).toEqual(['1', null]);
+
+  // An old phone may hold both flags. Turning saving back on must clear both, or the old one keeps the phone off.
+  await page.evaluate(() => localStorage.setItem('cdhub.sink.off', '1'));
+  await page.locator('#sinkurl').fill(SINK);
+  await page.locator('#sinkcode').fill(CODE);
+  await page.locator('#sinkon').click();
+  await expect(page.locator('#sinkcard')).toContainText('Saving on this device: on');
+  expect(await page.evaluate(() => [localStorage.getItem('cdhub.save.off'), localStorage.getItem('cdhub.sink.off')])).toEqual([null, null]);
+  expect(await page.locator('#sinkcard').evaluate((e) => e.outerHTML)).not.toContain(CODE);
+});
+
+test('BLD-save-webapp.json with optional set_at and set_by still gives the save address; nothing depends on them', async ({ page, guard }) => {
+  rooms(guard.world);
+  setFile(guard.world, 'BLD-save-webapp.json', JSON.stringify({ url: SINK, set_at: '2026-11-15', set_by: 'owner' }));
+  const sent = [];
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    if (body.code) sent.push(body);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="round"]');
+  await page.locator('.racc').first().selectOption('limited');
+  await enterCode(page, CODE);
+  await expect(page.locator('.rsave').first()).toHaveText(/^Saved \d\d:\d\d$/);
+  expect(sent.map((b) => b.code)).toEqual([CODE]);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.save.url'))).toBe(SINK);
+});
+
+test.describe('one copy for both pages', () => {
+  test.use({ allowedConsole: [/404/] });   // the staff page's optional module files may answer 404, as in its own specs
+  test('a phone set up on the staff page saves in CD Hub with no code prompt, and the hub reads the shared copy', async ({ page, guard }) => {
+    rooms(guard.world);
+    const sent = [];
+    const CORS = { 'access-control-allow-origin': '*' };
+    await page.route(SINK, async (route) => {
+      if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+      const body = JSON.parse(route.request().postData() || '{}');
+      if (body.action === 'read') {   // the staff page's reads; only saves are counted
+        return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: [], tables: { area: [], subject: [], occupancy: [], subject_status: [], requirement: [] } } } });
+      }
+      if (body.code) sent.push(body);
+      return route.fulfill({ headers: CORS, json: answer(body) });
+    });
+    await page.goto('cdhub/staff/#join=' + encodeURIComponent(CODE) + '&url=' + SINK);
+    await expect(page.getByRole('heading', { name: 'The Board' })).toBeVisible();
+    expect(await page.evaluate(() => ['cdhub.staff.code', 'cdhub.save.url', 'bld.device.code', 'bld.scriptUrl'].map((k) => localStorage.getItem(k))))
+      .toEqual([CODE, SINK, CODE, SINK]);
+
+    // Take the staff page's own copy away: CD Hub must still be on from the shared copy alone.
+    await page.evaluate(() => { localStorage.removeItem('bld.device.code'); localStorage.removeItem('bld.scriptUrl'); });
+    await page.goto('cdhub/');
+    if (await page.locator('#signinbtn').isVisible()) await page.locator('#signinbtn').click();
+    await tabClick(page, '#nav button[data-go="round"]');
+    await panelIsOn(page);
+    await page.locator('.racc').first().selectOption('limited');
+    await expect(page.locator('.rsave').first()).toHaveText(/^Saved \d\d:\d\d$/);
+    await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
+    expect(sent.map((b) => b.code)).toEqual([CODE]);
+  });
 });

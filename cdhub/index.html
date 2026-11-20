@@ -28,7 +28,8 @@
 <script src="jobs-view.js"></script>
 <script src="docs-view.js"></script>
 <script src="../breed-better/score.js"></script>
-<script src="../breed-better/dna-kit.js"></script>
+<script src="../breed-better/dna-panel.js"></script>
+<script src="staff/lib/viewer-levels.js"></script>
 <script src="../breed-better/hub-view.js"></script>
 <script src="../enquiries/core.js"></script>
 <script src="../enquiries/reader.js"></script>
@@ -38,6 +39,7 @@
 <script src="admin.js"></script>
 <script src="items-view.js"></script>
 <script src="bin-view.js"></script>
+<script src="work-actions.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -131,9 +133,10 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt input,.sbox input,.tmp input,#rdate,.frow input{font-weight:400;cursor:text}
 /* 17 Nov 2026: Compliance's "What was true on" and "Add a rule" rows were bare browser boxes (24-30px), not house controls */
 .frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}.frow select{padding:0 10px;max-width:100%}
+.radd{max-width:100%}   /* the "add a dog" list on The round: a long name never makes a 360px phone scroll sideways (20 Nov 2026) */
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
-@media (hover:hover){.filt select:hover, .fpanel select:hover {background:var(--hov);}
+@media (hover:hover){.filt select:hover, .fpanel select:hover, .frow select:hover {background:var(--hov);}
 .btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
@@ -663,6 +666,7 @@ h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
 <a id="backHome" class="btn back backhome house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
 <h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
 <span class="house-sp" aria-hidden="true"></span>
+<button type="button" class="btn house-ib hidden" id="hubBack" data-hub-back aria-label="Back" title="Back"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
 <span class="live" id="livepill" data-house-read>connecting&hellip;</span>
 <button type="button" class="btn srchbtn house-ib" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
 <button type="button" class="btn house-ib hidden" id="cdRefresh" data-reload="1" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
@@ -964,6 +968,7 @@ function signOut(){
   var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
   if(window.DashAuth) DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
+  bootTicket++;   /* a read still under way stops here: it must not put an error card, or the tables, back after Sign out (20 Nov 2026) */
   T={}; CD={}; copyWipe(); LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
 }
 function initGoogle(){
@@ -1203,6 +1208,8 @@ function build(){
   CD.docTypes=(T['BLD-doc_type.csv']||[]);
   /* Lisa 17 Nov 2026: items that are not CD Hub work (the CCP webinar, W043) never show here, whatever their status. */
   CD.work=(T['BLD-WORK.csv']||[]).filter(function(r){ return String(r.area||'').trim().toLowerCase()!=='ccp'&&!/\bnot CD Hub\b/i.test(String(r.evidence||'')); });
+  /* Lisa 19 Nov 2026: Done, Reassign and Snooze are dated BLD-requirement rows on the work row (work-actions.js) */
+  if(typeof CDWork!=='undefined') CD.work=CDWork.apply(CD.work,T['BLD-requirement.csv']||[],todayLondon());
 
   CD.matings=(T['BLD-mating.csv']||[]).map(function(r){ return {id:r.id,dam:r.dam_subject_id,
     sire:r.sire_subject_id,on:r.mated_on,no:r.mating_no,method:r.method||'',
@@ -1713,7 +1720,7 @@ function checks(){
  if(!rc||LOAD.copy||LOAD.stale||LOAD.later!=='ok') out.push({k:'tables',ok:true,wait:true,msg:'Checking tables\u2026'});
  else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
-   msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
+   fix:mism.length?'Rows moved to the Bin on purpose: the tables list count is old and needs updating. Not on purpose: look in the Bin.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
      :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')}); }
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
@@ -1858,7 +1865,7 @@ function needsToday(){
  var out=[];
  /* foundation: check (a data check that fails) */
  checks().forEach(function(x){ if(x.ok||x.k==='saving off') return;
-  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':'compliance',list:x.list||'',tone:'',kind:'check'}); });
+  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':'compliance/'+ckId(x.k),list:x.list||'',tone:'',kind:'check'}); });
  /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
@@ -1892,7 +1899,7 @@ function goBtn(x,text){
  var t=text||(x.med?'Show the record':'Open'), lab=t+': '+x.title;
  if(x.med) return '<button type="button" class="btn house-open" data-go="dogs/'+esc(x.med)+'" aria-label="'+esc(lab)+'">Show the record</button>';
  if(x.list) return '<button type="button" class="btn ci house-open" data-list="'+esc(x.list)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
- if(x.anchor) return '<button type="button" class="btn house-open" data-jump="'+esc(x.anchor)+'" aria-label="'+esc(lab)+'">Show</button>';
+ if(x.anchor) return '<button type="button" class="btn house-open" data-jump="'+esc(x.anchor)+'" aria-label="'+esc('Show: '+x.title)+'">Show</button>';
  return '<button type="button" class="btn house-open" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
 }
 function needRow(x,hide){
@@ -1911,7 +1918,7 @@ function needsCard(){
 function onSiteCard(){
  var c=counts();
 
- var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+': '+v+'. Open the list"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></a>'; };
+ var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+(s?' '+s:'')+' '+v+'. Open the list"><span class="t">'+t+(s?' <small>'+s+'</small>':'')+'</span> <span class="v">'+v+'</span></a>'; };
  return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><a class="big house-go" href="#/today" data-golist="here" aria-label="On site: '+c.here.length+'. Open the list">'+c.here.length+'</a></div>'
   +row('Adults',c.adults.length,'','adults')+row(adultMonths()===null?'Puppies (adult age not set)':'Under '+adultMonths()+' months',c.pups.length,'','pups')
@@ -2045,14 +2052,15 @@ function tempsCard(){
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 // A failed data check is broken: its count is the black badge (../toolkit.js DashKit.count), read out as "N failed".
+function ckId(k){ return 'ck-'+String(k).replace(/[^a-z0-9]+/gi,'-').toLowerCase(); }
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
  return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?DashKit.count.cls(bad,'failed').trim():'ok')+(bad?'<span class="sr"> failed</span>':'')+'</h3>'
   +all.map(function(x){
    /* skip: a rule check with no rule set is not run, so it shows a grey dash, never a green tick (17 Nov 2026) */
-   return '<div class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
-    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
-    +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
+   return '<div id="'+ckId(x.k)+'" class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
+    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small>'+(x.fix&&!x.ok?'<small class="help">'+esc(x.fix)+'</small>':'')+'</span>'
+    +(x.fix&&!x.ok?'<button type="button" class="btn house-open" data-go="bin">Bin</button>':'')+(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
 
@@ -2065,7 +2073,7 @@ function mainRows(){
   var href=x.med?'#/dogs/'+x.med:(x.list?'#/today/'+x.list:'#/'+x.go);
   return {kind:x.tone==='late'?'late':(x.date===today?'today':'wait'),pill:x.tone==='soon'?'Soon':(x.date&&x.tone!=='late'&&x.date!==today?dmy(x.date):''),
 
-   text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.med?'Show the record':(x.list?'Show the dogs':(MAIN_ACT[x.go]||label(x.go)))};
+   text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.med?'Show the record':(x.list?'Show the dogs':(MAIN_ACT[x.go.split('/')[0]]||label(x.go.split('/')[0])))};
  });
 }
 
@@ -3408,7 +3416,7 @@ function dogMoveChip(d, fromId, sid){
  var col=(typeof colourLabel==='function'?colourLabel(d):'')||'';
  return '<button type="button" class="dchip" data-move-dog="'+esc(d.id)+'" data-from="'+esc(fromId||'')+'"'
   +(d.sizeWord?' data-size="'+esc(d.sizeWord)+'"':'')+(szC?' style="--sz:'+esc(szC)+'"':'')
-  +' aria-label="Move '+esc(d.name||d.id)+'">'+esc(d.name||d.id)+(col?' <span class="mut">'+esc(col)+'</span>':'')+'</button>';
+  +' aria-label="'+esc((d.name||d.id)+(col?' '+col:''))+', move">'+esc(d.name||d.id)+(col?' <span class="mut">'+esc(col)+'</span>':'')+'</button>';
 }
 function dogFact(id){
  var d=CD._byId[id]||{}, dam='';
@@ -4051,19 +4059,26 @@ var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code', SAVE_KEEP_KE
 /* A remembered address or code (this tab, the round card, or the staff page) is reused. "Switch off here" forgets the code
    and the address kept on this device, and stops the staff page's copy being reused here (15 Nov 2026).
    #join=<code>&url=<address> still fills the card. */
-var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.sink.off';
+var SINK_RE=/^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/, SINK_OFF_KEY='cdhub.save.off', SINK_OFF_OLD='cdhub.sink.off';
+/* Storage tidy, stage 2 (owner 15 Nov 2026, "go with recommendation"): "Switch off here" is now kept as cdhub.save.off.
+   A phone switched off before this still has the old cdhub.sink.off, so either one means off. Only the new one is written;
+   switching back on clears both, or the old flag would keep the phone off for good. Old keys are removed in the last stage. */
+function offHere(){ return !!(sinkRaw(SINK_OFF_KEY)||sinkRaw(SINK_OFF_OLD)); }
+function setOffHere(on){ if(on){ sinkSet(SINK_OFF_KEY,'1'); return; } sinkSet(SINK_OFF_KEY,''); if(sinkRaw(SINK_OFF_OLD)) sinkSet(SINK_OFF_OLD,''); }
 var STAFF_MEM='', STAFF_REJECTED='', STAFF_ASK=null;
 /* A code the save script ACCEPTED is kept on this device (localStorage), so a phone is not asked again after the tab
    or the Home Screen app is closed. A refused code is removed. This tab's copy (sessionStorage) is only a fallback. */
 var STAFF_KEEP_KEY='cdhub.staff.code';
 function keepStaffCode(c){ c=String(c||'').trim(); if(!c||c===STAFF_REJECTED) return;
- sinkSet(STAFF_KEEP_KEY,c); sinkSet(SINK_OFF_KEY,'');
+ sinkSet(STAFF_KEEP_KEY,c); setOffHere(false);
  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(function(){}); }catch(e){} }
 function sinkRaw(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
 function sinkGet(k){ if(k===SINK_CODE_KEY) return staffCodeNow(); var v=sinkRaw(k); if(v) return v;
- if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(sinkRaw(SINK_OFF_KEY)?'':sinkRaw(SAVE_KEEP_KEY))||''; return ''; }
+ if(k===SINK_URL_KEY) return sinkRaw('bld.scriptUrl')||((window.DASH_CONFIG&&DASH_CONFIG.cdhub&&DASH_CONFIG.cdhub.saveScriptUrl)||'')||CD.saveUrl||(offHere()?'':sinkRaw(SAVE_KEEP_KEY))||''; return ''; }
 /* The save address is private: after sign-in it is read from BLD-save-webapp.json ({"url":"https://script.google.com/.../exec"})
-   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before. */
+   in the Drive folder, or from the public config when that is set. Missing file: the address box shows as before.
+   The file may also carry set_at (a date) and set_by (a role, never a name); they are for people reading the file and
+   nothing here depends on them. */
 var SAVE_URL_FILE='BLD-save-webapp.json';
 function saveUrlLoad(){
  if(SINK_RE.test(sinkGet(SINK_URL_KEY))) return Promise.resolve(sinkGet(SINK_URL_KEY));
@@ -4080,12 +4095,12 @@ function saveUrlLoad(){
  }).catch(function(){ return ''; }).then(function(u){ if(!u) CD.saveUrlPromise=null; return u; });   // nothing found: try again next time, never stuck for the visit
  return CD.saveUrlPromise;
 }
-function keepSaveUrl(u){ if(SINK_RE.test(u)&&!sinkRaw(SINK_OFF_KEY)) sinkSet(SAVE_KEEP_KEY,u); }
+function keepSaveUrl(u){ if(SINK_RE.test(u)&&!offHere()) sinkSet(SAVE_KEEP_KEY,u); }
 function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
 /* ONE source for the code (live test 13 Nov 2026: the panel said "off" although the kept code saved fine). The panel, the
    saves and the photo all use staffCodeNow(). The staff page's copy (bld.*) is not reused after "Switch off here". */
 function sinkOn(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)) && (!!staffCodeNow() || !!sinkGoogle()); }   /* a signed-in owner needs no code (16 Nov 2026) */
-function codeKept(){ var off=!!sinkRaw(SINK_OFF_KEY);
+function codeKept(){ var off=offHere();
  return sinkRaw(STAFF_KEEP_KEY)||sinkRaw(SINK_CODE_KEY)||(off?'':(sinkRaw('bld.staffCode')||sinkRaw('bld.device.code')))||''; }
 function staffCodeNow(){
  var c=STAFF_MEM;
@@ -4110,7 +4125,7 @@ function noteBadCode(c){
 function forgetHere(){ STAFF_MEM='';
  try{ sessionStorage.removeItem('cdhub.staff.session'); }catch(e){}
  [SINK_URL_KEY,SINK_CODE_KEY,STAFF_KEEP_KEY,SAVE_KEEP_KEY].forEach(function(k){ sinkSet(k,''); });
- sinkSet(SINK_OFF_KEY,'1'); }
+ setOffHere(true); }
 /* One line on the panel that says what this device holds. It never shows the code, only whether one is kept. */
 function deviceLine(){ var app=false; try{ app=!!((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true); }catch(e){}
  var yn=function(b){ return b?'yes':'no'; };
@@ -4140,7 +4155,7 @@ function askStaffCode(){
    Google sign-in and no code is asked. The save script checks it with Google and against its owner list. If it answers
    that this account is not an owner (or that route is off), this device goes back to asking for the code. */
 var SINK_GOOGLE_NO=false;
-function sinkGoogle(){ return !SINK_GOOGLE_NO&&!sinkRaw(SINK_OFF_KEY)&&TOKEN&&Date.now()<TOKEN_EXP?TOKEN:''; }   /* Switch off here wins */
+function sinkGoogle(){ return !SINK_GOOGLE_NO&&!offHere()&&TOKEN&&Date.now()<TOKEN_EXP?TOKEN:''; }   /* Switch off here wins */
 async function sinkGate(){
  if(!SINK_RE.test(sinkGet(SINK_URL_KEY))) await saveUrlLoad();
  var url=sinkGet(SINK_URL_KEY);
@@ -4154,7 +4169,7 @@ async function sinkGate(){
 (function sinkJoin(){ var raw=(location.hash||'').replace(/^#\/?/,''); if(raw.indexOf('join=')!==0) return;
  var at=raw.indexOf('&url='), c='', u=''; try{ c=decodeURIComponent(raw.slice(5,at>0?at:raw.length)).trim(); u=at>0?decodeURIComponent(raw.slice(at+5)).trim():''; }catch(e){ c=''; }
  try{ history.replaceState(null,'',location.pathname+'#/round'); }catch(e){ location.hash='#/round'; }
- if(c){ sinkSet(SINK_CODE_KEY,c); sinkSet(SINK_OFF_KEY,''); } if(SINK_RE.test(u)) sinkSet(SINK_URL_KEY,u); })();
+ if(c){ sinkSet(SINK_CODE_KEY,c); setOffHere(false); } if(SINK_RE.test(u)) sinkSet(SINK_URL_KEY,u); })();
 function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:function(x){ for(var i=0;i<x.length;i++) x[i]=Math.floor(Math.random()*256); return x; }}).getRandomValues(a);
  return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 /* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
@@ -4336,14 +4351,17 @@ function pageWork(){
  var W=CD.work||[];
  if(!W.length) return '<h2>Outstanding</h2>'+needsCard()+'<div class="card acc2"><h4>The work list did not load</h4></div>';
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
- var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
- var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
+ var mine=(by.OPEN||[]).length;   /* 19 Nov 2026: counts match the lists (done, dropped and snoozed rows are not waiting) */
+ var hers=(by.BLOCKED||[]).length;
  var wsort=findSort('work','');   /* As on file = by area, as before */
  var h='<h2>Outstanding</h2>'+needsCard()
   +'<p class="note" data-work-sum>Waiting on you <b>'+hers+'</b> \u00b7 on me <b>'+mine+'</b> \u00b7 done <b>'+(by.DONE||[]).length+'</b></p>'
   +findRow('work','to-dos',{name:1},wsort)+'<div data-find-of="work">';
  /* Lisa 17 Nov 2026: "this section cleared": finished items are not listed (the rows stay in BLD-WORK.csv as history). */
- [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me']].forEach(function(g){
+ var wkOn=typeof CDWork!=='undefined', wv=workV(), shown={};
+ W.forEach(function(r){ if(r.status==='BLOCKED'||r.status==='OPEN'||r.status==='SNOOZED') shown[r.id]=1; });
+ if(wkOn) h+=CDWork.notes(wv,shown);
+ [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['SNOOZED','acc4','Snoozed']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
   rows=wsort==='name'?BLDSort.sort(rows,'name',{name:function(r){ return r.item; }}):rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */
@@ -4351,14 +4369,14 @@ function pageWork(){
    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      var ask=g[0]==='BLOCKED'?medAsk(r):null, found=ask?medRows(ask):null;
-     var tail=g[0]==='DONE'?(r.evidence||''):(r.blocked_on||r.note||'');
+     var tail=g[0]==='DONE'?(r.evidence||''):g[0]==='SNOOZED'?('Back '+ukDate(r.snooze_until)):(r.owner&&r.owner!=='Lisa'&&r.owner!=='Claude'?'Waiting on '+r.owner:(r.blocked_on||''));   /* the note is already under the item: never twice (20 Nov 2026) */
      var act='';
      if(ask){
       if(!found.length) act='<br><span class="mut">No medicine recorded'+(ask.month?' in '+esc(UKMON[ask.month-1]):'')+'. Nothing to open.</span>';
       else act='<br><button type="button" class="btn" data-go="dogs/'+esc(ask.token)+'">Show the record</button>';
      }
      return '<tr id="work-'+esc(r.id)+'" data-find><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
-      +'<td>'+esc(r.item)+(r.note?'<br><span class="mut">'+esc(r.note)+'</span>':'')+act+'</td>'
+      +'<td>'+esc(r.item)+(r.note?'<br><span class="mut help">'+esc(r.note)+'</span>':'')+act+(wkOn?CDWork.rowActions(r,wv):'')+'</td>'
       +'<td class="mut">'+esc(tail)+'</td></tr>'; }).join('')
    +'</tbody></table></div></div>';
  });
@@ -4856,7 +4874,7 @@ function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) r
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
 function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve':'',
- canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
+ canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,saveScore:bbSaveScore,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
 /* Breed Better enrol / un-enrol (Lisa 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
    Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
 function bbSaved(j){ if(!(j&&j.ok&&j.result&&j.result.status==='saved')) throw new Error(sinkMsg(j||{})); return j.result; }
@@ -4874,6 +4892,11 @@ function bbUnenrol(e,reason,to){
  /* an older-list enrolment: copy it to a link from its own start, then end that link. Once a link exists the older row is not read. */
  var from=e.from&&e.from<=to?e.from:to;
  return bbEnrol(e.subject_id,e.scheme_id,from).then(function(){ var l=(T['BLD-links.csv']||[]).filter(function(x){ return x.from_id===e.subject_id&&x.to_id===e.scheme_id&&!x.to_date; }).pop(); return end(l.id); }); }
+/* Saved dated scores (15 Nov 2026): one score_assessment row and its score_line rows, behind TABLE_ON_score_assessment */
+function bbSaveScore(f){
+ return sinkAct('score_save',f).then(function(j){ var r=bbSaved(j);
+  (T['BLD-score_assessment.csv']=T['BLD-score_assessment.csv']||[]).push({id:r.id,subject_id:f.subject_id,scheme_id:f.scheme_id,period:f.period,verdict:f.verdict,
+   points_earned:f.points_earned,points_available:f.points_available,status:'saved',calculated_at:r.at||'',replaces_id:r.replaces_id||''}); }); }
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
 if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); }
@@ -4891,6 +4914,13 @@ PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
 /* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
+/* Outstanding: Done, Reassign, Snooze (work-actions.js). A save is remembered at once, so the row moves without a reload. */
+function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon(),rules:T['BLD-breeding_rule.csv']||[],sinkPost:sinkPost,bbSaved:bbSaved,showSave:showSave,
+ canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },
+ remember:function(row){ (T['BLD-requirement.csv']=T['BLD-requirement.csv']||[]).push(row);
+  CD.work=CDWork.apply((T['BLD-WORK.csv']||[]).filter(function(r){ return String(r.area||'').trim().toLowerCase()!=='ccp'&&!/\bnot CD Hub\b/i.test(String(r.evidence||'')); }),T['BLD-requirement.csv'],todayLondon());
+  CD._needs=null; },
+ redraw:function(){ go('work',false); }}; }
 function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin',showSave:showSave,
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },restore:binRestore}; }
 /* Bin Restore (Lisa 18 Nov 2026, answer A): one NEW dated row from today; the ended row stays as history. The page's
@@ -5054,7 +5084,9 @@ function go(id,push){
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
  if(id==='bin') CDBin.bind(main,binV());
+ if(id==='work'&&typeof CDWork!=='undefined') CDWork.bind(main,workV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
+ if(id==='compliance'&&/^ck-/.test(sub||'')) setTimeout(function(){ var r=document.getElementById(sub); if(r){ r.setAttribute('tabindex','-1'); r.focus({preventScroll:true}); if(r.scrollIntoView) r.scrollIntoView({block:'center'}); } },0);
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');
@@ -5101,7 +5133,7 @@ function go(id,push){
   Array.prototype.forEach.call(document.querySelectorAll('.tl, .lbseg'),function(b){
    if(!b.dataset.list) return;
    b.addEventListener('click',function(){ showList(b.dataset.list); }); });
-  if(sub&&LISTNAME[sub]) showList(sub);
+  if(sub&&LISTNAME[sub]){ showList(sub); setTimeout(function(){ var t=document.getElementById('tpanel'); if(t&&t.scrollIntoView) t.scrollIntoView({block:'start'}); },0); }
  }
  if(id==='sops'){
   ['sopq','sopcol','sopfr','sopcat','soprole','sopsort'].forEach(function(i){ var e=document.getElementById(i);
@@ -5167,7 +5199,7 @@ function go(id,push){
    var u=(document.getElementById('sinkurl').value||'').trim(), c=document.getElementById('sinkcode').value||'', m=document.getElementById('sinkmsg');
    if(!u) u=sinkGet(SINK_URL_KEY);
    if(!SINK_RE.test(u)){ m.textContent='That is not a save script address (it ends in /exec).'; return; }
-   sinkSet(SINK_OFF_KEY,'');
+   setOffHere(false);
    c=String(c).trim();
    if(c&&c.indexOf('\u2022')<0){ sinkSet(SINK_CODE_KEY,c); if(sinkRaw(STAFF_KEEP_KEY)!==c) sinkSet(STAFF_KEEP_KEY,''); rememberStaffCode(c); }
    if(!staffCodeNow()){ m.textContent='Type your staff code too.'; return; }
@@ -5192,17 +5224,18 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops')?full:id;
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed')?full:id;   /* breed: #/breed/<tab> and #/breed/score.<dog> stay in the address, so Back and reload keep the tab */
  if(push!==false && location.hash!=='#/'+at){
   /* a real history entry that remembers where you came from and how far down (Back returns there) */
   var pb=String(prevShown||'').split('/')[0];
-  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?label(pb):'',y:leaveY,state:{id:at}});
+  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});   /* the name the menu uses */
  }
  /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
  Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });   /* kept words still hide what they hid */
  if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();   /* the folds (and their heading rows' height) are in place before the page goes back to where it was, so a redraw never shifts it (17 Nov 2026) */
  window.scrollTo(0,keepY);
+ var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);   /* a brick may add its own from (BB) */
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
