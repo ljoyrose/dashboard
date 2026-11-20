@@ -231,3 +231,23 @@ test('only_groups: a dog job belongs only to dogs in those groups on the day; bl
   assert.equal(D.forTarget([job], [], { subject_id: 'd2' }, day).length, 1);   // caller did not say: shown
   assert.equal(D.forTarget([Object.assign({}, job, { only_groups: '' })], [], { subject_id: 'd2', groups: [] }, day).length, 1);
 });
+
+test('times a day: an owner row makes a daily job stay due until done that many times today; no row = once', () => {
+  const room = { area_id: 'iso' };
+  const types = [T('iso_check', 'area', '1'), T('clean', 'area', '1')];
+  const A = (key, at) => ({ id: 'x' + (++n), check_type_id: 'cty-' + key + '-1', area_id: 'iso', outcome: 'ok', happened_at: at, taken_at: at });
+  const R = (k, v, from, to) => ({ rule_key: k, value: v, effective_from: from, to_date: to || '', source: 'test' });
+  const rules = [R('job.times_per_day.iso_check', '2', '2026-01-01')];
+  const once = [A('iso_check', '2026-10-02T08:00:00Z'), A('clean', '2026-10-02T08:00:00Z')];
+  let r = D.forTarget(types, once, room, '2026-10-02', null, { rules });
+  const iso = r.find((j) => j.type_key === 'iso_check'), clean = r.find((j) => j.type_key === 'clean');
+  assert.equal(iso.status, 'today'); assert.equal(iso.done_today, 1); assert.equal(iso.times_per_day, 2);
+  assert.equal(clean.status, 'ok'); assert.equal(clean.times_per_day, 1);
+  r = D.forTarget(types, once.concat([A('iso_check', '2026-10-02T18:00:00Z')]), room, '2026-10-02', null, { rules });
+  assert.equal(r.find((j) => j.type_key === 'iso_check').status, 'ok');
+  // no rules given: once a day, as before
+  assert.equal(D.forTarget(types, once, room, '2026-10-02').find((j) => j.type_key === 'iso_check').status, 'ok');
+  // the row in force on the day: an ended row no longer counts
+  assert.equal(D.timesPerDay([R('job.times_per_day.iso_check', '2', '2026-01-01', '2026-06-30')], 'iso_check', '2026-10-02'), 1);
+  assert.equal(D.timesPerDay([R('job.times_per_day', '3', '2026-01-01')], 'iso_check', '2026-10-02'), 3);
+});

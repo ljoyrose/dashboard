@@ -133,8 +133,23 @@ test('Problem (was Report) is on every screen and carries the dog just scanned',
   await expect(page.getByText('Say what happened.')).toBeVisible();
   await page.getByLabel('What happened?').fill('Pretend note');
   await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByText('Sent.')).toBeVisible();
+  await expect(page.getByText('✓ Sent')).toBeVisible();
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-report', subject_id: 'dog-1', outcome: 'recorded', note: 'Pretend note' } });
+});
+
+test('Problem: the kinds are the owner\'s rows with target optional, with no fixed key; several kinds give a picker', async ({ page }) => {
+  const types = TYPES.filter((t) => t.type_key !== 'report').concat([J('incident', 'Pretend incident', 'optional', { note_label: 'What happened?' }), J('accident', 'Pretend accident', 'optional', { note_label: 'Who was hurt?' })]);
+  const sent = await setup(page, { check_type: types });
+  await page.goto('cdhub/staff/#m/report');
+  const kind = page.getByLabel('Kind');
+  await expect(kind.locator('option:not([disabled])')).toHaveText(['Pretend accident', 'Pretend incident']);
+  await kind.selectOption({ label: 'Pretend incident' });
+  await expect(page.getByRole('heading', { name: 'Pretend incident' })).toBeVisible();
+  await kind.selectOption({ label: 'Pretend accident' });
+  await page.getByLabel('Who was hurt?').fill('Pretend line');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByText('✓ Sent')).toBeVisible();
+  expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-accident', note: 'Pretend line', outcome: 'recorded' });
 });
 
 test('jobs: daily first, then less often (a group by its most frequent job), as needed last; A-Z within, whatever is late', async ({ page }) => {
@@ -610,6 +625,16 @@ test('Earlier, several days: dogs as they were on each day, and a job group ente
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-ears', subject_id: 'dog-1', how_recorded: 'bulk' });
   expect(london(new Date(sent[0].fields.happened_at))).toBe(day(2));
+});
+
+test('owner order row puts today\'s jobs in the owner\'s order, with another screen (temperatures) in its place', async ({ page }) => {
+  await setup(page, { breeding_rule: [{ id: 'r-o', rule_key: 'job.order', value: 'walk|screen:temperature=Pretend temps|bowls', effective_from: '2026-01-01', to_date: '', source: 'test' }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  const order = await page.locator('[data-job], [data-screen]').evaluateAll((els) => els.map((e) => e.getAttribute('data-job') || 'screen:' + e.getAttribute('data-screen')));
+  expect(order.slice(0, 3)).toEqual(['walk', 'screen:temperature', 'bowls']);
+  await page.locator('[data-screen="temperature"]').click();
+  await expect(page).toHaveURL(/#m\/temperature$/);
 });
 
 test('check types starting round. belong to The round and never show as jobs, nor in Earlier', async ({ page }) => {

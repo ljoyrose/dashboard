@@ -1,0 +1,9 @@
+id,tenant_id,name,area_id,made_at,made_by
+thm-1a,ten-sample,Room 1 door,ar-1,,
+thm-1b,ten-sample,Room 1 window,ar-1,,
+thm-2,ten-sample,Room 2,ar-2,,
+thm-3,ten-sample,Room 3,ar-3,,
+thm-4,ten-sample,Room 4,ar-4,,
+thm-5,ten-sample,Room 5,ar-5,,
+thm-6,ten-sample,Room 6,ar-6,,
+thm-8,ten-sample,Room 8,ar-8,,
