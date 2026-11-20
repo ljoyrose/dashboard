@@ -553,7 +553,7 @@
   function fmtDate(iso, today) {
     if (!isISO(iso)) return String(iso || '');
     today = today || todayISO();
-    return (iso.slice(0, 4) === today.slice(0, 4) ? dFmt : dFmtY).format(new Date(utc(iso)));
+    return (iso.slice(0, 4) === today.slice(0, 4) ? dFmt : dFmtY).format(new Date(utc(iso))).replace(/\bSept\b/, 'Sep');
   }
 
   root.MoneyCore = {

@@ -177,7 +177,7 @@
       send.disabled = true; result.textContent = 'Saving...';
       return save.submit('check_log', entry, { requestId: requestId }).then(function (r) {
         send.disabled = false;
-        if (r.ok) { reset(); result.textContent = r.message + ' ' + savedWhat(type, entry); return; }
+        if (r.ok) { reset(); result.textContent = (r.status === 'queued' || typeof BLDDone === 'undefined' ? r.message : BLDDone.by(r)) + ' ' + savedWhat(type, entry); return; }
         result.textContent = r.message;
         showErrors(r.fields);
         if (r.code !== 'NETWORK') requestId = null;
