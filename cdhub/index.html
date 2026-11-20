@@ -4860,7 +4860,16 @@ PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
 /* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
-function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin'}; }
+function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin',showSave:showSave,
+ canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },restore:binRestore}; }
+/* Bin Restore (Lisa 18 Nov 2026, answer A): one NEW dated row from today; the ended row stays as history. The page's
+   own copy gets the new row so it redraws without a reload. */
+function binRestore(plan){
+ var send=plan.kind==='link'?sinkAct(plan.action,plan.fields):sinkPost(plan.table,plan.fields);
+ return send.then(function(j){ var r=bbSaved(j), f=plan.fields;
+  if(plan.kind==='link') (T['BLD-links.csv']=T['BLD-links.csv']||[]).push({id:r.id,from_table:f.from_table,from_id:f.from_id,role:f.role,to_table:f.to_table,to_id:f.to_id,from_date:f.from_date,to_date:'',source:f.source});
+  else (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.id,rule_key:f.rule_key,value:f.value,effective_from:f.effective_from,source:f.source,to_date:''});
+  return 'Saved '+hhmmNow()+'. Restored from today.'; }); }
 if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
@@ -5013,7 +5022,7 @@ function go(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
- if(id==='bin') CDBin.bind(main);
+ if(id==='bin') CDBin.bind(main,binV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
