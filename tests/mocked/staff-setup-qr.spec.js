@@ -27,6 +27,36 @@ test('a good private QR sets the phone up and leaves no code in the address', as
   await expect(page.locator('a[data-link="checks"]')).toHaveAttribute('href', '../checks/');
 });
 
+// Storage tidy, stage 2 (owner 15 Nov 2026): set-up here also keeps CD Hub's copy, so both pages share one code and address.
+const hubKeys = (page) => page.evaluate(() => ['cdhub.staff.code', 'cdhub.save.url', 'cdhub.save.off', 'cdhub.sink.off'].map((k) => localStorage.getItem(k)));
+
+test('set-up here also keeps CD Hub\'s copy and undoes an earlier "Switch off here" in CD Hub @regression', async ({ page }) => {
+  await fakeScript(page, true);
+  await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('cdhub.save.off', '1'); localStorage.setItem('cdhub.sink.off', '1'); } });
+  const logs = [];
+  page.on('console', (m) => logs.push(m.text()));
+  await page.goto('cdhub/staff/#join=' + encodeURIComponent(CODE) + '&url=' + SCRIPT);
+  await expect(page.getByRole('heading', { name: 'The Board' })).toBeVisible();
+  expect(await stored(page)).toEqual([CODE, SCRIPT]);   // this page's own keys are still written
+  expect(await hubKeys(page)).toEqual([CODE, SCRIPT, null, null]);
+  expect(await page.locator('body').innerText()).not.toContain(CODE);
+  expect(logs.join('\n')).not.toContain(CODE);
+
+  // "Remove my code from this phone" removes the shared copy of that code too.
+  await page.goto('cdhub/staff/#device');
+  await page.getByRole('button', { name: 'Remove my code from this phone' }).click();
+  expect((await stored(page))[0]).toBeNull();
+  expect((await hubKeys(page))[0]).toBeNull();
+});
+
+test('a refused code is not shared with CD Hub, and a switched-off CD Hub stays off', async ({ page }) => {
+  await fakeScript(page, false);
+  await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('cdhub.save.off', '1'); } });
+  await page.goto('cdhub/staff/#join=' + encodeURIComponent(CODE) + '&url=' + SCRIPT);
+  await expect(page.getByText('That code was not accepted')).toBeVisible();
+  expect(await hubKeys(page)).toEqual([null, null, '1', null]);
+});
+
 test('a refused code is not remembered', async ({ page }) => {
   await fakeScript(page, false);
   await page.goto('cdhub/staff/#join=' + encodeURIComponent(CODE) + '&url=' + SCRIPT);
