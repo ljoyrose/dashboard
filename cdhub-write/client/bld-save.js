@@ -152,12 +152,24 @@
     // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
     // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
     // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
-    var saveTurn = Promise.resolve(), sending = 0;
-    function oneAtATime(send) {
+    // 20 Nov 2026 (OV12: a round of saves all said "Saving..." for minutes): each save can be told its place in the
+    // line. onTurn(n) is called with n = how many saves are ahead of it on this device, again whenever that changes,
+    // and with 0 when it is actually being sent. Screens show "Waiting, n ahead" until 0, then "Saving...".
+    var saveTurn = Promise.resolve(), sending = 0, line = [];
+    function tellLine() {
+      line.forEach(function (e, i) {
+        if (e.onTurn && e.told !== i) { e.told = i; try { e.onTurn(i); } catch (x) { /* a screen's own error never stops a save */ } }
+      });
+    }
+    function oneAtATime(send, onTurn) {
       sending++;
+      var me = { onTurn: typeof onTurn === 'function' ? onTurn : null, told: -1 };
+      line.push(me);
+      tellLine();
       var p = saveTurn.then(send, send);
       saveTurn = p.then(function () {}, function () {});
-      p.then(function () { sending--; }, function () { sending--; });
+      var done = function () { sending--; var i = line.indexOf(me); if (i >= 0) line.splice(i, 1); tellLine(); };
+      p.then(done, done);
       return p;
     }
     // Leaving the page while saves are still waiting their turn would drop them (OV12 16 Nov 2026): the browser asks
@@ -217,7 +229,8 @@
     /** After an answer: delivered or refused leaves the box; no answer keeps it. */
     function settle(id, j, item) {
       if (j && (j.ok || j.code === 'DUPLICATE')) { dropEntry(id); return; }
-      if (j && !KEEP_ON[j.code]) { if (item) refuseEntry(item, j); dropEntry(id); }
+      if (j && !KEEP_ON[j.code]) { if (item) refuseEntry(item, j); dropEntry(id); return; }
+      scheduleRetry(60000);   // no answer: kept, and tried again in a minute
     }
     var flushing = null;
     /** Send every kept entry again, one at a time, oldest first. Resolves to how many are still waiting. */
@@ -244,11 +257,15 @@
       flush: flush,
       onChange: function (fn) { outboxFns.push(fn); }
     };
-    // On a real page: try the box soon after opening, every minute, and when the signal comes back.
-    if (opts.autoFlush !== false && !opts.fetch && typeof document !== 'undefined') {   // a page's own save, never a test's pretend fetch
-      // Try again a minute later only while something is still waiting, so an empty box sets no timer at all.
-      var again = function () { flush().then(function (n) { if (n > 0) setTimeout(again, 60000); }); };
-      setTimeout(again, 4000);
+    // On a real page: try the box soon after opening, then every minute while something waits, and when the signal
+    // comes back. An empty box sets no timer at all.
+    var autoOn = opts.autoFlush !== false && !opts.fetch && typeof document !== 'undefined', retryTimer = null;   // a page's own save, never a test's pretend fetch
+    function scheduleRetry(ms) {
+      if (!autoOn || retryTimer) return;
+      retryTimer = setTimeout(function () { retryTimer = null; flush().then(function (n) { if (n > 0) scheduleRetry(60000); }); }, ms);
+    }
+    if (autoOn) {
+      scheduleRetry(4000);
       if (win.addEventListener) win.addEventListener('online', function () { flush(); });
     }
     var KEPT_MSG = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
@@ -376,7 +393,7 @@
         method: 'POST', redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
         body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }, o.onTurn).then(function (j) {
         settle(body.request_id, j, null);
         if (j && j.ok === false && KEEP_ON[j.code]) j = Object.assign({}, j, { kept: true, message: KEPT_MSG });
         if (j && j.ok) {
@@ -390,6 +407,7 @@
         }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
+        scheduleRetry(60000);
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
     }
@@ -398,7 +416,7 @@
      * Send one named save that is not a table row (e.g. link_add, link_end). Same code, same no-double-save reference.
      * Resolves (never rejects): {ok:true, ...result, message:'Saved.'} or {ok:false, code, message, fields}.
      */
-    function act(action, fields, requestId) {
+    function act(action, fields, requestId, onTurn) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
@@ -406,12 +424,14 @@
       keepEntry(body);
       return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }, onTurn).then(function (j) {
         settle(body.request_id, j, null);
         if (j && j.ok === false && KEEP_ON[j.code]) j = Object.assign({}, j, { kept: true, message: KEPT_MSG });
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
+        scheduleRetry(60000);
+        scheduleRetry(60000);
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
     }
