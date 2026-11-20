@@ -450,8 +450,12 @@ function sinkProcess_(spec, req, who, now, nowMs) {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
     timing_('write', Date.now() - tWrite);
+    // 15 Nov 2026 (print job, Addendum 2): a new item's QR code in the same save, when the owner's qr.on_add rule says yes.
+    // Only a first row: a correction row (corrects_id) is the same item and keeps its code.
+    var qr = spec.qrKind && req.action === 'add' && !row.corrects_id ? qrOnAdd_(spec.qrKind, rowId, spec.qrSub ? String(row[spec.qrSub] || '') : '', who, now) : null;
     var out = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };  // who: the tick on the item says who did it (Lisa: every save shows a tick)
     if (form) out.answers = form.answers.length;
+    if (qr) out.qr = qr.qr;
     return out;
   }
 

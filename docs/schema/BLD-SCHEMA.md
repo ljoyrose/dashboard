@@ -476,6 +476,20 @@ Result: the live rows already say what Lisa said. **No rows to add or end.** A d
 
 From print Addendum 3 (J3, running in the PR-watch cloud session): adding a subject, area or item makes its qr_tag row at once. qr_tag is LIVE (id, tenant_id, tag, kind, ref_id, active, made_at, made_by); TABLE_ON_qr_tag is OFF. Rule rows: `qr.on_add.<kind>` (yes/no, owner setting, starting default yes) and `qr.tag_length` (starting 10). Seeds: one qr_tag row per existing subject, area and item, made once on switch-on. **No PR has done this yet (searched 15 Nov 06:35 UK);** J3's PR is to be referenced here when it lands.
 
+Added 20 Nov 2026 (print-any-item job, code only, saving OFF):
+- **Rule rows**:
+  - `qr.on_add.<kind>`: yes/no, for kind = subject, area, litter, site, thermometer or item.
+  - `qr.on_add.item.<kind_key>`: one item type; beats `qr.on_add.item`.
+
+  These are dated like every rule; the newest row in force wins, and no row = no code. No new column.
+- **Code**:
+  - `cdhub-write/apps-script/QrTag.gs` `qrOnAdd_` writes one qr_tag row in the same save as `subject_create`, `items` (a first row only, not a `corrects_id` row) and `thermometer`. It reuses an active tag and never writes a second one.
+  - The same rule is in `cdhub/staff/lib/qr-rules.js`, used by the print page and the back-fill tool. A test checks both agree.
+- **Seed rows**: yes for subject, area, litter, site and thermometer, in `cdhub-write/docs/AA_CDHUB-PRINT-CARD_2026-11-20-1234__CLAUDE-CODE.md`. Not pasted into any live sheet: live seeding needs Lisa's yes.
+- **Back-fill**: `cdhub-write/tools/backfill-qr-tags.js` is dry-run by default and prints counts only. It writes new rows only to a new file, and running it again adds 0.
+- **Item card fields**: `print.fields.item(.<kind_key>)` = column names joined by `|`, and `print.label.<column>` = a printed label.
+- **Tag length**: stays 8 characters, as every live tag is; `qr.tag_length` is not read yet.
+
 ### 20.5 Tables live but missing from or stale in this master (read 15 Nov 2026)
 
 | Table | Status | Live columns (header row) | Note |
