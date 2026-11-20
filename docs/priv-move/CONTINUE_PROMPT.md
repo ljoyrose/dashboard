@@ -1,15 +1,13 @@
-# Continue prompt: JOB PRIV-MOVE 2 (Dashboard private move prep, part 2)
+# Continue prompt: Dashboard private move, after Lisa's choices
 
-Paste the standing PRIV-MOVE job brief (same rules: public repo = code only, privacy guard before every commit, no merges,
-no visibility switch, no history rewrite, slips to 00 AI Commons > CHANGES), then:
+Paste the standing PRIV-MOVE job brief (public repo = code only, privacy guard before every commit, no merges, no
+visibility switch, no history rewrite, slips to 00 AI Commons > CHANGES), then:
 
-1. Read `docs/priv-move/HANDOVER.md` and `docs/priv-move/RUN-PROGRESS.md` on branch `claude/sweet-johnson-13bvh1`.
-2. Check the two open PRs from part 1 are still green on their head commits. Do not merge them.
-3. Build section A (CI minutes trim) on a new branch from main. Workflow PR: open, do not merge. Put the measured
-   before/after minutes in the PR.
-4. Build section B (A1 Dockerfile + disabled deploy workflow, A2 notes) on a new branch from main.
-5. Page through the rest of the Drive search for the github.io address and add the rows to the link list on Drive.
-6. Slips continue the numbering `AA_DASH-PRIVATE-MOVE_2026-11-12-2015_<NN>.md` from the last one in CHANGES.
+1. Read `docs/priv-move/HANDOVER.md` and `RUN-PROGRESS.md`. Check PRs 497, 729 and 730: merged, or still green on their heads.
+2. Read Lisa's replies to the decision pack (HOST, CI, CONFIG, LOADER, OPEN, OWNER, PREVIEWS) in CHANGES.
+3. Build only what those replies unlock: the private-repo CI cut (HANDOVER section A), then the "before any host switch"
+   items (section B), then the later PRs (section C).
+4. Slips continue the numbering `AA_DASH-PRIVATE-MOVE_2026-11-12-2015_<NN>.md` from the last one in CHANGES.
 
-To run the browser suite in a cloud session, use `bash tools/ci-local/run-all.sh` (it points Playwright at the installed
-Chromium). A full mocked + phone run takes about 40 minutes on 4 workers; edit nothing under the repo while it runs.
+Browser suite in a cloud session: `bash tools/ci-local/run-all.sh`. A full run takes about 40 minutes on 4 workers; edit
+nothing under the repo while it runs. Docker can be started in a cloud session with `dockerd` for container checks.

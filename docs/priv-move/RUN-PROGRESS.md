@@ -6,9 +6,9 @@ Drive (00 AI Commons > CHANGES), never here. Nothing has been switched: no visib
 | # | Stage | State | Where |
 |---|---|---|---|
 | 1 | Runtime config loader (dry run) | Built, tests green locally, PR open for Lisa | branch `claude/sweet-johnson-13bvh1` |
-| 2 | CI minutes trim | Measured only. Not built: handed to PRIV-MOVE 2 | numbers and design in HANDOVER.md |
-| 3 | Privacy guard fixture rule | Built, self-test 38 of 38, PR 495 open for Lisa | branch `claude/priv-move-guard-fixtures` |
-| 4 | Host prototypes (A1 Dockerfile + workflow, A2 notes) | Not started: handed to PRIV-MOVE 2 | HANDOVER.md |
+| 2 | CI minutes trim | First cut built, PR 730 open for Lisa (about 17% fewer minutes). The private-repo cut waits on Lisa's CI choice | branch `claude/priv-move-ci-trim` |
+| 3 | Privacy guard fixture rule | MERGED by Lisa, 20 Nov 2026 (PR 495) | main |
+| 4 | Host prototypes (A1 Dockerfile + workflow, A2 notes) | Built, switched off, PR 729 open for Lisa. Container built and checked locally | branch `claude/priv-move-host-prototypes` |
 | 5 | Link inventory | Done (repo: 13 mentions in 8 files, none in shipped page code; Drive: first 100 files listed) | Drive: `AA_DASH-PRIVATE-MOVE-LINKS_2026-11-12.csv` |
 | 6 | Fresh scan, counts and types only | Done | Drive: `AA_PRIV-SCAN_2026-11-12_01.md`, `_02.md` |
 | 7 | Decision pack | Done | Drive: `AA_DASH-PRIVATE-MOVE-DECISION-PACK_2026-11-12.md` |
