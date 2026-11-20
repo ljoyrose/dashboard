@@ -311,9 +311,16 @@ async function crawl(site) {
     if (!ok) { await capped(site.open(route), OPEN_MS, 'opening ' + route); await settle(); } else await settle(30);
     cold = false;
     for (const step of steps) {
-      const got = await ask(([sig, k]) => window.__cc.prep(sig, k), [step.sig, step.k], 'finding a control');
-      if (!got.c) return false;
-      try { await act(got.c); } catch (e) { return false; }
+      // A fresh page may draw the screen once more after it has gone quiet (late photos, late tables), and the marks the walk
+      // put on the controls go with the old drawing. So: find the control, tap it, and if it has gone, find it again.
+      let ok2 = false, why = '';
+      for (let tries = 0; tries < 4 && !ok2; tries++) {
+        const got = await ask(([sig, k]) => window.__cc.prep(sig, k), [step.sig, step.k], 'finding a control');
+        if (!got.c) { why = 'not on ' + got.st.key; await page.waitForTimeout(250); await settle(150); continue; }
+        try { await capped(page.locator('[data-cc="' + got.c.i + '"]').click({ timeout: 1500, trial: got.c.kind !== 'row' && !got.c.off && !/^(select|input:)/.test(got.c.kind) }), 3000, 'trial tap'); await act(got.c); ok2 = true; }
+        catch (e) { why = String(e.message || e).split('\n')[0].slice(0, 160); await settle(150); }
+      }
+      if (!ok2) { if (process.env.CRAWL_DEBUG) log('  step failed: ' + step.sig + ' ¦ ' + step.k + ' · ' + why); return false; }
       await settle();
     }
     return true;
