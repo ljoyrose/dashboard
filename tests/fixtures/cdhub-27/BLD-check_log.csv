@@ -1,0 +1,15 @@
+id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded
+cl-01,ten-sample,ct-1,,sub-a01,,,done,2026-02-20T10:00:00Z,,2026-02-20T10:00:00Z,sample staff,,,typed
+cl-02,ten-sample,ct-1,,sub-a02,,,done,2026-02-20T10:00:00Z,,2026-02-20T10:00:00Z,sample staff,,,typed
+cl-03,ten-sample,ct-1,,sub-a03,,,done,2026-02-20T10:00:00Z,,2026-02-20T10:00:00Z,sample staff,,,typed
+cl-04,ten-sample,ct-1,,sub-a04,,,done,2026-02-20T10:00:00Z,,2026-02-20T10:00:00Z,sample staff,,,typed
+cl-05,ten-sample,ct-1,,sub-a05,,,done,2026-02-20T10:00:00Z,,2026-02-20T10:00:00Z,sample staff,,,typed
+cl-06,ten-sample,ct-2,ar-1,,,,done,2026-03-09T09:00:00Z,,2026-03-09T09:00:00Z,sample staff,,,typed
+cl-07,ten-sample,ct-2,ar-2,,,,done,2026-03-09T09:00:00Z,,2026-03-09T09:00:00Z,sample staff,,,typed
+cl-08,ten-sample,ct-2,ar-3,,,,done,2026-03-09T09:00:00Z,,2026-03-09T09:00:00Z,sample staff,,,typed
+cl-09,ten-sample,ct-2,ar-4,,,,done,2026-03-09T09:00:00Z,,2026-03-09T09:00:00Z,sample staff,,,typed
+cl-10,ten-sample,ct-2,ar-5,,,,done,2026-03-09T09:00:00Z,,2026-03-09T09:00:00Z,sample staff,,,typed
+cl-11,ten-sample,ct-2,ar-6,,,,done,2026-03-09T09:00:00Z,,2026-03-09T09:00:00Z,sample staff,,,typed
+cl-12,ten-sample,ct-2,ar-1,,,,done,2026-03-10T08:30:00Z,,2026-03-10T08:30:00Z,sample staff,,,typed
+cl-13,ten-sample,ct-2,ar-2,,,,done,2026-03-10T08:30:00Z,,2026-03-10T08:30:00Z,sample staff,,,typed
+cl-14,ten-sample,ct-3,,,,,done,2026-03-09T09:30:00Z,,2026-03-09T09:30:00Z,sample staff,,,typed

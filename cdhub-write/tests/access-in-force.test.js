@@ -29,3 +29,12 @@ test('the last counting row still wins, and an undated row (just saved) counts',
   assert.equal(C.accessOf(r, 'a1', '2026-11-18'), 'limited');
   assert.equal(C.accessOf(r, 'a2'), '');
 });
+
+test('accessOn (dated flap per day) never counts a voided row, with or without a date', function () {
+  var rows = [
+    { area_id: 'a1', access_type: 'free', from_date: '2026-11-10' },
+    { area_id: 'a1', access_type: 'limited', from_date: '2026-11-12', to_date: '2026-11-11' }
+  ];
+  assert.equal(C.accessOn(rows, 'a1', '2026-11-18'), 'free');
+  assert.equal(C.accessOn(rows, 'a1', ''), 'free');
+});

@@ -1,0 +1,9 @@
+id,tenant_id,code,grouping,group_sort,area_value,area_unit_id,m2_confirmed,m2_note,use,source
+ar-1,ten-sample,Room 1,Block A,1,12,u-m2,yes,,Housing,invented
+ar-2,ten-sample,Room 2,Block A,1,12,u-m2,yes,,Housing,invented
+ar-3,ten-sample,Room 3,Block A,1,10,u-m2,yes,,Housing,invented
+ar-4,ten-sample,Room 4,Block B,2,10,u-m2,no,not measured yet,Housing,invented
+ar-5,ten-sample,Room 5,Block B,2,8,u-m2,yes,,Whelping,invented
+ar-6,ten-sample,Room 6,Block B,2,8,u-m2,yes,,Whelping,invented
+ar-7,ten-sample,Field 1,Fields,9,0,u-m2,yes,,Fields,invented
+ar-8,ten-sample,Room 8,Block B,2,6,u-m2,yes,,Housing,invented
