@@ -965,6 +965,32 @@ test('saves still waiting are counted until each is answered', async () => {
   assert.equal(s.sending(), 0);
 });
 
+// OV12 20 Nov 2026: a round of saves all said "Saving..." for minutes. Each save is told how many are ahead of it,
+// again as that changes, and 0 when it is actually sent.
+test('each save is told its place in the line: 2 ahead, 1 ahead, then 0 when sent', async () => {
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    await new Promise((r) => setTimeout(r, 15));
+    return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: null, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const seen = { a: [], b: [], c: [] };
+  const rs = await Promise.all(['a', 'b', 'c'].map((id) => s.act('link_end', { id }, undefined, (n) => seen[id].push(n))));
+  assert.deepEqual(rs.map((r) => r.ok), [true, true, true]);
+  assert.deepEqual(seen, { a: [0], b: [1, 0], c: [2, 1, 0] });
+});
+
+test('submit passes its place in the line too, and a screen error in onTurn never stops the save', async () => {
+  const srv = fakeServer();
+  const s = mk(srv, { scriptUrl: GOOD_URL });
+  await s.checkStatus(); s.setLookups({ area: [{ id: 'area-t1' }] }); s.setCode('SECRETCODE1');
+  const told = [];
+  const r = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24.1' }, { onTurn: (n) => { told.push(n); throw new Error('screen bug'); } });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(told, [0]);
+});
+
 // Lisa 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
 // sent again after a pause, up to 3 times; only then is the person told.
 test('BUSY (someone else saving) is retried with the same request id and then saves', async () => {

@@ -82,6 +82,9 @@
     if (target.litter_id) return t === 'litter';
     if (perDogSite(job) && target.dogs) return dogsFor(job, target).length > 0;
     if (target.subject_id) return (t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea))) && inGroups(job, target.groups);
+    /* a room job saved per dog needs a dog there: with roomDogIds given and none in the room, it is not due (Lisa 20 Nov 2026:
+       isolation checks only when someone is in there) */
+    if (target.area_id && perDogRoom(job) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
     if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
   }
@@ -119,6 +122,7 @@
   }
   /**
    * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
+   * Room: add roomDogIds: [dog ids in the room] so a room job saved per dog is due only with a dog there, and counted per dog.
    * Add dogs: [{id, area_id}] (the dogs on site here) to show a whole-site job about dogs on a dog or room too, done once each of those dogs has a line.
    * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
@@ -128,7 +132,7 @@
    */
   /**
    * Times a day a daily job must be done (owner rule row job.times_per_day.<type_key>, else job.times_per_day; the row in
-   * force on that day, newest effective_from wins). No row = 1. Only a job due every day uses it (Isolation checks: 2).
+   * force on that day, newest effective_from wins). No row = 1. Only a job due every day uses it (Isolation checks: 3).
    */
   function timesPerDay(rules, typeKey, day) {
     function pick(k) {
@@ -142,7 +146,7 @@
   }
   /* opts.rules: the owner's rule rows (optional), for times_per_day */
   function forTarget(types, logs, target, today, visits, opts) {
-    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], todayCount = {};
+    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
@@ -160,7 +164,13 @@
         return;
       }
       if (!sameTarget(log, target, version)) return;
-      if (date === today) todayCount[version.type_key] = (todayCount[version.type_key] || 0) + 1;
+      if (date === today) {
+        todayCount[version.type_key] = (todayCount[version.type_key] || 0) + 1;
+        if (perDogRoom(version) && !target.subject_id && log.subject_id) {   // a room tap writes a line per dog: count times per dog
+          var c = dogToday[version.type_key] = dogToday[version.type_key] || {};
+          c[log.subject_id] = (c[log.subject_id] || 0) + 1;
+        }
+      }
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
@@ -174,6 +184,11 @@
       var every = everyDays(j.every_days), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
       var times = every === 1 ? timesPerDay(rules, j.type_key, today) : 1, doneToday = todayCount[j.type_key] || 0;
+      if (perDogRoom(j) && target.area_id && !target.subject_id && dogToday[j.type_key]) {
+        /* a room job saved per dog: done as many times as its least-checked dog here (the dogs in the room if given) */
+        var per = dogToday[j.type_key], ids = Array.isArray(target.roomDogIds) ? target.roomDogIds : Object.keys(per);
+        doneToday = ids.length ? Math.min.apply(null, ids.map(function (id) { return per[id] || 0; })) : 0;
+      }
       if (times > 1 && d && d.date === today && doneToday < times) status = 'today';   // done, but not yet as many times as today needs
       return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: every, last_done: d ? d.date : '',
         next_due: status === 'today' && times > 1 ? today : next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '',

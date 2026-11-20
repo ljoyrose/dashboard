@@ -65,7 +65,8 @@ test.describe('Money Hub: sign-in (mocked) and the Lisa gate', () => {
       await expect(page.locator('#view')).not.toContainText('£');
       await expect(page.locator('#view')).not.toContainText('TESTCO');
       // after the account check the page must not go on to read any CSV
-      const csvReads = guard.world.calls.filter((c) => c.path === '/files' && /name = |trashed = false and \(name/.test(c.query));
+      // (the one site-wide look for the private settings file is not a figures read; it is covered in private-config.spec.js)
+      const csvReads = guard.world.calls.filter((c) => c.path === '/files' && /name = |trashed = false and \(name/.test(c.query) && !c.query.includes("'DASH_CONFIG.json'"));
       expect(csvReads).toEqual([]);
     });
   });

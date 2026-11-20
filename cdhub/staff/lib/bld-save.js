@@ -152,12 +152,24 @@
     // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
     // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
     // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
-    var saveTurn = Promise.resolve(), sending = 0;
-    function oneAtATime(send) {
+    // 20 Nov 2026 (OV12: a round of saves all said "Saving..." for minutes): each save can be told its place in the
+    // line. onTurn(n) is called with n = how many saves are ahead of it on this device, again whenever that changes,
+    // and with 0 when it is actually being sent. Screens show "Waiting, n ahead" until 0, then "Saving...".
+    var saveTurn = Promise.resolve(), sending = 0, line = [];
+    function tellLine() {
+      line.forEach(function (e, i) {
+        if (e.onTurn && e.told !== i) { e.told = i; try { e.onTurn(i); } catch (x) { /* a screen's own error never stops a save */ } }
+      });
+    }
+    function oneAtATime(send, onTurn) {
       sending++;
+      var me = { onTurn: typeof onTurn === 'function' ? onTurn : null, told: -1 };
+      line.push(me);
+      tellLine();
       var p = saveTurn.then(send, send);
       saveTurn = p.then(function () {}, function () {});
-      p.then(function () { sending--; }, function () { sending--; });
+      var done = function () { sending--; var i = line.indexOf(me); if (i >= 0) line.splice(i, 1); tellLine(); };
+      p.then(done, done);
       return p;
     }
     // Leaving the page while saves are still waiting their turn would drop them (OV12 16 Nov 2026): the browser asks
@@ -311,7 +323,7 @@
         method: 'POST', redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
         body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }, o.onTurn).then(function (j) {
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
@@ -334,14 +346,14 @@
      * Send one named save that is not a table row (e.g. link_add, link_end). Same code, same no-double-save reference.
      * Resolves (never rejects): {ok:true, ...result, message:'Saved.'} or {ok:false, code, message, fields}.
      */
-    function act(action, fields, requestId) {
+    function act(action, fields, requestId, onTurn) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       var body = withGoogle({ v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} });
       return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }); }); }).then(function (j) {
+      })).then(function (r) { return r.json(); }); }); }, onTurn).then(function (j) {
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
