@@ -182,6 +182,8 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
 .rep-ctl label{font-size:var(--fs-small);color:var(--muted)}
 .rep-ctl select{min-height:40px;max-width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);color:var(--ink);font:inherit;padding:0 8px}
 .rep-ctl .btn{min-height:40px}
+.rep-say{flex-basis:100%;margin:0;font-size:var(--fs-small);color:var(--muted)}
+.rep-say:empty{display:none}
 .rep-h{font-size:var(--fs-head);margin:0 0 4px}
 .rep-why,.rep-sum{font-size:var(--fs-small);color:var(--muted);margin:0 0 8px}
 .rep-all{color:var(--ink);font-weight:600}
@@ -904,7 +906,8 @@ function buildReport(){
   var title='Room temperatures · '+MONTHS[m]+' '+y+' · '+(REP.u==='all'?'All rooms':unitName(REP.u));
   return '<div class="rep-ctl"><label for="repMonth">Month</label><select id="repMonth" onchange="repSet(this.value,null)">'+mopts+'</select>'
     +'<label for="repUnit">Rooms</label><select id="repUnit" onchange="repSet(null,this.value)">'+uopts+'</select>'
-    +'<button type="button" class="btn" id="repPdf" onclick="repPrint()">Save as PDF</button></div>'
+    +'<button type="button" class="btn" id="repPdf" onclick="repPrint()">Save as PDF</button>'
+    +'<p class="rep-say" id="repSay" role="status" aria-live="polite"></p></div>'
     +'<div class="rep-out" id="repOut"><h2 class="rep-h">'+esc(title)+'</h2>'
     +'<p class="rep-why">Each reading is judged by the limit rows in force that day. On a day a room held puppies under four weeks, the room is judged on the adult row and the bed spot on the puppy row.</p>'
     +(list.length?'<p class="rep-sum rep-all">'+list.length+(list.length===1?' room':' rooms')+' · '+t.read+' readings · '+t.out+' outside the limit · '+t.warm+' cooling actions · '+t.miss+' missed</p>'
@@ -921,6 +924,7 @@ function repSet(month,unit){
 function repPrint(){
   var old=document.title;
   document.title='Room temperatures '+MONTHS[REP.m]+' '+REP.y+' '+(REP.u==='all'?'all rooms':unitName(REP.u));
+  var say=el('repSay'); if(say) say.textContent='The print window is open: choose Save as PDF as the printer.';
   document.body.classList.add('print-report');
   var done=function(){ document.body.classList.remove('print-report'); document.title=old; window.removeEventListener('afterprint',done); };
   window.addEventListener('afterprint',done);

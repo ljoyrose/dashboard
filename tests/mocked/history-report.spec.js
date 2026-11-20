@@ -86,6 +86,7 @@ test('report: Save as PDF prints only the report, named for the month; the page 
   await page.getByRole('button', { name: 'Save as PDF' }).click();
   const printed = await page.evaluate(() => window.__printed);
   expect(printed).toEqual([{ title: 'Room temperatures Nov 2025 all rooms', cls: expect.stringContaining('print-report') }]);
+  await expect(page.locator('#repSay')).toHaveText('The print window is open: choose Save as PDF as the printer.');
   // In print, only the report shows: no header, tabs, year buttons, month picker or bottom tabs.
   await page.evaluate(() => document.body.classList.add('print-report'));
   await page.emulateMedia({ media: 'print' });
