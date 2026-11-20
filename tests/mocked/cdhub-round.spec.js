@@ -26,8 +26,14 @@ async function round(page, opts) {
   return { script, errors };
 }
 const openRoom = async (page, name) => { await card(page, name).click(); await expect(page.getByRole('heading', { name })).toBeVisible(); };
+// 20 Nov 2026: the MAX and MIN boxes are open at once (main, "Temps demo"). An older page showed a "Type it" button first.
+const typeIt = async (page) => {
+  const b = page.getByRole('button', { name: 'Type it' });
+  await page.getByLabel('MAX').or(b).first().waitFor();
+  if (await b.count()) await b.click();
+};
 const typeReading = async (page, max, min) => {
-  await page.getByRole('button', { name: 'Type it' }).click();
+  await typeIt(page);
   await page.getByLabel('MAX').fill(max);
   await page.getByLabel('MIN').fill(min);
 };
@@ -161,7 +167,7 @@ test.describe('The Round: recording a reading', () => {
   test('wrong typing is stopped before anything is sent: two decimals, lowest above highest, nothing typed', async ({ page }) => {
     const { script } = await round(page);
     await openRoom(page, 'Room 5');
-    await page.getByRole('button', { name: 'Type it' }).click();
+    await typeIt(page);
     await save(page).click();
     await expect(page.locator('#screen .msg').last()).toHaveText('Type MAX and MIN, one decimal place.');
     await page.getByLabel('MAX').fill('18.55');
@@ -311,7 +317,7 @@ test.describe('The Round: scan and move', () => {
     await expect(free).toHaveAttribute('aria-pressed', 'true');           // not changed: the save did not land
     script.mode.save = 'ok';
     await limited.click();
-    await expect(page.locator('#screen .msg').first()).toHaveText('Flap saved as limited.');
+    await expect(page.locator('#screen .msg').first()).toHaveText(/^Flap saved as limited\.( ✓ .*)?$/);
     await expect(limited).toHaveAttribute('aria-pressed', 'true');        // the lit button follows the save that landed
     await expect(free).toHaveAttribute('aria-pressed', 'false');
     expect(script.sent[script.sent.length - 1]).toMatchObject({ table: 'area_access', fields: { area_id: 'ar-2', access_type: 'limited' } });
@@ -340,7 +346,7 @@ test.describe('The Round: scan and move', () => {
     script.mode.save = 'ok';
     await scan(page, 'ROOMAAAB');
     await scan(page, 'DOGAAAAD');
-    await expect(page.locator('#screen .msg.good').first()).toHaveText('Dog A04: moved.');
+    await expect(page.locator('#screen .msg.good').first()).toHaveText(/^Dog A04: moved\.( ✓ .*)?$/);
     expect(script.sent[script.sent.length - 1]).toMatchObject({ table: 'occupancy', fields: { subject_id: 'sub-a04', area_id: 'ar-2' } });
     await scan(page, 'ROOMAAAB');                                          // the room again, then the same card: it is not moved twice
     await expect(page.locator('.cards .card .nm')).toHaveText(['Dog A05', 'Dog A06', 'Dog A04']);
@@ -353,7 +359,7 @@ test.describe('The Round: scan and move', () => {
     await expect(page.getByText('Choose why.')).toBeVisible();
     await page.getByLabel('Why is this dog leaving').selectOption('temporary');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.locator('details .msg')).toHaveText('Saved.');
+    await expect(page.locator('details .msg')).toHaveText(/^(Saved\.|✓ .+)$/);   // since 20 Nov 2026 a save says who and when ("✓ 09:30") in place of "Saved."
     // Finished this room ends the filling and goes Home
     await page.goto('cdhub/staff/#scan');
     await expect(page.getByRole('heading', { name: 'Filling Room 2' })).toBeVisible();
@@ -375,7 +381,7 @@ test.describe('The Round: scan and move', () => {
     expect(script.sent).toHaveLength(0);                                   // and nothing without a reason
     await page.locator('#screen input[type="text"], #screen textarea').first().fill('Sample reason: short stay while a room is cleaned');
     await page.getByRole('button', { name: 'Save with this reason' }).click();
-    await expect(page.locator('#screen .msg.good').first()).toHaveText('Dog A10: moved.');
+    await expect(page.locator('#screen .msg.good').first()).toHaveText(/^Dog A10: moved\.( ✓ .*)?$/);
     expect(script.sent[0]).toMatchObject({ table: 'occupancy', fields: { subject_id: 'sub-a10', area_id: 'ar-1', classification_note: 'Sample reason: short stay while a room is cleaned' } });
   });
 
