@@ -459,7 +459,7 @@
     var list = h('div'), msg = say('');
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Earlier reading' }));
-    host.appendChild(h('p', { class: 'sub', text: 'A reading for a past morning or afternoon: from paper, a photo or an app.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'A reading for a past morning or afternoon: from paper, a photo or an app.' }));
     host.appendChild(h('div', { class: 'tg-row' }, [day, half]));
     host.appendChild(msg); host.appendChild(list);
     day.addEventListener('change', show); half.addEventListener('change', show);
@@ -591,7 +591,7 @@
   function importer(host, c, areas) {
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Sensor back-up import' }));
-    host.appendChild(h('p', { class: 'sub', text: 'Govee CSV export. Kept as back-up beside the thermometer readings, never instead of them. One row per day: lowest and highest.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Govee CSV export. Kept as back-up beside the thermometer readings, never instead of them. One row per day: lowest and highest.' }));
     // One choice per room (no thermometer list): a sensor row is saved against the room, so the value must be a room id.
     // (It named a thermometer list this function is not given, and the screen stopped at its title.)
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, []).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
@@ -651,7 +651,7 @@
   function report(host, c, areas, bands, thermos, links) {
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Report' }));
-    host.appendChild(h('p', { class: 'sub', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (o) { return h('option', { value: o.value, text: o.text }); })));
     var y = Number(londonParts().date.slice(0, 4)), year = h('select', { class: 'inp', 'aria-label': 'Year' }, [y, y - 1, y - 2].map(function (v) { return h('option', { value: String(v), text: String(v) }); }));
     var msg = say(''), out = h('div', { class: 'tg-report' });
