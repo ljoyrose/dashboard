@@ -72,6 +72,7 @@
       }
       ctx0.reportFor = target.litter_id ? {} : { subject_id: target.subject_id, area_id: target.area_id };
       var roomDogs = target.area_id ? d.dogs.filter(function (x) { return x.areaId === target.area_id && !x.away; }) : [];
+      if (target.area_id && !target.subject_id) target.roomDogIds = roomDogs.map(function (x) { return x.id; });
       /* the dogs here, for a whole-site job about dogs (health check): each dog as they go, or all at once */
       var labelOf = {};
       if (!target.litter_id) {
