@@ -28,6 +28,14 @@ Drive (00 AI Commons > CHANGES), never here. Nothing has been switched: no visib
   and 3 above (fixed, then re-run green). The other 4 are load-sensitive: 2 fail on untouched main under the same load
   (`fold.spec.js` home, `every-click.spec.js` bin), 2 passed on re-run (`cdhub-dog-photos`, `hub-main-others`).
 
+## 20 Nov 2026 update
+- Guard fixture rule (PR 495) was merged by Lisa on 20 Nov.
+- main was merged into this branch (813 commits newer). Three new staff Board tests on main failed with the loader: the
+  staff pages now load `config.js`, those tests save their own invented sign-in, and the pretend Drive answered the
+  loader's look with 401. Fixed in the shared test setup (`tests/support/test.js`): a settings look-up made with a
+  pretend token the pretend Drive does not know is answered "no such file", as real Drive would. No page code changed.
+- The "same as today" test now covers 13 pages (it finds pages by itself; the 3 staff pages were added on main).
+
 ## How the suite was run here
 The container's browser is older than the one `package.json` pins, so the suite ran through a wrapper config that points
 Playwright at the installed Chromium (same idea as `tools/ci-local/run-all.sh`). The repo's config is unchanged.
