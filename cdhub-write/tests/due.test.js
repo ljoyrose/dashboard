@@ -197,3 +197,57 @@ test('part done is never counted as done', () => {
   const logs = [{ id: 'p1', check_type_id: 'cty-bowls-1', outcome: 'part_done', note: 'x', taken_at: '2026-03-02T09:00:00Z' }];
   assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
 });
+
+test('round.* types are written by the Round itself and are never listed as jobs (15 Nov 2026)', () => {
+  const keys = D.jobsInForce(TYPES.concat([T('round.presence', 'dog', '')]), '2026-10-02').map((r) => r.type_key);
+  assert.ok(keys.includes('ears'));
+  assert.ok(!keys.includes('round.presence'));
+});
+
+test('an item test (target item) is never a job: it is due per item on the Items page', () => {
+  const types = [
+    { id: 'c1', type_key: 'run', label: 'run', target: 'area', every_days: 1, active: 'true', effective_from: '2026-01-01' },
+    { id: 'c2', type_key: 'pat_class_1', label: 'PAT Class I', target: 'item', item_kind: 'appliance_class_1', every_days: 365, active: 'true', effective_from: '2025-01-01' }
+  ];
+  assert.deepEqual(D.jobsInForce(types, '2026-03-02').map((r) => r.type_key), ['run']);
+});
+
+test('only_groups: a dog job belongs only to dogs in those groups on the day; blank = every dog; unknown groups = shown', () => {
+  const D = require('../records/due.js');
+  const job = { id: 'cty-ftb', type_key: 'ftb', label: 'Fit to breed', target: 'dog', every_days: '365', effective_from: '2026-01-01', only_groups: 'breeding' };
+  const links = [
+    { role: 'member_of', from_table: 'subject', from_id: 'd1', to_table: 'group', to_id: 'breeding', from_date: '2026-01-01', to_date: '' },
+    { role: 'member_of', from_table: 'subject', from_id: 'd2', to_table: 'group', to_id: 'breeding', from_date: '2025-01-01', to_date: '2026-02-01' },
+    { role: 'bff', from_table: 'subject', from_id: 'd3', to_table: 'group', to_id: 'breeding', from_date: '2026-01-01', to_date: '' },
+  ];
+  const day = '2026-03-02';
+  assert.deepEqual(D.groupsOf(links, 'd1', day), ['breeding']);
+  assert.deepEqual(D.groupsOf(links, 'd2', day), []);   // left the group 1 Feb 2026
+  assert.deepEqual(D.groupsOf(links, 'd2', '2026-01-15'), ['breeding']);   // the past is judged by the row then
+  assert.deepEqual(D.groupsOf(links, 'd3', day), []);   // another kind of link
+  const n = (sid) => D.forTarget([job], [], { subject_id: sid, groups: D.groupsOf(links, sid, day) }, day).length;
+  assert.equal(n('d1'), 1);
+  assert.equal(n('d2'), 0);
+  assert.equal(D.forTarget([job], [], { subject_id: 'd2' }, day).length, 1);   // caller did not say: shown
+  assert.equal(D.forTarget([Object.assign({}, job, { only_groups: '' })], [], { subject_id: 'd2', groups: [] }, day).length, 1);
+});
+
+test('times a day: an owner row makes a daily job stay due until done that many times today; no row = once', () => {
+  const room = { area_id: 'iso' };
+  const types = [T('iso_check', 'area', '1'), T('clean', 'area', '1')];
+  const A = (key, at) => ({ id: 'x' + (++n), check_type_id: 'cty-' + key + '-1', area_id: 'iso', outcome: 'ok', happened_at: at, taken_at: at });
+  const R = (k, v, from, to) => ({ rule_key: k, value: v, effective_from: from, to_date: to || '', source: 'test' });
+  const rules = [R('job.times_per_day.iso_check', '2', '2026-01-01')];
+  const once = [A('iso_check', '2026-10-02T08:00:00Z'), A('clean', '2026-10-02T08:00:00Z')];
+  let r = D.forTarget(types, once, room, '2026-10-02', null, { rules });
+  const iso = r.find((j) => j.type_key === 'iso_check'), clean = r.find((j) => j.type_key === 'clean');
+  assert.equal(iso.status, 'today'); assert.equal(iso.done_today, 1); assert.equal(iso.times_per_day, 2);
+  assert.equal(clean.status, 'ok'); assert.equal(clean.times_per_day, 1);
+  r = D.forTarget(types, once.concat([A('iso_check', '2026-10-02T18:00:00Z')]), room, '2026-10-02', null, { rules });
+  assert.equal(r.find((j) => j.type_key === 'iso_check').status, 'ok');
+  // no rules given: once a day, as before
+  assert.equal(D.forTarget(types, once, room, '2026-10-02').find((j) => j.type_key === 'iso_check').status, 'ok');
+  // the row in force on the day: an ended row no longer counts
+  assert.equal(D.timesPerDay([R('job.times_per_day.iso_check', '2', '2026-01-01', '2026-06-30')], 'iso_check', '2026-10-02'), 1);
+  assert.equal(D.timesPerDay([R('job.times_per_day', '3', '2026-01-01')], 'iso_check', '2026-10-02'), 3);
+});

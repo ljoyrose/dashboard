@@ -8,8 +8,8 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const GUEST_HEADER = ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'];
-const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'];
-const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id'];
+const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind', 'only_groups'];
+const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'];
 
 const env0 = () => {
   const env = standardEnv({ props: { TABLE_ON_guest_reading: 'true', TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', READ_ENABLED: 'true' } });
@@ -219,6 +219,36 @@ test('occupancy_out: waits for approval, then is written to the occupancy file w
   assert.equal(rows[before].off_site_kind, 'sold');
   assert.equal(rows[before].area_id, '');
   assert.ok(rows[before].moved_in);
+});
+
+test('occupancy_out: a waiting move out is never applied by the automatic room-move step; only the owner approves it', () => {
+  const env = env1();
+  const before = recs(env, 'BLD-occupancy.csv').length;
+  const sold0 = recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length;
+  const out = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
+  assert.equal(out.result.status, 'queued');
+  assert.equal(env.ctx.applyWaitingOccupancyMoves_().applied, 0);
+  const sub = recs(env, 'BLD-subject.csv')[1].id;
+  const mv = recs(env, 'BLD-area.csv').map((a) => a.id).reduce((r, a) => (r && r.ok ? r : send(env, 'occupancy', { subject_id: sub, area_id: a })), null);   // a save also runs the step
+  assert.equal(mv.ok, true, JSON.stringify(mv));
+  assert.equal(recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length, sold0);
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before + 1);
+  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test');
+  assert.equal(recs(env, 'BLD-occupancy.csv').filter((r) => r.off_site_kind === 'sold').length, sold0 + 1);
+});
+
+test('approving a queued item obeys the switches: saving off or that list switched off writes nothing', () => {
+  const env = env1();
+  const out = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
+  const before = recs(env, 'BLD-occupancy.csv').length;
+  env.props.TABLE_ON_occupancy = ''; env.props.TABLE_ON_occupancy_out = '';
+  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test'), (e) => e.code === 'TABLE_OFF');
+  env.props.TABLE_ON_occupancy_out = 'true'; env.props.SAVE_ENABLED = '';
+  assert.throws(() => env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test'), (e) => e.code === 'SAVE_OFF');
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before);
+  env.props.SAVE_ENABLED = 'true';
+  env.ctx.sinkDecide_(out.result.pending_id, 'approve', '', 'owner@example.test');
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before + 1);
 });
 
 test('occupancy_out: a bad kind, a repeat tap and a dog already gone are refused', () => {

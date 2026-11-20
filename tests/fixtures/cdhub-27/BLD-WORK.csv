@@ -1,0 +1,6 @@
+id,area,item,status,owner,blocked_on,evidence,note
+W001,medicine,Identify the medicine given in February,BLOCKED,Lisa,the name on the packet,,
+W002,medicine,Check the medicine given to Dog A09 in March,BLOCKED,Lisa,,,
+W003,rooms,Confirm the floor area of Room 4,BLOCKED,Lisa,a tape measure reading,,sample note
+W004,records,Sample item waiting on the helper,OPEN,Claude,,,
+W005,records,Sample finished item,DONE,Claude,,sample evidence,

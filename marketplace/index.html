@@ -12,7 +12,7 @@
      RR_MKT-ENGINE Apps Script fills. A tap writes ONLY the 4 answer cells (G:J) of one row; the engine applies it after 10 minutes. -->
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="manifest" href="../manifest.webmanifest">
+<link rel="manifest" href="../manifest.webmanifest" crossorigin="use-credentials">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
@@ -231,10 +231,10 @@
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="Marketplace sections">
   <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n"></span></a>
-  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
-  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
-  <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span><span class="n" id="n-reply"></span></a>
-  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl"><span class="htl-long">New Stock</span><span class="htl-short">Stock</span></span><span class="n" id="n-newstock"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span> <span class="n" id="n-decide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span> <span class="n" id="n-do"></span></a>
+  <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span> <span class="n" id="n-reply"></span></a>
+  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl"><span class="htl-long">New Stock</span><span class="htl-short">Stock</span></span> <span class="n" id="n-newstock"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/insights" data-nav="insights" data-slot="3"><i class="ti ti-chart-bar" aria-hidden="true"></i><span class="htl">Insights</span></a>
@@ -467,8 +467,8 @@
   // one place to work from; never leave her guessing what a card is about).
   var MAIL = 'https://mail.google.com/mail/u/0/#all/';
   // Lisa 27 Oct: every card says when it was last updated (the engine's updated_at when it refreshed the card, else when it was made).
-  function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>'; }
-  function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\bSept\b/, 'Sep')) + '</div>'; }
+  function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\bSept\b/, 'Sep'); }
   // v11.10 Fix 6: ONE source for the post step words, used by the card, the band and packing mode.
   var STEP = { find: 'Find it', found: 'Found ✓', buy: 'Buy postage on the eBay order', label: 'Print the label from the email', qr: 'Show the QR at the drop-off', pack: 'Pack it, write the parcel number on it, post it, tap Posted' };
   function postSteps(d) {
@@ -486,6 +486,19 @@
     var oid = String(d.order_id || r.key.split('|')[2] || ''), tag = String(d.buyer_tag || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 3), n = sameItemNo(r);
     return '<div class="m ordl">' + esc([oid && !/^vt-/.test(oid) ? 'Order ' + oid : '', tag ? 'buyer ' + tag + '…' : '', d.sold_at ? 'sold ' + ukDay(d.sold_at) : '', d.qty > 1 ? 'qty ' + d.qty : ''].filter(Boolean).join(' · ')) +
       (n ? ' <b class="date">' + esc(n) + '</b>' : '') + '</div>';
+  }
+  // Refund cards (CHK|refund|<order_id>): the order number links to the order; sale date in UK words, never a raw ISO date.
+  var REFUND_OPTIONS = ['Item not received', 'Wrong item', 'Damaged', 'Not as described', 'Buyer changed mind', 'Other'];
+  function refundUrls(r, d) {
+    var oid = String(d.order_id || r.key.split('|')[2] || ''), eb = /ebay/i.test(d.platform || '');
+    return { oid: oid, order: safeUrl(d.order_url) || (eb && oid ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(oid) : ''),
+      listing: safeUrl(d.listing_url) || safeUrl(d.url) || (eb && /^\d+$/.test(String(d.item_id || '')) ? 'https://www.ebay.co.uk/itm/' + d.item_id : '') };
+  }
+  function refundLine(r, d) {
+    var u = refundUrls(r, d), sold = ukDay(d.sold_at || (/^\d{4}-\d\d-\d\d/.test(String(d.sold || '')) ? d.sold : '')), bits = [];
+    if (u.oid) bits.push('Order ' + (u.order ? '<a href="' + esc(u.order) + '" target="_blank" rel="noopener" data-order>' + esc(u.oid) + '</a>' : esc(u.oid)));
+    if (sold) bits.push('Sold ' + esc(sold));
+    return bits.length ? '<div class="m ordl">' + bits.join(' · ') + '</div>' : '';
   }
   function postGuide(r, d) {
     if (d.kind === 'fish') return fishGuide(d);
@@ -514,10 +527,11 @@
   }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
+    var isRefund = r.section === 'check' && d.kind === 'refund_reason';
     var nx = opts && opts.next;
     var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
-      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
+      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (isRefund ? refundLine(r, d) : d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
@@ -539,6 +553,12 @@
       if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
       else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
       acts.push('<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it off</button>'); }
+    else if (isRefund) {   // Refund card (12 Nov): what, how much, when, then the reason buttons. No reason is guessed as the main one.
+      var ru = refundUrls(r, d), ro = Array.isArray(d.options) && d.options.length ? d.options : REFUND_OPTIONS;
+      h += factsOf([['Refunded', d.refund_amount || d.amount || ''], ['Refund date', ukDay(d.refund_at)], ['Status', d.status || ''], ['Case', d.case_type || '']]) +
+        '<p class="what"><b>Next: ' + esc(d.next || 'Pick the reason to close this card.') + '</b></p>';
+      acts.push(linkBtn(ru.listing, 'Open listing'), linkBtn(ru.order, 'Open order on ' + (siteOf(r) || 'the site')));
+      ro.forEach(function (o) { acts.push(ansBtn(r, String(o), String(o), !!d.case_type && String(o).toLowerCase() === String(d.case_type).toLowerCase())); }); }
     else if (r.section === 'check' && !isPair && Array.isArray(d.options) && d.options.length) {   // v11.11: the engine names the answers (growth checks, rare item, ads test)
       acts.push(linkBtn(d.url, 'Open on ' + (d.platform || 'eBay'))); d.options.forEach(function (o, i) { acts.push(ansBtn(r, String(o), String(o), i === 0)); }); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo

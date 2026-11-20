@@ -101,6 +101,10 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
           else clean[name] = v;
         }
         break;
+      case 'number':   // any measured value (readings, 14 Nov 2026): no unit in the number, no range here (limits are rows)
+        if (!/^-?\d{1,9}(\.\d{1,6})?$/.test(v)) errors[name] = 'Type a number, e.g. 0.05 or 21.4.';
+        else clean[name] = v;
+        break;
       case 'count':
         if (!/^\d{1,3}$/.test(v)) errors[name] = 'Use a whole number from 0 to 999.';
         else clean[name] = String(parseInt(v, 10));
@@ -159,12 +163,17 @@ function rowValues_(columns, row) {
   return columns.map(function (c) { return row[c] === undefined ? '' : row[c]; });
 }
 
-/** Readable id: rdg-20261015-223107-k3f9 (London time) */
-function newId_(prefix, d) {
-  var stamp = Utilities.formatDate(d, BLD.TZ, 'yyyyMMdd-HHmmss');
-  var rnd = '', chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-  for (var i = 0; i < 4; i++) rnd += chars.charAt(Math.floor(Math.random() * chars.length));
-  return prefix + '-' + stamp + '-' + rnd;
+/**
+ * A new row's id: the table prefix and 8 random letters/digits, e.g. "sub-7k2q9xbm" (Lisa, 15 Nov 2026, Q4: every record
+ * has a permanent meaningless id; the name is a separate, editable column). Never built from a name or a date, so the id
+ * says nothing about the row and never needs to change. Existing ids are kept as they are. The second argument is
+ * ignored (it was the date). Random bytes from two UUIDs, skipping their fixed version and variant digits.
+ */
+function newId_(prefix) {
+  var chars = 'abcdefghjkmnpqrstuvwxyz23456789', raw = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var at = [0, 2, 4, 6, 8, 10, 20, 22], id = '';
+  for (var i = 0; i < at.length; i++) id += chars.charAt(parseInt(raw.substr(at[i], 2), 16) % chars.length);
+  return prefix + '-' + id;
 }
 
 function londonIso_(d) {
