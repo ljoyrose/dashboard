@@ -337,7 +337,7 @@ async function openWithKeys(page, guard, keys) {
 }
 
 for (const [from, keys] of Object.entries(OLD_SETUPS)) {
-  test(`a phone set up last week with only the old keys from ${from} still says on and saves with no code prompt @regression`, async ({ page, guard }) => {
+  test(`a phone set up last week with only the old keys from ${from} still says on and saves with no code prompt`, async ({ page, guard }) => {
     const sent = await openWithKeys(page, guard, keys);
     await panelIsOn(page);
     await page.locator('.racc').first().selectOption('limited');
@@ -359,7 +359,7 @@ test('an old "Switch off here" (cdhub.sink.off) is still honoured: saving stays 
   expect(sent).toHaveLength(0);
 });
 
-test('Switch off here writes only the new key cdhub.save.off; Use these clears it and the old one @regression', async ({ page, guard }) => {
+test('Switch off here writes only the new key cdhub.save.off; Use these clears it and the old one', async ({ page, guard }) => {
   await openWithKeys(page, guard, { 'cdhub.sink.code': CODE, 'cdhub.sink.url': SINK });
   await panelIsOn(page);
   await page.locator('#sinkoff').click();
@@ -397,7 +397,7 @@ test('BLD-save-webapp.json with optional set_at and set_by still gives the save 
 
 test.describe('one copy for both pages', () => {
   test.use({ allowedConsole: [/404/] });   // the staff page's optional module files may answer 404, as in its own specs
-  test('a phone set up on the staff page saves in CD Hub with no code prompt, and the hub reads the shared copy @regression', async ({ page, guard }) => {
+  test('a phone set up on the staff page saves in CD Hub with no code prompt, and the hub reads the shared copy', async ({ page, guard }) => {
     rooms(guard.world);
     const sent = [];
     const CORS = { 'access-control-allow-origin': '*' };
