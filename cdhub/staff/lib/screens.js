@@ -79,7 +79,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Room temperatures' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub help', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner.' }));
 
     var cards = el(doc, 'div', { class: 'bs-cards' });
     var header = mountHeader(doc, host, save, 'area_reading', refreshButtons);
@@ -187,7 +187,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Staff roster' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Add a member of staff to the roster. Owner only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub help', text: 'Add a member of staff to the roster. Owner only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
     var form = el(doc, 'div', { class: 'bs-card' });
     var header = mountHeader(doc, host, save, 'staff', refresh);
     host.appendChild(form);
@@ -253,7 +253,7 @@
     clear(host);
     host.classList.add('bs'); host.classList.add('bs-board');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Where is everyone?' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Tap Moved for any dog that moved. Then All the rest unmoved.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub help', text: 'Tap Moved for any dog that moved. Then All the rest unmoved.' }));
     var header = mountHeader(doc, host, save, 'occupancy', refreshButtons);
 
     var all = o.dogs || [], areas = o.areas || [];

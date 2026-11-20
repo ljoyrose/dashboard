@@ -5,6 +5,7 @@
   c.toggle('look-cool', o.bg === 'cool'); c.toggle('sel-soft', o.sel === 'soft');
   c.toggle('text-lg', o.text === 'lg'); c.toggle('text-xl', o.text === 'xl'); c.toggle('space-roomy', o.space === 'roomy');
   if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode);
+  c.toggle('show-help', o.help === 'on');   // Show help: off unless this person turns it on
 }());
 /* Print in the light look (13 Nov 2026): dark mode printed pale text on white paper. Light for the print only, then
    back. Same in ../index.html. */

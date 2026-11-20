@@ -93,7 +93,7 @@
           return flaps[mode] = h('button', { class: cur ? 'btn' : 'btn quiet', type: 'button', 'aria-pressed': String(cur), text: mode === 'free' ? 'Flap free' : 'Flap limited', onclick: function () {
             msg.className = 'msg'; msg.textContent = 'Saving...';
             c.save.submit('area_access', { area_id: areaId, access_type: mode }).then(function (res) {
-              if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '.';
+              if (res.ok) { access = access.concat([{ area_id: areaId, access_type: mode }]); msg.className = 'msg good'; msg.textContent = res.status === 'queued' ? res.message : 'Flap saved as ' + mode + '. ' + BLDDone.by(res);
                 if (res.status !== 'queued') Object.keys(flaps).forEach(function (m) { flaps[m].className = m === mode ? 'btn' : 'btn quiet'; flaps[m].setAttribute('aria-pressed', String(m === mode)); }); }
               else { msg.className = 'msg bad'; msg.textContent = res.message; }
             });
@@ -149,7 +149,7 @@
       function outcome(results) {
         results.forEach(function (x) {
           var res = x.res, ok = res.ok;
-          host.appendChild(say(ok ? labelOf(x.id) + (res.status === 'queued' ? ': sent for approval.' : ': moved.') : labelOf(x.id) + ': not saved. ' + res.message + (res.fields ? ' ' + Object.keys(res.fields).map(function (k) { return res.fields[k]; }).join(' ') : ''), ok ? 'good' : 'bad'));
+          host.appendChild(say(ok ? labelOf(x.id) + (res.status === 'queued' ? ': sent for approval.' : ': moved. ' + BLDDone.by(res)) : labelOf(x.id) + ': not saved. ' + res.message + (res.fields ? ' ' + Object.keys(res.fields).map(function (k) { return res.fields[k]; }).join(' ') : ''), ok ? 'good' : 'bad'));
         });
       }
 
@@ -172,7 +172,7 @@
             if (!why.value) { msg.className = 'msg bad'; msg.textContent = 'Choose why.'; return; }
             msg.className = 'msg'; msg.textContent = 'Saving...';
             c.save.submit('occupancy_out', { subject_id: id, off_site_kind: why.value }, { requestId: c.save.newRequestId() }).then(function (res) {
-              msg.className = 'msg ' + (res.ok ? 'good' : 'bad'); msg.textContent = res.ok ? (res.status === 'queued' ? res.message : 'Saved.') : res.message;
+              msg.className = 'msg ' + (res.ok ? 'good' : 'bad'); msg.textContent = res.ok ? (res.status === 'queued' ? res.message : BLDDone.by(res)) : res.message;
             });
           } }), msg]);
         return box;

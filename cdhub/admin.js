@@ -175,7 +175,7 @@ var AdminView = (function () {
       + '<p class="adm-key">' + icon('eye', 'adm-see') + ' sees ' + icon('dash', 'adm-hid') + ' hidden · tap a name or a mark</p>'
       + (live.length ? grid(live) : '<p class="mut">No rows yet.</p>') + see + why
       + (later.length ? '<details class="adm-later"><summary class="mut">Website people, later (' + later.length + ')</summary>' + grid(later) + '</details>' : '')
-      + '<p class="mut">From BLD-field_visibility, today. Add and change: set in the save script, not rows yet (coming).</p>'
+      + '<p class="mut help">From BLD-field_visibility, today. Add and change: set in the save script, not rows yet (coming).</p>'
       + '</details></section>';
   }
 
@@ -201,7 +201,7 @@ var AdminView = (function () {
         + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + '</p>'
         + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
         + '<p class="mut"><b>End</b> sets an end date. Nothing is deleted.</p>'
-        + '<p class="mut">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
+        + '<p class="mut help">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
     }
     if (id === 'phone') {
       var link = u ? qrBase(T, v.today) + '#setup=' + encodeURIComponent(u) : '', qr = '';
@@ -263,8 +263,8 @@ var AdminView = (function () {
     }
     if (id === 'print') {
       return '<p><a class="btn" href="' + v.esc(staffBase() + 'print/') + '">' + icon('print') + ' Open Print</a></p>'
-        + '<p class="mut">Room cards · dog cards · litter cards · set-up QRs. Needs an owner code on this device.</p>'
-        + '<p class="mut">QRs open <b>' + v.esc(qrHost) + '</b>, whichever address you print from.</p>';
+        + '<p class="mut help">Room cards · dog cards · litter cards · set-up QRs. Needs an owner code on this device.</p>'
+        + '<p class="mut help">QRs open <b>' + v.esc(qrHost) + '</b>, whichever address you print from.</p>';
     }
     if (id === 'rules') {
       var R = rows(T, 'BLD-breeding_rule.csv').filter(function (r) { return r.rule_key; }), by = {};
@@ -276,13 +276,13 @@ var AdminView = (function () {
         return '<li><b>' + v.esc(k) + '</b> ' + (now ? '= <b>' + v.esc(now.value) + '</b> from <span class="dpill">' + v.esc(v.dmy(now.effective_from)) + '</span>' + (now.source ? ' <span class="mut">' + v.esc(now.source) + '</span>' : '') : '<span class="mut">not in force today</span>')
           + (list.length > 1 ? ' <span class="mut">(' + list.length + ' versions)</span>' : '') + '</li>';
       }).join('') + '</ul>' : '<p class="mut">No rule rows.</p>')
-        + '<p class="mut">A change is a new row from a date; history stays.</p><p><button type="button" class="btn" data-go="compliance">Add a change</button></p>';
+        + '<p class="mut help">A change is a new row from a date; history stays.</p><p><button type="button" class="btn" data-go="compliance">Add a change</button></p>';
     }
     if (id === 'display') {
       var on1 = v.photoDates ? v.photoDates() : true;
       return '<p><b>Photo dates</b> under each photo in a dog\u2019s gallery: <b>' + (on1 ? 'shown' : 'hidden') + '</b></p>'
         + '<p><button type="button" class="btn" data-photo-dates="' + (on1 ? '0' : '1') + '" aria-pressed="' + (on1 ? 'true' : 'false') + '">' + (on1 ? 'Hide dates' : 'Show dates') + '</button> <span class="mut" data-photo-dates-msg role="status"></span></p>'
-        + '<p class="mut">Your own choice, from today. Order never changes. One change a day.</p>';
+        + '<p class="mut help">Your own choice, from today. Order never changes. One change a day.</p>';
     }
     if (id === 'records') {
       var K = rows(T, 'BLD-retention_setting.csv');
@@ -299,7 +299,7 @@ var AdminView = (function () {
         + (last ? '<li>' + icon('save') + ' Last temperature saved <span class="dpill">' + v.esc(v.dmy(last.slice(0, 10))) + '</span> ' + v.esc(last.slice(11, 16)) + '</li>' : '')
         + '<li>' + mark(v.sinkOn()) + ' Saving here: <b>' + (v.sinkOn() ? 'on' : 'off') + '</b></li></ul>'
         + (miss.length ? '<details><summary class="mut">Not set up yet (' + miss.length + ')</summary><p class="mut">' + miss.map(v.esc).join(', ') + '</p></details>' : '')
-        + '<p class="mut">Script version, last backup, errors: coming.</p>';
+        + '<p class="mut help">Script version, last backup, errors: coming.</p>';
     }
     return '';
   }
@@ -335,7 +335,7 @@ var AdminView = (function () {
         : '<ul class="adm-future">' + shown.map(function (j) {
           return '<li><span>' + v.esc(j.job) + '</span><em>' + v.esc(j.often) + '</em>' + tag(j.exists) + '</li>';
         }).join('') + '</ul>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
-      + '<p class="mut">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
+      + '<p class="mut help">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
   }
 
   function page(v) {
@@ -371,7 +371,7 @@ var AdminView = (function () {
         ['Temps', 'temp', b + '#m/temperature', 2, 'Room readings'], ['Where', 'where', b + '#m/where', 6, 'Dogs by room'], ['This phone', 'save', b + '#device', 0, 'Code, saving']])
       + g('Other pages', [['Checks', 'records', location.pathname.replace(/[^/]*$/, '') + 'checks/', 3, 'Staff checks'], ['Guest', 'visitor', b + 'guest/', 6, 'Visitor temps'], ['Inspector', 'inspect', b + 'inspect/', 7, 'Link only']])
       + (owner ? g('Only you', [['Print', 'print', b + 'print/', 4, 'QR cards'], ['Phone set-up', 'qr', '#/admin', 5, 'Show QR', 'phone'], ['Codes', 'key', '#/admin', 2, 'Who has one', 'codes']]) : '')
-      + '<p class="mut">Staff pages open as this device: they need a code here.</p>';
+      + '<p class="mut help">Staff pages open as this device: they need a code here.</p>';
   }
 
   /* a link elsewhere (the Staff page) that opens Admin on one card: registered now, so it runs before the hub's data-go handler */
