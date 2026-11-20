@@ -1718,7 +1718,7 @@ function checks(){
  if(!rc||LOAD.copy||LOAD.stale||LOAD.later!=='ok') out.push({k:'tables',ok:true,wait:true,msg:'Checking tables\u2026'});
  else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
-   msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
+   fix:mism.length?'Rows moved to the Bin on purpose: the tables list count is old and needs updating. Not on purpose: look in the Bin.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
      :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')}); }
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
@@ -1863,7 +1863,7 @@ function needsToday(){
  var out=[];
  /* foundation: check (a data check that fails) */
  checks().forEach(function(x){ if(x.ok||x.k==='saving off') return;
-  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':'compliance',list:x.list||'',tone:'',kind:'check'}); });
+  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':'compliance/'+ckId(x.k),list:x.list||'',tone:'',kind:'check'}); });
  /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
@@ -2050,14 +2050,15 @@ function tempsCard(){
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 // A failed data check is broken: its count is the black badge (../toolkit.js DashKit.count), read out as "N failed".
+function ckId(k){ return 'ck-'+String(k).replace(/[^a-z0-9]+/gi,'-').toLowerCase(); }
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
  return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?DashKit.count.cls(bad,'failed').trim():'ok')+(bad?'<span class="sr"> failed</span>':'')+'</h3>'
   +all.map(function(x){
    /* skip: a rule check with no rule set is not run, so it shows a grey dash, never a green tick (17 Nov 2026) */
-   return '<div class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
-    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
-    +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
+   return '<div id="'+ckId(x.k)+'" class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
+    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small>'+(x.fix&&!x.ok?'<small class="help">'+esc(x.fix)+'</small>':'')+'</span>'
+    +(x.fix&&!x.ok?'<button type="button" class="btn house-open" data-go="bin">Bin</button>':'')+(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
 
@@ -2070,7 +2071,7 @@ function mainRows(){
   var href=x.med?'#/dogs/'+x.med:(x.list?'#/today/'+x.list:'#/'+x.go);
   return {kind:x.tone==='late'?'late':(x.date===today?'today':'wait'),pill:x.tone==='soon'?'Soon':(x.date&&x.tone!=='late'&&x.date!==today?dmy(x.date):''),
 
-   text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.med?'Show the record':(x.list?'Show the dogs':(MAIN_ACT[x.go]||label(x.go)))};
+   text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.med?'Show the record':(x.list?'Show the dogs':(MAIN_ACT[x.go.split('/')[0]]||label(x.go.split('/')[0])))};
  });
 }
 
@@ -4355,7 +4356,7 @@ function pageWork(){
    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      var ask=g[0]==='BLOCKED'?medAsk(r):null, found=ask?medRows(ask):null;
-     var tail=g[0]==='DONE'?(r.evidence||''):g[0]==='SNOOZED'?('Back '+ukDate(r.snooze_until)):(r.owner&&r.owner!=='Lisa'&&r.owner!=='Claude'?'Waiting on '+r.owner:(r.blocked_on||r.note||''));
+     var tail=g[0]==='DONE'?(r.evidence||''):g[0]==='SNOOZED'?('Back '+ukDate(r.snooze_until)):(r.owner&&r.owner!=='Lisa'&&r.owner!=='Claude'?'Waiting on '+r.owner:(r.blocked_on||''));   /* the note is already under the item: never twice (20 Nov 2026) */
      var act='';
      if(ask){
       if(!found.length) act='<br><span class="mut">No medicine recorded'+(ask.month?' in '+esc(UKMON[ask.month-1]):'')+'. Nothing to open.</span>';
@@ -5067,6 +5068,7 @@ function go(id,push){
  if(id==='bin') CDBin.bind(main,binV());
  if(id==='work'&&typeof CDWork!=='undefined') CDWork.bind(main,workV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
+ if(id==='compliance'&&/^ck-/.test(sub||'')) setTimeout(function(){ var r=document.getElementById(sub); if(r){ r.setAttribute('tabindex','-1'); r.focus({preventScroll:true}); if(r.scrollIntoView) r.scrollIntoView({block:'center'}); } },0);
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');
@@ -5113,7 +5115,7 @@ function go(id,push){
   Array.prototype.forEach.call(document.querySelectorAll('.tl, .lbseg'),function(b){
    if(!b.dataset.list) return;
    b.addEventListener('click',function(){ showList(b.dataset.list); }); });
-  if(sub&&LISTNAME[sub]) showList(sub);
+  if(sub&&LISTNAME[sub]){ showList(sub); setTimeout(function(){ var t=document.getElementById('tpanel'); if(t&&t.scrollIntoView) t.scrollIntoView({block:'start'}); },0); }
  }
  if(id==='sops'){
   ['sopq','sopcol','sopfr','sopcat','soprole','sopsort'].forEach(function(i){ var e=document.getElementById(i);
