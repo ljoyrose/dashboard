@@ -13,3 +13,7 @@ What these rows should produce (worked out by `breed-better/score.js`):
 
 Used by `tests/mocked/breed-better-acceptance.spec.js`. The spec is in the Drive file
 `RR_Breed-Better_CD-Hub_spec-and-acceptance.md` in the Breed Better folder.
+
+`BLD-score_band.csv` also carries the optional `icon` column (invented values): a plain icon name (target, star, heart,
+stethoscope, smile, family). A blank cell picks the icon from the band `key`; any other key draws a plain circle (a must-pass
+band: the star). The `colour` cell may hold a colour word or a `#hex`.

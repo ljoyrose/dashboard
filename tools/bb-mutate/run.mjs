@@ -15,7 +15,7 @@ const MUTANTS = [
   ['a record is out of date on its last valid day', "if (dueDate < asOf) {", "if (dueDate <= asOf) {"],
   ['unknown points that could reach the target are ignored', "verdict = earned + unverified >= target ? 'unverified' : 'below_target';", "verdict = 'below_target';"],
   ['overlapping dated versions are no longer refused', "if (overlaps(o, c)) errors.push", "if (false && overlaps(o, c)) errors.push"],
-  ['an unmatched gate answer follows when_missing fail', "else if (when === 'fail' && ev.reason) outcome = 'fail';", "else if (when === 'fail') outcome = 'fail';"],
+  ['when_missing fail is accepted again (D7)', "if (when === 'fail') errors.push", "if (false) errors.push"],
   ['records dated after the scoring date are read', "fieldsMatch(c.evidence_match, r) &&\n        (!dateField || !recDay(r[dateField]) || recDay(r[dateField]) <= asOf);", "fieldsMatch(c.evidence_match, r) && true;"],
   ['lapsed_affects_verdict FALSE is read the wrong way round', "if (!/^false$/i.test(text(g.lapsed_affects_verdict)))", "if (/^false$/i.test(text(g.lapsed_affects_verdict)))"],
   ['an unmatched points answer is scored 0 under when_missing zero', "} else if (ev.reason && (when === 'zero' || when === 'fail')) {", "} else if (when === 'zero' || when === 'fail') {"],

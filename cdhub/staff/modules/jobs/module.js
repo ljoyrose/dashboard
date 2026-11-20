@@ -12,7 +12,7 @@
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso)); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : iso; }
   function dueLine(j) {
     if (j.status === 'late') return j.days_late === 1 ? '1 day late' : j.days_late + ' days late';
-    if (j.status === 'today') return 'Due today';
+    if (j.status === 'today') return j.times_per_day > 1 ? 'Due today: ' + (j.done_today || 0) + ' of ' + j.times_per_day : 'Due today';
     if (j.status === 'never') return 'Due';
     if (j.status === 'ok') return 'Next ' + dmy(j.next_due);
     return 'As needed';
@@ -49,7 +49,8 @@
     function moves() { c.go('mv/' + tag); }
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'),
+      tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]).then(function (v) {
       /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
       var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
       if (off && tag) { moves(); return; }
@@ -80,6 +81,7 @@
 
       /* owner rule rows (the shared rule list): key.<type_key> beats key; the row in force on that day; none = the starting default */
       var rules = (v[6] && v[6].rows) || [];
+      var today0 = c.today();
       function rule(key, typeKey, day) {
         function pick(k) {
           var best = null;
@@ -156,9 +158,15 @@
       });
       Object.keys(latestField).forEach(function (k) { var r = latestField[k]; if (isOn(r)) (formOf[r.type_key] = formOf[r.type_key] || []).push(r); });
       Object.keys(formOf).forEach(function (k) { formOf[k].sort(function (a, b) { return (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.label).localeCompare(String(b.label)); }); });
-      if (tag && !BLDDue.forTarget(types, logs, target, today).length) { moves(); return; }
+      if (tag && !BLDDue.forTarget(types, logs, target, today, null, { rules: rules }).length) { moves(); return; }
 
       host.appendChild(h('h2', { text: title }));
+      /* a room's jobs show its capacity too (LD-SC audit, 15 Nov 2026): the rows in force today, the same check as Move dogs */
+      if (target.area_id && window.BLDCapacity && v[7] && v[7].ok && (v[7].rows || []).some(function (r) { return r.area_id === target.area_id; })) {
+        var fact = BLDCapacity.facts({ subjects: d.raw.subject, litters: (v[4] && v[4].rows) || [], weights: (v[9] && v[9].rows) || [], weightsRead: !!(v[9] && v[9].ok), rules: rules, today: today0 });
+        var capR = BLDCapacity.check({ areaId: target.area_id, access: BLDCapacity.accessOn((v[8] && v[8].rows) || [], target.area_id, today0), capacity: v[7].rows, dogs: roomDogs.map(function (x) { return fact(x.id); }), date: today0 });
+        host.appendChild(h('p', { class: capR.status === 'over' ? 'msg bad' : 'sub', 'data-k': 'capacity', text: capR.status === 'over' ? capR.message : BLDCapacity.summary(capR) }));
+      }
       /* a room scan: who is in the room now, each opening that dog's own jobs (Lisa 18 Nov 2026); Move dogs is below */
       if (target.area_id) {
         var dogTag = {};
@@ -464,7 +472,7 @@
       }
       function catchUp() {
         /* on the whole-site screen every job (rooms and dogs too, a row each); on a dog, room or litter screen that one's jobs */
-        var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today)).slice();
+        var jobs = (site ? inForce.filter(function (t) { return t.target !== 'litter'; }) : BLDDue.forTarget(types, logs, target, today, null, { rules: rules })).slice();
         jobs.sort(byFrequency(jobs));
         list.textContent = ''; say('');
         list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { draw(); } }));
@@ -525,7 +533,7 @@
         ]);
       }
       function draw() {
-        var jobs = BLDDue.forTarget(types, logs, target, today), freq = byFrequency(jobs);
+        var jobs = BLDDue.forTarget(types, logs, target, today, null, { rules: rules }), freq = byFrequency(jobs);
         jobs.sort(function (a, b) { return (pos(a) - pos(b)) || freq(a, b); });
         list.textContent = '';
         if (group) {
@@ -559,7 +567,9 @@
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
     Promise.all([c.data(), c.readOptional('check_type')]).then(function (v) {
-      var d = v[0], type = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.type_key === REPORT_KEY; })[0] : null;
+      /* the kinds of report are the owner's job rows with target "optional" (incident, accident, lost dog...): no fixed key */
+      var d = v[0], kinds = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.target === 'optional' && isOn(t); })
+        .sort(function (a, b) { return (a.type_key === REPORT_KEY ? -1 : b.type_key === REPORT_KEY ? 1 : 0) || String(a.label).localeCompare(String(b.label)); }) : [], type = kinds[0];
       host.textContent = '';
       if (!d.ok) { host.appendChild(h('p', { class: 'msg bad', text: d.message })); return; }
       if (!type || !c.save.banner('check_log').canSave) { host.appendChild(h('p', { class: 'msg', text: 'Reports are not switched on yet.' })); return; }
@@ -570,24 +580,29 @@
       }
       var dog = select('Dog', 'Dog (optional)', d.subjects.map(function (x) { return [x.id, x.label]; }), was.subject_id);
       var room = select('Room', 'Room (optional)', d.areas.map(function (x) { return [x.id, x.label]; }), was.area_id);
+      var kind = kinds.length > 1 ? select('Kind', 'Kind', kinds.map(function (t) { return [t.id, t.label]; }), type.id) : null;
+      if (kind) kind.firstChild.disabled = true;
+      function picked() { return kind ? kinds.filter(function (t) { return t.id === kind.value; })[0] || type : type; }
       var note = h('textarea', { class: 'inp', rows: '4', 'aria-label': type.note_label || 'What happened?', placeholder: type.note_label || 'What happened?' });
+      if (kind) kind.addEventListener('change', function () { var t = picked(); note.placeholder = t.note_label || 'What happened?'; note.setAttribute('aria-label', note.placeholder); heading.textContent = t.label || 'Problem'; rid = null; });
       var msg = h('p', { class: 'msg', role: 'status' }), rid = null;
       note.addEventListener('input', function () { rid = null; });
       var btn = h('button', { class: 'btn', type: 'button', text: 'Send', onclick: function () {
         var text = note.value.trim();
         if (!text) { msg.className = 'msg bad'; msg.textContent = 'Say what happened.'; return; }
-        var f = { check_type_id: type.id, outcome: 'recorded', note: text, how_recorded: 'tapped' };
+        var f = { check_type_id: picked().id, outcome: 'recorded', note: text, how_recorded: 'tapped' };
         if (dog.value) f.subject_id = dog.value;
         if (room.value) f.area_id = room.value;
         rid = rid || c.save.newRequestId(); btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving...';
         c.save.submit('check_log', f, { requestId: rid }).then(function (r) {
           btn.disabled = false;
-          if (r.ok) { rid = null; note.value = ''; msg.className = 'msg good'; msg.textContent = r.status === 'queued' ? r.message : 'Sent.'; return; }
+          if (r.ok) { rid = null; note.value = ''; msg.className = 'msg good'; msg.textContent = r.status === 'queued' ? r.message : '✓ Sent'; return; }
           msg.className = 'msg bad'; msg.textContent = r.message;
           if (r.code !== 'NETWORK') rid = null;
         });
       } });
-      [h('h2', { text: type.label || 'Problem' }), dog, room, note, btn, msg].forEach(function (n) { host.appendChild(n); });
+      var heading = h('h2', { text: type.label || 'Problem' });
+      [heading, kind, dog, room, note, btn, msg].forEach(function (n) { if (n) host.appendChild(n); });
     });
   }
 

@@ -325,8 +325,16 @@
     return rows(v.T, 'BLD-item_kinds.csv').filter(function (k) { if (seen[k.kind_key]) return false; seen[k.kind_key] = 1; return true; })
       .map(function (k) { return '<option value="' + v.esc(k.kind_key) + '"' + (k.kind_key === sel ? ' selected' : '') + '>' + v.esc(k.label) + '</option>'; }).join('');
   }
-  function areaOptions(v, sel) {
-    return '<option value="">No room</option>' + rows(v.T, 'BLD-area.csv').map(function (a) { return '<option value="' + v.esc(a.id) + '"' + (a.id === sel ? ' selected' : '') + '>' + v.esc(a.code || a.name || a.id) + '</option>'; }).join('');
+  // every room (cabins, corridors, site rooms) in its group, sorted by the group's order then code, so a moved item finds its new room fast
+  function areaOptions(v, sel, noBlank) {
+    var e = v.esc, groups = {}, order = [];
+    rows(v.T, 'BLD-area.csv').slice().sort(function (a, b) {
+      return (Number(a.group_sort) || 0) - (Number(b.group_sort) || 0) || t(a.grouping).localeCompare(t(b.grouping)) || t(a.code || a.name).localeCompare(t(b.code || b.name), undefined, { numeric: true });
+    }).forEach(function (a) { var g = t(a.grouping); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(a); });
+    return (noBlank ? '<option value="">Pick a room</option>' : '<option value="">No room</option>') + order.map(function (g) {
+      var o = groups[g].map(function (a) { return '<option value="' + e(a.id) + '"' + (a.id === sel ? ' selected' : '') + '>' + e(a.code || a.name || a.id) + '</option>'; }).join('');
+      return g ? '<optgroup label="' + e(g) + '">' + o + '</optgroup>' : o;
+    }).join('');
   }
   function addForm(v, it) {
     var e = v.esc; it = it || {};
@@ -359,12 +367,12 @@
       + (S.msg ? '<p role="status">' + e(S.msg) + '</p>' : '');
     if (!x.archived) {
       h += '<div class="itm-btns"><button type="button" class="btn" data-itm-form="photo">' + ic('camera') + 'Photo</button>' + x.s.lines.map(function (l) { return '<button type="button" class="btn" data-itm-form="test:' + e(l.key) + '">' + ic('test') + e(l.label) + '</button>'; }).join('')
-        + '<button type="button" class="btn" data-itm-form="move">' + ic('place') + 'Room</button>'
+        + '<button type="button" class="btn" data-itm-form="move">' + ic('place') + 'Move</button>'
         + '<button type="button" class="btn" data-itm-form="edit">Edit</button>'
         + '<button type="button" class="btn" data-itm-form="archive">' + ic('archive') + 'Archive</button></div>';
     }
     if (S.form.indexOf('test:') === 0) h += testForm(v, it, S.form.slice(5));
-    else if (S.form === 'move') h += '<form class="itm-form" data-itm-save="move"><label>Room<select name="area_id" required>' + areaOptions(v, x.placeRow ? x.placeRow.to_id : '') + '</select></label><label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
+    else if (S.form === 'move') h += '<form class="itm-form" data-itm-save="move"><p class="mut">Now: ' + e(x.place || 'no room') + (x.placeRow ? ' since ' + e(v.dmy(x.placeRow.from_date)) : '') + '</p><label>Move to<select name="area_id" required>' + areaOptions(v, '', true) + '</select></label><label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'archive') h += '<form class="itm-form" data-itm-save="archive"><label>Out of use from<input type="date" name="out_on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label><label>Why<select name="why"><option>Dead</option><option>Failed test</option><option>Replaced</option><option>Gone</option><option>Other</option></select></label><label>Note<input name="note"></label><div class="itm-btns"><button type="submit" class="btn yes">Archive</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'edit') h += addForm(v, it);
     // one tap for a photo and its date, any item (Lisa 18 Nov 2026); saves the file and its link only, never an item change
