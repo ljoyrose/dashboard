@@ -520,9 +520,21 @@
         ]);
       }
 
+      /* Owner's order for today's list (rule row job.order, dated, with a source): a pipe list of type_keys, group:<name>,
+         or screen:<module id>=<label> for another staff screen (e.g. temperatures). Listed ones come first in that order;
+         the rest follow by frequency. No row = by frequency only. */
+      var order = rule('job.order', '', today).split('|').map(function (x) { return x.trim(); }).filter(Boolean);
+      function pos(j) { var i = order.indexOf(j.type_key); if (i < 0 && j.group) i = order.indexOf('group:' + j.group); return i < 0 ? 1e6 : i; }
+      function screenCard(entry) {
+        var m = /^screen:([a-z0-9_-]+)(?:=(.+))?$/i.exec(entry);
+        if (!m) return null;
+        return h('button', { class: 'card job go-group job-screen', type: 'button', 'data-screen': m[1], onclick: function () { c.go('m/' + m[1]); } }, [
+          h('div', { class: 'nm', text: m[2] || m[1] })
+        ]);
+      }
       function draw() {
-        var jobs = BLDDue.forTarget(types, logs, target, today);
-        jobs.sort(byFrequency(jobs));
+        var jobs = BLDDue.forTarget(types, logs, target, today), freq = byFrequency(jobs);
+        jobs.sort(function (a, b) { return (pos(a) - pos(b)) || freq(a, b); });
         list.textContent = '';
         if (group) {
           list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { group = ''; say(''); draw(); } }));
@@ -531,12 +543,16 @@
           return;
         }
         var shown = site && !more ? jobs.filter(function (j) { return isDue(j) || kept[j.type_key]; }) : jobs, rest = jobs.length - shown.length, seen = {};
+        var screens = order.map(function (e, i) { return { e: e, i: i }; }).filter(function (x) { return x.e.indexOf('screen:') === 0; });
+        function screensBefore(p) { while (screens.length && screens[0].i < p) { var card = screenCard(screens.shift().e); if (card) list.appendChild(card); } }
         shown.forEach(function (j) {
+          screensBefore(pos(j));
           if (!j.group) { list.appendChild(jobCard(j)); return; }
           if (seen[j.group]) return;
           seen[j.group] = true;
           list.appendChild(groupCard(j.group, jobs.filter(function (x) { return x.group === j.group; })));
         });
+        screensBefore(1e6);
         if (!shown.length) list.appendChild(h('p', { class: 'sub', text: jobs.length ? 'All done.' : 'No jobs set up.' }));
         if (rest > 0) list.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'More', onclick: function () { more = true; draw(); } }));
         if (jobs.length) list.appendChild(earlierBtn('btn quiet job-paper-btn job-earlier-all', 'Earlier: several days', catchUp));

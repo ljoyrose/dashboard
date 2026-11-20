@@ -37,6 +37,7 @@
 <script src="enquiries-view.js"></script>
 <script src="admin.js"></script>
 <script src="items-view.js"></script>
+<script src="bin-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -44,7 +45,8 @@
  var r=document.documentElement, c=r.classList;
  c.toggle('look-cool',o.bg==='cool'); c.toggle('sel-soft',o.sel==='soft');
  c.toggle('text-lg',o.text==='lg'); c.toggle('text-xl',o.text==='xl'); c.toggle('space-roomy',o.space==='roomy');
- if(o.mode==='light'||o.mode==='dark') r.setAttribute('data-theme',o.mode); })();
+ if(o.mode==='light'||o.mode==='dark') r.setAttribute('data-theme',o.mode);
+ c.toggle('show-help',o.help==='on'); })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../tokens.css">
@@ -528,6 +530,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
 ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--fs-small)}ul.notes li{margin:2px 0}
+ul.bin-list{margin:4px 0 12px;padding-left:20px}ul.bin-list li{margin:6px 0}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
@@ -714,7 +717,7 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 wantLater('BLD-subject-Archive.csv');
 wantLater('BLD-litter-Archive.csv');   /* Lisa 17 Nov 2026: old litters (paper books) kept as history, so their vet visits resolve */
 wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
-var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
+var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
@@ -725,7 +728,7 @@ function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><d
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
 function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
 /* a dog's documents: files linked from the dog, labelled by BLD-doc_type (Lisa 17 Nov 2026) */
-function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
+function docsRow(d){ return typeof BLDDocsView==='undefined'?'':BLDDocsView.html({links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],docTypes:CD.docTypes||[],records:function(t){ return T['BLD-'+t+'.csv']||T['BLD-'+String(t).replace(/s$/,'')+'.csv']||[]; },recordLabel:function(t,r){ var ct=(T['BLD-check_type.csv']||[]).filter(function(x){ return x.id===r.check_type_id; })[0]; return ct?ct.label:''; },today:todayISO(),esc:esc,dmy:dmy},d.id,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -850,7 +853,7 @@ function drawAssetTypes(){
   return;
  }
  box.innerHTML='<ul class="atype-grid">'+ASSET.types.map(function(t){ return assetItem('data-type-code',t.type_code,t.icon_key,t.label); }).join('')+'</ul>';
- if(fmt) fmt.innerHTML='<p class="mut">How a file is stored. Separate from the type.</p><ul class="atype-grid">'+ASSET.formats.map(function(f){ return assetItem('data-format-code',f.format_code,f.icon_key,f.label); }).join('')+'</ul>';
+ if(fmt) fmt.innerHTML='<p class="mut help">How a file is stored. Separate from the type.</p><ul class="atype-grid">'+ASSET.formats.map(function(f){ return assetItem('data-format-code',f.format_code,f.icon_key,f.label); }).join('')+'</ul>';
 }
 
 
@@ -3720,7 +3723,7 @@ function pageBuyers(){
  if(dead.length) h+='<div class="card dash"><h4>'+dead.length+' bodies are dead but still linked from breeder sites</h4>'
   +'<p style="margin-bottom:0" class="mut">'+dead.map(function(a){return esc(a.acronym)+' \u2014 '+esc(a.note);}).join('<br>')+'</p></div>';
  h+='<h3><span class="dot" style="background:var(--p3)"></span>Getting a dog there</h3>'
- +'<p class="mut">Every sale abroad is a commercial export, even with no money.</p>'
+ +'<p class="mut help">Every sale abroad is a commercial export, even with no money.</p>'
  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
  CD.exportRoutes.forEach(function(e){
   var cls=e.difficulty==='LOW'?'ok':(e.difficulty==='HIGH'?'no':'w');
@@ -4664,7 +4667,7 @@ function pageCompliance(){
  lg.forEach(function(x){ probs.push({who:x.dam,t:'Litters too close: '+(x.days===0?'same day':x.days+' days apart'),s:litName(x.prev)+' ('+dmy(litDob(x.prev))+') → '+litName(x.next)+' ('+dmy(litDob(x.next))+'). Your rule: '+x.months+' months.'}); });
  da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+dmy(x.on)+(x.est?' (estimated from the litter, no mating row)':'')+', born '+dmy(x.dob)+'. Your rule: '+x.months+' months.'}); });
  lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+litName(x.litter)+', '+dmy(litDob(x.litter))+'). Your rule: '+x.max+'.'}); });
- var h='<h2>Compliance</h2><p class="sub">Data checks, breeding rules and room limits.</p>';
+ var h='<h2>Compliance</h2><p class="sub help">Data checks, breeding rules and room limits.</p>';
  var asAt=/^\d{4}-\d{2}-\d{2}$/.test(COMP.asAt)&&COMP.asAt<=today?COMP.asAt:today, past=asAt!==today;
  h+='<div class="frow" id="asAtRow"><label for="compAsAt">What was true on</label> <input id="compAsAt" type="date" max="'+today+'" value="'+asAt+'">'
   +(past?' <button type="button" class="btn" id="compAsAtToday">Back to today</button>':'')+'</div>'
@@ -4678,7 +4681,7 @@ function pageCompliance(){
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
  h+=compFold('compProblems','problems','Needs a look'+cntPill(probs.length),pb);
  var rl=roomAudit(today), cl=closedAudit(today), clBad=cl.filter(function(x){ return x.dogs; });
- h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length+clBad.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses your room limits and how each cabin is run.</p>'
+ h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length+clBad.length),'<p class="mut help">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses your room limits and how each cabin is run.</p>'
   +(rl.over.length?'<ul class="notes" data-calm="off">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes" data-calm="off">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src&&hideSource(x.src)?' ('+esc(hideSource(x.src))+')':'')+'</span></li>'; }).join('')+'</ul>':'')
@@ -4688,7 +4691,7 @@ function pageCompliance(){
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
-  +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only the owner can save.</p>'
+  +'<p class="mut help">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only the owner can save.</p>'
   +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
   +'<input id="brVal" type="number" inputmode="numeric" min="1" max="999" step="1" placeholder="number" aria-label="number" style="width:7em"> '
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
@@ -4712,7 +4715,7 @@ function compUrgent(iso){ var out=[];
  return out; }
 function compUrgentHtml(iso){ var u=compUrgent(iso); if(!SOP.rows&&!SOP.err) sopStart();
  return compFold('compUrgent','urgent','Urgent'+cntPill(u.length,u.length?'need':''),u.length
-  ?'<ul class="urgl" id="urgList">'+u.map(function(x){ return '<li data-k="'+x.k+'"><span class="urg"><span class="urg-ring" aria-hidden="true"><i style="--c:var(--ljr-'+sopSlot(x.sop)+')"></i></span><svg aria-hidden="true"><use href="#'+x.icon+'"/></svg>Urgent</span> <b>'+(x.area?roomLink(x.area,x.title):esc(x.title))+'</b><br><span class="mut">'+esc(x.sub)+(x.sop?' · '+esc(x.sop):'')+'</span></li>'; }).join('')+'</ul><p class="mut">A warning never stops anyone working.</p>'
+  ?'<ul class="urgl" id="urgList">'+u.map(function(x){ return '<li data-k="'+x.k+'"><span class="urg"><span class="urg-ring" aria-hidden="true"><i style="--c:var(--ljr-'+sopSlot(x.sop)+')"></i></span><svg aria-hidden="true"><use href="#'+x.icon+'"/></svg>Urgent</span> <b>'+(x.area?roomLink(x.area,x.title):esc(x.title))+'</b><br><span class="mut">'+esc(x.sub)+(x.sop?' · '+esc(x.sop):'')+'</span></li>'; }).join('')+'</ul><p class="mut help">A warning never stops anyone working.</p>'
   :'<p class="mut">Nothing urgent.</p>'); }
 /* EXTERNAL REQUIREMENTS STATE (mock-up 7 Nov, H-07): BLD-credential is the thing (label, area_id, sop, crucial, issuer,
    source); BLD-credential_version is a dated link row (credential_id, from_date, to_date, source). As at a date the version
@@ -4763,7 +4766,7 @@ function compInspectionsHtml(iso){ var on=hasTable('BLD-inspection.csv');
  return compFold('compInspections','inspections','Inspections',!on?'<p class="mut" id="inspOff">Not set up yet. Inspections will show here once their list exists.</p>'
   :'<h4>External</h4>'+(ext.length?'<ul class="ctl" id="inspExt">'+ext.map(function(r){ return li(r,false); }).join('')+'</ul>':'<p class="mut">None yet.</p>')
   +'<h4>Internal</h4>'+(int.length?'<ul class="ctl" id="inspInt">'+int.map(function(r){ return li(r,String(r.visibility||'private').toLowerCase()!=='disclosable'); }).join('')+'</ul>':'<p class="mut">None yet.</p>')
-  +'<p class="mut">Internal checks are never counted in any figure here.</p>'); }
+  +'<p class="mut help">Internal checks are never counted in any figure here.</p>'); }
 /* FINDINGS (mock-up 7 Nov): BLD-finding rows as at a date. Open = raised on or before it and not closed by it.
    Recurrence = every finding on the same requirement (outcome_id) raised by that date: "failed N times", with its trail.
    A finding from a PRIVATE internal inspection (BLD-inspection, when that table exists) stays off this list (H-03, H-05);
@@ -4801,12 +4804,12 @@ function compRehearsalHtml(){ var r=REHEARSAL;
    +(r.notes.length?'<ul class="ctl" id="rhList">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>':'')
    +'<div class="frow"><input id="rhNote" type="text" placeholder="practice finding" aria-label="practice finding" style="min-width:14em"> <button type="button" id="rhAdd">Add</button></div>'
    +'<p><button type="button" class="btn" id="rhEnd">End and discard</button></p></div>'
-  :'<p class="mut">A practice inspection. Nothing is saved or counted.</p><p><button type="button" class="btn" id="rhStart">Start a rehearsal</button></p>'); }
+  :'<p class="mut help">A practice inspection. Nothing is saved or counted.</p><p><button type="button" class="btn" id="rhStart">Start a rehearsal</button></p>'); }
 /* ACCESS (mock-up 7 Nov): who holds a staff or guest code, and Revoke, live on the save script's owner page (signed in
    to the owner's Google account). The hub only links to it, from the save address this browser holds. */
 function compAccessHtml(){ var u=sinkGet(SINK_URL_KEY), ok=SINK_RE.test(u);
  return compFold('compAccess','access','Who has access',
-  '<p class="mut">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'+(typeof AdminView!=='undefined'&&AdminView.on(T)?'<p><button type="button" class="btn" data-go="admin" data-adm-pre="codes">Codes, inspector and vet: Admin</button></p>':'')
+  '<p class="mut help">Staff and guest codes: see who has one and Revoke it on the owner page.</p>'+(typeof AdminView!=='undefined'&&AdminView.on(T)?'<p><button type="button" class="btn" data-go="admin" data-adm-pre="codes">Codes, inspector and vet: Admin</button></p>':'')
   +(ok?'<p><a class="btn" id="accOpen" href="'+esc(u+'?page=approve')+'" target="_blank" rel="noopener">Open owner page</a></p>'
      :'<p class="mut" id="accOff">Saving is not set up in this browser yet. Set it up at the top of <a href="#/round">The round</a>.</p>')); }
 function bindRehearsal(){
@@ -4885,6 +4888,9 @@ if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(it
 PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Money</h2><p class="mut">Nothing here yet.</p></section>'; };
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
+/* Bin (OV11 for Lisa, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
+function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin'}; }
+if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
 /* Which views exist on this hub for this sign-in (menu option A, Lisa 14 Nov 2026). Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){
@@ -4892,6 +4898,7 @@ function navHas(id){
  if(id==='temps') return true;
  if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
+ if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
  return !!PAGES[id];
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
@@ -4947,7 +4954,9 @@ function labelControls(root){
   el.setAttribute('aria-label',t);
  });
 }
-function render(){ go((location.hash||'#/map').replace('#/',''),false); }
+/* no address: the owner's start row (nav.start.OWNER), else Main */
+function startView(){ var v=''; try{ v=navLayout().start||''; }catch(e){} return v&&viewOn(v)?v:'map'; }
+function render(){ go((location.hash||('#/'+startView())).replace('#/',''),false); }
 
 
 function levelHeadings(root){
@@ -4983,7 +4992,7 @@ function navCurrent(id){
 }
 function go(id,push){
  var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
- var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=String(id||''); chipsDraw('');
+ var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=LOAD.state==='ok'?String(id||''):''; chipsDraw('');   /* a page drawn before the rows land is not kept: the start row decides once they do */
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
@@ -5033,6 +5042,7 @@ function go(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin') AdminView.bind(admV());
+ if(id==='bin') CDBin.bind(main);
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
@@ -5277,7 +5287,7 @@ DashKit.search.register(function(q){
   return out;
  },function(){ return out; });
 });
-function followHash(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } }
+function followHash(){ if(LOAD.state==='ok'){ go((location.hash||('#/'+startView())).replace('#/',''),false); focusView(); } }
 try{ history.scrollRestoration='manual'; }catch(e){}
 /* a plain link (#/...) also gets a Back step from the browser: note how far down this page was first */
 document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a[href^="#/"]'); if(!a) return;

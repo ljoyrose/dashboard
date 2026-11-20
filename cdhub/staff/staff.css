@@ -64,3 +64,6 @@ textarea.inp{padding:10px 14px}
 .here-now h3{width:100%;margin:0;font-size:15px}
 .here-now .chip{font:inherit;font-size:16px;font-weight:600;padding:8px 14px;min-height:44px;border:1px solid var(--line,#C7C0B4);border-radius:12px;background:transparent;color:inherit}
 .here-now button.chip{cursor:pointer}.here-now button.chip:hover{box-shadow:inset 3px 0 0 currentColor}
+/* Show help switch (Lisa 18 Nov 2026): on = ✓ and the selected side line */
+.btn[role="switch"][aria-checked="true"]{box-shadow:inset 3px 0 0 var(--ink)}
+.btn[role="switch"][aria-checked="true"]::before{content:"\2713\00a0"}
