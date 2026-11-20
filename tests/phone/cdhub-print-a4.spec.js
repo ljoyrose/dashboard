@@ -24,12 +24,12 @@ test.describe('Phone: CD Hub print on A4', () => {
     expect(pdf.count).toBeLessThanOrEqual(6);
   });
 
-  test('kennel cards: Full A4, 2 per A4 and 4 per A4 give 1, 2 and 4 whole cards a page', async ({ page }) => {
+  test('dog cards: Full A4, 2 per A4 and 4 per A4 give 1, 2 and 4 whole cards a page', async ({ page }) => {
     await P.openCards(page);
     for (const per of [1, 2, 4]) {
       await page.getByRole('button', { name: P.PER_LABEL[per] }).click();
       const pdf = await P.printPdf(page, 'phone-cdhub-kennel-cards-' + per + '-per-A4');
-      expect(pdf.boxes.every((b) => P.isA4(b, per === 2)), P.PER_LABEL[per]).toBe(true);
+      expect(pdf.boxes.every((b) => P.isA4(b)), P.PER_LABEL[per]).toBe(true);   // all portrait (Lisa's dog card, 18 Nov 2026)
       expect(pdf.count, P.PER_LABEL[per]).toBe(Math.ceil(P.CARDS / per));
     }
   });

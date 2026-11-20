@@ -65,9 +65,11 @@
   function compute(v) {
     var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv', 'BLD-links.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
-    if (memo && memo.key === key) return memo;
+    /* the same row counts can hold different rows (a re-read after an edit): reuse only when every table is the very same one */
+    var names = Object.keys(T).sort(), held = names.map(function (f) { return T[f]; });
+    if (memo && memo.key === key && memo.names === names.join('|') && memo.held.every(function (x, i) { return x === held[i]; })) return memo;
     var all = enrolments(T);
-    var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
+    var out = { key: key, names: names.join('|'), held: held, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var logs = null;

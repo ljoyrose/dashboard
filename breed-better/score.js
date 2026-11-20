@@ -28,6 +28,8 @@
   function text(v) { return v === undefined || v === null ? '' : String(v).trim(); }
   function same(a, b) { return text(a).toLowerCase() === text(b).toLowerCase(); }
   function isDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(text(v)); }
+  /* points may carry decimals (0.1 + 0.2): round sums to 6 places so totals and targets never drift */
+  function tidy(n) { return Math.round(n * 1e6) / 1e6; }
   /* A record's date: a plain date, or a date and time (2026-08-13T12:00:00Z, or with a space) read as its day.
      Anything else is no date. (DOCS, 15 Nov 2026: saved records can carry a time.) */
   function recDay(v) { var m = /^(\d{4}-\d{2}-\d{2})(?:$|[T ]\d{2}:\d{2})/.exec(text(v)); return m ? m[1] : ''; }
@@ -51,7 +53,8 @@
   function targetFor(scheme, available) {
     var n = text(scheme && scheme.target_points);
     if (!/^\d+(\.\d+)?$/.test(n)) return '';
-    return /^percent\b/i.test(text(scheme.target_is)) ? Math.ceil(available * Number(n) / 100) : Number(n);
+    /* rounded up to whole points, but never more than can be earned (decimal points: 100% of 0.6 is 0.6, not 1) */
+    return /^percent\b/i.test(text(scheme.target_is)) ? Math.min(Number(n) <= 100 ? tidy(available) : Infinity, Math.ceil(tidy(available * Number(n) / 100))) : Number(n);
   }
 
   /** Whole months from a to b (both YYYY-MM-DD). */
@@ -167,6 +170,8 @@
       if (!band) { errors.push(c.id + ': belongs to no band'); return; }
       var when = text(c.when_missing) || 'unknown';
       if (WHEN_MISSING.indexOf(when) < 0) errors.push(c.id + ': when_missing cannot be "' + when + '"');
+      /* a must-pass check that is skipped when its record is missing would let the animal Pass without it */
+      if (when === 'skip' && band.kind === 'gate') errors.push(c.id + ': a must-pass check cannot be skipped; use unknown or fail');
       if (text(c.reads) && READS.indexOf(text(c.reads)) < 0) errors.push(c.id + ': cannot read "' + c.reads + '"');
       if (text(c.valid_months) && !/^\d+$/.test(text(c.valid_months))) errors.push(c.id + ': valid_months must be a whole number');
       if (text(c.valid_months) && !text(c.date_field)) errors.push(c.id + ': valid_months needs a date_field');
@@ -330,7 +335,8 @@
         var outcome;
         if (rule) outcome = rule.gate_outcome;
         else if (ev.reason === 'expired' || ev.reason === 'not_accepted') outcome = 'unverified';
-        else if (when === 'fail') outcome = 'fail';
+        /* when_missing is for a missing record; an answer no rule knows is a gap in the rules, never a Fail */
+        else if (when === 'fail' && ev.reason) outcome = 'fail';
         else outcome = 'unverified';
         line.gate_outcome = outcome;
         gates[outcome]++;
@@ -358,7 +364,7 @@
             });
           }
           earned += line.points;
-        } else if (when === 'zero' || when === 'fail') {
+        } else if (ev.reason && (when === 'zero' || when === 'fail')) {
           line.points = 0;
         } else {
           unverified += max;
@@ -368,6 +374,7 @@
       lines.push(line);
     });
 
+    earned = tidy(earned); available = tidy(available); unverified = tidy(unverified);
     var gateResult = gates.fail ? 'fail' : (gates.unverified ? 'unverified' : 'pass');
     var target = targetFor(input.scheme, available);
     /* one verdict: Fail, then Unverified, then the target. Points still unknown that could reach the target keep it Unverified */
