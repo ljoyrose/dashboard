@@ -70,6 +70,7 @@
     r.classList.toggle('look-cool', o.bg === 'cool');
     r.classList.toggle('sel-soft', o.sel === 'soft');
     if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
+    r.classList.toggle('show-help', o.help === 'on');   // Show help (Lisa 18 Nov 2026): off unless this person turns it on
   }
   applyLook();
   if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') { applyLook(); syncLookMenu(); } });
@@ -134,7 +135,9 @@
   // The menu offers what applyLook supports and saves it in 'dash-look', merged, so Studio's own keys (words, text, space) stay.
   // On a phone it also shows the read time and a Sign out item that presses the page's own Sign out (both leave the bar there).
   var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
-    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
+    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]],
+    // Show help (Lisa 18 Nov 2026): help and explanation lines (class "help") are hidden, not deleted, until this is on.
+    ['help', 'Help', [['off', 'Hidden'], ['on', 'Show help']]]];
   function readLook() { var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; } return typeof o === 'object' ? o : {}; }
   function lookVal(o, row) { return row[2].some(function (x) { return x[0] === o[row[0]]; }) ? o[row[0]] : row[2][0][0]; }
   function setLook(key, val) {
@@ -144,6 +147,7 @@
     if (key === 'bg') r.classList.toggle('look-cool', val === 'cool');
     else if (key === 'sel') r.classList.toggle('sel-soft', val === 'soft');
     else if (key === 'mode') { if (val === 'light' || val === 'dark') r.setAttribute('data-theme', val); else r.removeAttribute('data-theme'); }
+    else if (key === 'help') r.classList.toggle('show-help', val === 'on');
   }
   // The page's own Sign out in the top bar, when it is there (signed in). Hidden only by the phone rule counts as there.
   function headSignout() {
