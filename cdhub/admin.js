@@ -237,7 +237,9 @@ var AdminView = (function () {
     }
     if (id === 'staff') {
       var roles = rows(T, 'BLD-role.csv').filter(function (r) { return r.code; });
-      return steps(['Apps Script editor → <b>Admin.gs</b> → <b>adminAddStaffCode</b>', 'Type their NAME and ROLE', 'Press <b>Run</b>. Copy the code from the log (only you see it)', 'Give it to them, then <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
+      // Lisa 16 Nov 2026: a real button to the owner page, where codes are made; the name tag (sc-...) is not the code.
+      return '<p class="adm-make">' + ownerPage(v, 'Make a code', 'codes') + '</p>'
+        + steps(['Type their name, pick the role, press <b>Make their code</b>', 'Copy the 10-letter code from the green box. The name tag (sc-\u2026) is not the code', 'Give it to them, then <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
         + (roles.length ? '<p class="mut">Roles: ' + roles.map(function (r) { return '<b>' + v.esc(r.code) + '</b> ' + v.esc(r.name || ''); }).join(' · ') + '</p>' : '')
         + '<p>Who has a code, and remove someone: ' + ownerPage(v, '', 'codes') + '</p>';
     }

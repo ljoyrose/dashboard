@@ -126,7 +126,7 @@
     var logs = null;
     var evidence = new Proxy({}, { get: function (o, name) {
       if (name !== 'BLD-check_log') return T[name + '.csv'];
-      return logs || (logs = withValues(T['BLD-check_log.csv'], T['BLD-check_value.csv']));
+      return logs || (logs = withValues(T['BLD-check_log.csv'], T['BLD-check_value.csv'], T['BLD-check_type.csv']));
     } });
     var open = all.filter(function (e) { return !e.off && !(e.to && e.to < v.today) && !(e.from && e.from > v.today); });
     var isOpen = {}; open.forEach(function (e) { isOpen[e.subject_id] = 1; });
@@ -345,9 +345,14 @@
   /* Records typed on the Checks screen (15 Nov 2026, OV11: the phone entry for Fit to Breed, health screens and judged
      answers is the existing Checks form, any industry): each check_log row carries the values typed on its form
      (BLD-check_value: field_key = value) as if they were its own columns, so a criterion can read e.g.
-     answer_field=grade, evidence_match=check_type_id=cty-hips;certainty=final. A real column of the same name wins. */
-  function withValues(logs, values) {
+     answer_field=grade, evidence_match=check_type_id=cty-hips;certainty=final. A real column of the same name wins.
+     Each row also carries check_type_key, the type_key of its check type (16 Nov 2026, OV11). A check type changes by a
+     new dated row with a new id (cty-fit_to_breed-1, then -2) but keeps its type_key, so a criterion that matches
+     check_type_key=fit_to_breed reads every version, past and future, with no list of ids anywhere. */
+  function withValues(logs, values, types) {
     if (!logs) return logs;
+    var kind = {};
+    (types || []).forEach(function (c) { if (t(c.id) && t(c.type_key)) kind[t(c.id)] = t(c.type_key); });
     var by = {};
     (values || []).forEach(function (x) {
       var k = t(x.field_key), id = t(x.check_log_id);
@@ -355,7 +360,8 @@
       (by[id] || (by[id] = {}))[k] = t(x.value);
     });
     return logs.map(function (r) {
-      var add = by[t(r.id)];
+      var add = by[t(r.id)], k = kind[t(r.check_type_id)];
+      if (k && t(r.check_type_key) === '') { add = add ? Object.assign({}, add) : {}; add.check_type_key = k; }
       if (!add) return r;
       var o = {}; Object.keys(add).forEach(function (k) { o[k] = add[k]; });
       Object.keys(r).forEach(function (k) { if (t(r[k]) !== '' || o[k] === undefined) o[k] = r[k]; });
