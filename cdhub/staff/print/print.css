@@ -33,7 +33,7 @@
 .vcard .facts{grid-area:facts;margin:0;display:grid;grid-template-columns:auto auto;justify-content:space-between;gap:12px;align-self:center}
 .vcard .facts dt{color:#57504A;font-size:13px}.vcard .facts dd{margin:0;font-weight:600;font-size:22px;display:flex;align-items:center;gap:6px}
 .vcard .sex svg{width:20px;height:20px}
-.vcard .sex[aria-label="Female"]{color:#C2185B}.vcard .sex[aria-label="Male"]{color:#1565C0}
+.vcard .sex[aria-label="Female"]{color:color-mix(in srgb,var(--ljr-2-icon) 55%,var(--ljr-7-icon))}.vcard .sex[aria-label="Male"]{color:var(--ljr-6-icon)}
 .vcard .photo{grid-area:photo;width:100%;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:stretch}
 .vcard .szb{grid-area:size;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 16px 8px;border-radius:10px;box-sizing:border-box}
 .vcard .szb .lab{font-size:12px;font-weight:600;letter-spacing:.04em}.vcard .szb b{font-size:36px;line-height:1.1}
