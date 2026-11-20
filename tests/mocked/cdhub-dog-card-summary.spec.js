@@ -136,7 +136,7 @@ test.describe('CD Hub dog card summary', () => {
     const w = guard.world;
     put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status', ['sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire']));
     put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active']));
-    put(w, 'BLD-weight.csv', csv('id,subject_id,performed_on,weight_kg', ['w1,sub-x1,2026-01-12,25']));
+    put(w, 'BLD-weight.csv', csv('id,subject_id,performed_on,weight_kg', ['w1,sub-x1,2026-01-12,24.9']));
     put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
       'r3,t,size_from_kg.medium,10,2026-01-01,Pretend SOP,,,', 'r4,t,size_from_kg.large,25,2026-01-01,Pretend SOP,,,',
       'l1,t,size_label.medium,Pretend Old Word,2026-01-01,Pretend SOP,,,', 'l2,t,size_label.medium,Pretend Mid,2026-06-01,Pretend SOP,,,',
@@ -144,7 +144,7 @@ test.describe('CD Hub dog card summary', () => {
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = page.locator('#rows article.dc');
-    await expect(card).toHaveAttribute('data-size', 'medium');   // exactly 25 kg is medium (SOP: large is over 25 kg)
+    await expect(card).toHaveAttribute('data-size', 'medium');   // 24.9 kg is medium; 25.0 counts as large (live row)
     await expect(card.locator('[data-k="size"]')).toHaveText('Pretend Mid');
     expect(await page.evaluate(() => [sizeName('small'), sizeName('large')])).toEqual(['Small', 'Large']);
   });

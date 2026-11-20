@@ -75,15 +75,17 @@
      room limits from area_capacity for the room's current access. Nothing kennel-specific is fixed here. */
   var per = 2;   // cards per A4: 1, 2 or 4 (Lisa's dog card, 18 Nov 2026: two per A4)
   function sizeKey(b) { var m = /(small|medium|large)/i.exec(String(b || '')); return m ? m[1].toLowerCase() : ''; }
-  /* the dog's size: latest weighing, else the middle of the kg range in its size cell ("Mini 8-12kg" = 10 kg), both
-     against the owner's size_from_kg rows (staff/lib/capacity.js); else a size word typed in the cell. Lisa 15 Nov 2026 */
+  /* the dog's size: the one shared rule with the CD Hub dog page (staff/lib/capacity.js sizeForDog): an owner
+     size_override row, else the latest weighing, else the middle of the kg range in its size cell, all against the
+     owner's size_from_kg rows (Lisa 15 Nov 2026); last, a size word typed in the cell. Never any kg on the card. */
   function sizeOfDog(s) {
     if (!s) return '';
     var w = null;
     (T.weight || []).forEach(function (r) { if (r.subject_id === s.id && !isNaN(parseFloat(r.weight_kg)) && (!w || String(r.performed_on || '') >= String(w.performed_on || ''))) w = r; });
-    var cut = BLDCapacity.sizeCutoffs(T.breeding_rule || [], BLDNeeds.today());
-    return BLDCapacity.sizeOf(w ? w.weight_kg : null, s.size_band, cut).size || sizeKey(s.size_band);
+    return BLDCapacity.sizeForDog({ id: s.id, kg: w ? w.weight_kg : null, sizeText: s.size_band, rules: T.breeding_rule || [], today: BLDNeeds.today() }).size || sizeKey(s.size_band);
   }
+  /* the size word only, in the owner's size_label.* words (default Small, Medium, Large, shared with the hub): never the kg range typed in the old size cell */
+  function sizeWord(k) { return k ? (BLDCapacity.sizeLabels(T.breeding_rule || [], BLDNeeds.today())[k] || '') : ''; }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
@@ -114,13 +116,6 @@
     if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
       onerror: function () { box.textContent = 'Photo'; } }));
     return box; }
-  /* the owner's size word (size_label.* rule row in force), else Small / Medium / Large, as on the hub */
-  function sizeWord(k) {
-    var best = null, today = BLDNeeds.today();
-    (T.breeding_rule || []).forEach(function (r) { var f = r.effective_from || r.from_date || '';
-      if (r.rule_key === 'size_label.' + k && String(r.value || '').trim() && f <= today && (!r.to_date || r.to_date >= today) && (!best || f >= (best.effective_from || best.from_date || ''))) best = r; });
-    return best ? String(best.value).trim().slice(0, 30) : (k ? k.charAt(0).toUpperCase() + k.slice(1) : '');
-  }
   /* Lisa's dog card (18 Nov 2026): big name, Sex with its sign, Date of birth, photo framed in the size colour,
      "Size: Medium" block in the size colour, one large code, the microchip in groups of 3. Two per A4, cut line between. */
   function dogCard(tag, it) {
