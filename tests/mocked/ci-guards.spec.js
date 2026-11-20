@@ -203,6 +203,47 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(pages()).toMatch(/gate:[\s\S]*?if: \$\{\{ !github\.event\.repository\.private \}\}/);
   });
 
+  // Minutes trim (20 Nov 2026): the suite runs for pull requests and nightly, never on a plain push, and never twice for main.
+  test('minutes trim: browser suite on pull requests, nightly and by hand only; main is not run twice; small checks are not doubled', () => {
+    const on = (f) => { const t = read('.github/workflows/' + f); return t.slice(t.indexOf('\non:\n'), t.indexOf('\npermissions:')); };
+    const tests = on('tests.yml');
+    expect(tests).toMatch(/\n {2}pull_request:\n/);
+    expect(tests, 'a merge queue, if ever used, still gets the required check').toMatch(/\n {2}merge_group:/);
+    expect(tests).toMatch(/\n {2}schedule:\n/);
+    expect(tests).toMatch(/\n {2}workflow_dispatch:\n/);
+    expect(tests, 'tests.yml must not run on pushes: the publish gate already runs the suite on main').not.toMatch(/\n {2}push:/);
+    expect(read('.github/workflows/tests.yml')).toMatch(/group: tests-\$\{\{ github\.event\.pull_request\.number \|\| github\.ref \}\}\n {2}cancel-in-progress: true/);
+    // The publish gate still runs the full suite on every push to main while the repo is public.
+    expect(pages()).toMatch(/push:\n\s+branches: \[main\]/);
+    expect(pages()).toMatch(/npx playwright test --project=mocked --project=phone/);
+    // Small checks: once per pull request push and on main, not on every branch push as well.
+    for (const f of ['gate.yml', 'lint.yml']) {
+      expect(on(f), f).toMatch(/\n {2}push:\n {4}branches: \[main\]\n/);
+      expect(on(f), f).toMatch(/\n {2}pull_request:\n/);
+    }
+    // The privacy guard is deliberately NOT trimmed: in a public repo a pushed branch is public at once, pull request or not.
+    expect(on('privacy-guard.yml')).toMatch(/\n {2}push:\n {2}pull_request:\n/);
+  });
+
+  test('minutes trim: a pull request is judged like a branch push, and a quiet night skips the browser only when asked to', () => {
+    const run = (event, ref, env) => execFileSync('bash', [path.join(REPO, 'tools/ci-local/docs-only.sh'), event, ref],
+      { cwd: REPO, env: { ...process.env, GITHUB_OUTPUT: '', REPO_PRIVATE: 'false', NIGHTLY_SKIP_IDLE: '', NOW_EPOCH: '', ...env } }).toString().trim();
+    const last = Number(execFileSync('git', ['log', '-1', '--format=%ct', 'HEAD'], { cwd: REPO }).toString().trim());
+    // Nightly: fresh commit = run; older than 26 hours = skip; without the switch = always run.
+    expect(run('schedule', 'refs/heads/main', { NIGHTLY_SKIP_IDLE: 'true', NOW_EPOCH: String(last + 3600) })).toBe('browser=true');
+    expect(run('schedule', 'refs/heads/main', { NIGHTLY_SKIP_IDLE: 'true', NOW_EPOCH: String(last + 27 * 3600) })).toBe('browser=false');
+    expect(run('schedule', 'refs/heads/main', { NOW_EPOCH: String(last + 27 * 3600) })).toBe('browser=true');
+    // A hand-started run always runs the browser, whatever the age of the last commit.
+    expect(run('workflow_dispatch', 'refs/heads/main', { NIGHTLY_SKIP_IDLE: 'true', NOW_EPOCH: String(last + 27 * 3600) })).toBe('browser=true');
+    expect(read('.github/workflows/tests.yml')).toMatch(/NIGHTLY_SKIP_IDLE: 'true'/);
+    // The script takes the pull request path (same rule as a branch push) instead of always saying true.
+    expect(read('tools/ci-local/docs-only.sh')).toMatch(/\[ "\$event" = pull_request \]; then/);
+    expect(run('pull_request', 'refs/pull/1/merge', {})).toMatch(/^browser=(true|false)$/);
+    // Private repo: a merge-queue run skips the browser like pushes and pull requests do; public: it runs it.
+    expect(run('merge_group', 'refs/heads/gh-readonly-queue/main/pr-1', { REPO_PRIVATE: 'true' })).toBe('browser=false');
+    expect(run('merge_group', 'refs/heads/gh-readonly-queue/main/pr-1', {})).toBe('browser=true');
+  });
+
   test('every action in pages.yml is pinned to a full commit id', () => {
     const loose = [...pages().matchAll(/uses:\s*([^\s#]+)/g)].map((x) => x[1]).filter((u) => !/@[0-9a-f]{40}$/.test(u));
     expect(loose).toEqual([]);
