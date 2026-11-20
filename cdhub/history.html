@@ -178,6 +178,34 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
 .rl b{font-weight:600}
 .rl .note{display:block;margin-top:2px}
 .oline{font-size:var(--fs-small);font-variant-numeric:tabular-nums;margin:0}
+.rep-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 14px}
+.rep-ctl label{font-size:var(--fs-small);color:var(--muted)}
+.rep-ctl select{min-height:40px;max-width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);color:var(--ink);font:inherit;padding:0 8px}
+.rep-ctl .btn{min-height:40px}
+.rep-h{font-size:var(--fs-head);margin:0 0 4px}
+.rep-why,.rep-sum{font-size:var(--fs-small);color:var(--muted);margin:0 0 8px}
+.rep-all{color:var(--ink);font-weight:600}
+.rep-room{margin:14px 0 18px}
+.rep-room h3{margin:0 0 4px}
+.rep-tab{width:100%;border-collapse:collapse;font-size:var(--fs-small);font-variant-numeric:tabular-nums}
+.rep-tab th,.rep-tab td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}
+.rep-tab th{color:var(--muted);font-weight:600;white-space:nowrap}
+.rep-tab .rep-d{white-space:nowrap}
+.rep-bad td{color:var(--ljr-3-text);font-weight:600}
+@media print{
+  @page{size:A4;margin:12mm}
+  body.print-report>*:not(.wrap){display:none!important}
+  body.print-report #main>*:not(#view-r){display:none!important}
+  body.print-report #view-r{display:block!important}
+  body.print-report .rep-ctl,body.print-report .house-fold{display:none!important}
+  body.print-report .wrap,body.print-report #main{padding:0!important;margin:0!important;max-width:none!important}
+  body.print-report .rscroll{overflow:visible!important}
+  body.print-report .rep-tab{font-size:9pt}
+  body.print-report .rep-room{break-inside:auto}
+  body.print-report .rep-room+.rep-room{break-before:page}
+  body.print-report .rep-tab tr{break-inside:avoid}
+  body.print-report .rep-bad td{color:var(--ljr-3-text);font-weight:700}
+}
 </style>
 </head>
 <body>
@@ -627,7 +655,7 @@ function openDrill(isoDate){
 function closeDrill(){el('drill').classList.remove('open');}
 
 /* ---- views ---- */
-var YEAR=2026;
+var YEAR=+TODAY_STR.slice(0,4);
 /* Round order comes from BLD-area rows: group_sort, then code. When a room is in use and a thermometer is needed
    comes only from BLD-requirement rows through the shared lib (staff/lib/needs.js, thermometer.js, occupancy.js;
    Lisa 11 Nov 2026, "A standard"). A room whose room.in_use rows have all ended is retired: left out of the round
@@ -798,6 +826,107 @@ function areaStatusForArea(ar,range){
   });
   return hasFlag?'flag':hasWarn?'warn':'ok';
 }
+/* ---- Month report (Lisa 20 Nov 2026): one month, all rooms or one, ready to save as a PDF (the browser's own
+   Print > Save as PDF; nothing is sent anywhere). The same rules as every view on this page: each slot is judged by the
+   limit rows in force on its own day, and the youngest dog in the room that day (BLD-occupancy rows + BLD-subject date of
+   birth) picks the row. So a room that held puppies under four weeks on a past day is judged on the bed spot against the
+   puppy row (26–28 °C in the rows today), and the room itself on the adult row. Months go back to the first reading. ---- */
+var REP={y:null,m:null,u:'all'};
+function repInit(){ if(REP.y!==null) return; var p=TODAY_STR; REP.y=+p.slice(0,4); REP.m=+p.slice(5,7)-1; }
+function repMonths(){
+  /* back to January of the earliest year button (yearButtons), so every year offered has its months */
+  var t=TODAY_STR, y=+t.slice(0,4), m=+t.slice(5,7)-1, fy=firstYear(), fm=0, out=[];
+  while(y>fy||(y===fy&&m>=fm)){ out.push({y:y,m:m}); m--; if(m<0){ m=11; y--; } }
+  return out;
+}
+function repUnits(){
+  var ids=Object.keys(SPAN).map(unitArea).concat(THERMOS.map(function(t){ return t.area_id; })), u=[];
+  areasInWalk(ids).forEach(function(a){ u=u.concat(unitsOf(a)); });
+  return u;
+}
+function repNum(v){ return v==null?'':String(v); }
+function repLimit(day,u){
+  var aid=unitArea(u), B=bandOn(day,aid); if(!B) return 'No limit row';
+  var A=adultBandOn(day,aid);
+  if(B.age_to!==null&&A&&A!==B) return 'Room '+repNum(A.min)+'–'+repNum(A.max)+' · puppy bed '+repNum(B.min)+'–'+repNum(B.max);
+  return repNum(B.min)+'–'+repNum(B.max);
+}
+function repSlot(s){
+  if(!s||s.k==='none') return '';
+  if(s.k==='miss') return 'Missed';
+  if(s.k==='due') return 'Due';
+  if(s.k==='empty') return 'Room empty';
+  return (s.lo||'–')+'–'+(s.hi||'–');
+}
+function repWord(s){
+  if(!s) return '';
+  return {in:'In limit',nospot:'In limit',warm:'Over max: cooling action',nolimit:'No limit row',eout:'Room empty (flagged)',miss:'Missed',empty:'Room empty',due:'Due',
+    swap:s.unread?'Check: not a number':'Check: max lower than min',
+    out:s.why==='spotcold'?'Bed spot below the puppy limit':s.why==='spothot'?'Bed spot above the puppy limit':'Below the limit'}[s.k]||'';
+}
+function repBad(s){ return !!s&&(s.k==='out'||s.k==='swap'||s.k==='miss'); }
+function repData(y,m,only){
+  var md=mdays(y)[m], units=only==='all'?repUnits():[only], by={};
+  units.forEach(function(u){ by[u]={u:u,name:unitName(u),rows:[],read:0,out:0,warm:0,miss:0,lo:null,hi:null}; });
+  for(var d=1;d<=md;d++){
+    var day=ds(y,m,d); if(day>TODAY_STR) break;
+    dayRooms(day).forEach(function(x){
+      var R=by[x.aid]; if(!R) return;
+      R.rows.push({day:day,am:x.am,pm:x.pm,limit:repLimit(day,x.aid)});
+      [x.am,x.pm].forEach(function(s){
+        if(isRead(s.k)){ R.read++; var lo=parseFloat(s.lo), hi=parseFloat(s.hi);
+          if(!isNaN(lo)&&(R.lo===null||lo<R.lo)) R.lo=lo; if(!isNaN(hi)&&(R.hi===null||hi>R.hi)) R.hi=hi; }
+        if(s.k==='out') R.out++; if(s.k==='warm') R.warm++; if(s.k==='miss') R.miss++;
+      });
+    });
+  }
+  return units.map(function(u){ return by[u]; }).filter(function(R){ return R.rows.length; });
+}
+function repRoom(R,y,m){
+  var rows=R.rows.map(function(r){
+    var a=repWord(r.am), p=repWord(r.pm), res=a&&p&&a!==p?'AM '+a+' · PM '+p:(a||p);
+    var spot=[r.am.spot,r.pm.spot].filter(Boolean).join(' / ');
+    var note=[r.am.note?(r.pm.note?'AM: ':'')+r.am.note:'',r.pm.note?(r.am.note?'PM: ':'')+r.pm.note:''].filter(Boolean).join(' · ');
+    var bad=repBad(r.am)||repBad(r.pm);
+    return '<tr'+(bad?' class="warn rep-bad"':'')+'><td class="rep-d">'+esc(+r.day.slice(8,10)+' '+MONTHS[+r.day.slice(5,7)-1])+'</td><td>'+esc(repSlot(r.am))+'</td><td>'+esc(repSlot(r.pm))+'</td><td>'+esc(spot)+'</td><td>'+esc(r.limit)+'</td><td>'+esc(res)+'</td><td>'+esc(note)+'</td></tr>';
+  }).join('');
+  return '<section class="rep-room" data-unit="'+esc(R.u)+'"><h3>'+esc(R.name)+'</h3>'
+    +'<p class="rep-sum">'+R.read+' readings · lowest '+(R.lo===null?'–':dpIndoor(R.lo))+' °C · highest '+(R.hi===null?'–':dpIndoor(R.hi))+' °C · '
+    +R.out+' outside the limit · '+R.warm+' cooling actions · '+R.miss+' missed</p>'
+    +'<div class="rscroll" tabindex="0" role="region" aria-label="'+esc(R.name)+' readings"><table class="rep-tab"><thead><tr><th>Date</th><th>AM min–max</th><th>PM min–max</th><th>Bed spot</th><th>Limit °C</th><th>Result</th><th>What was done</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+}
+function buildReport(){
+  repInit();
+  var y=REP.y, m=REP.m, list=repData(y,m,REP.u);
+  var mopts=repMonths().map(function(x){ return '<option value="'+x.y+'-'+x.m+'"'+(x.y===y&&x.m===m?' selected':'')+'>'+MONTHS[x.m]+' '+x.y+'</option>'; }).join('');
+  var uopts='<option value="all"'+(REP.u==='all'?' selected':'')+'>All rooms</option>'+repUnits().map(function(u){ return '<option value="'+esc(u)+'"'+(REP.u===u?' selected':'')+'>'+esc(unitName(u))+'</option>'; }).join('');
+  var t={read:0,out:0,warm:0,miss:0}; list.forEach(function(R){ t.read+=R.read; t.out+=R.out; t.warm+=R.warm; t.miss+=R.miss; });
+  var title='Room temperatures · '+MONTHS[m]+' '+y+' · '+(REP.u==='all'?'All rooms':unitName(REP.u));
+  return '<div class="rep-ctl"><label for="repMonth">Month</label><select id="repMonth" onchange="repSet(this.value,null)">'+mopts+'</select>'
+    +'<label for="repUnit">Rooms</label><select id="repUnit" onchange="repSet(null,this.value)">'+uopts+'</select>'
+    +'<button type="button" class="btn" id="repPdf" onclick="repPrint()">Save as PDF</button></div>'
+    +'<div class="rep-out" id="repOut"><h2 class="rep-h">'+esc(title)+'</h2>'
+    +'<p class="rep-why">Each reading is judged by the limit rows in force that day. On a day a room held puppies under four weeks, the room is judged on the adult row and the bed spot on the puppy row.</p>'
+    +(list.length?'<p class="rep-sum rep-all">'+list.length+(list.length===1?' room':' rooms')+' · '+t.read+' readings · '+t.out+' outside the limit · '+t.warm+' cooling actions · '+t.miss+' missed</p>'
+      +list.map(function(R){ return repRoom(R,y,m); }).join('')
+      :'<p class="sub">No readings and nothing due for '+esc(MONTHS[m]+' '+y)+'.</p>')
+    +'</div>';
+}
+function repSet(month,unit){
+  if(month){ var p=month.split('-'); REP.y=+p[0]; REP.m=+p[1]; }
+  if(unit) REP.u=unit;
+  el('view-r').innerHTML=buildReport();
+}
+/* Save as PDF: the browser's print, with only the report on the page and its name as the file name. */
+function repPrint(){
+  var old=document.title;
+  document.title='Room temperatures '+MONTHS[REP.m]+' '+REP.y+' '+(REP.u==='all'?'all rooms':unitName(REP.u));
+  document.body.classList.add('print-report');
+  var done=function(){ document.body.classList.remove('print-report'); document.title=old; window.removeEventListener('afterprint',done); };
+  window.addEventListener('afterprint',done);
+  window.print();
+  setTimeout(done,1000);
+}
 function setViewMode(mode){
   VIEW_MODE=mode;
   document.querySelectorAll('.vt-btn').forEach(function(b){b.classList.toggle('on',b.dataset.vm===mode);});
@@ -929,12 +1058,29 @@ function setView(id,btn){
   btn.classList.add('on');
   closeDrill();
 }
+/* Year buttons: this year back to the first year with a reading (Lisa 20 Nov 2026: past years must load), and always
+   at least this year and the two before (as the page always offered). */
+function firstYear(){ var now=+TODAY_STR.slice(0,4), f=FIRST_DAY?+FIRST_DAY.slice(0,4):now; return Math.min(f,now-2); }
+function yearButtons(){
+  var now=+TODAY_STR.slice(0,4), first=firstYear(), h='';
+  for(var y=now;y>=first;y--) h+='<button class="btn yr-btn'+(y===YEAR?' on':'')+'" data-yr="'+y+'" onclick="setYear('+y+')">'+y+'</button>';
+  return h;
+}
+/* The same day in another year, never after today (29 Feb becomes 28 Feb). */
+function sameDayIn(y,iso){
+  var m=+iso.slice(5,7)-1, d=Math.min(+iso.slice(8,10),mdays(y)[m]), out=ds(y,m,d);
+  return out>TODAY_STR?TODAY_STR:out;
+}
 function setYear(y){
   YEAR=y;
   document.querySelectorAll('.yr-btn').forEach(function(b){ b.classList.toggle('on',+b.dataset.yr===y); });
   el('view-a').innerHTML=buildHeatMap(y);
   el('view-b').innerHTML=buildStrip(y);
   el('view-c').innerHTML=buildMonthCards(y);
+  /* Lisa 20 Nov 2026: pressing 2025 still showed today on The round. The round moves to the same day in that year. */
+  if(ROUND_DATE&&+ROUND_DATE.slice(0,4)!==y){ ROUND_DATE=sameDayIn(y,ROUND_DATE); var v=el('view-d'); if(v) v.innerHTML=buildRound(ROUND_DATE); }
+  /* and the report to the same month in that year */
+  if(REP.y!==null&&REP.y!==y){ var mm=ds(y,REP.m,1)>TODAY_STR?+TODAY_STR.slice(5,7)-1:REP.m; REP.y=y; REP.m=mm; var r=el('view-r'); if(r) r.innerHTML=buildReport(); }
   closeDrill();
 }
 function legend(){
@@ -966,9 +1112,7 @@ function renderPage(){
       +'</div>':'')
     +'<div id="legend-wrap">'+legend()+'</div>'
     +'<div class="yr-row">'
-    +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
-    +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
-    +'<button class="btn yr-btn" data-yr="2024" onclick="setYear(2024)">2024</button>'
+    +yearButtons()
     +'<a class="btn" style="min-height:40px" href="./history-archive.html">Archive</a>'
     +'</div>'
     +'<div class="tab-row">'
@@ -976,12 +1120,16 @@ function renderPage(){
     +'<button class="tab" onclick="setView(\'a\',this)">Heat map</button>'
     +'<button class="tab" onclick="setView(\'b\',this)">Year strip</button>'
     +'<button class="tab" onclick="setView(\'c\',this)">Month cards</button>'
+    +'<button class="tab" id="tabReport" onclick="setView(\'r\',this)">Report</button>'
     +'<a class="btn" href="./index.html#/round">Back to the round</a>'
     +'</div>'
     +'<div id="view-d" class="view on">'+buildRound(ROUND_DATE)+'</div>'
     +'<div id="view-a" class="view">'+buildHeatMap(YEAR)+'</div>'
     +'<div id="view-b" class="view">'+buildStrip(YEAR)+'</div>'
-    +'<div id="view-c" class="view">'+buildMonthCards(YEAR)+'</div>';
+    +'<div id="view-c" class="view">'+buildMonthCards(YEAR)+'</div>'
+    +'<div id="view-r" class="view">'+buildReport()+'</div>';
+  /* #report (CD Hub's Temps report links, and the staff Temps address) opens the report straight away */
+  if(/^#report\b/.test(location.hash||'')){ var t=el('tabReport'); if(t) setView('r',t); }
 }
 </script>
 </body></html>
