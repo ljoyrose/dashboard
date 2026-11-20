@@ -18,6 +18,8 @@ test.describe('Install on your phone', () => {
     for (const [url, pre] of [['./', ''], ['money/', '../'], ['cdhub/', '../']]) {
       await page.goto(url);
       await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', pre + 'manifest.webmanifest');
+      // Behind Cloudflare Access the manifest must be fetched with the sign-in cookie, or Android only makes a shortcut (15 Nov 2026).
+      await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'use-credentials');
       await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', pre + 'icons/icon.svg');
     }
     const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
@@ -50,7 +52,7 @@ test.describe('Install on your phone', () => {
         return out.sort();
       });
       expect(kept.length).toBeGreaterThan(5);
-      for (const p of kept) expect(p, 'kept: ' + p).toMatch(new RegExp('^' + esc(BASE) + /(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|cdhub\/sop-index\.json|cdhub\/asset-types\.json|cdhub\/asset-type-icons\.svg|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/.source));
+      for (const p of kept) expect(p, 'kept: ' + p).toMatch(new RegExp('^' + esc(BASE) + /(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|cdhub\/hub-nav\.js|cdhub\/sop-index\.json|cdhub\/asset-types\.json|cdhub\/asset-type-icons\.svg|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/.source));
     });
   });
 });

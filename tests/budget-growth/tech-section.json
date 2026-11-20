@@ -1,0 +1,2 @@
+{"home": 15800, "cdhub": 1000, "factory": 1000, "food": 1000, "marketplace": 1000, "money": 1000, "studio": 1000, "privacy": 1000,
+ "why": "Dashboard Tech section (TECH-HUB-1, PR 525): index.html gains the Tech view, find bar and Add tech (about 14.6 KB); toolkit.js gains one filter icon (115 bytes) and config.js the tech block (0.8 KB) on every page. The tile code and its CSS (studio/tech-core.js, studio/tech.css) load only when Tech opens, so they add nothing here."}

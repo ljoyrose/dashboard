@@ -35,6 +35,85 @@ test('a refused code is not remembered', async ({ page }) => {
   expect((await stored(page))[0]).toBeNull();
 });
 
+async function typeSetup(page, payload) {
+  await page.goto('cdhub/staff/');
+  await page.getByRole('button', { name: 'Type set-up code instead' }).click();
+  const box = page.getByLabel('Set-up code');
+  await box.fill(payload);
+  await page.getByRole('button', { name: 'Use this code' }).click();
+  await expect(box).toHaveCount(0);
+}
+
+test('a typed set-up code follows the QR: a good one opens the staff code, a bad one is refused @regression', async ({ page }) => {
+  await fakeScript(page, true);
+  const good = '#setup=' + encodeURIComponent(SCRIPT);
+  const bad = '#setup=' + encodeURIComponent('https://example.com/not-a-script');
+  const logs = [];
+  page.on('console', (m) => logs.push(m.text()));
+  await page.goto('cdhub/staff/' + good);
+  await expect(page.getByLabel('Your staff code')).toBeVisible();
+  expect(await stored(page)).toEqual([null, SCRIPT]);
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('cdhub/staff/' + bad);
+  await expect(page.getByText('That set-up QR was not right')).toBeVisible();
+  expect((await stored(page))[1]).toBeNull();
+  const pastedGood = await page.evaluate((h) => location.origin + location.pathname + h, good);
+  await typeSetup(page, pastedGood);
+  await expect(page.getByLabel('Your staff code')).toBeVisible();
+  expect(await stored(page)).toEqual([null, SCRIPT]);
+  expect(page.url()).not.toContain('setup=');
+  expect(page.url()).not.toContain('FAKE-TEST-ID');
+  expect(await page.locator('body').innerText()).not.toContain('FAKE-TEST-ID');
+  await page.evaluate(() => localStorage.clear());
+  const pastedBad = await page.evaluate((h) => location.origin + location.pathname + h, bad);
+  await typeSetup(page, pastedBad);
+  await expect(page.getByText('That set-up QR was not right')).toBeVisible();
+  expect((await stored(page))[1]).toBeNull();
+  expect(logs.join('\n')).not.toContain(SCRIPT);
+  expect(logs.join('\n')).not.toContain('FAKE-TEST-ID');
+});
+
+test('a typed private set-up code follows the QR: a good code is kept, a refused code is not @regression', async ({ page }) => {
+  let good = true;
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    return route.fulfill({ headers: CORS, json: good ? { ok: true, result: empty } : { ok: false, code: 'BAD_CODE', message: 'no' } });
+  });
+  const logs = [];
+  page.on('console', (m) => logs.push(m.text()));
+  await page.goto('cdhub/staff/');
+  const payload = await page.evaluate(([c, u]) => location.origin + location.pathname + '#join=' + encodeURIComponent(c) + '&url=' + u, [CODE, SCRIPT]);
+  await page.getByRole('button', { name: 'Type set-up code instead' }).click();
+  await page.getByLabel('Set-up code').fill(payload);
+  await page.getByRole('button', { name: 'Use this code' }).click();
+  await expect(page.getByRole('heading', { name: 'The Board' })).toBeVisible();
+  expect(page.url()).not.toContain(CODE);
+  expect(page.url()).not.toContain('join=');
+  expect(await stored(page)).toEqual([CODE, SCRIPT]);
+  expect(await page.locator('body').innerText()).not.toContain(CODE);
+  expect(logs.join('\n')).not.toContain(CODE);
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+  good = false;
+  await page.goto('cdhub/staff/');
+  await page.getByRole('button', { name: 'Type set-up code instead' }).click();
+  await page.getByLabel('Set-up code').fill(payload);
+  await page.getByRole('button', { name: 'Use this code' }).click();
+  await expect(page.getByText('That code was not accepted')).toBeVisible();
+  expect(page.url()).not.toContain(CODE);
+  expect((await stored(page))[0]).toBeNull();
+  expect(await page.locator('body').innerText()).not.toContain(CODE);
+});
+
+test('staff checks with no set-up names the hub owner and links to The Board', async ({ page }) => {
+  await page.goto('cdhub/checks/');
+  const note = page.locator('#note');
+  await expect(note).toContainText('Ask the hub owner or an admin');
+  await expect(note.getByRole('link', { name: 'The Board' })).toHaveAttribute('href', '../staff/');
+  await note.getByRole('link', { name: 'The Board' }).click();
+  await expect(page.getByRole('heading', { name: 'Set up this phone' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Type set-up code instead' })).toBeVisible();
+});
+
 test('the print page draws the QR on screen only and keeps nothing', async ({ page }) => {
   await fakeScript(page, true);
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
@@ -74,8 +153,8 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Dog kennel cards' }).click();
-  await expect(page.locator('.dcard .who b')).toHaveText(['Test here', 'Test offsite']);
+  await page.getByRole('button', { name: 'Dog cards' }).click();
+  await expect(page.locator('.dcard .name')).toHaveText(['Test here', 'Test offsite']);
 });
 
 test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card', async ({ page }) => {
@@ -120,8 +199,8 @@ test('room signs are never made for a room whose room.in_use rows have ended', a
   });
   await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
   await page.goto('cdhub/staff/print/');
-  await page.getByRole('button', { name: 'Room signs' }).click();
-  await expect(page.locator('.rcard > b')).toHaveText(['T1']);
+  await page.getByRole('button', { name: 'Room cards' }).click();
+  await expect(page.locator('.rcard .name')).toHaveText(['T1']);
 });
 
 // Lisa 11 Nov 2026: "+ Thermometer" on the hub opens the print page straight at Add thermometer; the place list has
@@ -151,4 +230,26 @@ test('add mode (?add=thermometer): straight to the form; corridors listed; saved
   await expect(page.locator('.qcard b')).toHaveText(['3A corridor', '3A.1']);
   await expect(page.locator('.qcard', { hasText: '3A corridor' }).locator('svg')).toHaveCount(1);
   expect(sent.map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', '3A corridor', 'area-c'], ['qr_tag', 'thermometer', 'thm-2']]);
+});
+
+test('print page: an owner signed in to CD Hub prints thermometer cards with no code (Board A, 17 Nov 2026)', async ({ page }) => {
+  const tables = { area: [{ id: 'area-t1', code: 'T1' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
+    thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1' }] };
+  const sent = [];
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
+    const b = JSON.parse(route.request().postData());
+    sent.push(b);
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role: 'OWNER', name: 'Pat Example' } } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'qrt-1' } } });
+  });
+  await page.addInitScript(([u]) => {
+    localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: 'fake-owner-token-0002', expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' }));
+    localStorage.setItem('cdhub.sink.url', u);
+  }, [SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Thermometer cards' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Hall']);
+  expect(sent.length).toBeGreaterThan(0);
+  for (const b of sent) { expect(b.google_token).toBe('fake-owner-token-0002'); expect(b.code).toBe(''); }
 });

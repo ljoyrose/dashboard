@@ -1,5 +1,6 @@
 // node --test cdhub/staff/modules/temperature/test/
-// Lisa, 8 Nov 2026: no picture is ever saved, uploaded or kept, and nothing goes to the staff member's phone.
+// Lisa, 8 Nov 2026: module.js and reader.js never make, keep or send a picture. Keeping a photo is a separate owner
+// setting (16 Nov 2026, job.temps_keep_photo, off by default) handled only in evidence.js: see evidence.test.mjs.
 // These checks fail if the module ever gains a way to make, keep or send a picture.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

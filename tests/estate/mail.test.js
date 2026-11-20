@@ -93,7 +93,7 @@ test('SPF broken: unknown mechanism, missing all, more than 10 lookups', () => {
 test('DKIM missing is flagged for Google Workspace MX when no allow-listed selector answers', () => {
   const none = { google: NX, selector1: NX, selector2: NX, k1: NX, s1: NX, default: NX };
   const miss = M.dkimWord(none, { word: 'Google Workspace' });
-  assert.equal(miss.word, 'missing');
+  assert.equal(miss.word, 'missing (google)');
   assert.deepEqual(M.summarise({ spf: 'pass', dkim: miss, dmarc: 'reject', mx: { word: 'Google Workspace' } }).faults, ['DKIM missing']);
   assert.deepEqual(E.emailProblems({ spf: 'pass', dkim: 'not found', dmarc: 'reject', mx: 'Google Workspace' }), ['DKIM missing']);
   const other = M.dkimWord({ google: NX, selector1: txt('"v=DKIM1; p=QUJD"') }, 'Google Workspace');

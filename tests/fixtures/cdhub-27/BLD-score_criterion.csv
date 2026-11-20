@@ -1,0 +1,5 @@
+id,scheme_id,band_id,key,label,evidence_source,subject_field,evidence_match,answer_field,date_field,reads,applies_to,valid_months,when_missing,guidance,authority
+c-hips-gate,s-test,b-gate,hips_gate,Hips pass,BLD-health_screen,subject_id,test=hips,grade,tested_on,latest,,,unknown,,invented
+c-hips-pts,s-test,b-health,hips_pts,Hips grade,BLD-health_screen,subject_id,test=hips,grade,tested_on,latest,,,unknown,,invented
+c-litters,s-test,b-breed,litters,Litters on file,BLD-litter,dam_subject_id,,,born_on,count,sex=F,,unknown,,invented
+c-status,s-test,b-status,status,Status,BLD-subject_status,subject_id,,state,,latest,,,unknown,,invented

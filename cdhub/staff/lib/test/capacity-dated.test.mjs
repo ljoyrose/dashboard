@@ -35,3 +35,110 @@ test('sizeCutoffs: a row past its to_date no longer counts', () => {
   assert.equal(C.sizeCutoffs(rules, '2026-03-01').large, 25);
   assert.equal(C.sizeCutoffs(rules, '2026-11-12').large, 20);
 });
+
+test('sizeFromKg follows the size_from_kg rows: small under 10, medium from 10, large from 25 (exactly 25 kg is large, as the live row says)', () => {
+  const cut = { medium: 10, large: 25 };
+  assert.equal(C.sizeFromKg('9.99', cut), 'small');
+  assert.equal(C.sizeFromKg('10', cut), 'medium');
+  assert.equal(C.sizeFromKg('24.99', cut), 'medium');
+  assert.equal(C.sizeFromKg('25', cut), 'large');
+  assert.equal(C.sizeFromKg('25.01', cut), 'large');
+  assert.equal(C.sizeFromKg('', cut), '');
+});
+
+test('freePlaces: lists remaining places of the incoming size, and 0 when the room would be over', () => {
+  const cap = [
+    { area_id: 'r1', access_type: 'free', size_band: 'small', max_dogs: '3', from_date: '2026-01-01' },
+    { area_id: 'r1', access_type: 'free', size_band: 'medium', max_dogs: '2', from_date: '2026-01-01' }
+  ];
+  const empty = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [], add: { id: 'a', size: 'small' }, date: '2026-11-12' });
+  assert.equal(empty.ok, true);
+  assert.equal(empty.free, 3);
+  assert.equal(empty.size, 'small');
+  const one = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [{ id: 'x', size: 'small' }], add: { id: 'a', size: 'small' }, date: '2026-11-12' });
+  assert.equal(one.ok, true);
+  assert.equal(one.free, 2);
+  const med = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [{ id: 'x', size: 'small' }, { id: 'y', size: 'small' }], add: { id: 'a', size: 'medium' }, date: '2026-11-12' });
+  assert.equal(med.ok, false);
+  assert.equal(med.free, 0);
+  const medOk = C.freePlaces({ areaId: 'r1', access: 'free', capacity: cap, dogs: [{ id: 'x', size: 'small' }], add: { id: 'a', size: 'medium' }, date: '2026-11-12' });
+  assert.equal(medOk.ok, true);
+  assert.equal(medOk.free, 1);
+});
+
+// LD-SC audit, OV11 15 Nov 2026: the flap and the sign's limits read the dated rows in force, never just the last row.
+test('accessOn: from_date (or an older effective_from), to_date ended, a future row ignored, latest start wins, undated is oldest', () => {
+  const A = [
+    { area_id: 'r1', access_type: 'limited', from_date: '2026-11-01' },
+    { area_id: 'r1', access_type: 'free' },                                        // undated: oldest, never beats a dated row
+    { area_id: 'r1', access_type: 'free', from_date: '2026-11-20' },               // not started yet on 15 Nov
+    { area_id: 'r2', access_type: 'free', effective_from: '2026-10-01', to_date: '2026-11-10' },
+    { area_id: 'r2', access_type: 'limited', effective_from: '2026-09-01' }];
+  assert.equal(C.accessOn(A, 'r1', '2026-11-15'), 'limited');
+  assert.equal(C.accessOn(A, 'r1', '2026-11-20'), 'free');
+  assert.equal(C.accessOn(A, 'r2', '2026-11-05'), 'free');
+  assert.equal(C.accessOn(A, 'r2', '2026-11-11'), 'limited');   // the free row ended on 10 Nov
+  assert.equal(C.accessOn(A, 'r3', '2026-11-11'), '');
+  assert.equal(C.accessOn([{ area_id: 'r1', access_type: 'free', from_date: '2026-11-01' }, { area_id: 'r1', access_type: 'limited', from_date: '2026-11-01' }], 'r1', '2026-11-15'), 'limited');   // same start: the later row
+});
+test('limitsOn: the sign shows the rows in force that day, small first, "+ pups" left out', () => {
+  const R = [
+    { area_id: 'r1', access_type: 'limited', size_band: 'medium', max_dogs: '1', from_date: '2026-01-01' },
+    { area_id: 'r1', access_type: 'limited', size_band: 'medium', max_dogs: '2', from_date: '2026-11-11' },
+    { area_id: 'r1', access_type: 'limited', size_band: 'small', max_dogs: '3', from_date: '2026-11-11' },
+    { area_id: 'r1', access_type: 'limited', size_band: 'large + pups', max_dogs: '1', from_date: '2026-11-11' },
+    { area_id: 'r1', access_type: 'free', size_band: 'small', max_dogs: '5', from_date: '2026-11-11' }];
+  assert.deepEqual(C.limitsOn(R, 'r1', 'limited', '2026-11-15'), [{ band: 'small', n: 3 }, { band: 'medium', n: 2 }]);
+  assert.deepEqual(C.limitsOn(R, 'r1', 'limited', '2026-11-10'), [{ band: 'medium', n: 1 }]);
+  assert.deepEqual(C.limitsOn(R, 'r1', '', '2026-11-15'), []);
+});
+test('facts and summary: size from the latest weight with the cut-off rows, the dam of a litter; one plain line', () => {
+  const rules = [{ rule_key: 'size_from_kg.medium', value: '10', source: 'invented', effective_from: '2026-01-01' },
+    { rule_key: 'size_from_kg.large', value: '25', source: 'invented', effective_from: '2026-01-01' }];
+  const f = C.facts({ subjects: [{ id: 'd1', size_band: 'large' }, { id: 'p1', birth_litter_id: 'l1' }], litters: [{ id: 'l1', dam_subject_id: 'd1' }],
+    weights: [{ subject_id: 'd1', performed_on: '2026-01-01', weight_kg: '30' }, { subject_id: 'd1', performed_on: '2026-11-01', weight_kg: '12' }], weightsRead: true, rules, today: '2026-11-15' });
+  assert.deepEqual(f('d1'), { id: 'd1', size: 'medium', damId: '' });
+  assert.equal(f('p1').damId, 'd1');
+  assert.equal(C.facts({ subjects: [{ id: 'd1', size_band: 'large' }], weightsRead: false, rules })('d1').size, 'large');
+  const r = C.check({ areaId: 'r1', access: 'limited', capacity: [{ area_id: 'r1', access_type: 'limited', size_band: 'small', max_dogs: '3' }], dogs: [{ id: 'x', size: 'small' }] });
+  assert.equal(C.summary(r), 'Takes 3 small with limited access. 1 of 3 now.');
+});
+
+test('flap set to limited but limits only recorded for free access: unknown, and the reason says so (3A.1/2, 17 Nov 2026)', () => {
+  const rows = [{ area_id: 'r2', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
+  const r = C.check({ areaId: 'r2', access: 'limited', capacity: rows, dogs: [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }], date: '2026-11-17' });
+  assert.equal(r.status, 'unknown');
+  assert.match(r.message, /flap is set to limited access, but this room only has limits for free access/);
+  const ok = C.check({ areaId: 'r2', access: 'free', capacity: rows, dogs: [{ id: 'a', size: 'medium' }], date: '2026-11-17' });
+  assert.equal(ok.status, 'ok');
+  assert.doesNotMatch(ok.message, /flap is set/);
+});
+
+// The Space Rules poster as BLD-breeding_rule holds it (rule keys as in the live sheet, 11 Nov 2026). Invented ids.
+const POSTER = [];
+[['free', { small: [2.5, 2.5, 4.5, 6.0], medium: [2.5, 4.5, 6.0], large: [4.5, 6.0] }, { small: 5, medium: 5, large: 9 }],
+ ['limited', { small: [4.5, 4.5, 6.5, 8.5], medium: [4.5, 6.5, 8.5], large: [6.5, 8.5] }, { small: 9, medium: 9, large: 13 }]].forEach(([mode, t, p]) => {
+  Object.keys(t).forEach((sz) => t[sz].forEach((v, i) => POSTER.push({ rule_key: `space.${mode}.adult.${sz}.${i + 1}`, value: String(v), effective_from: '2026-11-11' })));
+  Object.keys(p).forEach((sz) => POSTER.push({ rule_key: `space.${mode}.mum_with_pups.${sz}.1`, value: String(p[sz]), effective_from: '2026-11-11' }));
+});
+
+test('space rules: 3A.1/2 (9 m²) with the flap shut gets 4 small, 3 medium or 2 large, small/medium mum with pups but not large', () => {
+  const space = C.spaceRules(POSTER, '2026-11-17');
+  const rows = C.deriveRows('r3', 9, space).filter((r) => r.access_type === 'limited');
+  const by = Object.fromEntries(rows.map((r) => [r.size_band, r.max_dogs]));
+  assert.deepEqual(by, { small: '4', medium: '3', large: '2', 'small + pups': '1', 'medium + pups': '1', 'large + pups': '0' });
+  const free = Object.fromEntries(C.deriveRows('r3', 3.14, space).filter((r) => r.access_type === 'free').map((r) => [r.size_band, r.max_dogs]));
+  assert.equal(free.small, '2'); assert.equal(free.medium, '1'); assert.equal(free.large, '0');   // matches 4A on the Cabin List
+});
+
+test('check: a flap setting with no rows of its own uses the space rules and says so; the owner\'s own rows still win', () => {
+  const space = C.spaceRules(POSTER, '2026-11-17');
+  const own = [{ area_id: 'r3', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '3' }];
+  const two = [{ id: 'a', size: 'medium' }, { id: 'b', size: 'medium' }];
+  const r = C.check({ areaId: 'r3', access: 'limited', capacity: own, dogs: two, date: '2026-11-17', m2: 9, space });
+  assert.equal(r.status, 'ok'); assert.equal(r.limit, 3);
+  assert.match(r.message, /worked out from the room size \(9 m²\)/);
+  const mine = C.check({ areaId: 'r3', access: 'free', capacity: [{ area_id: 'r3', access_type: 'free', size_band: '10-25kg (medium)', max_dogs: '1' }], dogs: two, date: '2026-11-17', m2: 9, space });
+  assert.equal(mine.status, 'over');   // the owner's row (1) is used, not the derived 3
+  assert.equal(C.spaceRules([], '2026-11-17').free, undefined);   // no poster rows: nothing is invented
+});
