@@ -1,0 +1,3 @@
+id,tenant_id,species_id,code,text,domain,origin,is_law,source_hint,active,notes
+out-a,ten-sample,,A,Sample requirement A,,,,,yes,
+out-b,ten-sample,,B,Sample requirement B,,,,,yes,

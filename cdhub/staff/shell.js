@@ -57,6 +57,22 @@
   var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '';
   var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
   var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';
+  /* Storage tidy, stage 2 (owner 15 Nov 2026): a phone set up here also keeps CD Hub's copy (cdhub.staff.code and
+     cdhub.save.url), so both pages share one code and one address. This page's own keys (bld.*) are still written and read. */
+  var HUB_CODE_KEY = 'cdhub.staff.code', HUB_URL_KEEP = 'cdhub.save.url', HUB_OFF_KEYS = ['cdhub.save.off', 'cdhub.sink.off'];
+  var URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/;
+  /** A code the save script accepted on this page: CD Hub uses it too. Setting the phone up again here undoes "Switch off here". */
+  function shareWithHub(code) {
+    var u = storeGet('bld.scriptUrl');
+    if (code) storeSet(HUB_CODE_KEY, code);
+    if (URL_RE.test(u)) storeSet(HUB_URL_KEEP, u);
+    HUB_OFF_KEYS.forEach(function (k) { if (storeGet(k)) storeSet(k, ''); });
+  }
+  /** An owner's address found in the hub folder is kept for CD Hub too, unless CD Hub was switched off on this phone. */
+  function shareUrlWithHub() {
+    var u = storeGet('bld.scriptUrl');
+    if (URL_RE.test(u) && !HUB_OFF_KEYS.some(function (k) { return !!storeGet(k); })) storeSet(HUB_URL_KEEP, u);
+  }
   function owner() { return BLDSave.ownerToken ? BLDSave.ownerToken() : ''; }
 
   /** An owner's save address: one CD Hub kept in this browser, else the hub folder's BLD-save-webapp.json. */
@@ -72,7 +88,11 @@
         var f = (j && j.files) || [];
         if (f.length !== 1) return false;
         return fetch(base + '/' + encodeURIComponent(f[0].id) + '?alt=media&supportsAllDrives=true', hd).then(function (r) { return r.json(); })
-          .then(function (cfg) { return save.setScriptUrl(String((cfg && cfg.url) || '').trim(), true).ok && !!(cfg && cfg.url); });
+          .then(function (cfg) {   // set_at / set_by may be in the file too; only url is used
+            var ok = save.setScriptUrl(String((cfg && cfg.url) || '').trim(), true).ok && !!(cfg && cfg.url);
+            if (ok) shareUrlWithHub();
+            return ok;
+          });
       })
       .catch(function () { return false; });
   }
@@ -164,7 +184,7 @@
     return e;
   }
   function isSetUp() { return save.getScriptUrlSet() && (!!storeGet(CODE_KEY) || !!owner()); }
-  function forget() { storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
+  function forget() { var c = storeGet(CODE_KEY); if (c && storeGet(HUB_CODE_KEY) === c) storeSet(HUB_CODE_KEY, ''); storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
 
   /** Any read or save answering BAD_CODE means this phone was switched off: wipe it. */
   function guard(r) {
@@ -281,7 +301,7 @@
       save.setCode(c, false);
       save.checkStatus().then(function () { return rawRead('area'); }).then(function (r) {
         btn.disabled = false;
-        if (r.ok) { if (!storeSet(CODE_KEY, c)) { msg.className = 'msg bad'; msg.textContent = 'This browser will not remember the code. Turn off private browsing and try again.'; return; } code.value = ''; go('home'); return; }
+        if (r.ok) { if (!storeSet(CODE_KEY, c)) { msg.className = 'msg bad'; msg.textContent = 'This browser will not remember the code. Turn off private browsing and try again.'; return; } shareWithHub(c); code.value = ''; go('home'); return; }
         save.clearCode(); msg.className = 'msg bad'; msg.textContent = r.message || 'That did not work.';
       });
     } });
@@ -301,7 +321,7 @@
     save.checkStatus().then(function () { return rawRead('area'); }).then(function (res) {
       if (!res.ok) { fail(res.code === 'BAD_CODE' ? 'That code was not accepted. Ask the owner for a new QR.' : (res.message || 'That did not work. Ask the owner for a new QR.')); return; }
       if (!storeSet(CODE_KEY, j.code)) { fail('This browser will not remember the code. Turn off private browsing and scan again.'); return; }
-      dataP = null; go('home');
+      shareWithHub(j.code); dataP = null; go('home');
     });
   }
 

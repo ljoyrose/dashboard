@@ -2,8 +2,11 @@
  * CDBin (Settings -> Bin), owner page. OV11 for Lisa, 15 Nov 2026 (answer b).
  * Lists every row that has ended: a to_date (or another end date) on or before today, or an archive flag. Nothing is
  * deleted anywhere, so the Bin is a view, not a store. Grouped by kind (the table), newest first, each row saying who
- * ended it, when, and why where the row holds a reason. Searchable. Read only here: Restore comes later, behind its
- * own owner switch (OFF), and adds a new dated row rather than editing history.
+ * ended it, when, and why where the row holds a reason. Searchable.
+ * Restore (Lisa 18 Nov 2026, answer A): ended rules/settings rows and ended links only. Never edits history: it adds a
+ * NEW row from today, saying which Bin row it came from. Behind its own owner switch, the dated rule row
+ * bin.restore.on = 1 (no row = OFF). The Bin page is the owner's, so who may restore is the owner until the Bin opens to
+ * others. Codes, archived dogs and litters are not restored here (codes are the owner's; dogs/litters come later).
  * The foot links to the dashboard's Drive Bin (files, not rows).
  * Works in a browser (window.CDBin) and in Node (module.exports) so the sorting can be tested.
  */
@@ -19,7 +22,8 @@
   var BY = ['ended_by', 'end_by', 'archived_by', 'set_by'];
   var WHY = ['end_reason', 'reason', 'archive_reason', 'to_reason'];
   var NAMES = ['name', 'call_name', 'display_name', 'title', 'label', 'short_name', 'who', 'rule_key'];
-  var S = { q: '' };
+  var S = { q: '', byKey: {} };
+  var RESTORE_KEY = 'bin.restore.on';
 
   function t(x) { return String(x == null ? '' : x).trim(); }
   function day(x) { var s = t(x).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
@@ -58,7 +62,7 @@
         if (!label) label = t(r.id) || '(no id)';
         if (t(r.rule_key) && t(r.value)) label += ' = ' + t(r.value);
         out.push({ kind: kindOf(f), file: f, id: t(r.id), label: label, when: when, key: key,
-          by: nm(first(r, BY)), why: first(r, WHY) });
+          by: nm(first(r, BY)), why: first(r, WHY), row: r });
       });
     });
     return out;
@@ -83,12 +87,48 @@
     return keys.map(function (k) { return { kind: k, rows: g[k] }; });
   }
 
+  /** The owner switch: the latest bin.restore.on row in force on `today` (effective_from on or before, not ended). */
+  function restoreOn(T, today) {
+    var iso = day(today), best = null;
+    ((T || {})['BLD-breeding_rule.csv'] || []).forEach(function (r) {
+      if (!r || t(r.rule_key) !== RESTORE_KEY) return;
+      var f = day(r.effective_from), e = day(r.to_date);
+      if (!f || (iso && (f > iso || (e && e <= iso)))) return;
+      if (!best || best.from <= f) best = { from: f, on: parseInt(t(r.value), 10) >= 1 };
+    });
+    return !!(best && best.on);
+  }
+  /** What Restore would save for a Bin item, or null when this kind cannot be restored here. */
+  function restorePlan(x, today) {
+    var r = x && x.row || {}, src = 'Restored from Bin (' + (x && x.id || '') + ')', iso = day(today);
+    if (!iso || !x || !x.when) return null;   /* archive-flag rows (dogs, litters) are not restored here */
+    if (x.file === 'BLD-breeding_rule.csv' && t(r.rule_key) && t(r.value) !== '')
+      return { kind: 'rule', table: 'breeding_rule', fields: { rule_key: t(r.rule_key), value: t(r.value), effective_from: iso, source: src } };
+    if (x.file === 'BLD-links.csv' && t(r.role) && t(r.from_id) && t(r.to_id))
+      return { kind: 'link', action: 'link_add', fields: { from_table: t(r.from_table), from_id: t(r.from_id), role: t(r.role),
+        to_table: t(r.to_table), to_id: t(r.to_id), from_date: iso, source: src } };
+    return null;
+  }
+  /** A rule already in force today with the same key and value needs no restore. */
+  function alreadyLive(T, x, today) {
+    var r = x.row || {}, iso = day(today);
+    if (x.file !== 'BLD-breeding_rule.csv') return false;
+    return ((T || {})['BLD-breeding_rule.csv'] || []).some(function (o) {
+      if (!o || o === r || t(o.rule_key) !== t(r.rule_key) || t(o.value) !== t(r.value)) return false;
+      var f = day(o.effective_from), e = day(o.to_date);
+      return f && f <= iso && !(e && e <= iso);
+    });
+  }
+
   function hay(x) { return (x.label + ' ' + x.kind + ' ' + x.by + ' ' + x.why + ' ' + x.id).toLowerCase(); }
 
-  /** v: {T, today, esc, dmy, driveBin} */
+  /** v: {T, today, esc, dmy, driveBin, canWrite(), restore(plan) -> Promise of a save message} */
   function page(v) {
     var esc = v.esc, dmy = v.dmy || function (d) { return d; };
     var gs = groups(items(v.T, v.today)), n = 0;
+    var canRestore = restoreOn(v.T, v.today) && typeof v.restore === 'function';
+    var canWrite = canRestore && (typeof v.canWrite !== 'function' || v.canWrite());
+    S.byKey = {};
     gs.forEach(function (g) { n += g.rows.length; });
     var h = '<section class="card" id="binPage" style="margin-top:24px"><h2 class="hx4">Bin</h2>'
       + '<p class="mut">Ended and archived rows. Nothing is deleted.</p>';
@@ -103,7 +143,14 @@
           var bits = [x.when ? 'Ended ' + esc(dmy(x.when)) : 'Archived'];
           if (x.by) bits.push('by ' + esc(x.by));
           if (x.why) bits.push(esc(x.why));
-          h += '<li data-bin-row data-hay="' + esc(hay(x)) + '"><b>' + esc(x.label) + '</b><br><span class="mut">' + bits.join(' · ') + '</span></li>';
+          var act = '';
+          if (canRestore && restorePlan(x, v.today)) {
+            var k = x.file + '|' + x.id; S.byKey[k] = x;
+            if (alreadyLive(v.T, x, v.today)) act = '<br><span class="mut" data-bin-live>Already in force</span>';
+            else if (!canWrite) act = '<br><span class="mut">To restore, set up saving first.</span>';
+            else act = '<br><span data-bin-act="' + esc(k) + '"><button type="button" class="btn" data-bin-restore="' + esc(k) + '">Restore</button></span>';
+          }
+          h += '<li data-bin-row data-hay="' + esc(hay(x)) + '"><b>' + esc(x.label) + '</b><br><span class="mut">' + bits.join(' · ') + '</span>' + act + '</li>';
         });
         h += '</ul></div>';
       });
@@ -128,12 +175,41 @@
     var none = main.querySelector('#binNoMatch'); if (none) none.hidden = shown > 0;
   }
 
-  function bind(main) {
+  /** Restore asks first, in place: Restore -> "Bring back from today?" Yes / Cancel -> tick line once saved. */
+  function bind(main, v) {
     var q = main.querySelector('#binQ');
-    if (!q) return;
-    q.addEventListener('input', function () { filter(main, q.value); });
-    if (S.q) filter(main, S.q);
+    if (q) {
+      q.addEventListener('input', function () { filter(main, q.value); });
+      if (S.q) filter(main, S.q);
+    }
+    if (!v || typeof v.restore !== 'function') return;
+    var esc = v.esc;
+    main.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-bin-restore],[data-bin-yes],[data-bin-no]');
+      if (!b || !main.contains(b)) return;
+      var k = b.getAttribute('data-bin-restore') || b.getAttribute('data-bin-yes') || b.getAttribute('data-bin-no');
+      var box = null;
+      Array.prototype.forEach.call(main.querySelectorAll('[data-bin-act]'), function (el) { if (el.getAttribute('data-bin-act') === k) box = el; });
+      var x = S.byKey[k]; if (!box || !x) return;
+      if (b.hasAttribute('data-bin-restore')) {
+        box.innerHTML = 'Bring back from today? <button type="button" class="btn" data-bin-yes="' + esc(k) + '">Yes, restore</button> '
+          + '<button type="button" class="btn" data-bin-no="' + esc(k) + '">Cancel</button>';
+        var y = box.querySelector('[data-bin-yes]'); if (y) y.focus();
+      } else if (b.hasAttribute('data-bin-no')) {
+        box.innerHTML = '<button type="button" class="btn" data-bin-restore="' + esc(k) + '">Restore</button>';
+      } else {
+        var plan = restorePlan(x, v.today); if (!plan) return;
+        box.innerHTML = '<span class="mut" role="status">Saving…</span>';
+        Promise.resolve().then(function () { return v.restore(plan); }).then(function (msg) {
+          if (typeof v.showSave === 'function') v.showSave(box, msg); else box.textContent = msg;
+          box.setAttribute('role', 'status');
+        }, function (err) {
+          var em = String(err && err.message || 'error'), m = (/^Not saved/.test(em) ? em : 'Not saved: ' + em) + '. Nothing changed; try again.';
+          if (typeof v.showSave === 'function') v.showSave(box, m); else box.textContent = m;
+        });
+      }
+    });
   }
 
-  return { page: page, bind: bind, items: items, groups: groups, kindOf: kindOf };
+  return { page: page, bind: bind, items: items, groups: groups, kindOf: kindOf, restoreOn: restoreOn, restorePlan: restorePlan, RESTORE_KEY: RESTORE_KEY };
 }));

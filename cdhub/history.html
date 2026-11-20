@@ -34,6 +34,7 @@
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hidden{display:none!important}
 .wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:140px}
 .hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -108,6 +109,22 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.allok{background:var(--ljr-5);box-shadow:none}.d.warn{background:var(--ljr-3);box-shadow:none}.d.miss{background:var(--card);box-shadow:inset 0 0 0 2px var(--ljr-3)}.d.nolimit{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
 .d.ocool{background:var(--ljr-6-tint);box-shadow:none}.d.omild{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.d.owarm{background:var(--ljr-4-tint);box-shadow:none}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+/* indoor corner dot */
+.d{position:relative}
+.d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
+.d-dot.idot-flag{background:var(--ljr-2)}.d-dot.idot-warn{background:var(--ljr-3)}
+/* compliance mode cells */
+.d.comp-flag{background:var(--ljr-2);opacity:.8}.d.comp-warn{background:var(--ljr-3);opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
+.sd.comp-flag{background:var(--ljr-2);opacity:.8}.sd.comp-warn{background:var(--ljr-3);opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
+/* view mode toggle */
+.vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
+.vt-btn{padding:4px 12px;min-height:40px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
+.vt-btn.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+/* compact indoor table in drill panel */
+.itable{width:100%;border-collapse:collapse;font-size:var(--fs-small);margin-top:4px}
+.itable th{padding:4px 6px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.itable td{padding:5px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+.itable tr:last-child td{border-bottom:none}
 /* Over the maximum = cooling action, not outside (Lisa 17 Nov 2026): a light warm tint, never the solid orange of a breach */
 .d.warmd{background:var(--ljr-4-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}.sd.warmd{background:var(--ljr-4-tint);box-shadow:inset 0 0 0 2px var(--ljr-5)}
 .cool-act{color:var(--muted)}
@@ -175,6 +192,7 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
   </a>
   <h1><span class="dot" aria-hidden="true" style="background:var(--ljr-6)"></span>Temperatures</h1>
   <span class="house-sp" aria-hidden="true"></span>
+  <button type="button" class="btn house-ib hidden" id="hubBack" data-hub-back aria-label="Back" title="Back"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
   <span class="live" id="livepill">Live</span>
   <!-- Lisa 17 Nov 2026: closing Temperatures must go back to CD Hub. This was a Sign out button that looked like close;
        signing out is on CD Hub itself. -->
@@ -196,13 +214,20 @@ span.miss{display:inline-block;border:1px solid var(--ljr-3);border-radius:var(-
     <p class="dsec">Outside</p>
     <p class="oline" id="d-out">—</p>
   </section>
+  <section class="dblock" id="d-rooms" style="display:none">
+    <p class="dsec">Rooms</p>
+    <div id="d-rooms-inner"></div>
+  </section>
   <section class="dblock" id="d-areas" style="display:none">
     <p class="dsec">Indoors °C</p>
     <div id="d-areas-inner"></div>
   </section>
 </aside>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
-<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});</script>
+<script>document.getElementById('nav').innerHTML=HubNav.html({links:'href',current:'temps'});
+/* Back in the top bar: shown when this page was opened from the hub, so one tap returns to where you were there. */
+(function(){ var r=''; try{ var u=new URL(document.referrer); if(u.origin===location.origin&&/\/cdhub\/(index\.html)?$/.test(u.pathname)) r='CD Hub'; }catch(e){}
+ HubNav.back.sync(document.getElementById('hubBack'), r&&history.length>1?{label:r}:null); })();</script>
 
 <script>
 /* ---- config ---- */
@@ -220,6 +245,8 @@ var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
 var ROUND_DATE=null;
+var VIEW_MODE='outdoor'; /* 'outdoor' | 'compliance' */
+var AREA_RANGES={};     /* areaId -> {min,max} acceptable indoor range */
 var SPAN={};        /* areaId -> {first,last} reading day */
 var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
@@ -437,7 +464,12 @@ async function loadAreaData(){
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
-      parseCSV(atxt).forEach(function(a){if(!a.id)return;AREA_NAMES[a.id]=a.code||a.name||a.id;var g=parseFloat(a.group_sort);AREA_SORT[a.id]=isNaN(g)?Infinity:g;});
+      parseCSV(atxt).forEach(function(a){
+        if(!a.id)return;
+        AREA_NAMES[a.id]=a.code||a.name||a.id;
+        var g=parseFloat(a.group_sort);AREA_SORT[a.id]=isNaN(g)?Infinity:g;
+        if(a.min_c||a.max_c)AREA_RANGES[a.id]={min:parseFloat(a.min_c)||15,max:parseFloat(a.max_c)||25};
+      });
     }
   }catch(e){console.warn('Area data load failed:',e);}
 }
@@ -541,11 +573,55 @@ function dayClass(isoDate){
 /* One date format everywhere (Lisa 13 Nov 2026): "2 Mar 2026"; stored dates stay ISO. */
 function dayWords(iso){ iso=String(iso||''); if(!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8,10),10)+' '+MONTHS[parseInt(iso.slice(5,7),10)-1]+' '+iso.slice(0,4); }
 function openDrill(isoDate){
-  el('d-title').textContent=dayWords(isoDate);
-  el('d-out').textContent=outsideLine(isoDate)||'No outside reading';
-  var lines=dayRooms(isoDate).map(function(x){ return roomLine(x,true); });
-  el('d-areas-inner').innerHTML=lines.join('');
-  el('d-areas').style.display=lines.length?'':'none';
+  var r=DAYS[isoDate]||{};
+  var parts=isoDate.split('-');
+  var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
+  el('d-title').textContent=dLabel;
+  el('d-out').textContent=outsideLine(isoDate)||'—';
+  var rooms=dayRooms(isoDate);
+  var roomsEl=el('d-rooms');
+  if(rooms.length){
+    el('d-rooms-inner').innerHTML=rooms.map(function(x){ return roomLine(x,true); }).join('');
+    roomsEl.style.display='';
+  }else{
+    roomsEl.style.display='none';
+    el('d-rooms-inner').innerHTML='';
+  }
+  var dayAreas=AREA_DAYS[isoDate]||{};
+  var areaIds=areasInWalk(Object.keys(dayAreas));
+  var areasEl=el('d-areas');
+  if(areaIds.length){
+    el('d-areas-inner').innerHTML='<table class="itable"><thead><tr>'
+      +'<th>Area</th><th>AM</th><th>PM</th><th>Status</th>'
+      +'</tr></thead><tbody>'
+      +areaIds.map(function(aid){
+        var ar=dayAreas[aid]||{},am=ar.am||{},pm=ar.pm||{};
+        var range=AREA_RANGES[aid]||{min:15,max:25};
+        var fmtSlot=function(t){
+          if(!t||(!t.min&&!t.max))return'<span style="color:var(--muted)">—</span>';
+          var lo=parseFloat(t.min),hi=parseFloat(t.max);
+          var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
+          var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
+          var color=err?'var(--muted)':warn?'var(--muted)':'var(--ink)';
+          return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
+        };
+        var ast=areaStatusForArea(ar,range);
+        var spill=ast==='flag'?'<span class="pill ph">flag</span>'
+          :ast==='warn'?'<span class="pill po">warn</span>'
+          :'<span class="pill po">ok</span>';
+        return'<tr>'
+          +'<td style="font-weight:600;text-transform:capitalize">'+esc(areaName(aid))+'</td>'
+          +'<td>'+fmtSlot(am)+'</td>'
+          +'<td>'+fmtSlot(pm)+'</td>'
+          +'<td>'+spill+'</td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table>';
+    areasEl.style.display='';
+  }else{
+    areasEl.style.display='none';
+    el('d-areas-inner').innerHTML='';
+  }
   el('drill').classList.add('open');
 }
 function closeDrill(){el('drill').classList.remove('open');}
@@ -694,6 +770,41 @@ function outsideLine(day){
 function stateWord(cls){
   return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',warmd:'Warm: cooling action',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
+function areaStatus(isoDate){
+  var dayAreas=AREA_DAYS[isoDate];
+  if(!dayAreas||!Object.keys(dayAreas).length)return'';
+  var hasFlag=false,hasWarn=false;
+  Object.keys(dayAreas).forEach(function(aid){
+    var ar=dayAreas[aid],range=AREA_RANGES[aid]||{min:15,max:25};
+    ['am','pm'].forEach(function(slot){
+      var t=ar[slot];if(!t)return;
+      var lo=parseFloat(t.min),hi=parseFloat(t.max);
+      if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+      if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+      if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+    });
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function areaStatusForArea(ar,range){
+  range=range||{min:15,max:25};
+  var hasFlag=false,hasWarn=false;
+  ['am','pm'].forEach(function(slot){
+    var t=ar[slot];if(!t)return;
+    var lo=parseFloat(t.min),hi=parseFloat(t.max);
+    if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+    if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+    if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function setViewMode(mode){
+  VIEW_MODE=mode;
+  document.querySelectorAll('.vt-btn').forEach(function(b){b.classList.toggle('on',b.dataset.vm===mode);});
+  el('view-a').innerHTML=buildHeatMap(YEAR);
+  el('view-b').innerHTML=buildStrip(YEAR);
+  var lw=el('legend-wrap');if(lw)lw.innerHTML=legend();
+}
 function monthCal(y, classOf, kind){
   var md=mdays(y);
   var h='<div class="month-grid" data-cal="'+kind+'">';
@@ -707,7 +818,10 @@ function monthCal(y, classOf, kind){
       /* a day with nothing to open (a later day, or no readings) is not offered as a button: it used to be one that did nothing */
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
-      h+='<button type="button" class="d '+cls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'></button>';
+      var ist=date<=TODAY_STR?areaStatus(date):'';
+      var dotHtml=(kind==='out')?(ist==='flag'?'<span class="d-dot idot-flag"></span>':''):'';
+      var cellCls=(kind==='out'&&VIEW_MODE==='compliance'&&date<=TODAY_STR)?(ist?'comp-'+ist:'comp-nd'):cls;
+      h+='<button type="button" class="d '+cellCls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'>'+dotHtml+'</button>';
     }
     h+='</div></div>';
   });
@@ -726,7 +840,9 @@ function stripBody(y, classOf, kind){
         if((new Date(y,mi,d).getDay()+6)%7===di){
           var date=ds(y,mi,d), cls=classOf(date), word=stateWord(cls);
           var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
-          h+='<div class="sd '+cls+(kind==='out'?' dout':'')+'" title="'+d+' '+MONTHS[mi]+' '+kind+' — '+word+'"'+clk+'></div>';
+          var ist2=date<=TODAY_STR?areaStatus(date):'';
+          var scls=(kind==='out'&&VIEW_MODE==='compliance'&&date<=TODAY_STR)?(ist2?'comp-'+ist2:'comp-nd'):cls;
+          h+='<div class="sd '+scls+(kind==='out'?' dout':'')+'" title="'+d+' '+MONTHS[mi]+' '+kind+' — '+word+'"'+clk+'></div>';
         }
       }
     }
@@ -823,6 +939,14 @@ function setYear(y){
 }
 function legend(){
   var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
+  if(VIEW_MODE==='compliance'){
+    return'<div class="legend">'
+      +'<div class="leg">'+sq('background:var(--ljr-2)')+'Data error</div>'
+      +'<div class="leg">'+sq('background:var(--ljr-3)')+'Out of range</div>'
+      +'<div class="leg">'+sq('background:var(--ljr-5)')+'All ok</div>'
+      +'<div class="leg">'+sq('background:var(--soft)')+'No data</div>'
+      +'</div>';
+  }
   return '<div class="legend">'
     +'<div class="leg">'+sq('background:var(--ljr-5)')+'In limit</div>'
     +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit</div>'
@@ -833,9 +957,14 @@ function legend(){
 }
 function renderPage(){
   ROUND_DATE=ROUND_DATE||TODAY_STR;
+  var hasAreas=Object.keys(AREA_DAYS).length>0;
   el('main').innerHTML=
     (AREA_HDR_BAD?'<p class="warn" role="alert" data-hdrbad>Room temperatures sheet out of order: '+esc(AREA_HDR_BAD)+'. Put the heading row back on row 1; use a filter view, never sort the sheet.</p>':'')
-    +legend()
+    +(hasAreas?'<div class="vt-wrap">'
+      +'<button class="vt-btn on" data-vm="outdoor" onclick="setViewMode(\'outdoor\')">Outdoor temps</button>'
+      +'<button class="vt-btn" data-vm="compliance" onclick="setViewMode(\'compliance\')">Compliance</button>'
+      +'</div>':'')
+    +'<div id="legend-wrap">'+legend()+'</div>'
     +'<div class="yr-row">'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
