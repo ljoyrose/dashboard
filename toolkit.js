@@ -70,6 +70,7 @@
     r.classList.toggle('look-cool', o.bg === 'cool');
     r.classList.toggle('sel-soft', o.sel === 'soft');
     if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
+    r.classList.toggle('show-help', o.help === 'on');   // Show help (Lisa 18 Nov 2026): off unless this person turns it on
   }
   applyLook();
   if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') { applyLook(); syncLookMenu(); } });
@@ -134,7 +135,9 @@
   // The menu offers what applyLook supports and saves it in 'dash-look', merged, so Studio's own keys (words, text, space) stay.
   // On a phone it also shows the read time and a Sign out item that presses the page's own Sign out (both leave the bar there).
   var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
-    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
+    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]],
+    // Show help (Lisa 18 Nov 2026): help and explanation lines (class "help") are hidden, not deleted, until this is on.
+    ['help', 'Help', [['off', 'Hidden'], ['on', 'Show help']]]];
   function readLook() { var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; } return typeof o === 'object' ? o : {}; }
   function lookVal(o, row) { return row[2].some(function (x) { return x[0] === o[row[0]]; }) ? o[row[0]] : row[2][0][0]; }
   function setLook(key, val) {
@@ -144,6 +147,7 @@
     if (key === 'bg') r.classList.toggle('look-cool', val === 'cool');
     else if (key === 'sel') r.classList.toggle('sel-soft', val === 'soft');
     else if (key === 'mode') { if (val === 'light' || val === 'dark') r.setAttribute('data-theme', val); else r.removeAttribute('data-theme'); }
+    else if (key === 'help') r.classList.toggle('show-help', val === 'on');
   }
   // The page's own Sign out in the top bar, when it is there (signed in). Hidden only by the phone rule counts as there.
   function headSignout() {
@@ -251,7 +255,7 @@
   /** The HTML of one bottom tab: { href | go, nav, slot (0-8), icon (t-NAME), label, n (count id), need (true = late, rose ring; or the word, e.g. 'down' = broken, black badge: see countWhy) }. */
   function tabHtml(t) {
     var inner = '<span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true">' + icon(t.icon) + '</span><span class="htl">' + escHtml(t.label) + '</span>' +
-      (t.count != null ? '<span class="n' + countCls(t.count, t.need) + '"' + (t.n ? ' id="' + t.n + '"' : '') + (isWhy(t.need) ? ' data-why="' + t.need + '"' : '') + '>' + escHtml(t.count || '') + '</span>' : '');
+      (t.count != null ? ' <span class="n' + countCls(t.count, t.need) + '"' + (t.n ? ' id="' + t.n + '"' : '') + (isWhy(t.need) ? ' data-why="' + t.need + '"' : '') + '>' + escHtml(t.count || '') + '</span>' : '');
     return t.href ? '<a class="ht" data-slot="' + t.slot + '" href="' + t.href + '"' + (t.nav ? ' data-nav="' + t.nav + '"' : '') + '>' + inner + '</a>'
       : '<button type="button" class="ht" data-slot="' + t.slot + '"' + (t.go ? ' data-go="' + t.go + '"' : '') + '>' + inner + '</button>';
   }
@@ -277,14 +281,16 @@
     if (root.addEventListener) root.addEventListener('hashchange', function () { shutMores(null); });
   }
 
-  // ---- Tab names say the count ("Do, 3 waiting" / "Do, 1 late" / "Do, 1 down": the count's data-why, see DashKit.count; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
+  // ---- Tab names say the count, visible words first ("Do 3 waiting" / "Do 1 late" / "Do 1 down": the count's data-why, see DashKit.count; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
   function nameTabs(nav) {
     var fit = 0;
     Array.prototype.forEach.call(nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht'), function (t) {
       var w = t.querySelector(':scope > .htl'), n = t.querySelector(':scope > .n, :scope > .cnt'), s; if (!w) return;
       s = root.getComputedStyle(w); fit = Math.max(fit, Math.ceil(w.scrollWidth + parseFloat(s.marginLeft) * 2));
       if (!n) return;
-      var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') || n.classList.contains('broken') ? ' ' + (isWhy(n.getAttribute('data-why')) ? n.getAttribute('data-why') : n.classList.contains('broken') ? 'broken' : 'late') : ' waiting') : '');
+      var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ' ' + c + (n.classList.contains('need') || n.classList.contains('broken') ? ' ' + (isWhy(n.getAttribute('data-why')) ? n.getAttribute('data-why') : n.classList.contains('broken') ? 'broken' : 'late') : ' waiting') : '');
+      var lw = w.querySelector(':scope > .htl-long'), sw = w.querySelector(':scope > .htl-short');   // phone shows the short word: the name starts with it, then keeps the long one
+      if (lw && sw && root.getComputedStyle(lw).display === 'none') name = sw.textContent.trim() + name.slice(lw.textContent.trim().length) + ' (' + lw.textContent.trim() + ')';
       if (t.getAttribute('aria-label') !== name) t.setAttribute('aria-label', name);
     });
     if (nav.style.getPropertyValue('--house-tab-fit') !== (fit ? fit + 'px' : '')) nav.style.setProperty('--house-tab-fit', fit ? fit + 'px' : '');
@@ -720,7 +726,7 @@
     h += '<section class="hm-nums" data-hm="nums" aria-label="Numbers">' + (spec.nums || []).map(function (n) {
       var v = n.value == null || n.value === '' ? '–' : String(n.value), w = countWhy(v, n.late);   // late: true (late) or the broken word
       return '<a class="card hm-n house-go" data-k="' + escHtml(n.label) + '" href="' + escHtml(n.href) + '"' + (n.ext ? ' target="_blank" rel="noopener"' : '') +
-        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : w ? v + ' ' + w : v) + '. Open the list')) + '"><span class="hm-v' + countCls(v, n.late) + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
+        ' aria-label="' + escHtml((n.aria && v !== '–' ? v + ' ' + n.label + '. ' + n.aria : n.aria) || (v === '–' ? n.label + ': could not be read. Open the list' : v + ' ' + n.label + (w ? ' ' + w : '') + '. Open the list')) + '"><span class="hm-v' + countCls(v, n.late) + '">' + escHtml(v) + '</span> <span class="hm-l">' + escHtml(n.label) + '</span></a>';
     }).join('') + (spec.extra || '') + '</section>';
     return '<div class="hm" data-hub-main="' + escHtml(spec.hub || '') + '">' + h + '</div>';
   }

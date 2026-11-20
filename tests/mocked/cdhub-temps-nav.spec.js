@@ -99,7 +99,7 @@ async function bar(page, url, signedIn) {
 test('history.html: the bar is links, Temps is the current page, and the bar stays clear of the page', async ({ page }) => {
   const nav = await bar(page, 'cdhub/history.html', true);
   await expect(nav.locator('#houseMore a[href="./history.html"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('header a.house-ib')).toHaveAttribute('href', './index.html');
+  await expect(page.locator('header a.house-ib').first()).toHaveAttribute('href', './index.html');
   const pad = () => page.locator('.wrap').evaluate((e) => getComputedStyle(e).paddingBottom);
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(await pad()).toBe('140px');
@@ -113,7 +113,7 @@ test('history-archive.html: same links, Temps is not the current page, home retu
   const nav = await bar(page, 'cdhub/history-archive.html');
   await expect(nav.locator('[aria-current="page"]')).toHaveCount(0);
   await expect(nav.locator('#houseMore a[href="./history.html"]')).not.toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('header a.house-ib')).toHaveAttribute('href', './index.html');
+  await expect(page.locator('header a.house-ib').first()).toHaveAttribute('href', './index.html');
   await expect(page.locator('header a.house-ib')).toHaveAttribute('aria-label', 'CD Hub');
 });
 
@@ -134,3 +134,13 @@ test('the hub More menu includes the same Temps link, and it opens the history p
   await expect(page).toHaveURL(/\/history\.html$/);
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveAttribute('aria-current', 'page');
 });
+
+// Lisa 17 Nov 2026: closing Temperatures goes back to CD Hub, never the whole dashboard. The top-right button used to
+// be Sign out, which looked like close.
+test('history.html: the top-right button closes back to CD Hub; there is no Sign out button on this page', async ({ page }) => {
+  await bar(page, 'cdhub/history.html', true);
+  const close = page.getByRole('link', { name: 'Close Temperatures' });
+  await expect(close).toHaveAttribute('href', './index.html#/compliance');
+  await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
+});
+

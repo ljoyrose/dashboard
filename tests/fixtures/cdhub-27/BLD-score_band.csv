@@ -1,0 +1,5 @@
+id,scheme_id,key,label,colour,sort_order,kind
+b-gate,s-test,gate,Gates,red,1,gate
+b-health,s-test,health,Health,orange,2,points
+b-breed,s-test,breeding,Breeding record,blue,3,points
+b-status,s-test,status,Status,black,4,status

@@ -1,0 +1,4 @@
+id,subject_id,test,grade,tested_on,certainty,attributed_to,source_text
+hs-1,sub-a01,hips,Good,2025-06-01,clear,sample vet,sample hip score
+hs-2,sub-a09,hips,Excellent,2025-06-01,clear,sample vet,sample hip score
+hs-3,sub-a07,elbows,,2024-06-01,possible,sample vet,sample elbow note

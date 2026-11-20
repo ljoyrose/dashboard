@@ -1,0 +1,5 @@
+id,name,base_family,swatch_hex,nose_pigment_applies
+col-1,Cream,Cream,#EFE3C8,true
+col-2,Gold,Gold,#D9A441,true
+col-3,Chocolate,Chocolate,#5B3A29,false
+col-4,Black,Black,#2C2C2A,false
