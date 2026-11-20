@@ -103,6 +103,8 @@ function makeEnv(opts = {}) {
 
   const wrap = (f) => ({
     getName: () => f.title, getId: () => f.id,
+    // Drive's "last changed" time: any change to the file's text or cells gives a different time
+    getLastUpdated: () => new Date(parseInt(crypto.createHash('sha256').update(JSON.stringify([f.content, f.sheet, f.title])).digest('hex').slice(0, 10), 16)),
     getMimeType: () => (f.sheet ? SHEET_MIME : 'text/csv'),
     moveTo(dest) { f.parent = 'folder'; return this; },
     getSize: () => Buffer.byteLength(f.content, 'utf8'),
