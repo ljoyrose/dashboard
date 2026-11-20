@@ -6,6 +6,7 @@
  *   BLDDone.wait(el, text)                        sent but not received yet (no signal): a clock, never a tick
  *   BLDDone.fail(el, text)                        a red line; the button stays as it was
  *   BLDDone.clear(el)
+ *   BLDDone.by(res)                               "✓ Sam, 14:32" from a save reply (who + at), for screens that show a line, not a card
  * el is the card. Its main button carries data-done-btn. A tick only ever follows a reply that says saved.
  * Nothing here names a job, a dog or a person: `who` is whatever the saved row or the reply says.
  */
@@ -61,5 +62,11 @@
   function fail(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'bad', '', words || 'Not saved. Try again.'); btn(el, false); }
   function clear(el) { if (!el) return; el.classList.remove('is-done', 'is-concern'); var n = el.querySelector(':scope > .done-line'); if (n) n.remove(); btn(el, false); }
 
-  return { mark: mark, saving: saving, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
+  /** Demo 2a (18 Nov 2026): who and when, from the save's own reply. Never a tick unless the reply said saved. */
+  function by(res) {
+    if (!res || !res.ok) return '';
+    return '✓ ' + [res.who, hhmm(res.at)].filter(function (x) { return x && String(x).trim(); }).join(', ');
+  }
+
+  return { by: by, mark: mark, saving: saving, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
 }));
