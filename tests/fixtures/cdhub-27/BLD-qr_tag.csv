@@ -1,0 +1,10 @@
+tag,kind,ref_id,active
+ROOMAAAA,area,ar-1,true
+ROOMAAAB,area,ar-2,true
+ROOMAAAF,area,ar-6,true
+DOGAAAAD,subject,sub-a04,true
+DOGAAAAF,subject,sub-a06,true
+DOGAAAAK,subject,sub-a10,true
+LITAAAAB,litter,lit-2,true
+THMAAAAE,thermometer,thm-5,true
+SITEAAAA,site,site,true

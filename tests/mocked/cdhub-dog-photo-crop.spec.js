@@ -1,5 +1,5 @@
 // Dog photo crop and shrink (Lisa, 12 Nov 2026: "That request was too large" from a phone photo). After a picture is
-// chosen a square crop opens; Use photo always sends an 800 x 800 JPEG of at most 350,000 base64 characters, never the
+// chosen a square crop opens; Save photo always sends an 800 x 800 JPEG of at most 350,000 base64 characters, never the
 // original; Cancel sends nothing; a picture this browser cannot open gets a plain message. Invented dog, pretend script.
 const fs = require('fs');
 const os = require('os');
@@ -8,7 +8,7 @@ const { test, expect } = require('../fixtures/job34/load');
 const { openOneDog, recordSaves, bigPhoto, jpegSize } = require('../support/dog-photo-world');
 
 test.describe('CD Hub dog photo: crop, then shrink', () => {
-  test('the crop opens with Rotate, Cancel and Use photo; Use photo sends a square JPEG within the limit', async ({ page, guard }) => {
+  test('the crop opens with Rotate, Cancel and Save photo; Save photo sends a square JPEG within the limit', async ({ page, guard }) => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     const big = await bigPhoto(page);
@@ -19,7 +19,7 @@ test.describe('CD Hub dog photo: crop, then shrink', () => {
     await expect(dlg.locator('h3')).toHaveText('Crop and edit the photo');
     await expect(dlg.locator('[data-crop-rotate]')).toHaveText('Rotate 90\u00b0');
     await expect(dlg.locator('[data-crop-cancel]')).toHaveText('Cancel');
-    await expect(dlg.locator('[data-crop-use]')).toHaveText('Use photo');
+    await expect(dlg.locator('[data-crop-use]')).toHaveText('Save');
     // square crop box
     const box = await dlg.locator('[data-crop-view]').boundingBox();
     expect(Math.abs(box.width - box.height)).toBeLessThan(2);

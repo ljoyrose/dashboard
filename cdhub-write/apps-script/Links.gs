@@ -69,7 +69,7 @@ function linksEntry_(req, fn) {
   if (!linksOn_()) throw err_('TABLE_OFF', 'Saving to ' + LINKS_.file + ' is switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
-  var who = authStaff_(req.code);
+  var who = authSaver_(req);
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
   var f = req.fields && typeof req.fields === 'object' ? req.fields : {};

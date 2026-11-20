@@ -126,8 +126,23 @@
    * with no visits given, every visitor record is left out.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */
-  function forTarget(types, logs, target, today, visits) {
-    var byId = {}, vm = visitCounts(visits);
+  /**
+   * Times a day a daily job must be done (owner rule row job.times_per_day.<type_key>, else job.times_per_day; the row in
+   * force on that day, newest effective_from wins). No row = 1. Only a job due every day uses it (Isolation checks: 2).
+   */
+  function timesPerDay(rules, typeKey, day) {
+    function pick(k) {
+      var best = null;
+      (rules || []).forEach(function (r) { if (r.rule_key === k && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+      return best ? parseInt(best.value, 10) : NaN;
+    }
+    var n = pick('job.times_per_day.' + typeKey);
+    if (!(n > 0)) n = pick('job.times_per_day');
+    return n > 0 ? n : 1;
+  }
+  /* opts.rules: the owner's rule rows (optional), for times_per_day */
+  function forTarget(types, logs, target, today, visits, opts) {
+    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], todayCount = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
@@ -145,6 +160,7 @@
         return;
       }
       if (!sameTarget(log, target, version)) return;
+      if (date === today) todayCount[version.type_key] = (todayCount[version.type_key] || 0) + 1;
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
@@ -157,10 +173,13 @@
     return jobsInForce(types, today).filter(function (j) { return appliesTo(j, target); }).map(function (j) {
       var every = everyDays(j.every_days), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
+      var times = every === 1 ? timesPerDay(rules, j.type_key, today) : 1, doneToday = todayCount[j.type_key] || 0;
+      if (times > 1 && d && d.date === today && doneToday < times) status = 'today';   // done, but not yet as many times as today needs
       return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: every, last_done: d ? d.date : '',
-        next_due: next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '' };
+        next_due: status === 'today' && times > 1 ? today : next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '',
+        times_per_day: times, done_today: doneToday };
     });
   }
 
-  return { forTarget: forTarget, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, timesPerDay: timesPerDay, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));
