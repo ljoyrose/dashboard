@@ -612,6 +612,16 @@ test('Earlier, several days: dogs as they were on each day, and a job group ente
   expect(london(new Date(sent[0].fields.happened_at))).toBe(day(2));
 });
 
+test('owner order row puts today\'s jobs in the owner\'s order, with another screen (temperatures) in its place', async ({ page }) => {
+  await setup(page, { breeding_rule: [{ id: 'r-o', rule_key: 'job.order', value: 'walk|screen:temperature=Pretend temps|bowls', effective_from: '2026-01-01', to_date: '', source: 'test' }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  const order = await page.locator('[data-job], [data-screen]').evaluateAll((els) => els.map((e) => e.getAttribute('data-job') || 'screen:' + e.getAttribute('data-screen')));
+  expect(order.slice(0, 3)).toEqual(['walk', 'screen:temperature', 'bowls']);
+  await page.locator('[data-screen="temperature"]').click();
+  await expect(page).toHaveURL(/#m\/temperature$/);
+});
+
 test('check types starting round. belong to The round and never show as jobs, nor in Earlier', async ({ page }) => {
   await setup(page, { check_type: TYPES.concat([J('round.presence', 'Pretend round row', 'none', { every_days: '1' })]) });
   await page.goto('cdhub/staff/#s/SITETAG2');
