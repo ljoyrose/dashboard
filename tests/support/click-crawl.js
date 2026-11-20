@@ -102,7 +102,7 @@ function inPage() {
       const disabled = !!el.disabled || el.getAttribute('aria-disabled') === 'true';
       const href = el.getAttribute('href') || '';
       const data = Object.keys(el.dataset).filter((k) => k !== 'cc').sort().map((k) => k + '=' + el.dataset[k]).join('&');
-      const sig = [kind, cut(label, 90), href, cut(data, 120), el.id || '', kind === 'row' ? el.tagName.toLowerCase() + '.' + String(el.className && el.className.baseVal == null ? el.className : '').trim().split(/\s+/).join('.') : ''].join('|');
+      const sig = [kind, cut(label, 90), href, cut(data, 120), (el.id || '').replace(/\d+/g, '#') /* a made-up id is renumbered at every redraw (hfp-31, hfp-71): its number is not part of who the control is */, kind === 'row' ? el.tagName.toLowerCase() + '.' + String(el.className && el.className.baseVal == null ? el.className : '').trim().split(/\s+/).join('.') : ''].join('|');
       count[sig] = (count[sig] || 0);
       const i = out.length;
       el.setAttribute('data-cc', String(i));
@@ -404,7 +404,7 @@ async function crawl(site) {
         if (got.c && (got.st.key === key || (got.st.hash === cur.st.hash && got.st.heading === cur.st.heading))) break;
         got = null;
       }
-      if (!got || got.c.disabled) { const now = await here(); log((Date.now() - t0) + 'ms LOST ' + c0.kind + ' · ' + short(c0.label, 60) + ' · screen now ' + now.st.key + ' · wanted ' + key + ' · there ' + now.controls.some((x) => x.sig === c0.sig && x.k === c0.k)); return; }
+      if (!got || got.c.disabled) { const now = await here(); log((Date.now() - t0) + 'ms LOST ' + c0.kind + ' · ' + short(c0.label, 60) + ' · screen now ' + now.st.key + ' · wanted ' + key + ' · there ' + now.controls.some((x) => x.sig === c0.sig && x.k === c0.k)); if (process.env.CRAWL_DEBUG) log('  was ' + c0.sig + ' ¦ ' + c0.k + ' · now ' + now.controls.filter((x) => x.label === c0.label || x.sig === c0.sig).map((x) => x.sig + ' ¦ ' + x.k + (x.disabled ? ' (disabled)' : '')).join(' ;; ')); return; }
       const c = got.c;
       done.add(id);
       newErrors(); newOutside();
