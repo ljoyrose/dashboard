@@ -157,7 +157,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const card = page.locator('.card', { has: page.locator('h4', { hasText: 'not yet placed' }) });
     await expect(card.locator('h4')).toHaveText('1 dog not yet placed');
     await expect(card).toContainText('in Room D (day pen)');
-    await card.getByRole('button', { name: 'Move Pretend Adult Two' }).click();
+    await card.getByRole('button', { name: /^Pretend Adult Two.*, move$/ }).click();
     await expect(card.locator('[data-move-panel]')).toBeVisible();
     await expect(card.locator('[data-move-panel] [data-move-to="ar-d"]')).toHaveCount(0);   // never offered the day pen
     await expect(page.locator('#kept-readings h3')).toHaveText('Readings');

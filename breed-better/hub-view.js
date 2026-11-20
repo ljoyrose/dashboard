@@ -17,6 +17,8 @@
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
     /* evidence only Breed Better reads; the hub already loads health_screen, dna_result, litter and subject_status */
     'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv',
+    /* saved dated scores (15 Nov 2026, draft names; written only when TABLE_ON_score_assessment is on) */
+    'BLD-score_assessment.csv',
     /* optional settings rows: grade-to-colour bands for health results, and what each kind of outside viewer may see */
     'BLD-grade_band.csv', 'BLD-viewer_level.csv',
     /* the values typed on a Checks form (grade, certainty, answer), read onto their check_log row */
@@ -124,7 +126,7 @@
     var logs = null;
     var evidence = new Proxy({}, { get: function (o, name) {
       if (name !== 'BLD-check_log') return T[name + '.csv'];
-      return logs || (logs = withValues(T['BLD-check_log.csv'], T['BLD-check_value.csv']));
+      return logs || (logs = withValues(T['BLD-check_log.csv'], T['BLD-check_value.csv'], T['BLD-check_type.csv']));
     } });
     var open = all.filter(function (e) { return !e.off && !(e.to && e.to < v.today) && !(e.from && e.from > v.today); });
     var isOpen = {}; open.forEach(function (e) { isOpen[e.subject_id] = 1; });
@@ -343,9 +345,14 @@
   /* Records typed on the Checks screen (15 Nov 2026, OV11: the phone entry for Fit to Breed, health screens and judged
      answers is the existing Checks form, any industry): each check_log row carries the values typed on its form
      (BLD-check_value: field_key = value) as if they were its own columns, so a criterion can read e.g.
-     answer_field=grade, evidence_match=check_type_id=cty-hips;certainty=final. A real column of the same name wins. */
-  function withValues(logs, values) {
+     answer_field=grade, evidence_match=check_type_id=cty-hips;certainty=final. A real column of the same name wins.
+     Each row also carries check_type_key, the type_key of its check type (16 Nov 2026, OV11). A check type changes by a
+     new dated row with a new id (cty-fit_to_breed-1, then -2) but keeps its type_key, so a criterion that matches
+     check_type_key=fit_to_breed reads every version, past and future, with no list of ids anywhere. */
+  function withValues(logs, values, types) {
     if (!logs) return logs;
+    var kind = {};
+    (types || []).forEach(function (c) { if (t(c.id) && t(c.type_key)) kind[t(c.id)] = t(c.type_key); });
     var by = {};
     (values || []).forEach(function (x) {
       var k = t(x.field_key), id = t(x.check_log_id);
@@ -353,7 +360,8 @@
       (by[id] || (by[id] = {}))[k] = t(x.value);
     });
     return logs.map(function (r) {
-      var add = by[t(r.id)];
+      var add = by[t(r.id)], k = kind[t(r.check_type_id)];
+      if (k && t(r.check_type_key) === '') { add = add ? Object.assign({}, add) : {}; add.check_type_key = k; }
       if (!add) return r;
       var o = {}; Object.keys(add).forEach(function (k) { o[k] = add[k]; });
       Object.keys(r).forEach(function (k) { if (t(r[k]) !== '' || o[k] === undefined) o[k] = r[k]; });
@@ -572,7 +580,7 @@
     var esc = v.esc;
     var dna = Dna ? Dna.card(v.T, r.subject_id, esc) : '';
     if (dna) dna = dna.replace('data-bb-band="__dna"', 'data-bb-band="__dna"' + (state.open.__dna ? ' open' : ''));
-    return dogHead(v, r, c, 'score') + infoHtml(v, r) + verdictHtml(r) + dna
+    return dogHead(v, r, c, 'score') + infoHtml(v, r) + verdictHtml(r) + savedHtml(v, r) + dna
       + sortBands(r.bands).map(function (b) { return bandHtml(v, r, b); }).join('');
   }
 
@@ -787,11 +795,25 @@
       }).join('') : '<p class="mut">No records yet.</p>') + '</div>';
   }
 
-  /* ---- History: the animal's dated entries, and its score worked out again as of each date. Nothing is stored. ---- */
+  /* ---- History: the animal's dated entries, and its score worked out again as of each date. Nothing is stored here.
+     When saved scores are switched on (#644, the host gives saveScore), a score saved for a date is shown for that date
+     instead of the worked-out one, marked Saved: it is what the page said then. ---- */
+  function savedByDate(v, r) {
+    var out = {};
+    if (!v.saveScore) return out;
+    (v.T['BLD-score_assessment.csv'] || []).filter(function (a) { return t(a.subject_id) === r.subject_id && t(a.scheme_id) === r.scheme_id && isDate(t(a.period).slice(0, 10)); })
+      .sort(function (a, b) { return t(a.calculated_at).localeCompare(t(b.calculated_at)); })
+      .forEach(function (a) { out[t(a.period).slice(0, 10)] = a; });   /* the latest save for a date wins */
+    return out;
+  }
   function historyRows(v, r) {
     var items = evidenceItems(v, r).filter(function (x) { return x.date; });
     var dates = {}; items.forEach(function (x) { (dates[x.date] = dates[x.date] || []).push(x); });
+    var saved = savedByDate(v, r);
+    Object.keys(saved).forEach(function (d) { if (d <= v.today && !dates[d]) dates[d] = []; });
     return Object.keys(dates).sort().reverse().map(function (d) {
+      var a = saved[d];
+      if (a) return { date: d, entries: dates[d], verdict: t(a.verdict), earned: Number(t(a.points_earned)) || 0, available: t(a.points_available), saved: true };
       var input = Object.assign({}, r.input, { asOf: d, judgements: judgementsFor(v.T, r.subject_id, r.input.criteria, d) });
       var s = null;
       try { s = Score.score(input); } catch (e) { s = null; }
@@ -804,7 +826,7 @@
       + '<div class="card bb-hnow"><span class="bb-strong">Today</span> ' + vpill(verdictOf(r), r.words) + ' <span class="bb-pts">' + fmt(r.points_earned) + ' of ' + r.points_available + '</span></div>'
       + (rows.length ? rows.map(function (h) {
         return '<div class="card bb-hist" data-bb-hist="' + h.date + '"><div class="bb-l1"><span class="bb-strong">' + day(h.date) + '</span>'
-          + (h.verdict ? '<span>' + vpill(h.verdict, r.words) + ' <span class="bb-pts">' + fmt(h.earned) + ' of ' + h.available + '</span></span>' : '') + '</div>'
+          + (h.verdict && (r.words || words)[h.verdict] ? '<span>' + vpill(h.verdict, r.words) + ' <span class="bb-pts">' + fmt(h.earned) + ' of ' + esc(String(h.available)) + (h.saved ? ', saved' : '') + '</span></span>' : '') + '</div>'
           + h.entries.map(function (x) { return '<p class="bb-pts">' + esc(x.checks.join(', ')) + (x.answer ? ': ' + esc(x.answer) : '') + '</p>'; }).join('') + '</div>';
       }).join('') : '<p class="mut">No dated records yet.</p>');
   }
@@ -1107,7 +1129,7 @@
       '.bb-sec .bb-sechd::-webkit-details-marker{display:none}.bb-sec .bb-sechd:hover{background:none;outline:1px solid var(--hc,var(--ink));outline-offset:-1px}',
       '.bb-secf>.bb-sechd>svg:last-child{transition:transform .15s}.bb-secf:not([open])>.bb-sechd>svg:last-child{transform:rotate(-90deg)}',
       '.bb-auto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}',
-      '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}',
+      '.bb-done{display:flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-small)}.bb-err{margin:0}.bb-saved{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}',
       '.bb-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.bb-unf{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}.bb-odds{margin:0;padding:0;list-style:none;display:grid;gap:4px}.bb-odds li{display:flex;flex-wrap:wrap;gap:4px 8px}.bb-arch{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
       '.bb-sec{display:flex;flex-direction:column;gap:8px}.bb-misshd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-height:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;list-style:none}.bb-misshd::-webkit-details-marker{display:none}.bb-misshd>svg:last-child{margin-left:auto;transition:transform .15s}.bb-miss:not([open])>.bb-misshd>svg:last-child{transform:rotate(-90deg)}.bb-miss>.bb-gates{margin-top:6px}.bb-ret{margin-bottom:8px}',
       '.bb-secbd{display:flex;flex-direction:column;gap:8px;padding-top:8px}.bb-secgo{align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;gap:4px}',
@@ -1286,6 +1308,15 @@
       }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
       return true;
     }
+    if (b.hasAttribute('data-bb-score-save')) {
+      var r0 = compute(v).byId[b.getAttribute('data-bb-score-save')];
+      if (!r0) return true;
+      id = 'score:' + r0.subject_id; b.disabled = true;
+      Promise.resolve(v.saveScore(scoreFields(r0))).then(function () {
+        enrolMsg[id] = { ok: true, text: 'Saved ' + hhmm() }; refresh();
+      }, function (err) { enrolMsg[id] = { ok: false, text: (err && err.message) || 'Not saved.' }; refresh(); });
+      return true;
+    }
     if (b.hasAttribute('data-bb-auto')) {
       var sid = b.getAttribute('data-bb-auto'), val = b.getAttribute('data-bb-auto-v');
       id = 'auto:' + sid; b.disabled = true;
@@ -1313,6 +1344,29 @@
       + '<button type="button" class="bb-f" data-bb-unenrol-go="' + esc(id) + '">Un-enrol</button><button type="button" class="bb-f" data-bb-unenrol-x="1">Cancel</button></span>' + msgHtml(id);
   }
   var NOSAVE = 'Saving is not set up yet.';
+  /* ---- Saved dated scores (15 Nov 2026, OV11 for Lisa; draft Stage 4 names). Scores are still worked out on load;
+     Save score keeps what this page says today, so a later rule or record change never rewrites the past. ---- */
+  function scoreFields(r) {
+    return { subject_id: r.subject_id, scheme_id: r.scheme_id, period: r.as_of, verdict: verdictOf(r),
+      points_earned: String(r.points_earned), points_available: String(r.points_available),
+      points_unverified: String(r.points_unverified || 0), unknown_count: String(r.unknown_count || 0),
+      lines: r.lines.map(function (l) {
+        return { criterion_id: l.criterion_id, label_then: l.label_then, evidence_table: l.evidence_table || '', evidence_record_id: l.evidence_id || '',
+          answer_then: l.answer_then || '', points: l.points === '' ? '' : String(l.points), points_max: l.points_max === '' || l.points_max === undefined ? '' : String(l.points_max),
+          gate_outcome: l.gate_outcome || '', unknown_reason: l.unknown_reason || '', judged_by: l.judged_by || '' };
+      }) };
+  }
+  function lastSaved(T, r) {
+    return (T['BLD-score_assessment.csv'] || []).filter(function (a) { return t(a.subject_id) === r.subject_id && t(a.scheme_id) === r.scheme_id; })
+      .sort(function (a, b) { return t(a.calculated_at).localeCompare(t(b.calculated_at)); }).pop() || null;
+  }
+  function savedHtml(v, r) {
+    if (!v.saveScore) return '';
+    var esc = v.esc, id = 'score:' + r.subject_id, a = lastSaved(v.T, r), can = !!(v.canWrite && v.canWrite());
+    return '<p class="bb-saved"><button type="button" class="bb-f" data-bb-score-save="' + esc(r.subject_id) + '"' + (can ? '' : ' disabled') + '>Save score</button>'
+      + '<span class="bb-pts">' + (a ? 'Last saved ' + esc(day(t(a.period))) + ', ' + esc(((r.words && r.words[t(a.verdict)]) || VERDICT[t(a.verdict)] || t(a.verdict))) + ', ' + esc(t(a.points_earned)) + ' of ' + esc(t(a.points_available)) : 'Not saved yet') + '</span>'
+      + (can ? '' : ' <span class="bb-pts">' + NOSAVE + '</span>') + '</p>' + msgHtml(id);
+  }
   /* the scheme to enrol into: the one this animal was last in, else the one scheme in force today (newest if several) */
   function enrolScheme(v, c, id) {
     var was = c.ended.filter(function (x) { return x.id === id; })[0];
@@ -1389,7 +1443,7 @@
     });
     /* capture, so the state is set before the hub's own click handler changes the address and draws the page */
     document.addEventListener('click', function (e) {
-      var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto]');
+      var eb = e.target.closest && e.target.closest('[data-bb-enrol],[data-bb-unenrol],[data-bb-unenrol-go],[data-bb-unenrol-x],[data-bb-auto],[data-bb-score-save]');
       if (eb && !eb.disabled) { e.preventDefault(); e.stopPropagation(); enrolClick(eb); return; }
       var hubGo = e.target.closest && e.target.closest('[data-go]');
       if (hubGo && !hubGo.hasAttribute('data-bb-dog') && !(hubGo.closest && hubGo.closest('#bbRoot'))) state.from = null;   /* left by the hub's own menu */
@@ -1480,7 +1534,7 @@
   function getState() { return Object.assign({}, state); }
 
   return {
-    withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay,
+    scoreFields: scoreFields, withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay,
     FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section,
     open: open, setTab: setTab, setState: setState, getState: getState, age: age, months: months, ageGroups: ageGroups, inAge: inAge,
     bandStats: bandStats, bandCount: bandCount, day: day, lineHtml: lineHtml, wordsFor: wordsFor, pctLine: pctLine, judgementsFor: judgementsFor,
