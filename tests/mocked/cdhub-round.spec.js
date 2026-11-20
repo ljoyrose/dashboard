@@ -9,7 +9,7 @@ test.use({ viewport: { width: 390, height: 800 } });
 // The staff page asks for optional helper files (404), and the FAIL cases make the browser log the failed save.
 test.beforeEach(async ({ allowedConsole }) => { allowedConsole.push(/404/, /500/, /ERR_FAILED/); });
 
-const NO_REACH = 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.';
+const NO_REACH = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';   // never lose an entry (Lisa 17 Nov 2026)
 const card = (page, name) => page.locator('.cards .card', { has: page.locator('.nm', { hasText: new RegExp('^(✓ )?' + name + '$') }) });
 // The words on a card change from time to time (Done 08:05, a tick, a date style). What must hold is the state:
 // a card is done (class tg-done) or it is not, and its line carries the reading.
