@@ -251,3 +251,27 @@ test('times a day: an owner row makes a daily job stay due until done that many 
   assert.equal(D.timesPerDay([R('job.times_per_day.iso_check', '2', '2026-01-01', '2026-06-30')], 'iso_check', '2026-10-02'), 1);
   assert.equal(D.timesPerDay([R('job.times_per_day', '3', '2026-01-01')], 'iso_check', '2026-10-02'), 3);
 });
+
+test('a room job saved per dog: not due in an empty room; times a day counted per dog, by its least-checked dog', () => {
+  const types = [{ id: 'cty-iso_checks-1', type_key: 'iso_checks', label: 'Isolation checks', target: 'area', site_scope: 'per_dog', every_days: '1', active: 'true', effective_from: '2026-01-01', only_in_areas: 'iso' }];
+  const rules = [{ rule_key: 'job.times_per_day.iso_checks', value: '3', effective_from: '2026-01-01', to_date: '', source: 'test' }];
+  let n = 0;
+  const L = (dog, at) => ({ id: 'y' + (++n), check_type_id: 'cty-iso_checks-1', area_id: 'iso', subject_id: dog, outcome: 'ok', happened_at: at, taken_at: at });
+  // nobody in the room: no job
+  assert.equal(D.forTarget(types, [], { area_id: 'iso', roomDogIds: [] }, '2026-10-02', null, { rules }).length, 0);
+  // no roomDogIds given (hub, Earlier): as before
+  assert.equal(D.forTarget(types, [], { area_id: 'iso' }, '2026-10-02', null, { rules }).length, 1);
+  // two dogs: one room tap = one line each = 1 time, not 2
+  const room = { area_id: 'iso', roomDogIds: ['d1', 'd2'] };
+  let logs = [L('d1', '2026-10-02T08:00:00Z'), L('d2', '2026-10-02T08:00:00Z')];
+  let j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
+  assert.equal(j.done_today, 1); assert.equal(j.status, 'today'); assert.equal(j.times_per_day, 3);
+  logs = logs.concat([L('d1', '2026-10-02T12:00:00Z'), L('d2', '2026-10-02T12:00:00Z'), L('d1', '2026-10-02T18:00:00Z')]);
+  j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
+  assert.equal(j.done_today, 2); assert.equal(j.status, 'today');   // d2 only twice
+  logs = logs.concat([L('d2', '2026-10-02T18:05:00Z')]);
+  assert.equal(D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0].status, 'ok');
+  // one dog's own card counts that dog only
+  j = D.forTarget(types, logs.slice(0, 3), { subject_id: 'd1', everyDog: true, dogArea: 'iso' }, '2026-10-02', null, { rules })[0];
+  assert.equal(j.done_today, 2);
+});
