@@ -19,10 +19,12 @@
     });
     return best ? best.v : QR_BASE_START;
   }
-  save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
+  save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
+  save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only
   save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
-  function newTag() { var a = new Uint8Array(LEN), s = ''; crypto.getRandomValues(a); for (var i = 0; i < LEN; i++) s += ALPHABET.charAt(a[i] % ALPHABET.length); return s; }
+  /* tags and which tag an item already has: the one shared helper (staff/lib/qr-rules.js), also used by the back-fill tool */
+  function newTag() { var taken = {}; (T && T.qr_tag || []).forEach(function (t) { taken[t.tag] = 1; }); return BLDQrRules.newTag(taken, function (n) { var a = new Uint8Array(n); crypto.getRandomValues(a); return a; }); }
   function say(t, k) { msg.className = 'msg noprint ' + (k || ''); msg.textContent = t; }   // noprint kept: the status line never prints
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
@@ -33,20 +35,21 @@
   if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
   if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
-  var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' });
-  screen.appendChild(opts); screen.appendChild(msg); screen.appendChild(sheet);
+  var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pickBox = h('div', { class: 'noprint' });
+  screen.appendChild(opts); screen.appendChild(pickBox); screen.appendChild(msg); screen.appendChild(sheet);
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files', 'weight'], ['subject_link', 'links', 'files', 'weight', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files', 'weight', 'items', 'item_kinds'], ['subject_link', 'links', 'files', 'weight', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'items', 'item_kinds']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
   }
-  function current(kind, refId) { return (T.qr_tag || []).filter(function (t) { return t.kind === kind && t.ref_id === refId && String(t.active).toLowerCase() !== 'false'; })[0]; }
+  function current(kind, refId) { return BLDQrRules.tagFor(T.qr_tag, kind, refId); }
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
   function make(kind, items, draw) {
     sheet.textContent = '';
+    if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
     // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
     var role = typeof save.role === 'function' ? save.role() : '';
@@ -91,6 +94,16 @@
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
     return c ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : '';
   }
+  /* Lisa 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
+     colour (the owner's dated rule rows; the newest in force wins). No date of birth, or no rows: the size colour. */
+  function colourVar(c) { return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c || '') ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : ''; }
+  function isPup(s) {
+    var wk = parseFloat(ruleNow('puppy.under_weeks')), b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s.dob || '')), t = /^(\d{4})-(\d{2})-(\d{2})/.exec(BLDNeeds.today());
+    if (!(wk > 0) || !b || !t) return false;
+    var days = (Date.UTC(+t[1], +t[2] - 1, +t[3]) - Date.UTC(+b[1], +b[2] - 1, +b[3])) / 864e5;
+    return days >= 0 && days < wk * 7;
+  }
+  function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
   /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
@@ -109,27 +122,105 @@
   function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
     return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
   /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
-  function mainPhoto(s) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], 'subjects', s.id, BLDNeeds.today()).main;
+  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
     return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
-  function photoBox(s) {
-    var id = mainPhoto(s), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
+  /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
+     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
+  function photoBox(s, table) {
+    var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
     if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
-      onerror: function () { box.textContent = 'Photo'; } }));
+      onerror: function () { box.textContent = ''; box.classList.add('none'); } }));
     return box; }
-  /* Lisa's dog card (18 Nov 2026): big name, Sex with its sign, Date of birth, photo framed in the size colour,
-     "Size: Medium" block in the size colour, one large code, the microchip in groups of 3. Two per A4, cut line between. */
+  /* Lisa's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
+     its sign) and Date of birth labelled top-right; the photo left in a thick frame of the size colour, fitted whole (contain);
+     on the right a "Size" tile top-aligned with the photo and a 62 mm QR bottom-aligned with it; the microchip labelled across
+     the bottom in groups of three. No room, access, tag text or preview labels. Two per A4 with a dashed cut line. */
+  /* the QR's black squares, not its white border, are the printed size: --qz is the whole code over its squares (the white
+     quiet zone is 4 squares a side), so 2 per A4 prints 62 mm of squares with the quiet zone round them on the white card */
+  function qrBox(url, label) {
+    var svg = BLDQr.svg(url, label), m = /viewBox="0 0 (\d+) /.exec(svg), n = m ? +m[1] : 0;
+    return h('div', { class: 'code', html: svg, style: n > 8 ? '--qz:' + (n / (n - 8)).toFixed(4) : '' });
+  }
+  /* a long name steps down a size so it stays on two lines at most */
+  function nameFit(name) { var n = String(name).length; return n > 28 ? ' n3' : n > 16 ? ' n2' : ''; }
   function dogCard(tag, it) {
-    var s = it.s, sz = sizeOfDog(s), col = sizeColour(sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
+    var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
     var facts = [];
-    if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [f ? 'Female' : 'Male', sexIcon(s.sex)])]));
+    if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [sexIcon(s.sex), f ? 'Female' : 'Male'])]));
     if (s.dob) facts.push(h('div', { 'data-k': 'dob' }, [h('dt', { text: 'Date of birth' }), h('dd', { text: dmy(s.dob) })]));
-    return h('article', { class: 'dcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('h2', { class: 'name', text: s.name || s.id }),
-      h('div', { class: 'dtop' }, [h('dl', {}, facts), photoBox(s)]),
-      sz ? h('div', { class: 'szb', 'data-size': sz, 'data-k': 'size' }, ['Size: ', h('b', { text: sizeWord(sz) })]) : null,
-      h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)) }),
-      chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, ['Microchip', h('b', { text: chip })]) : null,
-      h('small', { class: 'tag', text: tag })]);
+    return h('article', { class: 'dcard vcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
+      h('h2', { class: 'name' + nameFit(s.name || s.id), text: s.name || s.id }),
+      h('dl', { class: 'facts' }, facts),
+      photoBox(s),
+      sz ? h('div', { class: 'szb', 'data-size': sz, 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: sizeWord(sz) })]) : null,
+      qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
+      chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
+  }
+  /* Item cards (print any item, Lisa 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields
+     that print are the owner's dated rule row print.fields.item.<kind_key> or print.fields.item (column names joined by |),
+     newest in force wins; without one, ITEM_FIELDS. Every value prints under its label (the owner's print.label.<column> row,
+     else ITEM_LABELS); the item name is the only value with no label. A choice made here is saved as a new dated rule row. */
+  var ITEM_COLS = ['item_no', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'note'];
+  var ITEM_FIELDS = ['item_no', 'kind_key', 'make', 'model', 'serial_no', 'expires_on'];
+  var ITEM_LABELS = { item_no: 'Item number', kind_key: 'Type', make: 'Make', model: 'Model', serial_no: 'Serial number', size: 'Size',
+    made_on: 'Made on', expires_on: 'Expires on', note: 'Note' };
+  function ruleNow(key) {
+    var best = null, today = BLDNeeds.today();
+    (T.breeding_rule || []).forEach(function (r) { var f = String(r.effective_from || '').slice(0, 10), t = String(r.to_date || '').slice(0, 10);
+      if (r.rule_key !== key || !String(r.value || '').trim() || (f && f > today) || (t && t < today)) return;
+      if (!best || f >= String(best.effective_from || '').slice(0, 10)) best = r; });
+    return best ? String(best.value).trim() : '';
+  }
+  function itemFields(kindKey) {
+    var v = (kindKey && ruleNow('print.fields.item.' + kindKey)) || ruleNow('print.fields.item');
+    var cols = v ? v.split('|').map(function (c) { return c.trim(); }).filter(function (c) { return ITEM_COLS.indexOf(c) >= 0; }) : [];
+    return cols.length ? cols : ITEM_FIELDS.slice();
+  }
+  function itemLabel(col) { return ruleNow('print.label.' + col).slice(0, 30) || ITEM_LABELS[col] || col; }
+  function itemValue(col, r) {
+    var v = String(r[col] == null ? '' : r[col]).trim();
+    if (col === 'kind_key') { var k = (T.item_kinds || []).filter(function (x) { return x.kind_key === v; }).pop(); return k && k.label ? k.label : v; }
+    if (/_on$/.test(col)) return dmy(v) || v;
+    return v;
+  }
+  /* one card per item: the latest row of each item (a correction row, corrects_id, replaces the first); its QR is the first row's */
+  function itemList() {
+    var latest = {};
+    (T.items || []).forEach(function (r) { var first = r.corrects_id || r.id; if (first) latest[first] = r; });
+    return Object.keys(latest).map(function (id) { var r = latest[id]; return { id: id, label: r.name || r.item_no || id, r: r }; })
+      .sort(function (a, b) { return String(a.r.item_no || a.label).localeCompare(String(b.r.item_no || b.label), 'en', { numeric: true }); });
+  }
+  var itemPick = null;   // columns chosen on this page for this print (null = the owner's rule rows)
+  function itemCard(tag, it) {
+    var r = it.r, cols = itemPick || itemFields(r.kind_key), facts = [];
+    cols.forEach(function (c) { var v = itemValue(c, r); if (v) facts.push(h('div', { 'data-k': c }, [h('dt', { text: itemLabel(c) }), h('dd', { text: v })])); });
+    return h('article', { class: 'dcard vcard icard', 'data-item': it.id }, [
+      h('h2', { class: 'name' + nameFit(it.label), text: it.label }),
+      h('dl', { class: 'facts' }, facts),
+      photoBox({ id: it.id, photo: r.photo }, 'items'),
+      qrBox(qrBase() + '#s/' + tag, 'QR code for ' + it.label)]);
+  }
+  function itemCards() {
+    sheet.className = 'sheet dogs per' + per;
+    make('item', itemList(), itemCard);
+    pickBox.textContent = '';
+    var boxes = ITEM_COLS.map(function (c) { var on = (itemPick || itemFields('')).indexOf(c) >= 0;
+      return h('label', { class: 'pick' }, [h('input', Object.assign({ type: 'checkbox', value: c }, on ? { checked: 'checked' } : {})), ' ' + itemLabel(c)]); });
+    var use = btn('Use these fields', function () {
+      itemPick = boxes.map(function (b) { return b.firstChild; }).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
+      if (!itemPick.length) itemPick = null;
+      make('item', itemList(), itemCard);
+    });
+    var keep = btn('Save as the usual fields', function () {
+      var cols = boxes.map(function (b) { return b.firstChild; }).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
+      if (!cols.length) { say('Tick at least one field.', 'bad'); return; }
+      var row = { rule_key: 'print.fields.item', value: cols.join('|'), effective_from: BLDNeeds.today(), source: 'CD Hub print page' };
+      save.submit('breeding_rule', row).then(function (res) {
+        if (res.ok) { T.breeding_rule.push(row); itemPick = null; make('item', itemList(), itemCard); say('Saved. Item cards print these fields from today.', 'good'); }
+        else say('Not saved: ' + (res.message || 'the save did not go through.') + ' These fields are used for this print only.', 'bad');
+      });
+    });
+    pickBox.appendChild(h('fieldset', { class: 'picks' }, [h('legend', { text: 'Fields on item cards' })].concat(boxes, [use, keep])));
   }
   /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
   function litterCard(tag, it) {
@@ -140,7 +231,7 @@
     return h('article', { class: 'dcard lcard', 'data-litter': l.id, style: col ? '--c:' + col : '' }, [
       h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: it.label })]), born ? h('small', { 'data-k': 'born' }, ['Born', h('br'), dmy(born)]) : null]),
       h('div', { class: 'dbody' }, [
-        h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
+        h('div', { class: 'cside' }, [h('div', { class: 'photo none', 'data-k': 'photo' }),   // the frame, blank: no placeholder word on paper
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + it.label) }),
         jobList(['litter']),
@@ -272,6 +363,7 @@
       make('litter', list.map(function (l) { var dam = subj[l.dam_subject_id] || {}, sire = subj[l.sire_subject_id] || {};
         return { id: l.id, label: 'Litter of ' + (dam.name || l.id), l: l, dam: dam, sire: sire.name || '', pups: pups[l.id] || 0, room: roomOf[l.dam_subject_id] || '' }; }), litterCard);
     }));
+    opts.appendChild(btn('Item cards', itemCards));
     opts.appendChild(btn('Thermometer cards', thermoCards));
     opts.appendChild(btn('Add thermometer', addThermometer));
     opts.appendChild(btn('Phone set-up QR', function () { sheet.className = 'sheet';
