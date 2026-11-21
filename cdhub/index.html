@@ -4685,6 +4685,38 @@ function compTempsHtml(){
    +(c.miss.length?'<ul class="ctl">'+c.miss.map(function(x){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' \u2014 '+esc(x.name)+', no reading</li>'; }).join('')+'</ul>':'')+'</li>'
   +'</ul><p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
 }
+/* Medicines register (priority 2, 21 Nov 2026): print or CSV of one month's medicines for an inspector. Read only.
+   meds-register.js loads on the first press, so the page is no heavier until it is used. */
+/* Every month from the first record to this one is offered, a month with none too, so its nil record can be printed. */
+/* The staff "Medicine given" job (check_type type_key medicine) saves to BLD-check_log: its records count here too. */
+function medsRows(){ var med={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(String(t.type_key||'').toLowerCase()==='medicine') med[t.id]=1; });
+ return (T['BLD-dispense.csv']||[]).concat((T['BLD-check_log.csv']||[]).filter(function(r){ return med[r.check_type_id]&&!(r.outcome==='note'&&r.note_for_id); }).map(function(r){ return {given_at:r.happened_at||r.taken_at}; })); }
+function compMedsHtml(){
+ var rows=medsRows(), ms={}, now=todayISO().slice(0,7); rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.given_at||r.given_on||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
+ var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
+ while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">One month of medicines given, for an inspector. Every column is printed; a detail the record does not hold says \u201cnot recorded\u201d. A month with none prints as a nil record.</p>'
+  +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
+  +'<button type="button" class="btn" id="medsPrint">Print</button> <button type="button" class="btn" id="medsCsv">Download CSV</button></div><p id="medsMsg" class="mut" aria-live="polite"></p>');
+}
+function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
+function medsMake(R){ var ym=(document.getElementById('medsMonth')||{}).value||'';
+ var lines=R.build((T['BLD-dispense.csv']||[]).concat(R.fromChecks(T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[])),{month:ym,dog:function(sid){ var d=(CD._byId||{})[sid]; return d?{name:d.name,chip:d.chip}:null; }});
+ return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,printed:dmy(todayISO())+' '+hhmmNow()}}; }
+function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
+ var say=function(t){ if(msg) msg.textContent=t; };
+ medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
+ p.addEventListener('click',function(){ var R=window.BLDMedsRegister;
+  if(!R){ say('Getting the register ready. Press Print again.'); medsLib().catch(function(){ say('Not opened: the register could not load. Try again.'); }); return; }
+  var x=medsMake(R), html=R.toHtml(x.head,x.lines);
+  window.__medsPrint=html; var w=window.open('meds-print.html','_blank');   /* meds-print.html shows window.__medsPrint and prints it */
+  if(w) say('Opened '+x.lines.length+' entr'+(x.lines.length===1?'y':'ies')+' to print.');
+  else { window.__medsPrint=''; saveBlob(new Blob([html],{type:'text/html'}),R.fileName(x.ym,'html')); say('Pop-ups are blocked, so the register was downloaded to print.'); } });
+ c.addEventListener('click',function(){ medsLib().then(function(R){ var x=medsMake(R);
+   saveBlob(new Blob([R.toCsv(x.head,x.lines)],{type:'text/csv;charset=utf-8'}),R.fileName(x.ym,'csv')); say('Downloaded '+x.lines.length+' entr'+(x.lines.length===1?'y':'ies')+'.'); })
+  .catch(function(){ say('Not downloaded: the register could not load. Try again.'); }); });
+}
+function saveBlob(b,name){ var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1000); }
 function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
@@ -4710,7 +4742,7 @@ function pageCompliance(){
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes" data-calm="off">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src&&hideSource(x.src)?' ('+esc(hideSource(x.src))+')':'')+'</span></li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
- h+=compTempsHtml();
+ h+=compTempsHtml()+compMedsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
@@ -4850,6 +4882,7 @@ function bindCompliance(){
   if(t.scrollIntoView) t.scrollIntoView({block:'start'}); if(v) v.focus(); }); });
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  bindRehearsal();
+ bindMeds();
  var aa=document.getElementById('compAsAt'), at=document.getElementById('compAsAtToday');
  if(aa) aa.addEventListener('change',function(){ var v=aa.value; COMP.asAt=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:''; go('compliance',false); });
  if(at) at.addEventListener('click',function(){ COMP.asAt=''; go('compliance',false); });
