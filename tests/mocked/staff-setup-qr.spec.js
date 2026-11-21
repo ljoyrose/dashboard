@@ -285,7 +285,7 @@ test('print page: an owner signed in to CD Hub prints thermometer cards with no 
 });
 
 // Area prints (21 Nov 2026): a room's "Print sign" in CD Hub opens the print page with ?sign=<area id>, and only that room's card shows.
-test('sign mode (?sign=<area id>): only that room\'s card, its saved code reused; a missing code is made once (owner only; staff and a second open write nothing); an unknown room says so @regression', async ({ page }) => {
+test('sign mode (?sign=<area id>): only that room card, its saved code reused; a missing code is made once (owner only; staff and a second open write nothing); an unknown room says so @regression', async ({ page }) => {
   const tables = {
     area: [{ id: 'area-r1', code: '3A.1' }, { id: 'area-r2', code: '3A.2' }, { id: 'area-r3', code: '3A.3' }],
     subject: [], subject_status: [], litter: [], occupancy: [], requirement: [],
