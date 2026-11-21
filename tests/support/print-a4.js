@@ -108,8 +108,9 @@ function cardTables() {
       .concat(['Daily clean', 'Deep clean', 'Water bowls'].map((l, i) => ({ type_key: 'a' + i, label: l, target: 'area', every_days: i === 1 ? '7' : '1', effective_from: '2026-01-01', active: 'true' })))
   };
 }
-async function openCards(page) {
+async function openCards(page, change) {
   const tables = cardTables();
+  if (change) change(tables);
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });

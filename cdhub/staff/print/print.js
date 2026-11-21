@@ -114,11 +114,12 @@
   /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
   function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
     return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
-  /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain) */
+  /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
+     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
   function photoBox(s, table) {
-    var id = mainPhoto(s, table), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
+    var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
     if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
-      onerror: function () { box.textContent = 'Photo'; } }));
+      onerror: function () { box.textContent = ''; box.classList.add('none'); } }));
     return box; }
   /* Lisa's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
      its sign) and Date of birth labelled top-right; the photo left in a thick frame of the size colour, fitted whole (contain);

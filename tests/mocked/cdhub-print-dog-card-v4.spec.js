@@ -43,3 +43,26 @@ test('dog card v4, 2 per A4: photo, Size tile and 62 mm QR line up as approved; 
   const pdf = await P.printPdf(page, 'cdhub-dog-card-v4');
   expect(pdf.count, P.CARDS + ' cards, 2 a page').toBe(Math.ceil(P.CARDS / 2));
 });
+
+test('dog card v4: no photo, or a photo that fails to load, keeps the size-colour frame and prints no word in it', async ({ page, allowedConsole }) => {
+  allowedConsole.push(/Failed to load resource.*404/);                                                          // the pretend broken Drive image
+  await page.route(/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 404, body: '' }));   // the Drive image fails
+  await P.openCards(page, (t) => { t.subject[0].photo = 'PretendBrokenPhoto0'; });                              // d0 has a photo; the rest have none
+  await page.getByRole('button', { name: '2 per A4' }).click();
+  await page.setViewportSize(P.PAPER.portrait);
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('.dcard[data-dog="d0"] .photo img')).toHaveCount(0);                                // the failed image is gone, no broken-image sign
+  const boxes = await page.locator('.dcard.vcard .photo').evaluateAll((els) => els.map((e) => {
+    const st = getComputedStyle(e), r = e.getBoundingClientRect();
+    return { text: e.textContent.trim(), w: r.width, h: r.height, border: parseFloat(st.borderTopWidth), colour: st.borderTopColor, card: getComputedStyle(e.closest('.dcard')).getPropertyValue('--c').trim() };
+  }));
+  expect(boxes).toHaveLength(P.CARDS);
+  boxes.forEach((b) => {
+    expect(b.text, 'no placeholder word printed').toBe('');
+    expect(Math.abs(b.w / P.MM - 88), 'the frame keeps its 88 mm square').toBeLessThan(1);
+    expect(Math.abs(b.w - b.h)).toBeLessThan(2);
+    expect(b.border, 'the thick frame is still there').toBeGreaterThanOrEqual(5);
+    expect(b.colour, 'in a colour, not transparent').not.toMatch(/rgba\(0, 0, 0, 0\)/);
+  });
+  await expect(page.locator('.sheet')).not.toContainText(/\bPhoto\b/);
+});
