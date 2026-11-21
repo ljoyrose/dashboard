@@ -4688,8 +4688,11 @@ function compTempsHtml(){
 /* Medicines register (priority 2, 21 Nov 2026): print or CSV of one month's medicines for an inspector. Read only.
    meds-register.js loads on the first press, so the page is no heavier until it is used. */
 /* Every month from the first record to this one is offered, a month with none too, so its nil record can be printed. */
+/* The staff "Medicine given" job (check_type type_key medicine) saves to BLD-check_log: its records count here too. */
+function medsRows(){ var med={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(String(t.type_key||'').toLowerCase()==='medicine') med[t.id]=1; });
+ return (T['BLD-dispense.csv']||[]).concat((T['BLD-check_log.csv']||[]).filter(function(r){ return med[r.check_type_id]&&!(r.outcome==='note'&&r.note_for_id); }).map(function(r){ return {given_at:r.happened_at||r.taken_at}; })); }
 function compMedsHtml(){
- var rows=T['BLD-dispense.csv']||[], ms={}, now=todayISO().slice(0,7); rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.given_at||r.given_on||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
+ var rows=medsRows(), ms={}, now=todayISO().slice(0,7); rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.given_at||r.given_on||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
  var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  return compFold('compMeds','meds','Medicines register','<p class="mut help">One month of medicines given, for an inspector. Every column is printed; a detail the record does not hold says \u201cnot recorded\u201d. A month with none prints as a nil record.</p>'
@@ -4698,7 +4701,7 @@ function compMedsHtml(){
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
 function medsMake(R){ var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build(T['BLD-dispense.csv']||[],{month:ym,dog:function(sid){ var d=(CD._byId||{})[sid]; return d?{name:d.name,chip:d.chip}:null; }});
+ var lines=R.build((T['BLD-dispense.csv']||[]).concat(R.fromChecks(T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[])),{month:ym,dog:function(sid){ var d=(CD._byId||{})[sid]; return d?{name:d.name,chip:d.chip}:null; }});
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };

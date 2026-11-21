@@ -73,7 +73,7 @@ test.describe('Medicines register: the rules', () => {
     const [l] = R.build([{ id: 'x', subject_id: 'sub-test-dog-1', given_at: '2026-04-02T08:15:00Z', product: 'Sample Tablet',
       batch: 'B-123', expires_on: '2027-01-31', amount: '5 ml', route: 'Oral', reason: 'skin', instructions: 'twice a day for 5 days', given_by: 'Sample Staff' }],
     { month: '2026-04', dog });
-    expect(R.cell(l, 'time')).toBe('08:15');
+    expect(R.cell(l, 'time')).toBe('09:15');   // 08:15 UTC is 09:15 UK summer time
     expect(R.cell(l, 'batch')).toBe('B-123');
     expect(R.cell(l, 'expiry')).toBe('2027-01-31');
     expect(R.cell(l, 'dose')).toBe('5 ml');
@@ -132,10 +132,54 @@ test.describe('Medicines register: the rules', () => {
   });
 });
 
+const JOB_TYPES = [
+  { id: 'ct-med', type_key: 'medicine', label: 'Medicine given', amount_unit: 'dose' },
+  { id: 'ct-feed', type_key: 'feeding', label: 'Feeding', amount_unit: 'g' },
+];
+const JOB_LOGS = [
+  { id: 'j1', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-04T08:15:00Z', taken_by: 'Sample Staff A' },
+  { id: 'j2', check_type_id: 'ct-med', subject_id: 'sub-test-dog-2', item: '', amount: '', outcome: 'not_done', happened_at: '2026-02-06T08:00:00Z', taken_by: 'Sample Staff B', note: 'Refused' },
+  { id: 'j3', check_type_id: 'ct-med', subject_id: 'sub-test-dog-2', outcome: 'note', note_for_id: 'j2', note: 'Vet told by phone', taken_by: 'Sample Staff A', taken_at: '2026-02-06T12:00:00Z' },
+  { id: 'j4', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '1 dose', outcome: 'ok', happened_at: '2026-02-07T07:00:00Z', time_given: 'false', taken_by: 'Sample Staff A' },
+  { id: 'j5', check_type_id: 'ct-feed', subject_id: 'sub-test-dog-1', item: 'Sample kibble', amount: '200', outcome: 'ok', happened_at: '2026-02-04T08:00:00Z' },
+  { id: 'j6', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '3', outcome: 'ok', happened_at: '2026-02-04T08:15:00Z', taken_by: 'Sample Staff A', corrects_id: 'j1', note: 'Was 3 drops' },
+];
+
+test.describe('Medicines register: the staff "Medicine given" job counts too', () => {
+  test('job records join the register; feeding and notes added later do not become lines', () => {
+    const all = ROWS.concat(R.fromChecks(JOB_LOGS, JOB_TYPES));
+    const lines = R.build(all, { month: '2026-02', dog });
+    expect(lines.map((l) => l.id)).toEqual(['dsp-2', 'dsp-1', 'j1', 'j6', 'j2', 'j4', 'dsp-3']);
+    const j1 = lines.find((l) => l.id === 'j1');
+    expect(R.COLUMNS.map((c) => R.cell(j1, c[0]))).toEqual(['4 Feb 2026', '08:15', 'Test Dog One', '900000000000001', 'Sample Drops',
+      R.NR, R.NR, '2 dose', R.NR, R.NR, R.NR, 'Sample Staff A', 'Corrected by a later record.', 'staff job']);
+    expect(R.cell(lines.find((l) => l.id === 'dsp-1'), 'source')).toBe('dog card');
+  });
+
+  test('not done says so with its note and the note added later; a default time is "time not recorded"; a correction says what it corrects', () => {
+    const lines = R.build(R.fromChecks(JOB_LOGS, JOB_TYPES), { month: '2026-02', dog });
+    const get = (id) => lines.find((l) => l.id === id);
+    expect(R.cell(get('j2'), 'note')).toBe('Job marked not done. Refused Later, by Sample Staff A: Vet told by phone');
+    expect(R.cell(get('j2'), 'product')).toBe(R.NR);
+    expect(R.cell(get('j4'), 'time')).toBe('time not recorded');
+    expect(R.cell(get('j4'), 'dose')).toBe('1 dose');
+    expect(R.cell(get('j6'), 'note')).toBe('Was 3 drops Corrects the record of 2026-02-04.');
+    expect(R.cell(get('j1'), 'date')).toBe('4 Feb 2026');
+  });
+
+  test('UK time: a job at 23:30 UTC in summer falls on the next day', () => {
+    const [l] = R.build(R.fromChecks([{ id: 's', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'X', outcome: 'ok', happened_at: '2026-06-30T23:30:00Z' }], JOB_TYPES), { month: '2026-07', dog });
+    expect(R.cell(l, 'date', true)).toBe('2026-07-01');
+    expect(R.cell(l, 'time')).toBe('00:30');
+  });
+});
+
 test.describe('CD Hub: Medicines register on Compliance', () => {
   test('pick a month, download the CSV and open the print page; nothing is written', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
+    setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit\nct-med,ten-test,medicine,Medicine given,dog,true,Medicine,true,dose\n');
+    setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,taken_at,taken_by,note,note_for_id,corrects_id,time_given\njb-1,ten-test,ct-med,sub-test-dog-2,Sample Drops,2,ok,2026-02-12T09:30:00Z,2026-02-12T09:30:00Z,Sample Staff A,,,,\n');
     await context.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
     await page.goto('cdhub/');
     await signIn(page);
@@ -143,7 +187,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const card = page.locator('#compMeds');
     await expect(card.locator('details')).toHaveAttribute('open', '');   // Compliance folds start open
     const month = card.locator('#medsMonth');
-    const counts = { '2026-02': 3, '2026-03': 1 };
+    const counts = { '2026-02': 4, '2026-03': 1 };
     await expect(month.locator('option')).toHaveText(offered('2026-02').map((k) => label(k, counts[k])));
     await month.selectOption('2026-02');
 
@@ -152,9 +196,10 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const csv = fs.readFileSync(await dl.path(), 'utf8');
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
-    expect(csv).toContain('2026-02-03,not recorded,Test Dog One,900000000000001,Sample Wormer,not recorded,not recorded,1 tablet,Oral,routine,not recorded,not recorded,with food');
+    expect(csv).toContain('2026-02-03,not recorded,Test Dog One,900000000000001,Sample Wormer,not recorded,not recorded,1 tablet,Oral,routine,not recorded,not recorded,with food,dog card');
     expect(csv).toContain('sub-not-on-list (not on the current list)');
-    await expect(card.locator('#medsMsg')).toHaveText('Downloaded 3 entries.');
+    expect(csv).toContain('2026-02-12,09:30,Test Dog Two,not recorded,Sample Drops,not recorded,not recorded,2 dose,not recorded,not recorded,not recorded,Sample Staff A,,staff job');
+    await expect(card.locator('#medsMsg')).toHaveText('Downloaded 4 entries.');
 
     await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
     const [pop] = await Promise.all([context.waitForEvent('page'), card.locator('#medsPrint').click()]);
@@ -163,10 +208,10 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await pop.waitForTimeout(800);
     expect(await pop.evaluate(() => window.__printed)).toBe(1);   // and not twice
     await expect(pop.locator('h1')).toHaveText('Medicines register · February 2026');
-    await expect(pop.locator('tbody tr')).toHaveCount(3);
+    await expect(pop.locator('tbody tr')).toHaveCount(4);
     await expect(pop.locator('.meta').first()).toContainText('Sample Kennel (invented)');
-    await expect(pop.locator('.gaps')).toContainText('Batch 3 of 3');
-    await expect(card.locator('#medsMsg')).toHaveText('Opened 3 entries to print.');
+    await expect(pop.locator('.gaps')).toContainText('Batch 4 of 4');
+    await expect(card.locator('#medsMsg')).toHaveText('Opened 4 entries to print.');
     await pop.close();
   });
 

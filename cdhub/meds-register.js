@@ -20,8 +20,10 @@
   var COLUMNS = [
     ['date', 'Date'], ['time', 'Time'], ['dog', 'Dog'], ['chip', 'Microchip'], ['product', 'Medicine'],
     ['batch', 'Batch'], ['expiry', 'Expiry'], ['dose', 'Dose'], ['route', 'Route'], ['reason', 'Reason'],
-    ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note']
+    ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note'], ['source', 'Recorded in']
   ];
+  var SOURCE = { dispense: 'dog card', job: 'staff job' };
+  var RESULT = { ok: 'done', done: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', part_done: 'part done' };
 
   /* Where each detail is read from: the record's own column names, first one with a value wins. */
   var FROM = {
@@ -31,7 +33,7 @@
     route: ['route'],
     reason: ['reason'],
     vet: ['vet_instruction', 'instructions'],
-    given_by: ['given_by'],
+    given_by: ['given_by', 'taken_by'],
     note: ['note']
   };
 
@@ -45,11 +47,43 @@
   }
 
   /* given_at (date and time) or given_on (date, sometimes with a time). Returns {date:'YYYY-MM-DD', time:'HH:MM'|''}. */
+  /* An instant with Z or an offset is shown in UK time (Europe/London); a plain date or local time is kept as written. */
+  var FMT = null;
   function when(r) {
     var s = str(r.given_at) || str(r.given_on);
     var m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(s);
     if (!m) return { date: '', time: '' };
+    if (m[2] && /(Z|[+-]\d{2}:?\d{2})$/.test(s) && !isNaN(new Date(s).getTime())) {
+      if (!FMT) FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+      var p = {}; FMT.formatToParts(new Date(s)).forEach(function (x) { p[x.type] = x.value; });
+      return { date: p.year + '-' + p.month + '-' + p.day, time: p.hour + ':' + p.minute };
+    }
     return { date: m[1], time: m[2] ? m[2] + ':' + m[3] : '' };
+  }
+
+  /**
+   * The staff "Medicine given" job (check_type with type_key "medicine") saves to BLD-check_log, not BLD-dispense.
+   * Its records join the register here, in the dispense shape: item = the medicine, amount = the dose, taken_by = who.
+   * A note added later (note_for_id) joins its record's note; a job not done or part done says so; a correction says
+   * which record it corrects, and the original stays. Nothing is filled in that the record does not hold.
+   */
+  function fromChecks(logs, types) {
+    var med = {}, unit = {};
+    (types || []).forEach(function (t) { if (str(t.type_key).toLowerCase() === 'medicine') { med[str(t.id)] = 1; unit[str(t.id)] = str(t.amount_unit); } });
+    var mine = (logs || []).filter(function (r) { return med[str(r.check_type_id)]; }), byId = {}, later = {};
+    mine.forEach(function (r) { byId[str(r.id)] = r; if (str(r.outcome) === 'note' && str(r.note_for_id)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r); });
+    return mine.filter(function (r) { return !(str(r.outcome) === 'note' && str(r.note_for_id)); }).map(function (r) {
+      var out = str(r.outcome), amt = str(r.amount), u = unit[str(r.check_type_id)], o = byId[str(r.corrects_id)];
+      var notes = [];
+      if (out && out !== 'ok' && out !== 'done') notes.push('Job marked ' + (RESULT[out] || out) + '.');
+      if (str(r.note)) notes.push(str(r.note));
+      (later[str(r.id)] || []).forEach(function (n) { notes.push('Later, by ' + (str(n.taken_by) || NR) + ': ' + (str(n.note) || NR)); });
+      if (str(r.corrects_id)) notes.push('Corrects the record of ' + (o ? (when({ given_at: o.happened_at || o.taken_at }).date || 'an earlier date') : 'an earlier date') + '.');
+      if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
+      return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
+        dose_volume: amt && u && amt.indexOf(u) < 0 ? amt + ' ' + u : amt, taken_by: str(r.taken_by), note: notes.join(' '),
+        time_given: str(r.time_given), _from: 'job' };
+    });
   }
 
   function ymd(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1].slice(0, 3) + ' ' + m[1] : ''; }
@@ -77,14 +111,15 @@
       var sid = str(r.subject_id), d = sid ? dogOf(sid) : null;
       var line = {
         id: str(r.id), sort: w.date + ' ' + (w.time || '99:99'),
-        date: w.date, time: w.time,
+        date: w.date, time: str(r.time_given).toLowerCase() === 'false' ? '' : w.time, noTime: str(r.time_given).toLowerCase() === 'false',
+        source: SOURCE[str(r._from)] || SOURCE.dispense,   // _from, not the sheet's own source column (where a row came from)
         dog: d && str(d.name) ? str(d.name) : '', offList: !!sid && !d,
         sid: sid,
         chip: d ? str(d.chip) : '',
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
-      line.missing = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return k !== 'note' && k !== 'dog' && !line[k]; });
+      line.missing = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return k !== 'note' && k !== 'dog' && k !== 'source' && !line[k]; });
       if (!line.dog) line.missing.unshift('dog');
       out.push(line);
     });
@@ -98,6 +133,7 @@
     if (key === 'date') return line.date ? (iso ? line.date : ymd(line.date)) : NR;
     if (key === 'dog') return line.dog || (line.sid ? line.sid + ' (not on the current list)' : NR);
     if (key === 'note') return line.note || '';
+    if (key === 'time' && line.noTime) return 'time not recorded';
     return line[key] || NR;
   }
 
@@ -175,6 +211,6 @@
   /** A file name: medicines-register-YYYY-MM.csv (no kennel name, so nothing personal is in it). */
   function fileName(ym, ext) { return 'medicines-register-' + (str(ym) || 'month') + '.' + (ext || 'csv'); }
 
-  return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, build: build, cell: cell, gaps: gaps,
+  return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, build: build, cell: cell, gaps: gaps,
     toCsv: toCsv, toHtml: toHtml, fileName: fileName, monthWords: monthWords };
 }));
