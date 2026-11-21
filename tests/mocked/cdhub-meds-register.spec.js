@@ -72,6 +72,30 @@ test.describe('Medicines register: the rules', () => {
     expect(l.missing).toEqual([]);
   });
 
+  test('CSV: free text that starts = + - @ tab or return cannot run as a formula, in any column', () => {
+    const bad = ['=1+1', '+1', '-1', '@SUM(A1)', '\tx', '\rx'];
+    const rows = bad.map((v, i) => ({ id: 'b' + i, subject_id: 'sub-test-dog-1', given_on: '2026-06-0' + (i + 1), product: v, reason: v, note: v }));
+    const csv = R.toCsv({ kennel: '=Kennel', month: '2026-06', printed: '' }, R.build(rows, { month: '2026-06', dog }));
+    const cells = csv.replace(/^\ufeff/, '').split('\r\n').slice(6, 12).map((r) => r.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map((c) => c.replace(/,$/, '').replace(/^"|"$/g, '').replace(/""/g, '"')));
+    cells.forEach((r, i) => {
+      [4, 9, 12].forEach((col) => {   // Medicine, Reason, Note
+        // = + - @ get a leading '; a leading tab or return is trimmed off with the other spaces
+        expect(r[col]).toBe(/^[\t\r]/.test(bad[i]) ? bad[i].trim() : "'" + bad[i]);
+        expect(r[col]).not.toMatch(/^[=+\-@\t\r]/);
+      });
+    });
+    expect(csv).toContain("Medicines register,'=Kennel");
+  });
+
+  test('CSV: UTF-8 with a BOM, and dates as YYYY-MM-DD', () => {
+    const csv = R.toCsv({ kennel: 'Café Kennel £', month: '2026-02', printed: '' }, R.build(ROWS, { month: '2026-02', dog }));
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(Buffer.from(csv, 'utf8').subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
+    expect(csv).toContain('Café Kennel £');
+    expect(csv).toContain('\r\n2026-02-03,not recorded,Test Dog One,');
+    expect(csv).not.toContain('3 Feb 2026');
+  });
+
   test('CSV: header lines, every column, formulas made harmless', () => {
     const lines = R.build(ROWS.concat([{ id: 'evil', subject_id: 'sub-test-dog-1', given_on: '2026-02-20', product: '=HYPERLINK("x")' }]), { month: '2026-02', dog });
     const csv = R.toCsv({ kennel: 'Sample Kennel', month: '2026-02', printed: '21 Nov 2026 10:00' }, lines);
@@ -116,7 +140,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const csv = fs.readFileSync(await dl.path(), 'utf8');
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
-    expect(csv).toContain('3 Feb 2026,not recorded,Test Dog One,900000000000001,Sample Wormer,not recorded,not recorded,1 tablet,Oral,routine,not recorded,not recorded,with food');
+    expect(csv).toContain('2026-02-03,not recorded,Test Dog One,900000000000001,Sample Wormer,not recorded,not recorded,1 tablet,Oral,routine,not recorded,not recorded,with food');
     expect(csv).toContain('sub-not-on-list (not on the current list)');
     await expect(card.locator('#medsMsg')).toHaveText('Downloaded 3 entries.');
 

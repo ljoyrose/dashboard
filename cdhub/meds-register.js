@@ -92,9 +92,10 @@
     return out;
   }
 
-  /** A line's value for a column as printed: "not recorded" for a missing detail. Note may be blank. */
-  function cell(line, key) {
-    if (key === 'date') return line.date ? ymd(line.date) : NR;
+  /** A line's value for a column as printed: "not recorded" for a missing detail. Note may be blank.
+   *  iso: the date as YYYY-MM-DD (the CSV), so a spreadsheet in any country reads it the same. */
+  function cell(line, key, iso) {
+    if (key === 'date') return line.date ? (iso ? line.date : ymd(line.date)) : NR;
     if (key === 'dog') return line.dog || (line.sid ? line.sid + ' (not on the current list)' : NR);
     if (key === 'note') return line.note || '';
     return line[key] || NR;
@@ -117,7 +118,7 @@
   }
 
   /**
-   * CSV text: four header lines (kennel, month, printed, the "not recorded" rule), a blank line, then the table.
+   * CSV text (UTF-8 with a BOM, so Excel shows accents and \u00a3 right): four header lines (kennel, month, printed, the "not recorded" rule), a blank line, then the table.
    * head: { kennel, month: 'YYYY-MM', printed: 'D Mon YYYY HH:MM' }
    */
   function toCsv(head, lines) {
@@ -129,7 +130,7 @@
       [],
       COLUMNS.map(function (c) { return c[1]; })
     ];
-    lines.forEach(function (l) { out.push(COLUMNS.map(function (c) { return cell(l, c[0]); })); });
+    lines.forEach(function (l) { out.push(COLUMNS.map(function (c) { return cell(l, c[0], true); })); });
     return '﻿' + out.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
   }
 
