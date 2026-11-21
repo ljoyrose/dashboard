@@ -283,5 +283,10 @@
     opts.appendChild(btn('Private set-up QR', privateQr));
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
     if (add === 'thermometer') addThermometer();   // from the hub's "+ Thermometer"
+    /* from a room's "Print sign" in CD Hub (?sign=<area id>, 21 Nov 2026): that one room's card, ready to print */
+    var sign = ''; try { sign = new URLSearchParams(location.search).get('sign') || ''; } catch (e) { /* old browser */ }
+    var signRoom = sign ? T.area.filter(function (a) { return a.id === sign; })[0] : null;
+    if (signRoom) { sheet.className = 'sheet rooms'; make('area', [{ id: signRoom.id, label: signRoom.code || signRoom.id, a: signRoom }], roomCard); }
+    else if (sign) say('That room is not on the list. Press Room cards to print them all.', 'warn');
   });
 }());
