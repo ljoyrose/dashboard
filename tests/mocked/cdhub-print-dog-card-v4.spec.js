@@ -66,3 +66,34 @@ test('dog card v4: no photo, or a photo that fails to load, keeps the size-colou
   });
   await expect(page.locator('.sheet')).not.toContainText(/\bPhoto\b/);
 });
+
+test('dog card v4: a pup under puppy.under_weeks prints purple (size_colour.puppy), from 12 weeks the size colour; no dob = size colour; unknown size = a plain frame', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));                     // the print day
+  await P.openCards(page, (t) => {
+    t.subject[0].dob = '2026-08-30';                                                      // 11 weeks 6 days: a pup
+    t.subject[2].dob = '2026-08-29';                                                      // exactly 12 weeks: no longer a pup
+    delete t.subject[3].dob;                                                              // no date of birth
+    t.subject[4].size_band = ''; t.subject[4].dob = '2022-03-01';                         // no weight, no size
+    t.breeding_rule.push(
+      { rule_key: 'size_colour.puppy', value: 'purple', effective_from: '2026-11-21', source: 'Pretend owner rule' },
+      { rule_key: 'puppy.under_weeks', value: '8', effective_from: '2026-01-01', source: 'Pretend older rule' },
+      { rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21', source: 'Pretend owner rule' },   // the newest in force wins
+      { rule_key: 'puppy.under_weeks', value: '20', effective_from: '2027-01-01', source: 'Pretend later rule' });  // not yet in force
+  });
+  await page.getByRole('button', { name: '2 per A4' }).click();
+  await page.emulateMedia({ media: 'print' });
+  const frame = (id) => page.locator('.dcard[data-dog="' + id + '"] .photo').evaluate((e) => {
+    const st = getComputedStyle(e); return { colour: st.borderTopColor, text: st.color, border: parseFloat(st.borderTopWidth), word: e.textContent.trim(), c: getComputedStyle(e.closest('.dcard')).getPropertyValue('--c').trim() };
+  });
+  const tokens = await page.evaluate(() => { const r = getComputedStyle(document.documentElement), probe = (v) => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+    return { purple: probe('var(--sz-purple)'), blue: probe('var(--sz-blue)'), orange: probe('var(--sz-orange)') }; });
+  const pup = await frame('d0'), twelve = await frame('d2'), noDob = await frame('d3'), unknown = await frame('d4');
+  expect(pup.colour, '11 weeks 6 days: purple').toBe(tokens.purple);
+  expect(twelve.colour, 'exactly 12 weeks: its size colour (large, blue)').toBe(tokens.blue);
+  expect(noDob.colour, 'no date of birth: its size colour (small, orange)').toBe(tokens.orange);
+  expect(unknown.c, 'unknown size: no size colour on the card').not.toMatch(/--sz-/);
+  expect([tokens.purple, tokens.blue, tokens.orange], 'unknown size: a plain frame, no size or puppy colour').not.toContain(unknown.colour);
+  expect(unknown.colour, 'the plain frame is the card ink colour').toBe(unknown.text);
+  [pup, twelve, noDob, unknown].forEach((f) => { expect(f.word).toBe(''); expect(f.border).toBeGreaterThan(0); });
+  await expect(page.locator('.dcard[data-dog="d4"] [data-k="size"]')).toHaveCount(0);   // no size tile when the size is unknown
+});

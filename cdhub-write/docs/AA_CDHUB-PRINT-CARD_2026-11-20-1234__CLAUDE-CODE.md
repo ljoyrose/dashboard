@@ -23,6 +23,18 @@ Not seeded, and Lisa's decision:
 
 Without a row, an item gets no code when it is added. Print still makes one when its card is printed.
 
+### Puppy colour on dog cards (Lisa 21 Nov 2026)
+
+A dog under `puppy.under_weeks` weeks old on the print day prints in the `size_colour.puppy` colour (frame and Size tile) instead of its size colour. With no date of birth, or without these rows, the size colour is used. A dog with no known size prints a plain frame. The newest row in force wins.
+
+```csv
+rule_key,value,effective_from,source,note
+size_colour.puppy,purple,2026-11-21,Lisa 21 Nov 2026,A pup under the puppy age prints purple instead of its size colour.
+puppy.under_weeks,12,2026-11-21,Lisa 21 Nov 2026,Under 12 weeks old on the print day counts as a pup.
+```
+
+Still Lisa's to decide: does a pup's Size tile say "Puppy" or keep Small/Medium/Large? Should the hub's on-screen dog card and the litter card also turn purple for pups?
+
 ### Fields on item cards (optional rows)
 
 | rule_key | value | meaning |

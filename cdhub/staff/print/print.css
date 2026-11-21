@@ -6,7 +6,7 @@
 @media print{.noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}.sheet{grid-template-columns:repeat(3,1fr)}}
 .qcard .room{display:block;font-size:14px;font-weight:600}
 /* Lisa's "Dog Card Print-outs" v4. Size colours come from rule rows; these only turn a colour word into the print shade. */
-:root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon)}
+:root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon);--sz-purple:var(--ljr-7-icon)}
 .per{display:inline-flex;gap:6px}.per [aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
 /* Lisa's dog card (18 Nov 2026). --c is the size colour from the owner's size_colour rows. */
 .sheet.dogs{display:grid;gap:10px;grid-template-columns:1fr}

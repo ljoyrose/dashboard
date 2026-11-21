@@ -94,6 +94,16 @@
     (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
     return c ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : '';
   }
+  /* Lisa 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
+     colour (the owner's dated rule rows; the newest in force wins). No date of birth, or no rows: the size colour. */
+  function colourVar(c) { return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c || '') ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : ''; }
+  function isPup(s) {
+    var wk = parseFloat(ruleNow('puppy.under_weeks')), b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s.dob || '')), t = /^(\d{4})-(\d{2})-(\d{2})/.exec(BLDNeeds.today());
+    if (!(wk > 0) || !b || !t) return false;
+    var days = (Date.UTC(+t[1], +t[2] - 1, +t[3]) - Date.UTC(+b[1], +b[2] - 1, +b[3])) / 864e5;
+    return days >= 0 && days < wk * 7;
+  }
+  function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
   /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
@@ -134,7 +144,7 @@
   /* a long name steps down a size so it stays on two lines at most */
   function nameFit(name) { var n = String(name).length; return n > 28 ? ' n3' : n > 16 ? ' n2' : ''; }
   function dogCard(tag, it) {
-    var s = it.s, sz = sizeOfDog(s), col = sizeColour(sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
+    var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
     var facts = [];
     if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [sexIcon(s.sex), f ? 'Female' : 'Male'])]));
     if (s.dob) facts.push(h('div', { 'data-k': 'dob' }, [h('dt', { text: 'Date of birth' }), h('dd', { text: dmy(s.dob) })]));
