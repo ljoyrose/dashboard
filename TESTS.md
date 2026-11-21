@@ -232,8 +232,9 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 
 ## When does it run?
 
-- **Every time a change is saved** (every "push") to GitHub.
-- **Every Monday about 06:17 UTC.**
+- **On every pull request**, and again each time a change is pushed to it (a newer push cancels the older run).
+- **On every push to main**, as the gate of "Publish site (after tests)": nothing is published unless it passes.
+- **Every night about 03:17 UTC**, unless main has had no new commit for 26 hours.
 - **Whenever you press the button:** GitHub > the **Actions** tab > **Dashboard tests** > **Run workflow**.
 
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
