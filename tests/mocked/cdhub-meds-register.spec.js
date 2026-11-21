@@ -30,6 +30,16 @@ const ROWS = DISPENSE.trim().split('\n').slice(1).map((l) => {
   h.forEach((k, i) => { o[k] = v[i] || ''; });
   return o;
 });
+// The months the fold offers: this month (London) back to the first record, newest first.
+const offered = (first) => {
+  const now = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }).slice(0, 7), out = [];
+  let [y, m] = now.split('-').map(Number), k = now;
+  for (;;) { out.push(k); if (k <= first) break; m -= 1; if (m < 1) { m = 12; y -= 1; } k = y + '-' + String(m).padStart(2, '0'); }
+  return out;
+};
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const label = (k, n) => MON3[Number(k.slice(5)) - 1] + ' ' + k.slice(0, 4) + ' (' + (n || 'none') + ')';
 const DOGS = { 'sub-test-dog-1': { name: 'Test Dog One', chip: '900000000000001' }, 'sub-test-dog-2': { name: 'Test Dog Two', chip: '' } };
 const dog = (sid) => DOGS[sid] || null;
 
@@ -132,7 +142,8 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const card = page.locator('#compMeds');
     await expect(card.locator('details')).toHaveAttribute('open', '');   // Compliance folds start open
     const month = card.locator('#medsMonth');
-    await expect(month.locator('option')).toHaveText(['Mar 2026 (1)', 'Feb 2026 (3)']);
+    const counts = { '2026-02': 3, '2026-03': 1 };
+    await expect(month.locator('option')).toHaveText(offered('2026-02').map((k) => label(k, counts[k])));
     await month.selectOption('2026-02');
 
     const [dl] = await Promise.all([page.waitForEvent('download'), card.locator('#medsCsv').click()]);
@@ -153,12 +164,36 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await pop.close();
   });
 
-  test('no medicine on file: the fold says so and offers nothing to print', async ({ page, guard }) => {
+  test('a month with nothing given prints and downloads a nil record @regression', async ({ page, guard, context }) => {
+    setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
+    await page.goto('cdhub/');
+    await signIn(page);
+    await tabClick(page, '#nav button[data-go="compliance"]');
+    const card = page.locator('#compMeds');
+    // April 2026 had no medicine: it is offered all the same
+    await expect(card.locator('#medsMonth option[value="2026-04"]')).toHaveText('Apr 2026 (none)');
+    await card.locator('#medsMonth').selectOption('2026-04');
+    const [pop] = await Promise.all([context.waitForEvent('page'), card.locator('#medsPrint').click()]);
+    await expect(pop.locator('h1')).toHaveText('Medicines register · April 2026');
+    await expect(pop.locator('body')).toContainText('No medicine recorded in April 2026.');
+    await expect(pop.locator('.meta').first()).toContainText('Entries: 0');
+    await pop.close();
+    const [dl] = await Promise.all([page.waitForEvent('download'), card.locator('#medsCsv').click()]);
+    const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^\ufeff/, '').trim().split('\r\n');
+    expect(csv[1]).toBe('Month,April 2026');
+    expect(csv[csv.length - 1]).toBe(R.COLUMNS.map((c) => c[1]).join(','));   // the header row and no lines
+    await expect(card.locator('#medsMsg')).toHaveText('Downloaded 0 entries.');
+  });
+
+  test('no medicine on file at all: this month is still offered, as a nil record', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', 'id,subject_id,given_on,product\n');
     await page.goto('cdhub/');
     await signIn(page);
     await tabClick(page, '#nav button[data-go="compliance"]');
-    await expect(page.locator('#medsNone')).toHaveText('No medicine recorded yet.');
-    await expect(page.locator('#medsPrint')).toHaveCount(0);
+    const now = offered('9999-99')[0];
+    await expect(page.locator('#medsMonth option')).toHaveText([label(now, 0)]);
+    const [pop] = await Promise.all([context.waitForEvent('page'), page.locator('#medsPrint').click()]);
+    await expect(pop.locator('body')).toContainText('No medicine recorded in ' + MONTH[Number(now.slice(5)) - 1] + ' ' + now.slice(0, 4) + '.');
+    await pop.close();
   });
 });
