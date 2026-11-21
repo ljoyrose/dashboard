@@ -184,6 +184,14 @@ const CASES = [
       rules(env, [`r1,${T},link_kind.gallery,Photos,2026-01-01,test,,,,`]);
     },
     body: () => ({ action: 'link_add', fields: { from_table: 'subject', from_id: 'sub-test-a', to_table: 'files', to_id: 'fil-1', role: 'gallery' } }) },
+  { id: 'score_save', on: ['score_assessment'], role: 'owner', writes: ['BLD-score_assessment.csv', 'BLD-score_line.csv'],
+    seed: (env) => {
+      put(env, 'BLD-score_assessment.csv', lines('id,tenant_id,subject_id,scheme_id,period,verdict,points_earned,points_available,points_unverified,unknown_count,status,calculated_at,calculated_by,replaces_id'));
+      put(env, 'BLD-score_line.csv', lines('id,tenant_id,assessment_id,criterion_id,label_then,evidence_table,evidence_record_id,answer_then,points,points_max,gate_outcome,unknown_reason,judged_at,judged_by,rule_version_then'));
+      put(env, 'BLD-score_scheme.csv', lines('id,tenant_id,name', [`sch-test,${T},Test scheme`]));
+    },
+    body: () => ({ action: 'score_save', fields: { subject_id: 'sub-test-a', scheme_id: 'sch-test', period: '2026-10-01', verdict: 'unverified',
+      points_earned: '0', points_available: '10', lines: [{ criterion_id: 'c-test', label_then: 'Test', points_max: '10', unknown_reason: 'no_record' }] } }) },
   // dog_photo has no TABLE_ON switch: it is "on" when SAVE_ENABLED and DOG_PHOTOS_FOLDER_ID are set (Risks found, R1).
   { id: 'dog_photo', on: [], role: 'staff', writes: ['BLD-subject.csv'], read: 'subject', props: { DOG_PHOTOS_FOLDER_ID: 'FOLDER-PHOTOS' }, outside: 1,
     seed: (env) => put(env, 'BLD-subject.csv', lines('id,tenant_id,name,photo', [`sub-test-a,${T},Test A,`])),

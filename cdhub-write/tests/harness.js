@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -34,6 +34,7 @@ function makeEnv(opts = {}) {
   const env = {
     nowMs: opts.nowMs || DEFAULT_NOW,
     props: Object.assign({}, opts.props || {}),
+    fetches: [], google: opts.google || null, ranges: [],
     cache: {},
     email: opts.email || '',
     drive: [],          // [{id,title,content}]
@@ -76,7 +77,7 @@ function makeEnv(opts = {}) {
     insertRowsAfter: (after, n) => { f.maxRows = Math.max(f.maxRows, after + n); },
     deleteRow: (n) => { f.sheet.splice(n - 1, 1); },
     setName: (n) => { f.tabName = n; },
-    getRange: (r, c, nr, nc) => { const grid = (fn) => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(fn(i, j)); out.push(row); } return out; }; return {
+    getRange: (r, c, nr, nc) => { env.ranges.push([f.title, r, c, nr || 1, nc || 1]); const grid = (fn) => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(fn(i, j)); out.push(row); } return out; }; return {
       // cells may hold text, real numbers or real dates (as Sheets does); shown the way the cell's number format says
       getDisplayValues: () => grid((i, j) => shown(cell(r + i, c + j), f.cfmt[(r + i) + ':' + (c + j)])),
       getValues: () => grid((i, j) => { const v = cell(r + i, c + j); return v === undefined ? '' : v; }),
@@ -102,6 +103,8 @@ function makeEnv(opts = {}) {
 
   const wrap = (f) => ({
     getName: () => f.title, getId: () => f.id,
+    // Drive's "last changed" time: any change to the file's text or cells gives a different time
+    getLastUpdated: () => new Date(parseInt(crypto.createHash('sha256').update(JSON.stringify([f.content, f.sheet, f.title])).digest('hex').slice(0, 10), 16)),
     getMimeType: () => (f.sheet ? SHEET_MIME : 'text/csv'),
     moveTo(dest) { f.parent = 'folder'; return this; },
     getSize: () => Buffer.byteLength(f.content, 'utf8'),
@@ -154,6 +157,21 @@ function makeEnv(opts = {}) {
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
+    // Google's answers for the owner sign-in check (Auth.gs authOwnerGoogle_). Tests set env.google; none = Google unreachable.
+    UrlFetchApp: { fetch: (url, o) => {
+      env.fetches.push({ url, headers: (o && o.headers) || {} });
+      if (!env.google) throw new Error('no network in tests');
+      const resp = (code, body) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(body) });
+      if (url.indexOf('https://oauth2.googleapis.com/tokeninfo?access_token=') === 0) {
+        const t = env.google.tokens[decodeURIComponent(url.split('=')[1])];
+        return t ? resp(200, { aud: t.aud, azp: t.aud, expires_in: String(t.expires_in == null ? 3000 : t.expires_in) }) : resp(400, { error: 'invalid_token' });
+      }
+      if (url.indexOf('https://www.googleapis.com/drive/v3/about') === 0) {
+        const t = env.google.tokens[String((o && o.headers && o.headers.Authorization) || '').replace('Bearer ', '')];
+        return t ? resp(200, { user: { emailAddress: t.email, displayName: t.name } }) : resp(401, {});
+      }
+      return resp(404, {});
+    } },
     DriveApp: {
       getFolderById: (id) => {
         if (id === 'FOLDER-TEST') return folder;

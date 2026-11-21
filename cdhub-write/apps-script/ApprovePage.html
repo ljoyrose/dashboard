@@ -54,11 +54,18 @@
     <button class="ok" id="sc-issue" type="button">Make their code</button>
     <div class="msg" id="sc-imsg"></div>
   </div>
-  <div class="card" id="sc-once" hidden>
-    <b id="sc-once-who"></b>
-    <p style="font:700 28px/1.3 monospace;letter-spacing:2px;margin:8px 0" id="sc-once-code"></p>
-    <p class="sub">Write it down for them now. It is shown once and cannot be shown again.</p>
-    <button class="ok" id="sc-once-hide" type="button">I have written it down</button>
+  <div class="card" id="sc-once" hidden style="border:3px solid var(--good)">
+    <b>Your code: type this (shown once, keep it safe)</b>
+    <div class="sub" id="sc-once-who"></div>
+    <p style="font:700 32px/1.3 monospace;letter-spacing:3px;margin:8px 0;user-select:all" id="sc-once-code"></p>
+    <p class="sub">Type it on the phone or the hub. The name tag (sc-...) is not the code. It cannot be shown again.</p>
+    <button class="ok" id="sc-once-copy" type="button">Copy</button>
+    <button class="ok" id="sc-once-hide" type="button">I've copied it</button>
+    <div class="msg" id="sc-once-msg"></div>
+  </div>
+  <div class="card" id="sc-tools" hidden>
+    <input id="sc-find" type="search" autocomplete="off" placeholder="Search name, role or name tag" aria-label="Search codes">
+    <label><input id="sc-old" type="checkbox"> <span id="sc-old-label">Show switched-off and replaced</span></label>
   </div>
   <div id="sc-list"></div>
   <div class="card"><button class="ok" id="sc-sync" type="button">Fill the code register</button><div class="msg" id="sc-smsg"></div>
@@ -75,6 +82,8 @@
   <div id="in-list"></div>
 </main>
 <script>
+  /* 15 Nov 2026: "Failed: undefined" told Lisa nothing. Google can hand back a plain string or an empty error, so say what came back. */
+  function whyFailed(e){ var m = e && (e.message || e.details); if (!m && typeof e === 'string') m = e; return m || 'Google gave no reason. Reload this page; if you are signed in to more than one Google account, use a window with only the owner account.'; }
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
   function load(){
     google.script.run.withSuccessHandler(show).withFailureHandler(function(e){
@@ -102,7 +111,7 @@
         google.script.run.withSuccessHandler(function(r){
           msg.textContent = r.ok ? (d==='approve'?'Added to the table.':'Rejected. Nothing was added.') : r.message;
           if(r.ok) setTimeout(load, 900);
-        }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_decide(it.pending_id, d, note.value);
+        }).withFailureHandler(function(e){ msg.textContent='Failed: '+whyFailed(e); }).ui_decide(it.pending_id, d, note.value);
       }
       var a=el('button','ok','Approve'); a.onclick=function(){ decide('approve'); };
       var r=el('button','no','Reject'); r.onclick=function(){ decide('reject'); };
@@ -114,17 +123,35 @@
 
   /* ---- staff codes: switch one off ---- */
   function scMsg(t){ document.getElementById('sc-msg').textContent=t; }
+  /* Lisa 16 Nov 2026: active codes only unless "Show switched-off and replaced" is ticked (starts off); search by name,
+     role or name tag; active first, then by name. Ended codes stay stored; they are only hidden here. */
+  var scAll=[];
+  function scDraw(){
+    var box=document.getElementById('sc-list'); box.textContent='';
+    var q=document.getElementById('sc-find').value.trim().toLowerCase(), old=document.getElementById('sc-old').checked;
+    var ended=scAll.filter(function(p){ return !p.active; }).length;
+    document.getElementById('sc-old-label').textContent='Show switched-off and replaced ('+ended+')';
+    var list=scAll.filter(function(p){ return (old || p.active) && (!q || [p.who,p.role,p.id].join(' ').toLowerCase().indexOf(q)>=0); });
+    list.sort(function(a,b){ return (b.active?1:0)-(a.active?1:0) || String(a.who).localeCompare(String(b.who)); });
+    scMsg(scAll.length ? (list.length ? '' : 'No codes match.') : 'No staff codes yet.');
+    scCards(box, list);
+  }
+  document.getElementById('sc-find').oninput=scDraw;
+  document.getElementById('sc-old').onchange=scDraw;
   function showStaff(){
     scMsg('Loading...');
     google.script.run.withSuccessHandler(function(res){
-      var box=document.getElementById('sc-list'); box.textContent='';
+      document.getElementById('sc-list').textContent='';
       if(!res.ok){ scMsg(res.message); return; }
-      var list=res.result.staff; scMsg(list.length ? '' : 'No staff codes yet.');
+      scAll=res.result.staff||[]; document.getElementById('sc-tools').hidden=false; scDraw();
+    }).withFailureHandler(function(e){ scMsg('Failed: '+whyFailed(e)); }).ui_staffList();
+  }
+  function scCards(box, list){
       list.forEach(function(p){
         var c=el('div','card'); var dl=el('dl');
         dl.appendChild(el('dt',null,'Name')); dl.appendChild(el('dd',null,p.who));
         dl.appendChild(el('dt',null,'Role')); dl.appendChild(el('dd',null,p.role));
-        dl.appendChild(el('dt',null,'Code id')); dl.appendChild(el('dd',null,p.id || (p.replaced ? '(moved to the new code)' : '(none yet: run adminAssignCodeIds)')));
+        dl.appendChild(el('dt',null,'Name tag (not the code)')); dl.appendChild(el('dd',null,p.id || (p.replaced ? '(moved to the new code)' : '(none yet: run adminAssignCodeIds)')));
         dl.appendChild(el('dt',null,'State')); dl.appendChild(el('dd',null,p.active ? 'active' : (p.replaced ? 'REPLACED by a new code ' : 'SWITCHED OFF ') + (p.revoked_at || '')));
         c.appendChild(dl);
         var msg=el('div','msg');
@@ -136,7 +163,7 @@
             google.script.run.withSuccessHandler(function(r){
               msg.textContent = r.ok ? ('Switched off.' + (r.result.logged ? '' : ' It could not be noted in the approvals queue file, so check that file exists.')) : r.message;
               if(r.ok) setTimeout(showStaff, 900);
-            }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_revokeCode(p.id);
+            }).withFailureHandler(function(e){ msg.textContent='Failed: '+whyFailed(e); }).ui_revokeCode(p.id);
           };
           c.appendChild(b);
           if(p.role!=='GUEST' && p.role!=='INSPECTOR'){
@@ -147,7 +174,7 @@
               google.script.run.withSuccessHandler(function(r){
                 msg.textContent = r.ok ? 'Name changed.' + (r.result.mirrored ? '' : ' (Not in the code register: is it switched on?)') : r.message;
                 if(r.ok) setTimeout(showStaff, 900);
-              }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_renameCode(p.id, nm);
+              }).withFailureHandler(function(e){ msg.textContent='Failed: '+whyFailed(e); }).ui_renameCode(p.id, nm);
             };
             var rs=el('button','no','Give them a new code'); rs.type='button';
             rs.onclick=function(){
@@ -156,14 +183,13 @@
               google.script.run.withSuccessHandler(function(r){
                 if(!r.ok){ msg.textContent=r.message; return; }
                 msg.textContent='New code made. The old one is switched off.'; showOnce(r.result);
-              }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_resetCode(p.id);
+              }).withFailureHandler(function(e){ msg.textContent='Failed: '+whyFailed(e); }).ui_resetCode(p.id);
             };
             c.appendChild(rn); c.appendChild(rs);
           }
         }
         c.appendChild(msg); box.appendChild(c);
       });
-    }).withFailureHandler(function(e){ scMsg('Failed: '+e.message); }).ui_staffList();
   }
   document.getElementById('sc-show').onclick=showStaff;
   // ?page=approve&section=codes (or #codes) opens straight on the codes list: the hub's Codes card links here
@@ -175,10 +201,17 @@
 
   /* ---- staff codes: make one, or a new one for the same person. The code is shown once, here only. ---- */
   function showOnce(r){
-    document.getElementById('sc-once-who').textContent='Code for '+r.who+' ('+r.role+')';
+    document.getElementById('sc-once-who').textContent='For '+r.who+' ('+r.role+'). Name tag '+r.id+'.';
     document.getElementById('sc-once-code').textContent=r.code;
-    document.getElementById('sc-once').hidden=false;
+    document.getElementById('sc-once-msg').textContent='';
+    var box=document.getElementById('sc-once'); box.hidden=false;
+    if(box.scrollIntoView){ try{ box.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ box.scrollIntoView(); } }
   }
+  document.getElementById('sc-once-copy').onclick=function(){
+    var t=document.getElementById('sc-once-code').textContent, m=document.getElementById('sc-once-msg');
+    if(!navigator.clipboard){ m.textContent='Select the code and copy it.'; return; }
+    navigator.clipboard.writeText(t).then(function(){ m.textContent='Copied.'; },function(){ m.textContent='Could not copy. Select the code and copy it.'; });
+  };
   document.getElementById('sc-once-hide').onclick=function(){
     document.getElementById('sc-once-code').textContent=''; document.getElementById('sc-once').hidden=true; showStaff();
   };
@@ -190,12 +223,12 @@
       b.disabled=false;
       if(!r.ok){ m.textContent=r.message; return; }
       nm.value=''; m.textContent='Made.' + (r.result.mirrored ? '' : ' (Not in the code register: is it switched on?)'); showOnce(r.result);
-    }).withFailureHandler(function(e){ b.disabled=false; m.textContent='Failed: '+e.message; }).ui_issueCode(nm.value, rl.value);
+    }).withFailureHandler(function(e){ b.disabled=false; m.textContent='Failed: '+whyFailed(e); }).ui_issueCode(nm.value, rl.value);
   };
   document.getElementById('sc-sync').onclick=function(){
     var m=document.getElementById('sc-smsg'); m.textContent='Working...';
     google.script.run.withSuccessHandler(function(r){ m.textContent = r.ok ? ('Added '+r.result.added+' code(s).') : r.message; })
-      .withFailureHandler(function(e){ m.textContent='Failed: '+e.message; }).ui_codeRegisterSync();
+      .withFailureHandler(function(e){ m.textContent='Failed: '+whyFailed(e); }).ui_codeRegisterSync();
   };
 
   /* ---- owner edit ---- */
@@ -215,7 +248,7 @@
         b.onclick=function(){ b.hidden=true; openEditor(c,r0,row); };
         c.appendChild(b); box.appendChild(c);
       });
-    }).withFailureHandler(function(e){ edMsg('Failed: '+e.message); }).ui_editList(document.getElementById('ed-table').value);
+    }).withFailureHandler(function(e){ edMsg('Failed: '+whyFailed(e)); }).ui_editList(document.getElementById('ed-table').value);
   };
   function openEditor(card,r0,row){
     var inputs={}; var form=el('div');
@@ -238,15 +271,19 @@
       msg.textContent='Working...';
       google.script.run.withSuccessHandler(function(r){
         msg.textContent = r.ok ? 'Done. Changed: '+r.result.changed.join(', ')+'.' : (r.message+(r.fields?' '+Object.keys(r.fields).map(function(k){return k+': '+r.fields[k];}).join(' '):''));
-      }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_edit(r0.table,row.id,f);
+      }).withFailureHandler(function(e){ msg.textContent='Failed: '+whyFailed(e); }).ui_edit(r0.table,row.id,f);
     };
     form.appendChild(go); form.appendChild(msg); card.appendChild(form);
   }
 
   /* ---- inspector links (Inspect.gs) ---- */
-  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status'};
+  var IN_NAMES={subject:'Dog',microchip:'Microchip',health_screen:'Health tests',fit_to_breed:'Fit to Breed',litter:'Litters',subject_status:'Status',area_reading:'Temperatures',check_log:'Jobs: health checks, bowls, cleaning'};
   // Suggested set (Breed Better spec S10): name, sex, DOB, chip last 4, health and Fit to Breed results, litters with date of birth
-  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob']};
+  var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],
+    area_reading:['room','reading_type','min_c','max_c','spot_c','taken_at','in_range','mitigation_note'],   // who typed it: off unless ticked
+    check_log:['job','room','dog','outcome','amount','happened_at','note']};
+  // never ticked by default on any list (Lisa can still tick them): who typed it and how, and old score, axis and body-condition (bcs) columns (DOCS, 20 Nov 2026)
+  var IN_NEVER_DEFAULT=/(^taken_by$|^created_by$|^how_recorded$|^bcs$|score|axis)/;
   function inMsg(t){ document.getElementById('in-msg').textContent=t; }
   function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }
   document.getElementById('in-new').onclick=function(){
@@ -264,6 +301,10 @@
       if(days(ch.max_hours)) ends.max=plus(ch.today,days(ch.max_hours));
       if(days(ch.default_hours)) ends.value=plus(ch.today,days(ch.default_hours));
       card.appendChild(ends);
+      card.appendChild(el('div','k','Records from (blank = all)'));
+      var dFrom=el('input'); dFrom.type='date'; dFrom.max=ch.today; card.appendChild(dFrom);
+      card.appendChild(el('div','k','Records to (blank = today)'));
+      var dTo=el('input'); dTo.type='date'; dTo.max=ch.today; card.appendChild(dTo);
       var dogTicks=[];
       [[false,'Dogs'],[true,'Archived or retired (shown only if ticked)']].forEach(function(g){
         var fs=el('fieldset'); fs.appendChild(el('legend',null,g[1]));
@@ -277,7 +318,7 @@
         var fs=el('fieldset'); fs.appendChild(el('legend',null,IN_NAMES[list]||list));
         var def=IN_DEFAULT[list]||[];
         ch.lists[list].filter(function(c){ return c!=='id' && c!==ch.keys[list]; }).forEach(function(col){
-          var t=tick(col, def==='*' || def.indexOf(col)>=0); var f={list:list,field:col,t:t};
+          var t=tick(col, !IN_NEVER_DEFAULT.test(col) && (def==='*' || def.indexOf(col)>=0)); var f={list:list,field:col,t:t};
           fs.appendChild(t.label);
           if(col==='chip_number'){ var s=el('select'); s.setAttribute('aria-label','How much of '+col); s.innerHTML='<option value="last4">Last 4 digits only</option><option value="">Whole number</option>'; f.red=s; fs.appendChild(s); }
           fieldTicks.push(f);
@@ -287,7 +328,7 @@
       var msg=el('div','msg'); msg.setAttribute('role','status');
       var go=el('button','ok','Make link'); go.type='button';
       go.onclick=function(){
-        var spec={label:name.value, ends:ends.value, subjects:[], fields:{}};
+        var spec={label:name.value, ends:ends.value, subjects:[], fields:{}, data_from_date:dFrom.value, data_to_date:dTo.value};
         dogTicks.forEach(function(t){ if(t.box.checked) spec.subjects.push(t.id); });
         fieldTicks.forEach(function(f){ if(!f.t.box.checked) return; (spec.fields[f.list]=spec.fields[f.list]||[]).push(f.red&&f.red.value ? {field:f.field,redaction:f.red.value} : f.field); });
         msg.textContent='Working...'; go.disabled=true;
@@ -304,10 +345,10 @@
           cp.onclick=function(){ navigator.clipboard.writeText(link).then(function(){ cm.textContent='Copied.'; },function(){ cm.textContent='Could not copy. Select the text and copy it.'; }); };
           done.appendChild(cp); done.appendChild(cm); box.appendChild(done);
           r.result.code=''; link='';
-        }).withFailureHandler(function(e){ go.disabled=false; msg.textContent='Failed: '+e.message; }).ui_inspectMake(spec);
+        }).withFailureHandler(function(e){ go.disabled=false; msg.textContent='Failed: '+whyFailed(e); }).ui_inspectMake(spec);
       };
       card.appendChild(go); card.appendChild(msg); box.appendChild(card);
-    }).withFailureHandler(function(e){ inMsg('Failed: '+e.message); }).ui_inspectChoices();
+    }).withFailureHandler(function(e){ inMsg('Failed: '+whyFailed(e)); }).ui_inspectChoices();
   };
   function showLinks(){
     inMsg('Loading...');
@@ -328,13 +369,13 @@
             if(!why || !why.trim()) return;
             msg.textContent='Working...';
             google.script.run.withSuccessHandler(function(r){ msg.textContent=r.ok?'Stopped.':r.message; if(r.ok) setTimeout(showLinks,900); })
-              .withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_inspectStop(k.id, why.trim());
+              .withFailureHandler(function(e){ msg.textContent='Failed: '+whyFailed(e); }).ui_inspectStop(k.id, why.trim());
           };
           c.appendChild(b);
         }
         c.appendChild(msg); box.appendChild(c);
       });
-    }).withFailureHandler(function(e){ inMsg('Failed: '+e.message); }).ui_inspectLinks();
+    }).withFailureHandler(function(e){ inMsg('Failed: '+whyFailed(e)); }).ui_inspectLinks();
   }
   document.getElementById('in-show').onclick=showLinks;
 </script>
