@@ -221,7 +221,7 @@
     return h('article', { class: 'dcard lcard', 'data-litter': l.id, style: col ? '--c:' + col : '' }, [
       h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: it.label })]), born ? h('small', { 'data-k': 'born' }, ['Born', h('br'), dmy(born)]) : null]),
       h('div', { class: 'dbody' }, [
-        h('div', { class: 'cside' }, [h('div', { class: 'photo', text: 'Photo' }),
+        h('div', { class: 'cside' }, [h('div', { class: 'photo none', 'data-k': 'photo' }),   // the frame, blank: no placeholder word on paper
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + it.label) }),
         jobList(['litter']),
