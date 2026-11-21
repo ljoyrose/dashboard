@@ -127,7 +127,8 @@ test('a network failure is honest and a retry reuses the same request id', async
   srv.state.fail = true;
   const a = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21', max_c: '22' }, { requestId: 'r-fixed-0001' });
   assert.equal(a.code, 'NETWORK');
-  assert.match(a.message, /not confirmed as saved/);
+  assert.equal(a.kept, true);
+  assert.match(a.message, /kept on this phone/);
   assert.equal(a.requestId, 'r-fixed-0001');
   srv.state.fail = false;
   await s.submit('area_reading', { area_id: 'area-t1', min_c: '21', max_c: '22' }, { requestId: 'r-fixed-0001' });
@@ -706,7 +707,7 @@ domTest('location check: if the daily log is switched off the button says so and
   srv2.st.fail = true;
   restBtn(host).click();
   await new Promise((r) => setTimeout(r, 30));
-  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /not confirmed as saved/);
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /kept on this phone/);
   assert.equal(restBtn(host).disabled, false);
   srv2.st.fail = false;
   restBtn(host).click();
@@ -970,6 +971,95 @@ test('submit passes its place in the line too, and a screen error in onTurn neve
   const r = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24.1' }, { onTurn: (n) => { told.push(n); throw new Error('screen bug'); } });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.deepEqual(told, [0]);
+});
+
+// NEVER LOSE AN ENTRY (OV12 20 Nov 2026: most of a temperature round was still waiting its turn when the app closed).
+function memStore() { const m = {}; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; }, m }; }
+test('outbox: every save is kept on the phone the moment it is pressed, without the code, and leaves once saved', async () => {
+  const local = memStore(); let release; const gate = new Promise((r) => { release = r; });
+  const posts = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    posts.push(JSON.parse(init.body)); await gate;
+    return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('SECRETCODE9');
+  const all = Promise.all(['a', 'b', 'c'].map((id) => s.act('link_end', { id })));
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(s.outbox.count(), 3);
+  assert.ok(!local.m['bld.outbox'].includes('SECRETCODE9'), 'the code is never kept');
+  release(); await all;
+  assert.equal(s.outbox.count(), 0);
+  assert.equal(local.m['bld.outbox'], undefined);
+});
+
+test('outbox: saves dropped when the phone sleeps or the app closes are sent when it opens again, with the same request ids', async () => {
+  const local = memStore();
+  const hang = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    throw new TypeError('Load failed');   // the phone slept: the browser drops every waiting save (20 Nov 2026)
+  };
+  const a = BLDSave.create({ fetch: hang, localStorage: local, sessionStorage: null });
+  a.setScriptUrl(GOOD_URL); a.setCode('ABC');
+  ['r1', 'r2', 'r3'].forEach((id) => a.act('link_end', { id }, 'r-kept-000' + id.slice(1)));
+  await new Promise((r) => setTimeout(r, 5));
+  const posts = [];
+  const ok = async (url, init = {}) => { posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: { id: 'x' } }) }; };
+  const b = BLDSave.create({ fetch: ok, localStorage: local, sessionStorage: null });
+  b.setScriptUrl(GOOD_URL); b.setCode('NEWCODE');
+  assert.equal(b.outbox.count(), 3);
+  assert.equal(await b.outbox.flush(), 0);
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-kept-0001', 'r-kept-0002', 'r-kept-0003']);
+  assert.ok(posts.every((p) => p.code === 'NEWCODE'), 'the code held now is added when sent');
+});
+
+test('outbox: no answer, busy or saving off keeps it; a refusal is listed as not saved; DUPLICATE counts as saved', async () => {
+  const local = memStore();
+  const replies = { r1: { ok: false, code: 'BUSY', message: 'busy' }, r2: { ok: false, code: 'SAVE_OFF', message: 'off' }, r3: { ok: false, code: 'INVALID', message: 'Say which room.' }, r4: { ok: false, code: 'DUPLICATE', message: 'dup' } };
+  const f = async (url, init = {}) => { const b = JSON.parse(init.body); return { json: async () => replies[b.fields.id] }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, busyPauseMs: 0 });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const rs = await Promise.all(['r1', 'r2', 'r3', 'r4'].map((id) => s.act('link_end', { id })));
+  assert.equal(rs[0].kept, true); assert.match(rs[0].message, /kept on this phone/);
+  assert.equal(rs[1].kept, true);
+  assert.equal(rs[2].kept, false); assert.equal(rs[2].message, 'Say which room.');
+  assert.equal(s.outbox.count(), 2);
+  assert.deepEqual(s.outbox.refused().map((x) => x.message), ['Say which room.']);
+  s.outbox.dismissRefused(s.outbox.refused()[0].id);
+  assert.equal(s.outbox.refused().length, 0);
+});
+
+test('outbox: after 5 hours an entry is not sent by itself; the person can send it after checking, or remove it', async () => {
+  const local = memStore();
+  local.setItem('bld.outbox', JSON.stringify([
+    { id: 'r-old-00001', at: new Date(Date.now() - 6 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00001', action: 'link_end', fields: { id: 'a' } } },
+    { id: 'r-old-00002', at: new Date(Date.now() - 6 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00002', action: 'link_end', fields: { id: 'b' } } }
+  ]));
+  const posts = [];
+  const f = async (url, init = {}) => { posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: {} }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  assert.equal(await s.outbox.flush(), 2);
+  assert.equal(posts.length, 0);
+  assert.deepEqual(s.outbox.items().map((x) => x.old), [true, true]);
+  s.outbox.remove('r-old-00002');
+  assert.equal(await s.outbox.flush({ old: true }), 0);
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-old-00001']);
+});
+
+test('outbox: a save still being sent from this page is not sent a second time by "Send now"', async () => {
+  const local = memStore(); let release; const gate = new Promise((r) => { release = r; });
+  const posts = [];
+  const f = async (url, init = {}) => { posts.push(JSON.parse(init.body).request_id); await gate; return { json: async () => ({ ok: true, result: {} }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const p = s.act('link_end', { id: 'a' }, 'r-once-00001');
+  const fl = s.outbox.flush();
+  await new Promise((r) => setTimeout(r, 5));
+  release(); await p; await fl;
+  assert.deepEqual(posts, ['r-once-00001']);
+  assert.equal(s.outbox.count(), 0);
 });
 
 // Lisa 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
