@@ -596,3 +596,37 @@ test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) 
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
 });
+
+test('21 Nov (Steward on #346): the outdoor calendar has an amber corner dot on a day outside the limit rows, red on an unreadable reading, none on an in-limit day', async ({ page, guard }) => {
+  const bands = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,10,26,,\n';
+  const rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method\n'
+    + 'rdg-c,area-r1,2026-01-07T09:00:00Z,2026-01-07T00:00:00+00:00,8.0,12.0,typed\n'
+    + 'rdg-s,area-r1,2026-01-08T09:00:00Z,2026-01-08T00:00:00+00:00,22.0,18.0,typed\n'
+    + 'rdg-k,area-r1,2026-01-09T09:00:00Z,2026-01-09T00:00:00+00:00,12.0,15.0,typed\n';
+  await open(page, guard);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  const upsert = (id, name, content) => {
+    const f = guard.world.files.find((x) => x.name === name);
+    if (f) { f.content = content; f.size = String(content.length); }
+    else guard.world.file(id, name, content, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  };
+  upsert('bld-band', 'BLD-temperature_band.csv', bands);
+  upsert('bld-readings', 'BLD-area_reading.csv', rows);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  const day = (d) => page.locator('[data-cal="out"] button[title^="' + d + ' Jan 2026 out"]');
+  await expect(day(7).locator('.d-dot.idot-warn')).toHaveCount(1);    // 8.0 is below the 10 limit row
+  await expect(day(8).locator('.d-dot.idot-flag')).toHaveCount(1);    // max lower than min
+  await expect(day(9).locator('.d-dot')).toHaveCount(0);              // 12.0-15.0 is inside 10-26
+  // House colours: never red, no warning colour on the outside calendar - the dot is ink (solid) or an ink ring.
+  const dotCols = await page.evaluate(() => [...document.querySelectorAll('[data-cal="out"] .d-dot')].map((d) => getComputedStyle(d).backgroundColor + '|' + getComputedStyle(d).boxShadow));
+  const ink = await page.evaluate(() => { const i = document.createElement('i'); i.style.color = 'var(--ink)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; });
+  for (const c of dotCols) expect(c).toContain(ink);
+  // The limit is the row, never a fixed 15-25: raise the row's minimum to 13 and 12.0 on the 9th is outside.
+  upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,13,26,,\n');
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await expect(day(9).locator('.d-dot.idot-warn')).toHaveCount(1);
+});
