@@ -4702,11 +4702,13 @@ function medsMake(R){ var ym=(document.getElementById('medsMonth')||{}).value||'
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
- p.addEventListener('click',function(){ var w=window.open('','_blank');   /* opened inside the press, so it is not blocked */
-  medsLib().then(function(R){ var x=medsMake(R), html=R.toHtml(x.head,x.lines);
-   if(w){ w.document.open(); w.document.write(html); w.document.close(); say('Opened '+x.lines.length+' entr'+(x.lines.length===1?'y':'ies')+' to print.'); }
-   else { saveBlob(new Blob([html],{type:'text/html'}),R.fileName(x.ym,'html')); say('Pop-ups are blocked, so the register was downloaded to print.'); } })
-  .catch(function(){ if(w) w.close(); say('Not opened: the register could not load. Try again.'); }); });
+ medsLib().catch(function(){});   /* fetched now, so Print can open its tab inside the press and is not blocked */
+ p.addEventListener('click',function(){ var R=window.BLDMedsRegister;
+  if(!R){ say('Getting the register ready. Press Print again.'); medsLib().catch(function(){ say('Not opened: the register could not load. Try again.'); }); return; }
+  var x=medsMake(R), html=R.toHtml(x.head,x.lines);
+  window.__medsPrint=html; var w=window.open('meds-print.html','_blank');   /* meds-print.html shows window.__medsPrint and prints it */
+  if(w) say('Opened '+x.lines.length+' entr'+(x.lines.length===1?'y':'ies')+' to print.');
+  else { window.__medsPrint=''; saveBlob(new Blob([html],{type:'text/html'}),R.fileName(x.ym,'html')); say('Pop-ups are blocked, so the register was downloaded to print.'); } });
  c.addEventListener('click',function(){ medsLib().then(function(R){ var x=medsMake(R);
    saveBlob(new Blob([R.toCsv(x.head,x.lines)],{type:'text/csv;charset=utf-8'}),R.fileName(x.ym,'csv')); say('Downloaded '+x.lines.length+' entr'+(x.lines.length===1?'y':'ies')+'.'); })
   .catch(function(){ say('Not downloaded: the register could not load. Try again.'); }); });

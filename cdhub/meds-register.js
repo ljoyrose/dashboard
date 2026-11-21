@@ -167,7 +167,8 @@
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p>'
       + '<p class="noprint"><button type="button" onclick="window.print()">Print</button></p>'
-      + '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},300);});<\/script>'
+      + '<script>(function(){var done=0;function go(){if(done)return;done=1;setTimeout(function(){window.print();},300);}'
+      + 'if(document.readyState==="complete")go();else window.addEventListener("load",go);}());<\/script>'
       + '</body></html>';
   }
 

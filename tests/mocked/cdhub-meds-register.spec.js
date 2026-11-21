@@ -133,9 +133,10 @@ test.describe('Medicines register: the rules', () => {
 });
 
 test.describe('CD Hub: Medicines register on Compliance', () => {
-  test('pick a month, download the CSV and open the print page; nothing is written @regression', async ({ page, guard, context }) => {
+  test('pick a month, download the CSV and open the print page; nothing is written', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     setFile(guard.world, 'BLD-microchip.csv', CHIPS);
+    await context.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
     await page.goto('cdhub/');
     await signIn(page);
     await tabClick(page, '#nav button[data-go="compliance"]');
@@ -155,7 +156,12 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     expect(csv).toContain('sub-not-on-list (not on the current list)');
     await expect(card.locator('#medsMsg')).toHaveText('Downloaded 3 entries.');
 
+    await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
     const [pop] = await Promise.all([context.waitForEvent('page'), card.locator('#medsPrint').click()]);
+    await expect(pop).toHaveURL(/cdhub\/meds-print\.html$/);
+    await expect.poll(() => pop.evaluate(() => window.__printed || 0)).toBe(1);   // the print dialog opens once
+    await pop.waitForTimeout(800);
+    expect(await pop.evaluate(() => window.__printed)).toBe(1);   // and not twice
     await expect(pop.locator('h1')).toHaveText('Medicines register · February 2026');
     await expect(pop.locator('tbody tr')).toHaveCount(3);
     await expect(pop.locator('.meta').first()).toContainText('Sample Kennel (invented)');
@@ -164,7 +170,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await pop.close();
   });
 
-  test('a month with nothing given prints and downloads a nil record @regression', async ({ page, guard, context }) => {
+  test('a month with nothing given prints and downloads a nil record', async ({ page, guard, context }) => {
     setFile(guard.world, 'BLD-dispense.csv', DISPENSE);
     await page.goto('cdhub/');
     await signIn(page);
@@ -173,6 +179,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     // April 2026 had no medicine: it is offered all the same
     await expect(card.locator('#medsMonth option[value="2026-04"]')).toHaveText('Apr 2026 (none)');
     await card.locator('#medsMonth').selectOption('2026-04');
+    await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
     const [pop] = await Promise.all([context.waitForEvent('page'), card.locator('#medsPrint').click()]);
     await expect(pop.locator('h1')).toHaveText('Medicines register · April 2026');
     await expect(pop.locator('body')).toContainText('No medicine recorded in April 2026.');
@@ -192,8 +199,15 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await tabClick(page, '#nav button[data-go="compliance"]');
     const now = offered('9999-99')[0];
     await expect(page.locator('#medsMonth option')).toHaveText([label(now, 0)]);
+    await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
     const [pop] = await Promise.all([context.waitForEvent('page'), page.locator('#medsPrint').click()]);
     await expect(pop.locator('body')).toContainText('No medicine recorded in ' + MONTH[Number(now.slice(5)) - 1] + ' ' + now.slice(0, 4) + '.');
     await pop.close();
+  });
+
+  test('the print page opened on its own says where to go, and shows nothing', async ({ page }) => {
+    await page.goto('cdhub/meds-print.html');
+    await expect(page.locator('#medsPrintNone')).toContainText('Open this from CD Hub: Compliance, Medicines register, then Print.');
+    await expect(page.locator('table')).toHaveCount(0);
   });
 });
