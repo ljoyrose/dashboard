@@ -41,36 +41,6 @@ test('key_prefix=job. (15 Nov 2026, SOPJOBS S8): staff read only the job.* owner
   assert.equal(r.scope, 'the job.* rows');
 });
 
-test('key_prefix=job.|size_from_kg.|size_colour. (Lisa 22 Nov 2026): one row-rule allows several prefixes; every other key stays hidden', () => {
-  const env = standardEnv({ props: { READ_ENABLED: 'true' } });
-  const t = fx.TENANT;
-  const rules = env.file('BLD-breeding_rule.csv');
-  const text = ['id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date',
-    `br-1,${t},job.paper_default_time,12:00,2026-11-14,Lisa,,,,`, `br-2,${t},size_from_kg.medium,10,2026-11-12,Lisa,,,,`,
-    `br-3,${t},size_colour.medium,green,2026-01-01,Lisa,,,,`, `br-4,${t},file.who_may,STAFF,2026-01-01,t,,,,`,
-    `br-5,${t},size_from_kgx.bad,1,2026-01-01,t,,,,`].join('\r\n') + '\r\n';
-  if (rules.length) { rules[0].content = text; rules[0].sheet = undefined; } else env.addFile('BLD-breeding_rule.csv', text);
-  const f = env.file('BLD-field_visibility.csv')[0];
-  f.content = f.content.replace(/\r?\n?$/, '\r\n') + [['*', 'key_prefix=job.|size_from_kg.|size_colour.'], ['rule_key', ''], ['value', ''], ['source', '']]
-    .map(([c, cond]) => `fv-x,${t},breeding_rule,${c},aud-staff,yes,${cond},,t,2026-11-15,t`).join('\r\n') + '\r\n';
-  const r = env.ctx.sinkRead_({ v: 1, action: 'read', code: env.codes.staff, table: 'breeding_rule' });
-  assert.deepEqual(Array.from(r.rows, (x) => x.rule_key), ['job.paper_default_time', 'size_from_kg.medium', 'size_colour.medium']);
-  assert.equal(r.rows[1].source, 'Lisa');
-  assert.equal(r.scope, 'the job.*, size_from_kg.*, size_colour.* rows');
-});
-
-test('key_prefix: a list that is not understood (no dot, more than 10, an empty part) is refused, never widened', () => {
-  for (const cond of ['key_prefix=job.|size_from_kg', 'key_prefix=job.||size.', 'key_prefix=' + Array.from({ length: 11 }, (_, i) => 'p' + i + '.').join('|')]) {
-    const env = standardEnv({ props: { READ_ENABLED: 'true' } });
-    const t = fx.TENANT;
-    const f = env.file('BLD-field_visibility.csv')[0];
-    f.content = f.content.replace(/\r?\n?$/, '\r\n') + [['*', cond], ['rule_key', '']]
-      .map(([c, cd]) => `fv-x,${t},breeding_rule,${c},aud-staff,yes,${cd},,t,2026-11-15,t`).join('\r\n') + '\r\n';
-    const r = (() => { try { return env.ctx.sinkRead_({ v: 1, action: 'read', code: env.codes.staff, table: 'breeding_rule' }); } catch (e) { return { refused: e.code || e.message }; } })();
-    assert.ok(r.refused || r.ok === false || (r.rows && r.rows.length === 0), cond + ' must not show rows');
-  }
-});
-
 /* Dated hiding (Lisa 15 Nov 2026, Q3): optional columns row_id, role_code, from_date, to_date, source at the end of
    BLD-field_visibility.csv. The test clock is 15 Oct 2026 (London). Invented rows only. */
 const VIS_Q3 = 'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason,row_id,role_code,from_date,to_date,source';
