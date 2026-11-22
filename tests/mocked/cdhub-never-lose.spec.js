@@ -102,3 +102,51 @@ test('a refusal (a check failed) is not kept: it is listed as Not saved with the
   await bar.locator('[data-outbox-ok]').click();
   await expect(bar).toBeHidden();
 });
+
+// ITEMS2 / OV12 22 Nov 2026: saves typed faster than they send go as one list save. A script with no list save yet
+// answers "Unknown action": nothing is refused or lost, the same entries go one by one. Form answers go with their item.
+async function listPage(page, oldScript) {
+  const sent = [];
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    sent.push(body);
+    let out;
+    if (body.action === 'add_many') {
+      out = oldScript ? { ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }
+        : { ok: true, result: { status: 'many', items: body.items.map((it, i) => ({ request_id: it.request_id, ok: true, result: { status: 'saved', id: 'clg-' + i } })) } };
+    } else out = { ok: true, result: { status: 'saved', id: 'clg-one' } };
+    await new Promise((r) => setTimeout(r, 150));   // a slow script, so the later saves wait in line together
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
+  });
+  await page.goto('cdhub/');
+  await page.evaluate((url) => { window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' }); }, SINK);
+  const answers = await page.evaluate(() => Promise.all([
+    sinkSend({ table: 'check_log', action: 'add', fields: { check_type_id: 'cty-a', outcome: 'ok' } }),
+    sinkSend({ table: 'check_log', action: 'add', fields: { check_type_id: 'cty-b', outcome: 'ok' }, values: { weight: '12.5' } }),
+    sinkSend({ table: 'check_log', action: 'add', fields: { check_type_id: 'cty-c', outcome: 'ok' } })
+  ]));
+  return { sent, answers };
+}
+
+test('a script with no list save yet: the list is answered "Unknown action", nothing is refused or lost, each goes one by one', async ({ page }) => {
+  const { sent, answers } = await listPage(page, true);
+  expect(answers.map((a) => a.ok)).toEqual([true, true, true]);
+  expect(sent.filter((b) => b.action === 'add_many')).toHaveLength(1);
+  const adds = sent.filter((b) => b.action === 'add').map((b) => b.fields.check_type_id).sort();
+  expect(adds).toEqual(['cty-a', 'cty-b', 'cty-c']);
+  expect(sent.find((b) => b.action === 'add' && b.fields.check_type_id === 'cty-b').values).toEqual({ weight: '12.5' });
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
+  await expect(page.locator('#hub-outbox')).toBeHidden();
+});
+
+test('a list save keeps each item\'s form answers', async ({ page }) => {
+  const { sent, answers } = await listPage(page, false);
+  expect(answers.map((a) => a.ok)).toEqual([true, true, true]);
+  const many = sent.find((b) => b.action === 'add_many');
+  expect(many).toBeTruthy();
+  const b = many.items.find((it) => it.fields.check_type_id === 'cty-b');
+  expect(b.values).toEqual({ weight: '12.5' });
+  expect(many.items.filter((it) => it.values)).toHaveLength(1);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+});
