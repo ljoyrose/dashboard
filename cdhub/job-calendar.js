@@ -142,7 +142,9 @@
     var prev = shift(ym, -1), next = shift(ym, 1), atNow = ym >= v.today.slice(0, 7);
     var h = '<section class="card jcal-wrap" id="jobCals"><div class="jcal-head"><h3>Daily records</h3><div class="jcal-nav">'
       + '<button class="btn quiet" type="button" data-jcal-month="' + prev + '" aria-label="Previous month">‹</button><b data-jcal-title>' + e(title) + '</b>'
-      + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button></div></div>'
+      + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button>'
+      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div></div>'
+      + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
       + '<p class="mut jcal-key"><span class="jd done">' + TICK + '</span> done <span class="jd part"></span> part done <span class="jd missed"></span> missed'
       + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
     if (!keys.length) return h + '<p class="mut">No calendars chosen. Add rows compliance.calendar.&lt;job&gt; in Settings.</p></section>';
@@ -192,7 +194,91 @@
     + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6-solid);color:var(--ljr-6-on);display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
     + '.jcal-day{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.jcal-day ul{margin:6px 0;padding-left:18px}'
     + '.jcal-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.jcal-pics a{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;min-height:44px;color:var(--ink)}.jcal-pics img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}'
-    + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}';
+    + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}'
+    + '.jcal-imp{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:grid;gap:8px}.jcal-imp[hidden]{display:none}.jcal-imp-row{display:flex;gap:8px;flex-wrap:wrap}.jcal-imp-t td,.jcal-imp-t th{padding:4px 6px;text-align:left}.jcal-imp-t .warn{color:var(--ljr-3-text)}';
 
-  return { STARTER: STARTER, chosen: chosen, month: month, html: html, dayHtml: dayHtml, filesByLog: filesByLog, doneFields: doneFields, shift: shift, CSS: CSS };
+  /* Import (Lisa 22 Nov 2026, "A"): past daily records from a spreadsheet, one row per job and day. Columns: date, job,
+     outcome (optional: done / concern / not done; blank = done), note (optional). The job is its key or its name as on
+     the calendar. Every row is checked first and shown; only the person's press saves, one row at a time, each marked
+     "imported" (how_recorded import), so the record always says it was entered afterwards from another source. */
+  function siteTypes(v) {
+    var by = {};
+    (v.types || []).forEach(function (r) { if (r.target === 'none' && r.effective_from <= v.today && String(r.active).toLowerCase() !== 'false' && (!by[r.type_key] || r.effective_from > by[r.type_key].effective_from)) by[r.type_key] = r; });
+    return by;
+  }
+  function csvRows(text) {
+    var rows = [], row = [], cell = '', q = false, t = String(text || '').replace(/^﻿/, '');
+    for (var i = 0; i < t.length; i++) {
+      var ch = t[i];
+      if (q) { if (ch === '"' && t[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; continue; }
+      if (ch === '"') q = true; else if (ch === ',') { row.push(cell); cell = ''; } else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += ch;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (c) { return String(c).trim(); }); });
+  }
+  function pad(y, mo, d) {
+    var iso = y + '-' + ('0' + mo).slice(-2) + '-' + ('0' + d).slice(-2), t = new Date(iso + 'T12:00:00Z');
+    return isNaN(t.getTime()) || t.toISOString().slice(0, 10) !== iso ? '' : iso;
+  }
+  function isoOf(d) {
+    d = String(d || '').trim(); var m;
+    if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(d))) return pad(m[1], m[2], m[3]);
+    if ((m = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/.exec(d))) return pad(m[3].length === 2 ? '20' + m[3] : m[3], m[2], m[1]);
+    return '';
+  }
+  var IMP_OUTCOME = { '': 'ok', done: 'ok', ok: 'ok', yes: 'ok', concern: 'concern', 'not done': 'not_done', no: 'not_done' };
+
+  /** Checks every row: [{line, iso, key, label, outcome, note, ok, why}]. Nothing is saved here. */
+  function parseImport(v, text) {
+    var types = siteTypes(v), byName = {};
+    Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
+    var rows = csvRows(text), out = [], seen = {};
+    if (rows.length && /date/i.test(rows[0][0] || '') && /job/i.test(rows[0][1] || '')) rows = rows.slice(1);
+    rows.forEach(function (r, i) {
+      var iso = isoOf(r[0]), key = byName[String(r[1] || '').trim().toLowerCase()] || '', oc = IMP_OUTCOME[String(r[2] || '').trim().toLowerCase()];
+      var x = { line: i + 1, date: String(r[0] || ''), job: String(r[1] || ''), iso: iso, key: key, label: key ? types[key].label || key : '', outcome: oc || '', note: String(r[3] || '').trim(), ok: false, why: '' };
+      if (!iso) x.why = 'date not understood (use 2026-11-17 or 17/11/2026)';
+      else if (iso > v.today) x.why = 'a future date';
+      else if (!key) x.why = 'job not found: use its name as on the calendar';
+      else if (!oc) x.why = 'outcome not understood (done, concern or not done)';
+      else if (seen[key + '|' + iso]) x.why = 'repeated in this file';
+      else if (days(v, key)[iso] && oc === 'ok') x.why = 'already recorded that day';
+      else { x.ok = true; seen[key + '|' + iso] = 1; }
+      out.push(x);
+    });
+    return out;
+  }
+  /** What one imported row sends: a whole-site record for that day, marked import; a per-dog job lists its dogs. */
+  function importFields(v, x) {
+    var t = siteTypes(v)[x.key]; if (!t) return null;
+    var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
+    if (x.note) f.note = x.note;
+    if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
+    return f;
+  }
+  /** A starter file: the heading row and one example row per calendar job (yesterday), to fill in and import. */
+  function template(v) {
+    var y = new Date(Date.parse(v.today + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10), types = siteTypes(v);
+    return 'date,job,outcome,note\r\n' + chosen(v).map(function (k) { return y + ',"' + String((types[k] || {}).label || k).replace(/"/g, '""') + '",done,'; }).join('\r\n') + '\r\n';
+  }
+  function importPanel(v) {
+    return '<p>Add past daily records from a spreadsheet: one row per job and day. Columns: <b>date</b>, <b>job</b>, <b>outcome</b> (done, concern or not done; blank = done), <b>note</b>. Each record is marked <i>imported</i>.</p>'
+      + '<div class="jcal-imp-row"><a class="btn quiet" download="daily-records.csv" href="data:text/csv;charset=utf-8,' + encodeURIComponent(template(v)) + '" data-jcal-template>Download a starter file</a>'
+      + '<label class="btn">Choose file<input type="file" accept=".csv,text/csv" data-jcal-file hidden></label></div>'
+      + '<div data-jcal-preview></div>';
+  }
+  function previewHtml(v, rows) {
+    var e = v.esc, good = rows.filter(function (x) { return x.ok; }).length;
+    if (!rows.length) return '<p class="msg warn">No rows found in that file.</p>';
+    var word = { ok: 'done', concern: 'concern', not_done: 'not done' };
+    return '<p data-jcal-imp-count><b>' + good + '</b> of ' + rows.length + ' rows ready to import' + (good < rows.length ? '; the others are listed with the reason and will not be saved' : '') + '.</p>'
+      + '<div class="scroll"><table class="jcal-imp-t"><thead><tr><th>Row</th><th>Date</th><th>Job</th><th>Outcome</th><th></th></tr></thead><tbody>'
+      + rows.map(function (x) {
+        return '<tr data-ok="' + (x.ok ? 1 : 0) + '"><td>' + x.line + '</td><td>' + e(x.iso ? (v.dmy ? v.dmy(x.iso) : x.iso) : x.date) + '</td><td>' + e(x.label || x.job) + '</td><td>'
+          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? 'ready' : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>'
+      + (good ? '<p><button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>' : '');
+  }
+
+  return { STARTER: STARTER, chosen: chosen, month: month, html: html, dayHtml: dayHtml, filesByLog: filesByLog, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };
 }));

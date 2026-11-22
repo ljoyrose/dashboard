@@ -34,6 +34,7 @@ const ours = (url) => {
   if (p === 'cdhub/') return 'CD Hub';
   if (p === 'cdhub/history.html') return 'Temperatures page';
   if (p === 'cdhub/history-archive.html') return 'Temperatures archive page';
+  if (p === 'cdhub/meds-print.html') return 'Medicines register print page';
   if (p === 'cdhub/staff/') return 'Staff page';
   if (p === 'cdhub/checks/') return 'Checks page';
   if (/^cdhub\/staff\/(print|inspect|guest)\/$/.test(p)) return 'Staff ' + p.split('/')[2] + ' page';
