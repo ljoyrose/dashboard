@@ -348,6 +348,26 @@ function fastCols_(spec) {
   return c.filter(function (x, i) { return c.indexOf(x) === i; });
 }
 
+/** A reading for a slot more than PERIOD_MAX_AGE_HOURS old (or one that cannot be read as a time): sameSlot_ then
+ *  checks every row, so the save reads every row. One hour of margin keeps this on the safe side of sameSlot_. */
+function lateSlot_(spec, fields, nowMs) {
+  if (!spec.ageCap) return false;
+  var v = String((fields && fields[spec.ageCap.field]) || '').trim();
+  if (!v) return false;   // no slot sent: the server stamps now
+  var t = Date.parse(v);
+  return isNaN(t) || t < nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000 + 3600000;
+}
+
+/** Is any row ABOVE the last rows inside the repeat window (as findDuplicate_ measures it)? Then the full check runs. */
+function windowAboveTail_(spec, read, nowMs) {
+  var times = read.full[spec.dupTimeCol] || [], above = read.tailFrom - 2, win = BLD.LIMITS.DUP_WINDOW_MIN * 60000;
+  for (var i = 0; i < above && i < times.length; i++) {
+    var t = Date.parse(times[i]);
+    if (!isNaN(t) && Math.abs(nowMs - t) < win) return true;
+  }
+  return false;
+}
+
 /** Every row of a fast read, as records holding only the columns read for every row. */
 function fastRecords_(read) {
   var cols = Object.keys(read.full), n = cols.length ? read.full[cols[0]].length : 0, out = [];
@@ -367,13 +387,23 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   // only the columns the repeat and id checks look at, so the checks still cover the whole table. A correction needs
   // the whole row it points at, so it reads everything as before.
   var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
+  // 22 Nov 2026 (saves 30-62 s, the lock held while ~5 columns of every row were read): a repeat is only a repeat
+  // inside DUP_WINDOW_MIN of its time, so for a recent slot every row needs only its id and its time. If every row
+  // inside the window is among the last rows (read in full), those rows are all the repeat check needs: the same
+  // answer, about 2 columns read instead of 5. A row inside the window above the last rows (the sheet was sorted),
+  // or a late reading (sameSlot_ looks at every row for that slot): every checked column is read, as before.
+  var tailOnly = fast && !!spec.dupTimeCol && !spec.dupNewestBy && !lateSlot_(spec, req.fields, nowMs);
   var tRead = Date.now();
-  var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec)) : store_read_(spec.file, true);
-  timing_(fast ? 'read_fast' : 'read', Date.now() - tRead);
+  var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, tailOnly ? ['id', spec.dupTimeCol] : fastCols_(spec)) : store_read_(spec.file, true);
+  if (tailOnly && target.tail && !target.complete && windowAboveTail_(spec, target, nowMs)) {
+    tailOnly = false;
+    target = store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec));
+  }
+  timing_(fast ? (tailOnly ? 'read_tail' : 'read_fast') : 'read', Date.now() - tRead);
   if (!sameHeader_(target.header, spec.columns)) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
-  var all = target.tail ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read)
+  var all = target.tail && !tailOnly ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read), or the last rows in full
   var tLook = Date.now();
   var lookups = store_lookups_(spec, tenant);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
@@ -423,6 +453,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
 
   var ids = {};
   all.forEach(function (r) { ids[r.id] = true; });
+  if (tailOnly && target.full && target.full.id) target.full.id.forEach(function (id) { ids[id] = true; });   // a new id is still checked against every row
   var rowId = newId_(spec.idPrefix, now);
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
 
