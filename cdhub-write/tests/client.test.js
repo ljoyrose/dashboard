@@ -1149,3 +1149,22 @@ test('a wrong staff code keeps the entry and does not send it again with the sam
   assert.equal(await s.outbox.flush(), 0);
   assert.deepEqual(posts.map((p) => p.request_id), [r.requestId, r.requestId]);
 });
+
+test('owner sign-in ended: with the shared quiet renewal on the page, waiting readings renew it and go by themselves', async () => {
+  const local = memStore(); let tok = ''; const posts = [];
+  global.window = {
+    DashAuth: { valid: () => (tok ? { access_token: tok } : null) },
+    BLDSave: { refreshOwnerToken: async () => { tok = 'ya29.renewed'; return tok; } }
+  };
+  try {
+    const f = async (url, init = {}) => { const b = JSON.parse(init.body); posts.push(b); return { json: async () => ({ ok: true, result: { status: 'saved' } }) }; };
+    const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+    s.setScriptUrl(GOOD_URL);
+    const r = await s.act('link_end', { id: 'a' });
+    assert.equal(r.kept, true); assert.equal(r.signIn, true); assert.equal(posts.length, 0);
+    await s.outbox.flush();   // asks for a quiet renewal, then sends with it
+    for (let i = 0; i < 20 && s.outbox.count(); i++) await new Promise((res) => setTimeout(res, 5));
+    assert.equal(s.outbox.count(), 0);
+    assert.equal(posts.length, 1); assert.equal(posts[0].google_token, 'ya29.renewed'); assert.equal(posts[0].request_id, r.requestId);
+  } finally { delete global.window; }
+});

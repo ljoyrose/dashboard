@@ -253,6 +253,17 @@
       scheduleRetry(60000);
       return false;
     }
+    /* While entries wait for the owner to sign in again: if the page has the shared quiet renewal
+       (BLDSave.refreshOwnerToken, CLOUD SPEED 22 Nov 2026), try it at most every 5 minutes and send once it gives a new
+       sign-in. Without it, or when Google cannot renew quietly, they stay kept and the line asks to sign in again. */
+    var renewAt = 0;
+    function quietRenew() {
+      var B = root_().BLDSave;
+      if (googleFn !== ownerToken || !B || typeof B.refreshOwnerToken !== 'function' || Date.now() - renewAt < 300000 || !outboxRead().length) return;
+      renewAt = Date.now();
+      try { Promise.resolve(B.refreshOwnerToken()).then(function (t) { if (t && hasAuth() && authNow() !== authWait) flush(); }, function () { /* stays kept */ }); }
+      catch (e) { /* stays kept */ }
+    }
     /** true while kept entries wait for someone to sign in again (or enter a code). */
     function needsSignIn() { return outboxRead().length > 0 && (!hasAuth() || authWait === authNow()); }
     /** An entry pressed while no one is signed in: kept, not sent, and goes once someone signs in. */
@@ -285,7 +296,8 @@
       if (flushing) return flushing;
       var now = Date.now(), all = outboxRead();
       var due = all.filter(function (x) { return (o && o.old) || now - Date.parse(x.at) < OUTBOX_AUTO_MS; });
-      if (!due.length || !scriptUrl || !doFetch || !hasAuth() || authWait === authNow()) return Promise.resolve(all.length);
+      if (!due.length || !scriptUrl || !doFetch) return Promise.resolve(all.length);
+      if (!hasAuth() || authWait === authNow()) { quietRenew(); return Promise.resolve(all.length); }
       flushing = due.reduce(function (p, item) { return p.then(function () { return sendKept(item); }); }, Promise.resolve())
         .then(function () { flushing = null; outboxNotify(); return outboxRead().length; }, function () { flushing = null; return outboxRead().length; });
       return flushing;
