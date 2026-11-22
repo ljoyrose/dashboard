@@ -1136,19 +1136,6 @@ test('owner sign-in ends mid-round: every reading is kept, none refused, and all
   assert.equal(s.outbox.refused().length, 0);
 });
 
-test('a wrong staff code keeps the entry and does not send it again with the same code (the lock-out counts wrong codes)', async () => {
-  const local = memStore(); const posts = [];
-  const f = async (url, init = {}) => { const b = JSON.parse(init.body); posts.push(b);
-    return { json: async () => (b.code === 'RIGHTCODE' ? { ok: true, result: {} } : { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' }) }; };
-  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
-  s.setScriptUrl(GOOD_URL); s.setCode('WRONGCODE');
-  const r = await s.act('link_end', { id: 'a' });
-  assert.equal(r.kept, true); assert.equal(s.outbox.refused().length, 0);
-  await s.outbox.flush(); assert.equal(posts.length, 1, 'not sent again with the same wrong code');
-  s.setCode('RIGHTCODE');
-  assert.equal(await s.outbox.flush(), 0);
-  assert.deepEqual(posts.map((p) => p.request_id), [r.requestId, r.requestId]);
-});
 
 test('owner sign-in ended: with the shared quiet renewal on the page, waiting readings renew it and go by themselves', async () => {
   const local = memStore(); let tok = ''; const posts = [];

@@ -4233,9 +4233,10 @@ var HUB_BOX='cdhub.outbox', HUB_REFUSED='cdhub.outbox.refused', HUB_BOX_AUTO=5*3
     HUB_RETRY={NETWORK:1,UNREACHABLE:1,BAD_ANSWER:1,TIMEOUT:1,BUSY:1,CHANGED_DURING_WRITE:1,LOG_FAILED:1,SAVE_OFF:1,TABLE_OFF:1,NOT_CONFIGURED:1,NOT_SET_UP:1,GOOGLE_UNREACHABLE:1,FOLDER_UNREACHABLE:1,NO_CODE:1},   /* 'not this time': kept and tried again; any other answered error is a refusal */
     HUB_KEPT_MSG='Not sent yet, will retry. Kept on this phone: do not type it again.', hubInFlight={}, hubTimer=null, hubFlushing=null,
     /* SIGN IN AGAIN (Lisa 22 Nov 2026): a Google sign-in lasts about an hour. When it has ended, or the script says this
-       sign-in or code may not save, the entry is kept, never refused: it waits until someone signs in again or enters a
-       code, then goes by itself. It is not sent again with the same sign-in or code (a wrong code counts towards the lock-out). */
-    HUB_SIGN_IN={GOOGLE_NOT_OWNER:1,NO_CODE:1,BAD_CODE:1}, HUB_AUTH_WAIT=null,
+       sign-in may not save (or no one is signed in), the entry is kept, never refused: it waits until someone signs in
+       again or enters a code, then goes by itself. It is not sent again with the same sign-in. A wrong staff code is still
+       refused and said plainly ("not recognised"). */
+    HUB_SIGN_IN={GOOGLE_NOT_OWNER:1,NO_CODE:1}, HUB_AUTH_WAIT=null,
     HUB_SIGNIN_MSG='Not sent yet: sign in again (or enter your code). Kept on this phone: do not type it again.';
 /* Who would send now, without asking anyone: the Google sign-in or the code this phone holds. */
 function hubAuthNow(){ return (staffCodeNow()||'')+'|'+(sinkGoogle()||''); }

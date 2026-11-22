@@ -218,10 +218,10 @@
     // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
     var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
     /* SIGN IN AGAIN (Lisa 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
-       script says this sign-in or code may not save, nothing was wrong with the entry, so it is never refused for that:
-       it stays kept and waits until someone signs in again or enters a code, then goes by itself. It is not sent again
-       with the same sign-in or code (a wrong code counts towards the lock-out). */
-    var SIGN_IN = { GOOGLE_NOT_OWNER: 1, NO_CODE: 1, BAD_CODE: 1 };
+       script says this sign-in may not save (or no one is signed in), nothing was wrong with the entry, so it is never refused for
+       that: it stays kept and waits until someone signs in again or enters a code, then goes by itself. It is not sent
+       again with the same sign-in. A wrong staff code is still refused and said plainly ("not recognised"). */
+    var SIGN_IN = { GOOGLE_NOT_OWNER: 1, NO_CODE: 1 };
     var SIGNIN_MSG = 'Not sent yet: sign in again (or enter your code). It is kept on this phone and goes by itself once you do, so do not type it again.';
     var authWait = null;   // the sign-in that was turned down; nothing is sent with it again
     function authNow() { return getCode() + '|' + googleFn(); }
