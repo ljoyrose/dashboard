@@ -302,7 +302,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (!sameHeader_(target.header, spec.columns)) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
-  var lookups = store_lookups_(spec, tenant);
+  var lookups = store_lookups_(spec, tenant, req.fields);
   var v = validateInput_(spec, fields, lookups, nowMs);
   var dogs = validateInput_({ input: { dog_ids: { type: 'idlist', lookup: 'subject', required: true } } }, { dog_ids: f.dog_ids }, lookups, nowMs);
   var errors = v.errors;
@@ -405,7 +405,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
   var all = target.tail && !tailOnly ? fastRecords_(target) : target.records;   // every row (only the checked columns after a fast read), or the last rows in full
   var tLook = Date.now();
-  var lookups = store_lookups_(spec, tenant);
+  var lookups = store_lookups_(spec, tenant, req.fields);
   var late = ageCap_(spec, tenant, nowMs, req.fields);
   timing_('lookups_rules', Date.now() - tLook);
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
