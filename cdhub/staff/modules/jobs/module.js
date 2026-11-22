@@ -271,6 +271,8 @@
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
             panelMsg.textContent = '';   // said once, on the card
+            /* Overseer 22 Nov 2026: a repeat means the first save landed (a slow reply, or a second tap), so show the tick, not only a red line */
+            if (r.code === 'DUPLICATE' && !paper) { state.rid = null; repeatTick(job, t, entry); return; }
             BLDDone.fail(state.card, r.code === 'DUPLICATE' ? (paper ? 'Not saved: this job was saved in the last 30 minutes. Try again later.' : 'Already saved a moment ago, so not saved twice. To add to it, use Note.')
               : 'Not saved: ' + (fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : (r.message || 'try again.')));
             if (r.code !== 'NETWORK') state.rid = null; return;
@@ -286,6 +288,21 @@
           say(left ? 'Left out: ' + left + '.' : '', 'warn');
           draw();
         });
+      }
+
+      /* a save refused as a repeat: the card ticks from today's line (or, with none read yet, from this tap) and says why nothing new was saved */
+      function repeatTick(job, t, entry) {
+        var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [];
+        var has = todays(job.type_key).some(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && l.outcome !== 'part_done' && (dogs.length ? dogs.indexOf(l.subject_id) >= 0 : here(l)); });
+        if (!has) {
+          var line = Object.assign({}, entry, { taken_at: new Date().toISOString(), taken_by: '', _noId: true });
+          delete line.dog_ids;
+          logs = logs.concat(dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, line, { id: 'dup-' + job.type_key + '-' + i, subject_id: dog }); }) : [Object.assign(line, { id: 'dup-' + job.type_key })]);
+        }
+        kept[job.type_key] = true;
+        draw();
+        var card = list.querySelector('[data-job="' + job.type_key + '"] .done-line');
+        if (card) { var n = document.createElement('span'); n.className = 'done-note'; n.textContent = 'Already saved a moment ago, so not saved twice. To add to it, use Note.'; card.appendChild(n); }
       }
 
       /* one form question from a check_field row: text, number, date, yes or no, or a choice */
@@ -554,7 +571,7 @@
           jobs.filter(function (j) { return j.group === group; }).forEach(function (j) { list.appendChild(jobCard(j)); });
           return;
         }
-        var shown = site && !more ? jobs.filter(function (j) { return isDue(j) || kept[j.type_key]; }) : jobs, rest = jobs.length - shown.length, seen = {};
+        var shown = site && !more ? jobs.filter(function (j) { return isDue(j) || kept[j.type_key] || j.last_done === today; }) : jobs, rest = jobs.length - shown.length, seen = {};
         var screens = order.map(function (e, i) { return { e: e, i: i }; }).filter(function (x) { return x.e.indexOf('screen:') === 0; });
         function screensBefore(p) { while (screens.length && screens[0].i < p) { var card = screenCard(screens.shift().e); if (card) list.appendChild(card); } }
         shown.forEach(function (j) {
