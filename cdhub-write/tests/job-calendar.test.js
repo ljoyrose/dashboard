@@ -62,3 +62,31 @@ test('the calendar shows a Done today button until done, then a tick', () => {
   assert.equal(C.shift('2026-01', -1), '2025-12');
   assert.equal(C.shift('2026-12', 1), '2027-01');
 });
+
+// Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
+test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
+  const v = base([log('1', 'cty-fb', '2026-11-10')]);
+  const rows = C.parseImport(v, 'date,job,outcome,note\r\n'
+    + '2026-11-09,Food bowls washed,done,\r\n'      // ready, by name
+    + '11/11/2026,whole_site_clean,,paper book\r\n' // ready, by key, UK date, blank outcome = done, note kept
+    + '2026-11-10,food_bowls,done,\r\n'             // already recorded that day
+    + '2026-11-09,Food bowls washed,done,\r\n'      // repeated in this file
+    + '2026-11-30,food_bowls,done,\r\n'             // future
+    + '31/02/2026,food_bowls,done,\r\n'             // not a real date
+    + '2026-11-08,Pretend job,done,\r\n'            // job not found
+    + '2026-11-08,food_bowls,maybe,\r\n'            // outcome not understood
+    + '2026-11-12,Health check: all dogs,concern,"skin, ears"\r\n');
+  assert.deepEqual(rows.map((x) => x.ok), [true, true, false, false, false, false, false, false, true]);
+  assert.match(rows[2].why, /already recorded/);
+  assert.match(rows[3].why, /repeated/);
+  assert.match(rows[4].why, /future/);
+  assert.match(rows[5].why, /date not understood/);
+  assert.match(rows[6].why, /job not found/);
+  assert.match(rows[7].why, /outcome/);
+  assert.equal(rows[1].iso, '2026-11-11');
+  assert.equal(rows[8].note, 'skin, ears');
+  assert.deepEqual(C.importFields(v, rows[1]), { check_type_id: 'cty-ws', outcome: 'ok', how_recorded: 'import', happened_at: '2026-11-11T12:00:00Z', note: 'paper book' });
+  assert.deepEqual(C.importFields(v, rows[8]), { check_type_id: 'cty-hc', outcome: 'concern', how_recorded: 'import', happened_at: '2026-11-12T12:00:00Z', note: 'skin, ears', dog_ids: 'd1|d2' });
+  const tpl = C.template(v);
+  assert.match(tpl, /^date,job,outcome,note\r\n2026-11-16,"Health check: all dogs",done,/);
+});
