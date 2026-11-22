@@ -286,7 +286,7 @@ test.describe('GA Hub page', () => {
     await expect(tile).toContainText('aim 2');
     await expect(tile.locator('.v')).not.toHaveClass(/red/);
   });
-  test('@regression growth tiles: a 0 never shows the red ring, even when down on the 30 days before or under the aim (22 Nov 2026)', async ({ page }) => {
+  test('growth tiles: a 0 never shows the red ring, even when down on the 30 days before or under the aim (22 Nov 2026) @regression', async ({ page }) => {
     const old = (no, n) => [no, 'Shopify', 'DDF', 'GA', 'Shipped', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '', '1', new Date(Date.now() - n * 864e5).toISOString(), '[]', 'Shipped'];
     const b = book();
     b.orders = [b.orders[0], old('9401', 40), old('9402', 45)];   // none in the last 30 days, 2 in the 30 before
