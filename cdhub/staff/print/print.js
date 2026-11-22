@@ -35,8 +35,8 @@
   if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
   if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
-  var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pickBox = h('div', { class: 'noprint' });
-  screen.appendChild(opts); screen.appendChild(pickBox); screen.appendChild(msg); screen.appendChild(sheet);
+  var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pick = h('div', { class: 'pick noprint' }), pickBox = h('div', { class: 'noprint' });
+  screen.appendChild(opts); screen.appendChild(pickBox); screen.appendChild(pick); screen.appendChild(msg); screen.appendChild(sheet);
   /* Lists, read only when a card type needs them (Lisa's demo, 22 Nov 2026: the page sat on "Loading..." for minutes while
      21 script calls ran one after another). The buttons show at once; each button reads only its lists, four at a time,
      and keeps them for this visit; "as of" says when, Refresh reads again. Lists marked optional may be off for this code. */
@@ -93,7 +93,7 @@
   function lazy(text, what, fn) { return btn(text, function () { need(what).then(function (ok) { if (ok) fn(); }); }); }
   function current(kind, refId) { return BLDQrRules.tagFor(T.qr_tag, kind, refId); }
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
-  function make(kind, items, draw) {
+  function make(kind, items, draw, done) {
     sheet.textContent = '';
     if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
@@ -101,6 +101,7 @@
     var role = typeof save.role === 'function' ? save.role() : '';
     if (missing.length && role && role !== 'OWNER') {
       say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
+      if (done) done();
       return;
     }
     (function next() {
@@ -118,7 +119,20 @@
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
       say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
         : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
+      if (done) done();
     }());
+  }
+  /* Pick which cards print (Lisa 22 Nov 2026): one tick box per card, all ticked to start (or only the ids in `only`),
+     Select all / Unselect all. Only ticked cards are drawn and printed, and only they can get a new code saved; the list is
+     locked while codes save. Nothing ticked: nothing is drawn and the page says so. Shared list: lib/pick-list.js. */
+  function pickThen(kind, items, draw, only) {
+    var list = BLDPick.create(pick, items, { only: only, onChange: show });
+    function show(sel) {
+      if (!sel.length) { sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
+      list.setBusy(true);
+      make(kind, sel, draw, function () { list.setBusy(false); });
+    }
+    show(list.selected());
   }
   /* Lisa's "Dog Card Print-outs" layout (v4). Every value prints from rows: size colours from size_colour.* rule rows,
      room limits from area_capacity for the room's current access. Nothing kennel-specific is fixed here. */
@@ -172,12 +186,42 @@
   /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
   function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
     return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
+     address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
+     way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
+  var DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files/';
+  function driveToken() {
+    try {
+      var saved = window.DashAuth && DashAuth.valid(), scope = window.DASH_CONFIG && DASH_CONFIG.scopes && DASH_CONFIG.scopes.read;
+      return saved && scope && DashAuth.hasScope(saved, scope) ? saved.access_token : '';
+    } catch (e) { return ''; }
+  }
+  function loadPhoto(img, id, fail) {
+    var tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
+    if (!tok) { img.onerror = fail; img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
+    function bytes() {
+      if (tried) { fail(); return; }
+      tried = true;
+      fetch(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
+        .then(function (r) { if (!r.ok) throw new Error('photo'); return r.blob(); })
+        .then(function (b) { if (!/^image\//.test(b.type || '')) throw new Error('photo'); img.src = URL.createObjectURL(b); })
+        .catch(fail);
+    }
+    img.onerror = bytes;
+    fetch(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
+      .catch(bytes);
+  }
   /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
      No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
   function photoBox(s, table) {
     var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
-    if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
-      onerror: function () { box.textContent = ''; box.classList.add('none'); } }));
+    if (id) {
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer' });
+      box.appendChild(img);
+      loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
+    }
     return box; }
   /* Lisa's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
      its sign) and Date of birth labelled top-right; the photo left in a thick frame of the size colour, fitted whole (contain);
@@ -253,7 +297,7 @@
     make('item', itemList(), itemCard);
     pickBox.textContent = '';
     var boxes = ITEM_COLS.map(function (c) { var on = (itemPick || itemFields('')).indexOf(c) >= 0;
-      return h('label', { class: 'pick' }, [h('input', Object.assign({ type: 'checkbox', value: c }, on ? { checked: 'checked' } : {})), ' ' + itemLabel(c)]); });
+      return h('label', { class: 'fpick' }, [h('input', Object.assign({ type: 'checkbox', value: c }, on ? { checked: 'checked' } : {})), ' ' + itemLabel(c)]); });
     var use = btn('Use these fields', function () {
       itemPick = boxes.map(function (b) { return b.firstChild; }).filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
       if (!itemPick.length) itemPick = null;
@@ -328,7 +372,7 @@
       h('p', { class: 'foot', text: footer() }),
       h('small', { class: 'tag', text: tag })]);
   }
-  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: fn }); }
+  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); fn(); } }); }
   /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
   function privateQr() {
     var url = '', timer = 0; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
@@ -357,7 +401,7 @@
     sheet.className = 'sheet';
     if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
     var today = BLDNeeds.today();   // a thermometer whose need rows all ended before today gets no card
-    make('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; })
+    pickThen('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; })
       .map(function (t) { return { id: t.id, label: t.name || t.id }; })
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label), 'en', { numeric: true }); }));
   }
@@ -389,9 +433,10 @@
   }
   (function () {
     screen.insertBefore(asOf, msg);
+    function roomItems() { return T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }); }
     opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
-    opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }), roomCard); }));
-    opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
+    opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; pickThen('area', roomItems(), roomCard); }));
+    opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; pickThen('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
@@ -408,7 +453,7 @@
         .sort(function (a, b) { return String(b.born_on || b.dob || '').localeCompare(String(a.born_on || a.dob || '')); });
       if (!list.length) { sheet.className = 'sheet'; sheet.textContent = ''; say('No litters on site.', 'warn'); return; }
       sheet.className = 'sheet dogs litters per' + per;
-      make('litter', list.map(function (l) { var dam = subj[l.dam_subject_id] || {}, sire = subj[l.sire_subject_id] || {};
+      pickThen('litter', list.map(function (l) { var dam = subj[l.dam_subject_id] || {}, sire = subj[l.sire_subject_id] || {};
         return { id: l.id, label: 'Litter of ' + (dam.name || l.id), l: l, dam: dam, sire: sire.name || '', pups: pups[l.id] || 0, room: roomOf[l.dam_subject_id] || '' }; }), litterCard);
     }));
     opts.appendChild(lazy('Item cards', 'items', itemCards));
@@ -423,5 +468,14 @@
     opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the owner's qr.base_url row */
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
     if (add === 'thermometer') need('thermo').then(function (ok) { if (ok) addThermometer(); });   // from the hub's "+ Thermometer"
+    /* from a room's "Print sign" in CD Hub (?sign=<area id>, 21 Nov 2026): the room list with only that room ticked, its card ready to print */
+    var sign = ''; try { sign = new URLSearchParams(location.search).get('sign') || ''; } catch (e) { /* old browser */ }
+    if (sign) need('rooms').then(function (ok) {
+      if (!ok) return;
+      var signRoom = T.area.filter(function (a) { return a.id === sign; })[0];
+      if (!signRoom) { say('That room is not on the list. Press Room cards to print them all.', 'warn'); return; }
+      var rooms = roomItems(); if (!rooms.some(function (r) { return r.id === signRoom.id; })) rooms.unshift({ id: signRoom.id, label: signRoom.code || signRoom.id, a: signRoom });
+      sheet.className = 'sheet rooms'; pickThen('area', rooms, roomCard, [signRoom.id]);
+    });
   }());
 }());

@@ -144,4 +144,10 @@
 }
 
 /* item cards (print any item, 15 Nov 2026): the field picker; the card itself uses the dog card layout */
-.picks{border:1px solid #C7C0B4;border-radius:10px;margin:8px 0;padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.picks legend{font-weight:600}.picks .pick{display:inline-flex;align-items:center;gap:4px;min-height:44px}
+.picks{border:1px solid #C7C0B4;border-radius:10px;margin:8px 0;padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.picks legend{font-weight:600}.picks .fpick{display:inline-flex;align-items:center;gap:4px;min-height:44px}
+/* the pick list (Lisa 22 Nov 2026): which cards print; never printed itself (noprint) */
+.pick:empty{display:none}
+.pick{border:1px solid var(--house-soft-line);border-radius:10px;padding:10px;margin:0 0 12px}
+.pick-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.pick-n{margin-right:auto}
+.pick-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px 12px}
+.pick-item{display:flex;gap:6px;align-items:center;min-height:32px}

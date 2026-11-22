@@ -61,7 +61,7 @@ test.describe('Print any item: the item card', () => {
       { rule_key: 'print.label.size', value: 'Weight', effective_from: '2026-11-01', source: 'Pretend' }] }));
     await expect(card(page, 'itm-1').locator('dt')).toHaveText(['Item number', 'Make']);   // size is blank on the latest row
     await expect(card(page, 'itm-2').locator('dt')).toHaveText(['Serial number']);
-    await expect(page.locator('.picks .pick').filter({ hasText: 'Weight' })).toHaveCount(1);   // the owner's label
+    await expect(page.locator('.picks .fpick').filter({ hasText: 'Weight' })).toHaveCount(1);   // the owner's label
   });
 
   test('a field choice made on the page is used at once and can be saved as a dated owner rule row', async ({ page }) => {
