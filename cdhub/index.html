@@ -4725,6 +4725,38 @@ function saveBlob(b,name){ var a=document.createElement('a'); a.href=URL.createO
 var JCAL={ym:''};
 if(typeof BLDJobCal!=='undefined'){ (function(){ var st=document.createElement('style'); st.textContent=BLDJobCal.CSS; document.head.appendChild(st); })(); }
 function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+/* Import past daily records (Lisa 22 Nov 2026, "A"): choose a spreadsheet, every row is checked and shown, then one
+   press saves the ready rows one at a time, each marked imported. Nothing is saved before that press. */
+document.addEventListener('click',function(ev){
+ var t=ev.target.closest&&ev.target.closest('[data-jcal-import]'); if(!t) return;
+ var box=document.querySelector('[data-jcal-imp]'); if(!box) return;
+ var open=box.hidden; box.hidden=!open; t.setAttribute('aria-expanded',open?'true':'false');
+ if(open&&!box.innerHTML) box.innerHTML=BLDJobCal.importPanel(jobsV());
+});
+document.addEventListener('change',function(ev){
+ var inp=ev.target.closest&&ev.target.closest('[data-jcal-file]'); if(!inp||!inp.files||!inp.files[0]) return;
+ var rd=new FileReader(), out=document.querySelector('[data-jcal-preview]');
+ rd.onload=function(){ JCAL.rows=BLDJobCal.parseImport(jobsV(),String(rd.result||'')); if(out) out.innerHTML=BLDJobCal.previewHtml(jobsV(),JCAL.rows); };
+ rd.readAsText(inp.files[0]);
+});
+document.addEventListener('click',async function(ev){
+ var b=ev.target.closest&&ev.target.closest('[data-jcal-import-go]'); if(!b||b.disabled) return;
+ var v=jobsV(), ready=(JCAL.rows||[]).filter(function(x){ return x.ok; }), msg=document.querySelector('[data-jcal-imp-msg]'), done=0, bad=[];
+ b.disabled=true;
+ for(var i=0;i<ready.length;i++){
+  var x=ready[i], f=BLDJobCal.importFields(v,x); if(!f){ bad.push(x.line); continue; }
+  if(msg) msg.textContent='Saving '+(i+1)+' of '+ready.length+'…';
+  var r=await sinkSend({table:'check_log',action:'add_site',fields:f});
+  if(r&&r.ok){ done++; var res=r.result||{}, ids=f.dog_ids?f.dog_ids.split('|'):[''], rows=T['BLD-check_log.csv']=T['BLD-check_log.csv']||[];
+   ids.forEach(function(d,k){ rows.push({id:(res.ids&&res.ids[k])||((res.id||'imp')+'-'+k),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''}); });
+  } else bad.push(x.line+' ('+sinkMsg(r||{},'').replace(/^Not saved: /,'')+')');
+ }
+ JCAL.rows=null;
+ var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
+ var m2=document.createElement('p'); m2.className='msg'+(bad.length?' bad':''); m2.setAttribute('data-jcal-imp-done','');
+ m2.textContent='Imported '+done+' of '+ready.length+'.'+(bad.length?' Not saved, row '+bad.join(', row ')+'.':'');
+ var w2=document.getElementById('jobCals'); if(w2) w2.appendChild(m2);
+});
 document.addEventListener('click',async function(ev){
  var m=ev.target.closest&&ev.target.closest('[data-jcal-month]');
  if(m){ JCAL.ym=m.getAttribute('data-jcal-month'); var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml(); return; }
