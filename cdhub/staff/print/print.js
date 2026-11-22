@@ -35,14 +35,59 @@
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' });
   screen.appendChild(opts); screen.appendChild(msg); screen.appendChild(sheet);
-  var T = null;
-  function load() {
-    say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type', 'subject_link', 'links', 'files', 'weight'], ['subject_link', 'links', 'files', 'weight', 'subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access', 'coat_colour', 'coat_pattern', 'nose_pigment', 'microchip', 'check_type']);   /* colour, chip and job lists are owner-only: a staff code reads none and the card leaves those lines out */ }).then(function (r) {
-      if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
-      T = r.tables; say(''); return true;
+  /* Lists, read only when a card type needs them (Lisa's demo, 22 Nov 2026: the page sat on "Loading..." for minutes while
+     21 script calls ran one after another). The buttons show at once; each button reads only its lists, four at a time,
+     and keeps them for this visit; "as of" says when, Refresh reads again. Lists marked optional may be off for this code. */
+  var T = {}, readAt = 0;
+  var REQUIRED = { area: 1, subject: 1, occupancy: 1, qr_tag: 1 };
+  var BASE = ['qr_tag', 'breeding_rule'], SITE = ['area', 'subject', 'occupancy', 'subject_status', 'requirement'];
+  var NEEDS = {
+    site: BASE,
+    rooms: BASE.concat(['area', 'requirement', 'area_capacity', 'area_access', 'check_type']),
+    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
+    litters: BASE.concat(SITE, ['litter', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
+    thermo: BASE.concat(['thermometer', 'requirement', 'area'])
+  };
+  /* a save needs the script's status (is saving on?): asked once, only when a code or thermometer is to be saved, never
+     before the buttons show (the status call also runs the script's waiting room moves, which can be slow) */
+  var statusP = null, rawSubmit = save.submit;
+  save.submit = function (table, fields) { statusP = statusP || save.checkStatus(); return statusP.then(function () { return rawSubmit(table, fields); }); };
+  var asOf = h('p', { class: 'mut noprint', 'data-print-asof': '' });
+  function hhmm(t) { var d = new Date(t); return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes(); }
+  function showAsOf() {
+    asOf.textContent = '';
+    if (!readAt) return;
+    asOf.appendChild(document.createTextNode('Lists as of ' + hhmm(readAt) + ' '));
+    asOf.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Refresh', 'data-print-refresh': '', onclick: function () { T = {}; readAt = 0; showAsOf(); say('Lists will be read again when you choose a card.'); } }));
+  }
+  function need(what) {
+    var keys = NEEDS[what].filter(function (k, i, a) { return a.indexOf(k) === i && !(k in T); });
+    if (!keys.length) return Promise.resolve(true);
+    var left = keys.slice(), done = 0, fail = null;
+    say('Loading ' + keys.length + ' list' + (keys.length === 1 ? '' : 's') + '...');
+    function worker() {
+      if (!left.length || fail) return Promise.resolve();
+      var k = left.shift();
+      return save.read(k).then(function (r) {
+        if (r.ok) T[k] = r.rows || [];
+        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) T[k] = [];   /* owner-only or not switched on: the card leaves those lines out */
+        else fail = fail || r;
+        done++; if (!fail) say('Loading lists: ' + done + ' of ' + keys.length + '...');
+        return worker();
+      });
+    }
+    return Promise.all([worker(), worker(), worker(), worker()]).then(function () {
+      if (fail) { say(fail.message || 'Could not load the lists.', 'bad'); return false; }
+      readAt = Date.now(); showAsOf(); say(''); return true;
     });
   }
+  function siteMaps() {
+    var onSite = {}, roomOf = {};
+    BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
+    return { onSite: onSite, roomOf: roomOf };
+  }
+  /** A button that reads what its cards need, then draws them. */
+  function lazy(text, what, fn) { return btn(text, function () { need(what).then(function (ok) { if (ok) fn(); }); }); }
   function current(kind, refId) { return (T.qr_tag || []).filter(function (t) { return t.kind === kind && t.ref_id === refId && String(t.active).toLowerCase() !== 'false'; })[0]; }
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
   function make(kind, items, draw) {
@@ -248,19 +293,19 @@
     } });
     sheet.appendChild(h('div', { class: 'qcard big noprint' }, [h('b', { text: 'Add thermometer' }), name, room, go]));
   }
-  load().then(function (ok) {
-    if (!ok) return;
-    var onSite = {}, roomOf = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
-    opts.appendChild(btn('Whole-site code', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
-    opts.appendChild(btn('Room cards', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }), roomCard); }));
-    opts.appendChild(btn('Dog cards', function () { sheet.className = 'sheet dogs per' + per; make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
+  (function () {
+    screen.insertBefore(asOf, msg);
+    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
+    opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }), roomCard); }));
+    opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
         if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
-    opts.appendChild(btn('Litter cards', function () {
+    opts.appendChild(lazy('Litter cards', 'litters', function () {
+      var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf;
       if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
       var subj = {}, pups = {}, pupsHere = {};
       T.subject.forEach(function (s) { subj[s.id] = s; if (s.birth_litter_id) { pups[s.birth_litter_id] = (pups[s.birth_litter_id] || 0) + 1; if (onSite[s.id]) pupsHere[s.birth_litter_id] = true; } });
@@ -272,16 +317,16 @@
       make('litter', list.map(function (l) { var dam = subj[l.dam_subject_id] || {}, sire = subj[l.sire_subject_id] || {};
         return { id: l.id, label: 'Litter of ' + (dam.name || l.id), l: l, dam: dam, sire: sire.name || '', pups: pups[l.id] || 0, room: roomOf[l.dam_subject_id] || '' }; }), litterCard);
     }));
-    opts.appendChild(btn('Thermometer cards', thermoCards));
-    opts.appendChild(btn('Add thermometer', addThermometer));
-    opts.appendChild(btn('Phone set-up QR', function () { sheet.className = 'sheet';
+    opts.appendChild(lazy('Thermometer cards', 'thermo', thermoCards));
+    opts.appendChild(lazy('Add thermometer', 'thermo', addThermometer));
+    opts.appendChild(lazy('Phone set-up QR', 'site', function () { sheet.className = 'sheet';
       var url = ''; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
       sheet.textContent = '';
       sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(qrBase() + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
-    opts.appendChild(btn('Private set-up QR', privateQr));
+    opts.appendChild(lazy('Private set-up QR', 'site', privateQr));   /* both QRs use the owner's qr.base_url row */
     var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
-    if (add === 'thermometer') addThermometer();   // from the hub's "+ Thermometer"
-  });
+    if (add === 'thermometer') need('thermo').then(function (ok) { if (ok) addThermometer(); });   // from the hub's "+ Thermometer"
+  }());
 }());
