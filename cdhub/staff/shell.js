@@ -260,9 +260,9 @@
   /* With PR 749's list cache (22 Nov 2026): the page's kept copy of where the dogs are follows the screen, so the next
      screen opened does not read it again. A saved move would otherwise forget that copy (any save to a list does). */
   function keepOccupancy() { if (dataObj && save.keepRows) save.keepRows('occupancy', dataObj.raw.occupancy || []); }
-  var rawSubmit = save.submit;
+  var submitBeforeMoves = save.submit;   // not rawSubmit: that name is the sign-out guard's, above
   save.submit = function (table, fields, o) {
-    return rawSubmit.apply(save, arguments).then(function (r) { if (r && r.ok && table === 'occupancy') keepOccupancy(); return r; });
+    return submitBeforeMoves.apply(save, arguments).then(function (r) { if (r && r.ok && table === 'occupancy') keepOccupancy(); return r; });
   };
   function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
 

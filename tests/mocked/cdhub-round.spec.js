@@ -412,6 +412,21 @@ test.describe('Scan and move: the move shows at once, with no read again', () =>
     expect(seen.filter((x) => /occupancy|subject|area,/.test(x) && x !== 'qr_tag')).toEqual([]);   // the dogs and rooms were not read again
   });
 
+  test('after a saved move the next screen opens with the dog in its new room and reads no list (with the PR 749 list cache) @regression', async ({ page }) => {
+    const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
+    await scan(page, 'ROOMAAAB');
+    await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();
+    const occBefore = script.tables.occupancy.length;
+    await scan(page, 'DOGAAAAD');                                          // Dog A04, from Room 1
+    await expect(page.locator('#screen .msg.good').first()).toContainText('Dog A04: moved.');
+    script.tables.occupancy.length = occBefore;                            // a fresh read would not have the move
+    const seen = reads(page);
+    await page.goto('cdhub/staff/#m/where');                              // same page, another screen: lists come from the kept copy
+    await expect(page.locator('#screen [data-dog]').first()).toBeVisible();
+    await expect(page.locator('#screen [data-dog]', { hasText: 'Dog A04' }).first()).toContainText('Room 2');
+    expect(seen.filter((x) => /occupancy/.test(x))).toEqual([]);         // where the dogs are was not read again
+  });
+
   test('a refused move puts the dog back and says Not saved with the reason', async ({ page }) => {
     const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
     await scan(page, 'ROOMAAAB');
