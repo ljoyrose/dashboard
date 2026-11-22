@@ -49,6 +49,34 @@ test('Main has The Board and Print cards', async ({ page, guard }) => {
   await expect(page.locator('[data-open-print]')).toHaveAttribute('href', './staff/print/');
 });
 
+// Lisa 22 Nov 2026: "can it also have the photos as then we would click and show image as we will for diary entries".
+test('tapping a day on a calendar opens who and when, and its diary photo; tapping again closes it', async ({ page, guard }) => {
+  const yest = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [`l1,t,j1,,,,,ok,,From the diary,${yest}T09:00:00Z,Pretend Staff,,,paper`]));
+  addTable(guard.world, 'BLD-files.csv', csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on,created_at,updated_at',
+    ['f1,t,upload,1FAKEDIARYPAGEIDFORTESTS000000aa,,image/jpeg,diary-page.jpg,1,,,,o,,,']));
+  addTable(guard.world, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,set_by,set_at',
+    [`k1,t,check_log,l1,evidence,files,f1,${yest},,o,`]));
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.route(/\/drive\/v3\/files\/1FAKEDIARYPAGEIDFORTESTS000000aa\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  if (yest.slice(0, 7) !== london(new Date()).slice(0, 7)) await page.locator('#jobCals [data-jcal-month]').first().click();
+  const day = page.locator(`[data-jcal="food_bowls"] [data-jcal-day="${yest}"]`);
+  await expect(day).toHaveClass(/\bph\b/);
+  await day.click();
+  const detail = page.locator(`[data-jcal="food_bowls"] [data-jcal-detail="${yest}"]`);
+  await expect(detail).toContainText('Pretend Staff');
+  await expect(detail).toContainText('From the diary');
+  await expect(detail.locator('[data-jcal-photo]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1FAKEDIARYPAGEIDFORTESTS000000aa/view');
+  await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('alt', 'evidence: diary-page.jpg');
+  await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('src', /^blob:/);   // read with the sign-in, never a public Google address
+  await page.locator(`[data-jcal="food_bowls"] [data-jcal-day="${yest}"]`).click();
+  await expect(page.locator('[data-jcal-detail]')).toHaveCount(0);
+});
+
 // Lisa 22 Nov 2026 ("A"): import past daily records. The file is checked and shown first; one press saves the ready rows.
 test('Import: a chosen file is checked row by row; Import saves only the ready rows, marked import, and the days turn green', async ({ page, guard }) => {
   const today = london(new Date()), d1 = london(new Date(Date.now() - 2 * 86400000)), d2 = london(new Date(Date.now() - 3 * 86400000));

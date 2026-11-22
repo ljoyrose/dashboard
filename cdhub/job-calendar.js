@@ -50,7 +50,7 @@
       var d = Due.londonDate(l.happened_at || l.taken_at); if (!d) return;
       var x = out[d] = out[d] || { dogs: {}, n: 0, lines: [] };
       if (l.subject_id) x.dogs[l.subject_id] = 1;
-      x.n++; x.lines.push({ by: l.taken_by || '', at: l.happened_at || l.taken_at || '' });
+      x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: l.note || '' });
     });
     return out;
   }
@@ -59,26 +59,85 @@
       missed, due (today, not yet), future, before (before this job's first record: not tracked here), blank (padding). */
   function month(v, key, ym) {
     var t = typeOf(v, key); if (!t) return null;
-    var perDog = Due.perDogSite(t), need = perDog ? Due.dogsFor(t, { dogs: v.dogs || [] }).length : 1;
+    var perDog = Due.perDogSite(t), mine = perDog ? Due.dogsFor(t, { dogs: v.dogs || [] }) : [], need = perDog ? mine.length : 1;
+    /* a dog counts on a day only once it is born: a pup born mid-month does not make the days before it "part done" */
+    var needOn = function (iso) { return mine.filter(function (x) { return !x.dob || String(x.dob).slice(0, 10) <= iso; }).length; };
     var d = days(v, key), first = Object.keys(d).sort()[0] || '';
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10);
     var len = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
     var cells = [];
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).length : x.n) : 0;
-      var state = iso > v.today ? 'future' : (got && (!perDog || got >= need)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
-      cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? need : 0, lines: x ? x.lines : [] });
+      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).length : x.n) : 0, want = perDog ? needOn(iso) : 1;
+      var state = iso > v.today ? 'future' : (got && (!perDog || got >= want)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
+      cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : 0, lines: x ? x.lines : [] });
     }
     return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, need: need, typeId: t.id, cells: cells };
   }
 
+  /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.
+      Same rule as the record history (jobs-view.js filesByLog). */
+  function filesByLog(v) {
+    var files = {}, out = {};
+    (v.files || []).forEach(function (f) { files[f.id] = f; });
+    (v.links || []).forEach(function (k) {
+      if (k.from_table !== 'check_log' || k.to_table !== 'files' || (k.to_date && k.to_date <= v.today)) return;
+      var f = files[k.to_id]; if (!f) return;
+      var id = String(f.drive_file_id || '').trim(), u = String(f.url || '').trim(), ok = /^[A-Za-z0-9_-]{20,}$/.test(id);
+      var url = /^https:\/\//i.test(u) ? u : ok ? 'https://drive.google.com/file/d/' + id + '/view' : '';
+      if (url) (out[k.from_id] = out[k.from_id] || []).push({ role: String(k.role || 'file').replace(/_/g, ' '), name: f.name || '', url: url,
+        photoId: ok && /^image\//.test(String(f.mime || 'image/')) ? id : '' });
+    });
+    return out;
+  }
+
+  /** What was recorded on one day for one job: who and when, notes, and the photos (diary pages, evidence) to open.
+      A picture has no src here: the page fills it from Drive with the signed-in read (data-cal-photo-id), as for dog photos. */
+  function dayHtml(v, key, iso, docs, vets) {
+    var e = v.esc, c = month(v, key, iso.slice(0, 7)); if (!c) return '';
+    var x = c.cells.filter(function (y) { return y.iso === iso; })[0]; if (!x) return '';
+    docs = docs || filesByLog(v);
+    var hm = function (at) { var d = new Date(at); return isNaN(d) ? '' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }); };
+    var by = {}, order = [], notes = [], pics = [];
+    x.lines.forEach(function (l) {
+      var k = l.by || 'Not named'; if (!by[k]) { by[k] = []; order.push(k); } by[k].push(hm(l.at));
+      if (l.note) notes.push(l.note);
+      (docs[l.id] || []).forEach(function (f) { if (!pics.some(function (p) { return p.url === f.url; })) pics.push(f); });
+    });
+    var part = x.state === 'part' && x.need ? ' (' + x.got + ' of ' + x.need + ')' : '';
+    var vet = c.perDog ? ((vets || vetByDay(v))[iso] || []) : [];
+    return '<div class="jcal-day" data-jcal-detail="' + e(iso) + '"><b>' + e(v.dmy ? v.dmy(iso) : iso) + '</b> <span class="mut">' + e(WORD[x.state] || '') + part + '</span>'
+      + (order.length ? '<ul>' + order.map(function (k) { var t = by[k].filter(Boolean).sort();
+          return '<li>' + e(k) + (t.length ? ' · ' + e(t[0] + (t.length > 1 && t[t.length - 1] !== t[0] ? '–' + t[t.length - 1] : '')) : '') + (by[k].length > 1 ? ' · ' + by[k].length + ' records' : '') + '</li>'; }).join('') + '</ul>'
+        : '<p class="mut">Nothing recorded.</p>')
+      + (vet.length ? '<p data-jcal-vet><b>Vet</b></p><ul>' + vet.map(function (r) { return '<li>' + e(r.dog) + (r.time ? ' · ' + e(r.time) : '') + (r.kind && r.kind !== 'appointment' ? ' · ' + e(r.kind) : '') + (r.reason ? ' · ' + e(r.reason) : '') + '</li>'; }).join('') + '</ul>' : '')
+      + (notes.length ? '<p class="mut">' + notes.filter(function (n, i, a) { return a.indexOf(n) === i; }).map(e).join('<br>') + '</p>' : '')
+      + (pics.length ? '<div class="jcal-pics">' + pics.map(function (f) {
+          return '<a href="' + e(f.url) + '" target="_blank" rel="noopener noreferrer" data-jcal-photo title="' + e(f.name) + '">'
+            + (f.photoId ? '<img data-cal-photo-id="' + e(f.photoId) + '" alt="' + e(f.role + ': ' + f.name) + '">' : '') + '<span>' + e(f.role) + '</span></a>'; }).join('') + '</div>' : '')
+      + '</div>';
+  }
+
+  /** Vet visits by day (BLD-visit rows, status done; booked ones are not shown as visits). Cross-referenced on the per-dog
+      calendars (health checks) so a vet day is visible next to the checks; a visit never counts as a check. */
+  function vetByDay(v) {
+    var out = {};
+    (v.vetVisits || []).forEach(function (r) {
+      var d = String(r.performed_on || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || String(r.status || '').toLowerCase() === 'booked' || String(r.status || '').toLowerCase() === 'cancelled') return;
+      (out[d] = out[d] || []).push({ dog: (v.dogNames || {})[r.subject_id] || r.subject_id || 'No dog on the record', time: r.start_time || '', kind: r.kind || '', reason: r.reason || '' });
+    });
+    return out;
+  }
+
+  var VET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+  var CAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
   var WORD = { done: 'done', part: 'part done', missed: 'missed', due: 'due today', future: '', before: 'not tracked yet' };
   var TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>';
 
   /** The calendars for one month, with a "Done today" button on each job not yet done today (when the page can save). */
   function html(v, ym, canSave) {
-    var e = v.esc, keys = chosen(v);
+    var e = v.esc, keys = chosen(v), docs = filesByLog(v), open = v.calOpen || {}, vets = vetByDay(v);
     var mm = parseInt(ym.slice(5, 7), 10), title = MON[mm - 1] + ' ' + ym.slice(0, 4);
     var prev = shift(ym, -1), next = shift(ym, 1), atNow = ym >= v.today.slice(0, 7);
     var h = '<section class="card jcal-wrap" id="jobCals"><div class="jcal-head"><h3>Daily records</h3><div class="jcal-nav">'
@@ -86,7 +145,8 @@
       + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button>'
       + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div></div>'
       + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
-      + '<p class="mut jcal-key"><span class="jd done">' + TICK + '</span> done <span class="jd part"></span> part done <span class="jd missed"></span> missed</p>';
+      + '<p class="mut jcal-key"><span class="jd done">' + TICK + '</span> done <span class="jd part"></span> part done <span class="jd missed"></span> missed'
+      + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
     if (!keys.length) return h + '<p class="mut">No calendars chosen. Add rows compliance.calendar.&lt;job&gt; in Settings.</p></section>';
     h += '<div class="jcal-grid">' + keys.map(function (k) {
       var c = month(v, k, ym); if (!c) return '';
@@ -98,12 +158,17 @@
         + '</div><div class="jdays">' + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (w) { return '<span class="jdh">' + w + '</span>'; }).join('')
         + c.cells.map(function (x) {
           if (x.state === 'blank') return '<span class="jd blank"></span>';
+          var ph = x.lines.some(function (l) { return (docs[l.id] || []).length; }), vn = c.perDog && vets[x.iso] ? vets[x.iso].length : 0;
           var who = x.lines.length ? ' · ' + x.lines.map(function (l) { return l.by; }).filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; }).join(', ') : '';
           var part = x.state === 'part' && x.need ? ' (' + x.got + ' of ' + x.need + ')' : '';
           var label = (v.dmy ? v.dmy(x.iso) : x.iso) + (WORD[x.state] ? ': ' + WORD[x.state] : '') + part + who;
-          return '<span class="jd ' + x.state + (x.iso === v.today ? ' today' : '') + '" data-day="' + x.iso + '" title="' + e(label) + '" aria-label="' + e(label) + '" role="img">'
-            + (x.state === 'done' ? TICK : '<i>' + x.day + '</i>') + '</span>';   // the date in every square but a done one (its tick); part done says how many in its label
-        }).join('') + '</div></div>';
+          if (vn) label += ' · vet: ' + vets[x.iso].map(function (r) { return r.dog; }).join(', ');
+          var cls = 'jd ' + x.state + (x.iso === v.today ? ' today' : '') + (ph ? ' ph' : '') + (vn ? ' vet' : '') + (open.key === k && open.iso === x.iso ? ' open' : '');
+          var face = (x.state === 'done' ? TICK : '<i>' + x.day + '</i>') + (ph ? '<b class="jcam">' + CAM + '</b>' : '') + (vn ? '<b class="jvet">' + VET + '</b>' : '');
+          if (x.lines.length || vn) return '<button type="button" class="' + cls + '" data-day="' + x.iso + '" data-jcal-day="' + x.iso + '" data-jcal-key="' + e(k) + '" title="' + e(label) + '" aria-label="' + e(label + (ph ? ' · photo' : '') + '. Open') + '"'
+            + (open.key === k && open.iso === x.iso ? ' aria-expanded="true"' : '') + '>' + face + '</button>';   // a day with records opens who, when, notes and photos
+          return '<span class="' + cls + '" data-day="' + x.iso + '" title="' + e(label) + '" aria-label="' + e(label) + '" role="img">' + face + '</span>';   // the date in every square but a done one (its tick); part done says how many in its label
+        }).join('') + '</div>' + (open.key === k && open.iso && open.iso.slice(0, 7) === ym ? dayHtml(v, k, open.iso, docs, vets) : '') + '</div>';
     }).join('') + '</div>';
     return h + '</section>';
   }
@@ -124,6 +189,11 @@
     + '.jd{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:10px;color:var(--ink)}'
     + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done{background:var(--ljr-5);box-shadow:none;color:var(--ljr-paper,#fff)}'
     + '.jd.part,.jd.missed{box-shadow:inset 0 0 0 2px var(--ljr-3)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
+    + 'button.jd{border:0;padding:0;font:inherit;cursor:pointer;position:relative;min-width:0}.jd.open{outline:3px solid var(--ink);outline-offset:-3px}'
+    + '.jcam{position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center}.jcam svg{width:9px;height:9px}'
+    + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6-solid);color:var(--ljr-6-on);display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
+    + '.jcal-day{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.jcal-day ul{margin:6px 0;padding-left:18px}'
+    + '.jcal-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.jcal-pics a{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;min-height:44px;color:var(--ink)}.jcal-pics img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}'
     + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}'
     + '.jcal-imp{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:grid;gap:8px}.jcal-imp[hidden]{display:none}.jcal-imp-row{display:flex;gap:8px;flex-wrap:wrap}.jcal-imp-t td,.jcal-imp-t th{padding:4px 6px;text-align:left}.jcal-imp-t .warn{color:var(--ljr-3-text)}';
 
@@ -210,5 +280,5 @@
       + (good ? '<p><button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>' : '');
   }
 
-  return { STARTER: STARTER, chosen: chosen, month: month, html: html, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };
+  return { STARTER: STARTER, chosen: chosen, month: month, html: html, dayHtml: dayHtml, filesByLog: filesByLog, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };
 }));
