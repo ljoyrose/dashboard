@@ -112,7 +112,8 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 /* indoor corner dot */
 .d{position:relative}
 .d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
-.d-dot.idot-flag{background:var(--ljr-2)}.d-dot.idot-warn{background:var(--ljr-3)}
+/* 21 Nov 2026: house colour rules (never red; no warning colour on the outside calendar): the indoor dot is ink. A ring = cannot be read, solid = outside the limit. */
+.d-dot.idot-warn{background:var(--ink)}.d-dot.idot-flag{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ink)}
 /* compliance mode cells */
 /* 22 Nov 2026 (OV12): house colour rules on the outside calendar - never red, no warning colour. Ink ring = cannot be read, solid ink = outside the limit. */
 .d.comp-flag{background:var(--card);box-shadow:inset 0 0 0 2px var(--ink)}.d.comp-warn{background:var(--ink)}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
@@ -247,7 +248,6 @@ var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
 var ROUND_DATE=null;
 var VIEW_MODE='outdoor'; /* 'outdoor' | 'compliance' */
-var AREA_RANGES={};     /* areaId -> {min,max} acceptable indoor range */
 var SPAN={};        /* areaId -> {first,last} reading day */
 var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
@@ -420,6 +420,7 @@ async function optionalCsv(name){
   catch(e){ console.warn(name+' not read:',e); return []; }
 }
 async function loadAreaData(){
+  AREA_STATUS={};
   await loadBand();
   try{
     REQ=await optionalCsv('BLD-requirement.csv');
@@ -469,10 +470,10 @@ async function loadAreaData(){
         if(!a.id)return;
         AREA_NAMES[a.id]=a.code||a.name||a.id;
         var g=parseFloat(a.group_sort);AREA_SORT[a.id]=isNaN(g)?Infinity:g;
-        if(a.min_c||a.max_c)AREA_RANGES[a.id]={min:parseFloat(a.min_c)||15,max:parseFloat(a.max_c)||25};
       });
     }
   }catch(e){console.warn('Area data load failed:',e);}
+  AREA_STATUS={};
 }
 
 async function loadData(){
@@ -597,16 +598,12 @@ function openDrill(isoDate){
       +'</tr></thead><tbody>'
       +areaIds.map(function(aid){
         var ar=dayAreas[aid]||{},am=ar.am||{},pm=ar.pm||{};
-        var range=AREA_RANGES[aid]||{min:15,max:25};
         var fmtSlot=function(t){
           if(!t||(!t.min&&!t.max))return'<span style="color:var(--muted)">—</span>';
-          var lo=parseFloat(t.min),hi=parseFloat(t.max);
-          var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
-          var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
-          var color=err?'var(--muted)':warn?'var(--muted)':'var(--ink)';
+          var color=compSlot(t,aid,isoDate,'am')==='ok'?'var(--ink)':'var(--muted)';
           return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
         };
-        var ast=areaStatusForArea(ar,range);
+        var ast=areaStatusForArea(ar,isoDate,aid);
         var spill=ast==='flag'?'<span class="pill ph">flag</span>'
           :ast==='warn'?'<span class="pill po">warn</span>'
           :'<span class="pill po">ok</span>';
@@ -771,33 +768,29 @@ function outsideLine(day){
 function stateWord(cls){
   return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',miss:'Missed',allok:'In limit',warmd:'Warm: cooling action',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
+/* 21 Nov 2026 (OV12, Steward check on #346): a day's indoor state for the corner dot and the Compliance colours comes from
+   the page's own slotState, judged on the limit rows Lisa typed (BLD-temperature_band in force that day), never a fixed
+   15-25. flag = cannot be read (wrong way round, or not a number); warn = outside the limit; a room with no limit row,
+   an empty room or a warm room (cooling action, Temps A) gets no dot. */
+function compSlot(t,aid,day,slot){
+  if(!t) return 'ok';
+  var k=slotState(t,aid,day,slot).k;
+  return k==='swap'?'flag':k==='out'?'warn':'ok';
+}
+function areaStatusForArea(ar,day,aid){
+  var st=['am','pm'].map(function(slot){ return compSlot(ar&&ar[slot],aid,day,slot); });
+  return st.indexOf('flag')>=0?'flag':st.indexOf('warn')>=0?'warn':'ok';
+}
+var AREA_STATUS={};   /* date -> state, worked out once per load: each calendar asks for every day */
 function areaStatus(isoDate){
+  if(Object.prototype.hasOwnProperty.call(AREA_STATUS,isoDate)) return AREA_STATUS[isoDate];
+  return (AREA_STATUS[isoDate]=areaStatusNow(isoDate));
+}
+function areaStatusNow(isoDate){
   var dayAreas=AREA_DAYS[isoDate];
   if(!dayAreas||!Object.keys(dayAreas).length)return'';
-  var hasFlag=false,hasWarn=false;
-  Object.keys(dayAreas).forEach(function(aid){
-    var ar=dayAreas[aid],range=AREA_RANGES[aid]||{min:15,max:25};
-    ['am','pm'].forEach(function(slot){
-      var t=ar[slot];if(!t)return;
-      var lo=parseFloat(t.min),hi=parseFloat(t.max);
-      if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
-      if(!isNaN(lo)&&lo<range.min)hasWarn=true;
-      if(!isNaN(hi)&&hi>range.max)hasWarn=true;
-    });
-  });
-  return hasFlag?'flag':hasWarn?'warn':'ok';
-}
-function areaStatusForArea(ar,range){
-  range=range||{min:15,max:25};
-  var hasFlag=false,hasWarn=false;
-  ['am','pm'].forEach(function(slot){
-    var t=ar[slot];if(!t)return;
-    var lo=parseFloat(t.min),hi=parseFloat(t.max);
-    if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
-    if(!isNaN(lo)&&lo<range.min)hasWarn=true;
-    if(!isNaN(hi)&&hi>range.max)hasWarn=true;
-  });
-  return hasFlag?'flag':hasWarn?'warn':'ok';
+  var st=Object.keys(dayAreas).map(function(aid){ return areaStatusForArea(dayAreas[aid],isoDate,aid); });
+  return st.indexOf('flag')>=0?'flag':st.indexOf('warn')>=0?'warn':'ok';
 }
 function setViewMode(mode){
   VIEW_MODE=mode;
@@ -820,7 +813,7 @@ function monthCal(y, classOf, kind){
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':' disabled';
       var extra=kind==='out'?' dout':'';
       var ist=date<=TODAY_STR?areaStatus(date):'';
-      var dotHtml=(kind==='out')?(ist==='flag'?'<span class="d-dot idot-flag"></span>':''):'';
+      var dotHtml=(kind==='out'&&(ist==='flag'||ist==='warn'))?'<span class="d-dot idot-'+ist+'"></span>':'';   /* indoors that day: solid ink = outside the limit, ink ring = cannot be read */
       var cellCls=(kind==='out'&&VIEW_MODE==='compliance'&&date<=TODAY_STR)?(ist?'comp-'+ist:'comp-nd'):cls;
       h+='<button type="button" class="d '+cellCls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'>'+dotHtml+'</button>';
     }
