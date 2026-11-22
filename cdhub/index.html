@@ -4203,13 +4203,13 @@ function sinkPump(){ if(sinkPumping) return; sinkPumping=true;
   sinkQ.splice(0,group.length);
   var lead=group.map(function(q){ return q.body.request_id; }); sinkSending=lead; sinkTell();
   if(group.length===1){ var j1; try{ j1=await sinkFetchBusy(first.body,first.url,0); }catch(e){ j1={ok:false,code:'NETWORK'}; } first.res(j1); continue; }
-  var many={v:1,request_id:sinkRid(),code:first.body.code,action:'add_many',items:group.map(function(q){ return {request_id:q.body.request_id,table:q.body.table,fields:q.body.fields}; })};
+  var many={v:1,request_id:sinkRid(),code:first.body.code,action:'add_many',items:group.map(function(q){ var it={request_id:q.body.request_id,table:q.body.table,fields:q.body.fields}; if(q.body.values!=null) it.values=q.body.values; return it; })};   /* form answers go with their item */
   if(first.body.google_token) many.google_token=first.body.google_token;
   var j; try{ j=await sinkFetchBusy(many,first.url,0); }catch(e){ j={ok:false,code:'NETWORK'}; }
   if(j&&j.ok&&j.result&&Array.isArray(j.result.items)){
    var by={}; j.result.items.forEach(function(x){ if(x&&x.request_id) by[x.request_id]=x; });
    group.forEach(function(q){ var x=by[q.body.request_id]; q.res(!x?{ok:false,code:'NETWORK'}:x.ok?{ok:true,result:x.result}:{ok:false,code:x.code,message:x.message,fields:x.fields,duplicate_of:x.duplicate_of}); });
-  } else if(j&&j.code==='BAD_REQUEST'){ sinkNoMany=true; sinkQ=group.concat(sinkQ); }   /* this script has no list save yet: one by one */
+  } else if(j&&j.code==='BAD_REQUEST'){ sinkNoMany=true; sinkQ=group.concat(sinkQ); }   /* a script with no list save yet ('Unknown action'): nothing was saved and nothing is refused; the same entries go one by one */
   else group.forEach(function(q){ q.res(j); });
  } sinkSending=[]; sinkPumping=false; })(); }
 /* leaving the page while saves wait their turn would drop them (OV12 16 Nov 2026): the browser asks "Leave site?" first */
