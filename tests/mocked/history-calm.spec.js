@@ -92,7 +92,7 @@ async function openDay(page, iso) {
 for (const size of RULES.layout.widths) {
   test(`layout (${size.name} ${size.width}px): no side scroll, the day panel fits, tap targets ≥ ${RULES.layout.minTap}px; screenshot saved`, async ({ page, guard }) => {
     await open(page, guard, size);
-    for (const tab of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
+    for (const tab of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
       await page.getByRole('button', { name: tab }).click();
       const over = await page.evaluate(() => document.scrollingElement.scrollWidth - window.innerWidth);
       expect(over, `${tab} scrolls sideways`).toBeLessThanOrEqual(0);
@@ -138,7 +138,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
   await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);   // Lisa 18 Nov 2026: no "(retired …)" in the calendar
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
-  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
+  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
     if (await page.locator('#drill .dclose').isVisible()) await page.locator('#drill .dclose').click();
     await page.getByRole('button', { name: view }).click();
     const text = (await page.locator('#main').innerText()) + ' ' + (await page.locator('#drill').innerText());
@@ -150,7 +150,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
 // ------------------------------------------------------------------ COLOUR / ALARM
 test('colour: no red anywhere; orange only for outside-limit or missed; the outside calendar uses no warning colour; every colour is a house token', async ({ page, guard }) => {
   await open(page, guard);
-  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
+  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
     await page.getByRole('button', { name: view }).click();
     if (view === 'Heat map') await openDay(page, '2026-01-06');
     const found = await page.evaluate((C) => {
