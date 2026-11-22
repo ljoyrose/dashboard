@@ -480,14 +480,16 @@ test('Part done needs a note, saves as part_done and shows on the card, not as d
   await expect(ears.locator('.ds')).toHaveText('Due');
 });
 
-test('when this code cannot read past records, the list says so instead of a silent Due', async ({ page }) => {
+test('when past records cannot be read, one neutral line with Try again, never "Ask Lisa" or a permission word', async ({ page }) => {
   await setup(page, { check_log: undefined });
   await page.goto('cdhub/staff/#s/SITETAG2');
-  await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
+  await expect(page.locator('[data-no-history]')).toHaveText('Couldn\u2019t check what\u2019s done yet. Try again.');
+  await expect(page.locator('[data-retry-history]')).toBeVisible();
+  await expect(page.locator('#screen')).not.toContainText(/Ask Lisa|not allowed|cannot read/);
 });
 
 // Lisa 17 Nov 2026: jobs she had saved still said Due because the records read got no answer in time (slow saves).
-// That is said as "did not load in time" with Try again, never as "this code cannot read".
+// 22 Nov 2026: said as the same neutral line with Try again.
 test.describe('records read with no answer', () => {
   test.use({ allowedConsole: [/404|net::ERR_FAILED/] });   // the pretend "no answer" is a failed load
 test('when the past records do not load in time, it says so and Try again reads them again', async ({ page }) => {
@@ -499,7 +501,7 @@ test('when the past records do not load in time, it says so and Try again reads 
     return route.fallback();
   });
   await page.goto('cdhub/staff/#s/SITETAG2');
-  await expect(page.locator('[data-no-history]')).toContainText('did not load in time');
+  await expect(page.locator('[data-no-history]')).toContainText('Couldn\u2019t check what\u2019s done yet');
   await expect(page.locator('[data-no-history]')).not.toContainText('cannot read');
   fail = false;
   await page.locator('[data-retry-history]').click();
