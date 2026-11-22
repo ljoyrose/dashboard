@@ -116,7 +116,7 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
     var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
@@ -200,6 +200,103 @@
         p.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
       });
     }
+
+    /* NEVER LOSE AN ENTRY (Lisa 17 Nov 2026; OV12 20 Nov 2026: most of a temperature round was still waiting its turn
+       when the app closed, and nothing was kept). Every save is kept on this device the moment it is pressed, before
+       it waits its turn, and leaves only when the save script answers. With no answer (no signal, timeout, script busy,
+       saving switched off for a moment) it stays kept and is sent again by itself with the SAME request id: soon after
+       the page opens, every minute while anything waits, when the signal returns, and on "Send now".
+       - The script remembers each request id for 6 hours and answers a repeat with the first answer, so a resend never
+         saves twice. After 5 hours a kept entry is no longer sent by itself (the script may have forgotten it): it is
+         shown as "not confirmed" and the person checks the records, then sends it or removes it.
+       - A save the script refuses (a check failed) leaves the box and is listed as "Not saved" with the reason.
+       - The staff code and any Google token are never kept with an entry: they are added again when it is sent. */
+    var OUTBOX_KEY = 'bld.outbox', REFUSED_KEY = 'bld.outbox.refused';
+    var OUTBOX_AUTO_MS = 5 * 3600000;   // inside the script's 6-hour memory of request ids
+    // Answers that mean "not this time" (no signal, script busy or switched off, not set up yet): the entry stays kept
+    // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
+    // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
+    var RETRY_ON = { NETWORK: 1, NOT_SENT: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
+    function refused(j) { return !!(j && !j.ok && j.code && !RETRY_ON[j.code]); }
+    var outboxFns = [], inFlight = {};
+    function jsonList(k) { try { var a = JSON.parse(get(local, k) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function outboxRead() { return jsonList(OUTBOX_KEY); }
+    function outboxNotify() { outboxFns.forEach(function (f) { try { f(outboxRead().length, jsonList(REFUSED_KEY)); } catch (e) { /* a screen's listener must not stop saving */ } }); }
+    function outboxWrite(a) { put(local, OUTBOX_KEY, a.length ? JSON.stringify(a) : ''); outboxNotify(); }
+    function keepEntry(body) {
+      var b = JSON.parse(JSON.stringify(body)); delete b.code; delete b.google_token;
+      var a = outboxRead().filter(function (x) { return x.id !== b.request_id; });
+      a.push({ id: b.request_id, body: b, at: new Date().toISOString() });
+      outboxWrite(a);
+    }
+    function dropEntry(id) { var a = outboxRead(), b = a.filter(function (x) { return x.id !== id; }); if (b.length !== a.length) outboxWrite(b); }
+    function refuseEntry(id, j) {
+      var item = outboxRead().filter(function (x) { return x.id === id; })[0];
+      if (!item) return;
+      var rf = jsonList(REFUSED_KEY).filter(function (x) { return x.id !== id; });
+      rf.push({ id: id, at: item.at, table: item.body.table || '', action: item.body.action || '', fields: item.body.fields || {}, code: (j && j.code) || '', message: (j && j.message) || '' });
+      put(local, REFUSED_KEY, JSON.stringify(rf.slice(-50)));
+    }
+    /** After an answer: saved (or already saved) and refused leave the box; anything else keeps it for another try. */
+    function settle(id, j) {
+      if (j && (j.ok || j.code === 'DUPLICATE')) { dropEntry(id); return true; }
+      if (refused(j)) { refuseEntry(id, j); dropEntry(id); return true; }
+      scheduleRetry(60000);
+      return false;
+    }
+    function postOnce(body) {
+      return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
+        method: 'POST', redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
+        body: JSON.stringify(body)
+      })).then(function (r) { return r.json(); }); });
+    }
+    /** One kept entry, sent with its own request id and the code held now. Never sent twice at once from this page. */
+    function sendKept(item) {
+      if (inFlight[item.id]) return inFlight[item.id];
+      var body = withGoogle(Object.assign({}, item.body, { code: getCode() }));
+      var p = oneAtATime(function () { return postOnce(body); })
+        .then(function (j) { settle(item.id, j); }, function () { scheduleRetry(60000); });
+      inFlight[item.id] = p;
+      var off = function () { delete inFlight[item.id]; };
+      p.then(off, off);
+      return p;
+    }
+    var flushing = null;
+    /** Send every kept entry younger than 5 hours again, oldest first. Resolves to how many are still kept. */
+    function flush(o) {
+      if (flushing) return flushing;
+      var now = Date.now(), all = outboxRead();
+      var due = all.filter(function (x) { return (o && o.old) || now - Date.parse(x.at) < OUTBOX_AUTO_MS; });
+      if (!due.length || !scriptUrl || !doFetch || !hasAuth()) return Promise.resolve(all.length);
+      flushing = due.reduce(function (p, item) { return p.then(function () { return sendKept(item); }); }, Promise.resolve())
+        .then(function () { flushing = null; outboxNotify(); return outboxRead().length; }, function () { flushing = null; return outboxRead().length; });
+      return flushing;
+    }
+    function isOld(x) { return Date.now() - Date.parse(x.at) >= OUTBOX_AUTO_MS; }
+    var outbox = {
+      count: function () { return outboxRead().length; },
+      items: function () { return outboxRead().map(function (x) { return { id: x.id, at: x.at, table: x.body.table || '', action: x.body.action || '', fields: x.body.fields || {}, old: isOld(x) }; }); },
+      refused: function () { return jsonList(REFUSED_KEY); },
+      dismissRefused: function (id) { put(local, REFUSED_KEY, JSON.stringify(jsonList(REFUSED_KEY).filter(function (x) { return x.id !== id; }))); outboxNotify(); },
+      /** Send now. {old: true} also sends entries past 5 hours, after the person has checked the records. */
+      flush: flush,
+      /** The person checked the records and the entry is there (or not wanted): take it out of the box. */
+      remove: function (id) { dropEntry(id); },
+      onChange: function (fn) { if (typeof fn === 'function') outboxFns.push(fn); }
+    };
+    // On a real page: try the box soon after opening, then every minute while something waits, and when the signal
+    // comes back. An empty box sets no timer. Tests pass their own fetch and get no timers.
+    var autoOn = opts.autoFlush !== false && !opts.fetch && typeof document !== 'undefined', retryTimer = null;
+    function scheduleRetry(ms) {
+      if (!autoOn || retryTimer || !outboxRead().length) return;
+      retryTimer = setTimeout(function () { retryTimer = null; flush().then(function (n) { if (n > 0) scheduleRetry(60000); }); }, ms);
+    }
+    if (autoOn) {
+      scheduleRetry(4000);
+      if (win.addEventListener) win.addEventListener('online', function () { flush(); });
+    }
+    var KEPT_MSG = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
 
     /** Plain-English state for the banner and for disabling buttons. */
     function banner(tableKey) {
@@ -319,11 +416,13 @@
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
-      return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
-        method: 'POST', redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
-        body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }); }); }, o.onTurn).then(function (j) {
+      keepEntry(body);
+      var sent = oneAtATime(function () { return postOnce(body); }, o.onTurn);
+      inFlight[body.request_id] = sent;
+      var off = function () { delete inFlight[body.request_id]; };
+      sent.then(off, off);
+      return sent.then(function (j) {
+        if (!settle(body.request_id, j) && j && j.ok === false) j = { ok: false, code: j.code, kept: true, message: KEPT_MSG };
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
@@ -333,12 +432,10 @@
             : 'Saved.';
           return res;
         }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
-        return {
-          ok: false, code: 'NETWORK', requestId: body.request_id,
-          message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.'
-        };
+        scheduleRetry(60000);
+        return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
     }
 
@@ -351,13 +448,18 @@
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       var body = withGoogle({ v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} });
-      return oneAtATime(function () { return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
-        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }); }); }, onTurn).then(function (j) {
+      keepEntry(body);
+      var sent = oneAtATime(function () { return postOnce(body); }, onTurn);
+      inFlight[body.request_id] = sent;
+      var off = function () { delete inFlight[body.request_id]; };
+      sent.then(off, off);
+      return sent.then(function (j) {
+        if (!settle(body.request_id, j) && j && j.ok === false) j = { ok: false, code: j.code, kept: true, message: KEPT_MSG };
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
-        return { ok: false, code: 'NETWORK', requestId: body.request_id, message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.' };
+        scheduleRetry(60000);
+        return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
     }
     /** Record-to-record links (14 Nov 2026): {from_table, from_id, role, to_table, to_id, sort?, note?, from_date?}. */
@@ -441,6 +543,7 @@
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
+      outbox: outbox,
       sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,

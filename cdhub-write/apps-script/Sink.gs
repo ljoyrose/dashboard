@@ -236,9 +236,9 @@ function sameSlot_(late, clean, rows, nowMs) {
 /** Main entry for a save. Returns a result object or throws err_. */
 function sinkHandle_(req) {
   var now = new Date(), nowMs = now.getTime();
-
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
+  if (req.action === 'add_many') return sinkHandleMany_(req, now, nowMs);
   if (req.action !== 'add' && req.action !== 'correct' && req.action !== 'add_site') throw err_('BAD_REQUEST', 'Unknown action.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
@@ -247,7 +247,31 @@ function sinkHandle_(req) {
   var who = authSaver_(req);
   timing_('sign_in', Date.now() - tAuth);
   if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
+  var spec = sinkSpecFor_(req, who);
 
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('rid:' + rid);
+  if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
+
+  // 17 Nov 2026: live saves took 17-127 s. Each save logs where its time went (no data, no names): before the lock,
+  // waiting for the lock, and the work inside it, so a slow save can be traced in Executions.
+  var tLock = Date.now(), tIn = 0;
+  var result = withLock_(function () {
+    tIn = Date.now();
+    // 20 Nov 2026: a resend that arrived while the first try was still saving waited here; it gets the first answer.
+    var inLock = cache.get('rid:' + rid);
+    if (inLock) { var dup = JSON.parse(inLock); dup.repeat = true; return dup; }
+    var r = req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs);
+    cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
+    return r;
+  });
+  timing_('before_lock', tLock - nowMs); timing_('lock_wait', tIn - tLock); timing_('work', Date.now() - tIn);
+  if (SAVE_TIMING_) SAVE_TIMING_.table = spec.key;
+  return result;
+}
+
+/** The table a save asks for, checked: allowed, switched on, and this role may do this action. */
+function sinkSpecFor_(req, who) {
   var asked = String(req.table || req.file || '');
   var spec = specFor_(asked);
   if (!spec || (req.table && req.file && specFor_(String(req.file)) !== spec)) {
@@ -259,19 +283,68 @@ function sinkHandle_(req) {
   }
   if (req.action === 'add_site' && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
   if (spec.perms[req.action === 'add_site' ? 'add' : req.action].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  return spec;
+}
 
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get('rid:' + rid);
-  if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
-
-  // 17 Nov 2026: live saves took 17-127 s. Each save logs where its time went (no data, no names): before the lock,
-  // waiting for the lock, and the work inside it, so a slow save can be traced in Executions.
+/**
+ * MANY ADDS IN ONE REQUEST (OV12 20 Nov 2026: a round of 36 readings was 36 requests, each paying sign-in, the room-moves
+ * pass and its own wait for the lock). {action:'add_many', code, items:[{request_id, action?, table, fields, values?}]}: signed in once,
+ * one lock, each item checked and saved exactly as a single add (its own repeat checks, its own request id, remembered
+ * for 6 hours like a single save, so any later resend of one item gets its first answer). One item refused does not stop
+ * the rest. Returns {items:[{request_id, ok, result} or {request_id, ok:false, code, message, fields}]} in the order sent.
+ * An item's action is 'add' (the default; values = a check's form answers, as on a single add), 'add_site' (a whole-site
+ * staff check, with exactly the single tap's checks: the Daily records import, 22 Nov 2026) or 'link_add' (a record link,
+ * fields as sinkLinkAdd_; items view bulk, 22 Nov 2026). Once LIMITS.MAX_BATCH_MS has passed inside the lock no new item starts: the
+ * rest answer NOT_SENT, which the page sends again (with the same request ids, so nothing saves twice).
+ */
+function sinkHandleMany_(req, now, nowMs) {
+  var items = req.items;
+  if (!Array.isArray(items) || !items.length || items.length > BLD.LIMITS.MAX_BATCH_ITEMS) {
+    throw err_('BAD_REQUEST', 'A list save needs 1 to ' + BLD.LIMITS.MAX_BATCH_ITEMS + ' entries.');
+  }
+  var tAuth = Date.now();
+  var who = authSaver_(req);
+  timing_('sign_in', Date.now() - tAuth);
+  if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
+  var cache = CacheService.getScriptCache(), out = [], todo = [];
+  items.forEach(function (it, i) {
+    var rid = String((it && it.request_id) || '');
+    if (!it || typeof it !== 'object' || !/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) { out[i] = { request_id: rid, ok: false, code: 'BAD_REQUEST', message: 'The entry had no valid reference.' }; return; }
+    var known = cache.get('rid:' + rid);
+    if (known) { var a = JSON.parse(known); a.repeat = true; out[i] = { request_id: rid, ok: true, result: a }; return; }
+    todo.push(i);
+  });
   var tLock = Date.now(), tIn = 0;
-  var result = withLock_(function () { tIn = Date.now(); return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
-  timing_('before_lock', tLock - nowMs); timing_('lock_wait', tIn - tLock); timing_('work', Date.now() - tIn);
-  if (SAVE_TIMING_) SAVE_TIMING_.table = spec.key;
-  cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
-  return result;
+  if (todo.length) withLock_(function () {
+    tIn = Date.now();
+    todo.forEach(function (i) {
+      var it = items[i], rid = String(it.request_id);
+      try {
+        var known = cache.get('rid:' + rid);
+        if (known) { var a = JSON.parse(known); a.repeat = true; out[i] = { request_id: rid, ok: true, result: a }; return; }
+        if (Date.now() - tIn > BLD.LIMITS.MAX_BATCH_MS) { out[i] = { request_id: rid, ok: false, code: 'NOT_SENT', message: 'Not sent yet. Send again.' }; return; }
+        var act = it.action || 'add';
+        if (act !== 'add' && act !== 'add_site' && act !== 'link_add') throw err_('BAD_REQUEST', 'Only adds, whole-site taps and links can be sent together.');
+        var flds = it.fields && typeof it.fields === 'object' ? it.fields : {}, r;
+        if (act === 'link_add') {
+          if (!linksOn_()) throw err_('TABLE_OFF', 'Saving to ' + LINKS_.file + ' is switched off.');
+          r = linkAddBody_(flds, who, new Date());   // already signed in and inside this list's lock
+        } else {
+          var one = { v: 1, request_id: rid, action: act, table: it.table, fields: flds };
+          if (act === 'add' && it.values !== undefined && it.values !== null) one.values = it.values;   // a check's form answers, as on a single add
+          var spec = sinkSpecFor_(one, who);
+          r = act === 'add_site' ? sinkSiteProcess_(spec, one, who, now, nowMs) : sinkProcess_(spec, one, who, now, nowMs);
+        }
+        cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
+        out[i] = { request_id: rid, ok: true, result: r };
+      } catch (e) {
+        var b = errorBody_(e); b.request_id = rid; out[i] = b;
+      }
+    });
+  });
+  timing_('before_lock', tLock - nowMs); timing_('lock_wait', tIn ? tIn - tLock : 0); timing_('work', tIn ? Date.now() - tIn : 0);
+  if (SAVE_TIMING_) { SAVE_TIMING_.table = 'add_many'; SAVE_TIMING_.items = items.length; }
+  return { status: 'many', items: out };
 }
 
 /**

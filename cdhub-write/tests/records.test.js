@@ -401,3 +401,42 @@ test('site tap on a Sheet: all rows are added as plain text, and a failed read-b
   assert.equal(bad.code, 'VERIFY_FAILED');
   assert.equal(f.sheet.length, 3);
 });
+
+/* ---- Daily records import in one request (22 Nov 2026): add_many items may be whole-site taps ---- */
+const ago = (env, h) => new Date(env.nowMs - h * 3600000).toISOString();
+const manyReq = (env, items, over) => save(env, Object.assign({ v: 1, request_id: 'r-imp-' + Math.random().toString(36).slice(2, 10), code: env.codes.staff, action: 'add_many', items }, over || {}));
+
+test('list save of whole-site taps: each row has the single tap\'s checks, its own answer in order, and is marked imported', () => {
+  const env = siteEnv();
+  const bowls = addType(env, 'bowls', { target: 'none', site_scope: 'one_line' });
+  const walk = addType(env, 'walk', { target: 'none', site_scope: 'per_dog', not_in_areas: 'area-t2' });
+  const r = manyReq(env, [
+    { request_id: 'r-imp-row-0001', action: 'add_site', table: 'check_log', fields: { check_type_id: bowls, outcome: 'ok', how_recorded: 'import', happened_at: ago(env, 30) } },
+    { request_id: 'r-imp-row-0002', action: 'add_site', table: 'check_log', fields: { check_type_id: walk, outcome: 'ok', how_recorded: 'import', happened_at: ago(env, 29), dog_ids: allDogs(env) } },
+    { request_id: 'r-imp-row-0003', action: 'add_site', table: 'check_log', fields: { check_type_id: 'cty-nope', outcome: 'ok', how_recorded: 'import' } },
+    { request_id: 'r-imp-row-0004', action: 'add_site', table: 'check_log', fields: { check_type_id: bowls, outcome: 'not-an-outcome', how_recorded: 'import' } },
+    { request_id: 'r-imp-row-0005', action: 'correct', table: 'check_log', fields: { check_type_id: bowls, outcome: 'ok' } }
+  ]);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const it = r.result.items;
+  assert.equal(JSON.stringify(it.map((x) => x.request_id)), JSON.stringify(['r-imp-row-0001', 'r-imp-row-0002', 'r-imp-row-0003', 'r-imp-row-0004', 'r-imp-row-0005']));
+  assert.equal(JSON.stringify(it.map((x) => x.ok)), JSON.stringify([true, true, false, false, false]));
+  assert.equal(it[1].result.saved, 1);                              // per-dog job: isolation, off-site and no-room dogs left out, as a single tap
+  assert.equal(it[4].code, 'BAD_REQUEST');
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((x) => x.how_recorded === 'import'));
+  const again = manyReq(env, [{ request_id: 'r-imp-row-0001', action: 'add_site', table: 'check_log', fields: { check_type_id: bowls, outcome: 'ok', how_recorded: 'import', happened_at: ago(env, 30) } }]);
+  assert.equal(again.result.items[0].result.repeat, true);           // sent again: nothing saved twice
+  assert.equal(recs(env, 'BLD-check_log.csv').length, 2);
+});
+
+test('list save: up to 200 rows in one request; 201 refuses the whole list', () => {
+  const env = siteEnv();
+  const bowls = addType(env, 'bowls', { target: 'none', site_scope: 'one_line' });
+  const item = (k) => ({ request_id: 'r-imp-cap-' + String(k).padStart(4, '0'), action: 'add_site', table: 'check_log', fields: { check_type_id: bowls, outcome: 'ok', how_recorded: 'import', happened_at: ago(env, 48 + k) } });
+  assert.equal(manyReq(env, Array.from({ length: 201 }, (_, k) => item(k))).code, 'BAD_REQUEST');
+  assert.equal(recs(env, 'BLD-check_log.csv').length, 0);
+  const r = manyReq(env, Array.from({ length: 16 }, (_, k) => item(k)));
+  assert.equal(r.result.items.length, 16);
+});

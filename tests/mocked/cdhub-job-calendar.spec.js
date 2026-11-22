@@ -48,3 +48,28 @@ test('Main has The Board and Print cards', async ({ page, guard }) => {
   await expect(page.locator('[data-open-board]')).toHaveAttribute('href', './staff/');
   await expect(page.locator('[data-open-print]')).toHaveAttribute('href', './staff/print/');
 });
+
+// Lisa 22 Nov 2026 ("A"): import past daily records. The file is checked and shown first; one press saves the ready rows.
+test('Import: a chosen file is checked row by row; Import saves only the ready rows, marked import, and the days turn green', async ({ page, guard }) => {
+  const today = london(new Date()), d1 = london(new Date(Date.now() - 2 * 86400000)), d2 = london(new Date(Date.now() - 3 * 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, []));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  await page.locator('[data-jcal-import]').click();
+  await expect(page.locator('[data-jcal-template]')).toHaveAttribute('href', /^data:text\/csv/);
+  const file = `date,job,outcome,note\n${d1},Pretend bowls washed,done,\n${d2},food_bowls,,from paper\n${d2},Nothing here,done,\n2999-01-01,food_bowls,done,\n`;
+  await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
+  await expect(page.locator('[data-jcal-imp-count]')).toContainText('2 of 4 rows ready');
+  await expect(page.locator('.jcal-imp-t tr[data-ok="0"]')).toHaveCount(2);
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'imp-' + window.__sent.length, ids: ['imp-' + window.__sent.length], at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await page.locator('[data-jcal-import-go]').click();
+  await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 2 of 2.');
+  const sent = await page.evaluate(() => window.__sent);
+  expect(sent.map((b) => b.fields)).toEqual([
+    { check_type_id: 'j1', outcome: 'ok', how_recorded: 'import', happened_at: d1 + 'T12:00:00Z' },
+    { check_type_id: 'j1', outcome: 'ok', how_recorded: 'import', happened_at: d2 + 'T12:00:00Z', note: 'from paper' }
+  ]);
+  if (d2.slice(0, 7) === today.slice(0, 7)) await expect(page.locator(`[data-jcal="food_bowls"] [data-day="${d2}"]`)).toHaveClass(/\bdone\b/);
+});
