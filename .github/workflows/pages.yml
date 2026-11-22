@@ -31,7 +31,7 @@ jobs:
     # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 35 # 1,777 tests now take about 18-21 min; 20 cut off every publish after #297 (3 Nov 2026)
+    timeout-minutes: 60 # 2,500+ tests now take about 35-40 min; 35 cut off every publish from 20 Nov 22:47 (#715) to 22 Nov (#765), so github.io went stale. Same limit as tests.yml.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
