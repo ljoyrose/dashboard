@@ -92,7 +92,7 @@ async function openDay(page, iso) {
 for (const size of RULES.layout.widths) {
   test(`layout (${size.name} ${size.width}px): no side scroll, the day panel fits, tap targets ≥ ${RULES.layout.minTap}px; screenshot saved`, async ({ page, guard }) => {
     await open(page, guard, size);
-    for (const tab of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
+    for (const tab of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
       await page.getByRole('button', { name: tab }).click();
       const over = await page.evaluate(() => document.scrollingElement.scrollWidth - window.innerWidth);
       expect(over, `${tab} scrolls sideways`).toBeLessThanOrEqual(0);
@@ -138,7 +138,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
   await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);   // Lisa 18 Nov 2026: no "(retired …)" in the calendar
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
-  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
+  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
     if (await page.locator('#drill .dclose').isVisible()) await page.locator('#drill .dclose').click();
     await page.getByRole('button', { name: view }).click();
     const text = (await page.locator('#main').innerText()) + ' ' + (await page.locator('#drill').innerText());
@@ -150,7 +150,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
 // ------------------------------------------------------------------ COLOUR / ALARM
 test('colour: no red anywhere; orange only for outside-limit or missed; the outside calendar uses no warning colour; every colour is a house token', async ({ page, guard }) => {
   await open(page, guard);
-  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {
+  for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
     await page.getByRole('button', { name: view }).click();
     if (view === 'Heat map') await openDay(page, '2026-01-06');
     const found = await page.evaluate((C) => {
@@ -565,7 +565,9 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const julyIn = await paint('2026-07-12');
   const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
-  expect(julyIn.shadow).not.toBe('none');
+  // Lisa 17 Nov 2026: in limit is the solid green (the pale tint with a frame looked "weird"), the same colour as the legend
+  const solid = await page.evaluate(() => { const i = document.createElement('i'); i.style.color = 'var(--ljr-5)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; });
+  expect(julyIn.bg).toBe(solid);
 });
 
 test('audit: a saved min or max that is text (25,3) or blank is "Check: not a number", counted with the problems, never read as 25 (OV11 15 Nov)', async ({ page, guard }) => {
@@ -595,4 +597,43 @@ test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) 
   await page.reload();
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
+});
+
+// Lisa 18 Nov 2026: "PDF A and B and also both month and year - all options selectable by user". Print / PDF builds the
+// pages from the same day rules as the screen: B summary calendars, A room tables, for one month or a whole year.
+test('Print / PDF: summary and room table for a month, totals and outside list from the records; the year skips months not begun', async ({ page, guard }) => {
+  await open(page, guard);
+  await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
+  await page.locator('[data-rp-open]').click();
+  const panel = page.locator('#rpPanel');
+  await expect(panel).toBeVisible();
+  await panel.locator('#rpMonth').selectOption('0');
+  await panel.locator('#rpYear').selectOption('2026');
+  await panel.locator('#rpGo').click();
+  expect(await page.evaluate(() => window.__printed)).toBe(1);
+  const rep = page.locator('#report');
+  await expect(rep.locator('.rp-page')).toHaveCount(2);
+  await expect(rep.locator('[data-rp="summary"]')).toHaveAttribute('data-month', '2026-01');
+  await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4']);   // the page's own room names (no "(retired …)" since Lisa 18 Nov 2026)
+  const want = expected();
+  await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · missed: ${want.miss} · outside the limit: ${want.out}`);
+  await expect(rep.locator('.rp-out li', { hasText: 'R1' }).first()).toContainText('nothing recorded');
+  await expect(rep.locator('[data-rp="table"] td.miss').first()).toHaveText('MISS');
+  // whole year, tables only: January only (the rest of 2026 has not begun on the pretend date)
+  await panel.locator('input[name="rpPeriod"][value="year"]').check();
+  await panel.locator('#rpSummary').uncheck();
+  await panel.locator('#rpGo').click();
+  await expect(rep.locator('.rp-page')).toHaveCount(1);
+  await expect(rep.locator('[data-rp="table"]')).toHaveCount(1);
+  // nothing ticked: says so, prints nothing
+  await panel.locator('#rpTable').uncheck();
+  await panel.locator('#rpGo').click();
+  await expect(panel.locator('#rpMsg')).toContainText('Tick at least one');
+  expect(await page.evaluate(() => window.__printed)).toBe(2);
+  // a sample PDF of the month for a person to look at (invented rows only)
+  await panel.locator('#rpTable').check(); await panel.locator('#rpSummary').check();
+  await panel.locator('input[name="rpPeriod"][value="month"]').check();
+  await panel.locator('#rpGo').click();
+  await page.emulateMedia({ media: 'print' });
+  if (process.env.RP_SAMPLE) await page.pdf({ path: process.env.RP_SAMPLE, format: 'A4', landscape: true, printBackground: true });
 });
