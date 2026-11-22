@@ -671,7 +671,7 @@ test('check types starting round. belong to The round and never show as jobs, no
 });
 
 // Lisa 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
-test('a whole-site dog job: "Done: N dogs" by the ticks saves the ticked dogs and the card says N of M dogs', async ({ page }) => {
+test('a whole-site dog job: "Done: N dogs" by the ticks saves the ticked dogs and the card says N of M dogs @regression', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');
   const card = page.locator('[data-job="walk"]');
