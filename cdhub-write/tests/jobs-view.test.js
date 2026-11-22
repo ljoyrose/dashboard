@@ -123,3 +123,14 @@ test('how a record was made is shown in the owner\'s words, hidden with "off", s
   assert.equal(V.howLabel({ rules: [] }, 'site_tap', '2026-11-17'), 'whole-site tap');
   assert.equal(V.howLabel(v, '', '2026-11-17'), '');
 });
+
+// 22 Nov 2026 (guardrail): the "entered later" setting lives in jobs-view.js, which only the owner hub loads. Inspector
+// pages, prints, registers and exports never load it, so what they show about back-filled records cannot change with it.
+test('only the owner hub loads jobs-view.js: inspector, print, temperature and register pages do not', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const root = path.join(__dirname, '..', '..', 'cdhub');
+  const pages = [];
+  (function walk(d) { fs.readdirSync(d, { withFileTypes: true }).forEach((e) => { const p = path.join(d, e.name); if (e.isDirectory()) { if (e.name !== 'test') walk(p); } else if (/\.(html|js)$/.test(e.name)) pages.push(p); }); })(root);
+  const users = pages.filter((p) => /jobs-view\.js/.test(fs.readFileSync(p, 'utf8')) && !/jobs-view\.js$/.test(p)).map((p) => path.relative(root, p));
+  assert.deepEqual(users, ['index.html']);
+});
