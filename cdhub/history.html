@@ -114,8 +114,9 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
 .d-dot.idot-flag{background:var(--ljr-2)}.d-dot.idot-warn{background:var(--ljr-3)}
 /* compliance mode cells */
-.d.comp-flag{background:var(--ljr-2);opacity:.8}.d.comp-warn{background:var(--ljr-3);opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
-.sd.comp-flag{background:var(--ljr-2);opacity:.8}.sd.comp-warn{background:var(--ljr-3);opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
+/* 22 Nov 2026 (OV12): house colour rules on the outside calendar - never red, no warning colour. Ink ring = cannot be read, solid ink = outside the limit. */
+.d.comp-flag{background:var(--card);box-shadow:inset 0 0 0 2px var(--ink)}.d.comp-warn{background:var(--ink)}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
+.sd.comp-flag{background:var(--card);box-shadow:inset 0 0 0 1.5px var(--ink)}.sd.comp-warn{background:var(--ink)}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
 /* view mode toggle */
 .vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
 .vt-btn{padding:4px 12px;min-height:40px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
@@ -941,10 +942,10 @@ function legend(){
   var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
   if(VIEW_MODE==='compliance'){
     return'<div class="legend">'
-      +'<div class="leg">'+sq('background:var(--ljr-2)')+'Data error</div>'
-      +'<div class="leg">'+sq('background:var(--ljr-3)')+'Out of range</div>'
-      +'<div class="leg">'+sq('background:var(--ljr-5)')+'All ok</div>'
-      +'<div class="leg">'+sq('background:var(--soft)')+'No data</div>'
+      +'<div class="leg">'+sq('background:var(--card);box-shadow:inset 0 0 0 2px var(--ink)')+'Cannot be read</div>'
+      +'<div class="leg">'+sq('background:var(--ink)')+'Outside limit</div>'
+      +'<div class="leg">'+sq('background:var(--ljr-5)')+'In limit</div>'
+      +'<div class="leg">'+sq('background:var(--soft)')+'No readings</div>'
       +'</div>';
   }
   return '<div class="legend">'

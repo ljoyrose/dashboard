@@ -596,3 +596,35 @@ test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) 
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
 });
+
+test('22 Nov (OV12): Compliance view keeps the house colours - no red or orange on the outside calendar or its key, house words only', async ({ page, guard }) => {
+  const rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method\n'
+    + 'rdg-s,area-r1,2026-01-08T09:00:00Z,2026-01-08T00:00:00+00:00,22.0,18.0,typed\n'
+    + 'rdg-c,area-r1,2026-01-07T09:00:00Z,2026-01-07T00:00:00+00:00,1.0,40.0,typed\n';
+  await open(page, guard);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  const f = guard.world.files.find((x) => x.name === 'BLD-area_reading.csv');
+  f.content = rows; f.size = String(rows.length);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.getByRole('button', { name: 'Compliance' }).click();
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  await expect(page.locator('#view-a [data-cal="out"] .d.comp-flag').first()).toBeVisible();   // the swapped reading on the 8th
+  const bad = await page.evaluate((C) => {
+    const probe = document.createElement('i'); document.body.appendChild(probe);
+    const val = (v) => { probe.style.color = 'var(' + v + ')'; return getComputedStyle(probe).color; };
+    const never = new Set(C.map(val)); probe.remove();
+    const out = [];
+    document.querySelectorAll('[data-cal="out"] *, #legend-wrap *').forEach((e) => {
+      const st = getComputedStyle(e);
+      [st.backgroundColor, st.borderTopColor].concat((st.boxShadow.match(/rgba?\([^)]*\)/g) || [])).forEach((c) => { if (never.has(c)) out.push(e.className + ' ' + c); });
+    });
+    return [...new Set(out)];
+  }, RULES.colour.outsideCalendarNever);
+  expect(bad).toEqual([]);
+  const key = await page.locator('#legend-wrap').innerText();
+  for (const re of RULES.words.never) expect(key).not.toMatch(re);
+  expect(key).toContain('Outside limit');
+  expect(key).toContain('Cannot be read');
+});
