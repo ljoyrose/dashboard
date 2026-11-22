@@ -72,3 +72,22 @@ test('a pup counts on the health-check calendar only from its birth day, so the 
   assert.equal(day('2026-11-15').state, 'part');     // born today: 2 of 3
   assert.equal(day('2026-11-15').need, 3);
 });
+
+test('a day with records opens who and when, notes, and its photos; a day with a photo shows a camera', () => {
+  const v = Object.assign(base([log('1', 'cty-fb', '2026-11-10', '', { taken_by: 'Pat', note: 'Diary page 12' }), log('2', 'cty-fb', '2026-11-12')]), {
+    dmy: (s) => s,
+    files: [{ id: 'f1', name: 'diary-10-nov.jpg', drive_file_id: '1FAKEDIARYPAGEIDFORTESTS000000aa', mime: 'image/jpeg' }, { id: 'f2', name: 'cert.pdf', drive_file_id: '1FAKEPDFIDFORTESTS0000000000000b', mime: 'application/pdf' }],
+    links: [{ from_table: 'check_log', from_id: '1', role: 'evidence', to_table: 'files', to_id: 'f1', from_date: '2026-11-10', to_date: '' },
+      { from_table: 'check_log', from_id: '1', role: 'certificate', to_table: 'files', to_id: 'f2', from_date: '2026-11-10', to_date: '' }],
+    calOpen: { key: 'food_bowls', iso: '2026-11-10' }
+  });
+  const html = C.html(v, '2026-11', false);
+  assert.match(html, /<button type="button" class="jd done ph open" data-day="2026-11-10" data-jcal-day="2026-11-10" data-jcal-key="food_bowls"/);
+  assert.match(html, /<button type="button" class="jd done" data-day="2026-11-12"/);   // records, no photo: opens, no camera
+  assert.match(html, /<span class="jd missed" data-day="2026-11-11"/);                  // nothing recorded: not a button
+  assert.match(html, /data-jcal-detail="2026-11-10"/);
+  assert.match(html, /<li>Pat · \d\d:\d\d<\/li>/);
+  assert.match(html, /Diary page 12/);
+  assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/1FAKEDIARYPAGEIDFORTESTS000000aa\/view"[^>]*data-jcal-photo[^>]*><img data-cal-photo-id="1FAKEDIARYPAGEIDFORTESTS000000aa"/);
+  assert.match(html, /1FAKEPDFIDFORTESTS0000000000000b\/view"[^>]*data-jcal-photo[^>]*><span>certificate<\/span>/);   // a PDF: a link, no picture
+});
