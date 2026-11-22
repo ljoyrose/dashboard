@@ -67,7 +67,17 @@ test('a record\'s linked file (e.g. a vet certificate) opens from the history; e
   assert.deepEqual(rows[1].files, []);
   const html = V.historyHtml(Object.assign({ esc: (s) => String(s), dmy: (s) => s }, v), { subject_id: 'd1' }, '');
   assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/1FAKEFILEIDFORTESTS00000000000aa\/view"[^>]*data-record-file[^>]*>certificate<\/a>/);
-  assert.match(html, /time not given/);
+  // Lisa 22 Nov 2026: whether "entered later" shows is the owner's row display.entered_later; none = hidden
+  assert.doesNotMatch(html, /time not given|imported|entered earlier/);
+  const on = Object.assign({ esc: (s) => String(s), dmy: (s) => s }, v, { rules: [{ rule_key: 'display.entered_later', value: 'on', effective_from: '2026-01-01' }] });
+  const shown = V.historyHtml(on, { subject_id: 'd1' }, '');
+  assert.match(shown, /time not given/);
+  assert.match(shown, /imported/);
+  const off = Object.assign({}, on, { rules: [{ rule_key: 'display.entered_later', value: 'on', effective_from: '2026-01-01' }, { rule_key: 'display.entered_later', value: 'off', effective_from: '2026-02-01' }] });
+  assert.doesNotMatch(V.historyHtml(off, { subject_id: 'd1' }, ''), /time not given|imported/);   // the later row wins
+  // the record itself is unchanged: how_recorded and time_given are still on the row
+  assert.equal(V.history(v, { subject_id: 'd1' })[0].how, 'import');
+  assert.equal(V.history(v, { subject_id: 'd1' })[0].noTime, true);
 });
 
 test('a history with no links or files still draws', () => {
@@ -96,7 +106,9 @@ test('an owner note covering a past period shows once on the Jobs card, with the
   const html = V.complianceHtml(v, () => '');
   assert.equal(html.split('data-owner-note').length - 1, 1);
   assert.match(html, /Owner’s note: All daily and weekly checks/);
-  assert.match(html, /entered 2026-11-17 by Pat/);
+  assert.doesNotMatch(html, /entered 2026-11-17/);   // 22 Nov 2026: hidden unless the owner's row display.entered_later is on
+  const on = V.complianceHtml(Object.assign({}, v, { rules: [{ rule_key: 'display.entered_later', value: 'on', effective_from: '2026-01-01' }] }), () => '');
+  assert.match(on, /entered 2026-11-17 by Pat/);
 });
 
 // Lisa 17 Nov 2026 ("is that not for the app user to decide? Its their app"): the words for how a record was made are
