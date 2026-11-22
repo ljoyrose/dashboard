@@ -86,8 +86,10 @@ function linksRead_() {
 
 function linkOpen_(r, day) { return !String(r.to_date || '') || String(r.to_date) >= day; }
 
-function sinkLinkAdd_(req) {
-  return linksEntry_(req, function (f, who, now) {
+function sinkLinkAdd_(req) { return linksEntry_(req, linkAddBody_); }
+/** The body of a link add, run already signed in and inside the lock: by sinkLinkAdd_ (through linksEntry_), and by a
+ *  list save (add_many, Sink.gs) for a link_add item, which holds the one lock for the whole list (22 Nov 2026). */
+function linkAddBody_(f, who, now) {
     var errors = {}, today = todayLondon_(now), tenant = prop_(BLD.PROP.TENANT_ID);
     var ft = String(f.from_table || '').trim(), fid = String(f.from_id || '').trim();
     var tt = String(f.to_table || '').trim(), tid = String(f.to_id || '').trim();
@@ -142,7 +144,6 @@ function sinkLinkAdd_(req) {
       set_by: who.id || who.who, set_on: today, created_at: stamp, updated_at: '' };
     store_append_(LINKS_.file, read.header, read.header.map(function (h) { return v[h] == null ? '' : String(v[h]); }), read);
     return { status: 'saved', id: id, role: key, ended: ended };
-  });
 }
 
 function sinkLinkEnd_(req) {
