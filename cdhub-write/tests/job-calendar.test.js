@@ -62,3 +62,13 @@ test('the calendar shows a Done today button until done, then a tick', () => {
   assert.equal(C.shift('2026-01', -1), '2025-12');
   assert.equal(C.shift('2026-12', 1), '2027-01');
 });
+
+test('a pup counts on the health-check calendar only from its birth day, so the days before it are not "part done"', () => {
+  const pups = dogs.concat([{ id: 'p1', area_id: 'a1', dob: '2026-11-15' }]);
+  const v = Object.assign(base([log('1', 'cty-hc', '2026-11-14', 'd1'), log('2', 'cty-hc', '2026-11-14', 'd2'),
+    log('3', 'cty-hc', '2026-11-15', 'd1'), log('4', 'cty-hc', '2026-11-15', 'd2')]), { dogs: pups });
+  const day = (iso) => C.month(v, 'health_check_all', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(day('2026-11-14').state, 'done');     // before the pup was born: 2 of 2
+  assert.equal(day('2026-11-15').state, 'part');     // born today: 2 of 3
+  assert.equal(day('2026-11-15').need, 3);
+});

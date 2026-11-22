@@ -59,16 +59,18 @@
       missed, due (today, not yet), future, before (before this job's first record: not tracked here), blank (padding). */
   function month(v, key, ym) {
     var t = typeOf(v, key); if (!t) return null;
-    var perDog = Due.perDogSite(t), need = perDog ? Due.dogsFor(t, { dogs: v.dogs || [] }).length : 1;
+    var perDog = Due.perDogSite(t), mine = perDog ? Due.dogsFor(t, { dogs: v.dogs || [] }) : [], need = perDog ? mine.length : 1;
+    /* a dog counts on a day only once it is born: a pup born mid-month does not make the days before it "part done" */
+    var needOn = function (iso) { return mine.filter(function (x) { return !x.dob || String(x.dob).slice(0, 10) <= iso; }).length; };
     var d = days(v, key), first = Object.keys(d).sort()[0] || '';
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10);
     var len = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
     var cells = [];
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).length : x.n) : 0;
-      var state = iso > v.today ? 'future' : (got && (!perDog || got >= need)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
-      cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? need : 0, lines: x ? x.lines : [] });
+      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).length : x.n) : 0, want = perDog ? needOn(iso) : 1;
+      var state = iso > v.today ? 'future' : (got && (!perDog || got >= want)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
+      cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : 0, lines: x ? x.lines : [] });
     }
     return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, need: need, typeId: t.id, cells: cells };
   }
