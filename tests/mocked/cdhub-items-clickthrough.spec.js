@@ -320,4 +320,20 @@ test.describe('CD Hub: items, click by click', () => {
       if (size.width < 768) expect(box.height).toBeGreaterThanOrEqual(44);
     });
   }
+  test('Move lists only rooms open today: a retired room is hidden, an items-only site room stays (20 Nov 2026)', async ({ page, guard }) => {
+    await open(page, guard, {
+      before: (w) => {
+        addTable(w, 'BLD-area.csv', csv('id,tenant_id,code,name,grouping,group_sort', [
+          'a-c1,t,C1,Cabin 1,Pretend cabins,1', 'a-old,t,ZZ_C9,Old cabin,Pretend cabins,1', 'a-site,t,Pretend office,Pretend office,Pretend site,10']));
+        addTable(w, 'BLD-requirement.csv', csv('id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on', [
+          'q1,t,room.in_use,area,a-old,2020-01-01,2021-01-01,x,o,2026-01-01',
+          'q2,t,room.in_use,area,a-site,2000-01-01,2000-01-01,x,o,2026-01-01',
+          'q3,t,room.items,area,a-site,2000-01-01,,x,o,2026-01-01']));
+      }
+    });
+    await page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' }).click();
+    await card(page).locator('[data-itm-form="move"]').click();
+    const names = await page.locator('form[data-itm-save="move"] option').allTextContents();
+    expect(names).toEqual(['Pick a room', 'C1', 'Pretend office']);
+  });
 });
