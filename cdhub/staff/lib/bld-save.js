@@ -584,6 +584,14 @@
       if (!tableKey) { kept = {}; return; }
       Object.keys(kept).forEach(function (k) { if (k.split('|')[0] === tableKey) delete kept[k]; });
     }
+    /** Replace the rows of a kept (unfiltered) list in place, keeping its read time: for a change this page made and
+     *  already shows (a move, 22 Nov 2026), so the next screen needs no read. */
+    function keepRows(tableKey, rows) {
+      var k = cacheKey(tableKey), e = kept[k] || { res: { ok: true, table: tableKey }, at: Date.now() };   // a save just forgot it: keep it again
+      var res = {}; Object.keys(e.res).forEach(function (x) { res[x] = e.res[x]; });
+      res.rows = rows || []; res.count = res.rows.length;
+      kept[k] = { res: res, at: e.at };
+    }
     /** When the kept copy of a list was read (ms), or 0. */
     function keptAt(tableKey, filter) { var e = kept[cacheKey(tableKey, filter)]; return e ? e.at : 0; }
     function readTimeout(p) {
@@ -695,7 +703,7 @@
       sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
       act: act, linkAdd: linkAdd, linkEnd: linkEnd,
-      read: read, readMany: readMany, dropCache: dropCache, keptAt: keptAt, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
+      read: read, readMany: readMany, dropCache: dropCache, keptAt: keptAt, keepRows: keepRows, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 

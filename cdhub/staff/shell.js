@@ -215,11 +215,11 @@
       if (!r.ok) { dataP = null; guard(r); return { ok: false, code: r.code, message: r.message || 'Could not load the records.' }; }
       var t = r.tables, d = BLDOccupancy.dailyList(t), subjects = (t.subject || []).map(function (x) { return { id: x.id, label: x.name || x.id }; });
       save.setLookups({ area: t.area || d.areas, subject: subjects });   // every room, retired ones too: a late reading may name a retired room (screens still hide it)
-      return { ok: true, areas: d.areas, dogs: d.dogs, skipped: d.skipped, subjects: subjects, raw: t };
+      return (dataObj = { ok: true, areas: d.areas, dogs: d.dogs, skipped: d.skipped, subjects: subjects, raw: t, asOf: Date.now() });
     });
     return dataP;
   }
-  function refresh() { dataP = null; if (save.dropCache) save.dropCache(); return data(); }
+  function refresh() { dataP = null; dataObj = null; if (save.dropCache) save.dropCache(); return data(); }
   /* 22 Nov 2026: a screen that waits for the records gives up after LOAD_LIMIT_MS and says so, with Try again.
      limit(p, host, retry) resolves what p resolves, or never (null-free) once the message has replaced the screen. */
   var LOAD_LIMIT_MS = 45000;
@@ -238,9 +238,35 @@
   }
   /** "As of" for the kept lists a screen uses: the oldest time one of them was read, or 0. */
   function listsAt(keys) { var at = 0; (keys || []).forEach(function (k) { var x = save.keptAt ? save.keptAt(k) : 0; if (x && (!at || x < at)) at = x; }); return at; }
+  /* Overseer 22 Nov 2026: a move showed the old room until a full reload. The loaded lists are changed in place instead. */
+  var dataObj = null;
+  function rebuild(o) { var d = BLDOccupancy.dailyList(o.raw); o.areas = d.areas; o.dogs = d.dogs; o.skipped = d.skipped; }
+  /** A move as it is sent: the dog shows in its new room at once. Returns undo(), for a save that is refused. */
+  function noteMove(row) {
+    var o = dataObj;
+    if (!o) return function () {};
+    o.raw.occupancy = (o.raw.occupancy || []).concat([row]); rebuild(o); keepOccupancy();
+    return function undo() { o.raw.occupancy = (o.raw.occupancy || []).filter(function (r) { return r !== row; }); rebuild(o); keepOccupancy(); };
+  }
+  /** Read where the dogs are again (occupancy only, never the other lists). {ok, asOf} or the read's refusal. */
+  function refreshOccupancy() {
+    if (save.dropCache) save.dropCache('occupancy');   // PR 749 keeps lists for the session: Refresh must read it fresh
+    return save.read('occupancy').then(function (r) {
+      if (!r.ok) return r;
+      if (dataObj) { dataObj.raw.occupancy = r.rows || []; rebuild(dataObj); dataObj.asOf = Date.now(); }
+      return { ok: true, asOf: dataObj ? dataObj.asOf : Date.now() };
+    });
+  }
+  /* With PR 749's list cache (22 Nov 2026): the page's kept copy of where the dogs are follows the screen, so the next
+     screen opened does not read it again. A saved move would otherwise forget that copy (any save to a list does). */
+  function keepOccupancy() { if (dataObj && save.keepRows) save.keepRows('occupancy', dataObj.raw.occupancy || []); }
+  var rawSubmit = save.submit;
+  save.submit = function (table, fields, o) {
+    return rawSubmit.apply(save, arguments).then(function (r) { if (r && r.ok && table === 'occupancy') keepOccupancy(); return r; });
+  };
   function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
 
-  var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, limit: limit, listsAt: listsAt, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
+  var ctx = { save: save, data: data, refresh: refresh, noteMove: noteMove, refreshOccupancy: refreshOccupancy, readOptional: readOptional, limit: limit, listsAt: listsAt, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
 
   /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
   function showMe() {

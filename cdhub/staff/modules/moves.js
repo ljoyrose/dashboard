@@ -29,12 +29,27 @@
     var h = c.h, tag = c.params.tag;
     function say(text, kind) { return h('p', { class: 'msg ' + (kind || ''), role: 'status', text: text }); }
     host.textContent = 'Loading...';
-    Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting'), c.readOptional('weight'), c.readOptional('breeding_rule')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting'), c.readOptional('weight'), c.readOptional('breeding_rule')]).then(show);
+    function show(v) {
       var d = v[0], tags = v[1], capacity = v[2].rows, access = v[3].rows, litters = v[4].rows, settings = v[5].rows;
       // size from the latest weight (Lisa, 12 Nov 2026), the same rule as the dog cards. Until the save script lets
       // this page read weights, the size on the dog's record is still used.
       host.textContent = '';
       if (!d.ok) { host.appendChild(say(d.message, 'bad')); return; }
+      /* Refresh (overseer 22 Nov 2026): reads where the dogs are again, only that list, then draws this screen again */
+      if (c.refreshOccupancy) {
+        var refreshMsg = h('p', { role: 'status' });   // gets class msg only when it has words, so it is never the screen's first .msg
+        host.appendChild(h('div', { class: 'moves-refresh', style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, [
+          h('button', { class: 'btn quiet', type: 'button', 'data-refresh-occupancy': '1', text: 'Refresh', onclick: function (e) {
+            e.target.disabled = true; refreshMsg.className = 'msg'; refreshMsg.textContent = 'Reading where the dogs are...';
+            c.refreshOccupancy().then(function (r) {
+              if (r.ok) { show(v); return; }
+              e.target.disabled = false; refreshMsg.className = 'msg bad'; refreshMsg.textContent = 'Not refreshed: ' + (r.message || 'try again.');
+            });
+          } }),
+          h('span', { class: 'as-of', 'data-as-of': '1', text: 'as of ' + BLDDone.hhmm(d.asOf ? new Date(d.asOf) : null) })]));
+        host.appendChild(refreshMsg);
+      }
       var action = (settings.filter(function (s) { return s.setting_key === 'over_capacity_action'; }).pop() || {}).value === 'refuse' ? 'refuse' : 'reason';
       var subj = {}; d.raw.subject.forEach(function (s) { subj[s.id] = s; });
       var damOfLitter = {}; litters.forEach(function (l) { damOfLitter[l.id] = l.dam_subject_id; });
@@ -118,8 +133,11 @@
       function saveMove(dogId, room, note, done) {
         var f = { subject_id: dogId, area_id: room.areaId };
         if (note) f.classification_note = note;
+        /* shown in the new room straight away; a refused save puts the dog back */
+        var undo = c.noteMove ? c.noteMove({ id: 'local-' + Date.now() + '-' + dogId, subject_id: dogId, area_id: room.areaId, moved_in: today }) : function () {};
         c.save.submit('occupancy', f, { requestId: c.save.newRequestId() }).then(function (res) {
           if (res.ok) { room.added = (room.added || []).concat([dogId]); room.at = Date.now(); setRoom(room); }
+          else undo();
           done(res);
         });
       }
@@ -154,17 +172,19 @@
       function outcome(results) {
         results.forEach(function (x) {
           var res = x.res, ok = res.ok;
-          host.appendChild(say(ok ? labelOf(x.id) + (res.status === 'queued' ? ': sent for approval.' : ': moved. ' + BLDDone.by(res)) : labelOf(x.id) + ': not saved. ' + res.message + (res.fields ? ' ' + Object.keys(res.fields).map(function (k) { return res.fields[k]; }).join(' ') : ''), ok ? 'good' : 'bad'));
+          host.appendChild(say(ok ? labelOf(x.id) + (res.status === 'queued' ? ': sent for approval.' : ': moved. ' + BLDDone.by(res)) : labelOf(x.id) + ': Not saved: ' + (res.message || 'try again.') + (res.fields ? ' ' + Object.keys(res.fields).map(function (k) { return res.fields[k]; }).join(' ') : ''), ok ? 'good' : 'bad'));
         });
       }
 
       function drawDog(id, fromRoom) {
         var dog = d.dogs.filter(function (x) { return x.id === id; })[0], room = fromRoom ? null : getRoom();
         host.appendChild(h('h2', { text: labelOf(id) }));
-        host.appendChild(h('p', { class: 'sub', text: dog ? (dog.known ? 'Last recorded in ' + dog.areaLabel : 'Room not recorded yet') : 'Not on the list of dogs on site.' }));
+        var last = h('p', { class: 'sub', 'data-last-room': '1' });
+        function lastLine() { var now = d.dogs.filter(function (x) { return x.id === id; })[0]; last.textContent = now ? (now.known ? 'Last recorded in ' + now.areaLabel : 'Room not recorded yet') : 'Not on the list of dogs on site.'; }
+        lastLine(); host.appendChild(last);
         if (room && dog) {
           if (dog.areaId === room.areaId || (room.added || []).indexOf(id) >= 0) host.appendChild(say('Already recorded in ' + room.label + '.', 'good'));
-          else moveOrWarn([id], room, function (results, r) { outcome(results); host.appendChild(h('p', { class: 'sub', text: capLine(r) })); });
+          else moveOrWarn([id], room, function (results, r) { lastLine(); outcome(results); host.appendChild(h('p', { class: 'sub', text: capLine(r) })); });
         } else if (!fromRoom) host.appendChild(say('Scan a room sign first to move this dog.', 'warn'));
         if (dog) host.appendChild(removeBox(id));
       }
@@ -198,7 +218,7 @@
           moveOrWarn(moving, room, function (results, r) { outcome(results); host.appendChild(h('p', { class: 'sub', text: capLine(r) })); });
         } }));
       }
-    });
+    }
   }
   StaffPage.register({ id: 'moves', title: 'Scan', icon: ctxIcons.scan, order: 10, open: open });
 }());

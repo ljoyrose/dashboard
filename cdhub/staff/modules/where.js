@@ -5,7 +5,8 @@ StaffPage.register({ id: 'where', title: 'Where', icon: StaffPage.ctx.icons.dogs
     var d = x[0], cap = x[1];
     host.textContent = '';
     if (!d.ok) { host.appendChild(c.h('p', { class: 'msg bad', text: d.message })); return; }
-    BLDScreens.locationConfirm(host, { save: c.save, dogs: d.dogs, areas: sleepingRooms(d.areas, cap, c.today()), skipped: d.skipped, offSite: true });
+    BLDScreens.locationConfirm(host, { save: c.save, dogs: d.dogs, areas: sleepingRooms(d.areas, cap, c.today()), skipped: d.skipped, offSite: true,
+      onMoved: function (id, to) { if (c.noteMove) c.noteMove(to ? { id: 'local-' + Date.now() + '-' + id, subject_id: id, area_id: to, moved_in: c.today() } : { id: 'local-' + Date.now() + '-' + id, subject_id: id, off_site_kind: 'temporary', moved_in: c.today() }); } });
     findDog(host, c);
   });
 } });
