@@ -336,14 +336,14 @@ test.describe('The Round: scan and move', () => {
     script.mode.save = 'fail';
     await scan(page, 'DOGAAAAD');                                          // Dog A04, from Room 1
     await expect(page.getByRole('heading', { name: 'Dog A04' })).toBeVisible();
-    await expect(page.locator('#screen .msg.bad').first()).toContainText('Dog A04: not saved.');
+    await expect(page.locator('#screen .msg.bad').first()).toContainText('Dog A04: Not saved:');
     script.mode.save = 'ok';
     await scan(page, 'ROOMAAAB');
     await scan(page, 'DOGAAAAD');
     await expect(page.locator('#screen .msg.good').first()).toContainText('Dog A04: moved.');
     expect(script.sent[script.sent.length - 1]).toMatchObject({ table: 'occupancy', fields: { subject_id: 'sub-a04', area_id: 'ar-2' } });
     await scan(page, 'ROOMAAAB');                                          // the room again, then the same card: it is not moved twice
-    await expect(page.locator('.cards .card .nm')).toHaveText(['Dog A05', 'Dog A06', 'Dog A04']);
+    await expect(page.locator('.cards .card .nm')).toHaveText(['Dog A04', 'Dog A05', 'Dog A06']);   // the moved dog is in the room's list at once, in name order
     await scan(page, 'DOGAAAAD');
     await expect(page.locator('#screen .msg.good').first()).toHaveText('Already recorded in Room 2.');
     expect(script.sent.filter((b) => b.table === 'occupancy')).toHaveLength(2);   // the failed try and the one that landed
@@ -387,5 +387,48 @@ test.describe('The Round: scan and move', () => {
     await expect(page.getByText('Scan a room sign first to move this dog.')).toBeVisible();
     await scan(page, 'ZZZZZZZZ');
     await expect(page.getByText('This QR code is not recognised or has been retired.')).toBeVisible();
+  });
+});
+
+// Overseer 22 Nov 2026: after a move the screen still showed the old room until a full reload (a long wait).
+test.describe('Scan and move: the move shows at once, with no read again', () => {
+  const scan = async (page, tag) => { await page.goto('cdhub/staff/#mv/' + tag); };
+  const reads = (page) => { const r = []; page.on('request', (q) => { if (q.method() === 'POST') { try { const b = JSON.parse(q.postData() || '{}'); if (String(b.action).indexOf('read') === 0) r.push(b.table || (b.tables || []).join(',') || b.action); } catch (e) { /* not JSON */ } } }); return r; };
+
+  test('a saved move shows the dog in its new room and out of the old one, with no read of the lists @regression', async ({ page }) => {
+    const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
+    await scan(page, 'ROOMAAAB');
+    await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();
+    const seen = reads(page), occBefore = script.tables.occupancy.length;
+    await scan(page, 'DOGAAAAD');                                          // Dog A04, from Room 1
+    await expect(page.locator('#screen .msg.good').first()).toContainText('Dog A04: moved.');
+    await expect(page.locator('[data-last-room]')).toHaveText('Last recorded in Room 2');
+    script.tables.occupancy.length = occBefore;                            // a later read would not have it: the screen must not need one
+    await scan(page, 'ROOMAAAA');                                          // Room 1: the dog has gone from it
+    await expect(page.getByRole('heading', { name: 'Room 1', exact: true })).toBeVisible();
+    await expect(page.locator('.cards .card .nm', { hasText: 'Dog A04' })).toHaveCount(0);
+    await scan(page, 'ROOMAAAB');                                          // Room 2: the dog is in its list
+    await expect(page.locator('.cards .card .nm', { hasText: 'Dog A04' })).toHaveCount(1);
+    expect(seen.filter((x) => /occupancy|subject|area,/.test(x) && x !== 'qr_tag')).toEqual([]);   // the dogs and rooms were not read again
+  });
+
+  test('a refused move puts the dog back and says Not saved with the reason', async ({ page }) => {
+    const { script } = await round(page, { tables: (t) => { t.occupancy = t.occupancy.filter((r) => r.subject_id !== 'sub-a12'); } });
+    await scan(page, 'ROOMAAAB');
+    script.mode.save = 'refused';
+    await scan(page, 'DOGAAAAD');
+    await expect(page.locator('#screen .msg.bad').first()).toHaveText('Dog A04: Not saved: Check the entry.');
+    await expect(page.locator('[data-last-room]')).toHaveText('Last recorded in Room 1');
+  });
+
+  test('Refresh reads where the dogs are, and only that list, and says as of when', async ({ page }) => {
+    await round(page);
+    await scan(page, 'ROOMAAAB');
+    await expect(page.locator('[data-as-of]')).toHaveText(/^as of \d\d:\d\d$/);
+    const seen = reads(page);
+    await page.locator('[data-refresh-occupancy]').click();
+    await expect(page.getByRole('heading', { name: 'Room 2', exact: true })).toBeVisible();
+    await expect.poll(() => seen.length).toBe(1);
+    expect(seen).toEqual(['occupancy']);
   });
 });
