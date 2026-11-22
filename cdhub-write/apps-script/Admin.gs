@@ -89,6 +89,20 @@ function adminCreateEmptyTables() {
 }
 
 /** 6. Plain-English health check. Changes nothing. */
+/** Columns the dog card, files and links saves need in a file (they check by name, not exact order), or null. */
+function saveNeedFor_(title) {
+  var out = null;
+  var specs = [];
+  if (typeof DOGCARD_ !== 'undefined') Object.keys(DOGCARD_).forEach(function (k) { specs.push(DOGCARD_[k]); });
+  if (typeof LINKS_ !== 'undefined') specs.push(LINKS_);
+  specs.forEach(function (sp) {
+    if (!sp || sp.file !== title || !sp.need) return;
+    out = out || [];
+    sp.need.forEach(function (c) { if (out.indexOf(c) < 0) out.push(c); });
+  });
+  return out;
+}
+
 function adminCheckSetup() {
   var ok = true;
   function say(good, msg) { if (!good) ok = false; Logger.log((good ? 'OK   ' : 'FIX  ') + msg); }
@@ -101,7 +115,13 @@ function adminCheckSetup() {
     try {
       var r = store_read_(title, false);
       if (!r) { Logger.log('--   ' + title + ' does not exist yet (fine until you switch that table on)'); return; }
-      var spec = specFor_(title), want = spec ? spec.columns : (inspectHeader_(title) || codeRegisterHeader_(title) || BLD.PENDING_COLUMNS);
+      var spec = specFor_(title), need = spec ? null : saveNeedFor_(title);
+      if (need) { // dog card, files and links saves only need their columns present, in any order, so check the same way
+        var miss = need.filter(function (c) { return r.header.indexOf(c) < 0; });
+        say(!miss.length, title + ' exists with ' + r.records.length + ' row(s); ' + (miss.length ? 'header has no ' + miss.join(', ') : 'header has every column the save needs'));
+        return;
+      }
+      var want = spec ? spec.columns : (inspectHeader_(title) || codeRegisterHeader_(title) || BLD.PENDING_COLUMNS);
       say(sameHeader_(r.header, want), title + ' exists with ' + r.records.length + ' row(s); header ' + (sameHeader_(r.header, want) ? 'matches' : 'DOES NOT MATCH'));
     } catch (e) { say(false, title + ': ' + (e.userMessage || e)); }
   });
