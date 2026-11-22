@@ -45,7 +45,6 @@ test('Import readings: every row checked and shown, nothing saved before the pre
   await page.goto('cdhub/staff/#m/temperature');
   await page.getByRole('button', { name: 'Import readings', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Import readings' })).toBeVisible();
-  await expect(page.getByText('Each reading is saved as typed; its entry time shows it was entered later.', { exact: false })).toBeVisible();
   // the starter file: the heading row and one row per thermometer
   const href = decodeURIComponent((await page.locator('[data-timp-template]').getAttribute('href')).replace(/^data:text\/csv;charset=utf-8,/, ''));
   expect(href.split('\r\n')[0]).toBe('date,room,thermometer,slot,min,max,room_empty,note');
@@ -57,7 +56,7 @@ test('Import readings: every row checked and shown, nothing saved before the pre
     + '2026-11-11,Nowhere,,day,13.0,19.0,,\n'               // unknown room
     + '2026-10-20,H5/6,H6,overnight,11.5,17.0,,\n';         // 23 days ago: saves with the confirm
   await page.locator('[data-timp-file]').setInputFiles({ name: 'readings.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
-  await expect(page.locator('[data-timp-count]')).toHaveText('2 of 4 rows ready to import; the others show the reason and will not be saved.');
+  await expect(page.locator('[data-timp-count]')).toHaveText('2 of 4 rows ready to import; the others show the reason and will not be saved. Each is saved as typed; its entry time shows it was entered later.');
   const rows = page.locator('.tg-tab tbody tr');
   await expect(rows.nth(1)).toContainText('already recorded for that slot');
   await expect(rows.nth(2)).toContainText('room not found: use its code as on the round');
