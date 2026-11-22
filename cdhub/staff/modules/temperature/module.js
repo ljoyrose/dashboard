@@ -74,6 +74,9 @@
       .formatToParts(d || new Date()).forEach(function (x) { p[x.type] = x.value; });
     return { date: p.year + '-' + p.month + '-' + p.day, hour: parseInt(p.hour, 10) % 24 };
   }
+  function dayShift(iso, n) { var d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function dayBefore(iso) { return dayShift(iso, -1); }
+  function dayAfter(iso) { return dayShift(iso, 1); }
   /** London offset at that wall time, as +00:00 / +01:00. */
   function londonIso(dateIso, hh) {
     var guess = new Date(dateIso + 'T' + hh + ':00:00Z'), lp = londonParts(guess);
@@ -470,6 +473,14 @@
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day.value)) { setMsg(msg, ''); return; }
       var slot = slotFor(day.value, half.value);
       if (!(day.value < today.date || (day.value === today.date && half.value === 'am' && today.key === 'pm'))) { setMsg(msg, 'That is now or later: use the round.', 'bad'); return; }
+      if (o.readFrom && !(o.loadedFrom && o.loadedFrom <= day.value)) {
+        var want = day.value; setMsg(msg, 'Loading...');
+        o.readFrom(want).then(function (rows) {
+          if (day.value !== want) return;
+          if (!rows) { setMsg(msg, 'The readings for that day did not load, so it cannot show what is already saved. Try again.', 'bad'); return; }
+          o.readings = rows.concat((o.readings || []).filter(function (r) { return r._local; })); o.loadedFrom = want; show(); });
+        return;
+      }
       setMsg(msg, '');
       var places = roundAreas(o.areas, o.thermos, slot.date, o.req), done = doneFor(o.readings, places, slot.periodStart);
       if (!places.length) { list.appendChild(say('No thermometer was needed that day.')); return; }
@@ -481,7 +492,7 @@
           o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot, rules: o.rules,
             dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length,
             limit: limitFor(a.id, o.bands, (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }), slot.date),
-            onSaved: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); },
+            onSaved: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart, _local: true }); },
             onDone: function () { show(); } }));
         } }, [h('div', { class: 'nm', text: (done[k] ? '✓ ' : '') + a.label }), done[k] ? h('div', { class: 'ds', text: 'Already has a reading' }) : null]));
       });
@@ -805,7 +816,17 @@
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
+    // 22 Nov 2026 (Temps took 45-110 s on every open): the slow lists are read once a session and shared (the save
+    // library keeps them in this page's memory); readings are read fresh, only from yesterday on (taken_at), which is
+    // all the round needs. Earlier reads further back when a past day is picked. An older script that refuses the
+    // filter gets the plain read. The whole wait gives up after 45 s with Try again.
+    var recentFrom = dayBefore(slotNow().date);
+    function readSince(from) {
+      var f = { from: from, to: dayAfter(slotNow().date) };
+      return c.readOptional('area_reading', f).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.readOptional('area_reading'); });
+    }
+    var LISTS = ['area', 'subject', 'occupancy', 'subject_status', 'requirement', 'temperature_band', 'thermometer', 'area_link', 'breeding_rule'];
+    (c.limit || function (p) { return p; })(Promise.all([c.data(), c.readOptional('temperature_band'), readSince(recentFrom), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]), host, function () { openStaff(host, c); }).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
@@ -826,10 +847,20 @@
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back();
-            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), rules: rules, setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
+            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), rules: rules, setStop: function (f) { stop = f; },
+              loadedFrom: v[2].ok ? recentFrom : '', readFrom: function (from) { return readSince(from).then(function (r) { return r.ok ? linked(r.rows, links) : null; }); } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
           mayReport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }, [h0('span', { class: 'ic', html: ICON.page }), 'Report']) : null,
-          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null
+          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null,
+          asOf()
         ].filter(Boolean));
+      }
+      /* the rooms, dogs and limits are kept for the session: say when they were read, with Refresh (readings are always fresh) */
+      function asOf() {
+        var at = c.listsAt ? c.listsAt(LISTS) : 0;
+        if (!at) return null;
+        var t = new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+        return h0('p', { class: 'mut', 'data-lists-asof': '1', style: 'flex-basis:100%;margin:8px 0 0' }, ['Rooms and dogs as of ' + t + ' ',
+          h0('button', { class: 'btn quiet', type: 'button', 'data-lists-refresh': '1', text: 'Refresh', onclick: function () { if (stop) stop(); stop = null; host.textContent = 'Loading...'; c.refresh().then(function () { openStaff(host, c); }); } })]);
       }
       var sub = h('div');
       function back() { host.textContent = ''; host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: start })); host.appendChild(sub); }

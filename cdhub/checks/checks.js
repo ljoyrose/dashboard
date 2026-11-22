@@ -94,18 +94,34 @@
     msg.setAttribute('role', 'status');
     host.appendChild(msg);
 
-    return save.checkStatus().then(function () {
+    // 22 Nov 2026: "Loading the checks..." stays until the form draws (the saving line only comes with the form), the
+    // lists are read together and shared for the session (save library), and the wait gives up after 45 s with Try again.
+    var LIMIT_MS = typeof opts.limitMs === 'number' ? opts.limitMs : 45000;
+    function tooLong() {
+      if (host.querySelector('[data-load-retry]')) return { ok: false, reason: 'timeout' };
+      msg.textContent = 'The records did not answer in 45 seconds. Nothing is lost. Try again.';
+      var again = make(doc, 'button', 'bs-btn', 'Try again'); again.type = 'button'; again.setAttribute('data-load-retry', '1');
+      again.addEventListener('click', function () { mount(host, save, opts); });
+      host.appendChild(again);
+      return { ok: false, reason: 'timeout' };
+    }
+    var work = save.checkStatus().then(function () {
       var b = save.banner('check_log');
-      msg.textContent = b.text;
-      if (!b.canSave) return { ok: false, reason: 'off' };
+      if (!b.canSave) { msg.textContent = b.text; return { ok: false, reason: 'off' }; }
       return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status', 'requirement'], ['subject', 'occupancy', 'subject_status', 'requirement']).then(function (all) {
+        if (!all.ok && (all.code === 'TIMEOUT' || all.code === 'NETWORK' || all.code === 'BUSY')) return tooLong();   // slow, not refused: the code stays
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
+        msg.textContent = b.text;
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
-        if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
+        if (!types.length) { msg.textContent = 'No checks have been set up yet.'; return { ok: false, reason: 'none' }; }
+        if (timedOut) return { ok: false, reason: 'timeout' };
         draw(host, save, types, (all.tables.area || []).filter(function (a) { return typeof BLDOccupancy === 'undefined' || BLDOccupancy.inUse(a, londonToday(opts.now), all.tables.requirement); }), onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });
+    var timedOut = false, timer = null;
+    var cap = new Promise(function (r) { timer = setTimeout(function () { timedOut = true; r(tooLong()); }, LIMIT_MS); });
+    return Promise.race([work.then(function (x) { clearTimeout(timer); return x; }), cap]);
   }
 
   function draw(host, save, types, areas, dogs, startKey, msg) {
