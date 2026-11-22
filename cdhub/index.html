@@ -2824,6 +2824,9 @@ document.addEventListener('click',async function(ev){
   var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
   var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
+  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
+     the screen says so instead of "Not saved". */
+  if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
   if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply(); }
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';

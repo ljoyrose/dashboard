@@ -99,3 +99,18 @@ test('a refused save keeps Photos open, says Not saved, and the photo stays', as
   await expect(gal('sub-g1').locator('> summary')).toHaveText('Photos (2)');
   expect(await page.evaluate(() => localStorage.getItem('cdhub.link.ends'))).toBeNull();
 });
+
+// Lisa 22 Nov 2026, after a reload: the phone showed its old copy (from before the removal), so the photo was back; a
+// second × was refused by the save script ("That link has already ended") and looked like a failure. It is gone.
+test('× on a photo the save script says is already removed takes it away and says Saved', async ({ page, guard }) => {
+  const { sent, release, gal } = await setUp(page, guard, { reply: { ok: false, code: 'NOT_ALLOWED', message: 'That link has already ended.' } });
+  await gal('sub-g1').locator('.gi[data-file="fil-2"] [data-gal-end]').click();
+  release();
+  await expect(gal('sub-g1').locator('[data-gal-msg]')).toHaveText('✓ Saved');
+  await expect(gal('sub-g1').locator('> summary')).toHaveText('Photos (1)');
+  await expect(gal('sub-g1')).toHaveAttribute('open', '');
+  expect(sent).toHaveLength(1);
+  await page.reload();
+  await page.evaluate(() => go('dogs'));
+  await expect(gal('sub-g1').locator('> summary')).toHaveText('Photos (1)');
+});
