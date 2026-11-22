@@ -288,10 +288,13 @@ function sinkSpecFor_(req, who) {
 
 /**
  * MANY ADDS IN ONE REQUEST (OV12 20 Nov 2026: a round of 36 readings was 36 requests, each paying sign-in, the room-moves
- * pass and its own wait for the lock). {action:'add_many', code, items:[{request_id, table, fields}]}: signed in once,
+ * pass and its own wait for the lock). {action:'add_many', code, items:[{request_id, action?, table, fields}]}: signed in once,
  * one lock, each item checked and saved exactly as a single add (its own repeat checks, its own request id, remembered
  * for 6 hours like a single save, so any later resend of one item gets its first answer). One item refused does not stop
  * the rest. Returns {items:[{request_id, ok, result} or {request_id, ok:false, code, message, fields}]} in the order sent.
+ * An item's action is 'add' (the default) or 'add_site' (a whole-site staff check, with exactly the single tap's checks:
+ * the Daily records import, 22 Nov 2026). Once LIMITS.MAX_BATCH_MS has passed inside the lock no new item starts: the
+ * rest answer NOT_SENT, which the page sends again (with the same request ids, so nothing saves twice).
  */
 function sinkHandleMany_(req, now, nowMs) {
   var items = req.items;
@@ -318,9 +321,12 @@ function sinkHandleMany_(req, now, nowMs) {
       try {
         var known = cache.get('rid:' + rid);
         if (known) { var a = JSON.parse(known); a.repeat = true; out[i] = { request_id: rid, ok: true, result: a }; return; }
-        var one = { v: 1, request_id: rid, action: 'add', table: it.table, fields: it.fields && typeof it.fields === 'object' ? it.fields : {} };
+        if (Date.now() - tIn > BLD.LIMITS.MAX_BATCH_MS) { out[i] = { request_id: rid, ok: false, code: 'NOT_SENT', message: 'Not sent yet. Send again.' }; return; }
+        var act = it.action === 'add_site' ? 'add_site' : 'add';
+        if (it.action && it.action !== 'add' && it.action !== 'add_site') throw err_('BAD_REQUEST', 'Only adds and whole-site taps can be sent together.');
+        var one = { v: 1, request_id: rid, action: act, table: it.table, fields: it.fields && typeof it.fields === 'object' ? it.fields : {} };
         var spec = sinkSpecFor_(one, who);
-        var r = sinkProcess_(spec, one, who, now, nowMs);
+        var r = act === 'add_site' ? sinkSiteProcess_(spec, one, who, now, nowMs) : sinkProcess_(spec, one, who, now, nowMs);
         cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
         out[i] = { request_id: rid, ok: true, result: r };
       } catch (e) {

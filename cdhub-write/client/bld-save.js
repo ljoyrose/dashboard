@@ -216,7 +216,7 @@
     // Answers that mean "not this time" (no signal, script busy or switched off, not set up yet): the entry stays kept
     // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
     // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
-    var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
+    var RETRY_ON = { NETWORK: 1, NOT_SENT: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
     function refused(j) { return !!(j && !j.ok && j.code && !RETRY_ON[j.code]); }
     var outboxFns = [], inFlight = {};
     function jsonList(k) { try { var a = JSON.parse(get(local, k) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
