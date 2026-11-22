@@ -99,3 +99,14 @@ test('import: title lines above the heading row are left out, never shown as a r
   assert.equal(rows[0].ok, true);
   assert.equal(rows[0].line, 1);
 });
+
+// Lisa 22 Nov 2026: "Imported 1 of 16", the rest refused as "more than 7 days ago. Save anyway?". The owner has seen every
+// date before pressing Import, so a row older than 7 days is sent with the save-anyway answer; a recent row is not.
+test('import: a row older than 7 days is sent with the save-anyway answer; a recent row is not', () => {
+  const v = base([]);
+  const rows = C.parseImport(v, 'date,job,outcome,note\r\n2026-11-10,food_bowls,done,\r\n2026-11-11,food_bowls,done,\r\n2026-10-01,food_bowls,done,\r\n');
+  assert.deepEqual(rows.map((x) => x.old), [true, false, true]);
+  assert.equal(C.importFields(v, rows[0]).confirm_unusual, 'yes');
+  assert.equal('confirm_unusual' in C.importFields(v, rows[1]), false);
+  assert.match(C.previewHtml(v, rows), /ready \(older than 7 days\)/);
+});
