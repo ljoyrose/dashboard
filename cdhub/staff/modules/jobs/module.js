@@ -66,7 +66,7 @@
         if (row.kind === 'subject') { target.subject_id = row.ref_id; title = ((d.subjects.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Dog'; }
         if (row.kind === 'litter') {
           var lit = (v[4].rows || []).filter(function (x) { return x.id === row.ref_id; })[0] || {}, dam = d.subjects.filter(function (x) { return x.id === lit.dam_subject_id; })[0];
-          target.litter_id = row.ref_id; title = dam ? 'Litter of ' + dam.label : 'Litter';
+          target.litter_id = row.ref_id; target.born = lit.dob || lit.born_on || ''; title = dam ? 'Litter of ' + dam.label : 'Litter';
         }
         if (row.kind === 'area') { target.area_id = row.ref_id; title = ((d.areas.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Room'; }
       }
