@@ -98,3 +98,16 @@ test('an owner note covering a past period shows once on the Jobs card, with the
   assert.match(html, /Owner’s note: All daily and weekly checks/);
   assert.match(html, /entered 2026-11-17 by Pat/);
 });
+
+// Lisa 17 Nov 2026 ("is that not for the app user to decide? Its their app"): the words for how a record was made are
+// the owner's rows job.how.<how>.label; "off" hides them; no row = the starter words. The record keeps how_recorded.
+test('how a record was made is shown in the owner\'s words, hidden with "off", starter words with no row', () => {
+  const rule = (how, value, from) => ({ rule_key: 'job.how.' + how + '.label', value, effective_from: from || '2026-01-01' });
+  const v = { rules: [rule('site_tap', 'All done'), rule('tapped', 'off'), rule('scanned', 'QR', '2026-12-01')] };
+  assert.equal(V.howLabel(v, 'site_tap', '2026-11-17'), 'All done');
+  assert.equal(V.howLabel(v, 'tapped', '2026-11-17'), '');
+  assert.equal(V.howLabel(v, 'scanned', '2026-11-17'), 'opened from tag');   // its row starts later
+  assert.equal(V.howLabel(v, 'scanned', '2026-12-02'), 'QR');
+  assert.equal(V.howLabel({ rules: [] }, 'site_tap', '2026-11-17'), 'whole-site tap');
+  assert.equal(V.howLabel(v, '', '2026-11-17'), '');
+});
