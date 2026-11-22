@@ -217,7 +217,15 @@
     // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
     // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
     var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
-    function refused(j) { return !!(j && !j.ok && j.code && !RETRY_ON[j.code]); }
+    /* SIGN IN AGAIN (Lisa 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
+       script says this sign-in or code may not save, nothing was wrong with the entry, so it is never refused for that:
+       it stays kept and waits until someone signs in again or enters a code, then goes by itself. It is not sent again
+       with the same sign-in or code (a wrong code counts towards the lock-out). */
+    var SIGN_IN = { GOOGLE_NOT_OWNER: 1, NO_CODE: 1, BAD_CODE: 1 };
+    var SIGNIN_MSG = 'Not sent yet: sign in again (or enter your code). It is kept on this phone and goes by itself once you do, so do not type it again.';
+    var authWait = null;   // the sign-in that was turned down; nothing is sent with it again
+    function authNow() { return getCode() + '|' + googleFn(); }
+    function refused(j) { return !!(j && !j.ok && j.code && !RETRY_ON[j.code] && !SIGN_IN[j.code]); }
     var outboxFns = [], inFlight = {};
     function jsonList(k) { try { var a = JSON.parse(get(local, k) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
     function outboxRead() { return jsonList(OUTBOX_KEY); }
@@ -238,12 +246,21 @@
       put(local, REFUSED_KEY, JSON.stringify(rf.slice(-50)));
     }
     /** After an answer: saved (or already saved) and refused leave the box; anything else keeps it for another try. */
-    function settle(id, j) {
-      if (j && (j.ok || j.code === 'DUPLICATE')) { dropEntry(id); return true; }
+    function settle(id, j, auth) {
+      if (j && (j.ok || j.code === 'DUPLICATE')) { authWait = null; dropEntry(id); return true; }
       if (refused(j)) { refuseEntry(id, j); dropEntry(id); return true; }
+      if (j && !j.ok && SIGN_IN[j.code] && auth != null) { authWait = auth; outboxNotify(); }
       scheduleRetry(60000);
       return false;
     }
+    /** true while kept entries wait for someone to sign in again (or enter a code). */
+    function needsSignIn() { return outboxRead().length > 0 && (!hasAuth() || authWait === authNow()); }
+    /** An entry pressed while no one is signed in: kept, not sent, and goes once someone signs in. */
+    function keptForSignIn(body) {
+      keepEntry(body); scheduleRetry(60000);
+      return Promise.resolve({ ok: false, code: 'NO_CODE', kept: true, signIn: true, requestId: body.request_id, message: SIGNIN_MSG });
+    }
+    function keptAnswer(j) { return SIGN_IN[j.code] ? { ok: false, code: j.code, kept: true, signIn: true, message: SIGNIN_MSG } : { ok: false, code: j.code, kept: true, message: KEPT_MSG }; }
     function postOnce(body) {
       return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow',
@@ -254,9 +271,9 @@
     /** One kept entry, sent with its own request id and the code held now. Never sent twice at once from this page. */
     function sendKept(item) {
       if (inFlight[item.id]) return inFlight[item.id];
-      var body = withGoogle(Object.assign({}, item.body, { code: getCode() }));
+      var auth = authNow(), body = withGoogle(Object.assign({}, item.body, { code: getCode() }));
       var p = oneAtATime(function () { return postOnce(body); })
-        .then(function (j) { settle(item.id, j); }, function () { scheduleRetry(60000); });
+        .then(function (j) { settle(item.id, j, auth); }, function () { scheduleRetry(60000); });
       inFlight[item.id] = p;
       var off = function () { delete inFlight[item.id]; };
       p.then(off, off);
@@ -268,7 +285,7 @@
       if (flushing) return flushing;
       var now = Date.now(), all = outboxRead();
       var due = all.filter(function (x) { return (o && o.old) || now - Date.parse(x.at) < OUTBOX_AUTO_MS; });
-      if (!due.length || !scriptUrl || !doFetch || !hasAuth()) return Promise.resolve(all.length);
+      if (!due.length || !scriptUrl || !doFetch || !hasAuth() || authWait === authNow()) return Promise.resolve(all.length);
       flushing = due.reduce(function (p, item) { return p.then(function () { return sendKept(item); }); }, Promise.resolve())
         .then(function () { flushing = null; outboxNotify(); return outboxRead().length; }, function () { flushing = null; return outboxRead().length; });
       return flushing;
@@ -278,6 +295,8 @@
       count: function () { return outboxRead().length; },
       items: function () { return outboxRead().map(function (x) { return { id: x.id, at: x.at, table: x.body.table || '', action: x.body.action || '', fields: x.body.fields || {}, old: isOld(x) }; }); },
       refused: function () { return jsonList(REFUSED_KEY); },
+      /** true while kept entries wait for someone to sign in again (or enter a code). */
+      needsSignIn: needsSignIn,
       dismissRefused: function (id) { put(local, REFUSED_KEY, JSON.stringify(jsonList(REFUSED_KEY).filter(function (x) { return x.id !== id; }))); outboxNotify(); },
       /** Send now. {old: true} also sends entries past 5 hours, after the person has checked the records. */
       flush: flush,
@@ -405,7 +424,7 @@
       if (!spec) return Promise.resolve({ ok: false, code: 'BAD_REQUEST', message: 'Unknown table.' });
       var b = banner(tableKey);
       if (!b.canSave) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: b.text });
-      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      var signedIn = hasAuth();
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
       var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
@@ -416,13 +435,15 @@
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
+      if (!signedIn) return keptForSignIn(body);
+      var auth = authNow();
       keepEntry(body);
       var sent = oneAtATime(function () { return postOnce(body); }, o.onTurn);
       inFlight[body.request_id] = sent;
       var off = function () { delete inFlight[body.request_id]; };
       sent.then(off, off);
       return sent.then(function (j) {
-        if (!settle(body.request_id, j) && j && j.ok === false) j = { ok: false, code: j.code, kept: true, message: KEPT_MSG };
+        if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
@@ -432,7 +453,7 @@
             : 'Saved.';
           return res;
         }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
         scheduleRetry(60000);
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
@@ -445,18 +466,19 @@
      */
     function act(action, fields, requestId, onTurn) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
-      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
       var body = withGoogle({ v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} });
+      if (!hasAuth()) return keptForSignIn(body);
+      var auth = authNow();
       keepEntry(body);
       var sent = oneAtATime(function () { return postOnce(body); }, onTurn);
       inFlight[body.request_id] = sent;
       var off = function () { delete inFlight[body.request_id]; };
       sent.then(off, off);
       return sent.then(function (j) {
-        if (!settle(body.request_id, j) && j && j.ok === false) j = { ok: false, code: j.code, kept: true, message: KEPT_MSG };
+        if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
         scheduleRetry(60000);
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };

@@ -4231,7 +4231,15 @@ function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOG
    A refusal (a check failed) leaves the box and is listed as Not saved. The code and Google token are never kept. */
 var HUB_BOX='cdhub.outbox', HUB_REFUSED='cdhub.outbox.refused', HUB_BOX_AUTO=5*3600000,
     HUB_RETRY={NETWORK:1,UNREACHABLE:1,BAD_ANSWER:1,TIMEOUT:1,BUSY:1,CHANGED_DURING_WRITE:1,LOG_FAILED:1,SAVE_OFF:1,TABLE_OFF:1,NOT_CONFIGURED:1,NOT_SET_UP:1,GOOGLE_UNREACHABLE:1,FOLDER_UNREACHABLE:1,NO_CODE:1},   /* 'not this time': kept and tried again; any other answered error is a refusal */
-    HUB_KEPT_MSG='Not sent yet, will retry. Kept on this phone: do not type it again.', hubInFlight={}, hubTimer=null, hubFlushing=null;
+    HUB_KEPT_MSG='Not sent yet, will retry. Kept on this phone: do not type it again.', hubInFlight={}, hubTimer=null, hubFlushing=null,
+    /* SIGN IN AGAIN (Lisa 22 Nov 2026): a Google sign-in lasts about an hour. When it has ended, or the script says this
+       sign-in or code may not save, the entry is kept, never refused: it waits until someone signs in again or enters a
+       code, then goes by itself. It is not sent again with the same sign-in or code (a wrong code counts towards the lock-out). */
+    HUB_SIGN_IN={GOOGLE_NOT_OWNER:1,NO_CODE:1,BAD_CODE:1}, HUB_AUTH_WAIT=null,
+    HUB_SIGNIN_MSG='Not sent yet: sign in again (or enter your code). Kept on this phone: do not type it again.';
+/* Who would send now, without asking anyone: the Google sign-in or the code this phone holds. */
+function hubAuthNow(){ return (staffCodeNow()||'')+'|'+(sinkGoogle()||''); }
+function hubCanSend(){ var a=hubAuthNow(); return a!=='|'&&a!==HUB_AUTH_WAIT; }
 function hubList(k){ try{ var a=JSON.parse(localStorage.getItem(k)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function hubPut(k,a){ try{ if(a.length) localStorage.setItem(k,JSON.stringify(a)); else localStorage.removeItem(k); }catch(e){} hubBoxDraw(); }
 function hubKeep(body){ var b; try{ b=JSON.parse(JSON.stringify(body)); }catch(e){ return; } delete b.code; delete b.google_token;
@@ -4239,8 +4247,9 @@ function hubKeep(body){ var b; try{ b=JSON.parse(JSON.stringify(body)); }catch(e
  var a=hubList(HUB_BOX).filter(function(x){ return x.id!==b.request_id; }); a.push({id:b.request_id,body:b,at:new Date().toISOString()}); hubPut(HUB_BOX,a); }
 function hubDrop(id){ var a=hubList(HUB_BOX), b=a.filter(function(x){ return x.id!==id; }); if(b.length!==a.length) hubPut(HUB_BOX,b); }
 /* After an answer: saved (or already saved) and refused leave the box; 'not this time' (or no answer) keeps it. true = settled. */
-function hubSettle(id,j){
- if(j&&(j.ok||j.code==='DUPLICATE')){ hubDrop(id); return true; }
+function hubSettle(id,j,auth){
+ if(j&&(j.ok||j.code==='DUPLICATE')){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
+ if(j&&!j.ok&&HUB_SIGN_IN[j.code]){ if(auth!=null) HUB_AUTH_WAIT=auth; hubBoxDraw(); hubRetry(60000); return false; }
  if(j&&!j.ok&&j.code&&!HUB_RETRY[j.code]){ var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0];
   if(it){ var rf=hubList(HUB_REFUSED).filter(function(x){ return x.id!==id; }); rf.push({id:id,at:it.at,table:it.body.table||'',fields:it.body.fields||{},message:j.message||j.code||''}); hubPut(HUB_REFUSED,rf.slice(-50)); }
   hubDrop(id); return true; }
@@ -4264,11 +4273,14 @@ function hubFlush(o){
  var now=Date.now(), due=hubList(HUB_BOX).filter(function(x){ return (o&&o.old)||now-Date.parse(x.at)<HUB_BOX_AUTO; });
  if(!due.length) return Promise.resolve(hubList(HUB_BOX).length);
  hubFlushing=(async function(){
+  /* by itself (every minute, on open, signal back): never asks for a code, and waits while no one is signed in */
+  if(!(o&&o.ask)&&!hubCanSend()) return;
   var g=await sinkGate(); if(!g.ok) return;
+  var auth=hubAuthNow();
   for(var i=0;i<due.length;i++){ var it=due[i]; if(hubInFlight[it.id]) continue;
    var b=Object.assign({},it.body,{code:g.code||''}); if(g.google) b.google_token=g.google;
    hubInFlight[it.id]=1;
-   try{ var j=await sinkFetch(b,g.url); if(hubSettle(it.id,j)&&j&&j.ok) hubDelivered(it,j); }
+   try{ var j=await sinkFetch(b,g.url); if(hubSettle(it.id,j,auth)&&j&&j.ok) hubDelivered(it,j); }
    catch(e){ hubRetry(60000); }
    finally{ delete hubInFlight[it.id]; } }
  })().then(function(){ hubFlushing=null; hubBoxDraw(); return hubList(HUB_BOX).length; },function(){ hubFlushing=null; return hubList(HUB_BOX).length; });
@@ -4278,15 +4290,15 @@ function hubBoxDraw(){
  var box=document.getElementById('hub-outbox');
  if(!box){ if(!document.body) return; box=document.createElement('div'); box.id='hub-outbox'; box.setAttribute('role','status'); document.body.insertBefore(box,document.body.firstChild); }
  var items=hubList(HUB_BOX), rf=hubList(HUB_REFUSED), now=Date.now();
- var fresh=items.filter(function(x){ return now-Date.parse(x.at)<HUB_BOX_AUTO; }), old=items.length-fresh.length, h='';
- if(fresh.length) h+='<div class="hob-row"><span data-outbox-waiting="'+fresh.length+'">'+fresh.length+' not sent yet. Kept on this phone: do not type again.</span><button type="button" class="btn" data-outbox-send>'+(hubFlushing?'Sending…':'Send now')+'</button></div>';
+ var fresh=items.filter(function(x){ return now-Date.parse(x.at)<HUB_BOX_AUTO; }), old=items.length-fresh.length, h='', signIn=fresh.length&&!hubCanSend();
+ if(fresh.length) h+='<div class="hob-row"><span data-outbox-waiting="'+fresh.length+'"'+(signIn?' data-outbox-sign-in':'')+'>'+fresh.length+(signIn?' not sent yet: sign in again to send.':' not sent yet.')+' Kept on this phone: do not type again.</span><button type="button" class="btn" data-outbox-send>'+(hubFlushing?'Sending…':'Send now')+'</button></div>';
  if(old) h+='<div class="hob-row"><span data-outbox-old="'+old+'">'+old+' not confirmed (over 5 hours). Check the records first.</span><button type="button" class="btn" data-outbox-send-old>Send</button><button type="button" class="btn quiet" data-outbox-remove-old>Remove</button></div>';
  rf.forEach(function(x){ var w=String((x.fields&&(x.fields.area_id||x.fields.check_type_id||x.fields.subject_id))||x.table||'entry').replace(/^(area|cty|sub)-/,'');
   h+='<div class="hob-row"><span data-outbox-refused="'+esc(x.id)+'">Not saved: '+esc(w)+' ('+esc(hhmmOf(x.at))+'). '+esc(x.message)+' Enter it again.</span><button type="button" class="btn quiet" data-outbox-ok="'+esc(x.id)+'">OK</button></div>'; });
  box.innerHTML=h; box.hidden=!h; }
 document.addEventListener('click',function(e){ var t=e.target&&e.target.closest?e.target.closest('#hub-outbox button'):null; if(!t) return;
- if(t.hasAttribute('data-outbox-send')){ t.disabled=true; t.textContent='Sending…'; hubFlush().then(hubBoxDraw,hubBoxDraw); }
- else if(t.hasAttribute('data-outbox-send-old')){ t.disabled=true; hubFlush({old:true}).then(hubBoxDraw,hubBoxDraw); }
+ if(t.hasAttribute('data-outbox-send')){ t.disabled=true; t.textContent='Sending…'; hubFlush({ask:true}).then(hubBoxDraw,hubBoxDraw); }
+ else if(t.hasAttribute('data-outbox-send-old')){ t.disabled=true; hubFlush({old:true,ask:true}).then(hubBoxDraw,hubBoxDraw); }
  else if(t.hasAttribute('data-outbox-remove-old')){ var now=Date.now(); hubPut(HUB_BOX,hubList(HUB_BOX).filter(function(x){ return now-Date.parse(x.at)<HUB_BOX_AUTO; })); }
  else if(t.hasAttribute('data-outbox-ok')){ var id=t.getAttribute('data-outbox-ok'); hubPut(HUB_REFUSED,hubList(HUB_REFUSED).filter(function(x){ return x.id!==id; })); } });
 window.addEventListener('online',function(){ hubFlush(); });
@@ -4294,6 +4306,10 @@ document.addEventListener('visibilitychange',function(){ if(document.visibilityS
 window.addEventListener('load',function(){ hubBoxDraw(); hubRetry(4000); });
 async function sinkSend(body){
  var g=await sinkGate();
+ if(!g.ok&&g.code==='NO_CODE'){   /* no one signed in (the sign-in ended) and no code given: kept, not lost (22 Nov 2026) */
+  body.v=1; body.request_id=body.request_id||sinkRid(); delete body.code; delete body.google_token;
+  hubKeep(body); hubRetry(60000);
+  return {ok:false,code:'NO_CODE',kept:true,signIn:true,requestId:body.request_id,message:HUB_SIGNIN_MSG}; }
  if(!g.ok) return g;
  body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code||'';
  if(g.google) body.google_token=g.google; else delete body.google_token;
@@ -4304,7 +4320,7 @@ async function sinkSend(body){
   var j=await sinkFetch(body,g.url);
   if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; delete hubInFlight[rid]; return sinkSend(body); }   /* not an owner account: ask the code instead */
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok){ if(g.code) keepStaffCode(g.code); keepSaveUrl(g.url); }
-  if(!hubSettle(rid,j)) return {ok:false,code:(j&&j.code)||'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG};
+  if(!hubSettle(rid,j,(g.code||'')+'|'+(g.google||''))) return HUB_SIGN_IN[j&&j.code]?{ok:false,code:j.code,kept:true,signIn:true,requestId:rid,message:HUB_SIGNIN_MSG}:{ok:false,code:(j&&j.code)||'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG};
   return j;
  }catch(e){ hubRetry(60000); return {ok:false,code:'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG}; }
  finally{ delete hubInFlight[rid]; }
@@ -4313,6 +4329,7 @@ async function sinkPost(table,fields,rid){
  return sinkSend({table:table,action:'add',fields:fields,request_id:rid||undefined});
 }
 function sinkMsg(r,kind){
+ if(r&&r.kept&&r.signIn) return 'Not sent yet: sign in again';
  if(r&&r.kept) return 'Not sent yet, will retry';
  if(r.ok&&r.result&&r.result.status==='saved') return (kind==='move'?'Moved ':'Saved ')+hhmmNow();
  if(r.ok&&r.result&&r.result.status==='queued') return kind==='move'?'Moved, still waiting. Open Compliance, then Who has access, then the owner page.':'Sent, waiting for approval';

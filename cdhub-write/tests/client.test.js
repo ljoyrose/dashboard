@@ -1092,3 +1092,60 @@ test('BUSY that never clears: after 3 retries the person is told, plainly', asyn
   assert.equal(r.code, 'BUSY');
   assert.equal(n, 4);
 });
+
+// SIGN IN AGAIN (Lisa 22 Nov 2026: owner Google sign-in; she enters every reading and maybe only one saves). A Google
+// sign-in lasts about an hour. When it ends mid-round, nothing is lost or refused: every reading stays kept and goes
+// once she signs in again, each saved once.
+test('owner sign-in ends mid-round: every reading is kept, none refused, and all save once after signing in again', async () => {
+  const local = memStore();
+  let token = 'ya29.first-sign-in';
+  const saved = {}, posts = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
+    const b = JSON.parse(init.body); posts.push(b);
+    // the script: the first sign-in has ended on its side once the second reading arrives
+    if (b.google_token !== 'ya29.second-sign-in' && posts.length > 1) return { json: async () => ({ ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.' }) };
+    saved[b.request_id] = (saved[b.request_id] || 0) + 1;
+    return { json: async () => ({ ok: true, result: { status: 'saved', id: 'rdg-' + b.request_id } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: () => token });
+  s.setScriptUrl(GOOD_URL); await s.checkStatus(); s.setLookups({ area: [{ id: 'area-1' }, { id: 'area-2' }, { id: 'area-3' }, { id: 'area-4' }] });
+  const r1 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' });
+  assert.equal(r1.ok, true, JSON.stringify(r1));
+  // the script turns down the sign-in: kept, never listed as Not saved, and the person is asked to sign in again
+  const r2 = await s.submit('area_reading', { area_id: 'area-2', min_c: '18.5', max_c: '21.5' });
+  assert.equal(r2.ok, false); assert.equal(r2.kept, true); assert.equal(r2.signIn, true); assert.match(r2.message, /sign in again/);
+  assert.equal(s.outbox.refused().length, 0, 'never refused for an ended sign-in');
+  assert.equal(s.outbox.needsSignIn(), true);
+  // it is not sent again with the same sign-in
+  const before = posts.length; await s.outbox.flush(); assert.equal(posts.length, before);
+  // the sign-in ends on the phone too: the next readings are kept without being sent
+  token = '';
+  const r3 = await s.submit('area_reading', { area_id: 'area-3', min_c: '19.0', max_c: '22.0' });
+  const r4 = await s.submit('area_reading', { area_id: 'area-4', min_c: '19.5', max_c: '22.5' });
+  assert.equal(r3.kept, true); assert.equal(r3.signIn, true); assert.equal(r4.kept, true);
+  assert.equal(posts.length, before, 'nothing is sent while no one is signed in');
+  assert.equal(s.outbox.count(), 3);
+  assert.ok(!local.m['bld.outbox'].includes('ya29.'), 'the Google sign-in is never kept');
+  // signed in again: every kept reading goes, each saved exactly once, and the box is empty
+  token = 'ya29.second-sign-in';
+  assert.equal(s.outbox.needsSignIn(), false);
+  assert.equal(await s.outbox.flush(), 0);
+  assert.deepEqual(Object.keys(saved).sort(), [r1.requestId, r2.requestId, r3.requestId, r4.requestId].sort());
+  assert.ok(Object.values(saved).every((n) => n === 1), 'each reading saved once');
+  assert.equal(s.outbox.refused().length, 0);
+});
+
+test('a wrong staff code keeps the entry and does not send it again with the same code (the lock-out counts wrong codes)', async () => {
+  const local = memStore(); const posts = [];
+  const f = async (url, init = {}) => { const b = JSON.parse(init.body); posts.push(b);
+    return { json: async () => (b.code === 'RIGHTCODE' ? { ok: true, result: {} } : { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); s.setCode('WRONGCODE');
+  const r = await s.act('link_end', { id: 'a' });
+  assert.equal(r.kept, true); assert.equal(s.outbox.refused().length, 0);
+  await s.outbox.flush(); assert.equal(posts.length, 1, 'not sent again with the same wrong code');
+  s.setCode('RIGHTCODE');
+  assert.equal(await s.outbox.flush(), 0);
+  assert.deepEqual(posts.map((p) => p.request_id), [r.requestId, r.requestId]);
+});

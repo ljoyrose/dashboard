@@ -102,3 +102,45 @@ test('a refusal (a check failed) is not kept: it is listed as Not saved with the
   await bar.locator('[data-outbox-ok]').click();
   await expect(bar).toBeHidden();
 });
+
+// SIGN IN AGAIN (Lisa 22 Nov 2026): the owner saves with her Google sign-in, which lasts about an hour. When it has
+// ended, a save is kept on the phone (never lost, never "Not saved"), the line asks her to sign in again, and once she
+// has, it goes by itself, saved once.
+test('owner sign-in ends: the save is kept, the line says sign in again, and it is saved once after signing in again', async ({ page, guard }) => {
+  rooms(guard.world);
+  const saved = [];
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    let ans;
+    if (body.google_token) { saved.push(body.request_id); ans = { ok: true, result: { status: 'saved', id: 'occ-new', who: 'Lisa', at: '2026-11-13T10:00:00+00:00' } }; }
+    else ans = answer(body);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ans) });
+  });
+  await page.goto('cdhub/');
+  await page.evaluate((url) => { DASH_CONFIG.cdhub.saveScriptUrl = url; }, SINK);
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
+  await expect(card).toBeVisible();
+  // the hour is up: the sign-in has ended on this phone
+  const hold = await page.evaluate(() => { const e = TOKEN_EXP; TOKEN_EXP = 0; return e; });
+  await card.getByRole('button', { name: 'Place' }).click();
+  await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
+  // no code to hand (Lisa signs in with Google): Cancel
+  await page.getByRole('dialog', { name: 'Staff code' }).getByRole('button', { name: 'Cancel' }).click();
+  const bar = page.locator('#hub-outbox');
+  await expect(bar.locator('[data-outbox-waiting="1"][data-outbox-sign-in]')).toContainText('sign in again');
+  await expect(bar.locator('[data-outbox-refused]')).toHaveCount(0);
+  const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('cdhub.outbox') || '[]'));
+  expect(kept).toHaveLength(1);
+  expect(JSON.stringify(kept)).not.toContain('pretend-token');
+  // waiting by itself never asks for a code
+  await page.evaluate(() => hubFlush());
+  await expect(page.getByRole('dialog', { name: 'Staff code' })).toHaveCount(0);
+  expect(saved).toHaveLength(0);
+  // signed in again: it goes by itself, once
+  await page.evaluate((e) => { TOKEN_EXP = e; return hubFlush(); }, hold);
+  await expect(bar).toBeHidden();
+  expect(saved).toEqual([kept[0].id]);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+});
