@@ -158,11 +158,21 @@
   }
   var IMP_OUTCOME = { '': 'ok', done: 'ok', ok: 'ok', yes: 'ok', concern: 'concern', 'not done': 'not_done', no: 'not_done' };
 
-  /** Checks every row: [{line, iso, key, label, outcome, note, ok, why}]. Nothing is saved here. */
+  /** A record already saved for this job, day and outcome (an "ok" day also counts any done record), so a file
+      imported twice never saves the same row twice (22 Nov 2026: Lisa's re-import). */
+  function saved(v, key, iso, oc) {
+    if (oc === 'ok' && days(v, key)[iso]) return true;
+    var ids = {}, replaced = {};
+    (v.types || []).forEach(function (r) { if (r.type_key === key) ids[r.id] = 1; });
+    (v.logs || []).forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = 1; });
+    return (v.logs || []).some(function (l) { return ids[l.check_type_id] && !replaced[l.id] && l.outcome === oc && Due.londonDate(l.happened_at || l.taken_at) === iso; });
+  }
+  /** Checks every row: [{line, iso, key, label, outcome, note, ok, why, past}]. Nothing is saved here. past = a week or
+      more ago: the save script asks "save anyway?" for those, and the person's Import press after this preview is that yes. */
   function parseImport(v, text) {
     var types = siteTypes(v), byName = {};
     Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
-    var rows = csvRows(text), out = [], seen = {};
+    var rows = csvRows(text), out = [], seen = {}, pastDay = new Date(Date.parse(v.today + 'T12:00:00Z') - 6 * 864e5).toISOString().slice(0, 10);
     if (rows.length && /date/i.test(rows[0][0] || '') && /job/i.test(rows[0][1] || '')) rows = rows.slice(1);
     rows.forEach(function (r, i) {
       var iso = isoOf(r[0]), key = byName[String(r[1] || '').trim().toLowerCase()] || '', oc = IMP_OUTCOME[String(r[2] || '').trim().toLowerCase()];
@@ -172,8 +182,8 @@
       else if (!key) x.why = 'job not found: use its name as on the calendar';
       else if (!oc) x.why = 'outcome not understood (done, concern or not done)';
       else if (seen[key + '|' + iso]) x.why = 'repeated in this file';
-      else if (days(v, key)[iso] && oc === 'ok') x.why = 'already recorded that day';
-      else { x.ok = true; seen[key + '|' + iso] = 1; }
+      else if (saved(v, key, iso, oc)) x.why = 'already recorded that day';
+      else { x.ok = true; x.past = iso <= pastDay; seen[key + '|' + iso] = 1; }
       out.push(x);
     });
     return out;
@@ -183,6 +193,7 @@
     var t = siteTypes(v)[x.key]; if (!t) return null;
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
     if (x.note) f.note = x.note;
+    if (x.past) f.confirm_unusual = 'yes';   // reviewed in the preview; never stored, how_recorded stays import
     if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
     return f;
   }
@@ -205,7 +216,7 @@
       + '<div class="scroll"><table class="jcal-imp-t"><thead><tr><th>Row</th><th>Date</th><th>Job</th><th>Outcome</th><th></th></tr></thead><tbody>'
       + rows.map(function (x) {
         return '<tr data-ok="' + (x.ok ? 1 : 0) + '"><td>' + x.line + '</td><td>' + e(x.iso ? (v.dmy ? v.dmy(x.iso) : x.iso) : x.date) + '</td><td>' + e(x.label || x.job) + '</td><td>'
-          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? 'ready' : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
+          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? (x.past ? 'past date: will be saved as imported' : 'ready') : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
       }).join('') + '</tbody></table></div>'
       + (good ? '<p><button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>' : '');
   }

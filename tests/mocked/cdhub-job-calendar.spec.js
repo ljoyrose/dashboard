@@ -73,3 +73,39 @@ test('Import: a chosen file is checked row by row; Import saves only the ready r
   ]);
   if (d2.slice(0, 7) === today.slice(0, 7)) await expect(page.locator(`[data-jcal="food_bowls"] [data-day="${d2}"]`)).toHaveClass(/\bdone\b/);
 });
+
+// 22 Nov 2026 (live bug): the save script refuses a row more than 7 days old unless confirm_unusual is yes. Import sends it
+// for past rows (the person reviewed them), and importing the same file again saves nothing twice.
+test('Import: a 30-day-old row saves with the confirm; importing the same file again does not duplicate', async ({ page, guard }) => {
+  const d30 = london(new Date(Date.now() - 30 * 86400000)), d1 = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, []));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  await page.evaluate(() => {   // like Validate.gs: older than 7 days and no confirm = "Save anyway?"
+    window.__sent = [];
+    window.sinkSend = async (b) => {
+      window.__sent.push(b);
+      if (Date.parse(b.fields.happened_at) < Date.now() - 168 * 3600000 && b.fields.confirm_unusual !== 'yes') return { ok: false, code: 'INVALID', fields: { happened_at: 'That is more than 7 days ago. Check the date, or save anyway.', confirm_unusual: 'Save anyway?' } };
+      return { ok: true, result: { status: 'saved', id: 'imp-' + window.__sent.length, ids: ['imp-' + window.__sent.length], at: new Date().toISOString(), who: 'Pretend Owner' } };
+    };
+  });
+  const file = Buffer.from(`date,job,outcome,note\n${d30},food_bowls,done,\n${d1},food_bowls,done,\n`);
+  await page.locator('[data-jcal-import]').click();
+  await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: file });
+  await expect(page.locator('.jcal-imp-t tr[data-ok="1"]').first()).toContainText('past date: will be saved as imported');
+  await page.locator('[data-jcal-import-go]').click();
+  await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 2 of 2.');
+  const sent = await page.evaluate(() => window.__sent.map((b) => b.fields));
+  expect(sent[0]).toEqual({ check_type_id: 'j1', outcome: 'ok', how_recorded: 'import', happened_at: d30 + 'T12:00:00Z', confirm_unusual: 'yes' });
+  expect(sent[1].confirm_unusual).toBeUndefined();
+  // the same file again: both rows already recorded, nothing to import, nothing sent
+  await page.locator('[data-jcal-import]').click();
+  if (await page.locator('[data-jcal-imp]').isHidden()) await page.locator('[data-jcal-import]').click();
+  await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: file });
+  await expect(page.locator('[data-jcal-imp-count]')).toContainText('0 of 2 rows ready');
+  await expect(page.locator('.jcal-imp-t tr[data-ok="0"]')).toHaveCount(2);
+  await expect(page.locator('[data-jcal-import-go]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__sent.length)).toBe(2);
+});

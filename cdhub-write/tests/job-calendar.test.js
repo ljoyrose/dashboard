@@ -85,8 +85,22 @@ test('import: rows are checked (date, job by name or key, outcome, future, repea
   assert.match(rows[7].why, /outcome/);
   assert.equal(rows[1].iso, '2026-11-11');
   assert.equal(rows[8].note, 'skin, ears');
-  assert.deepEqual(C.importFields(v, rows[1]), { check_type_id: 'cty-ws', outcome: 'ok', how_recorded: 'import', happened_at: '2026-11-11T12:00:00Z', note: 'paper book' });
-  assert.deepEqual(C.importFields(v, rows[8]), { check_type_id: 'cty-hc', outcome: 'concern', how_recorded: 'import', happened_at: '2026-11-12T12:00:00Z', note: 'skin, ears', dog_ids: 'd1|d2' });
+  assert.deepEqual(C.importFields(v, rows[1]), { check_type_id: 'cty-ws', outcome: 'ok', how_recorded: 'import', happened_at: '2026-11-11T12:00:00Z', note: 'paper book', confirm_unusual: 'yes' });
+  assert.deepEqual(C.importFields(v, rows[8]), { check_type_id: 'cty-hc', outcome: 'concern', how_recorded: 'import', happened_at: '2026-11-12T12:00:00Z', note: 'skin, ears', dog_ids: 'd1|d2' });   // 5 days ago: no confirm needed
   const tpl = C.template(v);
   assert.match(tpl, /^date,job,outcome,note\r\n2026-11-16,"Health check: all dogs",done,/);
+});
+
+// 22 Nov 2026 (live bug): rows a week or more old were refused by the script's "more than 7 days ago. Save anyway?".
+test('import: a past row (a week or more) is shown as past and sends the confirm; a re-imported row is not saved twice', () => {
+  const v = base([log('1', 'cty-fb', '2026-10-18', '', { outcome: 'concern' })]);
+  const rows = C.parseImport(v, 'date,job,outcome,note\n2026-10-18,food_bowls,done,\n2026-10-18,food_bowls,concern,\n2026-10-19,food_bowls,concern,\n2026-11-16,food_bowls,done,\n2026-10-18,food_bowls,not done,\n');
+  assert.deepEqual(rows.map((x) => x.ok), [false, false, true, true, true]);   // that day is recorded, so done and the same concern again are not saved
+  assert.match(rows[1].why, /already recorded/);
+  assert.equal(C.importFields(v, rows[2]).confirm_unusual, 'yes');      // 29 days ago
+  assert.equal(C.importFields(v, rows[3]).confirm_unusual, undefined);  // yesterday: no question, so no confirm
+  assert.equal(C.importFields(v, rows[2]).how_recorded, 'import');
+  const html = C.previewHtml(Object.assign({ dmy: (s) => s }, v), rows);
+  assert.match(html, /2026-10-19<\/td><td>[^<]*<\/td><td>concern<\/td><td>past date: will be saved as imported/);
+  assert.match(html, /2026-11-16<\/td><td>[^<]*<\/td><td>done<\/td><td>ready</);
 });
