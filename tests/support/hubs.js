@@ -33,8 +33,8 @@ function marketRows() {
     ['MSG|1', 'message', 'Clothes', 'Question about: sample jumper', JSON.stringify({ platform: 'eBay', url: 'https://www.ebay.co.uk/cnt/ViewMessage' }), ago(12)],
   ];
 }
-/* Order dates are days before the test runs, never fixed dates: fixed October dates fell out of "last 30 days" on 21 Nov 2026
-   and turned the Orders tile into a red count, failing the house look and sweep tests for Food on every branch. */
+// Order dates are relative to today: one order in the last 30 days and one in the 30 days before, so the growth
+// tile reads "same as" on any date (fixed dates aged out on 21 Nov 2026 and turned 0 red on the review view).
 function foodBook() {
   return {
     cards: [
@@ -43,8 +43,8 @@ function foodBook() {
       ['PL-1', 'pricelist', 'Products', 'New GA price list: sample', JSON.stringify({ files: ['FILE123456789012345678901'] }), ago(10)],
     ],
     orders: [['order_no', 'source', 'brand', 'supplier', 'status', 's_no', 'si_no', 'boxes', 'ga_goods', 'ga_delivery', 'ga_vat', 'ga_total', 'sale_ex_vat_est', 'profit_est', 'shipped_date', 'invoice_date', 'due_date', 'paid', 'notes', 'updated_at', 'tracking', 'order_type', 'sale_inc_vat', 'customer_orders', 'placed_at', 'shop_lines', 'check'],
-      ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17', '', '', '', '', '', '', '', 'Subscription (PayWhirl)', '63.00', '22', ago(26 * 1440), '[]', 'Matched'],
-      ['9003', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '3', ago(28 * 1440), '[]', 'Not at GA']],
+      ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17', '', '', '', '', '', '', '', 'Subscription (PayWhirl)', '63.00', '22', ago(10 * 1440), '[]', 'Matched'],
+      ['9003', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '3', ago(35 * 1440), '[]', 'Not at GA']],
     invoices: [['si_no', 'invoice_date', 's_no', 'order_no', 'goods', 'delivery', 'vat', 'total', 'due_date', 'paid_date', 'fy', 'vat_quarter', 'file_id'],
       ['SI-1000001', '2026-10-25', 'S1000001', '9001', '31.20', '10.82', '8.40', '50.42', day(2), '', 'FY2026-27', '2026-Q4', 'FILE000000000000000000001'],
       ['SI-1000002', '2026-09-25', 'S1000002', '9002', '130.67', '0', '26.14', '156.81', day(-3), '', 'FY2026-27', '2026-Q3', '']],
