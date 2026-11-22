@@ -710,6 +710,17 @@ if(DEMO){
   var b=document.createElement('div'); b.className='demo-banner'; b.setAttribute('data-demo-banner',''); b.setAttribute('role','status'); b.textContent=DEMO_WORDS;
   document.body.insertBefore(b,document.body.firstChild);
   document.title='DEMO - '+document.title;
+  /* a demo never opens a live page (history, The Board, print cards): real and pretend data never mix in one session.
+     Every link to another CD Hub page becomes a plain note, and a click that still reaches one is stopped. */
+  var here=location.pathname, base=here.replace(/[^\/]*$/,'');
+  function livePage(a){ var u; try{ u=new URL(a.getAttribute('href')||'',location.href); }catch(e){ return false; }
+   return u.origin===location.origin && u.pathname.indexOf(base)===0 && u.pathname!==here && u.pathname!==base && u.pathname!==base+'index.html'; }
+  function swap(root){ (root.querySelectorAll?root.querySelectorAll('a[href]'):[]).forEach(function(a){ if(!livePage(a)) return;
+   var n=document.createElement('span'); n.className='mut'; n.setAttribute('data-demo-live-note',''); n.textContent='Live page: open from the normal hub'; a.replaceWith(n); }); }
+  swap(document);
+  new MutationObserver(function(ms){ ms.forEach(function(m){ m.addedNodes.forEach(function(x){ if(x.nodeType===1){ if(x.matches&&x.matches('a[href]')) swap(x.parentNode||document); else swap(x); } }); }); })
+   .observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('click',function(ev){ var a=ev.target.closest&&ev.target.closest('a[href]'); if(a&&livePage(a)){ ev.preventDefault(); ev.stopPropagation(); } },true);
  }());
 }
 var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',

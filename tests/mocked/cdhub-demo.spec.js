@@ -96,3 +96,14 @@ test.describe('CD Hub: demo mode', () => {
     }
   });
 });
+
+test('in demo, links to live pages (history, The Board, print cards) are a plain note, never a link', async ({ page, guard }) => {
+  worlds(guard.world);
+  await openDemo(page, []);
+  await expect(page.locator('[data-demo-live-note]').first()).toHaveText('Live page: open from the normal hub');
+  for (const view of ['main', 'areas', 'today']) {
+    await page.evaluate((v) => go(v, false), view);
+    expect(await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => new URL(a.getAttribute('href'), location.href).pathname)
+      .filter((p) => /\/cdhub\/(history[^/]*\.html|staff\/)/.test(p)))).toEqual([]);
+  }
+});
