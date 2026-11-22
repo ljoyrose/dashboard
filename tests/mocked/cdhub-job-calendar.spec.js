@@ -76,7 +76,7 @@ test('Import: a chosen file is checked row by row; Import saves only the ready r
 
 // 22 Nov 2026 (live bug): the save script refuses a row more than 7 days old unless confirm_unusual is yes. Import sends it
 // for past rows (the person reviewed them), and importing the same file again saves nothing twice.
-test('Import: a 30-day-old row saves with the confirm; importing the same file again does not duplicate', async ({ page, guard }) => {
+test('Import: a 30-day-old row saves with the confirm; importing the same file again does not duplicate @regression', async ({ page, guard }) => {
   const d30 = london(new Date(Date.now() - 30 * 86400000)), d1 = london(new Date(Date.now() - 86400000));
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
   addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, []));
