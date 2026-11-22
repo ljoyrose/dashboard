@@ -32,6 +32,14 @@
   function isOn(r) { return String(r.active).toLowerCase() !== 'false'; }
   /* how a late entry came in: one at a time (paper) or several days at once (bulk). Owner-only; staff never see it */
   var PAPER_HOW = 'paper', BULK_HOW = 'bulk';
+  /* the photo helper the temperature round uses (one file + evidence links, through the save script), loaded when needed */
+  var EV_SRC = (document.currentScript && document.currentScript.src || '').replace(/jobs\/[^/]*$/, 'temperature/evidence.js'), evP = null;
+  function loadEvidence() {
+    if (window.BLDTempEvidence) return Promise.resolve(window.BLDTempEvidence);
+    if (!evP) evP = new Promise(function (ok) { var sc = document.createElement('script'); sc.src = EV_SRC || 'modules/temperature/evidence.js';
+      sc.onload = function () { ok(window.BLDTempEvidence || null); }; sc.onerror = function () { evP = null; ok(null); }; document.head.appendChild(sc); });
+    return evP;
+  }
   /* starting default for a new app only: the owner's rule row job.paper_default_time (or .<type_key>) wins */
   var START_TIME = '12:00';
   var PLUS = '<svg class="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
@@ -189,7 +197,8 @@
         if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
       }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
-      host.appendChild(status); host.appendChild(list);
+      var photoBox = h('div', { 'data-diary-photo': '1' });   // 22 Nov 2026: "Add the diary page" after an Earlier save; outside the list, so a redraw keeps it
+      host.appendChild(status); host.appendChild(photoBox); host.appendChild(list);
       if (tag && !site) host.appendChild(h('button', { class: 'btn quiet job-move', type: 'button', text: 'Move dogs', onclick: moves }));
 
       /* a room job restarted by a bigger job, such as the whole-site clean, says which */
@@ -281,6 +290,10 @@
           var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [], real = r.ids && r.ids.length === dogs.length;   // a row id we can point a note at only when the reply gives one per dog
           logs = logs.concat(dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, entry, mine, { id: real ? r.ids[i] : r.id + '-' + i, _noId: !real, subject_id: dog }); })
             : [Object.assign({}, entry, mine, { id: r.id })]);
+          // 22 Nov 2026 (Lisa: "when you enter with entered after, ensure there is a photo option so we can add the diary"):
+          // after an Earlier save that has real record ids, offer the page it came from. Optional; the record is saved either way.
+          var recIds = dogs.length ? (real ? r.ids.slice() : []) : (r.id ? [r.id] : []);
+          if (paper && recIds.length && r.status !== 'queued') diaryPhoto(job, recIds, BLDDue.londonDate(entry.happened_at) || today);
           var left = r.left_out ? r.left_out.isolation + r.left_out.no_room + r.left_out.off_site + r.left_out.repeat : 0;
           kept[job.type_key] = true;   // stays on today's list with its tick, not gone without a trace
           say(left ? 'Left out: ' + left + '.' : '', 'warn');
@@ -288,6 +301,15 @@
         });
       }
 
+      function diaryPhoto(job, ids, day) {
+        loadEvidence().then(function (E) {
+          if (!E || !E.offer) return;
+          photoBox.textContent = '';
+          E.offer(photoBox, { save: c.save, fromTable: 'check_log', fromIds: ids, day: day, past: true,
+            title: 'Diary page: ' + job.label + ', ' + dmy(day), sub: 'Add the page this came from (a photo of the diary or sheet).',
+            fileName: 'diary-page.jpg', source: 'Diary page, ' + job.label, what: ids.length === 1 ? 'the record' : 'the ' + ids.length + ' records' });
+        });
+      }
       /* one form question from a check_field row: text, number, date, yes or no, or a choice */
       function question(f, changed) {
         var label = f.label + (String(f.required).toLowerCase() === 'true' ? '' : ' (optional)'), el;
