@@ -322,11 +322,19 @@
           var did = doneToday(t.type_key), dogs = BLDDue.dogsFor(t, target).slice().sort(function (x, y) { return String(labelOf[x.id]).localeCompare(String(labelOf[y.id])); });
           state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, onchange: function () { state.rid = null; } }); });
           var all = h('button', { class: 'btn quiet job-all', type: 'button', text: 'Select all', onclick: function () {
-            state.ticks.forEach(function (b, i) { if (!did[dogs[i].id]) b.checked = true; }); state.rid = null;
+            state.ticks.forEach(function (b, i) { if (!did[dogs[i].id]) b.checked = true; }); state.rid = null; if (state.countTicks) state.countTicks();
           } });
           roomList = h('div', { class: 'job-dogs' }, (dogs.length > 1 ? [all] : []).concat(dogs.map(function (x, i) { return dogRow(state.ticks[i], labelOf[x.id], did[x.id]); })));
           state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
+        }
+        /* Lisa 22 Nov 2026: a multi-dog job had no button by its ticks, so the ticked dogs were never saved. "Done: N dogs" saves them. */
+        if (state.ticks && state.ticks.length > 1) {
+          var tickBtn = h('button', { class: 'btn job-ticks-done', type: 'button', 'data-ticks-done': '1', onclick: function () { send(job, t, done, inputs, panelMsg, state); } });
+          var count = function () { var n = state.ticks.filter(function (x) { return x.checked; }).length; tickBtn.textContent = 'Done: ' + n + (n === 1 ? ' dog' : ' dogs'); tickBtn.disabled = !n; };
+          state.ticks.forEach(function (b) { b.addEventListener('change', count); });
+          var dogBox = roomList || panel.querySelector('.job-dogs');
+          dogBox.appendChild(tickBtn); state.countTicks = count; count();
         }
         /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
            On a job already done today it waits for the save script's note record (outcome note + note_for_id). */

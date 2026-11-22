@@ -167,7 +167,8 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   const card = page.locator('[data-job="exercise"]');
   await expect(card.getByRole('checkbox')).toHaveCount(2);
   await card.getByRole('checkbox', { name: 'Pretend B' }).uncheck();
-  await card.getByRole('button', { name: /^Done/ }).click();
+  await expect(card.locator('[data-ticks-done]')).toHaveText('Done: 1 dog');
+  await card.getByRole('button', { name: 'Done: Exercise' }).click();
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].action).toBe('add_site');
   expect(sent[0].fields.dog_ids).toBe('dog-1');
@@ -667,4 +668,38 @@ test('check types starting round. belong to The round and never show as jobs, no
   await expect(page.locator('[data-job="round.presence"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Earlier: several days' }).click();
   await expect(page.getByLabel('Job').locator('option[value="round.presence"]')).toHaveCount(0);
+});
+
+// Lisa 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
+test('a whole-site dog job: "Done: N dogs" by the ticks saves the ticked dogs and the card says N of M dogs', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  const save = card.locator('[data-ticks-done]');
+  await expect(save).toBeVisible();
+  await expect(save).toHaveText('Done: 0 dogs');
+  await expect(save).toBeDisabled();
+  await card.getByRole('button', { name: 'Select all' }).click();
+  await expect(save).toHaveText('Done: 2 dogs');
+  await save.click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-walk', dog_ids: 'dog-1|dog-2' } });
+  await expect(page.locator('[data-job="walk"] .done-line')).toContainText(/Done \d\d:\d\d · 2 of 2 dogs/);
+});
+
+test('a whole-site dog job: a refused tick save says "Not saved" with the reason on the card', async ({ page }) => {
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'INVALID', message: 'None of those dogs can be covered by a whole-site tap.' } });
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await card.getByRole('checkbox', { name: 'Pretend A' }).check();
+  await expect(card.locator('[data-ticks-done]')).toHaveText('Done: 1 dog');
+  await card.locator('[data-ticks-done]').click();
+  await expect(card.locator('.done-line')).toHaveText('Not saved: None of those dogs can be covered by a whole-site tap.');
 });
