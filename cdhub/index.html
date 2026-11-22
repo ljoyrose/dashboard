@@ -688,6 +688,30 @@ h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
 }());
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;
+/* DEMO (Lisa 22 Nov 2026: "a demo copy ... for video"). ?demo=1 on this owner page reads ONLY the demo folder (pretend
+   records), never the live folder or the save script; nothing is sent anywhere (every non-GET request and every save-script
+   or Sheets request is refused here); no device copy; a DEMO banner on screen and in print; exports carry DEMO. Only this page
+   reads ?demo: the inspector, guest and staff pages never do, so an inspector link cannot open a demo. */
+var DEMO=/(?:^|&)demo=1(?:&|$)/.test(String(location.search||'').replace(/^\?/,'')) && !!window.DASH_CONFIG.cdhub.demoFolderId;
+var DEMO_WORDS='DEMO: pretend data, not real records';
+if(DEMO){
+ FOLDER=window.DASH_CONFIG.cdhub.demoFolderId; window.CD_DEMO=true;
+ (function(){
+  var realFetch=window.fetch.bind(window);
+  window.fetch=function(u,o){
+   var m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase(), url=String((u&&u.url)||u||'');
+   if((m!=='GET'&&m!=='HEAD')||/script\.google(usercontent)?\.com|sheets\.googleapis\.com/.test(url)) return Promise.reject(new Error('Demo: nothing is sent.'));
+   return realFetch(u,o);
+  };
+  var st=document.createElement('style');
+  st.textContent='.demo-banner{position:sticky;top:0;z-index:9999;background:var(--ljr-2-solid);color:var(--ljr-2-on);font-weight:700;text-align:center;padding:8px 16px;font-size:16px}'
+   +'@media print{.demo-banner{position:fixed;top:0;left:0;right:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{padding-top:40px}}';
+  document.head.appendChild(st);
+  var b=document.createElement('div'); b.className='demo-banner'; b.setAttribute('data-demo-banner',''); b.setAttribute('role','status'); b.textContent=DEMO_WORDS;
+  document.body.insertBefore(b,document.body.firstChild);
+  document.title='DEMO - '+document.title;
+ }());
+}
 var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
@@ -1060,11 +1084,11 @@ function copyOpen(){ return new Promise(function(res,rej){ if(!window.indexedDB)
   var r; try{ r=indexedDB.open(COPY_DB,1); }catch(e){ rej(e); return; }
   r.onupgradeneeded=function(){ r.result.createObjectStore('copy'); };
   r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; r.onblocked=function(){ rej(new Error('blocked')); }; }); }
-function copyGet(){ return copyOpen().then(function(db){ return new Promise(function(res){
+function copyGet(){ if(DEMO) return Promise.resolve(null); return copyOpen().then(function(db){ return new Promise(function(res){
   try{ var q=db.transaction('copy','readonly').objectStore('copy').get('last');
     q.onsuccess=function(){ db.close(); res(q.result||null); }; q.onerror=function(){ db.close(); res(null); }; }catch(e){ db.close(); res(null); } }); })
   .catch(function(){ return null; }); }
-function copyPut(v){ var w=copyWiped; return copyOpen().then(function(db){ return new Promise(function(res){
+function copyPut(v){ if(DEMO) return Promise.resolve(); var w=copyWiped; return copyOpen().then(function(db){ return new Promise(function(res){
   if(w!==copyWiped){ db.close(); res(); return; }
   try{ var tx=db.transaction('copy','readwrite'); tx.objectStore('copy').put(v,'last');
     tx.oncomplete=function(){ db.close(); if(w!==copyWiped) copyWipe(); res(); }; tx.onerror=tx.onabort=function(){ db.close(); res(); }; }catch(e){ db.close(); res(); } }); })
@@ -4200,6 +4224,7 @@ function sinkFetchNow(body,url){ var ac=window.AbortController?new AbortControll
    function(e){ clearTimeout(tm); return {ok:false,code:'NETWORK',message:e&&e.name==='AbortError'?'No answer from the save script after 2½ minutes. It may still have saved: tap Refresh and check before trying again.':'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }); }
 function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOGLE_NOT_OWNER'||j.code==='NO_CODE')); }
 async function sinkSend(body){
+ if(DEMO) return {ok:false,code:'DEMO',message:'Demo: nothing is saved.'};
  var g=await sinkGate();
  if(!g.ok) return g;
  body.v=1; body.request_id=body.request_id||sinkRid(); body.code=g.code||'';
