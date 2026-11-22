@@ -852,6 +852,24 @@ test('rows of another tenant are never returned, and a long list is capped', () 
   assert.equal(c.result.truncated, true);
 });
 
+test('a capped read keeps the NEWEST rows (the last in the table), and the filters run before the cap', () => {
+  const env = withRead();
+  const f = env.file('BLD-occupancy.csv')[0];
+  const key = (x) => x.subject_id + '@' + x.area_id;
+  const before = read(env, { table: 'occupancy' }).result.rows.map(key);
+  f.content += 'occ-new1,' + fx.TENANT + ',sub-dezi,area-t1,,2026-11-22,,,\r\n' + 'occ-new2,' + fx.TENANT + ',sub-dezi,area-t2,,2026-11-22,,,\r\n';
+  env.ctx.BLD.LIMITS.READ_MAX_ROWS = 2;
+  const c = read(env, { table: 'occupancy' });
+  assert.equal(c.result.truncated, true);
+  assert.deepEqual(Array.from(c.result.rows, key), ['sub-dezi@area-t1', 'sub-dezi@area-t2']);   // was the first two rows of the table
+  assert.ok(before.length >= 1);
+  // a filter narrows first; the cap then keeps the newest of what is left
+  env.ctx.BLD.LIMITS.READ_MAX_ROWS = 1;
+  const one = read(env, { table: 'occupancy', filter: { area_id: 'area-t1' } });
+  assert.equal(one.ok, true, JSON.stringify(one));
+  assert.deepEqual(Array.from(one.result.rows, key), ['sub-dezi@area-t1']);
+});
+
 test('reading is a separate switch from saving, and works through doPost', () => {
   const env = withRead({ SAVE_ENABLED: 'false' });
   const post = (body) => JSON.parse(env.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
