@@ -522,3 +522,11 @@ LIVE 82 (68 + files, links, items, item_kinds, readings, reading_kinds, reading_
 | 15 Nov 2026 05:01 | Q1-Q8 as 20.1 (edits logged per owner settings; delete/archive owner settings; dated hiding; meaningless ids + editable names; one dose table with stock chain and courses; party reference lists; document corrections edit in place, both shown on conflict, no import tables, no Animana; one certificate table). | Lisa via Steward, relayed by OV11 06:25 |
 | 15 Nov 2026 | Size bands small < 10 kg, medium 10-25, large >= 25; no toy or extra-large. Live rows already match; nothing written. | Lisa via Steward; live check 06:30 |
 | 15 Nov 2026 | Retention table and GDPR export/erase design (20.3). QR on add (20.4) waits for J3. | J1 brief |
+
+## Decision log additions (ITEMS2, 22/11)
+
+| When | Decision | Source |
+|---|---|---|
+| 22 Nov 2026 | **No new tables or columns for items many at once.** A test of many items is one check_log row per item (as a single test), its readings rows, and ONE files row (the certificate) joined by a `certificate` links row to each check_log. Move many = one `placed_in` link per item; archive many = one `item.in_use` requirement row per item. | Lisa 20–22 Nov ("multi select … or I have to enter individual testing per plug"); ITEMS2 design note AA_ITEMS2_2026-11-22-1320 |
+| 22 Nov 2026 | **New save action `many`** (Sink.gs, Web.gs): up to 100 `add` / `link_add` steps in one request, sign-in checked once, each step the ordinary save with request id `<rid>-<n>`; refused steps come back in place; steps not started within 4 minutes come back NOT_SENT. Limits `LIMITS.MANY_MAX_STEPS`, `LIMITS.MANY_TIME_MS` (Config.gs). Not live until Lisa deploys the script; the page falls back to one save at a time. | ITEMS2, 22 Nov 2026 |
+| 22 Nov 2026 | Items list group / sort is a per-person view kept on the device (localStorage `cdhub.items.view`), not a stored row. Starting default: group Kind, sort Status (best to worst). | ITEMS2, 22 Nov 2026 |

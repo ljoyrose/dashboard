@@ -42,6 +42,30 @@
     return /^-?(\d+\.?\d*|\.\d+)$/.test(s0) ? s0 : '';
   }
 
+  /* One index per set of tables (ITEMS2, 22 Nov 2026: thousands of items). Every lookup below used to scan whole
+     tables once per item; now each table is grouped once by the key it is looked up by. Rebuilt when the tables are
+     swapped (refresh) or a row is added (a save); answers that depend on a day are kept per day. */
+  var IXF = ['BLD-items.csv', 'BLD-links.csv', 'BLD-requirement.csv', 'BLD-check_type.csv', 'BLD-check_log.csv', 'BLD-check_value.csv',
+    'BLD-check_field.csv', 'BLD-readings.csv', 'BLD-reading_kinds.csv', 'BLD-files.csv', 'BLD-breeding_rule.csv', 'BLD-area.csv', 'BLD-item_kinds.csv'];
+  var IXC = null;
+  function ix(T) {
+    var sig = IXF.map(function (f) { return rows(T, f).length; }).join(',');
+    if (IXC && IXC.T === T && IXC.sig === sig) return IXC;
+    var X = { T: T, sig: sig, memo: {}, links: {}, req: {}, logs: {}, vals: {}, reads: {}, replaced: {}, types: {}, typesByKey: {}, fields: {} };
+    var push = function (o, k, r) { (o[k] = o[k] || []).push(r); };
+    rows(T, LINKS).forEach(function (l) { push(X.links, tbl(l.from_table) + '|' + l.from_id, l); });
+    rows(T, 'BLD-requirement.csv').forEach(function (r) { if (r.need_type === NEED && (r.target_table === 'items' || r.target_table === 'item')) push(X.req, r.target_id, r); });
+    rows(T, 'BLD-check_type.csv').forEach(function (r) { X.types[r.id] = r; push(X.typesByKey, r.type_key, r); });
+    rows(T, 'BLD-check_log.csv').forEach(function (l) { if (l.corrects_id) X.replaced[l.corrects_id] = true; push(X.logs, l.item_id, l); });
+    rows(T, 'BLD-check_value.csv').forEach(function (v) { push(X.vals, v.check_log_id, v); });
+    var rrep = {}; rows(T, 'BLD-readings.csv').forEach(function (r) { if (r.corrects_id) rrep[r.corrects_id] = true; });
+    rows(T, 'BLD-readings.csv').forEach(function (r) { if (t(r.check_log_id) && !rrep[r.id]) push(X.reads, r.check_log_id, r); });
+    rows(T, 'BLD-check_field.csv').forEach(function (r) { push(X.fields, r.type_key, r); });
+    IXC = X;
+    return X;
+  }
+  function memo(T, key, fn) { var X = ix(T); if (!Object.prototype.hasOwnProperty.call(X.memo, key)) X.memo[key] = fn(X); return X.memo[key]; }
+
   /** Items as the owner sees them now: one per first row id, showing its latest change. */
   function current(T) {
     var first = {}, out = [];
@@ -57,7 +81,7 @@
 
   /** In use on a day: no item.in_use rows = always (S4.15); else a row must cover the day. */
   function inUse(T, id, on) {
-    var rs = rows(T, 'BLD-requirement.csv').filter(function (r) { return r.need_type === NEED && (r.target_table === 'items' || r.target_table === 'item') && r.target_id === id; });
+    var rs = ix(T).req[id] || [];
     if (!rs.length) return { yes: true, row: null };
     var cover = rs.filter(function (r) { return t(r.from_date) <= on && (!t(r.to_date) || t(r.to_date) >= on); })[0];
     if (cover) return { yes: true, row: cover };
@@ -71,8 +95,8 @@
   function lk(l) { return t(l.role); }
   function live(l, on) { return t(l.from_date) <= on && (!t(l.to_date) || t(l.to_date) >= on); }
   function linksFrom(T, fromTable, fromId, kinds, on) {
-    return rows(T, LINKS).filter(function (l) {
-      return tbl(l.from_table) === tbl(fromTable) && l.from_id === fromId && kinds.indexOf(lk(l)) >= 0 && (!on || live(l, on));
+    return (ix(T).links[tbl(fromTable) + '|' + fromId] || []).filter(function (l) {
+      return kinds.indexOf(lk(l)) >= 0 && (!on || live(l, on));
     }).sort(function (a, b) { return (+a.sort || 0) - (+b.sort || 0) || t(a.from_date).localeCompare(t(b.from_date)); });
   }
   /** The room on a day: the latest placed_in link starting on or before it; a to_date ends it. */
@@ -83,14 +107,14 @@
   }
   /** Files joined to a record by the given link kinds (newest last), as {href, label}. */
   function filesFor(T, fromTable, fromId, kinds) {
-    var byId = {};
-    rows(T, 'BLD-files.csv').forEach(function (f) { byId[f.id] = f; });
+    var byId = memo(T, 'files', function () { var o = {}; rows(T, 'BLD-files.csv').forEach(function (f) { o[f.id] = f; }); return o; });
     return linksFrom(T, fromTable, fromId, kinds).filter(function (l) { return tbl(l.to_table) === 'file' && byId[l.to_id] && !t(l.to_date); })
       .map(function (l) { var f = byId[l.to_id]; return { id: t(f.drive_file_id), on: day(f.taken_on || f.set_on), href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
   }
 
   /** Test rows in force on a day for an item kind: latest effective_from per type_key, active, target item. */
-  function testsFor(T, kindKey, on) {
+  function testsFor(T, kindKey, on) { return memo(T, 'tf|' + kindKey + '|' + on, function () { return testsFor0(T, kindKey, on); }); }
+  function testsFor0(T, kindKey, on) {
     var latest = {};
     rows(T, 'BLD-check_type.csv').forEach(function (r) {
       if (!t(r.effective_from) || r.effective_from > on) return;
@@ -103,13 +127,14 @@
   /** The version of a test (by type_key) in force on a day. */
   function typeOn(T, key, on) {
     var best = null;
-    rows(T, 'BLD-check_type.csv').forEach(function (r) { if (r.type_key === key && t(r.effective_from) && r.effective_from <= on && (!best || r.effective_from > best.effective_from)) best = r; });
+    (ix(T).typesByKey[key] || []).forEach(function (r) { if (r.type_key === key && t(r.effective_from) && r.effective_from <= on && (!best || r.effective_from > best.effective_from)) best = r; });
     return best;
   }
   /** Questions (readings) of a test in force on a day, in order. */
-  function fieldsOn(T, key, on) {
+  function fieldsOn(T, key, on) { return memo(T, 'fo|' + key + '|' + on, function (X) { return fieldsOn0(X, key, on); }); }
+  function fieldsOn0(X, key, on) {
     var now = {};
-    rows(T, 'BLD-check_field.csv').forEach(function (r) {
+    (X.fields[key] || []).forEach(function (r) {
       if (r.type_key !== key || !t(r.effective_from) || r.effective_from > on) return;
       if (!now[r.field_key] || r.effective_from > now[r.field_key].effective_from) now[r.field_key] = r;
     });
@@ -148,14 +173,9 @@
   /** Records for one item, newest first; a corrected record gives way to its correction. Each record's values are its
       check_value answers and its readings rows, as {key, label, value, unit, inr} (inr false = outside the limit). */
   function records(T, id, kindKey) {
-    var byType = {}, replaced = {}, vals = {}, rds = {}, rkind = {}, it = { id: id, kind_key: kindKey || '' };
-    rows(T, 'BLD-check_type.csv').forEach(function (r) { byType[r.id] = r; });
-    rows(T, 'BLD-check_log.csv').forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
-    rows(T, 'BLD-check_value.csv').forEach(function (v) { (vals[v.check_log_id] = vals[v.check_log_id] || []).push(v); });
-    rows(T, 'BLD-reading_kinds.csv').forEach(function (k) { rkind[k.id] = k; });
-    var rrep = {}; rows(T, 'BLD-readings.csv').forEach(function (r) { if (r.corrects_id) rrep[r.corrects_id] = true; });
-    rows(T, 'BLD-readings.csv').forEach(function (r) { if (t(r.check_log_id) && !rrep[r.id]) (rds[r.check_log_id] = rds[r.check_log_id] || []).push(r); });
-    return rows(T, 'BLD-check_log.csv').filter(function (l) { return l.item_id === id && !replaced[l.id] && byType[l.check_type_id]; })
+    var X = ix(T), byType = X.types, replaced = X.replaced, vals = X.vals, rds = X.reads, it = { id: id, kind_key: kindKey || '' };
+    var rkind = memo(T, 'rkind', function () { var o = {}; rows(T, 'BLD-reading_kinds.csv').forEach(function (k) { o[k.id] = k; }); return o; });
+    return (X.logs[id] || []).filter(function (l) { return !replaced[l.id] && byType[l.check_type_id]; })
       .map(function (l) {
         var ty = byType[l.check_type_id], on = day(l.happened_at || l.taken_at), fs = {};
         fieldsOn(T, ty.type_key, on).forEach(function (f) { fs[f.field_key] = f; });
@@ -171,7 +191,8 @@
       .sort(function (a, b) { return b.on.localeCompare(a.on); });
   }
 
-  function dueSoonDays(T, on) {
+  function dueSoonDays(T, on) { return memo(T, 'ds|' + on, function () { return dueSoonDays0(T, on); }); }
+  function dueSoonDays0(T, on) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
       var k = r.rule_key || r.key || r.rule || '';
@@ -213,14 +234,15 @@
   }
 
   /** Every item with its kind, room, use and status on a day, best to worst. */
-  function list(T, on) {
+  function list(T, on) { return memo(T, 'list|' + on, function () { return list0(T, on); }); }
+  function list0(T, on) {
     var kinds = {};
     rows(T, 'BLD-item_kinds.csv').forEach(function (k) { if (!kinds[k.kind_key] || t(k.set_on) >= t(kinds[k.kind_key].set_on)) kinds[k.kind_key] = k; });
     var areas = {};
     rows(T, 'BLD-area.csv').forEach(function (a) { areas[a.id] = a; });
     return current(T).map(function (it) {
       var use = inUse(T, it.id, on), pl = placeOn(T, it.id, on), a = pl ? areas[pl.to_id] : null;
-      return { it: it, kind: kinds[it.kind_key] ? kinds[it.kind_key].label : it.kind_key, place: pl ? (a ? (a.code || a.name || a.id) : pl.to_id) : '', placeRow: pl,
+      return { it: it, area: a, kind: kinds[it.kind_key] ? kinds[it.kind_key].label : it.kind_key, place: pl ? (a ? (a.code || a.name || a.id) : pl.to_id) : '', placeRow: pl,
         archived: !use.yes, useRow: use.row, s: use.yes ? status(T, it, on) : { st: 'none', lines: [], next: '' } };
     }).sort(function (a, b) {
       return (a.archived - b.archived) || (RANK[a.s.st] - RANK[b.s.st]) || t(a.kind).localeCompare(t(b.kind)) || t(a.it.item_no).localeCompare(t(b.it.item_no), undefined, { numeric: true });
@@ -241,10 +263,10 @@
   }
 
   /** CSV (owner export): one line per item and test, the same layout the import reads. */
-  function csv(T, on) {
+  function csv(T, on, only) {
     var q = function (x) { x = String(x == null ? '' : x); return /[",\n]/.test(x) || /^[=+\-@]/.test(x) ? '"' + (/^[=+\-@]/.test(x) ? "'" : '') + x.replace(/"/g, '""') + '"' : x; };
     var out = [['item_no', 'name', 'kind', 'room', 'size', 'made_on', 'expires_on', 'status', 'archived', 'test', 'last', 'next', 'test_status', 'readings'].join(',')];
-    list(T, on).forEach(function (x) {
+    list(T, on).filter(function (x) { return !only || only[x.it.id]; }).forEach(function (x) {
       var base = [x.it.item_no, x.it.name, x.kind, x.place, x.it.size, x.it.made_on, x.it.expires_on, WORD[x.s.st], x.archived ? 'yes' : ''];
       var lines = x.s.lines.length ? x.s.lines : [null];
       lines.forEach(function (l) {
@@ -281,12 +303,96 @@
       '.itm-lim{font-size:var(--fs-small)}.itm-lim.ok{color:var(--ljr-5-icon)}.itm-lim.no{color:var(--ljr-2-icon);font-weight:600}',
       '.itm-tick{color:var(--ljr-5-icon);font-weight:600}.pill.itm-g{border-color:var(--ljr-5-text)}',
       '.itm-row{flex-wrap:wrap}.itm-row>span:nth-child(2){flex:1 1 140px}.itm-row span.mut{flex:1 1 160px}.itm-row .pill{margin-left:auto}',
-      '.itm-form input[type=file]{min-height:44px;padding:6px 0}'
+      '.itm-form input[type=file]{min-height:44px;padding:6px 0}',
+      '.itm-row{padding:0 6px 0 0;cursor:default;border-bottom:0;border-left-color:transparent}.itm-row.itm-on{border-left-color:var(--ljr-2-icon)}#main .itm-row:hover{background:none}.itm-open{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 200px;min-width:0;padding:8px 4px}.itm-open:focus-visible,.itm-fold:focus-visible{outline:2px solid var(--sel-bd);outline-offset:2px}',
+      '.itm-open b{min-width:48px}.itm-open>span:nth-child(2){flex:1 1 140px}.itm-open span.mut{flex:1 1 160px}.itm-open .pill{margin-left:auto}',
+      '.itm-ck{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;cursor:pointer;flex:none}.itm-ck input{width:20px;height:20px;margin:0;accent-color:var(--ljr-2-icon)}',
+      '.itm-gh{display:flex;align-items:center;gap:4px;margin-top:10px}.itm-fold{all:unset;cursor:pointer;flex:1;min-height:44px;display:flex;align-items:center}.itm-fold h3{margin:0}.itm-fold::before{content:"\\25BE";margin-right:6px}.itm-fold[aria-expanded=false]::before{content:"\\25B8"}',
+      '.itm-pick{display:inline-flex;gap:6px;align-items:center;font-size:var(--fs-small)}.itm-pick select{min-height:40px}',
+      '.itm-selbar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;margin:8px 0;background:var(--card,var(--bg));border:1px solid var(--line);border-left:3px solid var(--ljr-2-icon);border-radius:8px}.itm-selbar .btn{display:inline-flex;gap:6px;align-items:center}.itm-selbar .btn[aria-pressed=true]{font-weight:600;border-color:var(--sel-bd)}',
+      '.itm-wide{max-width:900px}.itm-bt{display:grid;gap:4px}.itm-btr{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)}.itm-btr b{min-width:40px}.itm-btr>span{flex:1 1 120px;min-width:0}.itm-btr input:not([type=checkbox]){width:110px;min-height:40px}',
+      '.itm-fail{display:inline-flex!important;gap:6px;align-items:center;min-height:44px;color:var(--ink)!important}.itm-fail input{width:20px;height:20px}',
+      '@media (max-width:767px){.itm-selbar .btn,.itm-bar .btn,.itm-f{min-height:44px;box-sizing:border-box}.itm-pick select{min-height:44px}.itm-btr input:not([type=checkbox]){min-height:44px;flex:1 1 100px}}'
     ].join('\n');
     document.head.appendChild(st);
   }());
 
   function pill(st) { return '<span class="pill ' + (PILL[st] || '') + '">' + WORD[st] + '</span>'; }
+
+  /* ------------------------------------------------------------------ list: group, sort, select (ITEMS2, 22 Nov 2026)
+     Lisa 20-22 Nov: "multi select/select all (with unselect individually) ... sort/group by type/location ... places
+     with thousands of items". The view (group, sort) is this person's, kept on this device. Results run best to worst. */
+  var VIEW_KEY = 'cdhub.items.view', PAGE_ROWS = 200, FOLD_OVER = 300;
+  var GROUPS = [['kind', 'Kind'], ['room', 'Room'], ['area_group', 'Room group'], ['status', 'Status'], ['next', 'Next due']];
+  var SORTS = [['status', 'Status'], ['no', 'Number'], ['name', 'Name'], ['room', 'Room'], ['next', 'Next due']];
+  (function () {
+    var p = {};
+    try { p = JSON.parse((typeof localStorage !== 'undefined' && localStorage.getItem(VIEW_KEY)) || '{}') || {}; } catch (x) { p = {}; }
+    S.group = GROUPS.some(function (g) { return g[0] === p.group; }) ? p.group : 'kind';
+    S.sort = SORTS.some(function (g) { return g[0] === p.sort; }) ? p.sort : 'status';
+    S.sel = {}; S.fold = {}; S.more = {}; S.bulk = ''; S.bkey = ''; S.bfail = {}; S.gids = {};
+  }());
+  function keepView() { try { localStorage.setItem(VIEW_KEY, JSON.stringify({ group: S.group, sort: S.sort })); } catch (x) { /* private window: the view is only for now */ } }
+  function natural(a, b) { return t(a).localeCompare(t(b), undefined, { numeric: true }); }
+  function ym(d) { return t(d).slice(0, 7); }
+  /** The group an item falls in: {key, label, order} where order runs best to worst. */
+  function groupOf(v, x) {
+    var on = v.today;
+    if (S.group === 'room') return x.place ? { key: 'r:' + x.place, label: x.place, order: [0, x.place] } : { key: 'r:', label: 'No room', order: [1, ''] };
+    if (S.group === 'area_group') {
+      if (!x.area) return { key: 'g:', label: 'No room', order: [1, 0, ''] };
+      var g = t(x.area.grouping) || 'Other';
+      return { key: 'g:' + g, label: g, order: [0, Number(x.area.group_sort) || 0, g] };
+    }
+    if (S.group === 'status') { var st = x.archived ? 'archived' : x.s.st; return { key: 's:' + st, label: st === 'archived' ? 'Archived' : WORD[st], order: [st === 'archived' ? 9 : RANK[st]] }; }
+    if (S.group === 'next') {
+      var n = x.s.next;
+      if (!n) return { key: 'n:', label: 'No date', order: [0, ''] };
+      if (n < on) return { key: 'n:late', label: 'Overdue', order: [2, ''] };
+      return { key: 'n:' + ym(n), label: v.dmy(ym(n) + '-01').replace(/^\d+\s+/, ''), order: [1, '~' + (9999 - +n.slice(0, 4)) + (99 - +n.slice(5, 7))] };   // furthest first
+    }
+    return { key: 'k:' + x.kind, label: t(x.kind) || 'No kind', order: [0, t(x.kind)] };
+  }
+  function cmpOrder(a, b) {
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      var p = a[i], q = b[i];
+      if (p === q) continue;
+      if (typeof p === 'number' && typeof q === 'number') return p - q;
+      return natural(p, q);
+    }
+    return 0;
+  }
+  function sorter(a, b) {
+    var byNo = natural(a.it.item_no, b.it.item_no);
+    if (S.sort === 'no') return byNo;
+    if (S.sort === 'name') return natural(a.it.name, b.it.name) || byNo;
+    if (S.sort === 'room') return (!a.place - !b.place) || natural(a.place, b.place) || byNo;
+    if (S.sort === 'next') return (!!a.s.next - !!b.s.next) || t(b.s.next).localeCompare(t(a.s.next)) || byNo;   // furthest first, never overdue first
+    return (a.archived - b.archived) || (RANK[a.s.st] - RANK[b.s.st]) || t(a.kind).localeCompare(t(b.kind)) || byNo;
+  }
+  function grouped(v, xs) {
+    var by = {}, out = [];
+    xs.forEach(function (x) { var g = groupOf(v, x); if (!by[g.key]) { by[g.key] = { key: g.key, label: g.label, order: g.order, xs: [] }; out.push(by[g.key]); } by[g.key].xs.push(x); });
+    // kind and room groups: the group with the best item first (best to worst, Lisa 9 Nov), then by name
+    var best = function (g) { return g.xs.reduce(function (m, x) { return Math.min(m, x.archived ? 9 : RANK[x.s.st]); }, 99); };
+    var byBest = S.group !== 'status' && S.group !== 'next';
+    out.sort(function (a, b) { return (byBest ? best(a) - best(b) : 0) || cmpOrder(a.order, b.order); });
+    out.forEach(function (g) { g.xs.sort(sorter); });
+    return out;
+  }
+  function selIds() { return Object.keys(S.sel).filter(function (k) { return S.sel[k]; }); }
+  function chosen(all) { return all.filter(function (x) { return S.sel[x.it.id] && !x.archived; }); }
+
+  function rowHtml(v, x) {
+    var e = v.esc, id = x.it.id, f = S.bfail[id];
+    return '<div class="itm-row' + (S.sel[id] ? ' itm-on' : '') + '">'
+      + (x.archived ? '' : '<label class="itm-ck"><input type="checkbox" data-itm-sel="' + e(id) + '"' + (S.sel[id] ? ' checked' : '') + ' aria-label="Select ' + e(x.it.item_no + ' ' + x.it.name) + '"></label>')
+      + '<button type="button" class="itm-open" data-itm-open="' + e(id) + '"><b>' + e(x.it.item_no) + '</b><span>' + e(x.it.name) + (x.it.size ? ' · ' + e(x.it.size) : '') + '</span>'
+      + '<span class="mut">' + e(x.place || 'no room') + (x.s.never === true ? ' · never tested' : (x.s.never ? ' · ' + x.s.never.map(e).join(', ') + ' never done' : '') + (x.s.next ? (x.s.next < v.today ? ' · Overdue since ' : ' · next ') + e(v.dmy(x.s.next)) : '')) + '</span>'
+      + (x.archived ? '<span class="pill">Archived</span>' : pill(x.s.st)) + (S.ticks[id] ? '<span class="itm-tick" aria-label="saved">' + ic('tick') + '</span>' : '') + '</button>'
+      + (f ? '<span class="itm-lim no">Not saved: ' + e(f.msg) + '</span><button type="button" class="btn" data-itm-bretry="' + e(id) + '">Retry</button>' : '')
+      + '</div>';
+  }
 
   function page(v) {
     var e = v.esc, on = v.today, all = list(v.T, on);
@@ -296,28 +402,91 @@
     if (S.open) return cardHtml(v, all.filter(function (x) { return x.it.id === S.open; })[0]);
     var counts = { all: 0, ok: 0, soon: 0, due: 0, archived: 0 };
     all.forEach(function (x) { if (x.archived) { counts.archived++; return; } counts.all++; if (x.s.st === 'ok') counts.ok++; else if (x.s.st === 'soon') counts.soon++; else if (x.s.st === 'due' || x.s.st === 'fail' || x.s.st === 'expired') counts.due++; });
-    var shown = filtered(all), byKind = {};
-    shown.forEach(function (x) { (byKind[x.kind] = byKind[x.kind] || []).push(x); });
+    var shown = filtered(all), groups = grouped(v, shown), picked = chosen(all);
+    var opt = function (list0, cur) { return list0.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
     var h = '<section class="card" id="itmPage"><h2 class="adm-h">' + ic('item', 'c2') + 'Items</h2>'
       + '<div class="itm-btns"><button type="button" class="btn" data-itm-form="add">' + ic('plus') + 'Add</button>'
       + '<button type="button" class="btn" data-itm-report="print">' + ic('report') + 'Report</button>'
       + '<button type="button" class="btn" data-itm-report="csv">' + ic('csv') + 'CSV</button></div>'
-      + (S.form === 'add' ? addForm(v) : '') + (S.msg ? '<p role="status">' + e(S.msg) + '</p>' : '')
+      + (S.form === 'add' ? addForm(v) : '')
       + '<div class="itm-bar" role="group" aria-label="Show">'
       + [['all', 'All'], ['ok', 'In date'], ['soon', 'Due soon'], ['due', 'Overdue'], ['archived', 'Archived']].map(function (f) {
         return '<button type="button" class="itm-f" data-itm-filter="' + f[0] + '" aria-pressed="' + (S.filter === f[0]) + '">' + f[1] + ' ' + counts[f[0]] + '</button>';
-      }).join('') + '<input type="search" data-itm-q placeholder="Search" aria-label="Search items" value="' + e(S.q) + '"></div>';
-    Object.keys(byKind).forEach(function (k) {
-      var xs = byKind[k], bad = xs.filter(function (x) { return RANK[x.s.st] >= RANK.due; }).length;
-      h += '<details class="compfold" open><summary><h3>' + e(k) + ' <span class="mut">' + xs.length + '</span>' + (bad ? ' <span class="pill no">' + bad + '</span>' : '') + '</h3></summary>'
-        + xs.map(function (x) {
-          return '<button type="button" class="itm-row" data-itm-open="' + e(x.it.id) + '"><b>' + e(x.it.item_no) + '</b><span>' + e(x.it.name) + (x.it.size ? ' · ' + e(x.it.size) : '') + '</span>'
-            + '<span class="mut">' + e(x.place || 'no room') + (x.s.never === true ? ' · never tested' : (x.s.never ? ' · ' + x.s.never.map(e).join(', ') + ' never done' : '') + (x.s.next ? (x.s.next < v.today ? ' · Overdue since ' : ' · next ') + e(v.dmy(x.s.next)) : '')) + '</span>'
-            + (x.archived ? '<span class="pill">Archived</span>' : pill(x.s.st)) + (S.ticks[x.it.id] ? '<span class="itm-tick" aria-label="saved">' + ic('tick') + '</span>' : '') + '</button>';
-        }).join('') + '</details>';
+      }).join('') + '<input type="search" data-itm-q placeholder="Search" aria-label="Search items" value="' + e(S.q) + '"></div>'
+      + '<div class="itm-bar"><label class="itm-pick">Group<select data-itm-group>' + opt(GROUPS, S.group) + '</select></label>'
+      + '<label class="itm-pick">Sort<select data-itm-sort>' + opt(SORTS, S.sort) + '</select></label>'
+      + (S.filter === 'archived' ? '' : '<button type="button" class="btn" data-itm-selall>Select all</button>') + '</div>'
+      + (picked.length ? '<div class="itm-selbar" role="group" aria-label="Selected"><b>' + picked.length + ' selected</b>'
+        + '<button type="button" class="btn" data-itm-bulk="test" aria-pressed="' + (S.bulk === 'test') + '">' + ic('test') + 'Test</button>'
+        + '<button type="button" class="btn" data-itm-bulk="move" aria-pressed="' + (S.bulk === 'move') + '">' + ic('place') + 'Move</button>'
+        + '<button type="button" class="btn" data-itm-bulk="archive" aria-pressed="' + (S.bulk === 'archive') + '">' + ic('archive') + 'Archive</button>'
+        + '<button type="button" class="btn" data-itm-selnone>Clear</button></div>' : '')
+      + (picked.length && S.bulk ? bulkForm(v, picked) : '')
+      + (S.msg ? '<p role="status">' + e(S.msg) + '</p>' : '');
+    var fold = shown.length > FOLD_OVER;
+    S.gids = {};
+    groups.forEach(function (g) {
+      var ids = g.xs.filter(function (x) { return !x.archived; }).map(function (x) { return x.it.id; });
+      S.gids[g.key] = ids;
+      var open = S.fold[g.key] === undefined ? !fold : !S.fold[g.key], bad = g.xs.filter(function (x) { return RANK[x.s.st] >= RANK.due; }).length;
+      var all1 = ids.length && ids.every(function (id) { return S.sel[id]; }), n = S.more[g.key] || PAGE_ROWS;
+      h += '<div class="itm-g"><div class="itm-gh">' + (ids.length ? '<label class="itm-ck"><input type="checkbox" data-itm-selg="' + e(g.key) + '"' + (all1 ? ' checked' : '') + ' aria-label="Select all ' + e(g.label) + '"></label>' : '')
+        + '<button type="button" class="itm-fold" data-itm-fold="' + e(g.key) + '" aria-expanded="' + open + '"><h3>' + e(g.label) + ' <span class="mut">' + g.xs.length + '</span>' + (bad ? ' <span class="pill no">' + bad + '</span>' : '') + '</h3></button></div>';
+      if (open) {
+        h += g.xs.slice(0, n).map(function (x) { return rowHtml(v, x); }).join('');
+        if (g.xs.length > n) h += '<button type="button" class="btn" data-itm-more="' + e(g.key) + '">Show ' + Math.min(PAGE_ROWS, g.xs.length - n) + ' more</button>';
+      }
+      h += '</div>';
     });
     if (!shown.length) h += '<p class="mut">None.</p>';
     return h + '</section>';
+  }
+
+  /* ------------------------------------------------------------------ many at once: test, move, archive */
+  function bulkForm(v, xs) {
+    var e = v.esc, btns = function (n, word) { return '<div class="itm-btns"><button type="submit" class="btn yes">' + word + ' ' + n + '</button><button type="button" class="btn" data-itm-bulk="">Cancel</button></div>'; };
+    if (S.bulk === 'move') {
+      return '<form class="itm-form" data-itm-save="bulk-move"><label>Move to<select name="area_id" required>' + areaOptions(v, '', true) + '</select></label>'
+        + '<label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label>' + btns(xs.length, 'Move') + '</form>';
+    }
+    if (S.bulk === 'archive') {
+      return '<form class="itm-form" data-itm-save="bulk-archive"><label>Out of use from<input type="date" name="out_on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label>'
+        + '<label>Why<select name="why"><option>Dead</option><option>Failed test</option><option>Replaced</option><option>Gone</option><option>Other</option></select></label><label>Note<input name="note"></label>' + btns(xs.length, 'Archive') + '</form>';
+    }
+    // test: the tests the chosen items have, most items first; Pass for every item unless its Fail is ticked
+    var keys = {}, order = [];
+    xs.forEach(function (x) { x.s.lines.forEach(function (l) { if (!keys[l.key]) { keys[l.key] = { key: l.key, label: l.label, n: 0 }; order.push(keys[l.key]); } keys[l.key].n++; }); });
+    order.sort(function (a, b) { return b.n - a.n || t(a.label).localeCompare(t(b.label)); });
+    if (!order.length) return '<p class="mut">None of these has a test set.</p>';
+    var key = keys[S.bkey] ? S.bkey : order[0].key, on = S.testOn || v.today;
+    S.bkey = key;
+    var mine = xs.filter(function (x) { return x.s.lines.some(function (l) { return l.key === key; }); }), rks = readingKindsFor(v.T, key, on);
+    return '<form class="itm-form itm-wide" data-itm-save="bulk-test" data-key="' + e(key) + '">'
+      + '<label>Test<select data-itm-bkey>' + order.map(function (o) { return '<option value="' + e(o.key) + '"' + (o.key === key ? ' selected' : '') + '>' + e(o.label) + ' (' + o.n + ')</option>'; }).join('') + '</select></label>'
+      + '<label>Date<input type="date" name="on" required value="' + e(on) + '" max="' + e(v.today) + '" data-itm-teston></label>'
+      + '<label>Who tested<input name="by"></label>'
+      + fieldsOn(v.T, key, on).map(function (f) { return fieldInput(v, f); }).join('')
+      + '<label>Certificate (PDF or photo)<input type="file" name="file" accept="application/pdf,image/*"></label>'
+      + '<label>or a link to it<input name="link" placeholder="https://"></label>'
+      + '<div class="itm-bt">' + mine.map(function (x) {
+        var id = x.it.id;
+        return '<div class="itm-btr"><b>' + e(x.it.item_no) + '</b><span>' + e(x.it.name) + '</span>'
+          + '<label class="itm-fail"><input type="checkbox" name="f_' + e(id) + '" aria-label="Fail ' + e(x.it.item_no) + '">Fail</label>'
+          + rks.map(function (k) {
+            var L = limitOn(v.T, k.id, x.it, on) || {};
+            return '<input name="r_' + e(id) + '__' + e(k.id) + '" inputmode="decimal" data-itm-num data-lo="' + e(L.low || '') + '" data-hi="' + e(L.high || '') + '" placeholder="' + e(k.label || k.kind_key) + (k.unit_id ? ' ' + e(k.unit_id) : '') + '" aria-label="' + e((k.label || k.kind_key) + ' ' + x.it.item_no) + '">';
+          }).join('')
+          + '<input name="n_' + e(id) + '" placeholder="Note" aria-label="Note ' + e(x.it.item_no) + '"></div>';
+      }).join('') + '</div>'
+      + (xs.length > mine.length ? '<p class="mut">' + (xs.length - mine.length) + ' not this test</p>' : '')
+      + '<div class="itm-btns"><button type="submit" class="btn yes">Save ' + mine.length + '</button><button type="button" class="btn" data-itm-bulk="">Cancel</button></div></form>';
+  }
+  function fieldInput(v, f) {
+    var e = v.esc;
+    var input = f.kind === 'choice' ? '<select name="v_' + e(f.field_key) + '"' + (f.required === 'true' ? ' required' : '') + '><option value=""></option>' + String(f.choices || '').split('|').map(function (c) { return '<option>' + e(c) + '</option>'; }).join('') + '</select>'
+      : f.kind === 'yesno' ? '<select name="v_' + e(f.field_key) + '"><option value=""></option><option>yes</option><option>no</option></select>'
+      : '<input name="v_' + e(f.field_key) + '"' + (f.kind === 'number' ? ' inputmode="decimal"' : f.kind === 'date' ? ' type="date"' : '') + (f.required === 'true' ? ' required' : '') + '>';
+    return '<label>' + e(f.label) + input + '</label>';
   }
 
   function kindOptions(v, sel) {
@@ -514,6 +683,7 @@
     };
     if (S.busy) return;
     S.busy = true; S.msg = 'Saving…'; v.redraw();
+    if (kind.indexOf('bulk-') === 0) return onBulk(v, form, kind, d);
     var ITEM = ['item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'note'];
     var pick = function () { var f = {}; ITEM.forEach(function (k) { if (d[k]) f[k] = d[k]; }); return f; };
     var place = function (id, area, from, why2) { return linkAdd(v, { from_table: 'items', from_id: id, to_table: 'area', to_id: area, role: PLACE, from_date: from, source: why2 }); };
@@ -590,6 +760,195 @@
     }
   }
 
+  /* ------------------------------------------------------------------ many saves (ITEMS2, 22 Nov 2026)
+     A save took ~30 s, so 25 plugs one by one took ~12 minutes. The save script's 'many' action takes up to 100 adds or
+     links in one request (each the ordinary save, with its own request id). Until Lisa deploys it the script answers
+     "Unknown action", and the page sends the same saves one at a time with a count. */
+  var MANY = null;   // null = not known yet, true = the script has 'many', false = send one by one
+  var CHUNK = 50;
+  function stepRid() { return 'itm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+  /** Send steps ({action:'add', table, fields, values} or {action:'link_add', fields}); resolves one answer per step. */
+  function sendMany(v, steps, prog) {
+    var out = new Array(steps.length), done = 0, total = steps.length;
+    var tell = function () { if (prog) prog(done, total); };
+    var one = function (i) {
+      var st = steps[i], body = { action: st.action, fields: st.fields, request_id: st.rid || (st.rid = stepRid()) };
+      if (st.table) body.table = st.table;
+      if (st.values) body.values = st.values;
+      return v.sinkSend(body).then(function (r) { return r || { ok: false }; }, function (x) { return { ok: false, message: (x && x.message) || 'Not saved.' }; })
+        .then(function (r) { out[i] = r; done++; tell(); });
+    };
+    var seq = function (idx) { return idx.reduce(function (p, i) { return p.then(function () { return one(i); }); }, Promise.resolve()); };
+    var batch = function (idx, round) {
+      if (!idx.length) return Promise.resolve();
+      if (MANY === false) return seq(idx);
+      var chunk = idx.slice(0, CHUNK), rest = idx.slice(CHUNK);
+      var body = { action: 'many', request_id: stepRid(), steps: chunk.map(function (i) { var st = steps[i], o = { action: st.action, fields: st.fields }; if (st.table) o.table = st.table; if (st.values) o.values = st.values; return o; }) };
+      return v.sinkSend(body).then(function (r) { return r; }, function (x) { return { ok: false, message: (x && x.message) || 'Not saved.' }; }).then(function (r) {
+        if (r && r.ok === false && r.code === 'BAD_REQUEST' && /unknown action/i.test(r.message || '')) { MANY = false; return seq(idx); }
+        if (!r || !r.ok || !r.result || !Array.isArray(r.result.results)) { chunk.forEach(function (i) { out[i] = r || { ok: false }; done++; }); tell(); return batch(rest, round); }
+        MANY = true;
+        var again = [];
+        chunk.forEach(function (i, k) { var x = r.result.results[k] || { ok: false }; if (x.code === 'NOT_SENT' && round < 5) again.push(i); else { out[i] = x; done++; } });
+        tell();
+        return batch(again.concat(rest), again.length ? round + 1 : round);
+      });
+    };
+    if (!v.sinkSend) return Promise.resolve(steps.map(function () { return { ok: false, message: 'Saving is not set up on this device.' }; }));
+    return batch(steps.map(function (x, i) { return i; }), 0).then(function () { return out; });
+  }
+  function progress(v, word) { return function (done, total) { S.msg = word + ' ' + done + ' of ' + total + '…'; v.redraw(); }; }
+  function okish(r) { return r && (r.ok || r.code === 'DUPLICATE'); }
+
+  /** One test per item. Each job: {id, lf, values, reads: [{kind_id, value}], file: {id, role} or null, logId}. Round 1 saves
+      the test rows; round 2 the readings and the certificate link for each test that saved. Resolves {id: message}. */
+  function runTests(v, jobs) {
+    var bad = {}, rk = {};
+    rows(v.T, 'BLD-reading_kinds.csv').forEach(function (k) { rk[k.id] = k; });
+    var need = jobs.filter(function (j) { return !j.logId; });
+    S.msg = 'Saving…'; v.redraw();
+    return sendMany(v, need.map(function (j) { return { action: 'add', table: 'check_log', fields: j.lf, values: Object.keys(j.values).length ? j.values : undefined }; }), progress(v, 'Saving'))
+      .then(function (rs) {
+        need.forEach(function (j, i) {
+          var r = rs[i];
+          if (!r || !r.ok || !r.result || !r.result.id) { bad[j.id] = why(r); return; }
+          j.logId = r.result.id;
+          remember(v, 'BLD-check_log.csv', j.lf, r);
+          Object.keys(j.values).forEach(function (k) { (v.T['BLD-check_value.csv'] = v.T['BLD-check_value.csv'] || []).push({ check_log_id: j.logId, field_key: k, value: j.values[k] }); });
+        });
+        var steps = [], owner = [];
+        jobs.forEach(function (j) {
+          if (!j.logId) return;
+          var it = (list(v.T, v.today).filter(function (z) { return z.it.id === j.id; })[0] || {}).it || { id: j.id };
+          j.reads.forEach(function (x) {
+            var k = rk[x.kind_id] || {}, L = limitOn(v.T, x.kind_id, it, j.on), inr = inLimit(L, x.value);
+            x.step = x.step || { action: 'add', table: 'readings', fields: { kind_id: x.kind_id, item_id: j.id, check_log_id: j.logId, value: x.value, unit_id: k.unit_id || '', precision_dp: k.precision_dp || '',
+              limit_id: (L && L.id) || '', in_range: inr === null ? '' : String(inr), taken_at: j.lf.happened_at, how_entered: 'typed', source: 'staff' } };
+            steps.push(x.step); owner.push([j, x]);
+          });
+          if (j.file && !j.fileDone) {
+            j.fileStep = j.fileStep || { action: 'link_add', fields: { from_table: 'check_log', from_id: j.logId, to_table: 'files', to_id: j.file.id, role: j.file.role, from_date: v.today } };
+            steps.push(j.fileStep); owner.push([j, null]);
+          }
+        });
+        if (!steps.length) return bad;
+        return sendMany(v, steps, progress(v, 'Saving readings')).then(function (rs2) {
+          rs2.forEach(function (r, i) {
+            var j = owner[i][0], x = owner[i][1];
+            if (!okish(r)) { bad[j.id] = 'Test saved. ' + (x ? 'Reading' : 'Certificate') + ' not saved: ' + why(r); return; }
+            if (x) { x.saved = true; if (r.ok) remember(v, 'BLD-readings.csv', x.step.fields, r); }
+            else { j.fileDone = true; if (r.ok) (v.T[LINKS] = v.T[LINKS] || []).push(Object.assign({ id: (r.result && r.result.id) || '' }, j.fileStep.fields)); }
+          });
+          jobs.forEach(function (j) { j.reads = j.reads.filter(function (x) { return !x.saved; }); });
+          return bad;
+        });
+      });
+  }
+  /** Simple steps, one per item (move, archive). jobs: [{id, step, then(r)}]. */
+  function runSteps(v, jobs, word) {
+    var bad = {};
+    S.msg = word + '…'; v.redraw();
+    return sendMany(v, jobs.map(function (j) { return j.step; }), progress(v, word)).then(function (rs) {
+      jobs.forEach(function (j, i) { if (!rs[i] || !rs[i].ok) bad[j.id] = why(rs[i]); else if (j.then) j.then(rs[i]); });
+      return bad;
+    });
+  }
+  /** After a many-save: tick what saved, keep a Retry on what did not, and keep only those ticked for another go. */
+  function finish(v, jobs, bad, retryFn) {
+    var n = 0;
+    jobs.forEach(function (j) {
+      if (bad[j.id]) { S.bfail[j.id] = { msg: bad[j.id], job: j, retry: j.step || j.lf ? retryFn : null }; S.sel[j.id] = true; }
+      else { n++; S.ticks[j.id] = true; delete S.bfail[j.id]; delete S.sel[j.id]; }
+    });
+    S.busy = false; S.bulk = '';
+    S.msg = n === jobs.length ? 'Saved ' + n + '.' : 'Saved ' + n + ' of ' + jobs.length + '. Not saved: ' + (jobs.length - n) + '.';
+    v.redraw();
+  }
+  /** The certificate once for every test (file_add returns its files id; each test then gets its own link). */
+  function fileOnce(v, form, d) {
+    var el = form.querySelector('input[type=file][name=file]'), file = el && el.files && el.files[0];
+    if (!file && !d.link) return Promise.resolve(null);
+    var got = function (r) {
+      if (!r || !r.ok || !r.result || !r.result.id) throw (r || new Error('The file was not saved.'));
+      var res = r.result;
+      if (!rows(v.T, 'BLD-files.csv').some(function (f) { return f.id === res.id; })) (v.T['BLD-files.csv'] = v.T['BLD-files.csv'] || []).push({ id: res.id, drive_file_id: res.drive_file_id || '', url: d.link || '', mime: res.mime || (file ? file.type : ''), taken_on: d.on || v.today });
+      return { id: res.id, role: 'certificate' };
+    };
+    if (!file) return /^https:\/\//.test(d.link) ? v.sinkSend({ action: 'file_add', fields: { kind: 'link', url: d.link, source: 'link' } }).then(got) : Promise.reject(new Error('A link starts with https://'));
+    return readFile(file).then(function (f) {
+      if (f.b64.length > 1800000) throw new Error('That file is too large. Use a smaller photo or PDF.');
+      S.msg = 'Sending the file…'; v.redraw();
+      return v.sinkSend({ action: 'file_add', fields: { kind: f.mime === 'application/pdf' ? 'upload' : 'photo', mime: f.mime, data_base64: f.b64, name: file.name || '', taken_on: d.on || v.today, source: 'upload' } });
+    }).then(got);
+  }
+  function cssq(x) { return String(x).replace(/["\\]/g, '\\$&'); }
+
+  /** Test, move or archive every ticked item. Each item gets the same save a single one would; ticks as each lands. */
+  function onBulk(v, form, kind, d) {
+    var keep = {};
+    Array.prototype.forEach.call(form.elements, function (el) { if (el.name && el.type !== 'file') keep[el.name] = el.type === 'checkbox' ? el.checked : el.value; });
+    var all = list(v.T, v.today), xs = chosen(all), fail = function (r) {   // a refused save keeps what was typed and ticked
+      S.busy = false; S.msg = why(r); v.redraw();
+      var nf = typeof document !== 'undefined' && document.querySelector('form[data-itm-save="' + kind + '"]');
+      if (nf) Array.prototype.forEach.call(nf.elements, function (el) { if (el.name && el.type !== 'file' && Object.prototype.hasOwnProperty.call(keep, el.name)) { if (el.type === 'checkbox') el.checked = keep[el.name] === true; else el.value = keep[el.name]; } });
+    };
+    if (!xs.length) return fail({ message: 'Tick the items first.' });
+    if (kind === 'bulk-test') {
+      var key = form.getAttribute('data-key'), ty = typeOn(v.T, key, d.on);
+      if (!ty) return fail({ message: 'That test was not in force on that day.' });
+      var mine = xs.filter(function (x) { return x.s.lines.some(function (l) { return l.key === key; }); });
+      var values = {}, at = d.on === v.today ? new Date().toISOString() : d.on + 'T12:00:00Z', jobs = [], problem = '';
+      Object.keys(d).forEach(function (k) { if (k.indexOf('v_') === 0 && d[k] !== '') values[k.slice(2)] = d[k]; });
+      mine.forEach(function (x) {
+        var id = x.it.id, box = form.querySelector('input[name="f_' + cssq(id) + '"]'), failed = !!(box && box.checked), note = d['n_' + id] || '', reads = [];
+        if (failed && !note) problem = problem || 'Say briefly what failed on ' + x.it.item_no + '.';
+        Object.keys(d).forEach(function (k) {
+          if (k.indexOf('r_' + id + '__') !== 0 || d[k] === '') return;
+          if (num(d[k]) === '') { problem = problem || 'Type each reading as a number, e.g. 0.09 (' + x.it.item_no + ').'; return; }
+          reads.push({ kind_id: k.slice(('r_' + id + '__').length), value: num(d[k]) });
+        });
+        var lf = { check_type_id: ty.id, item_id: id, outcome: failed ? 'concern' : 'ok', happened_at: at, how_recorded: 'typed' };
+        var nt = [d.by ? 'by ' + d.by : '', note].filter(Boolean).join('. ');
+        if (nt) lf.note = nt;
+        if (d.on < addDays(v.today, -7)) lf.confirm_unusual = 'yes';
+        jobs.push({ id: id, lf: lf, values: values, reads: reads, on: d.on, file: null });
+      });
+      if (problem) return fail({ message: problem });
+      if (!jobs.length) return fail({ message: 'None of these has that test.' });
+      return fileOnce(v, form, d).then(function (file) {
+        jobs.forEach(function (j) { j.file = file; });
+        S.testOn = '';
+        return runTests(v, jobs).then(function (bad) { finish(v, jobs, bad, function (j) { return runTests(v, [j]); }); });
+      }, function (r) { fail(r); });
+    }
+    if (kind === 'bulk-move') {
+      var mv = [], skip = {};
+      xs.forEach(function (x) {
+        var old = placeOn(v.T, x.it.id, v.today);
+        if (old && old.to_id === d.area_id) return;   // already there
+        if (old && d.from_date <= t(old.from_date)) { skip[x.it.id] = 'Pick a day after ' + v.dmy(old.from_date) + '.'; return; }
+        var f = { from_table: 'items', from_id: x.it.id, to_table: 'area', to_id: d.area_id, role: PLACE, from_date: d.from_date, source: 'Moved on the Items page' };
+        mv.push({ id: x.it.id, step: { action: 'link_add', fields: f }, then: function (r) {
+          var ended = (r.result && r.result.ended) || (old ? [old.id] : []);
+          rows(v.T, LINKS).forEach(function (l) { if (ended.indexOf(l.id) >= 0 && !t(l.to_date)) l.to_date = addDays(d.from_date, -1); });
+          (v.T[LINKS] = v.T[LINKS] || []).push(Object.assign({ id: (r.result && r.result.id) || '' }, f));
+        } });
+      });
+      var skipped = xs.filter(function (x) { return skip[x.it.id]; }).map(function (x) { return { id: x.it.id }; });
+      return runSteps(v, mv, 'Moving').then(function (bad) { Object.keys(skip).forEach(function (k) { bad[k] = skip[k]; }); finish(v, mv.concat(skipped), bad, function (j) { return runSteps(v, [j], 'Moving'); }); });
+    }
+    if (kind === 'bulk-archive') {
+      var toDate = addDays(d.out_on, -1);
+      var ar = xs.map(function (x) {
+        var from = (x.useRow && x.useRow.from_date) || day(x.it.first_at) || toDate;
+        if (from > toDate) from = toDate;
+        var f = { need_type: NEED, target_table: 'items', target_id: x.it.id, from_date: from, to_date: toDate, source: d.why + (d.note ? ': ' + d.note : '') };
+        return { id: x.it.id, step: { action: 'add', table: 'requirement', fields: f }, then: function (r) { remember(v, 'BLD-requirement.csv', f, r); } };
+      });
+      return runSteps(v, ar, 'Archiving').then(function (bad) { finish(v, ar, bad, function (j) { return runSteps(v, [j], 'Archiving'); }); });
+    }
+  }
+
   /** The item's latest main photo for the printed report (18 Nov 2026, Lisa: list, photo, type, expiry, then a PDF).
       A Drive photo prints from Drive's thumbnail, as the print cards do (print.js); a web link prints as given. */
   function photoCell(v, it) {
@@ -602,11 +961,12 @@
   function report(v, how) {
     var on = v.today;
     if (how === 'csv') {
-      var blob = new Blob([csv(v.T, on)], { type: 'text/csv' }), a = document.createElement('a');
+      var blob = new Blob([csv(v.T, on, selIds().length ? S.sel : null)], { type: 'text/csv' }), a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = 'Items ' + on + '.csv'; document.body.appendChild(a); a.click(); a.remove();
       return;
     }
     var e = v.esc, xs = filtered(list(v.T, on)), w = window.open('', '_blank');
+    if (selIds().length) xs = xs.filter(function (x) { return S.sel[x.it.id]; });   // only the ticked items, when any are ticked
     if (!w) { S.msg = 'Allow pop-ups to print the report.'; v.redraw(); return; }
     var body = '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
       + '<table><thead><tr><th>No.</th><th>Photo</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
@@ -628,9 +988,22 @@
     var cur = typeof getV === 'function' ? getV : function () { return getV; }, v = cur();
     ['click', 'submit', 'input', 'change'].forEach(function (k) { main.addEventListener(k, function () { v = cur(); }, true); });   // fresh rows each time (the hub swaps its tables on refresh)
     main.addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-itm-open],[data-itm-filter],[data-itm-form],[data-itm-report],[data-itm-retry]');
+      var b = ev.target.closest && ev.target.closest('[data-itm-open],[data-itm-filter],[data-itm-form],[data-itm-report],[data-itm-retry],[data-itm-bulk],[data-itm-selall],[data-itm-selnone],[data-itm-fold],[data-itm-more],[data-itm-bretry]');
       if (!b || !main.contains(b)) return;
-      if (b.hasAttribute('data-itm-open')) { S.open = b.getAttribute('data-itm-open'); S.form = ''; S.msg = ''; }
+      if (b.hasAttribute('data-itm-bulk')) { S.bulk = S.bulk === b.getAttribute('data-itm-bulk') ? '' : b.getAttribute('data-itm-bulk'); S.msg = ''; S.testOn = ''; }
+      else if (b.hasAttribute('data-itm-selall')) { filtered(list(v.T, v.today)).forEach(function (x) { if (!x.archived) S.sel[x.it.id] = true; }); }
+      else if (b.hasAttribute('data-itm-selnone')) { S.sel = {}; S.bulk = ''; }
+      else if (b.hasAttribute('data-itm-fold')) { var gk = b.getAttribute('data-itm-fold'); S.fold[gk] = b.getAttribute('aria-expanded') === 'true'; }
+      else if (b.hasAttribute('data-itm-more')) { var mk = b.getAttribute('data-itm-more'); S.more[mk] = (S.more[mk] || PAGE_ROWS) + PAGE_ROWS; }
+      else if (b.hasAttribute('data-itm-bretry')) {
+        var fid = b.getAttribute('data-itm-bretry'), fx = S.bfail[fid];
+        if (S.busy || !fx) return;
+        if (!fx.retry) { delete S.bfail[fid]; S.sel = {}; S.sel[fid] = true; S.bulk = 'move'; v.redraw(); return; }   // a skipped move: pick the day again
+        S.busy = true;
+        fx.retry(fx.job).then(function (bad) { finish(v, [fx.job], bad, fx.retry); });
+        return;
+      }
+      else if (b.hasAttribute('data-itm-open')) { S.open = b.getAttribute('data-itm-open'); S.form = ''; S.msg = ''; }
       else if (b.hasAttribute('data-itm-filter')) S.filter = b.getAttribute('data-itm-filter');
       else if (b.hasAttribute('data-itm-form')) { S.form = b.getAttribute('data-itm-form'); S.msg = ''; S.testOn = ''; }
       else if (b.hasAttribute('data-itm-report')) { report(v, b.getAttribute('data-itm-report')); return; }
@@ -657,13 +1030,18 @@
       }
     });
     main.addEventListener('change', function (ev) {
-      var el = ev.target;
+      var el = ev.target, refocus = function (sel) { var n = document.querySelector(sel); if (n) n.focus(); };
+      if (el.hasAttribute && el.hasAttribute('data-itm-sel')) { var sid = el.getAttribute('data-itm-sel'); if (el.checked) S.sel[sid] = true; else delete S.sel[sid]; if (!selIds().length) S.bulk = ''; v.redraw(); refocus('[data-itm-sel="' + cssq(sid) + '"]'); return; }
+      if (el.hasAttribute && el.hasAttribute('data-itm-selg')) { var gk2 = el.getAttribute('data-itm-selg'); (S.gids[gk2] || []).forEach(function (id) { if (el.checked) S.sel[id] = true; else delete S.sel[id]; }); if (!selIds().length) S.bulk = ''; v.redraw(); refocus('[data-itm-selg="' + cssq(gk2) + '"]'); return; }
+      if (el.hasAttribute && el.hasAttribute('data-itm-group')) { S.group = el.value; S.fold = {}; S.more = {}; keepView(); v.redraw(); refocus('[data-itm-group]'); return; }
+      if (el.hasAttribute && el.hasAttribute('data-itm-sort')) { S.sort = el.value; keepView(); v.redraw(); refocus('[data-itm-sort]'); return; }
+      if (el.hasAttribute && el.hasAttribute('data-itm-bkey')) { S.bkey = el.value; v.redraw(); refocus('[data-itm-bkey]'); return; }
       if (el.hasAttribute && el.hasAttribute('data-itm-teston')) {
         var f0 = el.form, keep = {};
-        if (f0) Array.prototype.forEach.call(f0.elements, function (x) { if (x.name && x.type !== 'file') keep[x.name] = x.value; });
+        if (f0) Array.prototype.forEach.call(f0.elements, function (x) { if (x.name && x.type !== 'file') keep[x.name] = x.type === 'checkbox' ? x.checked : x.value; });
         S.testOn = el.value; v.redraw();
-        var nf = document.querySelector('form[data-itm-save="test"]');   // answers typed before the date change stay
-        if (nf) Array.prototype.forEach.call(nf.elements, function (x) { if (x.name && x.type !== 'file' && Object.prototype.hasOwnProperty.call(keep, x.name)) x.value = keep[x.name]; });
+        var nf = document.querySelector('form[data-itm-save="test"],form[data-itm-save="bulk-test"]');   // answers typed before the date change stay
+        if (nf) Array.prototype.forEach.call(nf.elements, function (x) { if (x.name && x.type !== 'file' && Object.prototype.hasOwnProperty.call(keep, x.name)) { if (x.type === 'checkbox') x.checked = keep[x.name] === true; else x.value = keep[x.name]; } });
       }   // Earlier: the questions and limits of that day
     });
   }

@@ -141,7 +141,9 @@ function authOwnerGoogle_(token) {
  * Who is saving? An owner's Google sign-in (google_token) when it checks out, otherwise the staff code as before.
  * @throws err_ GOOGLE_NOT_OWNER when only a Google sign-in was sent and it is not an owner's; otherwise authStaff_'s errors
  */
+var AUTH_ONCE_ = null;   // set only while a 'many' request runs its steps: the sign-in was checked once for all of them
 function authSaver_(req) {
+  if (AUTH_ONCE_) return AUTH_ONCE_;
   req = req || {};
   var tok = typeof req.google_token === 'string' ? req.google_token : '';
   if (tok && prop_(BLD.PROP.HUB_CLIENT_ID)) {

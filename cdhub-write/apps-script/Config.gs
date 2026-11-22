@@ -61,7 +61,9 @@ var BLD = {
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
-    MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
+    MAX_BODY_CHARS: 60000,
+    MANY_MAX_STEPS: 100,     // saves in one 'many' request (ITEMS2, 22 Nov 2026)
+    MANY_TIME_MS: 240000,    // a 'many' request stops starting new steps after 4 minutes (Apps Script stops at 6)   // room for the daily check: one id per dog, 500 dogs at most
     MAX_PHOTO_CHARS: 2500000, // whole dog-photo request (base64 picture included)
     MAX_PHOTO_B64: 1800000,   // the picture itself, after whitespace is removed
     MAX_FILE_B64: 1800000,    // file_add: the platform request cap; the owner's file.max_bytes row sets the real limit

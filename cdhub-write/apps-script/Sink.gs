@@ -233,6 +233,40 @@ function sameSlot_(late, clean, rows, nowMs) {
   return null;
 }
 
+/**
+ * Several saves in one request (ITEMS2, 22 Nov 2026: a PAT day is ~25 plugs, one save each took ~30 s).
+ * req.steps = [{action: 'add', table, fields, values} | {action: 'link_add', fields}], at most LIMITS.MANY_MAX_STEPS.
+ * The sign-in is checked once; then each step is the ordinary save (same checks, limits, repeat test and switches),
+ * with its own request id <request_id>-<n>, so sending the same request again skips the steps already saved.
+ * One step refused does not stop the others. After LIMITS.MANY_TIME_MS no new step starts: the rest come back
+ * NOT_SENT for the page to send again. Returns {status, results: [{ok, result} | {ok: false, code, message, fields}]}.
+ */
+function sinkMany_(req) {
+  if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
+  if (!req || typeof req !== 'object' || !Array.isArray(req.steps) || !req.steps.length) throw err_('BAD_REQUEST', 'That request was not understood.');
+  if (req.steps.length > BLD.LIMITS.MANY_MAX_STEPS) throw err_('BAD_REQUEST', 'Send at most ' + BLD.LIMITS.MANY_MAX_STEPS + ' saves at a time.');
+  var rid = String(req.request_id || '');
+  if (!/^[A-Za-z0-9_\-]{8,56}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
+  var who = authSaver_(req);
+  if (who.role === ROLE_INSPECTOR) throw err_('NOT_ALLOWED', 'An inspector link can only look. It cannot save anything.');
+  var start = Date.now(), results = [];
+  AUTH_ONCE_ = who;
+  try {
+    req.steps.forEach(function (st, n) {
+      if (Date.now() - start > BLD.LIMITS.MANY_TIME_MS) { results.push({ ok: false, code: 'NOT_SENT', message: 'Not sent yet. Send again.' }); return; }
+      try {
+        if (!st || typeof st !== 'object' || (st.action !== 'add' && st.action !== 'link_add')) throw err_('BAD_REQUEST', 'Only adds and links can be sent together.');
+        var one = { action: st.action, table: st.table, file: st.file, fields: st.fields, values: st.values, request_id: rid + '-' + n };
+        results.push({ ok: true, result: st.action === 'link_add' ? sinkLinkAdd_(one) : sinkHandle_(one) });
+      } catch (e) {
+        var b = errorBody_(e);
+        results.push({ ok: false, code: b.code, message: b.message, fields: b.fields, duplicate_of: b.duplicate_of });
+      }
+    });
+  } finally { AUTH_ONCE_ = null; }
+  return { status: 'done', saved: results.filter(function (r) { return r.ok; }).length, results: results };
+}
+
 /** Main entry for a save. Returns a result object or throws err_. */
 function sinkHandle_(req) {
   var now = new Date(), nowMs = now.getTime();

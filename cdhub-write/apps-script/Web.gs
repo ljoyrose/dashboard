@@ -47,6 +47,8 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
     if (req && typeof req === 'object' && req.action === 'file_add') return jsonOut_({ ok: true, result: sinkFileAdd_(req) });   // one file store (14 Nov 2026), OFF until TABLE_ON_files
     // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
+    // several adds / links in one request (ITEMS2, 22 Nov 2026): one sign-in check, each step the ordinary save
+    if (req && typeof req === 'object' && req.action === 'many') return jsonOut_({ ok: true, result: sinkMany_(req) });
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
     if (req && typeof req === 'object' && req.action === 'link_end') return jsonOut_({ ok: true, result: sinkLinkEnd_(req) });
     // edit / archive / delete a saved row with a code, logged (Q1/Q2, 15 Nov 2026; Edit.gs). OFF until RECORD_EDIT_ON is true
