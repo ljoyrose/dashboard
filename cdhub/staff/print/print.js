@@ -104,6 +104,8 @@
     return days >= 0 && days < wk * 7;
   }
   function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
+  /* what a pup's Size tile says: the owner's dated puppy.size_tile row, "size" (Small/Medium/Large, the default) or "puppy" */
+  function tileWord(s, sz) { return isPup(s) && /^puppy$/i.test(ruleNow('puppy.size_tile')) ? 'Puppy' : sizeWord(sz); }
   /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
@@ -152,7 +154,7 @@
       h('h2', { class: 'name' + nameFit(s.name || s.id), text: s.name || s.id }),
       h('dl', { class: 'facts' }, facts),
       photoBox(s),
-      sz ? h('div', { class: 'szb', 'data-size': sz, 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: sizeWord(sz) })]) : null,
+      (function (w) { return w ? h('div', { class: 'szb', 'data-size': sz || 'puppy', 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: w })]) : null; })(tileWord(s, sz)),
       qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
       chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
   }

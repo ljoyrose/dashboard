@@ -31,9 +31,12 @@ A dog under `puppy.under_weeks` weeks old on the print day prints in the `size_c
 rule_key,value,effective_from,source,note
 size_colour.puppy,purple,2026-11-21,Lisa 21 Nov 2026,A pup under the puppy age prints purple instead of its size colour.
 puppy.under_weeks,12,2026-11-21,Lisa 21 Nov 2026,Under 12 weeks old on the print day counts as a pup.
+puppy.size_tile,size,2026-11-21,Default until Lisa decides,What a pup's Size tile says: size = Small/Medium/Large; puppy = "Puppy".
 ```
 
-Still Lisa's to decide: does a pup's Size tile say "Puppy" or keep Small/Medium/Large? Should the hub's on-screen dog card and the litter card also turn purple for pups?
+- **A pup's Size tile** follows `puppy.size_tile`. With `size`, or no row, it says Small/Medium/Large as today. With `puppy`, it says "Puppy". Lisa's answer is a newer dated row, with no code change.
+- A dog with no date of birth is never a pup.
+- **Still Lisa's to decide:** should the hub's on-screen dog card and the litter card also turn purple for pups?
 
 ### Fields on item cards (optional rows)
 

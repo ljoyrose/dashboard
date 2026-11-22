@@ -97,3 +97,20 @@ test('dog card v4: a pup under puppy.under_weeks prints purple (size_colour.pupp
   [pup, twelve, noDob, unknown].forEach((f) => { expect(f.word).toBe(''); expect(f.border).toBeGreaterThan(0); });
   await expect(page.locator('.dcard[data-dog="d4"] [data-k="size"]')).toHaveCount(0);   // no size tile when the size is unknown
 });
+
+for (const [rule, pupWord] of [[null, 'Small'], ['size', 'Small'], ['puppy', 'Puppy']]) {
+  test('dog card v4: puppy.size_tile ' + (rule || 'with no row') + ': a pup\'s Size tile says ' + pupWord + '; a grown dog and a dog with no dob keep the size word', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-11-21T12:00:00Z'));
+    await P.openCards(page, (t) => {
+      t.subject[0].dob = '2026-08-30';                                                    // a pup (11 weeks 6 days), small
+      delete t.subject[3].dob;                                                            // no date of birth, small
+      t.breeding_rule.push({ rule_key: 'puppy.under_weeks', value: '12', effective_from: '2026-11-21', source: 'Pretend owner rule' });
+      if (rule) t.breeding_rule.push({ rule_key: 'puppy.size_tile', value: rule, effective_from: '2026-11-21', source: 'Pretend owner rule' },
+        { rule_key: 'puppy.size_tile', value: rule === 'puppy' ? 'size' : 'puppy', effective_from: '2026-01-01', source: 'Pretend older rule' });   // the newest row in force wins
+    });
+    const word = (id) => page.locator('.dcard[data-dog="' + id + '"] [data-k="size"] b');
+    await expect(word('d0')).toHaveText(pupWord);
+    await expect(word('d3')).toHaveText('Small');                                         // no dob: never a pup
+    await expect(word('d1')).toHaveText('Medium');                                        // a grown dog
+  });
+}
