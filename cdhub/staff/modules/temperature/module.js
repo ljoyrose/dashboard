@@ -653,7 +653,7 @@
   function readingsImport(host, c, areas, thermos, readings) {
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Import readings' }));
-    host.appendChild(h('p', { class: 'sub help', text: 'Readings from paper or a spreadsheet: one row per room, thermometer and slot. Columns: date, room, thermometer, slot (overnight or day), min, max, room_empty (yes or blank), note. Every row is checked first; nothing is saved until you press Import.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Readings from paper or a spreadsheet: one row per room, thermometer and slot. Columns: date, room, thermometer, slot (overnight or day), min, max, room_empty (yes or blank), note. Every row is checked first; nothing is saved until you press Import. Each reading is saved as typed; its entry time shows it was entered later.' }));
     var msg = say(''), out = h('div'), row = h('div', { class: 'tg-row' });
     host.appendChild(row); host.appendChild(msg); host.appendChild(out);
     loadImport().then(function (I) {

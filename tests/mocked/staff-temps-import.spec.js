@@ -45,6 +45,7 @@ test('Import readings: every row checked and shown, nothing saved before the pre
   await page.goto('cdhub/staff/#m/temperature');
   await page.getByRole('button', { name: 'Import readings', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Import readings' })).toBeVisible();
+  await expect(page.getByText('Each reading is saved as typed; its entry time shows it was entered later.', { exact: false })).toBeVisible();
   // the starter file: the heading row and one row per thermometer
   const href = decodeURIComponent((await page.locator('[data-timp-template]').getAttribute('href')).replace(/^data:text\/csv;charset=utf-8,/, ''));
   expect(href.split('\r\n')[0]).toBe('date,room,thermometer,slot,min,max,room_empty,note');
