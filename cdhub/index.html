@@ -4706,7 +4706,7 @@ function loadCalPhotos(){
    .catch(function(){ img.remove(); });
  });
 }
-function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); v.calOpen=JCAL.open||null; return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
 document.addEventListener('click',async function(ev){
  var m=ev.target.closest&&ev.target.closest('[data-jcal-month]');
  if(m){ JCAL.ym=m.getAttribute('data-jcal-month'); var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml(); return; }

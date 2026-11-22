@@ -91,3 +91,20 @@ test('a day with records opens who and when, notes, and its photos; a day with a
   assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/1FAKEDIARYPAGEIDFORTESTS000000aa\/view"[^>]*data-jcal-photo[^>]*><img data-cal-photo-id="1FAKEDIARYPAGEIDFORTESTS000000aa"/);
   assert.match(html, /1FAKEPDFIDFORTESTS0000000000000b\/view"[^>]*data-jcal-photo[^>]*><span>certificate<\/span>/);   // a PDF: a link, no picture
 });
+
+// Lisa 22 Nov 2026: "Cross reference the dogs vet visit dates": a vet day shows on the health-check calendar, never as a check.
+test('a vet visit shows on the per-dog calendar day (marker and details), not on one-line jobs, and never counts as a check', () => {
+  const v = Object.assign(base([log('1', 'cty-hc', '2026-11-10', 'd1'), log('2', 'cty-hc', '2026-11-10', 'd2'), log('3', 'cty-fb', '2026-11-10')]), {
+    dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
+    vetVisits: [{ subject_id: 'd1', performed_on: '2026-11-12', start_time: '10:30', kind: 'appointment', status: 'done', reason: 'pretend vaccine' },
+      { subject_id: 'd2', performed_on: '2026-11-13', start_time: '09:00', kind: 'appointment', status: 'booked', reason: 'not yet' }],
+    calOpen: { key: 'health_check_all', iso: '2026-11-12' }
+  });
+  const html = C.html(v, '2026-11', false);
+  const hc = html.slice(html.indexOf('data-jcal="health_check_all"'), html.indexOf('data-jcal="food_bowls"'));
+  assert.match(hc, /<button type="button" class="jd missed vet open" data-day="2026-11-12"[^>]*title="2026-11-12: missed · vet: Pretend Dog"/);
+  assert.match(hc, /data-jcal-vet><b>Vet<\/b><\/p><ul><li>Pretend Dog · 10:30 · pretend vaccine<\/li>/);
+  assert.doesNotMatch(hc, /data-day="2026-11-13"[^>]*vet/);          // booked, not a visit
+  assert.doesNotMatch(html.slice(html.indexOf('data-jcal="food_bowls"')), /class="jd [^"]*vet/);   // one-line jobs: no vet marker
+  assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
+});
