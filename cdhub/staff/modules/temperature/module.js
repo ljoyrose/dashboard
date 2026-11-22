@@ -798,12 +798,19 @@
     css();
     var h0 = c.h || h, stop = null;
     host.textContent = 'Loading...';
+    /* 22 Nov 2026: the round and Earlier need only recent readings. Asking for the last 31 days lets the save script read
+       just its newest rows instead of all ~31,000 (minutes on "Loading..."). Older days: the save still refuses a repeat. */
+    function recentReadings() {
+      var d = new Date(Date.parse(c.today() + 'T12:00:00Z') - 31 * 86400000).toISOString().slice(0, 10);
+      return c.save.read('area_reading', { from: d }).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
+        .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
+    }
     c.addTable('sensor_reading', { label: 'Sensor back-up', file: 'BLD-sensor_reading.csv', fields: {
       area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' }, day: { type: 'date', required: true, label: 'Day' },
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('temperature_band'), recentReadings(), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
