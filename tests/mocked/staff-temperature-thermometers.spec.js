@@ -142,3 +142,29 @@ test('Lisa 12 Nov: the card shows its tick as soon as the save reply is OK, even
   await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('.cards .card', { hasText: 'S1' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
 });
+
+test('20 Nov (PR 731): a reading saved while another is still sending says "Waiting, 1 ahead", then saves', async ({ page }) => {
+  const sent = await setup(page, base());
+  let release; const gate = new Promise((r) => { release = r; });
+  let held = 0;
+  await page.route(SCRIPT, async (route) => {   // hold the first save's reply until released
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action && String(b.action).indexOf('read') !== 0 && held++ === 0) await gate;
+    return route.fallback();
+  });
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card', { hasText: 'H5/6 · H6' }).click();
+  await page.getByLabel('MAX').fill('18.0');
+  await page.getByLabel('MIN').fill('12.0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Saving...')).toBeVisible();
+  await page.getByRole('button', { name: '← Rooms' }).click();
+  await page.locator('.cards .card', { hasText: 'S1' }).click();
+  await page.getByLabel('MAX').fill('17.0');
+  await page.getByLabel('MIN').fill('11.0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Waiting, 1 ahead')).toBeVisible();
+  release();
+  await expect(page.getByText('✓ Saved · Staff A · 09:14')).toBeVisible();
+  await expect.poll(() => sent.length).toBe(2);
+});
