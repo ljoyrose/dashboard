@@ -125,10 +125,40 @@
   /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
   function mainPhoto(s) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], 'subjects', s.id, BLDNeeds.today()).main;
     return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
+     address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
+     way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
+  var DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files/';
+  function driveToken() {
+    try {
+      var saved = window.DashAuth && DashAuth.valid(), scope = window.DASH_CONFIG && DASH_CONFIG.scopes && DASH_CONFIG.scopes.read;
+      return saved && scope && DashAuth.hasScope(saved, scope) ? saved.access_token : '';
+    } catch (e) { return ''; }
+  }
+  function loadPhoto(img, id, fail) {
+    var tok = driveToken(), auth = { headers: { Authorization: 'Bearer ' + tok } }, tried = false;
+    if (!tok) { img.onerror = fail; img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800'; return; }
+    function bytes() {
+      if (tried) { fail(); return; }
+      tried = true;
+      fetch(DRIVE_FILES + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', auth)
+        .then(function (r) { if (!r.ok) throw new Error('photo'); return r.blob(); })
+        .then(function (b) { if (!/^image\//.test(b.type || '')) throw new Error('photo'); img.src = URL.createObjectURL(b); })
+        .catch(fail);
+    }
+    img.onerror = bytes;
+    fetch(DRIVE_FILES + encodeURIComponent(id) + '?fields=thumbnailLink&supportsAllDrives=true', auth)
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
+      .catch(bytes);
+  }
   function photoBox(s) {
     var id = mainPhoto(s), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
-    if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
-      onerror: function () { box.textContent = 'Photo'; } }));
+    if (id) {
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer' });
+      box.appendChild(img);
+      loadPhoto(img, id, function () { box.textContent = 'Photo'; });
+    }
     return box; }
   /* Lisa's dog card (18 Nov 2026): big name, Sex with its sign, Date of birth, photo framed in the size colour,
      "Size: Medium" block in the size colour, one large code, the microchip in groups of 3. Two per A4, cut line between. */
