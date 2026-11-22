@@ -126,50 +126,14 @@ test('the four approved checks, one after another, each save with their own word
   assert.equal(rows[3].area_id + rows[3].subject_id, '');
 });
 
-test('published checks page: its copy of the screen matches, and it loads only published files', () => {
+test('checks screen: its published copy matches; the old checks page is retired and points to staff Jobs', () => {
   const fs = require('node:fs'), path = require('node:path'), root = path.join(__dirname, '..', '..');
   assert.equal(fs.readFileSync(path.join(root, 'cdhub/checks/checks.js'), 'utf8'), fs.readFileSync(path.join(root, 'cdhub-write/records/checks.js'), 'utf8'));
   const html = fs.readFileSync(path.join(root, 'cdhub/checks/index.html'), 'utf8');
   for (const m of html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)) assert.ok(fs.existsSync(path.join(root, 'cdhub/checks', m[1])), m[1]);
-});
-
-test('published checks page: a refused code brings the code box back, and typing is sent in capitals', async () => {
-  const fs = require('node:fs'), path = require('node:path');
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'cdhub/checks/index.html'), 'utf8').replace(/<script src="[^"]+"><\/script>/g, '');
-  const codes = [];
-  const fake = { getScriptUrlSet: () => true, setCode: (c) => codes.push(c), clearCode: () => codes.push('') };
-  const dom = new JSDOM(html, { url: 'https://example.test/cdhub/checks/', runScripts: 'outside-only' });
-  const w = dom.window;
-  w.BLDSave = { create: () => fake };
-  w.BLDChecks = { mount: () => Promise.resolve({ ok: false, reason: 'read' }) };
-  w.eval(dom.window.document.querySelector('script').textContent);
-  const gate = w.document.getElementById('gate'), code = w.document.getElementById('code');
-  assert.equal(gate.hidden, false);
-  code.value = 'abc234';
-  gate.dispatchEvent(new w.Event('submit', { cancelable: true }));
-  assert.equal(gate.hidden, true);
-  await new Promise((r) => setTimeout(r, 0));
-  assert.deepEqual(codes, ['ABC234', '']);
-  assert.equal(gate.hidden, false);
-  assert.equal(code.value, '');
-});
-
-test('demo 2a: a code that opens the checks is kept on this device; a refused one is not', async () => {
-  const fs = require('node:fs'), path = require('node:path');
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'cdhub/checks/index.html'), 'utf8').replace(/<script src="[^"]+"><\/script>/g, '');
-  for (const good of [true, false]) {
-    const dom = new JSDOM(html, { url: 'https://example.test/cdhub/checks/', runScripts: 'outside-only' });
-    const w = dom.window;
-    w.BLDSave = { create: () => ({ getScriptUrlSet: () => true, setCode: () => {}, clearCode: () => {} }) };
-    w.BLDChecks = { mount: () => Promise.resolve(good ? { ok: true } : { ok: false, reason: 'read' }) };
-    w.eval(w.document.querySelector('script').textContent);
-    w.document.getElementById('code').value = 'abc234';
-    w.document.getElementById('gate').dispatchEvent(new w.Event('submit', { cancelable: true }));
-    await new Promise((r) => setTimeout(r, 0));
-    assert.equal(w.localStorage.getItem('bld.device.code'), good ? 'ABC234' : null, String(good));
-  }
+  assert.match(html, /This page has moved/);
+  assert.match(html, /href="\.\.\/staff\/#m\/jobs"/);
+  assert.doesNotMatch(html, /src="checks\.js"|<form|<select/);   // nothing can be saved from the retired page
 });
 
 test('demo 2a: a save line says who and when from the reply, and never ticks a refusal', () => {
