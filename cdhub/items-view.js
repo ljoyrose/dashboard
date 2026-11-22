@@ -608,7 +608,7 @@
     }
     var e = v.esc, xs = filtered(list(v.T, on)), w = window.open('', '_blank');
     if (!w) { S.msg = 'Allow pop-ups to print the report.'; v.redraw(); return; }
-    var body = (typeof self !== 'undefined' && self.CD_DEMO ? '<p style="background:#AF2420;color:#FFFFFF;font-weight:700;padding:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">DEMO: pretend data, not real records</p>' : '') + '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
+    var body = (typeof self !== 'undefined' && self.CD_DEMO ? '<p style="background:#AF2420;color:#FFFFFF;font-weight:600;padding:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">DEMO: pretend data, not real records</p>' : '') + '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
       + '<table><thead><tr><th>No.</th><th>Photo</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
       + xs.map(function (x) {
         var ls = x.s.lines.length ? x.s.lines : [null];
