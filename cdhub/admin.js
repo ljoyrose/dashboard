@@ -371,7 +371,7 @@ var AdminView = (function () {
     return '<h2 class="adm-h">' + icon('staff') + ' Staff</h2>'
       + g('Staff phone', [['Board', 'board', b, 5, 'Home'], ['Jobs', 'check', b + '#m/jobs', 5, 'Due today'], ['Scan', 'qr', b + '#scan', 4, 'Room, dog, litter'],
         ['Temps', 'temp', b + '#m/temperature', 2, 'Room readings'], ['Where', 'where', b + '#m/where', 6, 'Dogs by room'], ['This phone', 'save', b + '#device', 0, 'Code, saving']])
-      + g('Other pages', [['Checks', 'records', location.pathname.replace(/[^/]*$/, '') + 'checks/', 3, 'Staff checks'], ['Guest', 'visitor', b + 'guest/', 6, 'Visitor temps'], ['Inspector', 'inspect', b + 'inspect/', 7, 'Link only']])
+      + g('Other pages', [['Guest', 'visitor', b + 'guest/', 6, 'Visitor temps'], ['Inspector', 'inspect', b + 'inspect/', 7, 'Link only']])
       + (owner ? g('Only you', [['Print', 'print', b + 'print/', 4, 'QR cards'], ['Phone set-up', 'qr', '#/admin', 5, 'Show QR', 'phone'], ['Codes', 'key', '#/admin', 2, 'Who has one', 'codes']]) : '')
       + '<p class="mut help">Staff pages open as this device: they need a code here.</p>';
   }

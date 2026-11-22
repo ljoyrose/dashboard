@@ -5,66 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Staff checks</title>
+<title>This page has moved</title>
 <script src="../staff/look.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../staff/lib/bld-save.css">
 <link rel="stylesheet" href="../../tokens.css">
 <link rel="stylesheet" href="../../house.css">
 <link rel="stylesheet" href="../staff/staff.css">
 </head>
 <body>
+<!-- Retired 22 Nov 2026 (Lisa: "hide anything old or useless"). Staff record daily checks on Jobs, one card per job.
+     Hidden, not deleted: checks.js stays (the Jobs screen uses it) and every saved check stays in its sheet. -->
 <main class="screen">
-  <a class="back" href="../staff/">Back to The Board</a>
-  <h1>Staff checks</h1>
-  <p id="note" class="sub" role="status"></p>
-  <form id="gate" hidden>
-    <label for="code">Your staff code</label>
-    <input id="code" class="inp" type="password" autocomplete="off" autocapitalize="characters" spellcheck="false">
-    <button class="btn" type="submit">Open checks</button>
-  </form>
-  <div id="app"></div>
+  <h1>This page has moved</h1>
+  <p class="sub">Daily checks are now on Jobs: one card per job, tap to tick it done.</p>
+  <p><a class="btn" id="moved" href="../staff/#m/jobs">Open Jobs</a></p>
 </main>
-<script src="../../config.js"></script>
-<script src="../../auth.js"></script>
-<script src="../staff/lib/bld-save.js"></script>
-<script src="../staff/lib/done-state.js"></script>
-<script src="../staff/lib/needs.js"></script>
-<script src="../staff/lib/occupancy.js"></script>
-<script src="checks.js"></script>
-<script>
-  // Uses what The Board already keeps on this phone: the save address and this person's code. ?t=feeding opens that check.
-  (function () {
-    var save = BLDSave.create(), type = new URLSearchParams(location.search).get('t') || '';
-    var gate = document.getElementById('gate'), note = document.getElementById('note'), device = '';
-    function open() {
-      gate.hidden = true; note.textContent = '';
-      return BLDChecks.mount(document.getElementById('app'), save, { type: type }).then(function (r) {
-        if (r && r.reason === 'read') { save.clearCode(); document.getElementById('code').value = ''; gate.hidden = false; }
-      });
-    }
-    if (!save.getScriptUrlSet()) {
-      note.textContent = '';
-      note.appendChild(document.createTextNode('This phone is not set up. Ask the hub owner or an admin, then set it up on '));
-      var a = document.createElement('a');
-      a.href = '../staff/';
-      a.textContent = 'The Board';
-      note.appendChild(a);
-      note.appendChild(document.createTextNode('.'));
-      return;
-    }
-    try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
-    var owner = !device && !!save.usingGoogle && save.usingGoogle();   // an owner signed in to CD Hub needs no code (Board A, 17 Nov 2026)
-    gate.hidden = !!device || owner;
-    if (device) { save.setCode(device, false); open(); } else if (owner) open();
-    // Demo 2a (18 Nov 2026): a code that opens the checks is kept on this device, as on The Board, so it is typed once
-    gate.addEventListener('submit', function (ev) {
-      ev.preventDefault();
-      var typed = document.getElementById('code').value.toUpperCase().trim();
-      save.setCode(typed, false);
-      open().then(function () { if (gate.hidden && typed) { try { localStorage.setItem('bld.device.code', typed); } catch (e) { /* private browsing: works for this visit */ } } });
-    });
-  })();
-</script>
 </body>
 </html>
