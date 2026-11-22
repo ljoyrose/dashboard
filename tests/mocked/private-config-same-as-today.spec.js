@@ -66,7 +66,13 @@ const boot = async (page, guard, url, signedIn) => {
 const both = async (page, guard, url) => {
   const out = await boot(page, guard, url, false);
   const inn = await boot(page, guard, url, true);
-  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+  // 22 Nov 2026: also the device copy (IndexedDB). CD Hub now reuses a kept file whose Drive time is unchanged, so a run
+  // after a run with the copy left in place reads fewer files; both runs must start with nothing kept.
+  await page.evaluate(async () => {
+    localStorage.clear(); sessionStorage.clear();
+    const dbs = indexedDB.databases ? await indexedDB.databases() : [];
+    await Promise.all(dbs.map((d) => new Promise((r) => { const q = indexedDB.deleteDatabase(d.name); q.onsuccess = q.onerror = q.onblocked = () => r(); })));
+  });
   return { out, inn };
 };
 
