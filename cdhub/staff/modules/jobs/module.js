@@ -72,6 +72,7 @@
       }
       ctx0.reportFor = target.litter_id ? {} : { subject_id: target.subject_id, area_id: target.area_id };
       var roomDogs = target.area_id ? d.dogs.filter(function (x) { return x.areaId === target.area_id && !x.away; }) : [];
+      if (target.area_id && !target.subject_id) target.roomDogIds = roomDogs.map(function (x) { return x.id; });
       /* the dogs here, for a whole-site job about dogs (health check): each dog as they go, or all at once */
       var labelOf = {};
       if (!target.litter_id) {
@@ -264,6 +265,8 @@
         } else if (BLDDue.perDogSite(t) && target.subject_id) { opts.action = 'add_site'; entry.dog_ids = target.subject_id; }
         if (site && !noteFor) { opts.action = 'add_site'; entry.how_recorded = paper ? PAPER_HOW : 'site_tap'; }
         panelMsg.className = 'msg'; panelMsg.textContent = ''; BLDDone.saving(state.card);
+        /* 20 Nov 2026 (OV12): saves on this phone go one at a time, so a waiting save says "Waiting, 2 ahead" */
+        opts.onTurn = function (n) { BLDDone.saving(state.card, BLDDone.turn(n)); };
         c.save.submit('check_log', entry, opts).then(function (r) {
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
@@ -456,6 +459,7 @@
           if (tg.dog) { opts.action = 'add_site'; entry.dog_ids = tg.dog; }
           else if (t.target === 'none') opts.action = 'add_site';
           BLDDone.saving(row);
+          opts.onTurn = function (n) { BLDDone.saving(row, BLDDone.turn(n)); };
           return c.save.submit('check_log', entry, opts).then(function (r) {
             if (!r.ok) {
               BLDDone.fail(row, r.code === 'DUPLICATE' ? 'Not saved: this job was saved in the last 30 minutes. Try again later.' : 'Not saved: ' + (r.message || 'try again.'));
@@ -594,7 +598,7 @@
         if (dog.value) f.subject_id = dog.value;
         if (room.value) f.area_id = room.value;
         rid = rid || c.save.newRequestId(); btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving...';
-        c.save.submit('check_log', f, { requestId: rid }).then(function (r) {
+        c.save.submit('check_log', f, { requestId: rid, onTurn: function (n) { msg.textContent = BLDDone.turn(n); } }).then(function (r) {
           btn.disabled = false;
           if (r.ok) { rid = null; note.value = ''; msg.className = 'msg good'; msg.textContent = r.status === 'queued' ? r.message : '✓ Sent'; return; }
           msg.className = 'msg bad'; msg.textContent = r.message;
