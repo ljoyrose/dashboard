@@ -76,7 +76,7 @@
   }
 
   /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.
-      Same rule as the record history (jobs-view.js filesByLog). */
+      Same rule as the record history (filesByLog in the jobs view). */
   function filesByLog(v) {
     var files = {}, out = {};
     (v.files || []).forEach(function (f) { files[f.id] = f; });
