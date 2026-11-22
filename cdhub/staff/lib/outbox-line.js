@@ -30,8 +30,10 @@
       var fresh = items.filter(function (x) { return !x.old; }), old = items.filter(function (x) { return x.old; });
       box.textContent = ''; box.hidden = !items.length && !rf.length;
       if (fresh.length) {
-        var p1 = el(doc, 'p', '', fresh.length + ' waiting to send. Kept on this phone: do not type again.');
+        var signIn = !!(save.outbox.needsSignIn && save.outbox.needsSignIn());   // 22 Nov 2026: the sign-in has ended
+        var p1 = el(doc, 'p', '', fresh.length + (signIn ? ' waiting: sign in again to send. ' : ' waiting to send. ') + 'Kept on this phone: do not type again.');
         p1.setAttribute('data-outbox-waiting', String(fresh.length));
+        if (signIn) p1.setAttribute('data-outbox-sign-in', '');
         var go = btn(doc, busy ? 'Sending...' : 'Send now', false, function () {
           busy = true; draw();
           save.outbox.flush().then(function () { busy = false; draw(); }, function () { busy = false; draw(); });
