@@ -4245,7 +4245,16 @@ function hubList(k){ try{ var a=JSON.parse(localStorage.getItem(k)||'[]'); retur
 function hubPut(k,a){ try{ if(a.length) localStorage.setItem(k,JSON.stringify(a)); else localStorage.removeItem(k); }catch(e){} hubBoxDraw(); }
 function hubKeep(body){ var b; try{ b=JSON.parse(JSON.stringify(body)); }catch(e){ return; } delete b.code; delete b.google_token;
  if(JSON.stringify(b).length>60000) return;   /* a photo is too big to keep; it says so itself */
- var a=hubList(HUB_BOX).filter(function(x){ return x.id!==b.request_id; }); a.push({id:b.request_id,body:b,at:new Date().toISOString()}); hubPut(HUB_BOX,a); }
+ var all=hubList(HUB_BOX), was=all.filter(function(x){ return x.id===b.request_id; })[0], a=all.filter(function(x){ return x.id!==b.request_id; });
+ var item={id:b.request_id,body:b,at:new Date().toISOString()}; if(was&&was.unsure) item.unsure=true; a.push(item); hubPut(HUB_BOX,a); }
+/* SAVED, NOT "NOT SAVED" (OV13 22 Nov 2026: saves took 19-60 s; the first try saved, its answer never came, the resend
+   was answered DUPLICATE and the page said Not saved). A try with no answer (NETWORK, BAD_ANSWER) may have saved; when
+   that entry is sent again and answered DUPLICATE, the first try saved it: saved, with a tick. */
+function hubUnsure(id,j){ if(!(j&&!j.ok&&(j.code==='NETWORK'||j.code==='BAD_ANSWER'))) return;
+ var a=hubList(HUB_BOX), hit=false; a.forEach(function(x){ if(x.id===id&&!x.unsure){ x.unsure=true; hit=true; } }); if(hit){ try{ localStorage.setItem(HUB_BOX,JSON.stringify(a)); }catch(e){} } }
+function hubAnswer(id,j){ if(!(j&&j.ok===false&&j.code==='DUPLICATE')) return j;
+ var it=hubList(HUB_BOX).filter(function(x){ return x.id===id; })[0];
+ return it&&it.unsure?{ok:true,result:{status:'saved',repeat:true,earlier_try:true,at:new Date().toISOString()}}:j; }
 function hubDrop(id){ var a=hubList(HUB_BOX), b=a.filter(function(x){ return x.id!==id; }); if(b.length!==a.length) hubPut(HUB_BOX,b); }
 /* After an answer: saved (or already saved) and refused leave the box; 'not this time' (or no answer) keeps it. true = settled. */
 function hubSettle(id,j,auth){
@@ -4281,7 +4290,7 @@ function hubFlush(o){
   for(var i=0;i<due.length;i++){ var it=due[i]; if(hubInFlight[it.id]) continue;
    var b=Object.assign({},it.body,{code:g.code||''}); if(g.google) b.google_token=g.google;
    hubInFlight[it.id]=1;
-   try{ var j=await sinkFetch(b,g.url); if(hubSettle(it.id,j,auth)&&j&&j.ok) hubDelivered(it,j); }
+   try{ var j=hubAnswer(it.id,await sinkFetch(b,g.url)); hubUnsure(it.id,j); if(hubSettle(it.id,j,auth)&&j&&j.ok) hubDelivered(it,j); }
    catch(e){ hubRetry(60000); }
    finally{ delete hubInFlight[it.id]; } }
  })().then(function(){ hubFlushing=null; hubBoxDraw(); return hubList(HUB_BOX).length; },function(){ hubFlushing=null; return hubList(HUB_BOX).length; });
@@ -4318,7 +4327,7 @@ async function sinkSend(body){
  var rid=body.request_id;
  hubInFlight[rid]=1;
  try{
-  var j=await sinkFetch(body,g.url);
+  var j=hubAnswer(rid,await sinkFetch(body,g.url)); hubUnsure(rid,j);
   if(sinkGoogleRefused(j,g)){ SINK_GOOGLE_NO=true; delete hubInFlight[rid]; return sinkSend(body); }   /* not an owner account: ask the code instead */
   if(j&&(j.code==='BAD_CODE'||j.code==='NO_CODE')){ if(g.code) noteBadCode(g.code); } else if(j&&j.ok){ if(g.code) keepStaffCode(g.code); keepSaveUrl(g.url); }
   if(!hubSettle(rid,j,(g.code||'')+'|'+(g.google||''))) return HUB_SIGN_IN[j&&j.code]?{ok:false,code:j.code,kept:true,signIn:true,requestId:rid,message:HUB_SIGNIN_MSG}:{ok:false,code:(j&&j.code)||'NETWORK',kept:true,requestId:rid,message:HUB_KEPT_MSG};

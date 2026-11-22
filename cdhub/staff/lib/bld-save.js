@@ -233,9 +233,26 @@
     function outboxWrite(a) { put(local, OUTBOX_KEY, a.length ? JSON.stringify(a) : ''); outboxNotify(); }
     function keepEntry(body) {
       var b = JSON.parse(JSON.stringify(body)); delete b.code; delete b.google_token;
-      var a = outboxRead().filter(function (x) { return x.id !== b.request_id; });
-      a.push({ id: b.request_id, body: b, at: new Date().toISOString() });
+      var all = outboxRead(), was = all.filter(function (x) { return x.id === b.request_id; })[0];
+      var a = all.filter(function (x) { return x.id !== b.request_id; });
+      var item = { id: b.request_id, body: b, at: new Date().toISOString() };
+      if (was && was.unsure) item.unsure = true;
+      a.push(item);
       outboxWrite(a);
+    }
+    /* SAVED, NOT "NOT SAVED" (OV13 22 Nov 2026: live saves took 19-60 s; the first try saved, its answer never came,
+       the resend was answered DUPLICATE and the page said Not saved). A try that got no answer may have saved. When
+       an entry sent again after such a try is answered DUPLICATE, its first try saved it: it counts as saved, with a
+       tick. A DUPLICATE for an entry whose every try was answered is still shown as before (a different entry). */
+    function markUnsure(id) {
+      var a = outboxRead(), hit = false;
+      a.forEach(function (x) { if (x.id === id && !x.unsure) { x.unsure = true; hit = true; } });
+      if (hit) put(local, OUTBOX_KEY, JSON.stringify(a));
+    }
+    function answerFor(id, j) {
+      if (!(j && j.ok === false && j.code === 'DUPLICATE')) return j;
+      var item = outboxRead().filter(function (x) { return x.id === id; })[0];
+      return item && item.unsure ? { ok: true, result: { status: 'saved', repeat: true, earlier_try: true } } : j;
     }
     function dropEntry(id) { var a = outboxRead(), b = a.filter(function (x) { return x.id !== id; }); if (b.length !== a.length) outboxWrite(b); }
     function refuseEntry(id, j) {
@@ -284,7 +301,7 @@
       if (inFlight[item.id]) return inFlight[item.id];
       var auth = authNow(), body = withGoogle(Object.assign({}, item.body, { code: getCode() }));
       var p = oneAtATime(function () { return postOnce(body); })
-        .then(function (j) { settle(item.id, j, auth); }, function () { scheduleRetry(60000); });
+        .then(function (j) { settle(item.id, answerFor(item.id, j), auth); }, function () { markUnsure(item.id); scheduleRetry(60000); });
       inFlight[item.id] = p;
       var off = function () { delete inFlight[item.id]; };
       p.then(off, off);
@@ -455,6 +472,7 @@
       var off = function () { delete inFlight[body.request_id]; };
       sent.then(off, off);
       return sent.then(function (j) {
+        j = answerFor(body.request_id, j);
         if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
         if (j && j.ok) {
           var res = j.result || {};
@@ -467,6 +485,7 @@
         }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
+        markUnsure(body.request_id);
         scheduleRetry(60000);
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
@@ -488,10 +507,12 @@
       var off = function () { delete inFlight[body.request_id]; };
       sent.then(off, off);
       return sent.then(function (j) {
+        j = answerFor(body.request_id, j);
         if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
         if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
+        markUnsure(body.request_id);
         scheduleRetry(60000);
         return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });

@@ -144,3 +144,41 @@ test('owner sign-in ends: the save is kept, the line says sign in again, and it 
   expect(saved).toEqual([kept[0].id]);
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
 });
+
+// OV13 22 Nov 2026: saves took 19-60 s; the first try saved but its answer never came; the resend was answered
+// DUPLICATE and the page said "Not saved". A DUPLICATE after a try with no answer means that try saved it.
+test('first try saved but its answer was lost: the resend answered DUPLICATE shows as saved, never Not saved', async ({ page, guard, allowedConsole }) => {
+  allowedConsole.push(/ERR_FAILED/, /Failed to load resource/);
+  rooms(guard.world);
+  let tries = 0;
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    if (!body.code) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(answer(body)) });
+    tries++;
+    if (tries === 1) return route.abort('failed');   // the script saved it; the answer never reached the phone
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.' }) });
+  });
+  await page.goto('cdhub/');
+  await page.evaluate((url) => { DASH_CONFIG.cdhub.saveScriptUrl = url; }, SINK);
+  await page.locator('#signinbtn').click();
+  await tabClick(page, '#nav button[data-go="dogs"]');
+  const card = page.locator('.dc[data-dog="sub-test-pup-1"]');
+  await card.getByRole('button', { name: 'Place' }).click();
+  await page.locator('[data-move-panel] [data-move-to="area-1"]').click();
+  const dlg = page.getByRole('dialog', { name: 'Staff code' });
+  await dlg.getByLabel('Your staff code').fill('river-staff-441');
+  await dlg.getByRole('button', { name: 'Use this code' }).click();
+  const bar = page.locator('#hub-outbox');
+  await expect(bar.locator('[data-outbox-waiting="1"]')).toBeVisible();
+  // watch what the page does with the answer: delivered as saved (a round reading would tick), not dropped unshown
+  await page.evaluate(() => { window.__delivered = []; const real = hubDelivered; hubDelivered = function (it, j) { window.__delivered.push({ id: it.id, ok: !!(j && j.ok) }); return real(it, j); }; });
+  await bar.locator('[data-outbox-send]').click();
+  await expect(bar).toBeHidden();
+  const kept = await page.evaluate(() => window.__delivered);
+  expect(kept).toHaveLength(1);
+  expect(kept[0].ok).toBe(true);
+  await expect(page.locator('body')).not.toContainText('Not saved');
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
+  expect(tries).toBe(2);
+});

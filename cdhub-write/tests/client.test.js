@@ -1155,3 +1155,45 @@ test('owner sign-in ended: with the shared quiet renewal on the page, waiting re
     assert.equal(posts.length, 1); assert.equal(posts[0].google_token, 'ya29.renewed'); assert.equal(posts[0].request_id, r.requestId);
   } finally { delete global.window; }
 });
+
+// OV13 22 Nov 2026: saves took 19-60 s; the first try saved but its answer never came; the resend (same entry) was
+// answered DUPLICATE and the page said "Not saved". A DUPLICATE after a try with no answer means that try saved it.
+test('first try saved but its answer was lost: the resend answered DUPLICATE counts as saved, with nothing left kept', async () => {
+  const local = memStore(); const tries = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
+    const b = JSON.parse(init.body); tries.push(b.request_id);
+    if (tries.length === 1) throw new TypeError('Load failed');   // the script saved it, but the answer never reached the phone
+    return { json: async () => ({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.' }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); await s.checkStatus(); s.setLookups({ area: [{ id: 'area-1' }] }); s.setCode('ABC');
+  const r1 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' });
+  assert.equal(r1.kept, true);
+  // the screen keeps the same request id and the person presses Save again
+  const r2 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' }, { requestId: r1.requestId });
+  assert.equal(r2.ok, true, JSON.stringify(r2)); assert.equal(r2.message, 'Saved.');
+  assert.equal(s.outbox.count(), 0); assert.equal(s.outbox.refused().length, 0);
+  assert.deepEqual(tries, [r1.requestId, r1.requestId]);
+});
+
+test('a DUPLICATE for an entry whose tries were all answered is still told as before (a different entry already saved)', async () => {
+  const local = memStore();
+  const f = async (url, init = {}) => ({ json: async () => ({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved.' }) });
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const r = await s.act('link_end', { id: 'a' });
+  assert.equal(r.ok, false); assert.equal(r.code, 'DUPLICATE');
+  assert.equal(s.outbox.count(), 0);
+});
+
+test('a kept entry resent after a lost answer and answered DUPLICATE leaves the box as saved, never as Not saved', async () => {
+  const local = memStore(); let n = 0;
+  const f = async (url, init = {}) => { n++; if (n === 1) throw new TypeError('Load failed'); return { json: async () => ({ ok: false, code: 'DUPLICATE', message: 'dup' }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const r = await s.act('link_end', { id: 'a' });
+  assert.equal(r.kept, true);
+  assert.equal(await s.outbox.flush(), 0);
+  assert.equal(s.outbox.refused().length, 0);
+});
