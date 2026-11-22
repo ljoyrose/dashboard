@@ -375,6 +375,29 @@ test('every tap shows Saving straight away, with the button off until the reply'
   expect(sent).toHaveLength(0);
 });
 
+test('a second tap while a save is out says Waiting, 1 ahead, then Saving, then ticks', async ({ page }) => {
+  await setup(page);
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.route(SCRIPT, async (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    if (!b.fields.dog_ids) await held;
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'clg-' + b.request_id } } });
+  });
+  const bowls = page.locator('[data-job="bowls"]'), walk = page.locator('[data-job="walk"]');
+  await page.getByRole('button', { name: 'Yes, done: Bowls' }).click();
+  await expect(bowls.locator('.done-line')).toContainText('Saving...');
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await walk.getByRole('button', { name: 'Select all' }).click();
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(walk.locator('.done-line')).toContainText('Waiting, 1 ahead');
+  release();
+  await expect(bowls.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
+  await expect(walk.locator('.done-line')).toContainText('2 of 2 dogs');
+});
+
 test('a check the screen refuses before sending still shows on the card', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');
