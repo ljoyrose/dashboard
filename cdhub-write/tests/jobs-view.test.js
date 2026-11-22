@@ -1,5 +1,5 @@
 'use strict';
-/** Compliance job counts: litter jobs count only for the litters the caller passes as current. */
+/** Compliance job counts: litter jobs count only for the litters the caller passes as current; every job in force is listed. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const V = require('../../cdhub/jobs-view.js');
@@ -8,12 +8,30 @@ const T = (key, target, every) => ({ id: 'cty-' + key, type_key: key, label: key
 const base = { today: '2026-03-02', types: [T('socialise', 'litter', '1')], dogs: [], areas: [] };
 const logs = [{ id: 'l1', check_type_id: 'cty-socialise', litter_id: 'lit1', outcome: 'ok', taken_at: '2026-03-02T09:00:00Z' }];
 
-test('litter jobs count per current litter, and not at all with no current litters', () => {
+test('litter jobs count per current litter; with no current litter the job is still listed, nothing counted, last record kept', () => {
   const one = V.summary(Object.assign({}, base, { logs, litters: [{ id: 'lit1' }, { id: 'lit2' }] }))[0];
   assert.equal(one.ok, 1);
   assert.equal(one.due, 1);
-  assert.equal(V.summary(Object.assign({}, base, { logs, litters: [] })).length, 0);
-  assert.equal(V.summary(Object.assign({}, base, { logs })).length, 0);
+  for (const v of [Object.assign({}, base, { logs, litters: [] }), Object.assign({}, base, { logs })]) {
+    const r = V.summary(v);
+    assert.equal(r.length, 1);
+    assert.deepEqual([r[0].late, r[0].due, r[0].ok, r[0].none_now, r[0].last_done], [0, 0, 0, 'no_litter', '2026-03-02']);
+  }
+  const html = V.complianceHtml(Object.assign({}, base, { logs: [], esc: (s) => String(s), dmy: (s) => s, fold: () => '' }), () => '');
+  assert.match(html, /data-job="socialise"[\s\S]*no litter now/);
+});
+
+test('a Problem-button job (target optional) shows on its SOP panel with its own timing words', () => {
+  const types = [Object.assign(T('lost_dog', 'optional', ''), { sop: 'Lost Dog', frequency: 'When it happens' })];
+  const v = { today: '2026-03-02', logs: [], litters: [], types, dogs: [], areas: [], esc: (s) => String(s), dmy: (s) => s };
+  assert.match(V.sopHtml(v, 'Lost Dog'), /<b>lost_dog<\/b><span class="mut" data-every>When it happens<\/span>[\s\S]*Problem button/);
+});
+
+test('the row\'s own frequency words win over words made from every_days', () => {
+  const types = [Object.assign(T('water_bowls', 'area', '1'), { sop: 'Feeding', frequency: 'Daily and when dirty' })];
+  const v = { today: '2026-03-02', logs: [], litters: [], types, dogs: [], areas: [{ id: 'r1' }], esc: (s) => String(s), dmy: (s) => s };
+  assert.match(V.sopHtml(v, 'Feeding'), /data-every>Daily and when dirty</);
+  assert.equal(V.timing({ every_days: 7 }), 'weekly');
 });
 
 test('a litter\'s history lists only its own records', () => {

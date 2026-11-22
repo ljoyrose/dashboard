@@ -16,7 +16,7 @@
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
     var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
-    var key = v.today + '|' + (v.visits || []).length + '|' + (v.rules || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
+    var key = v.today + '|' + (v.visits || []).length + '|' + (v.rules || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.map(function (t) { return t.id; }).join(',') + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
     var rows = {}, perDog = {};
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
@@ -37,8 +37,21 @@
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
     add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
-    var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {
-      return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '', every_days: Due.everyDays(t.every_days) });
+    /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
+       current litter, a Problem-button job (target optional). Its last record is still shown. */
+    var keyOf = {}, lastOf = {};
+    v.types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+    v.logs.forEach(function (l) {
+      var k = keyOf[l.check_type_id], d = Due.londonDate(l.happened_at || l.taken_at);
+      if (!k || !d || d > v.today || l.outcome === 'note' || l.outcome === 'not_done' || l.outcome === 'part_done') return;
+      if (!lastOf[k] || d > lastOf[k]) lastOf[k] = d;
+    });
+    var inForce = Due.jobsInForce(v.types, v.today);
+    inForce.forEach(function (t) {
+      if (!rows[t.type_key]) rows[t.type_key] = { key: t.type_key, label: t.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: lastOf[t.type_key] || '', none_now: t.target === 'optional' ? 'problem' : t.target === 'litter' ? 'no_litter' : 'none' };
+    });
+    var list = inForce.map(function (t) {
+      return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '', every_days: Due.everyDays(t.every_days), frequency: String(t.frequency || '').trim() });
     }).sort(function (a, b) { return String(a.sop).localeCompare(String(b.sop)) || String(a.label).localeCompare(String(b.label)); });
     memo = { key: key, rows: list };
     return list;
@@ -125,8 +138,9 @@
     h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
-        var done = r.as_needed && !r.ok ? '<td data-n="done"><span class="mut">as needed</span></td>' : cell(r, r.ok, 'ok', 'done');
-        return '<tr data-job="' + e(r.key) + '"><td class="mut">' + sop + '</td><td><b>' + e(r.label) + '</b></td>' + done + cell(r, r.due, 'w', 'due') + cell(r, r.late, 'no', 'late')
+        var done = NONE_NOW[r.none_now] ? '<td data-n="done"><span class="mut">' + NONE_NOW[r.none_now] + '</span></td>'
+          : r.as_needed && !r.ok ? '<td data-n="done"><span class="mut">as needed</span></td>' : cell(r, r.ok, 'ok', 'done');
+        return '<tr data-job="' + e(r.key) + '"><td class="mut">' + sop + '</td><td><b>' + e(r.label) + '</b> <span class="mut" data-every>' + e(timing(r)) + '</span></td>' + done + cell(r, r.due, 'w', 'due') + cell(r, r.late, 'no', 'late')
           + '<td class="mut">' + e(r.last_done ? v.dmy(r.last_done) : '—') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     h += '<h4>By licence source</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>source</th><th>jobs</th><th>due</th><th>late</th></tr></thead><tbody>'
@@ -137,7 +151,7 @@
     return h + '</details></section>';
   }
 
-  /** How often, in words, from the job row's every_days (never typed text): 365 = every 12 months, 14 = every 2 weeks; null = as needed. */
+  /** How often, in words, from the job row's every_days: 365 = every 12 months, 14 = every 2 weeks; null = as needed. */
   function everyWords(n) {
     if (!n) return 'as needed';
     if (n === 1) return 'daily';
@@ -147,12 +161,17 @@
     return 'every ' + n + ' days';
   }
 
+  /** The job's timing in the owner's own words (its frequency, e.g. "Daily and when dirty"), else from every_days. */
+  function timing(r) { return r.frequency || everyWords(r.every_days); }
+  /** Why a job has nothing to count today: no current litter, or it is recorded from the Problem button. */
+  var NONE_NOW = { no_litter: 'no litter now', problem: 'Problem button' };
+
   function sopHtml(v, name) {
     var e = v.esc, rows = summary(v).filter(function (r) { return r.sop === name; });
     if (!rows.length) return '';
     return '<div class="sopjobs" data-sopjobs="' + e(name) + '">' + rows.map(function (r) {
-      var state = r.late ? '<span class="pill no">' + r.late + ' late</span>' : r.due ? '<span class="pill w">' + r.due + ' due</span>' : '';
-      return '<div class="dcs-row"><b>' + e(r.label) + '</b><span class="mut" data-every>' + e(everyWords(r.every_days)) + '</span><span class="mut">' + e(r.last_done ? 'last ' + v.dmy(r.last_done) : 'not recorded') + '</span>' + state + '</div>';
+      var state = r.late ? '<span class="pill no">' + r.late + ' late</span>' : r.due ? '<span class="pill w">' + r.due + ' due</span>' : NONE_NOW[r.none_now] ? '<span class="mut" data-none>' + NONE_NOW[r.none_now] + '</span>' : '';
+      return '<div class="dcs-row"><b>' + e(r.label) + '</b><span class="mut" data-every>' + e(timing(r)) + '</span><span class="mut">' + e(r.last_done ? 'last ' + v.dmy(r.last_done) : 'not recorded') + '</span>' + state + '</div>';
     }).join('') + '</div>';
   }
 
@@ -167,5 +186,5 @@
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
-  return { summary: summary, everyWords: everyWords, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
+  return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
 }));
