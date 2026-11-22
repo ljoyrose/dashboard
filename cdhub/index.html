@@ -726,6 +726,16 @@ wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2
 var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
 /* LIVE_PAGES never show the device copy: Compliance ("What was true on", the inspection export) reads live rows only */
 var LIVE_PAGES={compliance:1};
+/* Breed Better grading is Breed Better's only (Lisa 22 Nov 2026: "anything from breed better grading is BB only not
+   compliance"). A check type is Breed Better's when its row says so: group "Breed Better", or a note that starts
+   "Breed Better:". Every version of that type_key is left off Compliance, with its records; Breed Better, Jobs and the
+   records themselves are unchanged. Read from rows, no list here. */
+function bbOnlyType(t){ return !!t&&(String(t.group||'').trim().toLowerCase()==='breed better'||/^\s*breed better\s*:/i.test(String(t.note||''))); }
+function compJobsV(){ var v=jobsV(), keys={}, ids={};
+ v.types.forEach(function(t){ if(bbOnlyType(t)&&String(t.type_key||'').trim()) keys[String(t.type_key).trim()]=1; });
+ v.types=v.types.filter(function(t){ var off=bbOnlyType(t)||!!keys[String(t.type_key||'').trim()]; if(off) ids[t.id]=1; return !off; });
+ v.logs=v.logs.filter(function(r){ return !ids[r.check_type_id]; });
+ return v; }
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
@@ -4724,7 +4734,7 @@ function saveBlob(b,name){ var a=document.createElement('a'); a.href=URL.createO
    saves one whole-site record (every dog for a per-dog job). Which jobs show is the owner's rows (BLDJobCal). */
 var JCAL={ym:''};
 if(typeof BLDJobCal!=='undefined'){ (function(){ var st=document.createElement('style'); st.textContent=BLDJobCal.CSS; document.head.appendChild(st); })(); }
-function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=compJobsV();   /* Compliance only */ return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
 /* Import past daily records (Lisa 22 Nov 2026, "A"): choose a spreadsheet, every row is checked and shown, then one
    press saves the ready rows one at a time, each marked imported. Nothing is saved before that press. */
 document.addEventListener('click',function(ev){
@@ -4798,7 +4808,7 @@ function pageCompliance(){
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src&&hideSource(x.src)?' ('+esc(hideSource(x.src))+')':'')+'</span></li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
  h+=compTempsHtml()+compMedsHtml();
- h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
+ h+=BLDJobsView.complianceHtml(compJobsV(),cntPill);
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
