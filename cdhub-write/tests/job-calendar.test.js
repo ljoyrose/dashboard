@@ -90,3 +90,12 @@ test('import: rows are checked (date, job by name or key, outcome, future, repea
   const tpl = C.template(v);
   assert.match(tpl, /^date,job,outcome,note\r\n2026-11-16,"Health check: all dogs",done,/);
 });
+
+// Lisa 22 Nov 2026: a Numbers export puts the table name ("Csv", "daily-records") above the heading row. It is left out.
+test('import: title lines above the heading row are left out, never shown as a row', () => {
+  const v = base([]);
+  const rows = C.parseImport(v, 'daily-records\r\nCsv,,,\r\ndate,job,outcome,note\r\n2026-11-09,Food bowls washed,done,\r\n');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].ok, true);
+  assert.equal(rows[0].line, 1);
+});

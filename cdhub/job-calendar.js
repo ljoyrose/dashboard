@@ -163,7 +163,12 @@
     var types = siteTypes(v), byName = {};
     Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
     var rows = csvRows(text), out = [], seen = {};
-    if (rows.length && /date/i.test(rows[0][0] || '') && /job/i.test(rows[0][1] || '')) rows = rows.slice(1);
+    // The heading row (date, job, ...) may sit under a title line: Numbers puts the table name above it ("daily-records",
+    // "Csv"; Lisa 22 Nov 2026). Everything above the heading row is left out; no heading row = every row is data.
+    for (var h = 0; h < Math.min(rows.length, 5); h++) {
+      var cells = rows[h].map(function (c) { return String(c).trim().toLowerCase(); });
+      if (cells.indexOf('date') >= 0 && cells.indexOf('job') >= 0) { rows = rows.slice(h + 1); break; }
+    }
     rows.forEach(function (r, i) {
       var iso = isoOf(r[0]), key = byName[String(r[1] || '').trim().toLowerCase()] || '', oc = IMP_OUTCOME[String(r[2] || '').trim().toLowerCase()];
       var x = { line: i + 1, date: String(r[0] || ''), job: String(r[1] || ''), iso: iso, key: key, label: key ? types[key].label || key : '', outcome: oc || '', note: String(r[3] || '').trim(), ok: false, why: '' };
@@ -207,7 +212,8 @@
         return '<tr data-ok="' + (x.ok ? 1 : 0) + '"><td>' + x.line + '</td><td>' + e(x.iso ? (v.dmy ? v.dmy(x.iso) : x.iso) : x.date) + '</td><td>' + e(x.label || x.job) + '</td><td>'
           + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? 'ready' : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
       }).join('') + '</tbody></table></div>'
-      + (good ? '<p><button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>' : '');
+      + '<p>' + (good ? '<button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> ' : '')
+      + '<button class="btn quiet" type="button" data-jcal-import-cancel>Cancel</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>';
   }
 
   return { STARTER: STARTER, chosen: chosen, month: month, html: html, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };
