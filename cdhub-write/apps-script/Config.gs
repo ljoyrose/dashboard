@@ -80,6 +80,7 @@ var BLD = {
     TEMP_MIN: -30,
     TEMP_MAX: 60,
     READ_MAX_ROWS: 3000,    // a read never returns more rows than this
+    READ_TAIL_ROWS: 3000,   // a read with a from-date reads only this many of the newest rows when they reach back past that date (22 Nov 2026)
     MOVES_QUEUE_DAYS: 14,   // moves queue for this many days after go-live (adminStartMovesQueue)
     CHECK_MAX_DOGS: 500     // most dogs one daily-check confirmation may list
   },
