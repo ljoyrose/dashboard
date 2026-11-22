@@ -149,6 +149,8 @@ test('a list save keeps each item\'s form answers', async ({ page }) => {
   expect(b.values).toEqual({ weight: '12.5' });
   expect(many.items.filter((it) => it.values)).toHaveLength(1);
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+});
+
 // SIGN IN AGAIN (Lisa 22 Nov 2026): the owner saves with her Google sign-in, which lasts about an hour. When it has
 // ended, a save is kept on the phone (never lost, never "Not saved"), the line asks her to sign in again, and once she
 // has, it goes by itself, saved once.
