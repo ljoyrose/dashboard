@@ -151,7 +151,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
   // 20-22 Nov 2026: the gate's 35-minute limit cut off every publish once the suite ran past it, so github.io (where
   // the printed QR codes point) went stale for two days while main moved on. The gate runs the same suite as the
   // required check, so it gets at least the same time limit.
-  test('the publish gate has at least as long as the required check to run the suite', () => {
+  test('the publish gate has at least as long as the required check to run the suite @regression', () => {
     const minutes = (wf, job) => Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
     expect(minutes(pages(), 'gate')).toBeGreaterThanOrEqual(minutes(read('.github/workflows/tests.yml'), '[a-z-]+'));
   });
