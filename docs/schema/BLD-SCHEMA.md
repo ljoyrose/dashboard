@@ -523,6 +523,12 @@ LIVE 82 (68 + files, links, items, item_kinds, readings, reading_kinds, reading_
 | 15 Nov 2026 | Size bands small < 10 kg, medium 10-25, large >= 25; no toy or extra-large. Live rows already match; nothing written. | Lisa via Steward; live check 06:30 |
 | 15 Nov 2026 | Retention table and GDPR export/erase design (20.3). QR on add (20.4) waits for J3. | J1 brief |
 
+## Decision log additions (ITEMS, 20/11)
+
+| When | Decision | Source |
+|---|---|---|
+| 20 Nov 2026 | **New need_type `room.items`** on BLD-requirement (target_table area, from_date/to_date, source). A room covered by it today is offered for items (Move / Add) even when `room.in_use` keeps it off dog rounds, cleans and temps. Items room list = in use today OR `room.items` today, plus the item's own room; retired rooms (in use ended) drop out with no ZZ_ rename. Live rows 45–48: the four site rooms, from 2000-01-01, open. Backup AA_BACKUP_BLD-requirement_2026-11-20-2300__CLAUDE-CODE. | Lisa "yes hide" (ZZ_ cabins in Move), 20 Nov 2026; PR 738 |
+
 ## Decision log additions (ITEMS2, 22/11)
 
 | When | Decision | Source |
