@@ -58,10 +58,11 @@ async function open(page, guard, opts) {
     const b = JSON.parse(route.request().postData() || '{}');
     sent.push(b);
     const ok = (result) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result }) });
-    // 22 Nov 2026 (ITEMS2): 'many' = several saves in one request; a script without it says Unknown action
-    if (b.action === 'many') {
+    // 22 Nov 2026 (ITEMS2): add_many = the list save (PR 737/771): one answer per item, by its own request id;
+    // a script without it says Unknown action
+    if (b.action === 'add_many') {
       if (!(opts && opts.many)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }) });
-      return ok({ status: 'done', results: b.steps.map((st, k) => ({ ok: true, result: { status: 'saved', id: (st.table || 'lnk').slice(0, 3) + '-m' + sent.length + '-' + k, ended: [] } })) });
+      return ok({ status: 'many', items: b.items.map((it, k) => ({ request_id: it.request_id, ok: true, result: Object.assign({ status: 'saved', id: (it.table || 'lnk').slice(0, 3) + '-m' + sent.length + '-' + k, ended: [] }, it.values ? { answers: Object.keys(it.values).length } : {}) })) });
     }
     if (b.table === 'check_log' && opts && opts.failItem && b.fields.item_id === opts.failItem && opts.failLeft-- > 0) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'INVALID', message: 'Pretend refusal.' }) });
     if (b.action === 'file_add') return ok({ status: 'saved', id: 'fil-new', drive_file_id: 'drvfilenewpretend000000001' });
@@ -355,18 +356,22 @@ test.describe('CD Hub: items, click by click', () => {
     await expect(f.locator('input[name="f_ip0"]')).toBeChecked();
     await f.locator('input[name="n_ip0"]').fill('Cable cut');
     await f.locator('input[name="r_i1__r1"]').fill('0.05');
+    await f.locator('select[name="v_look"]').selectOption('Pass');                // the form's answer goes with every test
     await f.locator('input[name="file"]').setInputFiles(pdf);
     await shot(page, 'bulk-test-form');
     await f.locator('button[type="submit"]').click();
     await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 26.');
     const ms = Date.now() - t0;
-    expect(sent.map((b) => b.action)).toEqual(['file_add', 'many', 'many']);
-    const logs = sent[1].steps;
+    expect(sent.map((b) => b.action)).toEqual(['file_add', 'add_many', 'add_many']);
+    const logs = sent[1].items;
     expect(logs).toHaveLength(26);
     expect(logs.every((st) => st.table === 'check_log' && st.fields.check_type_id === 'c1')).toBe(true);
     expect(logs.filter((st) => st.fields.outcome === 'concern').map((st) => [st.fields.item_id, st.fields.note])).toEqual([['ip0', 'by Pretend Tester. Cable cut']]);
     expect(logs.filter((st) => st.fields.outcome === 'ok')).toHaveLength(25);
-    const second = sent[2].steps;
+    expect(logs.every((st) => st.values && st.values.look === 'Pass')).toBe(true);
+    expect(new Set(logs.map((st) => st.request_id)).size).toBe(26);              // each item its own full request id
+    expect(logs.every((st) => /^[A-Za-z0-9_-]{8,64}$/.test(st.request_id))).toBe(true);
+    const second = sent[2].items;
     expect(second.filter((st) => st.table === 'readings').map((st) => [st.fields.item_id, st.fields.value, st.fields.in_range])).toEqual([['i1', '0.05', 'true']]);
     expect(second.filter((st) => st.action === 'link_add').map((st) => st.fields.role + ':' + st.fields.to_id)).toEqual(Array(26).fill('certificate:fil-new'));
     await expect(page.locator('#itmPage .itm-tick')).toHaveCount(26);
@@ -384,7 +389,7 @@ test.describe('CD Hub: items, click by click', () => {
     await page.locator('[data-itm-bulk="test"]').click();
     await page.locator('form[data-itm-save="bulk-test"] button[type="submit"]').click();
     await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 1 of 2. Not saved: 1.');
-    expect(sent.map((b) => b.action + ':' + (b.fields ? b.fields.item_id : ''))).toEqual(['many:', 'add:i2', 'add:i1']);   // best first: the heater is in date
+    expect(sent.map((b) => b.action + ':' + (b.fields ? b.fields.item_id : ''))).toEqual(['add_many:', 'add:i2', 'add:i1']);   // best first: the heater is in date
     const heater = page.locator('#itmPage .itm-row', { hasText: 'Pretend heater' });
     await expect(heater).toContainText('Not saved: Pretend refusal.');
     await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' }).locator('.itm-tick')).toBeVisible();
@@ -392,6 +397,7 @@ test.describe('CD Hub: items, click by click', () => {
     await heater.locator('[data-itm-bretry]').click();
     await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 1.');
     expect(sent.slice(3).map((b) => b.action + ':' + b.fields.item_id)).toEqual(['add:i2']);   // the kettle is not sent again
+    expect(sent[3].request_id).toBe(sent[1].request_id);                         // the same id: a resend can never save twice
     await expect(heater.locator('.itm-tick')).toBeVisible();
     await expect(heater).not.toContainText('Not saved');
   });
@@ -410,14 +416,14 @@ test.describe('CD Hub: items, click by click', () => {
     await m.locator('input[name="from_date"]').fill('2026-11-20');
     await m.locator('button[type="submit"]').click();
     await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 2.');
-    expect(sent[0].steps.map((st) => st.action + ':' + st.fields.from_id + '>' + st.fields.to_id).sort()).toEqual(['link_add:i1>a-c2', 'link_add:i2>a-c2']);
+    expect(sent[0].items.map((st) => st.action + ':' + st.fields.from_id + '>' + st.fields.to_id).sort()).toEqual(['link_add:i1>a-c2', 'link_add:i2>a-c2']);
     await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' })).toContainText('C2');
     await page.locator('[data-itm-sel="i1"]').check();
     await page.locator('[data-itm-sel="i2"]').check();
     await page.locator('[data-itm-bulk="archive"]').click();
     await page.locator('form[data-itm-save="bulk-archive"] button[type="submit"]').click();
     await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 2.');
-    expect(sent[1].steps.map((st) => st.table + ':' + st.fields.need_type + ':' + st.fields.target_id).sort()).toEqual(['requirement:item.in_use:i1', 'requirement:item.in_use:i2']);
+    expect(sent[1].items.map((st) => st.table + ':' + st.fields.need_type + ':' + st.fields.target_id).sort()).toEqual(['requirement:item.in_use:i1', 'requirement:item.in_use:i2']);
     await expect(page.locator('#itmPage .itm-row')).toHaveCount(1);
     await expect(page.locator('[data-itm-filter="archived"]')).toHaveText('Archived 2');
   });

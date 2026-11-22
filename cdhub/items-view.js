@@ -772,20 +772,22 @@
   }
 
   /* ------------------------------------------------------------------ many saves (ITEMS2, 22 Nov 2026)
-     A save took ~30 s, so 25 plugs one by one took ~12 minutes. The save script's 'many' action takes up to 100 adds or
-     links in one request (each the ordinary save, with its own request id). Until Lisa deploys it the script answers
-     "Unknown action", and the page sends the same saves one at a time with a count. */
-  var MANY = null;   // null = not known yet, true = the script has 'many', false = send one by one
+     A save took ~30 s, so 25 plugs one by one took ~12 minutes. The save script's list save (add_many: STAFF, PR 737/771)
+     takes up to 200 adds and links in one request, signed in once under one lock, each checked as a single save. Every
+     step keeps one request id of its own for the list, a resend and Retry, so nothing saves twice. A script without the
+     list save answers "Unknown action", and the page sends the same steps one at a time with a count. */
+  var MANY = null;   // null = not known yet, true = the script has add_many, false = send one by one
   var CHUNK = 50;
   function stepRid() { return 'itm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
   /** Send steps ({action:'add', table, fields, values} or {action:'link_add', fields}); resolves one answer per step. */
   function sendMany(v, steps, prog) {
     var out = new Array(steps.length), done = 0, total = steps.length;
     var tell = function () { if (prog) prog(done, total); };
+    steps.forEach(function (st) { if (!st.rid) st.rid = stepRid(); });
+    var item = function (st) { var o = { request_id: st.rid, action: st.action, fields: st.fields }; if (st.table) o.table = st.table; if (st.values) o.values = st.values; return o; };
     var one = function (i) {
-      var st = steps[i], body = { action: st.action, fields: st.fields, request_id: st.rid || (st.rid = stepRid()) };
-      if (st.table) body.table = st.table;
-      if (st.values) body.values = st.values;
+      var body = item(steps[i]);
+      body.request_id = steps[i].rid;
       return v.sinkSend(body).then(function (r) { return r || { ok: false }; }, function (x) { return { ok: false, message: (x && x.message) || 'Not saved.' }; })
         .then(function (r) { out[i] = r; done++; tell(); });
     };
@@ -794,15 +796,26 @@
       if (!idx.length) return Promise.resolve();
       if (MANY === false) return seq(idx);
       var chunk = idx.slice(0, CHUNK), rest = idx.slice(CHUNK);
-      var body = { action: 'many', request_id: stepRid(), steps: chunk.map(function (i) { var st = steps[i], o = { action: st.action, fields: st.fields }; if (st.table) o.table = st.table; if (st.values) o.values = st.values; return o; }) };
+      var body = { action: 'add_many', request_id: stepRid(), items: chunk.map(function (i) { return item(steps[i]); }) };
       return v.sinkSend(body).then(function (r) { return r; }, function (x) { return { ok: false, message: (x && x.message) || 'Not saved.' }; }).then(function (r) {
         if (r && r.ok === false && r.code === 'BAD_REQUEST' && /unknown action/i.test(r.message || '')) { MANY = false; return seq(idx); }
-        if (!r || !r.ok || !r.result || !Array.isArray(r.result.results)) { chunk.forEach(function (i) { out[i] = r || { ok: false }; done++; }); tell(); return batch(rest, round); }
+        if (!r || !r.ok || !r.result || !Array.isArray(r.result.items)) { chunk.forEach(function (i) { out[i] = r || { ok: false }; done++; }); tell(); return batch(rest, round); }
         MANY = true;
-        var again = [];
-        chunk.forEach(function (i, k) { var x = r.result.results[k] || { ok: false }; if (x.code === 'NOT_SENT' && round < 5) again.push(i); else { out[i] = x; done++; } });
+        var by = {}, again = [], alone = [];
+        r.result.items.forEach(function (x) { if (x && x.request_id) by[x.request_id] = x; });
+        chunk.forEach(function (i) {
+          var x = by[steps[i].rid];
+          if (!x) { out[i] = { ok: false, code: 'NETWORK', message: 'No answer for this one. Retry.' }; done++; return; }
+          if (x.code === 'NOT_SENT' && round < 5) { again.push(i); return; }
+          // a list save from before links were allowed in it (PR 737 alone): that link goes on its own
+          if (x.code === 'BAD_REQUEST' && steps[i].action !== 'add') { alone.push(i); return; }
+          out[i] = x.ok ? { ok: true, result: x.result } : { ok: false, code: x.code, message: x.message, fields: x.fields, duplicate_of: x.duplicate_of };
+          // a list save that dropped the answers (PR 737 alone): the record is saved, its answers are not; said, never silent
+          if (x.ok && steps[i].values && x.result && x.result.answers === undefined && !x.result.repeat) out[i] = { ok: false, code: 'ANSWERS_NOT_SAVED', message: 'Saved without its answers. Add them on the item.', saved: x.result };
+          done++;
+        });
         tell();
-        return batch(again.concat(rest), again.length ? round + 1 : round);
+        return seq(alone).then(function () { return batch(again.concat(rest), again.length ? round + 1 : round); });
       });
     };
     if (!v.sinkSend) return Promise.resolve(steps.map(function () { return { ok: false, message: 'Saving is not set up on this device.' }; }));
@@ -818,7 +831,8 @@
     rows(v.T, 'BLD-reading_kinds.csv').forEach(function (k) { rk[k.id] = k; });
     var need = jobs.filter(function (j) { return !j.logId; });
     S.msg = 'Saving…'; v.redraw();
-    return sendMany(v, need.map(function (j) { return { action: 'add', table: 'check_log', fields: j.lf, values: Object.keys(j.values).length ? j.values : undefined }; }), progress(v, 'Saving'))
+    // the step is kept on the job, so a Retry sends the same request id (the script answers it once, never saves it twice)
+    return sendMany(v, need.map(function (j) { return (j.step = j.step || { action: 'add', table: 'check_log', fields: j.lf, values: Object.keys(j.values).length ? j.values : undefined }); }), progress(v, 'Saving'))
       .then(function (rs) {
         need.forEach(function (j, i) {
           var r = rs[i];

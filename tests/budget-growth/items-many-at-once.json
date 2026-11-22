@@ -1,1 +1,1 @@
-{"cdhub": 33000, "why": "Items many at once: tick boxes, Test/Move/Archive for many, group and sort, folded groups, one index for thousands of items (ITEMS2, items-view.js +32.5 KB)"}
+{"cdhub": 41000, "why": "Items many at once: tick many, group/sort, bulk Test/Move/Archive through add_many (ITEMS2, items-view.js +34.8 KB). Also covers index.html +11 KB from the stacked outbox (PR 737/771), which used the rest of the 10% headroom; drop 6000 if 737 adds its own growth file."}
