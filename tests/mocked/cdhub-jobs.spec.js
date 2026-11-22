@@ -109,8 +109,9 @@ test.describe('CD Hub: jobs', () => {
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
     await expect(hist).toContainText('6 Jan 2026');   // owner date: "2 Mar 2026"
-    await expect(hist).toContainText('entered earlier');   // how it came in: owner-only
-    await expect(hist).toContainText('time not given');
+    // Lisa 22 Nov 2026: "entered later" words show only when the owner's row display.entered_later is on (none here)
+    await expect(hist).not.toContainText('entered earlier');
+    await expect(hist).not.toContainText('time not given');
     await expect(hist).toContainText('Pretend morning');   // a part of the day: the owner's label for it
     await expect(hist).not.toContainText(/verified|attended/i);
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
