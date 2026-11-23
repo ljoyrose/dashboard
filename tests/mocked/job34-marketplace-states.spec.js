@@ -180,7 +180,7 @@ test.describe('Marketplace (JOB 34)', () => {
     await HUBS.marketplace.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 50);
-    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Decide', 'Do, ', 'Reply', 'New Stock', 'More']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Decide', 'Do ', 'Reply', 'New Stock', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
     // Insights sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.

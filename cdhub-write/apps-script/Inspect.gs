@@ -31,7 +31,8 @@ var INSPECT = {
   ACCESS_FILE: 'BLD-inspect_access.csv',
   ACCESS_COLUMNS: ['id', 'tenant_id', 'link_id', 'code_id', 'table_name', 'rows', 'at'],
   // the lists a link may show, and the column on each that names the dog
-  LISTS: { subject: 'id', subject_status: 'subject_id', health_screen: 'subject_id', fit_to_breed: 'subject_id', litter: 'dam_subject_id', microchip: 'subject_id' },
+  LISTS: { subject: 'id', subject_status: 'subject_id', health_screen: 'subject_id', fit_to_breed: 'subject_id', litter: 'dam_subject_id', microchip: 'subject_id',
+           area_reading: '', check_log: '' },   // 18 Nov 2026: room and site records (INSPECT_SITE), not one dog's
   REDACTIONS: ['', 'last4'],
   // how long a link lasts is NOT here: rule rows external.default_hours.<role> and external.max_hours.<role> (externalRule_)
   MAX_DOGS: 200,
@@ -88,6 +89,98 @@ function inspectCovers_(r, day) {
   return (!from || from <= day) && (!to || day <= to);
 }
 
+/* 15 Nov 2026 (FTB): a list whose key is also a job (a check_type type_key, e.g. fit_to_breed) shows that job's saved records
+   as well as any rows in its own older file. Only these columns are made, so how a record was entered and who typed it stay
+   the owner's. valid_until = the day done + every_days on the job row the record was saved against (the rule then). */
+var INSPECT_JOB_COLUMNS = ['id', 'tenant_id', 'subject_id', 'done_on', 'outcome', 'note', 'valid_until'];
+
+function inspectJobRows_(key, tenant) {
+  var t = store_read_(READABLE.check_type.file, false), l = store_read_(READABLE.check_log.file, false);
+  if (!t || !l) return null;
+  var ver = {}, any = false;
+  t.records.forEach(function (r) { if ((!r.tenant_id || r.tenant_id === tenant) && r.type_key === key && r.id) { ver[r.id] = r; any = true; } });
+  if (!any) return null;
+  var replaced = {};
+  l.records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
+  return l.records.filter(function (r) {
+    return (!r.tenant_id || r.tenant_id === tenant) && ver[r.check_type_id] && r.subject_id && !replaced[r.id];
+  }).map(function (r) {
+    var at = String(r.happened_at || r.taken_at || ''), d = new Date(at), day = isNaN(d.getTime()) ? at.slice(0, 10) : todayLondon_(d);
+    var every = String(ver[r.check_type_id].every_days || '').trim(), until = '';
+    if (/^[0-9]+$/.test(every) && +every > 0 && isRealDate_(day)) until = new Date(Date.parse(day + 'T00:00:00Z') + (+every) * 86400000).toISOString().slice(0, 10);
+    return { id: r.id, tenant_id: r.tenant_id || tenant, subject_id: r.subject_id, done_on: day, outcome: r.outcome || '', note: r.note || '', valid_until: until };
+  });
+}
+
+/* 18 Nov 2026 (CD Hub demo, Lisa: "The inspector can see temperature logs, daily health checks, bowl and cleaning records").
+   Temperatures and job records belong to a room or the whole site, so they are not cut down to the link's dogs, except that a
+   job record about one dog shows only if that dog is on the link. The owner still ticks the columns, and may set the link's
+   data_from_date / data_to_date to limit the days. Newest first; a corrected record shows only as its correction. Readable
+   names are added (room, job, dog) so the inspector never sees an internal id on its own. */
+var INSPECT_SITE = {
+  area_reading: { dateCols: ['taken_at', 'period_start'], extra: ['room'] },
+  check_log: { dateCols: ['happened_at', 'taken_at'], extra: ['job', 'room', 'dog'] }
+};
+
+function inspectRowDay_(r, cols) {
+  for (var i = 0; i < cols.length; i++) {
+    var d = String(r[cols[i]] || '').slice(0, 10);   // saved in London time, so this is the London day
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  }
+  return '';
+}
+
+/** A room or site list with its readable names added, newest first, corrected records left out. null = no file. */
+function inspectSiteData_(key, tenant) {
+  var f = store_read_(READABLE[key].file, false);
+  if (!f) return null;
+  var site = INSPECT_SITE[key], names = function (file, col) {
+    var out = {}, t = store_read_(file, false);
+    ((t && t.records) || []).forEach(function (r) { if ((!r.tenant_id || r.tenant_id === tenant) && r.id) out[r.id] = String(r[col] || r.name || r.id); });
+    return out;
+  };
+  var room = names(READABLE.area.file, 'name'), job = key === 'check_log' ? names(READABLE.check_type.file, 'label') : {};
+  var dog = key === 'check_log' ? names(READABLE.subject.file, 'name') : {};
+  var dam = key === 'check_log' ? names(READABLE.litter.file, 'dam_subject_id') : {};   // a litter's mum, to scope its pups' records
+  var replaced = {};
+  f.records.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = true; });
+  // a temperature on a day an owner row (BLD-requirement, need_type room.empty) says the room was empty is left out,
+  // as the staff pages do (TEMPS, 18 Nov 2026)
+  var empty = [];
+  if (key === 'area_reading') {
+    var q = store_read_(READABLE.requirement.file, false);
+    ((q && q.records) || []).forEach(function (e) {
+      if ((!e.tenant_id || e.tenant_id === tenant) && e.need_type === 'room.empty' && e.target_table === 'area' && e.target_id) empty.push(e);
+    });
+  }
+  var emptyOn = function (aid, day) { return !!day && empty.some(function (e) { return e.target_id === aid && inspectCovers_(e, day); }); };
+  var header = f.header.slice();
+  site.extra.forEach(function (c) { if (header.indexOf(c) < 0) header.push(c); });
+  var recs = f.records.filter(function (r) { return (!r.tenant_id || r.tenant_id === tenant) && !replaced[r.id]; }).map(function (r) {
+    var o = {};
+    for (var k in r) if (Object.prototype.hasOwnProperty.call(r, k)) o[k] = r[k];
+    o.room = r.area_id ? (room[r.area_id] || r.area_id) : '';
+    if (key === 'check_log') { o.job = job[r.check_type_id] || ''; o.dog = r.subject_id ? (dog[r.subject_id] || '') : ''; }
+    o.__dam = r.litter_id ? (dam[r.litter_id] || '') : '';
+    o.__day = inspectRowDay_(r, site.dateCols);
+    o.__empty = key === 'area_reading' && emptyOn(r.area_id, o.__day);
+    o.__at = String(r[site.dateCols[0]] || r[site.dateCols[1]] || '');
+    return o;
+  });
+  recs = recs.filter(function (r) { return !r.__empty; });
+  recs.sort(function (a, b) { return a.__at < b.__at ? 1 : a.__at > b.__at ? -1 : 0; });
+  return { header: header, records: recs };
+}
+
+/** The rows a list shows: its own file, plus the job's records when the key is also a job. null = neither exists. */
+function inspectListData_(key, tenant) {
+  var f = store_read_(READABLE[key].file, false), jobs = inspectJobRows_(key, tenant);
+  if (!jobs) return f;
+  var header = f ? f.header.slice() : [];
+  INSPECT_JOB_COLUMNS.forEach(function (c) { if (header.indexOf(c) < 0) header.push(c); });
+  return { header: header, records: (f ? f.records : []).concat(jobs) };
+}
+
 /**
  * An inspector's read. Called by sinkRead_ once the code is known to be a live INSPECTOR code.
  * Returns the same shape as a staff read, plus `ends` (the link's end, London time).
@@ -119,22 +212,35 @@ function inspectSinkRead_(req, who, now) {
   });
   var access = inspectRead_(INSPECT.ACCESS_FILE);
 
-  var data = store_read_(rd.file, false);
+  if (!Object.keys(cols).some(function (c) { return cols[c] !== null; })) throw denied;   // nothing ticked on this list
+  var site = INSPECT_SITE[key];
+  var data = site ? inspectSiteData_(key, tenant) : inspectListData_(key, tenant);
   if (!data) throw err_('FILE_MISSING', 'That list does not exist yet.');
   var fields = data.header.filter(function (c) {
-    return c !== 'tenant_id' && Object.prototype.hasOwnProperty.call(cols, c) && cols[c] !== null;
+    return c && c !== 'tenant_id' && !/score/i.test(c) && Object.prototype.hasOwnProperty.call(cols, c) && cols[c] !== null;   // never a score column
   });
-  if (!fields.length || data.header.indexOf(subjCol) < 0) throw denied;
-  // the column naming the dog always comes too (an internal id, never redacted), so the page can put each dog's rows together
-  if (fields.indexOf(subjCol) < 0) fields.unshift(subjCol);
-  cols[subjCol] = '';
+  if (!fields.length) throw denied;
+  if (!site) {
+    if (data.header.indexOf(subjCol) < 0) throw denied;
+    // the column naming the dog always comes too (an internal id, never redacted), so the page can put each dog's rows together
+    if (fields.indexOf(subjCol) < 0) fields.unshift(subjCol);
+    cols[subjCol] = '';
+  }
+  var dFrom = isRealDate_(String(link.data_from_date || '')) ? String(link.data_from_date) : '';
+  var dTo = isRealDate_(String(link.data_to_date || '')) ? String(link.data_to_date) : '';
 
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0, rows = [], truncated = false, redacted = {};
   fields.forEach(function (c) { if (cols[c]) redacted[c] = cols[c]; });
   for (var i = 0; i < data.records.length; i++) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
-    if (!dogs[r[subjCol]]) continue;
+    if (site) {
+      // a record about one dog: only the link's dogs. A litter's record: only if its mum, or that pup, is on the link
+      // (an unknown litter is never shown).
+      if (r.litter_id) { if (!(r.subject_id && dogs[r.subject_id]) && !(r.__dam && r.__dam !== r.litter_id && dogs[r.__dam])) continue; }
+      else if (r.subject_id && !dogs[r.subject_id]) continue;
+      if ((dFrom || dTo) && (!r.__day || (dFrom && r.__day < dFrom) || (dTo && r.__day > dTo))) continue;
+    } else if (!dogs[r[subjCol]]) continue;
     if (rows.length >= BLD.LIMITS.READ_MAX_ROWS) { truncated = true; break; }
     var o = {};
     fields.forEach(function (c) {
@@ -183,8 +289,8 @@ function sinkInspectChoices_() {
   var lists = {};
   Object.keys(INSPECT.LISTS).forEach(function (k) {
     if (!inspectListOk_(k)) return;
-    var f = store_read_(READABLE[k].file, false);
-    if (f) lists[k] = f.header.filter(function (c) { return c !== 'tenant_id'; });
+    var f = INSPECT_SITE[k] ? inspectSiteData_(k, tenant) : inspectListData_(k, tenant);
+    if (f) lists[k] = f.header.filter(function (c) { return c && c !== 'tenant_id' && !/score/i.test(c); });
   });
   return {
     dogs: dogs, lists: lists, keys: INSPECT.LISTS, today: today, now: londonIso_(new Date()).slice(0, 16),
@@ -229,13 +335,14 @@ function sinkInspectMake_(spec, adminEmail) {
     if (!inspectListOk_(list)) throw bad('fields', 'A link cannot show that list.');
     var want = fields[list];
     if (!Array.isArray(want)) throw bad('fields', 'That field choice was not understood.');
-    var f = store_read_(READABLE[list].file, false);
+    var f = INSPECT_SITE[list] ? inspectSiteData_(list, tenant) : inspectListData_(list, tenant);
     if (!f) throw bad('fields', 'That list does not exist yet.');
     var done = {};
     want.forEach(function (w) {
       var name = typeof w === 'string' ? w : (w && typeof w === 'object' ? String(w.field || '') : '');
       var red = w && typeof w === 'object' ? String(w.redaction || '') : '';
       if (!name || name === 'tenant_id' || f.header.indexOf(name) < 0) throw bad('fields', 'One of the ticked fields was not found. Reload the page.');
+      if (/score/i.test(name)) throw bad('fields', 'A link never shows scores.');
       if (INSPECT.REDACTIONS.indexOf(red) < 0) throw bad('fields', 'That way of hiding part of a value is not known.');
       if (done[name]) return;
       done[name] = true;
@@ -243,6 +350,11 @@ function sinkInspectMake_(spec, adminEmail) {
     });
   });
   if (!fieldRows.length) throw bad('fields', 'Tick at least one field.');
+  // 18 Nov 2026: optional first and last day of records shown (temperatures and job records); blank = all
+  var dataFrom = String(spec.data_from_date || '').trim(), dataTo = String(spec.data_to_date || '').trim();
+  if (dataFrom && !isRealDate_(dataFrom)) throw bad('data_from_date', 'That date was not understood.');
+  if (dataTo && !isRealDate_(dataTo)) throw bad('data_to_date', 'That date was not understood.');
+  if (dataFrom && dataTo && dataFrom > dataTo) throw bad('data_to_date', 'The last day is before the first day.');
   if (fieldRows.length > INSPECT.MAX_FIELDS) throw bad('fields', 'Too many fields ticked.');
 
   return withLock_(function () {
@@ -250,6 +362,7 @@ function sinkInspectMake_(spec, adminEmail) {
     inspectRead_(INSPECT.ACCESS_FILE);   // the visit log must exist before a link can be opened
     var linkId = newId_('ilk', now), codeId = newCodeId_(), endsAt = win.ends_at, by = adminEmail || 'owner';
     var v1 = sameHeader_(L.header, INSPECT.LINK_COLUMNS_V1);
+    if (v1 && (dataFrom || dataTo)) throw bad('data_from_date', 'Limiting the days needs the data_from_date and data_to_date columns in BLD-inspect_link. Ask STAFF to add them.');
     if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the starts_at and ends_at columns in BLD-inspect_link. Ask STAFF to add them.');
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, todayLondon_(new Date(win.startMs)), ends];
@@ -258,7 +371,7 @@ function sinkInspectMake_(spec, adminEmail) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: londonIso_(now), made_by: by,
-      starts_at: win.starts_at, ends_at: win.ends_at, data_from_date: '', data_to_date: '' };
+      starts_at: win.starts_at, ends_at: win.ends_at, data_from_date: dataFrom, data_to_date: dataTo };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';

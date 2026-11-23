@@ -36,6 +36,29 @@
    */
   function takesDogs(a, day, reqRows) { return !!a && !N.coversDay(reqRows, 'room.no_dogs', 'area', a.id, day || N.today(), { absentIs: false }); }
   /**
+   * Is room `areaId` empty all day on `day`? A BLD-requirement row with need_type room.empty (target_table area), dated
+   * like every need row (Lisa 18 Nov 2026: "mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just
+   * hide them"). No such row = not marked empty. Not the same as room.no_dogs: a corridor takes no dogs but its
+   * temperatures still show.
+   */
+  function emptyOn(areaId, day, reqRows) { return !!areaId && N.coversDay(reqRows, 'room.empty', 'area', areaId, day || N.today(), { absentIs: false }); }
+  /**
+   * The readings as the screens show them: a reading on a day its room is marked empty (room.empty) keeps its row but
+   * shows as Room empty with no temperatures. The records are never changed. dayOf(r) gives a reading's London day
+   * (default: the first 10 characters of period_start, else taken_at).
+   */
+  function hideEmpty(readings, reqRows, dayOf) {
+    var has = (reqRows || []).some(function (r) { return r && r.need_type === 'room.empty'; });
+    if (!has) return readings || [];
+    dayOf = dayOf || function (r) { return String(r.period_start || r.taken_at || '').slice(0, 10); };
+    return (readings || []).map(function (r) {
+      if (!r || !emptyOn(r.area_id, dayOf(r), reqRows)) return r;
+      var c = {}; Object.keys(r).forEach(function (k) { c[k] = r[k]; });
+      c.min_c = ''; c.max_c = ''; c.spot_c = ''; c.mitigation_note = ''; c.room_empty = 'yes'; c.empty_by_rule = 'yes';
+      return c;
+    });
+  }
+  /**
    * Overnight cabin (The round, overnight picker)? A day pen is marked by a BLD-requirement row with need_type
    * room.no_overnight (target_table area), dated like every need row. No such row = overnight placement is allowed
    * (if takesDogs is also true). Need type is a row value, never a room name in code.
@@ -179,5 +202,5 @@
     });
   }
 
-  return { roomName: roomName, latestRow: latestRow, recordOn: recordOn, rowOn: rowOn, inArea: inArea, offSite: offSite, inUse: inUse, takesDogs: takesDogs, takesOvernight: takesOvernight, dailyList: dailyList, loadViaScript: loadViaScript };
+  return { roomName: roomName, latestRow: latestRow, recordOn: recordOn, rowOn: rowOn, inArea: inArea, offSite: offSite, inUse: inUse, takesDogs: takesDogs, emptyOn: emptyOn, hideEmpty: hideEmpty, takesOvernight: takesOvernight, dailyList: dailyList, loadViaScript: loadViaScript };
 }));

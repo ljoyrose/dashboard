@@ -197,3 +197,107 @@ test('part done is never counted as done', () => {
   const logs = [{ id: 'p1', check_type_id: 'cty-bowls-1', outcome: 'part_done', note: 'x', taken_at: '2026-03-02T09:00:00Z' }];
   assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
 });
+
+test('round.* types are written by the Round itself and are never listed as jobs (15 Nov 2026)', () => {
+  const keys = D.jobsInForce(TYPES.concat([T('round.presence', 'dog', '')]), '2026-10-02').map((r) => r.type_key);
+  assert.ok(keys.includes('ears'));
+  assert.ok(!keys.includes('round.presence'));
+});
+
+test('an item test (target item) is never a job: it is due per item on the Items page', () => {
+  const types = [
+    { id: 'c1', type_key: 'run', label: 'run', target: 'area', every_days: 1, active: 'true', effective_from: '2026-01-01' },
+    { id: 'c2', type_key: 'pat_class_1', label: 'PAT Class I', target: 'item', item_kind: 'appliance_class_1', every_days: 365, active: 'true', effective_from: '2025-01-01' }
+  ];
+  assert.deepEqual(D.jobsInForce(types, '2026-03-02').map((r) => r.type_key), ['run']);
+});
+
+test('only_groups: a dog job belongs only to dogs in those groups on the day; blank = every dog; unknown groups = shown', () => {
+  const D = require('../records/due.js');
+  const job = { id: 'cty-ftb', type_key: 'ftb', label: 'Fit to breed', target: 'dog', every_days: '365', effective_from: '2026-01-01', only_groups: 'breeding' };
+  const links = [
+    { role: 'member_of', from_table: 'subject', from_id: 'd1', to_table: 'group', to_id: 'breeding', from_date: '2026-01-01', to_date: '' },
+    { role: 'member_of', from_table: 'subject', from_id: 'd2', to_table: 'group', to_id: 'breeding', from_date: '2025-01-01', to_date: '2026-02-01' },
+    { role: 'bff', from_table: 'subject', from_id: 'd3', to_table: 'group', to_id: 'breeding', from_date: '2026-01-01', to_date: '' },
+  ];
+  const day = '2026-03-02';
+  assert.deepEqual(D.groupsOf(links, 'd1', day), ['breeding']);
+  assert.deepEqual(D.groupsOf(links, 'd2', day), []);   // left the group 1 Feb 2026
+  assert.deepEqual(D.groupsOf(links, 'd2', '2026-01-15'), ['breeding']);   // the past is judged by the row then
+  assert.deepEqual(D.groupsOf(links, 'd3', day), []);   // another kind of link
+  const n = (sid) => D.forTarget([job], [], { subject_id: sid, groups: D.groupsOf(links, sid, day) }, day).length;
+  assert.equal(n('d1'), 1);
+  assert.equal(n('d2'), 0);
+  assert.equal(D.forTarget([job], [], { subject_id: 'd2' }, day).length, 1);   // caller did not say: shown
+  assert.equal(D.forTarget([Object.assign({}, job, { only_groups: '' })], [], { subject_id: 'd2', groups: [] }, day).length, 1);
+});
+
+test('times a day: an owner row makes a daily job stay due until done that many times today; no row = once', () => {
+  const room = { area_id: 'iso' };
+  const types = [T('iso_check', 'area', '1'), T('clean', 'area', '1')];
+  const A = (key, at) => ({ id: 'x' + (++n), check_type_id: 'cty-' + key + '-1', area_id: 'iso', outcome: 'ok', happened_at: at, taken_at: at });
+  const R = (k, v, from, to) => ({ rule_key: k, value: v, effective_from: from, to_date: to || '', source: 'test' });
+  const rules = [R('job.times_per_day.iso_check', '2', '2026-01-01')];
+  const once = [A('iso_check', '2026-10-02T08:00:00Z'), A('clean', '2026-10-02T08:00:00Z')];
+  let r = D.forTarget(types, once, room, '2026-10-02', null, { rules });
+  const iso = r.find((j) => j.type_key === 'iso_check'), clean = r.find((j) => j.type_key === 'clean');
+  assert.equal(iso.status, 'today'); assert.equal(iso.done_today, 1); assert.equal(iso.times_per_day, 2);
+  assert.equal(clean.status, 'ok'); assert.equal(clean.times_per_day, 1);
+  r = D.forTarget(types, once.concat([A('iso_check', '2026-10-02T18:00:00Z')]), room, '2026-10-02', null, { rules });
+  assert.equal(r.find((j) => j.type_key === 'iso_check').status, 'ok');
+  // no rules given: once a day, as before
+  assert.equal(D.forTarget(types, once, room, '2026-10-02').find((j) => j.type_key === 'iso_check').status, 'ok');
+  // the row in force on the day: an ended row no longer counts
+  assert.equal(D.timesPerDay([R('job.times_per_day.iso_check', '2', '2026-01-01', '2026-06-30')], 'iso_check', '2026-10-02'), 1);
+  assert.equal(D.timesPerDay([R('job.times_per_day', '3', '2026-01-01')], 'iso_check', '2026-10-02'), 3);
+});
+
+test('a room job saved per dog: not due in an empty room; times a day counted per dog, by its least-checked dog', () => {
+  const types = [{ id: 'cty-iso_checks-1', type_key: 'iso_checks', label: 'Isolation checks', target: 'area', site_scope: 'per_dog', every_days: '1', active: 'true', effective_from: '2026-01-01', only_in_areas: 'iso' }];
+  const rules = [{ rule_key: 'job.times_per_day.iso_checks', value: '3', effective_from: '2026-01-01', to_date: '', source: 'test' }];
+  let n = 0;
+  const L = (dog, at) => ({ id: 'y' + (++n), check_type_id: 'cty-iso_checks-1', area_id: 'iso', subject_id: dog, outcome: 'ok', happened_at: at, taken_at: at });
+  // nobody in the room: no job
+  assert.equal(D.forTarget(types, [], { area_id: 'iso', roomDogIds: [] }, '2026-10-02', null, { rules }).length, 0);
+  // no roomDogIds given (hub, Earlier): as before
+  assert.equal(D.forTarget(types, [], { area_id: 'iso' }, '2026-10-02', null, { rules }).length, 1);
+  // two dogs: one room tap = one line each = 1 time, not 2
+  const room = { area_id: 'iso', roomDogIds: ['d1', 'd2'] };
+  let logs = [L('d1', '2026-10-02T08:00:00Z'), L('d2', '2026-10-02T08:00:00Z')];
+  let j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
+  assert.equal(j.done_today, 1); assert.equal(j.status, 'today'); assert.equal(j.times_per_day, 3);
+  logs = logs.concat([L('d1', '2026-10-02T12:00:00Z'), L('d2', '2026-10-02T12:00:00Z'), L('d1', '2026-10-02T18:00:00Z')]);
+  j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
+  assert.equal(j.done_today, 2); assert.equal(j.status, 'today');   // d2 only twice
+  logs = logs.concat([L('d2', '2026-10-02T18:05:00Z')]);
+  assert.equal(D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0].status, 'ok');
+  // one dog's own card counts that dog only
+  j = D.forTarget(types, logs.slice(0, 3), { subject_id: 'd1', everyDog: true, dogArea: 'iso' }, '2026-10-02', null, { rules })[0];
+  assert.equal(j.done_today, 2);
+});
+
+test('a litter job due by age (owner row job.by_age.<key>): daily in week 1, weekly to 4 weeks, then at 6 and 10 weeks', () => {
+  const types = [{ id: 'pw', type_key: 'pup_weights', label: 'Puppy weights', target: 'litter', every_days: '', active: 'true', effective_from: '2026-01-01' }];
+  const rules = [{ rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', source: 'Lisa 22 Nov 2026' }];
+  const born = '2026-03-01', t = { litter_id: 'lit1', born };
+  const log = (day) => ({ id: 'w' + day, check_type_id: 'pw', litter_id: 'lit1', outcome: 'ok', taken_at: day + 'T09:00:00Z' });
+  const at = (day, logs) => D.forTarget(types, logs, t, day, null, { rules })[0];
+  assert.equal(at('2026-03-03', []).status, 'today');                                   // day 2: daily
+  assert.equal(at('2026-03-03', [log('2026-03-03')]).next_due, '2026-03-04');
+  assert.deepEqual([at('2026-03-04', [log('2026-03-02')]).status, at('2026-03-04', [log('2026-03-02')]).days_late], ['today', 0]);
+  const wk2 = at('2026-03-10', [log('2026-03-08')]);                                    // weekly from day 7: done day 7, next day 14
+  assert.deepEqual([wk2.status, wk2.next_due], ['ok', '2026-03-15']);
+  const gap = at('2026-04-01', [log('2026-03-22')]);                                    // after 4 weeks nothing until 6 weeks
+  assert.deepEqual([gap.status, gap.next_due], ['ok', '2026-04-12']);
+  const missed = at('2026-04-14', [log('2026-03-22')]);                                 // 6-week weight missed
+  assert.deepEqual([missed.status, missed.days_late], ['late', 2]);
+  assert.equal(at('2026-06-01', [log('2026-05-10')]).status, 'ok');                     // after 10 weeks: done
+  assert.equal(D.forTarget(types, [], { litter_id: 'lit1' }, '2026-03-03', null, { rules })[0].status, 'as_needed');   // no birth date: as before
+  assert.equal(D.forTarget(types, [], t, '2026-03-03', null, {})[0].status, 'as_needed');                              // no row: as before
+});
+
+test('the by-age row in force on the day wins, and bad parts of it are skipped', () => {
+  const rules = [{ rule_key: 'job.by_age.x', value: '0', effective_from: '2026-01-01' }, { rule_key: 'job.by_age.x', value: '3|junk|5-1:1|7-9:0', effective_from: '2026-03-01' }];
+  assert.deepEqual(D.ageDates(rules, 'x', '2026-02-01', '2026-01-10'), ['2026-01-10']);
+  assert.deepEqual(D.ageDates(rules, 'x', '2026-03-02', '2026-03-01T10:00:00Z'), ['2026-03-04']);
+});
