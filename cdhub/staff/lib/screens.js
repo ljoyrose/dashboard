@@ -344,6 +344,7 @@
           if (r.ok) {
             var room = leaving ? 'Off-site' : (areas.filter(function (a) { return a.id === to; })[0] || {}).label || to;
             if (!d.out) moves.push(d.id);
+            if (o.onMoved) o.onMoved(d.id, leaving ? '' : to);   // the page's loaded list follows the move, with no read again
             rec.done = true; rec2.done = true;
             card.className += ' bs-done';
             result.className = 'bs-result bs-ok';
