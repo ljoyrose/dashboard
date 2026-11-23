@@ -54,6 +54,8 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'grant_give') return jsonOut_({ ok: true, result: sinkVisitGive_(req) });
     if (req && typeof req === 'object' && req.action === 'grant_end') return jsonOut_({ ok: true, result: sinkVisitEnd_(req) });
     if (req && typeof req === 'object' && req.action === 'grant_extend') return jsonOut_({ ok: true, result: sinkVisitExtend_(req) });
+    if (req && typeof req === 'object' && req.action === 'delegation_give') return jsonOut_({ ok: true, result: sinkDelegationGive_(req) });
+    if (req && typeof req === 'object' && req.action === 'delegation_end') return jsonOut_({ ok: true, result: sinkDelegationEnd_(req) });
     try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
     if (req && typeof req === 'object' && req.action === 'file_add') return jsonOut_({ ok: true, result: sinkFileAdd_(req) });   // one file store (14 Nov 2026), OFF until TABLE_ON_files

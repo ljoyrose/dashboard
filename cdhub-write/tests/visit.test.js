@@ -98,6 +98,7 @@ test('card_add: a fixed visit type needs the fixed_type_id column and a real typ
 
 // ---- Part B: grant_give / grant_end / grant_extend (London clock in tests: 15/10/26 23:30 BST)
 const LINK_H = 'id,tenant_id,code_id,label,ends,created_at,set_by,from_at,to_at,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,updated_at';
+const LINK_H = 'id,tenant_id,code_id,label,ends,created_at,set_by,from_at,to_at,supersedes_id,grant_type_id,person_id,visitor_name,organisation,sign_in_id,card_tag_id,as_of_from,as_of_to,purpose_text,grant_basis,identity_assurance,id_checked_by,accompanied_by,retention_until,email_code,ended_at,ended_by,end_reason,tz,issued_by,delegation_id,updated_at';
 function benv(props, linkHeader) {
   const e = env(props, TAG_H + ',fixed_type_id');
   e.addFile('BLD-inspect_link.csv', (linkHeader || LINK_H) + '\r\n');
@@ -327,4 +328,82 @@ test('grant_record: only jobs on the visit; through the normal check path; taken
   assert.equal(act(e, 'grant_record', { t: add.tag }, { check_type_id: water, subject_id: 'sub-test-a', outcome: 'concern' }).code, 'INVALID');   // the usual note rule
   const noRight = give(e, { grant_type_id: typeId(e) });
   assert.equal(act(e, 'grant_record', { code: noRight.result.code }, { check_type_id: water, outcome: 'ok' }).code, 'NOT_ALLOWED');
+});
+
+// ---- // ---- Delegated admin (Delegate.gs): give_visit conferred by the owner, never implied by a role
+const DELEG_H = 'id,tenant_id,power,holder_person_id,holder_code_id,holder_sign_in_id,parent_id,depth_left,from_date,to_date,grant_type_ids,max_hours,rights,lists,fields,area_ids,subject_ids,end_others,extend_others,ended_at,ended_by,end_reason,end_issued,set_by,set_on,source,notes,created_at,updated_at';
+function genv() {
+  const e = benv();
+  e.addFile('BLD-delegation.csv', DELEG_H + '\r\n');
+  e.second = e.ctx.sinkIssueCode_('Sue Second', 'STAFF', 'owner@example.test');   // invented person
+  return e;
+}
+const delegRows = (e) => e.ctx.store_read_('BLD-delegation.csv', true).records;
+
+test('delegation: a staff code cannot give a visit until the owner confers give_visit; then only within its limits', () => {
+  const e = genv();
+  const t = typeId(e), vet = typeId(e, { type_key: 'vet', name: 'Vet' });
+  const asStaff = (over) => post(e, 'grant_give', Object.assign({ grant_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], subject_ids: ['sub-test-a'], hours: '2', purpose_text: 'Contractor visit' }, over), e.codes.staff);
+  assert.equal(asStaff().code, 'NOT_ALLOWED');
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.second.id }, e.codes.staff).code, 'NOT_ALLOWED');   // no row to pass on
+  const d = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, grant_type_ids: t, max_hours: '4', rights: 'view', fields: 'subject.name|subject.chip_number', subject_ids: 'sub-test-a', depth_left: '1' });
+  assert.equal(d.ok, true, JSON.stringify(d));
+  const ok = asStaff();
+  assert.equal(ok.ok, true, JSON.stringify(ok));
+  const L = links(e).filter((x) => x.id === ok.result.grant_id)[0];
+  assert.equal(L.issued_by, e.ids.staff);
+  assert.equal(L.delegation_id, d.result.id);
+  assert.equal(asStaff({ grant_type_id: vet }).code, 'INVALID');
+  assert.equal(asStaff({ hours: '5' }).code, 'INVALID');
+  assert.equal(asStaff({ rights: ['view', 'review'] }).code, 'INVALID');
+  assert.equal(asStaff({ fields: ['subject.sex'] }).code, 'INVALID');
+  assert.equal(asStaff({ fields: ['subject.chip_number:last4'] }).ok, true);   // the full column allows its last 4
+  assert.equal(asStaff({ subject_ids: ['sub-test-b'] }).code, 'INVALID');
+  const all = asStaff({ subject_ids: [] });
+  assert.equal(all.result.dogs, 1);   // "all dogs" = all the dogs they may give
+});
+
+test('delegation: passing on is never wider or deeper; ending a row ends those below it and, if asked, their visits', () => {
+  const e = genv();
+  const t = typeId(e);
+  const top = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, rights: 'view|raise_finding', max_hours: '8', depth_left: '1' }).result.id;
+  const sueId = e.second.id;
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, rights: 'view|record', depth_left: '0' }, e.codes.staff).code, 'INVALID');
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, depth_left: '1' }, e.codes.staff).code, 'INVALID');
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, max_hours: '9' }, e.codes.staff).code, 'INVALID');
+  const child = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: sueId, parent_id: top, rights: 'view' }, e.codes.staff);
+  assert.equal(child.ok, true, JSON.stringify(child));
+  const c = delegRows(e).filter((r) => r.id === child.result.id)[0];
+  assert.equal(c.max_hours, '8');            // blank = no wider than the parent, written out
+  assert.equal(c.set_by, e.ids.staff);
+  // Sue cannot pass it on (depth 0), and cannot end her own row
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, parent_id: child.result.id }, e.second.code).code, 'NOT_ALLOWED');
+  assert.equal(post(e, 'delegation_end', { id: child.result.id, reason: 'x' }, e.second.code).code, 'NOT_ALLOWED');
+  const v = post(e, 'grant_give', { grant_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], hours: '2', purpose_text: 'Contractor visit' }, e.second.code);
+  assert.equal(v.ok, true, JSON.stringify(v));
+  // Sam (who gave Sue hers) cannot end Sue's visit without end_others
+  assert.equal(post(e, 'grant_end', { grant_id: v.result.grant_id, reason: 'x' }, e.codes.staff).code, 'NOT_ALLOWED');
+  const end = post(e, 'delegation_end', { id: top, reason: 'Role changed', end_issued: 'end' });
+  assert.equal(end.ok, true, JSON.stringify(end));
+  assert.equal(end.result.children_ended, 1);
+  assert.equal(end.result.visits_ended, 1);
+  assert.ok(delegRows(e).every((r) => r.ended_at));
+  assert.equal(current(e, v.result.grant_id).end_reason, 'permission ended: Role changed');
+  assert.equal(post(e, 'grant_give', { grant_type_id: t, person_name: 'X', rights: ['view'], fields: ['subject.name'], hours: '1', purpose_text: 'x' }, e.second.code).code, 'NOT_ALLOWED');
+});
+
+test('delegation: from_date / to_date are whole London days; a visit given under it must end by the end of to_date', () => {
+  const e = genv();
+  const t = typeId(e, { max_hours: '72' });
+  assert.equal(post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, from_date: '2026-10-15', to_date: '2026-10-14' }).code, 'INVALID');
+  const d = post(e, 'delegation_give', { power: 'give_visit', holder_code_id: e.ids.staff, to_date: '2026-10-16' });
+  assert.equal(d.ok, true, JSON.stringify(d));
+  const row = delegRows(e)[0];
+  assert.equal(row.from_date, '2026-10-15');
+  assert.equal(row.to_date, '2026-10-16');
+  const asStaff = (hours) => post(e, 'grant_give', { grant_type_id: t, person_name: 'Pat Example', rights: ['view'], fields: ['subject.name'], hours, purpose_text: 'Contractor visit' }, e.codes.staff);
+  assert.equal(asStaff('48').code, 'INVALID');   // past 16 Oct 23:59
+  assert.equal(asStaff('24').ok, true);
+  e.nowMs = Date.parse('2026-10-17T09:00:00+01:00');
+  assert.equal(asStaff('1').code, 'NOT_ALLOWED');   // the permission has ended
 });
