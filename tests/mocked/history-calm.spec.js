@@ -599,6 +599,72 @@ test('guard: a sorted sheet whose heading row is not row 1 (or sits lower down) 
   await expect(page.locator('[data-hdrbad]')).toContainText('a heading row is also lower down');
 });
 
+test('22 Nov (OV12): Compliance view keeps the house colours - no red or orange on the outside calendar or its key, house words only', async ({ page, guard }) => {
+  const rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method\n'
+    + 'rdg-s,area-r1,2026-01-08T09:00:00Z,2026-01-08T00:00:00+00:00,22.0,18.0,typed\n'
+    + 'rdg-c,area-r1,2026-01-07T09:00:00Z,2026-01-07T00:00:00+00:00,1.0,40.0,typed\n';
+  await open(page, guard);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  const f = guard.world.files.find((x) => x.name === 'BLD-area_reading.csv');
+  f.content = rows; f.size = String(rows.length);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await page.getByRole('button', { name: 'Compliance' }).click();
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  await expect(page.locator('#view-a [data-cal="out"] .d.comp-flag').first()).toBeVisible();   // the swapped reading on the 8th
+  const bad = await page.evaluate((C) => {
+    const probe = document.createElement('i'); document.body.appendChild(probe);
+    const val = (v) => { probe.style.color = 'var(' + v + ')'; return getComputedStyle(probe).color; };
+    const never = new Set(C.map(val)); probe.remove();
+    const out = [];
+    document.querySelectorAll('[data-cal="out"] *, #legend-wrap *').forEach((e) => {
+      const st = getComputedStyle(e);
+      [st.backgroundColor, st.borderTopColor].concat((st.boxShadow.match(/rgba?\([^)]*\)/g) || [])).forEach((c) => { if (never.has(c)) out.push(e.className + ' ' + c); });
+    });
+    return [...new Set(out)];
+  }, RULES.colour.outsideCalendarNever);
+  expect(bad).toEqual([]);
+  const key = await page.locator('#legend-wrap').innerText();
+  for (const re of RULES.words.never) expect(key).not.toMatch(re);
+  expect(key).toContain('Outside limit');
+  expect(key).toContain('Cannot be read');
+});
+
+test('21 Nov (Steward on #346): the outdoor calendar has an amber corner dot on a day outside the limit rows, red on an unreadable reading, none on an in-limit day', async ({ page, guard }) => {
+  const bands = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,10,26,,\n';
+  const rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method\n'
+    + 'rdg-c,area-r1,2026-01-07T09:00:00Z,2026-01-07T00:00:00+00:00,8.0,12.0,typed\n'
+    + 'rdg-s,area-r1,2026-01-08T09:00:00Z,2026-01-08T00:00:00+00:00,22.0,18.0,typed\n'
+    + 'rdg-k,area-r1,2026-01-09T09:00:00Z,2026-01-09T00:00:00+00:00,12.0,15.0,typed\n';
+  await open(page, guard);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  const upsert = (id, name, content) => {
+    const f = guard.world.files.find((x) => x.name === name);
+    if (f) { f.content = content; f.size = String(content.length); }
+    else guard.world.file(id, name, content, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
+  };
+  upsert('bld-band', 'BLD-temperature_band.csv', bands);
+  upsert('bld-readings', 'BLD-area_reading.csv', rows);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  const day = (d) => page.locator('[data-cal="out"] button[title^="' + d + ' Jan 2026 out"]');
+  await expect(day(7).locator('.d-dot.idot-warn')).toHaveCount(1);    // 8.0 is below the 10 limit row
+  await expect(day(8).locator('.d-dot.idot-flag')).toHaveCount(1);    // max lower than min
+  await expect(day(9).locator('.d-dot')).toHaveCount(0);              // 12.0-15.0 is inside 10-26
+  // House colours: never red, no warning colour on the outside calendar - the dot is ink (solid) or an ink ring.
+  const dotCols = await page.evaluate(() => [...document.querySelectorAll('[data-cal="out"] .d-dot')].map((d) => getComputedStyle(d).backgroundColor + '|' + getComputedStyle(d).boxShadow));
+  const ink = await page.evaluate(() => { const i = document.createElement('i'); i.style.color = 'var(--ink)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; });
+  for (const c of dotCols) expect(c).toContain(ink);
+  // The limit is the row, never a fixed 15-25: raise the row's minimum to 13 and 12.0 on the 9th is outside.
+  upsert('bld-band', 'BLD-temperature_band.csv', 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\ntb-a,Adult,29,,13,26,,\n');
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await expect(day(9).locator('.d-dot.idot-warn')).toHaveCount(1);
+});
+
 // Lisa 18 Nov 2026: "PDF A and B and also both month and year - all options selectable by user". Print / PDF builds the
 // pages from the same day rules as the screen: B summary calendars, A room tables, for one month or a whole year.
 test('Print / PDF: summary and room table for a month, totals and outside list from the records; the year skips months not begun', async ({ page, guard }) => {
@@ -636,4 +702,47 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   await panel.locator('#rpGo').click();
   await page.emulateMedia({ media: 'print' });
   if (process.env.RP_SAMPLE) await page.pdf({ path: process.env.RP_SAMPLE, format: 'A4', landscape: true, printBackground: true });
+});
+
+// Lisa 22 Nov 2026: "print pages for month ... fit on one page nicely for each type, particularly the tick versions".
+// A full month for 30 rooms: the summary is one A4 sheet and the room table is one A4 sheet, checked in a real PDF.
+test('Print / PDF: a 30-room month prints the summary on one page and the room table on one page', async ({ page, guard }, info) => {
+  const n = 30;
+  const rooms = 'id,code,group_sort\n' + Array.from({ length: n }, (_, i) => `area-x${i},3B.${i}/${i + 1},${i}`).join('\n') + '\n';
+  await open(page, guard, null, rooms, new Date('2026-02-02T09:00:00'));
+  let rows = 'id,area_id,taken_at,period_start,min_c,max_c,read_method\n', k = 0;
+  for (let i = 0; i < n; i++) for (let d = 1; d <= 31; d++) for (const s of ['am', 'pm']) {
+    const day = '2026-01-' + String(d).padStart(2, '0');
+    const lo = (i === 3 && d === 9 && s === 'am') ? '8.5' : '12.' + (d % 10);
+    if (i === 5 && d === 14 && s === 'pm') continue;   // one missed slot
+    rows += `r${k++},area-x${i},${day}T${s === 'am' ? '09' : '16'}:00:00Z,${day}T${s === 'am' ? '00' : '12'}:00:00+00:00,${lo},16.${d % 10},typed\n`;
+  }
+  const f = guard.world.files.find((x) => x.name === 'BLD-area_reading.csv'); f.content = rows; f.size = String(rows.length);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.locator('[data-rp-open]').click();
+  const panel = page.locator('#rpPanel');
+  await panel.locator('#rpMonth').selectOption('0');
+  await panel.locator('#rpYear').selectOption('2026');
+  await panel.locator('#rpGo').click();
+  await expect(page.locator('#report .rp-page')).toHaveCount(2);
+  await expect(page.locator('#report [data-rp="summary"] .rp-cal')).toHaveCount(n);
+  await expect(page.locator('#report [data-rp="table"] tbody th[rowspan]')).toHaveCount(n);
+  await page.emulateMedia({ media: 'print' });
+  await page.evaluate(() => document.body.classList.add('rp-printing'));
+  // nothing runs off the sheet: every calendar and the table sit inside their page
+  const off = await page.evaluate(() => [...document.querySelectorAll('#report .rp-cal, #report .rp-t')].filter((e) => {
+    const p = e.closest('.rp-page').getBoundingClientRect(), r = e.getBoundingClientRect();
+    return r.right > p.right + 0.5 || r.bottom > p.bottom + 0.5;
+  }).length);
+  expect(off).toBe(0);
+  for (const which of ['summary', 'table', 'both']) {
+    await page.evaluate(() => document.body.classList.add('rp-printing'));   // each PDF run fires afterprint, which takes it off
+    await page.evaluate((w) => document.querySelectorAll('#report .rp-page').forEach((p) => { p.style.display = (w === 'both' || p.dataset.rp === w) ? '' : 'none'; }), which);
+    const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
+    await info.attach('print-' + which + '.pdf', { body: pdf, contentType: 'application/pdf' });
+    const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+    expect(pages, which).toBe(which === 'both' ? 2 : 1);
+  }
 });

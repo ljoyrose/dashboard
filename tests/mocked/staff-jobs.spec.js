@@ -226,6 +226,19 @@ test('a litter code opens that litter\'s jobs and saves against the litter', asy
   await expect(page.locator('[data-job="socialise"]')).toHaveCount(0);
 });
 
+test('puppy weights are due by the litter\'s age from the owner\'s by-age row', async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const ago = (n) => new Date(Date.parse(today + 'T00:00:00Z') - n * 86400000).toISOString().slice(0, 10);
+  await setup(page, {
+    check_type: TYPES.concat([J('pup_weights', 'Puppy weights', 'litter')]),
+    breeding_rule: [{ id: 'r-a', rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', to_date: '', source: 'test' }],
+    litter: [{ id: 'lit-1', dam_subject_id: 'dog-1', dob: ago(3) }],
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }])
+  });
+  await page.goto('cdhub/staff/#s/LITTAG22');
+  await expect(page.locator('[data-job="pup_weights"]')).toContainText('Due today');
+});
+
 test('a litter code with no litter jobs goes on to Move dogs as before', async ({ page }) => {
   await setup(page, { litter: [{ id: 'lit-1', dam_subject_id: 'dog-1' }], qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }]) });
   await page.goto('cdhub/staff/#s/LITTAG22');
