@@ -1,22 +1,29 @@
 name: Dashboard tests
 
-# Runs the browser tests on every push, once a week, and on demand (Actions tab > Dashboard tests > Run workflow).
-# Once the repo is PRIVATE (Actions minutes are metered), pushes run only the no-browser checks; the browser suite
-# runs weekly and on demand, and on the Mac before every PR (tools/ci-local/run-all.sh). See docs-only.sh.
+# Runs the browser tests on every pull request (each new push to it), once a night, and on demand
+# (Actions tab > Dashboard tests > Run workflow, on any branch). Minutes trim, 20 Nov 2026:
+#  - NOT on a plain push any more. A branch with no pull request runs nothing here, and a push to main does not run the
+#    suite twice: "Publish site (after tests)" already runs the same suite on every push to main before it publishes.
+#  - A newer push to the same pull request cancels the older run.
+#  - The nightly run is skipped when main has had no new commit for 26 hours.
+#  - The privacy guard is NOT trimmed: it still runs on every push, because a pushed branch is public at once.
+# Once the repo is PRIVATE (Actions minutes are metered), pull requests run only the no-browser checks; the browser
+# suite runs nightly and on demand, and in a session before every PR (tools/ci-local/run-all.sh). See docs-only.sh.
 # Google sign-in and Google Drive are pretend in these tests. No secrets are used or needed.
 # The job called "Browser tests (pretend Google and Drive)" is the one branch protection requires on main.
 # Do not rename it without also changing the branch protection rule (see TESTS.md).
 on:
-  push:
+  pull_request:
+  merge_group: # if a merge queue is ever switched on for main, the required check still reports there
   schedule:
-    - cron: '17 6 * * 1' # Mondays 06:17 UTC (about 06:17/07:17 UK time)
+    - cron: '17 3 * * *' # every night 03:17 UTC (about 03:17/04:17 UK time)
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
+  group: tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -47,6 +54,7 @@ jobs:
         run: bash tools/ci-local/docs-only.sh
         env:
           REPO_PRIVATE: ${{ github.event.repository.private }}
+          NIGHTLY_SKIP_IDLE: 'true' # a nightly run with no new commit on main for 26 hours skips the browser
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

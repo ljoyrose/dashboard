@@ -14,6 +14,10 @@
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var READ = { in: 1, out: 1, nolimit: 1, eout: 1, swap: 1, warm: 1, nospot: 1 };
 
+  /* 22 Nov 2026 (Lisa: "fit on one page nicely for each type, particularly the tick versions"): every page is one A4
+     landscape sheet. The page area is 281 x 194 mm (8 mm margins); the summary picks how many calendars go across so the
+     rows fit, the table sizes its text to the days and rooms, and fit() shrinks any page that would still run over. */
+  var PAGE_W = 281, PAGE_H = 194, BODY_H = 170;   // mm; BODY_H leaves room for the title, key, totals and signature line
   function e(s) { return window.esc ? window.esc(s) : String(s || ''); }
   function days(y, m) { var n = window.mdays(y)[m], out = []; for (var d = 1; d <= n; d++) out.push(window.ds(y, m, d)); return out; }
 
@@ -61,7 +65,17 @@
     var h = '<section class="rp-page" data-rp="summary" data-month="' + y + '-' + (m < 9 ? '0' : '') + (m + 1) + '">'
       + head('Room temperatures: summary', MON[m] + ' ' + y);
     if (!md.rooms.length) return h + '<p>No room readings were needed or taken this month.</p>' + foot() + '</section>';
-    h += '<p class="rp-key"><i class="rk done">✓</i> every reading inside its limit &nbsp; <i class="rk out">!</i> a reading outside its limit &nbsp; <i class="rk miss">✗</i> a reading missed</p><div class="rp-cals">';
+    /* The biggest day square that lets every room's calendar fit across and down the sheet (mm). */
+    var weeks = Math.ceil((lead + days(y, m).length) / 7), n = md.rooms.length, cols = 1, cell = 0;
+    for (var c = 1; c <= Math.min(n, 14); c++) {
+      var rows = Math.ceil(n / c);
+      var byW = ((PAGE_W - (c - 1) * 4) / c - 1.8) / 7;                            // 7 squares and their gaps across
+      var byH = ((BODY_H - 4) / rows - 3 - 4 - 0.3 * weeks) / (0.6 + weeks);         // name, M T W..., the weeks down
+      var sq = Math.min(byW, byH, 12);
+      if (sq > cell) { cell = sq; cols = c; }
+    }
+    h += '<p class="rp-key"><i class="rk done">✓</i> every reading inside its limit &nbsp; <i class="rk out">!</i> a reading outside its limit &nbsp; <i class="rk miss">✗</i> a reading missed</p>'
+      + '<div class="rp-cals" style="grid-template-columns:repeat(' + cols + ',max-content);--c:' + (Math.floor(cell * 100) / 100) + 'mm">';
     md.rooms.forEach(function (r) {
       h += '<div class="rp-cal" data-room="' + e(r.aid) + '"><b>' + e(r.name) + '</b><div class="rp-g">'
         + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (w) { return '<span class="rh">' + w + '</span>'; }).join('');
@@ -80,16 +94,19 @@
     if (s.k === 'miss') return '<td class="miss">MISS</td>';
     if (s.k === 'empty') return '<td class="empty">empty</td>';
     var bad = s.k === 'out' || s.k === 'swap';
-    return '<td class="' + (bad ? 'out' : 'in') + '">' + e(s.lo || '–') + '<br>' + e(s.hi || '–') + (bad ? ' !' : '') + '</td>';
+    return '<td class="' + (bad ? 'out' : 'in') + '">' + e(s.lo || '–') + '–' + e(s.hi || '–') + (bad ? '!' : '') + '</td>';
   }
 
   /** A: rooms down the side, days across, AM and PM rows. */
   function tablePage(md) {
     var y = md.y, m = md.m, ds = days(y, m);
     var h = '<section class="rp-page" data-rp="table" data-month="' + y + '-' + (m < 9 ? '0' : '') + (m + 1) + '">'
-      + head('Room temperatures °C: lowest over highest', MON[m] + ' ' + y);
+      + head('Room temperatures °C: lowest–highest', MON[m] + ' ' + y);
     if (!md.rooms.length) return h + '<p>No room readings were needed or taken this month.</p>' + foot() + '</section>';
-    h += '<table class="rp-t"><thead><tr><th>Room</th><th></th>' + ds.map(function (iso) { return '<th>' + (+iso.slice(8)) + '</th>'; }).join('') + '</tr></thead><tbody>';
+    var colW = (PAGE_W - 30) / ds.length, rowH = (BODY_H - 4) / (md.rooms.length * 2 + 1);
+    var fs = Math.max(4.5, Math.min(9, colW * 3.78 / 5.2, rowH * 3.78 / 1.25));   // px: 9 characters across a day, one line high
+    var rh = Math.min(6, rowH - 0.1);                                              // rows grow to fill the sheet, up to 6 mm
+    h += '<table class="rp-t" style="--fs:' + fs.toFixed(2) + 'px;--rh:' + rh.toFixed(2) + 'mm"><thead><tr><th>Room</th><th></th>' + ds.map(function (iso) { return '<th>' + (+iso.slice(8)) + '</th>'; }).join('') + '</tr></thead><tbody>';
     md.rooms.forEach(function (r) {
       ['am', 'pm'].forEach(function (slot, i) {
         h += '<tr' + (i ? ' class="pm"' : '') + '>' + (i ? '' : '<th rowspan="2">' + e(r.name) + '</th>') + '<th class="sl">' + slot.toUpperCase() + '</th>'
@@ -128,19 +145,22 @@
   var CSS = '#rpPanel{position:fixed;inset:auto 0 0 0;z-index:60;background:var(--card);border-top:1px solid var(--line);padding:16px;display:grid;gap:10px;max-width:640px;margin:0 auto;border-radius:16px 16px 0 0;box-shadow:0 -4px 16px color-mix(in srgb,var(--ink) 15%,transparent)}'
     + '#rpPanel[hidden]{display:none}#rpPanel fieldset{border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}'
     + '#rpPanel label{display:flex;align-items:center;gap:6px;min-height:40px}#rpPanel select{min-height:40px}#rpPanel .row{display:flex;gap:8px;flex-wrap:wrap}'
-    + '#report{display:none}'
-    + '@media print{@page{size:A4 landscape;margin:8mm}html,body.rp-printing{background:none!important}body.rp-printing>*:not(#report){display:none!important}body.rp-printing #report{display:block}'
+    + '#report{display:none}#report.rp-measure{display:block;position:absolute;left:-10000px;top:0;width:281mm}'
     + '#report{color:var(--ink);font:9px/1.25 system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-    + '.rp-page{page-break-after:always;break-after:page}.rp-head{display:flex;justify-content:space-between;font-size:13px;border-bottom:1px solid var(--ink);margin-bottom:4px}'
-    + '.rp-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:8px}.rp-tot{margin:4px 0}'
-    + '.rp-t{width:100%;border-collapse:collapse;table-layout:fixed}.rp-t th,.rp-t td{border:0.5px solid var(--line);padding:0 1px;text-align:center;font-size:6.5px;line-height:1.15;overflow:hidden}'
-    + '.rp-t thead th{font-size:7px}.rp-t tbody th{text-align:left;font-size:7px}.rp-t th:first-child{width:22mm}.rp-t .sl{width:6mm}'
-    + '.rp-t td.in{background:var(--ljr-5-tint)}.rp-t td.out{background:var(--ljr-3);color:var(--ink);font-weight:700}.rp-t td.miss{outline:1.5px solid var(--ljr-3);outline-offset:-1.5px;font-weight:700}.rp-t td.empty{color:var(--muted)}'
-    + '.rp-out ul{margin:2px 0 0 14px;padding:0}.rp-cals{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}.rp-cal b{display:block;font-size:8px}'
-    + '.rp-g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}.rp-g span{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:6px}'
-    + '.rp-g .rh{aspect-ratio:auto;color:var(--muted)}.rd.none{color:var(--muted)}.rd.done{background:var(--ljr-5);color:var(--paper)}.rd.out{background:var(--ljr-3);font-weight:700}.rd.miss{outline:1.5px solid var(--ljr-3);outline-offset:-1.5px;font-weight:700}'
-    + '.rk{display:inline-block;width:10px;text-align:center;font-style:normal}.rk.done{background:var(--ljr-5);color:var(--paper)}.rk.out{background:var(--ljr-3)}.rk.miss{outline:1.5px solid var(--ljr-3)}}';
-
+    + '#report .rp-page{width:281mm;box-sizing:border-box;overflow:hidden}'
+    + '#report .rp-head{display:flex;justify-content:space-between;font-size:13px;border-bottom:1px solid var(--ink);margin-bottom:4px}'
+    + '#report .rp-key{margin:2px 0 4px}#report .rp-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:8px}#report .rp-tot{margin:4px 0}'
+    + '#report .rp-t{width:100%;border-collapse:collapse;table-layout:fixed}'
+    + '#report .rp-t th,#report .rp-t td{border:0.5px solid var(--line);padding:0;text-align:center;font-size:var(--fs,6.5px);line-height:1.2;height:var(--rh,auto);white-space:nowrap;overflow:hidden}'
+    + '#report .rp-t thead th{font-weight:700}#report .rp-t tbody th{text-align:left;padding-left:1mm}#report .rp-t th:first-child{width:24mm}#report .rp-t .sl{width:6mm}'
+    + '#report .rp-t td.in{background:var(--ljr-5-tint)}#report .rp-t td.out{background:var(--ljr-3);color:var(--ink);font-weight:700}#report .rp-t td.miss{outline:1.5px solid var(--ljr-3);outline-offset:-1.5px;font-weight:700}#report .rp-t td.empty{color:var(--muted)}'
+    + '#report .rp-out ul{margin:2px 0 0 14px;padding:0}'
+    + '#report .rp-cals{display:grid;gap:3mm 4mm;align-items:start;justify-content:space-between}#report .rp-cal b{display:block;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '#report .rp-g{display:grid;grid-template-columns:repeat(7,var(--c));gap:0.3mm}#report .rp-g span{height:var(--c);display:flex;align-items:center;justify-content:center;font-size:calc(var(--c) * 0.55)}'
+    + '#report .rp-g .rh{height:calc(var(--c) * 0.6);color:var(--muted);font-size:calc(var(--c) * 0.4)}#report .rd.none{color:var(--muted)}#report .rd.done{background:var(--ljr-5);color:var(--paper)}#report .rd.out{background:var(--ljr-3);font-weight:700}#report .rd.miss{outline:1.5px solid var(--ljr-3);outline-offset:-1.5px;font-weight:700}'
+    + '#report .rk{display:inline-block;width:10px;text-align:center;font-style:normal}#report .rk.done{background:var(--ljr-5);color:var(--paper)}#report .rk.out{background:var(--ljr-3)}#report .rk.miss{outline:1.5px solid var(--ljr-3)}'
+    + '@media print{@page{size:A4 landscape;margin:8mm}html,body.rp-printing{background:none!important}body.rp-printing>*:not(#report){display:none!important}body.rp-printing #report{display:block}'
+    + '#report .rp-page{height:194mm;page-break-after:always;break-after:page;break-inside:avoid}#report .rp-page:last-child{page-break-after:auto;break-after:auto}}';
   function panel() {
     var p = document.getElementById('rpPanel');
     if (p) return p;
@@ -166,11 +186,23 @@
       var o = choice();
       if (!o.summary && !o.table) { p.querySelector('#rpMsg').textContent = 'Tick at least one: summary calendars or room tables.'; return; }
       rep.innerHTML = build(o);
+      fit(rep);
       document.body.classList.add('rp-printing');
       window.print();
     };
     window.addEventListener('afterprint', function () { document.body.classList.remove('rp-printing'); });
     return p;
+  }
+  /* Any page still taller than the sheet is shrunk to fit it (long "outside the limit" lists, very many rooms). */
+  function fit(rep) {
+    rep.classList.add('rp-measure');
+    var max = PAGE_H * 96 / 25.4;
+    rep.querySelectorAll('.rp-page').forEach(function (pg) {
+      pg.style.zoom = '';
+      var h = pg.scrollHeight;
+      if (h > max) pg.style.zoom = (Math.floor(max / h * 1000) / 1000).toString();
+    });
+    rep.classList.remove('rp-measure');
   }
   function choice() {
     var p = document.getElementById('rpPanel');
@@ -178,5 +210,5 @@
       month: parseInt(p.querySelector('#rpMonth').value, 10), summary: p.querySelector('#rpSummary').checked, table: p.querySelector('#rpTable').checked };
   }
 
-  window.TempsReport = { open: function () { var p = panel(); p.hidden = false; p.querySelector('#rpGo').focus(); }, build: build, monthData: monthData };
+  window.TempsReport = { open: function () { var p = panel(); p.hidden = false; p.querySelector('#rpGo').focus(); }, build: build, monthData: monthData, fit: fit };
 }());
