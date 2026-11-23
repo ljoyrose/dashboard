@@ -61,7 +61,7 @@ function csvFiles() {
     // (docs: AA_2026-10-16_JOB4-PROPOSED-field_visibility-rows). Row rules use field_name *.
     'BLD-field_visibility.csv': crlf(VISIBILITY_ROWS),
     'BLD-person.csv': crlf([
-      'id,tenant_id,full_name,known_as',
+      'id,tenant_id,full_name,party_kind,title,first_name,last_name,pronouns,known_as,email,phone,phone_alt,email_alt,preferred_contact,best_time_to_call,address_line,address_line_2,address_locality,address_region,address_postal_code,address_country_code,is_vet,is_supplier_contact,marketing_consent,consent_basis,consent_recorded_on,source,effective_from,effective_to,date_of_birth,id_checked_on,do_not_contact,gdpr_erasure_requested_on,retention_review_on,notes,external_ref,external_ref_system,visibility,visible_from,visible_to,visibility_set_by',   // the live header (15 Nov 2026)
       `per-test-1,${TENANT},Pat Tester,`
     ]),
     'BLD-role.csv': crlf([
