@@ -222,7 +222,10 @@ function sinkRead_(req) {
   var flt = readFilter_(req.filter, rd, data.header);
   var sc = access.scope, cutoff = sc.days ? nowMs - sc.days * 86400000 : 0;
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0;
-  var rows = [], truncated = false;
+  // 22 Nov 2026: past READ_MAX_ROWS the NEWEST matching rows are kept (the last in the table), not the oldest. The
+  // filters above still run first, on every row. Before, the reading table (~31,000 rows) returned only its first
+  // 3,000, so a screen never saw today's readings.
+  var hits = [], rows = [], truncated = false;
   for (var i = 0; i < data.records.length; i++) {
     var r = data.records[i];
     if (hasTenantCol && r.tenant_id !== tenant) continue;
@@ -238,12 +241,15 @@ function sinkRead_(req) {
       var day = String(r[rd.dateCol] || '').slice(0, 10);     // dates are saved in London time, so this is the London day
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || (flt.from && day < flt.from) || (flt.to && day > flt.to)) continue;
     }
-    if (rows.length >= BLD.LIMITS.READ_MAX_ROWS) { truncated = true; break; }
+    hits.push(r);
+  }
+  if (hits.length > BLD.LIMITS.READ_MAX_ROWS) { truncated = true; hits = hits.slice(hits.length - BLD.LIMITS.READ_MAX_ROWS); }
+  hits.forEach(function (r) {
     var o = {};
     var cellsOff = access.hideCells[r.id] || {};
     fields.forEach(function (c) { o[c] = cellsOff[c] ? '' : r[c]; });
     rows.push(o);
-  }
+  });
   return {
     table: key, fields: fields, rows: rows, count: rows.length, truncated: truncated, role: who.role, name: who.who,   // the caller's own role and name (Welcome line, buttons); never anyone else's
     scope: sc.kind === 'all' ? 'all rows' : sc.kind === 'prefix' ? 'the ' + sc.prefixes.join('*, ') + '* rows' : (sc.kind === 'own' ? 'your own rows from the last ' + sc.days + ' days' : 'rows from the last ' + sc.days + ' days'),
