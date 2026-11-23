@@ -101,3 +101,36 @@ test('Import: a chosen file is checked row by row; Import saves only the ready r
   ]);
   if (d2.slice(0, 7) === today.slice(0, 7)) await expect(page.locator(`[data-jcal="food_bowls"] [data-day="${d2}"]`)).toHaveClass(/\bdone\b/);
 });
+
+// Lisa 23 Nov 2026 (phone screenshot): "Make it clearer between part done (orange) and missed (red)". Missed is a red
+// frame with a small cross, part done an orange frame on a light orange fill; the key shows all three the same way.
+test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark', async ({ page, guard }) => {
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [`l1,t,j1,,,,,ok,,,${london(new Date(Date.now() - 3 * 86400000))}T09:00:00Z,Pretend Staff,,,site_tap`]));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const key = page.locator('#jobCals .jcal-key');
+  await expect(key.locator('[data-jcal-legend]')).toHaveCount(3);
+  await expect(key).toContainText('done');
+  await expect(key).toContainText('part done');
+  await expect(key).toContainText('missed');
+  const lum = (rgb) => { const c = rgb.match(/\d+/g).slice(0, 3).map((v) => { v = v / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: scheme });
+    const look = await key.evaluate((k) => {
+      const s = (n) => getComputedStyle(k.querySelector('[data-jcal-legend="' + n + '"]'));
+      const a = getComputedStyle(k.querySelector('[data-jcal-legend="missed"]'), '::after');
+      const card = getComputedStyle(k.closest('.card') || document.body).backgroundColor;
+      return { part: { frame: s('part').boxShadow, fill: s('part').backgroundColor }, missed: { frame: s('missed').boxShadow, fill: s('missed').backgroundColor, mark: a.content, markColour: a.color }, done: s('done').backgroundColor, card: card };
+    });
+    expect(look.missed.mark).toBe('"✕"');                          // missed has its own mark, so it never relies on colour
+    expect(look.part.frame).not.toBe(look.missed.frame);           // different frame colours
+    expect(look.part.fill).not.toBe(look.missed.fill);             // part done has a fill, missed has none
+    expect(look.done).not.toBe(look.part.fill);
+    const [l1, l2] = [lum(look.missed.markColour), lum(look.card)].sort((x, y) => y - x);
+    expect((l1 + 0.05) / (l2 + 0.05), scheme + ' cross contrast').toBeGreaterThanOrEqual(4.5);
+  }
+  // a real missed day in the month carries the class (and so the cross)
+  await expect(page.locator('#jobCals [data-jcal="food_bowls"] .jd.missed').first()).toBeVisible();
+});

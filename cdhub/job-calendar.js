@@ -145,7 +145,7 @@
       + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button>'
       + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div></div>'
       + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
-      + '<p class="mut jcal-key"><span class="jd done">' + TICK + '</span> done <span class="jd part"></span> part done <span class="jd missed"></span> missed'
+      + '<p class="mut jcal-key"><span class="jd done" data-jcal-legend="done">' + TICK + '</span> done <span class="jd part" data-jcal-legend="part"></span> part done <span class="jd missed" data-jcal-legend="missed"></span> missed'
       + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
     if (!keys.length) return h + '<p class="mut">No calendars chosen. Add rows compliance.calendar.&lt;job&gt; in Settings.</p></section>';
     h += '<div class="jcal-grid">' + keys.map(function (k) {
@@ -188,7 +188,7 @@
     + '.jcal-ok svg,.jd svg{width:16px;height:16px}.jdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.jdh{font-size:10px;color:var(--muted);text-align:center}'
     + '.jd{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:10px;color:var(--ink)}'
     + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done{background:var(--ljr-5);box-shadow:none;color:var(--ljr-paper,#fff)}'
-    + '.jd.part,.jd.missed{box-shadow:inset 0 0 0 2px var(--ljr-3)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
+    + '.jd.part{box-shadow:inset 0 0 0 2px var(--ljr-3);background:var(--ljr-3-tint)}.jd.missed{box-shadow:inset 0 0 0 2px var(--ljr-2-text);position:relative}.jd.missed::after{content:"\\2715";position:absolute;top:1px;right:2px;font-size:8px;line-height:1;font-weight:700;color:var(--ljr-2-text)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
     + 'button.jd{border:0;padding:0;font:inherit;cursor:pointer;position:relative;min-width:0}.jd.open{outline:3px solid var(--ink);outline-offset:-3px}'
     + '.jcam{position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center}.jcam svg{width:9px;height:9px}'
     + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6-solid);color:var(--ljr-6-on);display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
