@@ -22,7 +22,7 @@ async function setup(page, tables, store) {
     const b = JSON.parse(route.request().postData());
     if (String(b.action).indexOf('read') === 0) return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], tables, role: 'OWNER' } } });
     sent.push(b);
-    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length } } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'rdg-' + sent.length, who: 'Staff A', at: '2026-01-12T09:14:00+00:00' } } });
   });
   await page.clock.setFixedTime(new Date('2026-11-12T09:00:00Z'));
   await page.addInitScript(([c, u, s, now]) => {
@@ -38,7 +38,6 @@ test('the round lists each thermometer in a two-thermometer room by name; a save
   await page.goto('cdhub/staff/#m/temperature');
   await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await page.locator('.cards .card', { hasText: 'H5/6 · H6' }).click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -52,10 +51,9 @@ test('the round lists each thermometer in a two-thermometer room by name; a save
 test('a thermometer QR opens that exact thermometer, no picking, and saves its thermometer_id', async ({ page }) => {
   const sent = await setup(page, base(), { 'bld.temp.thermometer': { thermometerId: 'th-h6' } });
   await page.goto('cdhub/staff/#m/temperature');
-  await expect(page.getByRole('button', { name: 'Type it' })).toBeVisible();
+  await expect(page.getByLabel('MAX')).toBeVisible();   // the boxes are open at once (demo 18 Nov 2026)
   await expect(page.getByRole('heading', { name: 'H5/6 · H6' })).toBeVisible();
   await expect(page.locator('.cards')).toHaveCount(0);   // no picking
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -68,14 +66,13 @@ test('a room QR in a room with two thermometers shows both, by name, first; noth
   await page.goto('cdhub/staff/#m/temperature');
   await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('.cards .card', { hasText: 'You scanned this' })).toHaveCount(2);
-  await expect(page.getByRole('button', { name: 'Type it' })).toHaveCount(0);
+  await expect(page.getByLabel('MAX')).toHaveCount(0);
 });
 
 test('a room QR in a room with one thermometer opens it straight away', async ({ page }) => {
   const sent = await setup(page, base(), { 'bld.move.room': { areaId: 'area-s' } });
   await page.goto('cdhub/staff/#m/temperature');
-  await expect(page.getByRole('button', { name: 'Type it' })).toBeVisible();
-  await page.getByRole('button', { name: 'Type it' }).click();
+  await expect(page.getByLabel('MAX')).toBeVisible();   // the boxes are open at once (demo 18 Nov 2026)
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -103,7 +100,7 @@ test('year report: a room with two thermometers can be opened whole or per therm
   ];
   await setup(page, t);
   await page.goto('cdhub/staff/#m/temperature');
-  await page.getByRole('button', { name: 'Year report' }).click();
+  await page.locator('.tg-row').getByRole('button', { name: 'Report', exact: true }).click();
   await expect(page.getByLabel('Room').locator('option')).toContainText(['H5/6 (all)', 'H5/6 · H5', 'H5/6 · H6', 'S1']);
   await page.getByLabel('Room').selectOption({ label: 'H5/6 · H6' });
   await page.getByRole('button', { name: 'Open report' }).click();
@@ -136,13 +133,38 @@ test('Lisa 12 Nov: the card shows its tick as soon as the save reply is OK, even
   const sent = await setup(page, base());
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card', { hasText: 'S1' }).click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  await expect(page.getByText('✓ Saved')).toBeVisible();
+  await expect(page.getByText('✓ Saved · Staff A · 09:14')).toBeVisible();   // demo 18 Nov: who saved it and when
   await page.getByRole('button', { name: '← Rooms' }).click();
   await expect(names(page)).toHaveText(['H5/6 · H5', 'H5/6 · H6', 'S1']);
   await expect(page.locator('.cards .card', { hasText: 'S1' }).locator('.done-line')).toContainText(/^Done \d\d:\d\d/);
+});
+
+test('20 Nov (PR 731): a reading saved while another is still sending says "Waiting, 1 ahead", then saves', async ({ page }) => {
+  const sent = await setup(page, base());
+  let release; const gate = new Promise((r) => { release = r; });
+  let held = 0;
+  await page.route(SCRIPT, async (route) => {   // hold the first save's reply until released
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action && String(b.action).indexOf('read') !== 0 && held++ === 0) await gate;
+    return route.fallback();
+  });
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card', { hasText: 'H5/6 · H6' }).click();
+  await page.getByLabel('MAX').fill('18.0');
+  await page.getByLabel('MIN').fill('12.0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Saving...')).toBeVisible();
+  await page.getByRole('button', { name: '← Rooms' }).click();
+  await page.locator('.cards .card', { hasText: 'S1' }).click();
+  await page.getByLabel('MAX').fill('17.0');
+  await page.getByLabel('MIN').fill('11.0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Waiting, 1 ahead')).toBeVisible();
+  release();
+  await expect(page.getByText('✓ Saved · Staff A · 09:14')).toBeVisible();
+  await expect.poll(() => sent.length).toBe(2);
 });

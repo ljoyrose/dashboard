@@ -24,15 +24,20 @@
  *                    this date and MODE_occupancy are ignored for moves. Corrections on other tables may still queue.
  *   DOG_PHOTOS_FOLDER_ID  Shared Drive folder id for dog photos. Never a My Drive folder. Missing = photo upload is refused.
  *                    The id stays in Script Properties. It is not written in the repository and is not sent to the page.
+ *   FILES_FOLDER_ID  Shared Drive folder id for the one file store (photos, uploads; Lisa 13 Nov 2026). Never the tables
+ *                    folder. Missing = file_add of a photo or upload is refused; links still save.
  *   INSPECT_PAGE_URL  https address of the inspector page (.../cdhub/staff/inspect/). The owner page builds each link as
  *                    this address + #s=<INSPECT_SCRIPT_ID>&c=<code>. Not secret. Missing = the owner page shows the code only.
  *   INSPECT_SCRIPT_ID  the Save deployment's id (between /macros/s/ and /exec). Not secret; the inspector's phone needs it.
+ *   HUB_CLIENT_ID    the CD Hub's Google sign-in client id (the hub page's DASH_CONFIG.clientId; not secret). Set =
+ *                    owners save with their Google sign-in, no code (Lisa 16 Nov 2026, option A; owner list = ADMIN_EMAILS,
+ *                    a personal Gmail counts). Missing = codes only, as before. See authOwnerGoogle_ in Auth.gs.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
  * are not recorded. Corrections go through the screen.
  */
 var BLD = {
-  VERSION: '1.2.0',
+  VERSION: '1.3.0',
   TZ: 'Europe/London',
   PROP: {
     SAVE_ENABLED: 'SAVE_ENABLED',
@@ -49,27 +54,33 @@ var BLD = {
     OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
     MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL',
     DOG_PHOTOS_FOLDER: 'DOG_PHOTOS_FOLDER_ID',
+    FILES_FOLDER: 'FILES_FOLDER_ID',
     INSPECT_PAGE_URL: 'INSPECT_PAGE_URL',
-    INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID'
+    INSPECT_SCRIPT_ID: 'INSPECT_SCRIPT_ID',
+    HUB_CLIENT_ID: 'HUB_CLIENT_ID'
   },
   RETENTION_FILE: 'BLD-retention_setting.csv',
   LIMITS: {
     MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
     MAX_PHOTO_CHARS: 2500000, // whole dog-photo request (base64 picture included)
     MAX_PHOTO_B64: 1800000,   // the picture itself, after whitespace is removed
+    MAX_FILE_B64: 1800000,    // file_add: the platform request cap; the owner's file.max_bytes row sets the real limit
     MAX_TEXT_CHARS: 500,
     FAIL_WINDOW_SEC: 600,   // bad staff codes are counted for 10 minutes
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends
     DUP_WINDOW_MIN: 30,     // a second reading for the same room inside this window is refused
     PERIOD_MAX_AGE_HOURS: 168,
+    SAVE_TAIL_ROWS: 200,    // a fast append (Specs fastAppend) reads this many of the last rows in full; the rest only the checked columns
     // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
     // a section, the legal period, else this many years. Used only as that fallback.
     RETENTION_DEFAULT_YEARS: 6,
     REQUEST_CACHE_SEC: 21600,
     LOCK_WAIT_MS: 20000,
+    MAX_BATCH_ITEMS: 20,    // a list save (add_many, 20 Nov 2026): one round's readings, sent in parts of at most 20
     TEMP_MIN: -30,
     TEMP_MAX: 60,
     READ_MAX_ROWS: 3000,    // a read never returns more rows than this
+    READ_TAIL_ROWS: 3000,   // a read with a from-date reads only this many of the newest rows when they reach back past that date (22 Nov 2026)
     MOVES_QUEUE_DAYS: 14,   // moves queue for this many days after go-live (adminStartMovesQueue)
     CHECK_MAX_DOGS: 500     // most dogs one daily-check confirmation may list
   },

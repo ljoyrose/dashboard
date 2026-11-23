@@ -1,0 +1,2 @@
+id,tenant_id,language_tag,date_display,first_day_of_week,area_unit_id,temperature_unit_id,mass_unit_id,length_unit_id,currency_code,set_by,set_on,notes,time_zone,from_date,to_date,source
+loc-test,ten-test,en-GB,,,,,,,,,,,Europe/London,2020-01-01,,Invented for tests

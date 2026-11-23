@@ -11,6 +11,8 @@ const BLDChecks = require('../records/checks.js');
 const URL_OK = 'https://script.google.com/macros/s/AKfycbxTEST/exec';
 const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'grant_id', 'counts_due'];
+const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind', 'only_groups'];
+const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'];
 const flush = () => new Promise((r) => setTimeout(r, 15));
 
 function world() {
@@ -153,6 +155,30 @@ test('published checks page: a refused code brings the code box back, and typing
   assert.deepEqual(codes, ['ABC234', '']);
   assert.equal(gate.hidden, false);
   assert.equal(code.value, '');
+});
+
+test('demo 2a: a code that opens the checks is kept on this device; a refused one is not', async () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'cdhub/checks/index.html'), 'utf8').replace(/<script src="[^"]+"><\/script>/g, '');
+  for (const good of [true, false]) {
+    const dom = new JSDOM(html, { url: 'https://example.test/cdhub/checks/', runScripts: 'outside-only' });
+    const w = dom.window;
+    w.BLDSave = { create: () => ({ getScriptUrlSet: () => true, setCode: () => {}, clearCode: () => {} }) };
+    w.BLDChecks = { mount: () => Promise.resolve(good ? { ok: true } : { ok: false, reason: 'read' }) };
+    w.eval(w.document.querySelector('script').textContent);
+    w.document.getElementById('code').value = 'abc234';
+    w.document.getElementById('gate').dispatchEvent(new w.Event('submit', { cancelable: true }));
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(w.localStorage.getItem('bld.device.code'), good ? 'ABC234' : null, String(good));
+  }
+});
+
+test('demo 2a: a save line says who and when from the reply, and never ticks a refusal', () => {
+  const D = require('../../cdhub/staff/lib/done-state.js');
+  assert.equal(D.by({ ok: true, who: 'Sam', at: '2026-11-18T14:32:00Z' }), '✓ Sam, 14:32');
+  assert.equal(D.by({ ok: true, at: '2026-07-01T09:05:00Z' }), '✓ 10:05');
+  assert.equal(D.by({ ok: false, who: 'Sam' }), '');
 });
 
 test('the dog list is only dogs on site, A-Z: a dog that has left is not offered', async () => {
