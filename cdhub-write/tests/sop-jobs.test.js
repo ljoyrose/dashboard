@@ -9,6 +9,9 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
+const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas'];
+const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'grant_id', 'counts_due'];
+const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by'];
 const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas', 'only_in_areas', 'item_kind', 'only_groups'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given'];
 const FIELD_H = ['id', 'tenant_id', 'type_key', 'field_key', 'label', 'kind', 'choices', 'required', 'sort', 'active', 'effective_from', 'set_at', 'set_by', 'unit', 'limit_low', 'limit_high', 'source'];
@@ -35,6 +38,7 @@ const log = (env, f, values, code) => save(env, req(env, Object.assign({ code: c
 test('litter: a check can target a litter; a litter job saves with litter_id, the last column, and the litter must exist', () => {
   const env = env0();
   const id = typeId(env, 'pup_weigh', { target: 'litter' });
+  assert.deepEqual(Array.from(env.ctx.TABLES.check_log.columns).slice(-4), ['litter_id', 'note_for_id', 'grant_id', 'counts_due']);
   assert.deepEqual(Array.from(env.ctx.TABLES.check_log.columns).slice(-4, -2), ['litter_id', 'note_for_id']);
   const r = log(env, { check_type_id: id, litter_id: 'ltr-1' });
   assert.equal(r.ok, true, JSON.stringify(r));
