@@ -560,11 +560,17 @@ function store_readSmall_(title) {
   return { records: r.records };
 }
 
-function store_lookups_(spec, tenantId) {
-  var out = {};
+function store_lookups_(spec, tenantId, fields) {
+  // 22 Nov 2026 (a job save spent 7.7-12.8 s here): each list is read once per save, not once per lookup on it (the
+  // job types were read 4 times), and a lookup only one field needs (onlyIfField) is skipped when the save does not
+  // send that field (the whole job log was read for every job save, but only a note uses it). Callers that pass no
+  // fields (edits) get every lookup, as before.
+  var out = {}, got = {};
   for (var i = 0; i < spec.lookups.length; i++) {
     var lk = spec.lookups[i];
-    var r = store_readSmall_(lk.file);
+    if (lk.onlyIfField && fields && !String(fields[lk.onlyIfField] || '').trim()) continue;
+    if (!Object.prototype.hasOwnProperty.call(got, lk.file)) got[lk.file] = store_readSmall_(lk.file);
+    var r = got[lk.file];
     if (!r) { out[lk.name] = null; continue; }
     var set = {};
     r.records.forEach(function (rec) {
