@@ -4751,7 +4751,21 @@ function saveBlob(b,name){ var a=document.createElement('a'); a.href=URL.createO
    saves one whole-site record (every dog for a per-dog job). Which jobs show is the owner's rows (BLDJobCal). */
 var JCAL={ym:''};
 if(typeof BLDJobCal!=='undefined'){ (function(){ var st=document.createElement('style'); st.textContent=BLDJobCal.CSS; document.head.appendChild(st); })(); }
-function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=compJobsV();   /* Compliance only */ return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+/* the calendar's day photos: read from Drive with the sign-in (like dog photos), shown from memory; a failed one keeps its link only */
+var CALPHOTO_URLS={};
+function loadCalPhotos(){
+ Array.prototype.forEach.call(document.querySelectorAll('img[data-cal-photo-id]:not([src])'),function(img){
+  var id=img.getAttribute('data-cal-photo-id');
+  if(CALPHOTO_URLS[id]){ img.src=CALPHOTO_URLS[id]; return; }
+  if(!TOKEN){ img.remove(); return; }
+  DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+   if(!res.ok) throw new Error(res.status);
+   return res.blob();
+  }).then(function(b){ if(!b||!/^image\//.test(b.type||'')) throw new Error('type'); CALPHOTO_URLS[id]=URL.createObjectURL(b); img.src=CALPHOTO_URLS[id]; })
+   .catch(function(){ img.remove(); });
+ });
+}
+function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=compJobsV();   /* Compliance only: no Breed Better grading */ v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
 /* Import past daily records (Lisa 22 Nov 2026, "A"): choose a spreadsheet, every row is checked and shown, then one
    press saves the ready rows one at a time, each marked imported. Nothing is saved before that press. */
 document.addEventListener('click',function(ev){
@@ -4787,6 +4801,8 @@ document.addEventListener('click',async function(ev){
 document.addEventListener('click',async function(ev){
  var m=ev.target.closest&&ev.target.closest('[data-jcal-month]');
  if(m){ JCAL.ym=m.getAttribute('data-jcal-month'); var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml(); return; }
+ var dy=ev.target.closest&&ev.target.closest('[data-jcal-day]');
+ if(dy){ var dk=dy.getAttribute('data-jcal-key'), di=dy.getAttribute('data-jcal-day'); JCAL.open=(JCAL.open&&JCAL.open.key===dk&&JCAL.open.iso===di)?null:{key:dk,iso:di}; var wd=document.getElementById('jobCals'); if(wd) wd.outerHTML=jobCalHtml(); loadCalPhotos(); return; }   /* a day opens who, when, notes and photos; tap again to close */
  var b=ev.target.closest&&ev.target.closest('[data-jcal-done]'); if(!b||b.disabled) return;
  var key=b.getAttribute('data-jcal-done'), v=jobsV(), f=BLDJobCal.doneFields(v,key); if(!f) return;
  b.disabled=true; b.textContent='Saving\u2026';
