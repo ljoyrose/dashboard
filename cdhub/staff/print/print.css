@@ -8,40 +8,94 @@
 /* Lisa's "Dog Card Print-outs" v4. Size colours come from rule rows; these only turn a colour word into the print shade. */
 :root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon)}
 .per{display:inline-flex;gap:6px}.per [aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+/* Lisa's dog card (18 Nov 2026). --c is the size colour from the owner's size_colour rows. */
 .sheet.dogs{display:grid;gap:10px;grid-template-columns:1fr}
-.sheet.dogs.per2{grid-template-columns:1fr 1fr}.sheet.dogs.per4{grid-template-columns:1fr 1fr}
-.dcard{--c:#57504A;background:#fff;color:var(--ljr-8);border:1px solid #C7C0B4;border-radius:10px;overflow:hidden;break-inside:avoid;display:flex;flex-direction:column;font-family:"Lexend",system-ui,sans-serif}
-.dcard .band{background:var(--c);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
-.dcard .who{display:flex;align-items:center;gap:8px;min-width:0}.dcard .who b{font-size:30px;line-height:1.05;overflow-wrap:break-word;hyphens:manual}
-.dcard .band small{flex:none;font-size:16px;font-weight:600;text-align:right;white-space:nowrap}
-.dcard .sex svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
-.dcard .dbody{padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px}
-.dcard .cside{display:grid;grid-template-columns:40% 1fr;gap:12px;width:100%}
-.dcard .photo img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block}
-.dcard .photo{overflow:hidden;min-height:110px;border:2px dashed var(--ljr-0-icon);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ljr-0-text)}
-.dcard dl{margin:0;display:grid;gap:8px;align-content:space-evenly}.dcard dt{color:var(--ljr-0-text);font-size:13px}.dcard dd{margin:0;font-weight:600;font-size:20px}
+.sheet.dogs.per2,.sheet.dogs.per4{grid-template-columns:1fr 1fr}
+.dcard{--c:#57504A;background:#fff;color:#141413;border:1px solid #C7C0B4;border-radius:10px;padding:14px;break-inside:avoid;display:flex;flex-direction:column;align-items:center;gap:10px;font-family:"Lexend",system-ui,sans-serif}
+.dcard .name{margin:0;font-size:34px;line-height:1.05;text-align:center;overflow-wrap:anywhere}
+.dcard .dtop{display:grid;grid-template-columns:1fr 46%;gap:12px;width:100%;align-items:center}
+.dcard dl{margin:0;display:grid;gap:10px}.dcard dt{color:#57504A;font-size:13px}.dcard dd{margin:0;font-weight:600;font-size:20px;display:flex;align-items:center;gap:6px}
+.dcard .sex svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.dcard .photo{overflow:hidden;aspect-ratio:1;border:4px solid var(--c);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#57504A}
+.dcard .photo img{width:100%;height:100%;object-fit:cover;display:block}
+.dcard .szb{width:100%;box-sizing:border-box;background:var(--c);color:#fff;border-radius:10px;padding:8px 12px;font-size:20px;text-align:center}
 .dcard .code svg,.rcard .code svg{width:100%;max-width:300px;height:auto;display:block;margin:0 auto}
-.dcard .tag,.rcard .tag{font-size:11px;color:var(--ljr-0-text)}
-.sheet.rooms{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-.rcard{background:#fff;color:var(--ljr-8);border:1px solid #C7C0B4;border-radius:10px;padding:12px;text-align:center;break-inside:avoid}
-.rcard>b{display:block;font-size:28px}
-.rcard .limits{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0}
-.sz{--c:#57504A;display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:2px solid var(--c);border-radius:12px;font-weight:600;font-size:13px;color:var(--c)}
-.sz i{width:12px;height:12px;border-radius:50%;background:var(--c)}
-/* margin 0: the browser then has no room for its own header and footer, which print the page address and title (Lisa 13 Nov 2026: no address on any print-out). The 8mm moves into the body. */
-@media print{@page{size:A4;margin:0} body{padding:8mm;margin:0}
- .dcard,.rcard{-webkit-print-color-adjust:exact;print-color-adjust:exact}
- .sheet.dogs.per1 .dcard{height:277mm;page-break-after:always}.sheet.dogs.per1 .dcard .code svg{max-width:150mm}.sheet.dogs.per1 .dcard .who b{font-size:52px}
- .sheet.dogs.per2{grid-template-columns:1fr 1fr}.sheet.dogs.per2 .dcard{height:190mm}
- .sheet.dogs.per4{grid-template-columns:1fr 1fr}.sheet.dogs.per4 .dcard{height:136mm}
- .sheet.rooms{grid-template-columns:1fr 1fr}}
-.dcard .chipline{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--ljr-0-text)}
-.dcard .chipline b{font-size:20px;color:var(--ljr-8);font-variant-numeric:tabular-nums;white-space:nowrap}
-.dcard .jobs{width:100%;display:flex;flex-wrap:wrap;gap:6px 14px}
-.dcard .job{display:flex;align-items:center;gap:6px;font-size:16px}
-.dcard .job:before{content:"";width:5px;height:20px;background:var(--c);border-radius:3px}
+.dcard .tag,.rcard .tag{font-size:11px;color:#57504A;text-align:center}
+.dcard .chipline{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:#57504A}
+.dcard .chipline b{font-size:22px;color:#141413;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:.04em}
 .dcard .lst{width:100%;list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}.dcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
-.rcard .lst{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:14px;text-align:left}
-.rcard .lst li{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #C7C0B4;padding-top:4px}
-.rcard .lst span{color:var(--ljr-0-text)}
-@media print{.sheet.dogs.per1 .dcard .chipline b{font-size:36px}.sheet.dogs.per1 .dcard .job{font-size:22px}}
+/* the litter card keeps its band */
+.dcard .band{align-self:stretch;margin:-14px -14px 0;background:var(--c);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dcard .who b{font-size:30px}.dcard .band small{font-size:16px;font-weight:600;text-align:right}
+.dcard .dbody{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.dcard .cside{display:grid;grid-template-columns:40% 1fr;gap:12px;width:100%}
+/* Lisa's room card (18 Nov 2026) */
+.sheet.rooms{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.rcard{background:#fff;color:#141413;border:1px solid #C7C0B4;border-radius:10px;padding:14px 16px;break-inside:avoid;font-family:"Lexend",system-ui,sans-serif;display:flex;flex-direction:column;gap:8px}
+.rcard .name{margin:0;font-size:30px;text-align:center}
+.rcard .rainbow{height:3px;border-radius:2px;background:linear-gradient(90deg,var(--ljr-2-icon),var(--ljr-3-icon),var(--ljr-4-icon),var(--ljr-5-icon),var(--ljr-6-icon),var(--ljr-7-icon));-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rcard .facts{margin:0;display:grid;grid-template-columns:repeat(3,1fr);text-align:center}
+.rcard .facts dt{font-size:10px;color:#57504A}.rcard .facts dd{margin:0;font-size:13px;font-weight:600}.rcard .facts small{display:block;font-size:10px;color:#57504A}
+.rcard .rbody{display:grid;grid-template-columns:1fr 38%;gap:12px;align-items:center}
+.rcard .rows{display:grid;gap:6px}
+.szrow{--c:#57504A;border:3px solid var(--c);border-radius:8px;padding:2px 8px 4px;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;align-items:center;column-gap:6px}
+.szrow b{grid-column:1/-1;font-size:13px}
+.szrow .dogs{display:flex;gap:3px;flex-wrap:wrap}.szrow .dogs i svg{width:24px;height:18px;fill:var(--c);display:block}
+.szrow .n{font-size:24px;font-weight:600}
+.szrow.none{border-style:dashed}.szrow.none small{grid-column:1/-1;font-size:11px}
+.rcard .nolim{border:3px dashed var(--ljr-2-icon);border-radius:8px;padding:10px;font-weight:600;margin:0}
+.rcard .foot{margin:0;text-align:center;font-weight:600;font-size:13px}
+.rcard>*,.dcard>*{flex:none}
+/* Print (13 Nov 2026, PR 529; Lisa's cards 18 Nov 2026). No address on any print-out: margin 0 leaves the browser no room
+   for its header and footer; the 10 mm goes on the body, repeated on every page. Each card has a fixed height a little under
+   its share of the page and the QR takes what is left, so nothing is cut off and no card is split. Inline-block, not grid,
+   so Safari and Chrome break pages the same way. Full A4: one card a page. 2 per A4: two cards one above the other with a
+   dashed cut line (Lisa's design). 4 per A4: two by two. Room cards: two a sheet, cut line between. */
+@media print{
+ @page{size:A4;margin:0}
+ html,body{margin:0!important}
+ body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+ h1,.msg{display:none!important}
+ .screen{margin:0!important}
+ .sheet{margin:0}
+ .dcard,.rcard,.qcard,.szrow,.szb{-webkit-print-color-adjust:exact;print-color-adjust:exact;break-inside:avoid;page-break-inside:avoid}
+ .sheet.dogs,.sheet.rooms{display:block;font-size:0;orphans:1;widows:1}
+ .sheet.dogs .dcard{display:inline-flex;vertical-align:top;box-sizing:border-box;width:100%;margin:0 0 4mm;font-size:16px;overflow:hidden}
+ .dcard .code{flex:1 1 0;min-height:16mm;width:100%;display:flex;justify-content:center}
+ .dcard .code svg{width:auto;height:100%;max-width:100%;max-height:100%;margin:0}
+ .dcard .name,.dcard .dtop,.dcard .szb,.dcard .chipline,.dcard .tag,.dcard .band,.dcard .cside,.dcard .jobs,.dcard .lst{flex:none}
+ .dcard .dbody{flex:1 1 auto;min-height:0}
+ .sheet.dogs.per1 .dcard{height:265mm;margin:0;gap:6mm;padding:8mm;break-after:page;page-break-after:always}
+ .sheet.dogs.per1 .dcard:last-child{break-after:auto;page-break-after:auto}
+ .sheet.dogs.per1 .dcard .name{font-size:48px}.sheet.dogs.per1 .dcard .dtop{grid-template-columns:1fr 62mm}
+ .sheet.dogs.per1 .dcard dt{font-size:16px}.sheet.dogs.per1 .dcard dd{font-size:28px}.sheet.dogs.per1 .dcard .szb{font-size:30px;padding:4mm}
+ .sheet.dogs.per1 .dcard .chipline{font-size:20px}.sheet.dogs.per1 .dcard .chipline b{font-size:36px}
+ /* two a page: name across the top, facts and photo, the size block, the chip; the QR on the right */
+ .sheet.dogs.per2 .dcard{height:132mm;border-radius:0;border-width:0 0 1px;border-bottom-style:dashed;display:inline-grid;grid-template-columns:1fr 62mm;grid-template-rows:auto 1fr auto auto;grid-template-areas:"name name" "top code" "size code" "chip tag";align-content:space-evenly;column-gap:8mm;padding:5mm 6mm}
+ .sheet.dogs.per2 .dcard .name{grid-area:name;font-size:40px}.sheet.dogs.per2 .dcard .dtop{grid-area:top;grid-template-columns:1fr 55mm}
+ .sheet.dogs.per2 .dcard .szb{grid-area:size;font-size:22px}.sheet.dogs.per2 .dcard .code{grid-area:code;align-self:center;height:62mm}
+ .sheet.dogs.per2 .dcard .chipline{grid-area:chip}.sheet.dogs.per2 .dcard .tag{grid-area:tag;text-align:center}
+ .sheet.dogs.per2 .dcard dd{font-size:22px}.sheet.dogs.per2 .dcard dt{font-size:14px}
+ .sheet.dogs.per2 .dcard.lcard{display:inline-flex}
+ .sheet.dogs.per4 .dcard{width:calc(50% - 2mm);height:129mm;gap:2mm;padding:3mm 4mm}
+ .sheet.dogs.per4 .dcard:nth-child(odd){margin-right:4mm}
+ .sheet.dogs.per4 .dcard .name{font-size:22px}.sheet.dogs.per4 .dcard .dtop{grid-template-columns:1fr 30mm;gap:2mm}
+ .sheet.dogs.per4 .dcard dl{gap:1mm}.sheet.dogs.per4 .dcard dt{font-size:9px}.sheet.dogs.per4 .dcard dd{font-size:13px}
+ .sheet.dogs.per4 .dcard .szb{font-size:13px;padding:1.5mm 3mm}.sheet.dogs.per4 .dcard .chipline{font-size:10px}.sheet.dogs.per4 .dcard .chipline b{font-size:14px}
+ .sheet.dogs.per4 .dcard .tag{font-size:8px}.sheet.dogs.per4 .dcard .photo{border-width:3px}
+ .sheet.dogs.per4 .dcard .band{margin:-3mm -4mm 0;padding:2mm 3.5mm}.sheet.dogs.per4 .dcard .who b{font-size:20px}
+ .sheet.dogs.per4 .dcard .lst{font-size:10px;gap:1px}
+ /* room cards: two a sheet, one above the other, the QR as big as the room on the right allows */
+ .sheet.rooms .rcard{display:inline-flex;vertical-align:top;box-sizing:border-box;width:100%;height:132mm;margin:0 0 4mm;font-size:16px;overflow:hidden;border-radius:0;border-width:0 0 1px;border-bottom-style:dashed;justify-content:space-evenly;padding:5mm 6mm}
+ .sheet.rooms .rcard .name{font-size:44px}.sheet.rooms .rcard .facts dt{font-size:13px}.sheet.rooms .rcard .facts dd{font-size:18px}.sheet.rooms .rcard .facts small{font-size:12px}
+ .sheet.rooms .rcard .rbody{grid-template-columns:1fr 62mm}
+ .sheet.rooms .szrow b{font-size:16px}.sheet.rooms .szrow .dogs i svg{width:32px;height:24px}.sheet.rooms .szrow .n{font-size:30px}.sheet.rooms .rcard .foot{font-size:16px}
+ .sheet.rooms .rcard{gap:2mm}.sheet.rooms .rcard .rows{gap:2mm}
+ .sheet.rooms .rcard .tag{font-size:9px}
+}
+/* the pick list (Lisa 22 Nov 2026): which cards print; never printed itself (noprint) */
+.pick:empty{display:none}
+.pick{border:1px solid var(--house-soft-line);border-radius:10px;padding:10px;margin:0 0 12px}
+.pick-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.pick-n{margin-right:auto}
+.pick-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px 12px}
+.pick-item{display:flex;gap:6px;align-items:center;min-height:32px}

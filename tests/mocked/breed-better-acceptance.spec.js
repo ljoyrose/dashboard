@@ -199,7 +199,8 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     await expect(page.locator('#main h2')).toContainText('Breed Better');
     await screen.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('#bbRoot h3')).toContainText('Test Dog One');
-    await expect(page).toHaveURL(/#\/breed$/);
+    // each tab has its own address (owner's design, 13 Nov 2026): the dog's Score tab
+    await expect(page).toHaveURL(/#\/breed\/score\.sub-test-dog-1$/);
   });
 
   asOwner('S7 look: verdict pills and buttons are 1px lines with no fill; each section has a 3px colour line', async ({ page }) => {
@@ -346,13 +347,14 @@ const INS_DATA = {
   microchip: { fields: ['id', 'subject_id', 'chip_number'], redacted: { chip_number: 'last4' }, rows: [{ id: 'c1', subject_id: 'a', chip_number: '0042' }] },
   health_screen: { fields: ['id', 'subject_id', 'test', 'grade', 'tested_on'], rows: [{ id: 'h1', subject_id: 'a', test: 'hips', grade: '5', tested_on: '2024-02-03' }] }
 };
-const inspectRoute = async (page) => {
+const inspectRoute = async (page, extra) => {
   const asked = [];
+  const data = Object.assign({}, INS_DATA, extra || {});
   await page.route(INS_SCRIPT, (r) => {
     if (r.request().method() === 'GET') return r.fulfill({ headers: INS_CORS, json: { saveEnabled: false, readEnabled: true, tables: [], version: 'test' } });
     const b = JSON.parse(r.request().postData());
     asked.push(b.table);
-    const t = INS_DATA[b.table];
+    const t = data[b.table];
     if (!t) return r.fulfill({ headers: INS_CORS, json: { ok: false, code: 'NOT_ALLOWED', message: 'no' } });
     return r.fulfill({ headers: INS_CORS, json: { ok: true, result: Object.assign({ ends: '2026-11-18T17:00:00' }, t) } });
   });
@@ -374,10 +376,20 @@ base.describe('Breed Better acceptance: inspector view', () => {
     await expect(page.locator('button, input, textarea, select, form, [contenteditable], [data-save], [data-edit]')).toHaveCount(0);
   });
 
-  base('S10.2 shows the shared records, never points, target, verdict or ranking, and never asks for a score list', async ({ page }) => {
-    const asked = await openInspector(page);
-    await expect(page.locator('#screen')).toContainText('Health tests');
-    await expect(page.locator('#screen')).not.toContainText(/\d+ of \d+|Below target|target|points|Unverified|\bPass\b|\bFail\b|Testing/i);
+  // Owner, 18 Nov 2026: an inspector (level B) sees Pass / Unverified / Fail on the must-pass checks, when the save script sends
+  // its must-pass summary; never points, target or ranking. Invented rows only.
+  base('S10.2 shows Pass / Unverified / Fail on the must-pass checks, never points, target or ranking, and never asks for a score list', async ({ page }) => {
+    const asked = await inspectRoute(page, { must_pass: { fields: ['subject_id', 'label', 'outcome', 'answer', 'date', 'due_date'], rows: [
+      { subject_id: 'a', label: 'Check One', outcome: 'pass', answer: '5', date: '2024-02-03', due_date: '' },
+      { subject_id: 'a', label: 'Check Two', outcome: 'unverified', answer: '', date: '', due_date: '' },
+      { subject_id: 'z', label: 'Check One', outcome: 'fail', answer: '0', date: '2024-01-05', due_date: '' }] } });
+    await page.goto(INS_LINK);
+    await expect(page.locator('.ins-dog')).toHaveCount(3);
+    const screen = page.locator('#screen');
+    await expect(screen.locator('.ins-v.ins-pass').first()).toHaveText('Pass');
+    await expect(screen.locator('.ins-v.ins-unverified').first()).toHaveText('Unverified');
+    await expect(screen.locator('.ins-v.ins-fail').first()).toHaveText('Fail');
+    await expect(screen).not.toContainText(/\d+ of \d+ points|Below target|target|points|rank|Testing|Unproven/i);
     expect(asked.length).toBeGreaterThan(0);
     expect(asked.some((t) => /score|enrol|judg/i.test(t))).toBe(false);
   });
@@ -396,7 +408,8 @@ base.describe('Breed Better acceptance: inspector view', () => {
   base('S10.5 a microchip ticked as last 4 shows only those 4 digits, and the code leaves the address bar', async ({ page }) => {
     await openInspector(page);
     const able = page.locator('.ins-dog', { hasText: 'Test Dog Able' });
-    await expect(able.locator('.ins-list', { hasText: 'Microchip' })).toContainText('Chip number 0042');
+    // the owner's inspector layout (approved): sex · DOB · chip last 4 on the dog's own line
+    await expect(able).toContainText(/Chip \D*0042/);
     expect(await page.locator('#screen').innerText()).not.toMatch(/\d{5,}/);
     expect(page.url()).not.toContain('FAKEINSPECTCODEY');
     expect(page.url()).not.toContain(INS_ID);

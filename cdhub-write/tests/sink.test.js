@@ -324,6 +324,23 @@ test('the proposed staff table and the retired round_event are NOT on the allow-
   assert.throws(() => env.ctx.store_append_('BLD-staff.csv', fx.STAFF_HEADER, [], { header: fx.STAFF_HEADER, file: {}, text: '' }), (e) => e.code === 'FILE_NOT_ALLOWED');
 });
 
+// 15 Nov 2026: a code made on the owner page was refused on the hub. Codes are made in capitals; one typed in small
+// letters, with spaces or with a dash is the same code. A different code is still refused, and a switched-off one stays off.
+test('a code typed in small letters, with spaces or a dash is recognised; wrong and switched-off codes still are not', () => {
+  const env = standardEnv();
+  const c = env.codes.staff;
+  [c.toLowerCase(), ' ' + c.slice(0, 5) + ' ' + c.slice(5) + ' ', c.slice(0, 5) + '-' + c.slice(5).toLowerCase()].forEach((typed) => {
+    const r = save(env, req(env, { code: typed }));   // the 2nd and 3rd are repeats of the 1st reading: past the code check, refused as a repeat
+    assert.ok(r.ok || !/BAD_CODE|NO_CODE|TOO_MANY_TRIES/.test(r.code), typed.length + ': ' + r.code);
+  });
+  assert.equal(save(env, req(env, { code: c.toLowerCase() })).code === 'BAD_CODE', false);
+  assert.equal(save(env, req(env, { code: c.slice(1).toLowerCase() })).code, 'BAD_CODE');
+  const reg = JSON.parse(env.props.STAFF_REGISTRY);
+  Object.keys(reg).forEach((h) => { if (reg[h].who === 'Sam Staff') reg[h].active = false; });
+  env.props.STAFF_REGISTRY = JSON.stringify(reg);
+  assert.equal(save(env, req(env, { code: c.toLowerCase() })).code, 'BAD_CODE');
+});
+
 test('wrong, missing and switched-off staff codes are refused; the code is never stored in clear', () => {
   const env = standardEnv();
   assert.equal(save(env, req(env, { code: 'NOTACODE123' })).code, 'BAD_CODE');
@@ -593,6 +610,19 @@ test('admin: health check changes nothing and speaks plainly', () => {
   assert.ok(env.logs.some((l) => /BLD-_pending.csv exists with 0 row/.test(l)));
   assert.ok(!env.logs.some((l) => /BLD-staff.csv/.test(l))); // proposed tables are not checked
   assert.ok(env.logs.some((l) => /SAVE_ENABLED is TRUE/.test(l)));
+});
+
+// 15 Nov 2026: files and links saves only need their columns present, so the check no longer compares them with the queue header.
+test('admin: health check judges files and links by the columns their saves need, not the queue header', () => {
+  const env = standardEnv({ props: { TABLE_ON_files: 'true', TABLE_ON_links: 'true' } });
+  const links = env.ctx.LINKS_.need.slice().reverse().concat(['extra_col']);
+  env.addFile('BLD-links.csv', links.join(',') + '\r\n');
+  env.addFile('BLD-files.csv', env.ctx.DOGCARD_.files.need.filter((c) => c !== 'sha256').join(',') + '\r\n');
+  env.ctx.adminCheckSetup();
+  assert.equal(env.writes.length, 0);
+  assert.ok(env.logs.some((l) => /^OK   BLD-links.csv exists with 0 row\(s\); header has every column the save needs/.test(l)), env.logs.join('\n'));
+  assert.ok(env.logs.some((l) => /^FIX  BLD-files.csv exists with 0 row\(s\); header has no sha256/.test(l)));
+  assert.ok(!env.logs.some((l) => /BLD-(links|files).csv.*DOES NOT MATCH/.test(l)));
 });
 
 // ------------------------------------------------------------------ 10. the pending queue is itself append-only

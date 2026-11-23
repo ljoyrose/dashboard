@@ -79,7 +79,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Room temperatures' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub help', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner.' }));
 
     var cards = el(doc, 'div', { class: 'bs-cards' });
     var header = mountHeader(doc, host, save, 'area_reading', refreshButtons);
@@ -159,7 +159,7 @@
             result.className = 'bs-result bs-bad';
             result.textContent = r.message;
             if (r.fields) showErrors(errs, r.fields);
-            if (r.code !== 'NETWORK') requestId = null;
+            if (!r.kept && r.code !== 'NETWORK') requestId = null;
           }
         });
       });
@@ -187,7 +187,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Staff roster' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Add a member of staff to the roster. Owner only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub help', text: 'Add a member of staff to the roster. Owner only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
     var form = el(doc, 'div', { class: 'bs-card' });
     var header = mountHeader(doc, host, save, 'staff', refresh);
     host.appendChild(form);
@@ -217,7 +217,7 @@
       save.submit('staff', fields, { requestId: requestId }).then(function (r) {
         btn.disabled = !save.banner('staff').canSave;
         if (r.ok) { result.className = 'bs-result bs-ok'; result.textContent = r.message + ' (' + r.id + ')'; requestId = null; }
-        else { result.className = 'bs-result bs-bad'; result.textContent = r.message; if (r.fields) showErrors(errs, r.fields); if (r.code !== 'NETWORK') requestId = null; }
+        else { result.className = 'bs-result bs-bad'; result.textContent = r.message; if (r.fields) showErrors(errs, r.fields); if (!r.kept && r.code !== 'NETWORK') requestId = null; }
       });
     });
     [sel, role, emp, started, ended].forEach(function (i) { i.addEventListener('input', function () { requestId = null; }); });
@@ -253,7 +253,7 @@
     clear(host);
     host.classList.add('bs'); host.classList.add('bs-board');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Where is everyone?' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Tap Moved for any dog that moved. Then All the rest unmoved.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub help', text: 'Tap Moved for any dog that moved. Then All the rest unmoved.' }));
     var header = mountHeader(doc, host, save, 'occupancy', refreshButtons);
 
     var all = o.dogs || [], areas = o.areas || [];
@@ -353,7 +353,7 @@
           } else {
             go.disabled = false; if (offBtn) offBtn.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
             if (r.fields) Object.keys(r.fields).forEach(function (k) { err.textContent += r.fields[k] + ' '; });
-            if (r.code !== 'NETWORK') mrid = null;
+            if (!r.kept && r.code !== 'NETWORK') mrid = null;
           }
         });
       }
@@ -392,7 +392,7 @@
         } else {
           restBtn.disabled = false; restMsg.className = 'bs-result bs-bad';
           restMsg.textContent = r.message + (r.fields ? ' ' + Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' ') : '');
-          if (r.code !== 'NETWORK') crid = null;
+          if (!r.kept && r.code !== 'NETWORK') crid = null;
           refreshButtons();
         }
       });

@@ -81,21 +81,26 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(dog(page).locator('details.wtc [data-k="wrow"]')).toHaveCount(3);
   });
 
-  test('vaccines: codes as words, removed rows hidden, card link, and Remove only on the newest', async ({ page, guard }) => {
+  test('vaccines: codes as words, archived rows apart, card link, Archive and Delete forever on every row', async ({ page, guard }) => {
     await open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
     await openMore(page);
-    const rows = dog(page).locator('details.vacc .dcs-bd > .dcs-row');
-    await expect(rows).toHaveCount(2);   // v0 is voided
+    const rows = dog(page).locator('details.vacc > .dcs-bd > .dcs-row');
+    await expect(rows).toHaveCount(2);   // v0 is archived
+    await expect(dog(page).locator('details[data-k="vax-arch"] > summary')).toHaveText('Archived (1)');
     await expect(rows.nth(1).locator('[data-k="covers"]')).toHaveText('Distemper, Hepatitis (adenovirus), Parvovirus');
     await expect(rows.nth(0).locator('[data-k="covers"]')).toHaveText('Kennel cough (Bordetella), Parainfluenza, Canine herpesvirus');
     await expect(rows.nth(1).locator('[data-k="vcard"]')).toHaveAttribute('href', 'https://example.test/pretend-card.jpg');
-    await expect(rows.nth(0).locator('[data-vax-void]')).toHaveCount(1);
-    await expect(rows.nth(1).locator('[data-vax-void]')).toHaveCount(0);
+    for (const i of [0, 1]) {   // the owner's records: any row (Lisa 17 Nov 2026)
+      await expect(rows.nth(i).locator('[data-vax-void]')).toHaveText('Archive');
+      await expect(rows.nth(i).locator('[data-vax-del]')).toHaveText('Delete forever');
+    }
+    await expect(dog(page).locator('[data-vax-arch] [data-vax-void]')).toHaveCount(0);
+    await expect(dog(page).locator('[data-vax-arch] [data-vax-del]')).toHaveCount(1);
     expect(await page.evaluate(() => vaxWords('some_new_thing;rabies'))).toBe('Some new thing, Rabies');
   });
 
-  test('Add vaccination sends one row; Remove sends vaccination_void for the newest and the one before becomes newest', async ({ page, guard }) => {
+  test('Add vaccination sends one row; Archive moves a row under Archived; Delete forever takes it away; each ticks', async ({ page, guard }) => {
     await open(page, guard);
     const bodies = await saves(page, (b) => ({ ok: true, result: { status: 'saved', id: b.action === 'vaccination' ? 'v-new' : b.fields.id } }));
     await page.evaluate(() => go('dogs/sub-x1'));
@@ -108,15 +113,29 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await f.locator('button[type=submit]').click();
     await expect.poll(() => bodies.length).toBe(1);
     expect(bodies[0]).toMatchObject({ action: 'vaccination', fields: { subject_id: 'sub-x1', given_on: '2026-02-01', product: 'Pretend L4', diseases_covered: 'leptospirosis', certificate_link: 'https://example.test/pretend-card-2.jpg' } });
-    const rows = dog(page).locator('details.vacc .dcs-bd > .dcs-row');
+    const rows = dog(page).locator('details.vacc > .dcs-bd > .dcs-row');
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toContainText('Leptospirosis');
     page.once('dialog', (d) => d.accept());
-    await rows.nth(0).locator('[data-vax-void]').click();
+    await rows.nth(1).locator('[data-vax-void]').click();   // not the newest: allowed
     await expect.poll(() => bodies.length).toBe(2);
-    expect(bodies[1]).toMatchObject({ action: 'vaccination_void', fields: { subject_id: 'sub-x1', id: 'v-new' } });
+    const archived = bodies[1].fields.id;
+    expect(bodies[1]).toMatchObject({ action: 'vaccination_void', fields: { subject_id: 'sub-x1' } });
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0).locator('[data-vax-void]')).toHaveCount(1);
+    await expect(dog(page).locator('details.vacc [data-vax-msg] [data-saved="good"]')).toBeVisible();
+    await expect(dog(page).locator('details[data-k="vax-arch"] > summary')).toHaveText('Archived (2)');
+    page.once('dialog', (d) => { expect(d.message()).toContain('cannot be undone'); d.accept(); });
+    await dog(page).locator('details[data-k="vax-arch"] > summary').click();
+    await dog(page).locator('[data-vax-arch="' + archived + '"] [data-vax-del]').click();
+    await expect.poll(() => bodies.length).toBe(3);
+    expect(bodies[2]).toMatchObject({ action: 'vaccination_delete', fields: { subject_id: 'sub-x1', id: archived } });
+    await expect(dog(page).locator('details[data-k="vax-arch"] > summary')).toHaveText('Archived (1)');
+    await expect(dog(page).locator('details.vacc [data-vax-msg] [data-saved="good"]')).toBeVisible();
+    // a dismissed question sends nothing
+    page.once('dialog', (d) => d.dismiss());
+    await rows.nth(0).locator('[data-vax-del]').click();
+    await page.waitForTimeout(200);
+    expect(bodies.length).toBe(3);
   });
 
   test('status words without code letters, no "Colour" word, and the microchip is a plain line', async ({ page, guard }) => {
@@ -141,7 +160,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     const card = dog(page);
     await expect(card).toHaveAttribute('data-size', 'small');
-    await expect(card.locator('[data-k="size"]')).toHaveText('Toy/Mini');
+    await expect(card.locator('[data-k="size"]')).toHaveText('Small');
     const frame = () => card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopColor);
     const small = await frame();
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['small', 'small']);
@@ -154,7 +173,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await frame()).not.toBe(small);
     expect(await page.evaluate(() => [roomDogs(['sub-x1'])[0].size, sizeOn(CD._byId['sub-x1'])])).toEqual(['medium', 'medium']);
     expect(await page.evaluate(() => sizeDot(CD._byId['sub-x1'].sizeWord))).toContain('data-size="medium"');
-    // the dog with no weight has no size at all, whatever its record says
+    // the dog with no weight and no kg range in its size cell has no size at all
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(dog(page)).not.toHaveAttribute('data-size', /./);
   });
@@ -229,12 +248,13 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
     await expect(page.locator('#rstat')).toContainText('1 with a temperature');
     await expect(page.locator('#kept-readings')).toContainText('11.3–13.2');
-    page.once('dialog', (d) => d.accept());
+    const dialogs = []; page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });   // Lisa 16 Nov: one tap, no pop-up
     await page.locator(`.rempty[data-area="${area}"][data-slot="pm"]`).click();
     await expect.poll(() => bodies.length).toBe(2);
     expect(bodies[1]).toMatchObject({ table: 'area_reading', fields: { area_id: area, room_empty: 'yes' } });
     expect(bodies[1].fields.min_c).toBeUndefined();
     await expect(page.locator('#kept-readings')).toContainText('Room empty');
+    expect(dialogs).toEqual([]);
   });
 
   test('a comma decimal saves as a point; text is refused and nothing saves; a saved reading that is not a number shows as a problem (OV11 15 Nov)', async ({ page, guard }) => {
@@ -262,6 +282,46 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(await page.evaluate(() => CD.tempUnread.map((x) => x.id))).toEqual(['r-x']);
   });
 
+  test('the round has one temperature line per thermometer (two in one room stay apart) and saves its thermometer_id; a corridor gets a temperature-only card (OV11 15 Nov)', async ({ page, guard }) => {
+    await open(page, guard);
+    const bodies = await saves(page, () => ({ ok: true, result: { status: 'saved', id: 'ar-new', at: '2026-11-11T09:00:00Z' } }));
+    await page.evaluate(() => go('round'));
+    await page.locator('#rdate').fill('2026-11-11');
+    await page.locator('#rdate').dispatchEvent('change');
+    const ids = await page.evaluate(() => {
+      const hall = { id: 'area-hall-x', code: 'Pretend Hall', m2: '' };   // a pretend corridor: in use, no dogs
+      [CD.allAreas, CD.areas].forEach((l) => { if (l && !l.some((a) => a.id === hall.id)) l.push(hall); });
+      const w = walkList().map((c) => c.area.id); return { two: w[0], one: w[1], hall: hall.id };
+    });
+    await page.evaluate((x) => {
+      T['BLD-thermometer.csv'] = [{ id: 'thm-a', name: 'Pretend A', area_id: x.two }, { id: 'thm-b', name: 'Pretend B', area_id: x.two },
+        { id: 'thm-c', name: 'Pretend C', area_id: x.one }, { id: 'thm-h', name: 'Pretend Hall', area_id: x.hall }];
+      CD.req = (CD.req || []).concat([{ need_type: 'room.no_dogs', target_table: 'area', target_id: x.hall, from_date: '2026-01-01' }]);   // the hall becomes a corridor
+      go('round', false);
+    }, ids);
+    const card = page.locator(`.card[data-area="${ids.two}"]`);
+    await expect(card.locator('.tline')).toHaveText(['Pretend A', 'Pretend B']);
+    await expect(card.locator('.tmp')).toHaveCount(2);
+    await expect(page.locator(`.card[data-area="${ids.one}"] .tline`)).toHaveCount(0);   // one thermometer: one line, no name
+    await card.locator('.tmin[data-th="thm-b"][data-slot="am"]').fill('12.0');
+    await card.locator('.tmin[data-th="thm-b"][data-slot="am"]').blur();
+    await card.locator('.tmax[data-th="thm-b"][data-slot="am"]').fill('15.0');
+    await card.locator('.tmax[data-th="thm-b"][data-slot="am"]').blur();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: ids.two, thermometer_id: 'thm-b', min_c: '12.0', max_c: '15.0' } });
+    await expect(card.locator('.tmsg[data-th="thm-b"][data-slot="am"]')).toContainText('Saved');
+    await expect(card.locator('.tmin[data-th="thm-a"][data-slot="am"]')).toHaveValue('');   // the other thermometer is still due
+    const one = page.locator(`.card[data-area="${ids.one}"]`);
+    await one.locator('.tmin[data-slot="am"]').fill('11.0'); await one.locator('.tmin[data-slot="am"]').blur();
+    await one.locator('.tmax[data-slot="am"]').fill('14.0'); await one.locator('.tmax[data-slot="am"]').blur();
+    await expect.poll(() => bodies.length).toBe(2);
+    expect(bodies[1].fields).toMatchObject({ area_id: ids.one, thermometer_id: 'thm-c' });   // a single thermometer is named too
+    const hall = page.locator(`.card[data-temp-only][data-area="${ids.hall}"]`);
+    await expect(hall).toHaveCount(1);
+    await expect(hall.locator('.tmin[data-th="thm-h"]')).toHaveCount(2);
+    await expect(page.locator(`.card[data-area="${ids.hall}"]:not([data-temp-only])`)).toHaveCount(0);
+  });
+
   test('guard: the room temperatures sheet with its heading row moved (sorted or filtered) shows on Readings and Data checks (OV11 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     await page.evaluate(() => go('round'));
@@ -283,7 +343,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
   test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     let fail = false;
-    const bodies = await saves(page, () => (fail ? { ok: false, code: 'NETWORK', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
+    const bodies = await saves(page, () => (fail ? { ok: false, code: 'BUSY_FOR_GOOD', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
     await page.evaluate(() => { T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-p', type_key: 'round.presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]); go('round'); });
     const here = page.locator('button[data-here]').first();
     const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');

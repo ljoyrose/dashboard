@@ -11,6 +11,13 @@ const signIn = async (page) => {
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
 
+test('dates use 3-letter months, "2 Sep 2026" never "Sept" (Lisa, 16 Nov 2026)', () => {
+  const D = require('../../cdhub/staff/lib/date-words.js');
+  D.setLocale([{ language_tag: 'en-GB' }]);
+  expect(D.long('2026-09-30')).toBe('30 Sep 2026');
+  expect(D.long('2026-03-02')).toBe('2 Mar 2026');
+});
+
 test.describe('CD Hub: loads', () => {
   test('page loads with HTTP 200 and asks for sign-in; no tables shown yet', async ({ page }) => {
     const res = await page.goto('cdhub/');
@@ -107,7 +114,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     const stats = await page.evaluate(() => window.__cdReads);
     expect(stats.n).toBeGreaterThan(6);
     expect(stats.max).toBeGreaterThan(1);
-    expect(stats.max).toBeLessThanOrEqual(6);
+    expect(stats.max).toBeLessThanOrEqual(10);   // READ_AT_ONCE (10 since 22 Nov 2026): never an unlimited burst
     await expect(page.locator('#boot')).toHaveCount(0);
   });
 
@@ -180,13 +187,15 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await signIn(page);
     await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
-    await expect(page.locator('#main')).toContainText('Sample finished item');
+    await expect(page.locator('#main')).toContainText('Sample item waiting on Claude');
+    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // Lisa 17 Nov 2026: the Done list is cleared from view
+    await expect(page.locator('[data-work-sum]')).toContainText('done 1');
   });
 
   test('tables missing from the folder are reported, not hidden', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#main')).toContainText(/\d+ file\(s\) not in the folder/);
+    await expect(page.locator('#main')).toContainText(/\d+ files? not in the folder/);   // plain plural, never "file(s)" (audit 17 Nov 2026)
   });
 });
 
@@ -201,11 +210,11 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Ops, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
-    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Ops', 'People']);
+    await expect(bar.locator('.htl')).toHaveText(['Main', 'Compliance', 'Records', 'People']);
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
@@ -382,7 +391,7 @@ const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,meth
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
 // Gestation timings are dated rows now (Lisa 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
-  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'litters.recent_days,84']
+  + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'nav.view.litters,1', 'nav.view.buyers,1', 'nav.view.shape,1', 'nav.view.vet,1', 'nav.view.enquiries,1']   // the views a new kennel starts with off; this kennel has them on
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
 const openTab = (page, id) => openView(page, id);
 // Walks every visible element and returns plain-English problems, one list per rule.
@@ -625,7 +634,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
     await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('7');   // + Breeding rules not set (8 Nov 2026)
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('8');   // Main holds Decide (7) and Do (1)
+    await expect(page.locator('#nav button[data-section="main"] .n')).toHaveText('7');   // Main holds Decide (7); Do's 1 waiting item is one of those 7, so it is not counted twice (audit 17 Nov 2026)
     // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
     await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
@@ -673,7 +682,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const plain = await page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = dpill('2026-01-01', ''); document.querySelector('#main').appendChild(d); const s = getComputedStyle(d.firstChild); return [s.borderTopWidth, s.borderTopStyle, s.backgroundColor]; });
     expect(plain).toEqual(['1px', 'solid', 'rgba(0, 0, 0, 0)']);
     await openTab(page, 'litters');
-    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('2');
+    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('3');   // 2 in whelp + the fixture litter with a puppy still on site
     await expect(page.locator('#littersCard .dpill.late')).toHaveCount(1);
     await expect(page.locator('#littersCard .dpill.soon')).toHaveCount(1);
     await openTab(page, 'map');
@@ -982,6 +991,23 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
     await expect(page.locator('#main')).toContainText('In whelp');
     await expect(page.locator('#main')).toContainText('day 40');
   });
+
+  test("a mating's own due date wins over first mating + due days (SOP Mating Plan)", async ({ page, guard }) => {
+    const fixture = fs.readFileSync(path.join(FIX, 'bld', 'BLD-mating.csv'), 'utf8').trimEnd();
+    setFile(guard.world, 'BLD-mating.csv', fixture
+      + `\nmat-test-2,sub-test-dog-1,sub-test-dog-2,${iso(-40)},1,natural,yes,${iso(30)},,,invented open mating with own due date`
+      + `\nmat-test-3,sub-test-dog-2,sub-test-dog-1,${iso(-20)},1,natural,yes,,,,invented open mating with no due date\n`);
+    GEST(guard.world);
+    await page.goto('cdhub/');
+    await signIn(page);
+    const r = await page.evaluate(() => inWhelp().map((x) => ({ dam: x.dam, due: x.due, own: x.dueOwn, ruleDue: addDays(x.on, x.g.due) })));
+    const own = r.find((x) => x.dam === 'sub-test-dog-1'), rule = r.find((x) => x.dam === 'sub-test-dog-2');
+    expect(own.due).toBe(iso(30));
+    expect(own.own).toBe(true);
+    expect(own.due).not.toBe(own.ruleDue);
+    expect(rule.due).toBe(rule.ruleDue);
+    expect(rule.own).toBe(false);
+  });
 });
 
 test('CD Hub: gestation and adult age come from dated rows; no row = not set, judged on the mating date', async ({ page, guard }) => {
@@ -1024,7 +1050,8 @@ test('CD Hub: The round shows a Readings card (from BLD-area_reading.csv), not a
   const rows = page.locator('#kept-readings tbody tr');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0).locator('td').nth(1).locator('.ic')).toHaveClass(/cold/);   // 8.50 min: blue
-  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/late/);   // 28.50 max: red
+  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/ok/);     // 28.50 max: over 26 is cooling action, not outside (Temps A, 17 Nov 2026)
+  await expect(rows.nth(0).locator('td').nth(2)).toContainText('over the limit: cooling action');
   await expect(rows.nth(1).locator('td').nth(1).locator('.ic')).toHaveClass(/ok/);     // 12-20: green
 });
 
@@ -1040,8 +1067,12 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     CD._byId.tpup = { id: 'tpup', dob: '2026-01-01' };
     CD.dogs.push({ id: 'tpup', area_id: 'test-pup-room', dob: '2026-01-01' });
     const pup = roomBand('test-pup-room', '2026-01-10');
-    out.pupOk = tempState('26.5', '27.5', pup);
-    out.pupCold = tempState('22', '24', pup);
+    // Temps A (Lisa 17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
+    out.pupOk = tempState('18', '22', pup, '27.0', '2026-01-10');
+    out.pupRoomWarm = tempState('20', '27.5', pup, '27.0', '2026-01-10');
+    out.pupCold = tempState('22', '24', pup, '24.5', '2026-01-10');
+    out.pupNoSpot = tempState('22', '24', pup, '', '2026-01-10');
+    out.pupRoomCold = tempState('9', '14', pup, '27.0', '2026-01-10');
     CD.dogs.push({ id: 'tnodob', area_id: 'test-nodob-room', dob: '' });
     CD._byId.tnodob = { id: 'tnodob', dob: '' };
     out.noDob = tempState('15', '20', roomBand('test-nodob-room', '2026-01-10'));
@@ -1049,7 +1080,7 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     out.noRows = tempState('15', '20');
     return out;
   });
-  expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
+  expect(r).toEqual({ adult26: 'ok', adultHot: 'warm', adultCold: 'cold', pupOk: 'ok', pupRoomWarm: 'warm', pupCold: 'cold', pupNoSpot: 'nospot', pupRoomCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
 test.describe('CD Hub: no placeholder boxes or build notes on live tabs; dates are "2 Mar 2026"', () => {

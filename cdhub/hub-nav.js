@@ -1,13 +1,16 @@
 /* CD Hub bottom bar (Lisa 14 Nov 2026, menu option A). The hub and the temperature pages both render from this list.
    Bar: Main (slot 1: Today, Do, Decide) · up to 3 sections chosen per role or person · More.
-   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Ops 4, People 5, Sales 6, Ideas 7; Settings 8 (holds Bin).
+   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Records 4 (id ops; Lisa named it 15 Nov 2026), People 5, Sales 6, Ideas 7; Settings 8 (holds Bin).
    Which sections are on and which sit on the bar are owner settings: dated rule rows (breeding_rule), never fixed here.
      nav.on.<section>                  1 on, 0 off
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
      nav.tab.person.<person_id>.<section>   the same for one person; wins over the role. Never a code: codes are secrets
                                        and no code may sit in a rule row (OV11, 14 Nov 2026).
+     nav.view.<view>                   1 on, 0 off: one view inside a section (starter: Assocs, Table map, Litters, Vet, Enquiries off)
      nav.first.<ROLE>.<section>        which view the section opens on: its place in the chip row (1 = first)
      nav.first.person.<person_id>.<section>   the same for one person; wins over the role
+     nav.home.<ROLE>.<card>            Main's cards (Lisa 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
+     nav.home.person.<person_id>.<card>   the same for one person; wins over the role. No rows = the pack's starter cards.
    Chips (Lisa 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
    "Next: X" buttons at the foot of the page, so any view is one tap away at any number of records.
    No nav rows: the app's starting layout (STARTER), reported as not set so Settings can say so. */
@@ -29,21 +32,31 @@
     temps: { label: 'Temps', icon: 't-temp', href: './history.html' },
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
-    admin: { label: 'Settings', icon: 't-box' }
+    admin: { label: 'Settings', icon: 't-box' },
+    bin: { label: 'Bin', icon: 't-box' }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
     { id: 'main', label: 'Main', slot: '1', icon: 't-main', go: 'map', views: ['map', 'today', 'work'] },
     { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check', go: 'compliance', views: ['compliance', 'items', 'breed'] },   /* Breed Better: a welfare and standards scheme, its own brick */
     { id: 'money', label: 'Money', slot: '3', icon: 't-money', go: 'money', views: [] },
-    { id: 'ops', label: 'Ops', slot: '4', icon: 't-box', go: 'dogs', views: ['dogs', 'litters', 'areas', 'round', 'sops', 'temps'] },
+    { id: 'ops', label: 'Records', slot: '4', icon: 't-box', go: 'dogs', views: ['dogs', 'litters', 'areas', 'round', 'sops', 'temps'] },
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin'] }
   ];
-  /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Ops · People · More. Proposed default, not a rule. */
+  /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
+  /* Views a pack starts with switched off (Lisa approved 13 Nov 2026, PR 472: hide Assocs, the Table map and Litters; the vet
+     link stays off). An owner switches one back on with a dated row nav.view.<id> = 1 (0 = off). Hidden views are off every
+     menu, chip row, Find and Main card, and their addresses open Main. Their pages and data stay. */
+  var STARTER_OFF = { buyers: 1, shape: 1, litters: 1, vet: 1, enquiries: 1 };
+  function viewOn(o) {
+    o = o || {};
+    var r = inForce(o.rows, o.iso)['nav.view.' + o.id];
+    return r ? r.value >= 1 : !STARTER_OFF[o.id];
+  }
   var PICKABLE = ['compliance', 'money', 'ops', 'people', 'sales', 'ideas'];
   var MAX_TABS = 3;
 
@@ -94,7 +107,14 @@
       var live = s.views.filter(has), v = r && live[r.value - 1];
       if (v) first[s.id] = v;
     });
-    return { tabs: tabs, on: on, set: set, first: first };
+    /* The view the hub opens on with no address (Lisa 18 Nov 2026 demo: the owner lands on Records). A dated row
+       nav.start.person.<id> or nav.start.<role> = the section's slot number (1 Main, 2 Compliance, 4 Records ...). No row: Main. */
+    var start = '', sr = (o.person && rows['nav.start.person.' + o.person]) || (o.role && rows['nav.start.' + o.role]);
+    SECTIONS.forEach(function (s) {
+      if (start || !sr || s.slot !== String(sr.value) || (s.id !== 'main' && !on[s.id])) return;
+      start = first[s.id] || (has(s.go) ? s.go : (s.views.filter(has)[0] || ''));
+    });
+    return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
   function viewItem(id, slot, opts, has) {
@@ -113,7 +133,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin'; };   /* pages without the rows (temperature history) */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin'; };   /* pages without the rows (temperature history); Bin is the owner's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
@@ -184,6 +204,16 @@
       if (f && f.label) return '<button type="button" class="cb hback" data-hub-back>\u2190 Back to ' + esc(f.label) + '</button>';
       if (fallback && fallback.hash) return '<a class="cb hback" href="' + esc(fallback.hash) + '">\u2190 ' + esc(fallback.label || 'Back') + '</a>';
       return '';
+    },
+    /* sync(el, fallback): the Back button in the top bar (one app-wide header: Home on the left, Back on the right, OV11 15 Nov
+       2026). Shown when there is somewhere in the hub to go back to: this entry's from, or else fallback = {label} for a page
+       opened from the hub (the temps page). Hidden on a link opened cold. A click goes back one real history step. */
+    sync: function (el, fallback) {
+      if (!el) return;
+      /* read out "Back (Dogs)": a page's own "← Back to Dogs" link keeps its own name, so the two are never confused */
+      var f = back.from() || fallback || null;
+      el.classList.toggle('hidden', !f);
+      if (f) { el.setAttribute('aria-label', f.label ? 'Back (' + f.label + ')' : 'Back'); el.setAttribute('title', f.label ? 'Back to ' + f.label : 'Back'); }
     }
   };
   if (root.document) root.document.addEventListener('click', function (e) {
@@ -191,5 +221,20 @@
     if (b) { e.preventDefault(); root.history.back(); }
   });
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, sectionOf: sectionOf, html: html, chips: chips, back: back };
+  /* home({rows, iso, role, person, cards, starter}) -> the card ids on Main, in order. cards = every card this hub has;
+     starter = the pack's starting cards. The person's rows win, then the role's; a set of rows that takes every card off
+     leaves Main empty (that person chose it), only no rows at all falls back to the starter. */
+  function home(o) {
+    o = o || {};
+    var rows = inForce(o.rows, o.iso), cards = o.cards || [];
+    function pick(prefix) {
+      var any = false, p = [];
+      cards.forEach(function (id) { var r = rows[prefix + id]; if (r) { any = true; if (r.value >= 1) p.push([r.value, id]); } });
+      return any ? p.sort(function (a, b) { return a[0] - b[0] || cards.indexOf(a[1]) - cards.indexOf(b[1]); }).map(function (x) { return x[1]; }) : null;
+    }
+    return (o.person && pick('nav.home.person.' + o.person + '.')) || (o.role && pick('nav.home.' + o.role + '.'))
+      || (o.starter || []).filter(function (id) { return cards.indexOf(id) >= 0; });
+  }
+
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, viewOn: viewOn, STARTER_OFF: STARTER_OFF, sectionOf: sectionOf, html: html, chips: chips, back: back };
 })(typeof window !== 'undefined' ? window : this);

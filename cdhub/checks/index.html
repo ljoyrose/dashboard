@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-dash-gate="off">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -25,7 +25,11 @@
   </form>
   <div id="app"></div>
 </main>
+<script src="../../config.js"></script>
+<script src="../../auth.js"></script>
 <script src="../staff/lib/bld-save.js"></script>
+<script src="../staff/lib/done-state.js"></script>
+<script src="../staff/lib/outbox-line.js"></script>
 <script src="../staff/lib/needs.js"></script>
 <script src="../staff/lib/occupancy.js"></script>
 <script src="checks.js"></script>
@@ -33,6 +37,7 @@
   // Uses what The Board already keeps on this phone: the save address and this person's code. ?t=feeding opens that check.
   (function () {
     var save = BLDSave.create(), type = new URLSearchParams(location.search).get('t') || '';
+    if (window.BLDOutboxLine) BLDOutboxLine.mount(save, document.querySelector('main.screen'));   // never lose an entry (20 Nov 2026)
     var gate = document.getElementById('gate'), note = document.getElementById('note'), device = '';
     function open() {
       gate.hidden = true; note.textContent = '';
@@ -51,9 +56,16 @@
       return;
     }
     try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
-    gate.hidden = !!device;
-    if (device) { save.setCode(device, false); open(); }
-    gate.addEventListener('submit', function (ev) { ev.preventDefault(); save.setCode(document.getElementById('code').value.toUpperCase(), false); open(); });
+    var owner = !device && !!save.usingGoogle && save.usingGoogle();   // an owner signed in to CD Hub needs no code (Board A, 17 Nov 2026)
+    gate.hidden = !!device || owner;
+    if (device) { save.setCode(device, false); open(); } else if (owner) open();
+    // Demo 2a (18 Nov 2026): a code that opens the checks is kept on this device, as on The Board, so it is typed once
+    gate.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var typed = document.getElementById('code').value.toUpperCase().trim();
+      save.setCode(typed, false);
+      open().then(function () { if (gate.hidden && typed) { try { localStorage.setItem('bld.device.code', typed); } catch (e) { /* private browsing: works for this visit */ } } });
+    });
   })();
 </script>
 </body>

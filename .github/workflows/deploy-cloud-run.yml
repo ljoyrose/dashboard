@@ -1,0 +1,98 @@
+name: Deploy to Cloud Run (prototype, off)
+
+# A1 host prototype for the private move (docs/priv-move/HOST-A1-CLOUD-RUN.md). OFF: the job is skipped unless the
+# repo variable CLOUD_RUN_DEPLOY is exactly ON, and even then it is a DRY RUN unless the person starting it unticks
+# the box. Hand-started only: nothing here runs on a push, a pull request or a timer.
+# No stored key: Google Cloud is reached with Workload Identity (a short-lived token GitHub issues for this run).
+# Project, region, service and identity names come from repo VARIABLES, never from this file.
+# A dry run builds the site and the container on the runner, checks it answers, and stops. Nothing leaves the runner.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build and check the container, deploy nothing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false # a started deploy is left to finish
+
+jobs:
+  deploy:
+    name: Cloud Run (dry run unless unticked)
+    if: ${{ vars.CLOUD_RUN_DEPLOY == 'ON' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # lets this run ask GitHub for the short-lived token Google trusts; no key is stored anywhere
+    env:
+      # Anything other than an explicit "false" is a dry run.
+      DRY_RUN: ${{ inputs.dry_run == false && 'false' || 'true' }}
+      GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      GCP_SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+      GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the site (the same files the Pages publish copies, nothing else)
+        run: sh tools/build-site/build.sh
+
+      - name: Put together the container's build folder (site files, Dockerfile, nginx.conf only)
+        run: |
+          mkdir build
+          cp -r _site build/_site
+          cp deploy/cloud-run/Dockerfile deploy/cloud-run/nginx.conf build/
+          ls build
+
+      - name: Build the container on the runner
+        run: docker build -t dashboard-site:check build
+
+      - name: Check the container (home page answers; no tests, docs or hidden files inside)
+        run: |
+          docker run -d --rm -p 8080:8080 --name site dashboard-site:check
+          for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS http://127.0.0.1:8080/ > /dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8080/ | grep -q '<title>'
+          curl -fsS http://127.0.0.1:8080/config.js > /dev/null
+          curl -fsS http://127.0.0.1:8080/cdhub/ > /dev/null
+          for gone in tests/ docs/ tools/ .github/ .git/config package.json; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8080/$gone")
+            test "$code" = 404 || { echo "/$gone answered $code, expected 404"; exit 1; }
+          done
+          docker stop site
+
+      - name: Dry run stops here
+        if: env.DRY_RUN != 'false'
+        run: echo "Dry run. The container built and answered. Nothing was signed in to, pushed or deployed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Sign in to Google Cloud without a key (Workload Identity)
+        if: env.DRY_RUN == 'false'
+        run: |
+          : "${GCP_PROJECT:?repo variable GCP_PROJECT is not set}" "${GCP_REGION:?repo variable GCP_REGION is not set}"
+          : "${GCP_SERVICE:?repo variable CLOUD_RUN_SERVICE is not set}" "${GCP_WIF_PROVIDER:?repo variable GCP_WIF_PROVIDER is not set}"
+          : "${GCP_SERVICE_ACCOUNT:?repo variable GCP_SERVICE_ACCOUNT is not set}"
+          aud=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote("https://iam.googleapis.com/" + sys.argv[1], safe=""))' "$GCP_WIF_PROVIDER")
+          token=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$aud" | python3 -c 'import sys, json; print(json.load(sys.stdin)["value"])')
+          echo "::add-mask::$token"
+          printf '%s' "$token" > "$RUNNER_TEMP/oidc.jwt"
+          gcloud iam workload-identity-pools create-cred-config "$GCP_WIF_PROVIDER" \
+            --service-account="$GCP_SERVICE_ACCOUNT" \
+            --credential-source-file="$RUNNER_TEMP/oidc.jwt" \
+            --output-file="$RUNNER_TEMP/gcp-creds.json"
+          gcloud auth login --cred-file="$RUNNER_TEMP/gcp-creds.json" --quiet
+
+      - name: Deploy (sign-in wall on; nobody gets in without an allowed Google account)
+        if: env.DRY_RUN == 'false'
+        run: |
+          gcloud run deploy "$GCP_SERVICE" --source build --project "$GCP_PROJECT" --region "$GCP_REGION" \
+            --no-allow-unauthenticated --iap --quiet
+
+      - name: Forget the sign-in
+        if: always() && env.DRY_RUN == 'false'
+        run: rm -f "$RUNNER_TEMP/oidc.jwt" "$RUNNER_TEMP/gcp-creds.json"
