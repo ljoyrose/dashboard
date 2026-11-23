@@ -165,6 +165,27 @@ function readFilter_(f, rd, header) {
   return out;
 }
 
+/**
+ * A read that asks only for rows from a date on (filter.from) reads just the newest rows when they reach back past it
+ * (22 Nov 2026: the staff Temperatures screen read all ~31,000 readings on every open and sat on "Loading..." for
+ * minutes). Rows are added in time order, so when the first RECENT_EDGE rows of the newest block are all older than
+ * `from`, nothing newer can sit above it. Otherwise (a short table, a CSV, rows out of order, no date column) it returns
+ * null and the caller reads the whole table as before. Same shape as store_read_.
+ */
+var RECENT_EDGE_ = 20;
+function readRecent_(rd, f) {
+  var from = f && typeof f === 'object' && !Array.isArray(f) && f.from ? String(f.from).trim() : '';
+  if (!from || !rd.dateCol || !isRealDate_(from)) return null;
+  var file = store_findOne_(rd.file);
+  if (!file || !store_isSheet_(file)) return null;
+  var t = store_readTail_(rd.file, BLD.LIMITS.READ_TAIL_ROWS, []);
+  if (t.complete) return t;
+  var edge = t.records.slice(0, RECENT_EDGE_);
+  if (edge.length < RECENT_EDGE_) return null;
+  var older = edge.every(function (r) { var d = String(r[rd.dateCol] || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d < from; });
+  return older ? t : null;
+}
+
 /** Main entry for a read. Returns {table, fields, rows, ...} or throws err_. */
 function sinkRead_(req) {
   var now = new Date(), nowMs = now.getTime();
@@ -187,7 +208,7 @@ function sinkRead_(req) {
   var access = readAccess_(readPolicy_(tenant, todayLondon_(now)), rd, audiences);
   if (!access) throw denied;
 
-  var data = store_read_(rd.file, false);
+  var data = readRecent_(rd, req.filter) || store_read_(rd.file, false);
   if (!data) throw err_('FILE_MISSING', 'That list does not exist yet.');
 
   var fields = data.header.filter(function (c) { return access.fields[c] === true && c !== 'tenant_id'; });

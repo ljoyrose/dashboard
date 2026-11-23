@@ -93,3 +93,9 @@
  .sheet.rooms .rcard{gap:2mm}.sheet.rooms .rcard .rows{gap:2mm}
  .sheet.rooms .rcard .tag{font-size:9px}
 }
+/* the pick list (Lisa 22 Nov 2026): which cards print; never printed itself (noprint) */
+.pick:empty{display:none}
+.pick{border:1px solid var(--house-soft-line);border-radius:10px;padding:10px;margin:0 0 12px}
+.pick-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.pick-n{margin-right:auto}
+.pick-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px 12px}
+.pick-item{display:flex;gap:6px;align-items:center;min-height:32px}

@@ -114,7 +114,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     const stats = await page.evaluate(() => window.__cdReads);
     expect(stats.n).toBeGreaterThan(6);
     expect(stats.max).toBeGreaterThan(1);
-    expect(stats.max).toBeLessThanOrEqual(6);
+    expect(stats.max).toBeLessThanOrEqual(10);   // READ_AT_ONCE (10 since 22 Nov 2026): never an unlimited burst
     await expect(page.locator('#boot')).toHaveCount(0);
   });
 
