@@ -58,6 +58,13 @@ async function open(page, guard, opts) {
     const b = JSON.parse(route.request().postData() || '{}');
     sent.push(b);
     const ok = (result) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result }) });
+    // 22 Nov 2026 (ITEMS2): add_many = the list save (PR 737/771): one answer per item, by its own request id;
+    // a script without it says Unknown action
+    if (b.action === 'add_many') {
+      if (!(opts && opts.many)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'BAD_REQUEST', message: 'Unknown action.' }) });
+      return ok({ status: 'many', items: b.items.map((it, k) => ({ request_id: it.request_id, ok: true, result: Object.assign({ status: 'saved', id: (it.table || 'lnk').slice(0, 3) + '-m' + sent.length + '-' + k, ended: [] }, it.values ? { answers: Object.keys(it.values).length } : {}) })) });
+    }
+    if (b.table === 'check_log' && opts && opts.failItem && b.fields.item_id === opts.failItem && opts.failLeft-- > 0) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'INVALID', message: 'Pretend refusal.' }) });
     if (b.action === 'file_add') return ok({ status: 'saved', id: 'fil-new', drive_file_id: 'drvfilenewpretend000000001' });
     if (b.action === 'link_add') return ok({ status: 'saved', id: 'lnk-new-' + sent.length, role: b.fields.role, ended: (b.fields.role === 'placed_in' && opts && opts.ended) || [] });
     // 16 Nov 2026: BUSY is now retried by the hub on its own, so the failed save here is one the person must retry.
@@ -67,7 +74,7 @@ async function open(page, guard, opts) {
   await HUBS.cdhub.open(page, guard);
   await page.evaluate((url) => { localStorage.setItem('cdhub.sink.url', url); localStorage.setItem('cdhub.sink.code', 'pretend-code'); }, SINK);
   await page.evaluate(() => { location.hash = '#/items'; });
-  await expect(page.locator('#itmPage .itm-row')).toHaveCount(3);
+  if (!(opts && opts.rows === false)) await expect(page.locator('#itmPage .itm-row')).toHaveCount((opts && opts.rows) || 3);
   return sent;
 }
 let shotN = 0;
@@ -320,4 +327,175 @@ test.describe('CD Hub: items, click by click', () => {
       if (size.width < 768) expect(box.height).toBeGreaterThanOrEqual(44);
     });
   }
+
+  // ---------------------------------------------------------------- many at once (ITEMS2, 22 Nov 2026)
+  const plugs = (n) => (w) => {
+    const f = w.files.find((x) => x.name === 'BLD-items.csv');
+    const extra = Array.from({ length: n }, (_, i) => `ip${i},t,P-${String(i + 3).padStart(2, '0')},Pretend lamp ${i + 3},pretend_plug,,,,,,,,,,2026-01-01T00:00:00Z,o`);
+    f.content = f.content.trimEnd() + '\r\n' + extra.join('\r\n') + '\r\n';
+  };
+  const pdf = { name: 'certificate.pdf', mimeType: 'application/pdf', buffer: PDF };
+
+  test('PAT day: tick a whole group, untick one, one form for all, Pass by default, one Fail with a note, one certificate; 3 requests', async ({ page, guard }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const sent = await open(page, guard, { many: true, before: plugs(25), rows: 28 });
+    const t0 = Date.now();
+    await page.locator('[data-itm-selg="k:Pretend plug-in"]').check();
+    await expect(page.locator('.itm-selbar')).toContainText('27 selected');
+    await page.locator('[data-itm-sel="i2"]').uncheck();                           // untick one
+    await expect(page.locator('.itm-selbar')).toContainText('26 selected');
+    await page.locator('[data-itm-bulk="test"]').click();
+    const f = page.locator('form[data-itm-save="bulk-test"]');
+    await expect(f.locator('[data-itm-bkey] option')).toHaveText(['Pretend PAT (26)']);
+    await expect(f.locator('.itm-btr')).toHaveCount(26);
+    await f.locator('input[name="by"]').fill('Pretend Tester');
+    await f.locator('input[name="f_ip0"]').check();
+    await f.locator('button[type="submit"]').click();
+    await expect(page.locator('#itmPage [role="status"]')).toHaveText('Say briefly what failed on P-03.');
+    expect(sent.length).toBe(0);
+    await expect(f.locator('input[name="f_ip0"]')).toBeChecked();
+    await f.locator('input[name="n_ip0"]').fill('Cable cut');
+    await f.locator('input[name="r_i1__r1"]').fill('0.05');
+    await f.locator('select[name="v_look"]').selectOption('Pass');                // the form's answer goes with every test
+    await f.locator('input[name="file"]').setInputFiles(pdf);
+    await shot(page, 'bulk-test-form');
+    await f.locator('button[type="submit"]').click();
+    await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 26.');
+    const ms = Date.now() - t0;
+    expect(sent.map((b) => b.action)).toEqual(['file_add', 'add_many', 'add_many']);
+    const logs = sent[1].items;
+    expect(logs).toHaveLength(26);
+    expect(logs.every((st) => st.table === 'check_log' && st.fields.check_type_id === 'c1')).toBe(true);
+    expect(logs.filter((st) => st.fields.outcome === 'concern').map((st) => [st.fields.item_id, st.fields.note])).toEqual([['ip0', 'by Pretend Tester. Cable cut']]);
+    expect(logs.filter((st) => st.fields.outcome === 'ok')).toHaveLength(25);
+    expect(logs.every((st) => st.values && st.values.look === 'Pass')).toBe(true);
+    expect(new Set(logs.map((st) => st.request_id)).size).toBe(26);              // each item its own full request id
+    expect(logs.every((st) => /^[A-Za-z0-9_-]{8,64}$/.test(st.request_id))).toBe(true);
+    const second = sent[2].items;
+    expect(second.filter((st) => st.table === 'readings').map((st) => [st.fields.item_id, st.fields.value, st.fields.in_range])).toEqual([['i1', '0.05', 'true']]);
+    expect(second.filter((st) => st.action === 'link_add').map((st) => st.fields.role + ':' + st.fields.to_id)).toEqual(Array(26).fill('certificate:fil-new'));
+    await expect(page.locator('#itmPage .itm-tick')).toHaveCount(26);
+    await expect(page.locator('.itm-selbar')).toHaveCount(0);                     // all saved: nothing left ticked
+    await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend lamp 4' })).toContainText('In date');
+    await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend lamp 3' })).toContainText('Failed');
+    await shot(page, 'bulk-test-saved');
+    console.log('bulk PAT for 26 plugs, clicks and typing: ' + ms + ' ms');
+  });
+
+  test('before the save script has many: one save at a time with a count; a refused item gets Retry for that item only', async ({ page, guard }) => {
+    const sent = await open(page, guard, { failItem: 'i2', failLeft: 1 });
+    await page.locator('[data-itm-sel="i1"]').check();
+    await page.locator('[data-itm-sel="i2"]').check();
+    await page.locator('[data-itm-bulk="test"]').click();
+    await page.locator('form[data-itm-save="bulk-test"] button[type="submit"]').click();
+    await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 1 of 2. Not saved: 1.');
+    expect(sent.map((b) => b.action + ':' + (b.fields ? b.fields.item_id : ''))).toEqual(['add_many:', 'add:i2', 'add:i1']);   // best first: the heater is in date
+    const heater = page.locator('#itmPage .itm-row', { hasText: 'Pretend heater' });
+    await expect(heater).toContainText('Not saved: Pretend refusal.');
+    await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' }).locator('.itm-tick')).toBeVisible();
+    await expect(page.locator('.itm-selbar')).toContainText('1 selected');        // only the one that failed stays ticked
+    await heater.locator('[data-itm-bretry]').click();
+    await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 1.');
+    expect(sent.slice(3).map((b) => b.action + ':' + b.fields.item_id)).toEqual(['add:i2']);   // the kettle is not sent again
+    expect(sent[3].request_id).toBe(sent[1].request_id);                         // the same id: a resend can never save twice
+    await expect(heater.locator('.itm-tick')).toBeVisible();
+    await expect(heater).not.toContainText('Not saved');
+  });
+
+  test('move and archive many: one request each; rooms change and archived items leave the list', async ({ page, guard }) => {
+    const sent = await open(page, guard, {
+      many: true,
+      before: (w) => addTable(w, 'BLD-area.csv', csv('id,tenant_id,code,name,grouping,group_sort', ['a-c1,t,C1,Cabin 1,Pretend cabins,1', 'a-c2,t,C2,Cabin 2,Pretend cabins,1']))
+    });
+    await page.locator('[data-itm-selall]').click();
+    await expect(page.locator('.itm-selbar')).toContainText('3 selected');
+    await page.locator('[data-itm-sel="i3"]').uncheck();
+    await page.locator('[data-itm-bulk="move"]').click();
+    const m = page.locator('form[data-itm-save="bulk-move"]');
+    await m.locator('select[name="area_id"]').selectOption('a-c2');
+    await m.locator('input[name="from_date"]').fill('2026-11-20');
+    await m.locator('button[type="submit"]').click();
+    await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 2.');
+    expect(sent[0].items.map((st) => st.action + ':' + st.fields.from_id + '>' + st.fields.to_id).sort()).toEqual(['link_add:i1>a-c2', 'link_add:i2>a-c2']);
+    await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' })).toContainText('C2');
+    await page.locator('[data-itm-sel="i1"]').check();
+    await page.locator('[data-itm-sel="i2"]').check();
+    await page.locator('[data-itm-bulk="archive"]').click();
+    await page.locator('form[data-itm-save="bulk-archive"] button[type="submit"]').click();
+    await expect(page.locator('#itmPage [role="status"]')).toHaveText('Saved 2.');
+    expect(sent[1].items.map((st) => st.table + ':' + st.fields.need_type + ':' + st.fields.target_id).sort()).toEqual(['requirement:item.in_use:i1', 'requirement:item.in_use:i2']);
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(1);
+    await expect(page.locator('[data-itm-filter="archived"]')).toHaveText('Archived 2');
+  });
+
+  test('group and sort: by status runs best to worst; the view is remembered on this device; Report prints only the ticked', async ({ page, guard }) => {
+    await open(page, guard);
+    await page.locator('[data-itm-group]').selectOption('status');
+    const heads = () => page.locator('#itmPage .itm-fold h3').allTextContents();
+    expect((await heads()).map((h) => h.replace(/\s*\d+.*$/, ''))).toEqual(['In date', 'Overdue']);
+    await page.locator('[data-itm-group]').selectOption('room');
+    await expect(page.locator('#itmPage .itm-fold h3')).toHaveText([/^No room 3/]);
+    await page.locator('[data-itm-sort]').selectOption('name');
+    await expect(page.locator('#itmPage .itm-row b')).toHaveText(['F-01', 'P-02', 'P-01']);   // chiller, heater, kettle
+    await page.reload();
+    await page.evaluate(() => { location.hash = '#/items'; });
+    await expect(page.locator('[data-itm-group]')).toHaveValue('room');
+    await expect(page.locator('[data-itm-sort]')).toHaveValue('name');
+    await page.locator('#itmPage .itm-fold').first().click();                       // fold a group
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(0);
+    await page.locator('#itmPage .itm-fold').first().click();
+    await page.locator('[data-itm-sel="i3"]').check();
+    const [pop] = await Promise.all([page.waitForEvent('popup'), page.locator('[data-itm-report="print"]').click()]);
+    await expect(pop.locator('tbody tr')).toHaveCount(1);
+    await expect(pop.locator('tbody')).toContainText('Pretend chiller');
+    await pop.close();
+  });
+
+  test('phone (390px): ticked rows, the count bar and the many-test form fit; buttons and ticks are 44px', async ({ page, guard }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page, guard);
+    await page.locator('[data-itm-selall]').click();
+    await page.locator('[data-itm-bulk="test"]').click();
+    await shot(page, 'phone-bulk-test');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+    const small = await page.evaluate(() => Array.from(document.querySelectorAll('#itmPage button, #itmPage .itm-ck, #itmPage .itm-fail')).filter((b) => b.offsetParent && b.getBoundingClientRect().height < 44).map((b) => b.textContent.trim() || b.className));
+    expect(small).toEqual([]);
+  });
+
+  test('3,000 items: the page opens folded and search stays quick', async ({ page, guard }) => {
+    const sent = await open(page, guard, { before: plugs(3000), rows: false });
+    expect(sent.length).toBe(0);
+    await expect(page.locator('#itmPage .itm-fold')).toHaveCount(2);
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(0);               // groups start folded above 300 rows
+    const ms = await page.evaluate(async () => {
+      const q = document.querySelector('[data-itm-q]'), t0 = performance.now();
+      q.value = 'lamp 2999'; q.dispatchEvent(new Event('input', { bubbles: true }));
+      return performance.now() - t0;
+    });
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(1);
+    console.log('3,000 items: search redraw ' + Math.round(ms) + ' ms');
+    expect(ms).toBeLessThan(1000);
+    await page.locator('[data-itm-q]').fill('');
+    await page.locator('#itmPage .itm-fold', { hasText: 'Pretend plug-in' }).click();
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(200);
+    await page.locator('[data-itm-more]').click();
+    await expect(page.locator('#itmPage .itm-row')).toHaveCount(400);
+  });
+
+  test('Move lists only rooms open today: a retired room is hidden, an items-only site room stays (20 Nov 2026)', async ({ page, guard }) => {
+    await open(page, guard, {
+      before: (w) => {
+        addTable(w, 'BLD-area.csv', csv('id,tenant_id,code,name,grouping,group_sort', [
+          'a-c1,t,C1,Cabin 1,Pretend cabins,1', 'a-old,t,ZZ_C9,Old cabin,Pretend cabins,1', 'a-site,t,Pretend office,Pretend office,Pretend site,10']));
+        addTable(w, 'BLD-requirement.csv', csv('id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on', [
+          'q1,t,room.in_use,area,a-old,2020-01-01,2021-01-01,x,o,2026-01-01',
+          'q2,t,room.in_use,area,a-site,2000-01-01,2000-01-01,x,o,2026-01-01',
+          'q3,t,room.items,area,a-site,2000-01-01,,x,o,2026-01-01']));
+      }
+    });
+    await page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' }).click();
+    await card(page).locator('[data-itm-form="move"]').click();
+    const names = await page.locator('form[data-itm-save="move"] option').allTextContents();
+    expect(names).toEqual(['Pick a room', 'C1', 'Pretend office']);
+  });
 });

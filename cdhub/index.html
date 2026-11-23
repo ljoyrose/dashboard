@@ -4233,7 +4233,7 @@ function sinkGoogleRefused(j,g){ return !!(j&&g.google&&!g.code&&(j.code==='GOOG
    After 5 hours an entry is no longer sent by itself: the person checks the records, then sends or removes it.
    A refusal (a check failed) leaves the box and is listed as Not saved. The code and Google token are never kept. */
 var HUB_BOX='cdhub.outbox', HUB_REFUSED='cdhub.outbox.refused', HUB_BOX_AUTO=5*3600000,
-    HUB_RETRY={NETWORK:1,UNREACHABLE:1,BAD_ANSWER:1,TIMEOUT:1,BUSY:1,CHANGED_DURING_WRITE:1,LOG_FAILED:1,SAVE_OFF:1,TABLE_OFF:1,NOT_CONFIGURED:1,NOT_SET_UP:1,GOOGLE_UNREACHABLE:1,FOLDER_UNREACHABLE:1,NO_CODE:1},   /* 'not this time': kept and tried again; any other answered error is a refusal */
+    HUB_RETRY={NETWORK:1,NOT_SENT:1,UNREACHABLE:1,BAD_ANSWER:1,TIMEOUT:1,BUSY:1,CHANGED_DURING_WRITE:1,LOG_FAILED:1,SAVE_OFF:1,TABLE_OFF:1,NOT_CONFIGURED:1,NOT_SET_UP:1,GOOGLE_UNREACHABLE:1,FOLDER_UNREACHABLE:1,NO_CODE:1},   /* 'not this time': kept and tried again; any other answered error is a refusal */
     HUB_KEPT_MSG='Not sent yet, will retry. Kept on this phone: do not type it again.', hubInFlight={}, hubTimer=null, hubFlushing=null,
     /* SIGN IN AGAIN (Lisa 22 Nov 2026): a Google sign-in lasts about an hour. When it has ended, or the script says this
        sign-in may not save (or no one is signed in), the entry is kept, never refused: it waits until someone signs in

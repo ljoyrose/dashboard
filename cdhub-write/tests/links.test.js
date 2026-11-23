@@ -119,3 +119,40 @@ test('inherit at birth: * copies every open scheme; an ended parent link is not 
   const e2 = inheritEnv('*');
   assert.equal(inherit(e2).length, 2);
 });
+
+function many(e, items, code) {
+  n += 1;
+  const body = { v: 1, request_id: 'req-lmany-' + String(n).padStart(4, '0'), code: code || e.codes.staff, action: 'add_many', items };
+  return JSON.parse(e.ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
+}
+
+test('list save (add_many): link_add items save inside the one lock, each with its own answer; switched off is per item', () => {
+  const e = env();
+  const r = many(e, [
+    { request_id: 'req-lm-item-01', action: 'link_add', fields: g('sub-test-a', 'fil-1') },
+    { request_id: 'req-lm-item-02', action: 'link_add', fields: g('sub-test-a', 'fil-9') },
+    { request_id: 'req-lm-item-03', action: 'link_add', fields: g('sub-test-b', 'fil-2') }
+  ]);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(JSON.stringify(r.result.items.map((x) => [x.ok, x.code || x.result.status])), JSON.stringify([[true, 'saved'], [false, 'NOT_FOUND'], [true, 'saved']]));
+  assert.equal(rows(e).length, 2);
+  const again = many(e, [{ request_id: 'req-lm-item-01', action: 'link_add', fields: g('sub-test-a', 'fil-1') }]);
+  assert.equal(again.result.items[0].result.repeat, true);
+  assert.equal(rows(e).length, 2);
+  const off = env({ TABLE_ON_links: '' });
+  assert.equal(many(off, [{ request_id: 'req-lm-item-09', action: 'link_add', fields: g('sub-test-a', 'fil-1') }]).result.items[0].code, 'TABLE_OFF');
+});
+
+test('list save (add_many): a mixed list (a reading, a link, an unknown action) answers each in order', () => {
+  const e = env({ TABLE_ON_area_reading: 'true' });
+  const area = e.ctx.store_read_('BLD-area.csv', false).records[0].id;
+  const r = many(e, [
+    { request_id: 'req-lmx-item-01', table: 'area_reading', fields: { area_id: area, min_c: '18.0', max_c: '21.0' } },
+    { request_id: 'req-lmx-item-02', action: 'link_add', fields: g('sub-test-a', 'fil-2') },
+    { request_id: 'req-lmx-item-03', action: 'link_end', fields: { id: 'lnk-x' } }
+  ]);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(JSON.stringify(r.result.items.map((x) => [x.request_id, x.ok])), JSON.stringify([['req-lmx-item-01', true], ['req-lmx-item-02', true], ['req-lmx-item-03', false]]));
+  assert.equal(r.result.items[2].code, 'BAD_REQUEST');
+  assert.equal(rows(e).length, 1);
+});

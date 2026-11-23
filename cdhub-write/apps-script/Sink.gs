@@ -288,10 +288,14 @@ function sinkSpecFor_(req, who) {
 
 /**
  * MANY ADDS IN ONE REQUEST (OV12 20 Nov 2026: a round of 36 readings was 36 requests, each paying sign-in, the room-moves
- * pass and its own wait for the lock). {action:'add_many', code, items:[{request_id, table, fields}]}: signed in once,
+ * pass and its own wait for the lock). {action:'add_many', code, items:[{request_id, action?, table, fields, values?}]}: signed in once,
  * one lock, each item checked and saved exactly as a single add (its own repeat checks, its own request id, remembered
  * for 6 hours like a single save, so any later resend of one item gets its first answer). One item refused does not stop
  * the rest. Returns {items:[{request_id, ok, result} or {request_id, ok:false, code, message, fields}]} in the order sent.
+ * An item's action is 'add' (the default; values = a check's form answers, as on a single add), 'add_site' (a whole-site
+ * staff check, with exactly the single tap's checks: the Daily records import, 22 Nov 2026) or 'link_add' (a record link,
+ * fields as sinkLinkAdd_; items view bulk, 22 Nov 2026). Once LIMITS.MAX_BATCH_MS has passed inside the lock no new item starts: the
+ * rest answer NOT_SENT, which the page sends again (with the same request ids, so nothing saves twice).
  */
 function sinkHandleMany_(req, now, nowMs) {
   var items = req.items;
@@ -318,6 +322,19 @@ function sinkHandleMany_(req, now, nowMs) {
       try {
         var known = cache.get('rid:' + rid);
         if (known) { var a = JSON.parse(known); a.repeat = true; out[i] = { request_id: rid, ok: true, result: a }; return; }
+        if (Date.now() - tIn > BLD.LIMITS.MAX_BATCH_MS) { out[i] = { request_id: rid, ok: false, code: 'NOT_SENT', message: 'Not sent yet. Send again.' }; return; }
+        var act = it.action || 'add';
+        if (act !== 'add' && act !== 'add_site' && act !== 'link_add') throw err_('BAD_REQUEST', 'Only adds, whole-site taps and links can be sent together.');
+        var flds = it.fields && typeof it.fields === 'object' ? it.fields : {}, r;
+        if (act === 'link_add') {
+          if (!linksOn_()) throw err_('TABLE_OFF', 'Saving to ' + LINKS_.file + ' is switched off.');
+          r = linkAddBody_(flds, who, new Date());   // already signed in and inside this list's lock
+        } else {
+          var one = { v: 1, request_id: rid, action: act, table: it.table, fields: flds };
+          if (act === 'add' && it.values !== undefined && it.values !== null) one.values = it.values;   // a check's form answers, as on a single add
+          var spec = sinkSpecFor_(one, who);
+          r = act === 'add_site' ? sinkSiteProcess_(spec, one, who, now, nowMs) : sinkProcess_(spec, one, who, now, nowMs);
+        }
         var one = { v: 1, request_id: rid, action: 'add', table: it.table, fields: it.fields && typeof it.fields === 'object' ? it.fields : {} };
         if (it.values && typeof it.values === 'object') one.values = it.values;   // a check's form answers go with their item (22 Nov 2026)
         var spec = sinkSpecFor_(one, who);

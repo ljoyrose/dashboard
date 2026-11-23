@@ -250,3 +250,21 @@ test('paper catch-up (14 Nov 2026): a week of one job for one room is seven reco
   assert.equal(log(env, { check_type_id: id, area_id: 'area-t1', happened_at: '2026-11-10T15:00:00Z', how_recorded: 'paper' }).code, 'DUPLICATE');
   assert.equal(log(env, { check_type_id: id, area_id: 'area-t1', happened_at: '2026-11-08T12:00:00Z', time_given: 'yes', confirm_unusual: 'true' }).code, 'INVALID');
 });
+
+test('list save (add_many): a check\'s form answers go through on an add item, and a required question is still required', () => {
+  const env = env0();
+  const id = typeId(env, 'weigh');
+  field(env, { required: 'true' });
+  const many = (items) => save(env, { v: 1, request_id: 'r-many-form-' + Math.random().toString(36).slice(2, 8), code: env.codes.staff, action: 'add_many', items });
+  const r = many([
+    { request_id: 'r-many-frm-01', table: 'check_log', fields: { check_type_id: id, subject_id: 'sub-test-a', outcome: 'ok' }, values: { weight: '12.5' } },
+    { request_id: 'r-many-frm-02', table: 'check_log', fields: { check_type_id: id, subject_id: 'sub-test-a', outcome: 'ok' } }
+  ]);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.items[0].ok, true, JSON.stringify(r.result.items[0]));
+  assert.equal(r.result.items[0].result.answers, 1);
+  assert.equal(r.result.items[1].ok, false);
+  assert.equal(r.result.items[1].fields['values.weight'], 'This is needed.');
+  assert.equal(recs(env, 'BLD-check_value.csv').length, 1);
+  assert.equal(recs(env, 'BLD-check_log.csv').length, 1);
+});

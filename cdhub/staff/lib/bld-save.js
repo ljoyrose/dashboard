@@ -216,7 +216,7 @@
     // Answers that mean "not this time" (no signal, script busy or switched off, not set up yet): the entry stays kept
     // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
     // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
-    var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
+    var RETRY_ON = { NETWORK: 1, NOT_SENT: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
     /* SIGN IN AGAIN (Lisa 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
        script says this sign-in may not save (or no one is signed in), nothing was wrong with the entry, so it is never refused for
        that: it stays kept and waits until someone signs in again or enters a code, then goes by itself. It is not sent
