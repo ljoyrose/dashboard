@@ -59,7 +59,7 @@ function editRule_(name, table, day) {
 function editStart_(req, action) {
   if (!editOn_()) throw err_('EDIT_OFF', 'Changing saved entries is switched off.');
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
-  var who = authStaff_(req.code);
+  var who = authSaver_(req);
   if (who.role === ROLE_INSPECTOR || who.role === ROLE_GUEST) throw err_('NOT_ALLOWED', 'This code can only look.');
   var spec = specFor_(String(req.table || ''));
   if (!spec || spec.file === BLD.PENDING_FILE || spec.ownerEditable !== true) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');

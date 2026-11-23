@@ -5,7 +5,10 @@ name: House lint
 # Workflows must pass outright: every action pinned to a full SHA, top-level permissions contents read only,
 # a timeout on every job, and a concurrency block. Not a required check.
 on:
+  # Minutes trim (20 Nov 2026): pull requests and main. A branch with no pull request is not linted until it has one.
   push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:

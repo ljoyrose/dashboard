@@ -1,0 +1,3 @@
+id,tenant_id,inspection_id,declaration_id,outcome_id,authority,raised_on,wording_as_given,finding_kind,tenant_response,action_agreed,due_on,closed_on,evidence_document_id,notes
+fd-1,ten-sample,in-1,,out-a,Sample council,2025-06-01,Sample wording for an open finding,advisory,,Sample action,2026-04-01,,,
+fd-2,ten-sample,in-1,,out-b,Sample council,2025-06-01,Sample wording for a closed finding,advisory,,,2025-09-01,2025-08-15,,
