@@ -123,25 +123,40 @@ test('site code: only what is due, bowls one line, a dog job lists every dog tic
   await expect(page.locator('[data-job="toys"]')).toBeVisible();
 });
 
-test('Report is on every screen and carries the dog just scanned', async ({ page }) => {
+test('Problem (was Report) is on every screen and carries the dog just scanned', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.getByRole('heading', { name: 'Pretend A' })).toBeVisible();
-  await page.locator('#tabs').getByRole('button', { name: 'Report' }).click();
+  await page.locator('#tabs').getByRole('button', { name: 'Problem' }).click();
   await expect(page.getByLabel('Dog')).toHaveValue('dog-1');
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByText('Say what happened.')).toBeVisible();
   await page.getByLabel('What happened?').fill('Pretend note');
   await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByText('Sent.')).toBeVisible();
+  await expect(page.getByText('✓ Sent')).toBeVisible();
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-report', subject_id: 'dog-1', outcome: 'recorded', note: 'Pretend note' } });
 });
 
-test('jobs are listed A-Z, with a group where its name falls, whatever is late', async ({ page }) => {
+test('Problem: the kinds are the owner\'s rows with target optional, with no fixed key; several kinds give a picker', async ({ page }) => {
+  const types = TYPES.filter((t) => t.type_key !== 'report').concat([J('incident', 'Pretend incident', 'optional', { note_label: 'What happened?' }), J('accident', 'Pretend accident', 'optional', { note_label: 'Who was hurt?' })]);
+  const sent = await setup(page, { check_type: types });
+  await page.goto('cdhub/staff/#m/report');
+  const kind = page.getByLabel('Kind');
+  await expect(kind.locator('option:not([disabled])')).toHaveText(['Pretend accident', 'Pretend incident']);
+  await kind.selectOption({ label: 'Pretend incident' });
+  await expect(page.getByRole('heading', { name: 'Pretend incident' })).toBeVisible();
+  await kind.selectOption({ label: 'Pretend accident' });
+  await page.getByLabel('Who was hurt?').fill('Pretend line');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByText('✓ Sent')).toBeVisible();
+  expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-accident', note: 'Pretend line', outcome: 'recorded' });
+});
+
+test('jobs: daily first, then less often (a group by its most frequent job), as needed last; A-Z within, whatever is late', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.locator('[data-group="Grooming"]')).toBeVisible();
-  await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Walk', 'Weigh']);
+  await expect(page.locator('.job .nm')).toHaveText(['Walk', 'Grooming', 'Weigh']);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
 });
@@ -152,12 +167,27 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   const card = page.locator('[data-job="exercise"]');
   await expect(card.getByRole('checkbox')).toHaveCount(2);
   await card.getByRole('checkbox', { name: 'Pretend B' }).uncheck();
-  await card.getByRole('button', { name: /^Done/ }).click();
+  await expect(card.locator('[data-ticks-done]')).toHaveText('Done: 1 dog');
+  await card.getByRole('button', { name: 'Done: Exercise' }).click();
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].action).toBe('add_site');
   expect(sent[0].fields.dog_ids).toBe('dog-1');
   expect(sent[0].fields.area_id).toBe('area-1');
   expect(sent[0].fields.how_recorded).toBe('scanned');
+});
+
+test('a room scan shows who is in the room now; a name opens that dog\'s jobs', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const here = page.locator('[data-k="here"]');
+  await expect(here.locator('h3')).toHaveText('Here now');
+  await expect(here.locator('.chip')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Move dogs' })).toBeVisible();
+  const tagged = here.locator('button.chip').first();
+  await expect(tagged).toBeVisible();
+  await tagged.click();
+  await expect(page).toHaveURL(/#s\/[A-Z2-9]+$/);
+  await expect(page.locator('[data-k="here"]')).toHaveCount(0);   // a dog screen has no room list
 });
 
 test('a scanned room has a Temperature button that opens the temperature screen', async ({ page }) => {
@@ -194,6 +224,19 @@ test('a litter code opens that litter\'s jobs and saves against the litter', asy
   expect(sent[0].fields.subject_id).toBeUndefined();
   await page.goto('cdhub/staff/#s/DOG2TAG2');
   await expect(page.locator('[data-job="socialise"]')).toHaveCount(0);
+});
+
+test('puppy weights are due by the litter\'s age from the owner\'s by-age row', async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const ago = (n) => new Date(Date.parse(today + 'T00:00:00Z') - n * 86400000).toISOString().slice(0, 10);
+  await setup(page, {
+    check_type: TYPES.concat([J('pup_weights', 'Puppy weights', 'litter')]),
+    breeding_rule: [{ id: 'r-a', rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', to_date: '', source: 'test' }],
+    litter: [{ id: 'lit-1', dam_subject_id: 'dog-1', dob: ago(3) }],
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'LITTAG22', kind: 'litter', ref_id: 'lit-1', active: 'true' }])
+  });
+  await page.goto('cdhub/staff/#s/LITTAG22');
+  await expect(page.locator('[data-job="pup_weights"]')).toContainText('Due today');
 });
 
 test('a litter code with no litter jobs goes on to Move dogs as before', async ({ page }) => {
@@ -346,6 +389,29 @@ test('every tap shows Saving straight away, with the button off until the reply'
   expect(sent).toHaveLength(0);
 });
 
+test('a second tap while a save is out says Waiting, 1 ahead, then Saving, then ticks', async ({ page }) => {
+  await setup(page);
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.route(SCRIPT, async (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    if (!b.fields.dog_ids) await held;
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'clg-' + b.request_id } } });
+  });
+  const bowls = page.locator('[data-job="bowls"]'), walk = page.locator('[data-job="walk"]');
+  await page.getByRole('button', { name: 'Yes, done: Bowls' }).click();
+  await expect(bowls.locator('.done-line')).toContainText('Saving...');
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await walk.getByRole('button', { name: 'Select all' }).click();
+  await page.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await expect(walk.locator('.done-line')).toContainText('Waiting, 1 ahead');
+  release();
+  await expect(bowls.locator('.done-line')).toContainText(/Done \d\d:\d\d/);
+  await expect(walk.locator('.done-line')).toContainText('2 of 2 dogs');
+});
+
 test('a check the screen refuses before sending still shows on the card', async ({ page }) => {
   await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');
@@ -406,7 +472,8 @@ test('a save refused as a repeat says so once, in plain words', async ({ page })
   await page.getByRole('button', { name: 'Done: Weigh' }).click();
   await weigh.getByLabel('Amount (kg)').fill('21.5');
   await page.getByRole('button', { name: 'Done: Weigh' }).click();
-  await expect(weigh.locator('.done-line.bad')).toContainText('Already saved a moment ago');
+  await expect(weigh.locator('.done-line.good')).toContainText(/Done \d\d:\d\d/);   // the first save landed: a tick, not only a red line
+  await expect(weigh.locator('.done-line .done-note')).toHaveText('Already saved a moment ago, so not saved twice. To add to it, use Note.');
   await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
   await expect(weigh.getByText('Saving...')).toHaveCount(0);
 });
@@ -432,6 +499,28 @@ test('when this code cannot read past records, the list says so instead of a sil
   await setup(page, { check_log: undefined });
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
+});
+
+// Lisa 17 Nov 2026: jobs she had saved still said Due because the records read got no answer in time (slow saves).
+// That is said as "did not load in time" with Try again, never as "this code cannot read".
+test.describe('records read with no answer', () => {
+  test.use({ allowedConsole: [/404|net::ERR_FAILED/] });   // the pretend "no answer" is a failed load
+test('when the past records do not load in time, it says so and Try again reads them again', async ({ page }) => {
+  await setup(page);
+  let fail = true;
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData() || '{}') : {};
+    if (fail && String(b.action).indexOf('read') === 0 && b.table === 'check_log') return route.abort();
+    return route.fallback();
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-no-history]')).toContainText('did not load in time');
+  await expect(page.locator('[data-no-history]')).not.toContainText('cannot read');
+  fail = false;
+  await page.locator('[data-retry-history]').click();
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-no-history]')).toHaveCount(0);
+});
 });
 
 test('with past records readable there is no warning', async ({ page }) => {
@@ -460,9 +549,207 @@ test('Earlier (late entry) saves the real day and time, ticks the card with that
   await ears.getByRole('button', { name: 'Done: Ears' }).click();
   await expect.poll(() => sent.length).toBe(1);
   const f = sent[0].fields;
-  expect(f.how_recorded).not.toBe('scanned');
+  expect(f.how_recorded).toBe('paper');
+  expect(f.time_given).toBeUndefined();   // a time was entered
   expect(london(new Date(f.happened_at))).toBe(yesterday);
   expect(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(new Date(f.happened_at))).toBe('07:30');
   await expect(ears.locator('.done-line.good')).toContainText('07:30');
   await expect(ears.locator('.done-line.good')).toContainText(/\d{1,2} [A-Z][a-z]{2}/);
+});
+
+test('Earlier, owner time choices: part of day, exact, not known and now each save the right time', async ({ page }) => {
+  const R = (k, v) => ({ id: 'r-' + k, rule_key: k, value: v, effective_from: '2026-01-01', to_date: '', source: 'test' });
+  const sent = await setup(page, { breeding_rule: [R('job.paper_time_options', 'part|exact|none|now'),
+    R('job.day_part.am.label', 'Pretend AM'), R('job.day_part.am.at', '09:00'), R('job.day_part.am.sort', '1'),
+    R('job.day_part.pm.label', 'Pretend PM'), R('job.day_part.pm.at', '14:30'), R('job.day_part.pm.sort', '2')] });
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const hm = (d) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(d);
+  const yesterday = london(new Date(Date.now() - 86400000));
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  const when = ears.getByLabel('When');
+  await ears.getByLabel('Day done').fill(yesterday);
+  // the first choice is preselected; "now" is only for today
+  await expect(when).toHaveValue('part');
+  await expect(when.locator('option')).toHaveText(['Part of day', 'Time', 'Not known']);
+  await expect(ears.getByLabel('Part of day')).toBeVisible();
+  await expect(ears.getByLabel('Time done')).toBeHidden();
+  await ears.getByLabel('Part of day').selectOption('pm');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  let f = sent[0].fields;
+  expect(f.time_given).toBe('part:pm');
+  expect(london(new Date(f.happened_at))).toBe(yesterday);
+  expect(hm(new Date(f.happened_at))).toBe('14:30');
+  await expect(ears.locator('.done-line.good')).toContainText('Pretend PM');
+  // exact: a time is needed
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(yesterday);
+  await when.selectOption('exact');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect(ears.locator('.done-line.bad')).toContainText('Type the time');
+  await ears.getByLabel('Time done').fill('07:15');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  await expect(ears.locator('.done-line.good')).toBeVisible();
+  f = sent[1].fields;
+  expect(f.time_given).toBeUndefined();
+  expect(hm(new Date(f.happened_at))).toBe('07:15');
+  // not known: the owner's default time, marked "time not given"
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(yesterday);
+  await when.selectOption('none');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(3);
+  await expect(ears.locator('.done-line.good')).toBeVisible();
+  expect(sent[2].fields.time_given).toBe('false');
+  // today: now is offered
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(london(new Date()));
+  await expect(when.locator('option')).toHaveText(['Part of day', 'Time', 'Not known', 'Now']);
+  await when.selectOption('now');
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(4);
+  f = sent[3].fields;
+  expect(f.time_given).toBeUndefined();
+  expect(Math.abs(Date.parse(f.happened_at) - Date.now())).toBeLessThan(5 * 60000);
+});
+
+test('Earlier, several days: a row per room per day, each judged and saved for its own day, each ticks', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const day = (n) => london(new Date(Date.now() - n * 86400000));
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await page.getByLabel('Job').selectOption('clean');
+  await page.getByLabel('First day').fill(day(2));
+  await page.getByLabel('Days').selectOption('7');
+  await page.getByRole('button', { name: 'Show' }).click();
+  const rows = page.locator('.job-row');
+  await expect(rows).toHaveCount(3);   // two days ago, yesterday, today: never a future day
+  await page.getByRole('button', { name: 'Done all' }).click();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent.map((b) => london(new Date(b.fields.happened_at)))).toEqual([day(2), day(1), day(0)]);
+  sent.forEach((b) => expect(b).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-clean', area_id: 'area-1', outcome: 'ok', how_recorded: 'bulk', time_given: 'false' } }));
+  await expect(rows.locator('.done-line.good')).toHaveCount(3);
+  // a whole-site job saves as a whole-site row
+  await page.getByLabel('Job').selectOption('bowls');
+  await page.getByLabel('Days').selectOption('1');
+  await page.getByRole('button', { name: 'Show' }).click();
+  await rows.first().getByRole('button', { name: /^Done:/ }).click();
+  await expect.poll(() => sent.length).toBe(4);
+  expect(sent[3]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-bowls' } });
+});
+
+test('Earlier, several days: dogs as they were on each day, and a job group enters every job in it', async ({ page }) => {
+  const london = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d);
+  const day = (n) => london(new Date(Date.now() - n * 86400000));
+  // Pretend B arrived yesterday: two days ago only Pretend A was here
+  const sent = await setup(page, { occupancy: [{ subject_id: 'dog-1', area_id: 'area-1', moved_in: '2026-10-01' }, { subject_id: 'dog-2', area_id: 'area-1', moved_in: day(1) }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await page.getByLabel('Job').selectOption('group:Grooming');
+  await page.getByLabel('First day').fill(day(2));
+  await page.getByLabel('Days').selectOption('7');
+  await page.getByRole('button', { name: 'Show' }).click();
+  const rows = page.locator('.job-row');
+  await expect(rows).toHaveCount(2 + 4 + 4);   // 2 jobs x 1 dog, then 2 jobs x 2 dogs on each of the last two days
+  await expect(page.locator('.job-row[data-day="' + day(2) + '"]')).toHaveCount(2);
+  await expect(page.locator('.job-row[data-day="' + day(2) + '"]').filter({ hasText: 'Pretend B' })).toHaveCount(0);
+  await expect(page.locator('.job-row[data-day="' + day(1) + '"]').filter({ hasText: 'Nails: Pretend B' })).toHaveCount(1);
+  await page.locator('.job-row[data-day="' + day(2) + '"]').filter({ hasText: 'Ears: Pretend A' }).getByRole('button', { name: /^Done:/ }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].fields).toMatchObject({ check_type_id: 'cty-ears', subject_id: 'dog-1', how_recorded: 'bulk' });
+  expect(london(new Date(sent[0].fields.happened_at))).toBe(day(2));
+});
+
+test('owner order row puts today\'s jobs in the owner\'s order, with another screen (temperatures) in its place', async ({ page }) => {
+  await setup(page, { breeding_rule: [{ id: 'r-o', rule_key: 'job.order', value: 'walk|screen:temperature=Pretend temps|bowls', effective_from: '2026-01-01', to_date: '', source: 'test' }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  const order = await page.locator('[data-job], [data-screen]').evaluateAll((els) => els.map((e) => e.getAttribute('data-job') || 'screen:' + e.getAttribute('data-screen')));
+  expect(order.slice(0, 3)).toEqual(['walk', 'screen:temperature', 'bowls']);
+  await page.locator('[data-screen="temperature"]').click();
+  await expect(page).toHaveURL(/#m\/temperature$/);
+});
+
+test('check types starting round. belong to The round and never show as jobs, nor in Earlier', async ({ page }) => {
+  await setup(page, { check_type: TYPES.concat([J('round.presence', 'Pretend round row', 'none', { every_days: '1' })]) });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('[data-job="bowls"]')).toBeVisible();
+  await expect(page.locator('[data-job="round.presence"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Earlier: several days' }).click();
+  await expect(page.getByLabel('Job').locator('option[value="round.presence"]')).toHaveCount(0);
+});
+
+// Lisa 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
+test('a whole-site dog job: the Done N dogs button by the ticks saves the ticked dogs and the card says N of M dogs @regression', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  const save = card.locator('[data-ticks-done]');
+  await expect(save).toBeVisible();
+  await expect(save).toHaveText('Done: 0 dogs');
+  await expect(save).toBeDisabled();
+  await card.getByRole('button', { name: 'Select all' }).click();
+  await expect(save).toHaveText('Done: 2 dogs');
+  await save.click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-walk', dog_ids: 'dog-1|dog-2' } });
+  await expect(page.locator('[data-job="walk"] .done-line')).toContainText(/Done \d\d:\d\d · 2 of 2 dogs/);
+});
+
+test('a whole-site dog job: a refused tick save says "Not saved" with the reason on the card', async ({ page }) => {
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'INVALID', message: 'None of those dogs can be covered by a whole-site tap.' } });
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await card.getByRole('checkbox', { name: 'Pretend A' }).check();
+  await expect(card.locator('[data-ticks-done]')).toHaveText('Done: 1 dog');
+  await card.locator('[data-ticks-done]').click();
+  await expect(card.locator('.done-line')).toHaveText('Not saved: None of those dogs can be covered by a whole-site tap.');
+});
+
+// Lisa 22 Nov 2026: "Bedding washed" (As needed) saved, but its card showed no tick, so a second Yes was refused as a repeat.
+test('an as-needed job shows its tick straight after a save', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'More' }).click();
+  const card = page.locator('[data-job="toys"]');
+  await expect(card.locator('.ds')).toHaveText('As needed');
+  await card.getByRole('button', { name: 'Yes, done: Toys' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await expect(page.locator('[data-job="toys"] .done-line')).toContainText(/Done \d\d:\d\d/);
+});
+
+test('an as-needed job done today stays on the site list with its tick when the screen opens again @regression', async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  await setup(page, { check_log: [{ id: 'clg-1', check_type_id: 'cty-toys', outcome: 'ok', how_recorded: 'site_tap', taken_by: 'Pretend Owner', taken_at: today + 'T12:50:00Z' }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="toys"]');
+  await expect(card).toBeVisible();
+  await expect(card.locator('.done-line')).toContainText(/Done \d\d:\d\d · Pretend Owner/);
+});
+
+test('an as-needed job refused as a repeat shows the tick, not only a red line @regression', async ({ page }) => {
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (String(b.action).indexOf('read') === 0 || route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved.' } });
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'Yes, done: Toys' }).click();
+  const card = page.locator('[data-job="toys"]');
+  await expect(card.locator('.done-line.good')).toContainText(/Done \d\d:\d\d/);
+  await expect(card.locator('.done-note')).toContainText('Already saved a moment ago');
 });

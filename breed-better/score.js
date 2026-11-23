@@ -28,6 +28,11 @@
   function text(v) { return v === undefined || v === null ? '' : String(v).trim(); }
   function same(a, b) { return text(a).toLowerCase() === text(b).toLowerCase(); }
   function isDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(text(v)); }
+  /* points may carry decimals (0.1 + 0.2): round sums to 6 places so totals and targets never drift */
+  function tidy(n) { return Math.round(n * 1e6) / 1e6; }
+  /* A record's date: a plain date, or a date and time (2026-08-13T12:00:00Z, or with a space) read as its day.
+     Anything else is no date. (DOCS, 15 Nov 2026: saved records can carry a time.) */
+  function recDay(v) { var m = /^(\d{4}-\d{2}-\d{2})(?:$|[T ]\d{2}:\d{2})/.exec(text(v)); return m ? m[1] : ''; }
 
   /** Add whole months to YYYY-MM-DD, holding the day inside the shorter month (31 Jan + 1 = 28 Feb). */
   function addMonths(date, months) {
@@ -48,7 +53,8 @@
   function targetFor(scheme, available) {
     var n = text(scheme && scheme.target_points);
     if (!/^\d+(\.\d+)?$/.test(n)) return '';
-    return /^percent\b/i.test(text(scheme.target_is)) ? Math.ceil(available * Number(n) / 100) : Number(n);
+    /* rounded up to whole points, but never more than can be earned (decimal points: 100% of 0.6 is 0.6, not 1) */
+    return /^percent\b/i.test(text(scheme.target_is)) ? Math.min(Number(n) <= 100 ? tidy(available) : Infinity, Math.ceil(tidy(available * Number(n) / 100))) : Number(n);
   }
 
   /** Whole months from a to b (both YYYY-MM-DD). */
@@ -164,6 +170,10 @@
       if (!band) { errors.push(c.id + ': belongs to no band'); return; }
       var when = text(c.when_missing) || 'unknown';
       if (WHEN_MISSING.indexOf(when) < 0) errors.push(c.id + ': when_missing cannot be "' + when + '"');
+      /* a must-pass check that is skipped when its record is missing would let the animal Pass without it */
+      if (when === 'skip' && band.kind === 'gate') errors.push(c.id + ': a must-pass check cannot be skipped; use unknown');
+      /* D7 (Lisa, 18 Nov 2026): a missing record is never a Fail; it stays Unverified until the record exists */
+      if (when === 'fail') errors.push(c.id + ': when_missing cannot be fail (a missing record is never a Fail); use unknown, or zero on a points line');
       if (text(c.reads) && READS.indexOf(text(c.reads)) < 0) errors.push(c.id + ': cannot read "' + c.reads + '"');
       if (text(c.valid_months) && !/^\d+$/.test(text(c.valid_months))) errors.push(c.id + ': valid_months must be a whole number');
       if (text(c.valid_months) && !text(c.date_field)) errors.push(c.id + ': valid_months needs a date_field');
@@ -206,13 +216,13 @@
     var dateField = text(c.date_field);
     var found = table.filter(function (r) {
       return r[subjectField] === subject.id && fieldsMatch(c.evidence_match, r) &&
-        (!dateField || !isDate(r[dateField]) || r[dateField] <= asOf);
+        (!dateField || !recDay(r[dateField]) || recDay(r[dateField]) <= asOf);
     });
     var reads = text(c.reads) || 'latest';
     /* a count is of things that happened: a row with no date (a mating that took, say, or a blank line) is not one */
-    if (reads === 'count' && dateField) found = found.filter(function (r) { return isDate(r[dateField]); });
+    if (reads === 'count' && dateField) found = found.filter(function (r) { return recDay(r[dateField]); });
     if (reads === 'count') return { answer: String(found.length), row: null, count: true };
-    if (!found.length) return { reason: 'no_record' };
+    if (!found.length) return heldBack(c, table, subjectField, dateField, subject, asOf);
     var chosen;
     if (reads === 'lowest') {
       chosen = found.slice().sort(function (a, b) {
@@ -221,11 +231,30 @@
       })[0];
     } else {
       chosen = found.slice().sort(function (a, b) {
-        var da = text(a[dateField]), db = text(b[dateField]);
+        var da = recDay(a[dateField]) || text(a[dateField]), db = recDay(b[dateField]) || text(b[dateField]);
         return da === db ? 0 : (da < db ? 1 : -1);
       })[0];
     }
     return { answer: chosen[c.answer_field], row: chosen };
+  }
+
+  /* Lisa's Design Doc reads "latest final result" (OV11, 15 Nov 2026). evidence_match's FIRST condition says which record
+     (test=hips); any later one says which records are accepted (certainty=final), dated with the criterion. A record that
+     matches the first but not a later one is shown on the line by the value it holds ("Preliminary") and stays Unverified. */
+  function heldBack(c, table, subjectField, dateField, subject, asOf) {
+    var pairs = text(c.evidence_match).split(';').map(text).filter(Boolean);
+    if (pairs.length < 2) return { reason: 'no_record' };
+    var near = table.filter(function (r) {
+      return r[subjectField] === subject.id && fieldsMatch(pairs[0], r) &&
+        (!dateField || !recDay(r[dateField]) || recDay(r[dateField]) <= asOf);
+    }).sort(function (a, b) {
+      var da = recDay(a[dateField]) || text(a[dateField]), db = recDay(b[dateField]) || text(b[dateField]);
+      return da === db ? 0 : (da < db ? 1 : -1);
+    });
+    if (!near.length) return { reason: 'no_record' };
+    var miss = pairs.slice(1).filter(function (p) { return !fieldsMatch(p, near[0]); })[0];
+    var held = miss ? text(near[0][miss.slice(0, miss.indexOf('=')).trim()]) : '';
+    return { reason: 'not_accepted', row: near[0], answer: near[0][c.answer_field], held: held };
   }
 
   /** How long a record lasts, by g: the version of the check in force on the record's own date. */
@@ -233,8 +262,8 @@
     if (ev.reason || !ev.row) return ev;
     var chosen = ev.row, due = '', dueDate = '';
     if (text(g.valid_months)) {
-      var when = text(chosen[c.date_field]);
-      if (!isDate(when)) return { reason: 'undated', row: chosen };
+      var when = recDay(chosen[c.date_field]);
+      if (!when) return { reason: 'undated', row: chosen };
       dueDate = addMonths(when, Number(g.valid_months));
       if (dueDate < asOf) {
         due = 'overdue';
@@ -283,7 +312,7 @@
       var todayRules = pointsOn(c, input.asOf);
       var ev = readEvidence(c, todayRules, input.subject, evidence, judgements, input.asOf);
       /* the record is graded by the rules in force on its own date; with none then, today's rules */
-      var recDate = ev.row && text(c.date_field) && isDate(ev.row[c.date_field]) ? ev.row[c.date_field] : '';
+      var recDate = ev.row && text(c.date_field) ? recDay(ev.row[c.date_field]) : '';
       var g = recDate ? (versionOn(versions[k], recDate) || c) : c;
       var ruleRows = recDate ? pointsOn(g, recDate) : todayRules;
       if (!ruleRows.length) { g = c; ruleRows = todayRules; }
@@ -293,7 +322,7 @@
         evidence_table: c.evidence_source, evidence_id: ev.row ? text(ev.row.id) : '',
         answer_then: ev.answer === undefined ? '' : text(ev.answer),
         date_then: recDate || (ev.row && text(c.date_field) ? text(ev.row[c.date_field]) : ''), due: ev.due || '', due_date: ev.dueDate || '',
-        points: '', points_max: '', gate_outcome: '', unknown_reason: ev.reason || '', judged_by: ev.judgedBy || '',
+        points: '', points_max: '', gate_outcome: '', unknown_reason: ev.reason || '', held_then: ev.held || '', judged_by: ev.judgedBy || '',
         rules_then: g !== c || ids(ruleRows) !== ids(todayRules)
       };
 
@@ -307,8 +336,9 @@
       if (band.kind === 'gate') {
         var outcome;
         if (rule) outcome = rule.gate_outcome;
-        else if (ev.reason === 'expired') outcome = 'unverified';
-        else if (when === 'fail') outcome = 'fail';
+        else if (ev.reason === 'expired' || ev.reason === 'not_accepted') outcome = 'unverified';
+        /* when_missing is for a missing record; an answer no rule knows is a gap in the rules, never a Fail */
+        else if (when === 'fail' && ev.reason) outcome = 'fail';
         else outcome = 'unverified';
         line.gate_outcome = outcome;
         gates[outcome]++;
@@ -336,7 +366,7 @@
             });
           }
           earned += line.points;
-        } else if (when === 'zero' || when === 'fail') {
+        } else if (ev.reason && (when === 'zero' || when === 'fail')) {
           line.points = 0;
         } else {
           unverified += max;
@@ -346,6 +376,7 @@
       lines.push(line);
     });
 
+    earned = tidy(earned); available = tidy(available); unverified = tidy(unverified);
     var gateResult = gates.fail ? 'fail' : (gates.unverified ? 'unverified' : 'pass');
     var target = targetFor(input.scheme, available);
     /* one verdict: Fail, then Unverified, then the target. Points still unknown that could reach the target keep it Unverified */

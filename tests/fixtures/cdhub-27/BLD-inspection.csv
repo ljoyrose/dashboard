@@ -1,0 +1,3 @@
+id,tenant_id,kind,authority,inspection_date,outcome_summary,visibility,source
+in-1,ten-sample,external,Sample council,2025-06-01,Sample pass,disclosable,invented
+in-2,ten-sample,internal,,2026-02-01,,private,invented

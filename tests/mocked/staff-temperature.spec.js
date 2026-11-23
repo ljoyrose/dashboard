@@ -117,6 +117,20 @@ test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", a
   expect(sent[0].fields).toMatchObject({ area_id: 'area-new', min_c: '8.5', period_start: '2026-11-12T00:00:00+00:00', mitigation_note: 'Heater on, rechecked at 12:00' });
 });
 
+// Lisa 17 Nov 2026 ("says all temps are due but I definitely put them in"): the save script reads a reading's
+// period_start back as the cell shows it ("2026-11-12 00:00"), not as the page sent it; it must still count as done.
+test('a saved reading read back as "2026-11-12 00:00" shows as done, not Due', async ({ page }) => {
+  const keep = TABLES.area_reading;
+  TABLES.area_reading = [{ id: 'r1', area_id: 'area-new', thermometer_id: 'thm-new', period_start: '2026-11-12 00:00', taken_at: '2026-11-12 08:10', min_c: '12.0', max_c: '18.0' }];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    const card = page.locator('.cards .card').first();
+    await expect(card).toContainText('12.0–18.0');
+    await expect(card).not.toContainText('Due');
+  } finally { TABLES.area_reading = keep; }
+});
+
 // Room empty (Lisa 11 Nov 2026): no dog present. A flag on the slot's reading; a reading is optional with it, and an
 // outside reading in an empty room is never a non-compliance, so "What was done" is not asked.
 test('Room empty with no reading saves room_empty yes and no temperatures; no CLR step', async ({ page }) => {
@@ -253,11 +267,43 @@ test('Report and Import show for an owner code only; a staff code sees the round
   }
 });
 
+// Found by the click-crawl, 13 Nov 2026: Sensor CSV threw "thermos is not defined", so the owner got a title and nothing else.
+test('Sensor CSV opens for an owner: room picker and file box; a sensor file is read and saved one day at a time @regression', async ({ page }) => {
+  const sent = await setup(page);
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  // this test's save script also has the sensor back-up list switched on
+  await page.route(SCRIPT, (route) => (route.request().method() === 'GET'
+    ? route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }, { key: 'sensor_reading', on: true, mode: 'direct' }] } })
+    : route.fallback()));
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Sensor back-up import' })).toBeVisible();
+  const room = page.getByLabel('Room');
+  await expect(room.locator('option')).toHaveText(['Choose the room', '3A.1/2']);   // rooms in use today, one choice each
+  await expect(room.locator('option').nth(1)).toHaveAttribute('value', 'area-new');   // a room id, so the save names a room
+  await expect(page.getByLabel('Sensor name')).toBeVisible();
+  await page.getByLabel('File to import').setInputFiles({ name: 'sample-sensor.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('Timestamp,Temperature_Celsius\n2026-11-10 08:00:00,12.0\n2026-11-10 15:00:00,18.5\n2026-11-11 09:00:00,13.0\n') });
+  await expect(page.getByText('2 days.')).toBeVisible();
+  const saveAll = page.getByRole('button', { name: 'Save 2 days' });
+  await saveAll.click();
+  await expect(page.getByText('Choose the room.')).toBeVisible();   // nothing is sent without a room
+  expect(sent).toHaveLength(0);
+  await room.selectOption('area-new');
+  await saveAll.click();
+  await expect(page.getByText('2 saved.')).toBeVisible();
+  expect(sent.map((b) => b.table)).toEqual(['sensor_reading', 'sensor_reading']);
+  expect(sent[0].fields).toMatchObject({ area_id: 'area-new', day: '2026-11-10', min_c: '12.0', max_c: '18.5', source: 'govee' });
+  await page.getByRole('button', { name: '← Rooms' }).click();
+  await expect(page.getByRole('heading', { name: 'Room temperatures' })).toBeVisible();
+  expect(errors, errors.join('\n')).toEqual([]);
+});
+
 test('an unusual temperature is the script\'s warning: the screen shows it with "Save anyway", which resends with confirm_unusual yes', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('65.0');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByLabel('What was done').fill('Thermometer checked');
@@ -284,7 +330,6 @@ test('min 22.0 and max 18.0 (min first) is flagged as the wrong way round and no
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MIN').fill('22.0');
   await page.getByLabel('MAX').fill('18.0');
   const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
@@ -303,7 +348,6 @@ test('min 22.0 and max 18.0 (max first) is flagged as the wrong way round and no
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.0');
   await page.getByLabel('MIN').fill('22.0');
   const bad = page.locator('.msg.bad', { hasText: PAIR_MSG });
@@ -337,4 +381,15 @@ test('year report: a saved reading with max lower than min is flagged, not count
     await row.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await page.screenshot({ path: staffShot('staff-year-report-swapped.png'), fullPage: false });
   } finally { TABLES.area_reading = []; }
+});
+
+test('a comma decimal is a point: 18,5 and 12,0 save as 18.5 and 12.0 (OV11 15 Nov)', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByLabel('MAX').fill('18,5');
+  await page.getByLabel('MIN').fill('12,0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { max_c: '18.5', min_c: '12.0' } });
 });

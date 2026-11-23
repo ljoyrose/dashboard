@@ -1,0 +1,5 @@
+id,tenant_id,type_key,label,target,active,effective_from,source,every_days,group,includes,sop
+ct-1,ten-sample,nails,Nails,dog,true,2026-01-01,invented,28,Grooming,,Care Check
+ct-2,ten-sample,clean,Clean the room,area,true,2026-01-01,invented,1,,,Cleaning
+ct-3,ten-sample,bowls,Wash the bowls,none,true,2026-01-01,invented,1,,,Cleaning
+ct-4,ten-sample,report,Report,optional,true,2026-01-01,invented,,,,

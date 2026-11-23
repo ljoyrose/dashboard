@@ -3,9 +3,11 @@
  *   BLDDone.mark(el, {outcome, at, who, extra, note})  a tick line on the card: "Done 14:32 · Sam" (or "Concern noted", "Not done noted"),
  *                                                 and the card's main button greys (it still works, for a second time that day)
  *   BLDDone.saving(el)                            straight after the tap: "Saving..." and the button is off until the reply
+ *   BLDDone.turn(n)                               "Waiting, n ahead" while other saves on this phone go first, then "Saving..."
  *   BLDDone.wait(el, text)                        sent but not received yet (no signal): a clock, never a tick
  *   BLDDone.fail(el, text)                        a red line; the button stays as it was
  *   BLDDone.clear(el)
+ *   BLDDone.by(res)                               "✓ Sam, 14:32" from a save reply (who + at), for screens that show a line, not a card
  * el is the card. Its main button carries data-done-btn. A tick only ever follows a reply that says saved.
  * Nothing here names a job, a dog or a person: `who` is whatever the saved row or the reply says.
  */
@@ -61,5 +63,14 @@
   function fail(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'bad', '', words || 'Not saved. Try again.'); btn(el, false); }
   function clear(el) { if (!el) return; el.classList.remove('is-done', 'is-concern'); var n = el.querySelector(':scope > .done-line'); if (n) n.remove(); btn(el, false); }
 
-  return { mark: mark, saving: saving, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
+  /** Demo 2a (18 Nov 2026): who and when, from the save's own reply. Never a tick unless the reply said saved. */
+  function by(res) {
+    if (!res || !res.ok) return '';
+    return '✓ ' + [res.who, hhmm(res.at)].filter(function (x) { return x && String(x).trim(); }).join(', ');
+  }
+
+  /** 20 Nov 2026: the words for a save's place in this device's line (bld-save onTurn): "Waiting, 2 ahead", then "Saving...". */
+  function turn(n) { return n > 0 ? 'Waiting, ' + n + ' ahead' : 'Saving...'; }
+
+  return { by: by, turn: turn, mark: mark, saving: saving, wait: wait, fail: fail, clear: clear, text: text, hhmm: hhmm, TICK: TICK };
 }));

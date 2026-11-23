@@ -350,7 +350,7 @@ test('occupancy_check is on the allow-list behind its own switch, OFF by default
   assert.equal(env.text('BLD-occupancy_check.csv'), before);
   assert.equal(env.writes.length, 0);
   assert.deepEqual(Array.from(env.ctx.TABLES.occupancy_check.columns), fx.OCCUPANCY_CHECK_HEADER);
-  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff', 'parties', 'products', 'lots', 'stock_movements', 'courses', 'doses', 'prescriptions', 'product_dose_bands', 'certificate_kinds', 'certificates']);
 });
 
 test('ONE tap with 150 dogs appends exactly ONE row: who (code id), when, the dog list, the moved count', () => {
@@ -366,7 +366,7 @@ test('ONE tap with 150 dogs appends exactly ONE row: who (code id), when, the do
   assert.equal(lines(after).length, 2);                                          // header + ONE row
   assert.equal(env.writes.length, 1);
   const row = rows(env, 'BLD-occupancy_check.csv')[0];
-  assert.match(row.id, /^chk-20261015-233000-[a-z0-9]{4}$/);
+  assert.match(row.id, /^chk-[a-z2-9]{8}$/);
   assert.equal(row.tenant_id, fx.TENANT);
   assert.equal(row.confirmed_at, '2026-10-15T23:30:00+01:00');                  // ISO with offset, set by the script
   assert.equal(row.confirmed_by, env.ids.staff);                                 // the staff code id, not the name, not the code
@@ -493,7 +493,7 @@ test('permanently gone = sold, owned_by_family, Collected, deceased: such a dog 
 
 test('config: version bumped, the new switch is documented, and nothing secret is in the repository files', () => {
   const env = standardEnv();
-  assert.equal(env.ctx.BLD.VERSION, '1.2.0');
+  assert.equal(env.ctx.BLD.VERSION, '1.3.0');
   const dir = path.join(__dirname, '..', fs.existsSync(path.join(__dirname, '..', 'code')) ? 'code' : '', 'apps-script');
   const cfg = fs.readFileSync(path.join(dir, 'Config.gs'), 'utf8');
   assert.match(cfg, /MOVES_QUEUE_UNTIL/);
