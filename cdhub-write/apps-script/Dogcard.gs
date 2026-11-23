@@ -363,7 +363,11 @@ function sinkSubjectCreate_(req) {
     if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
     // 15 Nov 2026 (BB): a pup gets its parents' open links of kinds the owner set to inherit at birth (e.g. a scheme)
     var inherited = litterId ? linkInheritAtBirth_(id, litterId, dob, who, now) : [];
-    return inherited.length ? { status: 'saved', id: id, links: inherited } : { status: 'saved', id: id };
+    // 15 Nov 2026 (print job, Addendum 2): the dog's QR code is made now when the owner's qr.on_add.subject rule says yes (QrTag.gs)
+    var qr = qrOnAdd_('subject', id, '', who, now);
+    var out = inherited.length ? { status: 'saved', id: id, links: inherited } : { status: 'saved', id: id };
+    out.qr = qr.qr;
+    return out;
   });
 }
 
