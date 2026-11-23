@@ -16,13 +16,13 @@
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
     var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
-    var key = v.today + '|' + (v.visits || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
+    var key = v.today + '|' + (v.visits || []).length + '|' + (v.rules || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
     var rows = {}, perDog = {};
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
       targets.forEach(function (t) {
-        Due.forTarget(v.types, logs, t, v.today, v.visits).forEach(function (j) {
+        Due.forTarget(v.types, logs, t, v.today, v.visits, { rules: v.rules }).forEach(function (j) {
           if (t.area_id && perDog[j.type_key]) return;   // counted dog by dog instead
           var r = rows[j.type_key] = rows[j.type_key] || { key: j.type_key, label: j.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: '' };
           if (j.status === 'late') r.late++;
@@ -35,7 +35,7 @@
     var groups = function (d) { return Due.groupsOf(v.links, d.id, v.today); };
     add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
-    add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
+    add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
     add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {
       return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '', every_days: Due.everyDays(t.every_days) });
@@ -49,6 +49,35 @@
     var m = {};
     rows.forEach(function (r) { var s = r.source || ''; var x = m[s] = m[s] || { source: s, jobs: 0, late: 0, due: 0 }; x.jobs++; x.late += r.late; x.due += r.due; });
     return Object.keys(m).sort().map(function (k) { return m[k]; });
+  }
+
+  /** The owner's name for a part of the day (row job.day_part.<code>.label in force that day); no row = the code. */
+  function partLabel(v, code, day) {
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.day_part.' + code + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    return (best && String(best.value || '').trim()) || code;
+  }
+
+  /** How a record was made, in the owner's words (Lisa 17 Nov 2026: "is that not for the app user to decide?"). Row
+      job.how.<how>.label in force that day: its value is the words; "off" hides the words. No row = the starter words.
+      The record always keeps how_recorded itself: only what the screen says is the owner's choice. */
+  /* Lisa 22 Nov 2026: "the user pays for the app, it is up to them what is displayed". Whether a screen says a record
+     was entered later (entered earlier / imported / time not given / "(entered <date>)") is the owner's row
+     display.entered_later in force that day: "on" shows it; no row or "off" hides it. The records always keep
+     happened_at, taken_at, how_recorded and time_given: only what the screen says changes. */
+  var LATE_HOW = { paper: 1, bulk: 1, import: 1 };
+  function showLate(v, day) {
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'display.entered_later' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    return !!best && /^on$/i.test(String(best.value || '').trim());
+  }
+  function howLabel(v, how, day) {
+    if (!how) return '';
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.how.' + how + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    if (!best) return LATE_HOW[how] && !showLate(v, day) ? '' : (HOW[how] || '');   // an owner's own label row for it still shows
+    var w = String(best.value || '').trim();
+    return /^off$/i.test(w) ? '' : w;
   }
 
   /** The file a record's link points at, as a Drive link: the file row's url when it is https, else its Drive file id. */
@@ -78,7 +107,8 @@
     return v.logs.filter(function (l) {
       return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
     }).map(function (l) {
-      return { at: l.happened_at || l.taken_at || '', noTime: String(l.time_given).toLowerCase() === 'false', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
+      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '';
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -96,6 +126,13 @@
       var inner = n ? '<span class="pill ' + cls + '">' + n + '</span>' : '<span class="mut">0</span>';
       return '<td data-n="' + k + '">' + (href ? '<a href="' + e(href) + '" aria-label="' + n + ' ' + k + ', open ' + e(r.sop) + '">' + inner + '</a>' : inner) + '</td>';
     }
+    // Lisa 17 Nov 2026 (checks A): an owner's note covering a past period (how_recorded owner_note) is shown as written,
+    // with the day it was entered, so anyone reading sees it was recorded afterwards.
+    var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'owner_note' && l.note; });
+    var seenNote = {};
+    notes.forEach(function (l) { var k = l.note; if (seenNote[k]) return; seenNote[k] = 1;
+      var lateOn = showLate(v, v.today || String(l.taken_at || '').slice(0, 10));
+      h += '<p class="note" data-owner-note>Owner\u2019s note: ' + e(l.note) + (l.taken_at && lateOn ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
     h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
@@ -136,10 +173,10 @@
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(Due.londonDate(r.at) || String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
-          + [r.item, r.amount, r.note, r.by, HOW[r.how] || '', r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
+          + [r.item, r.amount, r.note, r.by, howLabel(v, r.how, Due.londonDate(r.at) || String(r.at).slice(0, 10)), r.part, r.noTime && showLate(v, Due.londonDate(r.at) || String(r.at).slice(0, 10)) ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
           + r.files.map(function (f) { return '<a href="' + e(f.url) + '" target="_blank" rel="noopener noreferrer" data-record-file title="' + e(f.name) + '">' + e(f.role) + '</a>'; }).join('') + '</div>';
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
-  return { summary: summary, everyWords: everyWords, bySource: bySource, history: history, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
+  return { showLate: showLate, summary: summary, everyWords: everyWords, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
 }));

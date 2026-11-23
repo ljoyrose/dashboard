@@ -121,7 +121,7 @@ test.describe('CD Hub dog card summary', () => {
     const card = page.locator('#rows article.dc');
     await expect(card).toHaveAttribute('data-size', 'small');          // 8.4 kg beats the record's medium
     await expect(card).toHaveAttribute('data-size-from', 'weight');
-    await expect(card.locator('[data-k="size"]')).toHaveText('Toy/Mini');
+    await expect(card.locator('[data-k="size"]')).toHaveText('Small');
     await expect(card.locator('[data-k="size"]')).toHaveAttribute('title', /8\.4 kg on 12 Jan 2026/);
     expect(await card.locator('.ph').evaluate((e) => getComputedStyle(e).borderTopWidth)).toBe('3px');   // the photo has the size-coloured frame (12 Nov)
     await page.evaluate(() => go('dogs/sub-x2'));
@@ -130,6 +130,23 @@ test.describe('CD Hub dog card summary', () => {
     await expect(page.locator('#rows article.dc')).not.toHaveAttribute('data-size', /./);  // no weight: no size (never the record, 12 Nov)
     await expect(page.locator('#rows [data-k="size"]')).toHaveCount(0);
     expect(await page.evaluate(() => roomDogs(['sub-x1', 'sub-x2']).map((d) => d.size))).toEqual(['small', 'medium']);
+  });
+
+  test('size words are the owner\'s size_label rows (newest in force); without them Small / Medium / Large', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status', ['sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire']));
+    put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-x1,Active']));
+    put(w, 'BLD-weight.csv', csv('id,subject_id,performed_on,weight_kg', ['w1,sub-x1,2026-01-12,24.9']));
+    put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
+      'r3,t,size_from_kg.medium,10,2026-01-01,Pretend SOP,,,', 'r4,t,size_from_kg.large,25,2026-01-01,Pretend SOP,,,',
+      'l1,t,size_label.medium,Pretend Old Word,2026-01-01,Pretend SOP,,,', 'l2,t,size_label.medium,Pretend Mid,2026-06-01,Pretend SOP,,,',
+      'l3,t,size_label.medium,Pretend Future,2099-01-01,Pretend SOP,,,']));
+    await HUBS.cdhub.open(page, guard);
+    await page.evaluate(() => go('dogs/sub-x1'));
+    const card = page.locator('#rows article.dc');
+    await expect(card).toHaveAttribute('data-size', 'medium');   // 24.9 kg is medium; 25.0 counts as large (live row)
+    await expect(card.locator('[data-k="size"]')).toHaveText('Pretend Mid');
+    expect(await page.evaluate(() => [sizeName('small'), sizeName('large')])).toEqual(['Small', 'Large']);
   });
 
   test('size: no cut-off rows means no size from weight; a row without a source does not count', async ({ page, guard }) => {
@@ -207,7 +224,7 @@ test('Areas room card: limits as door-sign chips for the current flap mode, the 
   await expect(room.locator('table')).toBeHidden();
   await room.locator('details.allfig summary').click();
   await expect(room.locator('table')).toBeVisible();
-  await expect(room.locator('[data-print-sign="ar-a"]')).toHaveAttribute('href', 'staff/print/');
+  await expect(room.locator('[data-print-sign="ar-a"]')).toHaveAttribute('href', 'staff/print/?sign=ar-a');
 });
 
 test('Areas room card: today\'s temperature line in the round\'s words, the limit from the band rows, and a history link', async ({ page, guard }) => {

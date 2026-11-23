@@ -80,6 +80,8 @@ var TABLES = {
     // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
     // slot sent by the hub) within DUP_WINDOW_MIN of taken_at. Without period_start: same room inside the window.
     dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
+    // 16 Nov 2026: ~31,000 rows; an add reads the last rows in full and only the checked columns of the rest (Sink.gs)
+    fastAppend: true,
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
       if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);   // the 7th column (blank or variance_c)
@@ -1580,7 +1582,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_()).concat(editFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(linksFiles_()).concat(editFiles_()).concat(scoresFiles_());   // code register (Codes.gs): owner page only, behind TABLE_ON_code_register   // dog card saves (Dogcard.gs), each behind its own switch   // inspector link files: written only by the owner's make-link and the visit log
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
@@ -1633,5 +1635,8 @@ var READABLE = {
   // 14 Nov 2026 (ITEMS): the item list and its kinds, read only as far as visibility rows allow (staff phones read items to open an item's tests)
   items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
   item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' },
-  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' }
+  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' },
+  // 22 Nov 2026 (DOGCARD, Lisa: printed dog cards showed an empty Photo box): the files a main-photo link points at,
+  // read only as far as visibility rows allow (owner print rows exist; no staff rows)
+  files:           { file: 'BLD-files.csv',           vis: 'files',           authorCol: 'set_by',      dateCol: 'set_on' }
 };

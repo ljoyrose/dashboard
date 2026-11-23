@@ -38,8 +38,11 @@ var BLDPhotos = (function () {
       var key = String(l.role || '');
       if (key === 'main') { if (on(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
       if (key !== 'gallery') return;
-      if (on(l, day)) gal.push(l);
-      else if (ymd(l.to_date) && ymd(l.to_date) < day) ended.push(l);
+      // Removed from the gallery today (Lisa 16 Nov 2026): a link added today can only end today, so an end reason marks it
+      // ended at once instead of at midnight.
+      var removedToday = ymd(l.to_date) === day && String(l.end_reason || '').trim() !== '';
+      if (on(l, day) && !removedToday) gal.push(l);
+      else if (ymd(l.to_date) && (ymd(l.to_date) < day || removedToday)) ended.push(l);
     });
     gal.sort(function (a, b) {
       var sa = String(a.sort || '').trim(), sb = String(b.sort || '').trim();

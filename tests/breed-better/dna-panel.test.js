@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const Dna = require('../../breed-better/dna-kit.js');
+const Dna = require('../../breed-better/dna-panel.js');
 
 const esc = (s) => String(s).replace(/[&<>"]/g, '');
 /* invented test rows in the live column shape; no real dogs */

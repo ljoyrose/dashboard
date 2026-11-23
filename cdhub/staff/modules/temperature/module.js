@@ -32,6 +32,31 @@
     });
     return readerP;
   }
+  // Keep-photo setting (Lisa 16 Nov 2026): evidence.js is loaded only when the owner's job.temps_keep_photo row exists.
+  var evidenceP = null;
+  function loadEvidence() {
+    if (window.BLDTempEvidence) return Promise.resolve(window.BLDTempEvidence);
+    if (!evidenceP) evidenceP = new Promise(function (ok) {
+      var s = document.createElement('script'); s.src = BASE + 'evidence.js';
+      s.onload = function () { ok(window.BLDTempEvidence || null); }; s.onerror = function () { evidenceP = null; ok(null); };
+      document.head.appendChild(s);
+    });
+    return evidenceP;
+  }
+  // Readings import (Lisa 22 Nov 2026): readings-import.js is loaded only when the owner opens it.
+  var importP = null;
+  function loadImport() {
+    if (window.BLDTempImport) return Promise.resolve(window.BLDTempImport);
+    if (!importP) importP = new Promise(function (ok) {
+      var s = document.createElement('script'); s.src = BASE + 'readings-import.js';
+      s.onload = function () { ok(window.BLDTempImport || null); }; s.onerror = function () { importP = null; ok(null); };
+      document.head.appendChild(s);
+    });
+    return importP;
+  }
+  function keepRule(rules) {
+    return (rules || []).some(function (r) { return r && String(r.rule_key || '').trim() === 'job.temps_keep_photo'; });
+  }
 
   /* ------------------------------------------------------------------ small helpers */
   function h(tag, attrs, kids) {
@@ -114,9 +139,13 @@
     var mine = (items || []).filter(function (a) { return a.id === r.area_id; });
     return mine.length === 1 ? itemKey(mine[0]) : String(r.area_id);
   }
+  /* The slot a period_start names, as London day + hour. The page sends "2026-11-17T12:00:00+00:00"; the save script
+     reads the cell back as shown, "2026-11-17 12:00" (17 Nov 2026: since readings are saved as real dates the two never
+     matched as text, so every saved reading still showed Due). Both start with the same London day and hour. */
+  function slotId(s) { s = String(s || ''); return /^\d{4}-\d{2}-\d{2}[T ]\d{2}/.test(s) ? s.slice(0, 10) + ' ' + s.slice(11, 13) : s; }
   function doneFor(rows, items, periodStart) {
-    var done = {};
-    (rows || []).forEach(function (r) { if (String(r.period_start || '') === periodStart) done[readingKey(r, items)] = r; });   // the row itself: the card shows its numbers
+    var done = {}, want = slotId(periodStart);
+    (rows || []).forEach(function (r) { if (slotId(r.period_start) === want) done[readingKey(r, items)] = r; });   // the row itself: the card shows its numbers
     return done;
   }
   /* The round is the thermometer rows (BLD-thermometer: name, area_id), never a coded list: a room with no
@@ -191,13 +220,29 @@
     // this room's row first, then the narrowest age, then the later from_date (two rows in force: the newer wins)
     fits.sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || (num(b.age_from_days) || 0) - (num(a.age_from_days) || 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); });
     var f = fits[0];
-    return { min: num(f.min_temp), max: num(f.max_temp), label: f.band || '', id: f.id || '' };
+    // Temps A (Lisa 17 Nov 2026): the room itself is judged on the open-ended (adult) row; a puppy row (with an upper
+    // age) is for the bed spot. Shared rule: staff/lib/temp-judge.js.
+    var adult = bands.filter(function (b) { return (!b.area_id || b.area_id === areaId) && num(b.age_to_days) === null && num(b.min_temp) !== null && num(b.max_temp) !== null; })
+      .sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); })[0];
+    var puppy = num(f.age_to_days) !== null && !!adult && adult !== f;
+    return { min: num(f.min_temp), max: num(f.max_temp), label: f.band || '', id: f.id || '', puppy: puppy,
+      adult: adult ? { min: num(adult.min_temp), max: num(adult.max_temp) } : null };
   }
-  function breach(lim, mn, mx) {
+  /* '' | 'low' (below the limit) | 'warm' (over the limit: cooling action) | 'spotlow' | 'spothigh' (bed spot outside the
+     puppy row). Every one asks "What was done?"; only low, spotlow and spothigh are outside the limit. */
+  function breach(lim, mn, mx, sp) {
     if (!lim || lim.min == null) return '';
+    var J = window.BLDTempJudge;
+    if (J) {
+      var k = J.judge({ min: mn, max: mx, spot: sp }, { min: lim.min, max: lim.max }, lim.adult, lim.puppy);
+      return k === 'cold' ? 'low' : k === 'warm' ? 'warm' : k === 'spotcold' ? 'spotlow' : k === 'spothot' ? 'spothigh' : '';
+    }
     if (mn !== null && mn < lim.min) return 'low';
-    if (mx !== null && mx > lim.max) return 'high';
+    if (mx !== null && mx > lim.max) return 'warm';
     return '';
+  }
+  function breachWords(b) {
+    return b === 'low' ? 'Below the limit.' : b === 'warm' ? 'Over the limit: what cooling was done?' : b === 'spotlow' ? 'Bed spot below the puppy limit.' : b === 'spothigh' ? 'Bed spot above the puppy limit.' : '';
   }
 
   /* ------------------------------------------------------------------ live camera reader */
@@ -268,8 +313,14 @@
    * a reading outside the limit in an empty room is flagged "Room empty" and never counted as non-compliant, so no
    * "What was done" is asked. Staff only (area_reading), never guests.
    */
+  /* who saved it and when, from the save reply (Lisa's demo, 18 Nov 2026: "shows who did it and when"): " · Grace · 09:14" */
+  function whoWhen(r) {
+    var at = r && r.at ? new Date(r.at) : null, t = '';
+    if (at && !isNaN(at.getTime())) t = at.toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
+    return (r && r.who ? ' · ' + r.who : '') + (t ? ' · ' + t : '');
+  }
   function entry(host, o) {
-    var stopCam = null, cam = null;   // cam = {max, min} as the camera read them
+    var stopCam = null, cam = null, stopEv = null;   // cam = {max, min} as the camera read them; stopEv = the keep-photo camera
     var slot = o.slot || slotNow(), past = !!slot.past, table = o.table || 'area_reading', lim = o.limit || {};
     host.textContent = '';
     host.appendChild(h('h2', { text: o.area.label }));
@@ -282,7 +333,9 @@
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
     // An earlier reading comes from paper, a photo or an app (e.g. Govee): the thermometer no longer shows that day's numbers.
-    if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn, typeBtn]));
+    // Demo 18 Nov 2026 (Lisa: "temperatures ... one tap each"): the MAX and MIN boxes are open at once, so a reading is one
+    // entry and one Save; the camera stays as a choice, and "Type it" is no longer needed.
+    if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
     if (table === 'area_reading') {
       host.appendChild(h('label', { class: 'tg-empty' }, [emptyIn, h('span', { text: 'Room empty' })]));
@@ -298,20 +351,21 @@
     function field(label, ph) { return h('input', { class: 'inp', inputmode: 'decimal', autocomplete: 'off', placeholder: ph || '00.0', 'aria-label': label }); }
     var maxIn = field('MAX'), minIn = field('MIN'), spotIn = field('Bed spot', 'optional');
     var noteIn = h('input', { class: 'inp', type: 'text', maxlength: '500', 'aria-label': 'What was done', placeholder: 'What was done?' });
-    var noteRow = h('label', { class: 'tg-f', hidden: true }, [h('span', { text: 'Outside the limit. What was done?' }), noteIn]);
+    var noteRow = h('label', { class: 'tg-f', hidden: true }, [h('span', { text: 'What was done?' }), noteIn]);
     var checkMsg = say(''), msg = say('');
     var saveBtn = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: send });
     var form = h('div', { hidden: true }, [
       h('div', { class: 'tg-pair' }, [h('label', { class: 'tg-f' }, [h('span', { text: 'MAX' }), maxIn]), h('label', { class: 'tg-f' }, [h('span', { text: 'MIN' }), minIn])]),
-      h('details', { class: 'tg-spot' }, [h('summary', { text: 'Bed spot reading (optional)' }), spotIn]),
+      // Temps A: with puppies under four weeks the bed spot is what the puppy limit is about, so it is open and asked for
+      h('details', { class: 'tg-spot', open: !!lim.puppy }, [h('summary', { text: lim.puppy ? 'Bed spot reading (puppies under 4 weeks: ' + lim.min.toFixed(1) + '–' + lim.max.toFixed(1) + ' C)' : 'Bed spot reading (optional)' }), spotIn]),
       checkMsg, noteRow, saveBtn, msg
     ]);
     host.appendChild(form);
-    if (past) form.hidden = false;
-    [maxIn, minIn].forEach(function (i) { i.addEventListener('input', check); });
+    form.hidden = false;
+    [maxIn, minIn, spotIn].forEach(function (i) { i.addEventListener('input', check); });
     var requestId = null, anyway = null, none = false;   // none: Room empty with no temperatures (set by send)
 
-    function stopNow() { if (stopCam) { stopCam(); stopCam = null; } }
+    function stopNow() { if (stopCam) { stopCam(); stopCam = null; } if (stopEv) { stopEv(); stopEv = null; } }
     function startCam() {
       stopNow(); setMsg(camMsg, 'Starting camera...');
       loadReader().then(function (R) {
@@ -327,13 +381,13 @@
     }
     function check() {
       requestId = null;
-      var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx));
+      var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx), num(oneDp(spotIn.value)));
       var pe = (window.BLDTempPair && mx && mn) ? window.BLDTempPair.error(mn, mx) : '';
       noteRow.hidden = !b;
       [minIn, maxIn].forEach(function (i) { i.classList.toggle('swap', !!pe); });
       if ((maxIn.value && !mx) || (minIn.value && !mn)) setMsg(checkMsg, 'One decimal place, e.g. 18.5', 'bad');
       else if (pe) setMsg(checkMsg, pe, 'bad');
-      else if (b) setMsg(checkMsg, (b === 'low' ? 'Below' : 'Above') + ' the limit.', 'bad');
+      else if (b) setMsg(checkMsg, breachWords(b), b === 'warm' ? 'warn' : 'bad');
       else setMsg(checkMsg, '');
     }
     function send() {
@@ -342,7 +396,7 @@
       if (!none && (!mx || !mn)) { setMsg(msg, empty ? 'Type MAX and MIN, or leave both blank.' : 'Type MAX and MIN, one decimal place.', 'bad'); return; }
       if (sp === null) { setMsg(msg, 'Bed spot: one decimal place, or leave it empty.', 'bad'); return; }
       if (!none && window.BLDTempPair && window.BLDTempPair.swapped(mn, mx)) { setMsg(msg, window.BLDTempPair.message, 'bad'); return; }
-      var b = empty ? null : breach(lim, num(mn), num(mx));
+      var b = empty ? null : breach(lim, num(mn), num(mx), sp ? num(sp) : null);
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
       if (o.area.thermometerId && table === 'area_reading') f.thermometer_id = o.area.thermometerId;
@@ -361,7 +415,9 @@
     function go(f) {
       if (anyway) { anyway.remove(); anyway = null; }
       saveBtn.disabled = true; setMsg(msg, 'Saving...');
-      o.save.submit(table, f, { requestId: requestId }).then(function (r) {
+      // 20 Nov 2026 (OV12, STAFF PR 731): while saves queue on this device the line says "Waiting, 2 ahead", then "Saving...".
+      var onTurn = function (n) { var D = window.BLDDone; setMsg(msg, D && D.turn ? D.turn(n) : 'Saving...'); };
+      o.save.submit(table, f, { requestId: requestId, onTurn: onTurn }).then(function (r) {
         saveBtn.disabled = false;
         if (!r.ok && r.fields && r.fields.confirm_unusual && f.confirm_unusual !== 'yes') {
           var why = Object.keys(r.fields).filter(function (k) { return k !== 'confirm_unusual'; }).map(function (k) { return r.fields[k]; }).join(' ');
@@ -380,10 +436,20 @@
         form.hidden = true; camBox.textContent = ''; camMsg.textContent = '';
         // Lisa 12 Nov 2026: the item shows its tick as soon as the save reply is OK, even if CLR pressed / Done is never tapped
         if (o.onSaved) o.onSaved(f);
+        var clrHint = past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' });
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
-          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') }),
-          past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' })
+          h('div', { class: 'nm', text: '✓ ' + (r.status === 'queued' ? 'Sent' : 'Saved') + whoWhen(r) }), clrHint
         ]));
+        // Keep a photo with the reading only while the owner's dated setting is on (evidence.js). A queued reading
+        // has no record id yet, so no photo is offered for it.
+        var evBox = h('div'); host.appendChild(evBox);
+        if (table === 'area_reading' && !none && r.id && r.status !== 'queued' && keepRule(o.rules)) {
+          loadEvidence().then(function (E) {
+            if (!E || !E.on(o.rules, slot.date)) return;
+            if (clrHint) clrHint.textContent = 'Take the photo first, then press CLR on the thermometer.';
+            stopEv = E.offer(evBox, { save: o.save, readingId: r.id, day: slot.date, areaLabel: o.area.label, past: past });
+          });
+        }
         host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(f); } }));
       });
     }
@@ -406,7 +472,7 @@
     var list = h('div'), msg = say('');
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Earlier reading' }));
-    host.appendChild(h('p', { class: 'sub', text: 'A reading for a past morning or afternoon: from paper, a photo or an app.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'A reading for a past morning or afternoon: from paper, a photo or an app.' }));
     host.appendChild(h('div', { class: 'tg-row' }, [day, half]));
     host.appendChild(msg); host.appendChild(list);
     day.addEventListener('change', show); half.addEventListener('change', show);
@@ -423,7 +489,7 @@
         var k = itemKey(a);
         cards.appendChild(h('button', { class: 'card go' + (done[k] ? ' tg-done' : ''), type: 'button', onclick: function () {
           var box = h('div'); list.textContent = ''; list.appendChild(box);
-          o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot,
+          o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot, rules: o.rules,
             dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length,
             limit: limitFor(a.id, o.bands, (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }), slot.date),
             onSaved: function () { (o.readings = o.readings || []).push({ area_id: a.id, thermometer_id: a.thermometerId || '', period_start: slot.periodStart }); },
@@ -451,7 +517,7 @@
       host.textContent = '';
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
-      stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
+      stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest, rules: o.guest ? [] : o.rules,
         dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onSaved: function (f) { if (!o.guest) { var g = {}; Object.keys(f || {}).forEach(function (k) { if (k !== 'confirm_unusual') g[k] = f[k]; }); g._saved_at = new Date().toISOString(); (o.done = o.done || {})[itemKey(a)] = g; } }, onDone: function () { list(); } });
     }
     /* Each card says Due, the reading ("12.0–15.0"), Outside, or Room empty (OVERSEER 5, 12 Nov 2026). */
@@ -461,7 +527,7 @@
       var mn = num(d.min_c), mx = num(d.max_c), empty = String(d.room_empty || '').toLowerCase() === 'yes';
       if (mn === null && mx === null) return { text: empty ? 'Room empty' : 'Done' };
       var range = (mn === null ? '–' : mn.toFixed(1)) + '–' + (mx === null ? '–' : mx.toFixed(1));
-      var out = !!breach(limit(a.id), mn, mx);
+      var bk = breach(limit(a.id), mn, mx, num(d.spot_c)), out = !!bk && bk !== 'warm';
       return { text: (out ? 'Outside ' : '') + range + (empty ? ' · Room empty' : ''), out: out && !empty };
     }
     function list() {
@@ -538,7 +604,7 @@
   function importer(host, c, areas) {
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Sensor back-up import' }));
-    host.appendChild(h('p', { class: 'sub', text: 'Govee CSV export. Kept as back-up beside the thermometer readings, never instead of them. One row per day: lowest and highest.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Govee CSV export. Kept as back-up beside the thermometer readings, never instead of them. One row per day: lowest and highest.' }));
     // One choice per room (no thermometer list): a sensor row is saved against the room, so the value must be a room id.
     // (It named a thermometer list this function is not given, and the screen stopped at its title.)
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, []).map(function (x) { return h('option', { value: x.value, text: x.text }); })));
@@ -581,6 +647,67 @@
     }
   }
 
+  /* ------------------------------------------------------------------ readings import (owner) */
+  /* Lisa 22 Nov 2026: paper or spreadsheet readings into the temperature list. Check every row, show it, save only on
+     the press, one row at a time as the round saves (readings-import.js has the rules). */
+  function readingsImport(host, c, areas, thermos, readings) {
+    host.textContent = '';
+    host.appendChild(h('h2', { text: 'Import readings' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Readings from paper or a spreadsheet: one row per room, thermometer and slot. Columns: date, room, thermometer, slot (overnight or day), min, max, room_empty (yes or blank), note. Every row is checked first; nothing is saved until you press Import.' }));
+    var msg = say(''), out = h('div'), row = h('div', { class: 'tg-row' });
+    host.appendChild(row); host.appendChild(msg); host.appendChild(out);
+    loadImport().then(function (I) {
+      if (!I) { setMsg(msg, 'The import could not load. Check the connection and try again.', 'bad'); return; }
+      var p = londonParts(), base = { today: p.date, nowHour: p.hour, areas: areas, thermos: thermos, readings: readings, londonIso: londonIso };
+      var inUse = areas.filter(function (a) { return !a.retired; });
+      row.appendChild(h('a', { class: 'btn quiet', download: 'temperature-readings.csv', 'data-timp-template': '',
+        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(I.template({ today: p.date, areas: inUse, thermos: thermos })), text: 'Download a starter file' }));
+      var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'Readings file', 'data-timp-file': '' });
+      row.appendChild(file);
+      file.addEventListener('change', function () {
+        out.textContent = ''; setMsg(msg, '');
+        var f = file.files && file.files[0]; if (!f) return;
+        if (f.size > 5 * 1024 * 1024) { setMsg(msg, 'That file is too big (5 MB at most).', 'bad'); return; }
+        f.text().then(function (t) { show(I, I.parse(base, t)); });
+      });
+    });
+    function show(I, rows) {
+      out.textContent = '';
+      if (!rows.length) { setMsg(msg, 'No rows found in that file.', 'warn'); return; }
+      var ready = rows.filter(function (x) { return x.ok; });
+      out.appendChild(h('p', { 'data-timp-count': '', text: ready.length + ' of ' + rows.length + ' rows ready to import' + (ready.length < rows.length ? '; the others show the reason and will not be saved.' : '.') + ' Each is saved as typed; its entry time shows it was entered later.' }));
+      var tb = h('tbody');
+      rows.forEach(function (x) {
+        var status = x.ok ? (x.warn || (x.past ? 'ready (older than 7 days)' : 'ready')) : x.why;
+        tb.appendChild(h('tr', { 'data-ok': x.ok ? '1' : '0', class: x.ok ? '' : 'tg-br' }, [x.line, x.iso ? dayWords(x.iso) : x.date, x.roomCode || x.room, x.thermoName || x.thermometer,
+          x.hh ? (x.hh === '00' ? 'Overnight' : 'Day') : x.slot, x.empty && x.minC === '' ? 'Room empty' : (x.min + ' / ' + x.max), status].map(function (v) { return h('td', { text: String(v == null ? '' : v) }); })));
+      });
+      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Row', 'Date', 'Room', 'Thermometer', 'Slot', 'Low / high', ''].map(function (x) { return h('th', { text: x }); }))]), tb]));
+      if (ready.length) out.appendChild(h('button', { class: 'btn', type: 'button', 'data-timp-go': '', text: 'Import ' + ready.length + ' row' + (ready.length === 1 ? '' : 's'), onclick: function (e) { saveAll(I, ready, e.target); } }));
+    }
+    function saveAll(I, ready, btn) {
+      var b = c.save.banner('area_reading');
+      if (!b.canSave) { setMsg(msg, b.text, 'warn'); return; }
+      btn.disabled = true;
+      var i = 0, okN = 0, dup = 0, fails = [];
+      (function next() {
+        if (i >= ready.length) {
+          setMsg(msg, 'Imported ' + okN + ' of ' + ready.length + '.' + (dup ? ' ' + dup + ' already there.' : '') + (fails.length ? ' Not saved: ' + fails.join('; ') + '.' : ''), fails.length ? 'warn' : 'good');
+          msg.setAttribute('data-timp-done', '');
+          return;
+        }
+        var x = ready[i];
+        setMsg(msg, 'Saving ' + (i + 1) + ' of ' + ready.length + '...');
+        c.save.submit('area_reading', I.fields(x), { requestId: I.requestId(x) }).then(function (r) {
+          if (r && r.ok) { okN++; readings.push({ area_id: x.areaId, thermometer_id: x.thermoId, period_start: x.periodStart }); }
+          else if (r && r.code === 'DUPLICATE') dup++;
+          else fails.push('row ' + x.line + ' (' + ((r && r.message) || 'no answer') + ')');
+          i++; next();
+        });
+      }());
+    }
+  }
+
   /* ------------------------------------------------------------------ year report (the inspector's annualised record) */
   /* Report choices: one per room; a room with two or more thermometers also gets one per thermometer, by name
      ("H5/6 · H5"), value "areaId|thermometerId". The room choice keeps every reading in the room. */
@@ -598,7 +725,7 @@
   function report(host, c, areas, bands, thermos, links) {
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Report' }));
-    host.appendChild(h('p', { class: 'sub', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
     var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (o) { return h('option', { value: o.value, text: o.text }); })));
     var y = Number(londonParts().date.slice(0, 4)), year = h('select', { class: 'inp', 'aria-label': 'Year' }, [y, y - 1, y - 2].map(function (v) { return h('option', { value: String(v), text: String(v) }); }));
     var msg = say(''), out = h('div', { class: 'tg-report' });
@@ -745,12 +872,19 @@
     css();
     var h0 = c.h || h, stop = null;
     host.textContent = 'Loading...';
+    /* 22 Nov 2026: the round and Earlier need only recent readings. Asking for the last 31 days lets the save script read
+       just its newest rows instead of all ~31,000 (minutes on "Loading..."). Older days: the save still refuses a repeat. */
+    function recentReadings() {
+      var d = new Date(Date.parse(c.today() + 'T12:00:00Z') - 31 * 86400000).toISOString().slice(0, 10);
+      return c.save.read('area_reading', { from: d }).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
+        .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
+    }
     c.addTable('sensor_reading', { label: 'Sensor back-up', file: 'BLD-sensor_reading.csv', fields: {
       area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' }, day: { type: 'date', required: true, label: 'Day' },
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('temperature_band'), recentReadings(), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
@@ -761,18 +895,20 @@
       var areas = d.raw && d.raw.area && d.raw.area.length ? areaRows(d.raw.area, req, slotNow().date)
         : d.areas.map(function (a) { return { id: a.id, code: a.label, label: a.label, sort: a.sort }; });
       var bands = v[1].ok ? v[1].rows : [];
+      var rules = v[5] && v[5].ok ? v[5].rows : [];   // owner rule rows staff may read (job.*): job.temps_keep_photo
       var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
       // Who may open Report or Import is an owner setting (permission keys temps.year_report,
       // temps.sensor_import), read through can(). Until BLD-permission is served, can() allows owner codes only.
-      var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import');
+      var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import'), mayReadings = can(c, 'temps.reading_import');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back();
-            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
+            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), rules: rules, setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
           mayReport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }, [h0('span', { class: 'ic', html: ICON.page }), 'Report']) : null,
-          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null
+          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null,
+          mayReadings ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); readingsImport(sub, c, areas, v[3].ok ? v[3].rows : [], (v[2].ok ? v[2].rows : []).slice()); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import readings']) : null
         ].filter(Boolean));
       }
       var sub = h('div');
@@ -781,7 +917,7 @@
         host.textContent = ''; sub = h('div'); host.appendChild(sub);
         if (!v[1].ok) sub.appendChild(say('Room limits are not loaded, so no limit is checked: ' + (v[1].message || ''), 'warn'));
         var inner = h('div'); sub.appendChild(inner);
-        stop = rooms(inner, { save: c.save, areas: round, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true });
+        stop = rooms(inner, { save: c.save, areas: round, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true, rules: rules });
       }
       start();
     });
