@@ -130,7 +130,8 @@ test('Import: Cancel clears the file with nothing saved; Stop during an import l
   await page.evaluate(() => window.__release());
   await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 1 of 3. Stopped: the other 2 were not sent.');
   expect(await page.evaluate(() => window.__sent.length)).toBe(1);
-// Lisa 23 Nov 2026 (phone screenshot): "Make it clearer between part done (orange) and missed (red)". Missed is a red
+});
+// Lisa 23 Nov 2026 (phone screenshot: "Make it clearer between part done (orange) and missed (red)". Missed is a red
 // frame with a small cross, part done an orange frame on a light orange fill; the key shows all three the same way.
 test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark', async ({ page, guard }) => {
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
