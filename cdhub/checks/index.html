@@ -29,6 +29,7 @@
 <script src="../../auth.js"></script>
 <script src="../staff/lib/bld-save.js"></script>
 <script src="../staff/lib/done-state.js"></script>
+<script src="../staff/lib/outbox-line.js"></script>
 <script src="../staff/lib/needs.js"></script>
 <script src="../staff/lib/occupancy.js"></script>
 <script src="checks.js"></script>
@@ -36,6 +37,7 @@
   // Uses what The Board already keeps on this phone: the save address and this person's code. ?t=feeding opens that check.
   (function () {
     var save = BLDSave.create(), type = new URLSearchParams(location.search).get('t') || '';
+    if (window.BLDOutboxLine) BLDOutboxLine.mount(save, document.querySelector('main.screen'));   // never lose an entry (20 Nov 2026)
     var gate = document.getElementById('gate'), note = document.getElementById('note'), device = '';
     function open() {
       gate.hidden = true; note.textContent = '';

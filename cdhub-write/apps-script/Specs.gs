@@ -1674,5 +1674,8 @@ var READABLE = {
   // 14 Nov 2026 (ITEMS): the item list and its kinds, read only as far as visibility rows allow (staff phones read items to open an item's tests)
   items:           { file: 'BLD-items.csv',           vis: 'items',           authorCol: 'created_by',  dateCol: 'created_at' },
   item_kinds:      { file: 'BLD-item_kinds.csv',      vis: 'item_kinds',      authorCol: 'set_by',      dateCol: 'set_on' },
-  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' }
+  links:           { file: 'BLD-links.csv',           vis: 'links',           authorCol: 'set_by',      dateCol: 'set_on' },
+  // 22 Nov 2026 (DOGCARD, Lisa: printed dog cards showed an empty Photo box): the files a main-photo link points at,
+  // read only as far as visibility rows allow (owner print rows exist; no staff rows)
+  files:           { file: 'BLD-files.csv',           vis: 'files',           authorCol: 'set_by',      dateCol: 'set_on' }
 };

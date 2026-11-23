@@ -180,7 +180,7 @@
         if (r.ok) { reset(); result.textContent = (r.status === 'queued' || typeof BLDDone === 'undefined' ? r.message : BLDDone.by(r)) + ' ' + savedWhat(type, entry); return; }
         result.textContent = r.message;
         showErrors(r.fields);
-        if (r.code !== 'NETWORK') requestId = null;
+        if (!r.kept && r.code !== 'NETWORK') requestId = null;
       });
     });
 
