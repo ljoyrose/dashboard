@@ -404,7 +404,9 @@
     function go(f) {
       if (anyway) { anyway.remove(); anyway = null; }
       saveBtn.disabled = true; setMsg(msg, 'Saving...');
-      o.save.submit(table, f, { requestId: requestId }).then(function (r) {
+      // 20 Nov 2026 (OV12, STAFF PR 731): while saves queue on this device the line says "Waiting, 2 ahead", then "Saving...".
+      var onTurn = function (n) { var D = window.BLDDone; setMsg(msg, D && D.turn ? D.turn(n) : 'Saving...'); };
+      o.save.submit(table, f, { requestId: requestId, onTurn: onTurn }).then(function (r) {
         saveBtn.disabled = false;
         if (!r.ok && r.fields && r.fields.confirm_unusual && f.confirm_unusual !== 'yes') {
           var why = Object.keys(r.fields).filter(function (k) { return k !== 'confirm_unusual'; }).map(function (k) { return r.fields[k]; }).join(' ');

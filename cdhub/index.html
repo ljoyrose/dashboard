@@ -3632,7 +3632,7 @@ function pageAreas(){
         return '<option value="'+m+'"'+(cur===m?' selected':'')+'>'
           +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
     +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
-    +'<a class="cb" href="staff/print/" target="_blank" rel="noopener" data-print-sign="'+esc(a.id)+'">Print sign</a></div>'+jobsHist({area_id:a.id});
+    +'<a class="cb" href="staff/print/?sign='+encodeURIComponent(a.id)+'" target="_blank" rel="noopener" data-print-sign="'+esc(a.id)+'">Print sign</a></div>'+jobsHist({area_id:a.id});
 
    {
     var modes = cur ? [cur] : ['free','limited'], bands=bandsFor(a.id);
@@ -4678,7 +4678,7 @@ function compTempsHtml(){
  var word={cold:'too cold',hot:'too hot',swap:'max lower than min',unread:'not a number'};
  var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(x.from&&x.from.length?'<span class="mut" data-from> \u2014 from '+esc(x.from.join(', '))+'</span>':'')+(extra||'')+'</li>'; };
  if(!c.win.set) return compFold('compTemps','temps','Room temperatures','<p class="mut" data-window="unset" id="tempsUnset"><span class="pill w">not set</span> Days Compliance looks back \u00b7 <a href="#/compliance" data-change-window="compliance.look_back_days">set it</a>. Readings are not checked here until it is set.</p>'
-  +'<p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
+  +'<p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a> \u00b7 <a href="./history.html#report">Month report (PDF)</a></p>');
  return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set&&c.win.src?' ('+esc(c.win.src)+')':'')+' \u00b7 <a href="#/compliance" data-change-window="compliance.look_back_days">change</a>. A reading in a room marked empty is flagged but never counted.</p>'
   +'<ul class="ctemps">'
   +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'
@@ -4686,7 +4686,7 @@ function compTempsHtml(){
   +'<li data-k="bad"><span class="pill no">'+c.bad.length+'</span> out of range'+(c.bad.length?'<ul class="ctl">'+c.bad.map(function(x){ return li(x); }).join('')+'</ul>':'')+'</li>'
   +'<li data-k="miss"><span class="pill no">'+c.miss.length+'</span> missing'+(c.on?'':' <span class="mut">(the thermometer list is not switched on yet)</span>')
    +(c.miss.length?'<ul class="ctl">'+c.miss.map(function(x){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' \u2014 '+esc(x.name)+', no reading</li>'; }).join('')+'</ul>':'')+'</li>'
-  +'</ul><p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
+  +'</ul><p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a> \u00b7 <a href="./history.html#report">Month report (PDF)</a></p>');
 }
 /* Medicines register (priority 2, 21 Nov 2026): print or CSV of one month's medicines for an inspector. Read only.
    meds-register.js loads on the first press, so the page is no heavier until it is used. */
@@ -4725,6 +4725,38 @@ function saveBlob(b,name){ var a=document.createElement('a'); a.href=URL.createO
 var JCAL={ym:''};
 if(typeof BLDJobCal!=='undefined'){ (function(){ var st=document.createElement('style'); st.textContent=BLDJobCal.CSS; document.head.appendChild(st); })(); }
 function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+/* Import past daily records (Lisa 22 Nov 2026, "A"): choose a spreadsheet, every row is checked and shown, then one
+   press saves the ready rows one at a time, each marked imported. Nothing is saved before that press. */
+document.addEventListener('click',function(ev){
+ var t=ev.target.closest&&ev.target.closest('[data-jcal-import]'); if(!t) return;
+ var box=document.querySelector('[data-jcal-imp]'); if(!box) return;
+ var open=box.hidden; box.hidden=!open; t.setAttribute('aria-expanded',open?'true':'false');
+ if(open&&!box.innerHTML) box.innerHTML=BLDJobCal.importPanel(jobsV());
+});
+document.addEventListener('change',function(ev){
+ var inp=ev.target.closest&&ev.target.closest('[data-jcal-file]'); if(!inp||!inp.files||!inp.files[0]) return;
+ var rd=new FileReader(), out=document.querySelector('[data-jcal-preview]');
+ rd.onload=function(){ JCAL.rows=BLDJobCal.parseImport(jobsV(),String(rd.result||'')); if(out) out.innerHTML=BLDJobCal.previewHtml(jobsV(),JCAL.rows); };
+ rd.readAsText(inp.files[0]);
+});
+document.addEventListener('click',async function(ev){
+ var b=ev.target.closest&&ev.target.closest('[data-jcal-import-go]'); if(!b||b.disabled) return;
+ var v=jobsV(), ready=(JCAL.rows||[]).filter(function(x){ return x.ok; }), msg=document.querySelector('[data-jcal-imp-msg]'), done=0, bad=[];
+ b.disabled=true;
+ for(var i=0;i<ready.length;i++){
+  var x=ready[i], f=BLDJobCal.importFields(v,x); if(!f){ bad.push(x.line); continue; }
+  if(msg) msg.textContent='Saving '+(i+1)+' of '+ready.length+'…';
+  var r=await sinkSend({table:'check_log',action:'add_site',fields:f});
+  if(r&&r.ok){ done++; var res=r.result||{}, ids=f.dog_ids?f.dog_ids.split('|'):[''], rows=T['BLD-check_log.csv']=T['BLD-check_log.csv']||[];
+   ids.forEach(function(d,k){ rows.push({id:(res.ids&&res.ids[k])||((res.id||'imp')+'-'+k),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''}); });
+  } else bad.push(x.line+' ('+sinkMsg(r||{},'').replace(/^Not saved: /,'')+')');
+ }
+ JCAL.rows=null;
+ var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
+ var m2=document.createElement('p'); m2.className='msg'+(bad.length?' bad':''); m2.setAttribute('data-jcal-imp-done','');
+ m2.textContent='Imported '+done+' of '+ready.length+'.'+(bad.length?' Not saved, row '+bad.join(', row ')+'.':'');
+ var w2=document.getElementById('jobCals'); if(w2) w2.appendChild(m2);
+});
 document.addEventListener('click',async function(ev){
  var m=ev.target.closest&&ev.target.closest('[data-jcal-month]');
  if(m){ JCAL.ym=m.getAttribute('data-jcal-month'); var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml(); return; }
@@ -5426,7 +5458,11 @@ DashKit.search.register(function(q){
   return out;
  },function(){ return out; });
 });
-function followHash(){ if(LOAD.state==='ok'){ go((location.hash||('#/'+startView())).replace('#/',''),false); focusView(); } }
+/* Lisa 20 Nov 2026: #m/temperature (the staff Temps address, also used from Admin) opened Main here. On CD Hub it opens
+   the temperatures month report instead. */
+function tempsReportHash(){ if(/^#\/?m\/temperature\b/.test(location.hash||'')){ location.replace('./history.html#report'); return true; } return false; }
+tempsReportHash();
+function followHash(){ if(tempsReportHash()) return; if(LOAD.state==='ok'){ go((location.hash||('#/'+startView())).replace('#/',''),false); focusView(); } }
 try{ history.scrollRestoration='manual'; }catch(e){}
 /* a plain link (#/...) also gets a Back step from the browser: note how far down this page was first */
 document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a[href^="#/"]'); if(!a) return;
