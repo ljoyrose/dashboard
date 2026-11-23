@@ -684,6 +684,40 @@ test('check types starting round. belong to The round and never show as jobs, no
   await expect(page.getByLabel('Job').locator('option[value="round.presence"]')).toHaveCount(0);
 });
 
+// 22 Nov 2026 (Lisa: "when you enter with entered after ensure there is a photo option so we can add the diary"):
+// an Earlier save offers the diary page; a chosen photo is stored once and linked to the record as evidence.
+test('Earlier: after the save, "Diary page" offers a photo, kept with the record through the save script', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  const ears = page.locator('[data-job="ears"]');
+  const yesterday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date(Date.now() - 86400000));
+  await page.getByRole('button', { name: 'Earlier: Ears' }).click();
+  await ears.getByLabel('Day done').fill(yesterday);
+  await ears.getByRole('button', { name: 'Done: Ears' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  const box = page.locator('[data-diary-photo] [data-evidence="check_log"]');
+  await expect(box).toContainText('Diary page: Ears');
+  await expect(box.getByRole('button', { name: 'Choose photo' })).toBeVisible();
+  await expect(box.getByRole('button', { name: 'Skip' })).toBeVisible();
+  // a 2x2 PNG stands in for the diary page
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR42mP8z8Dwn4EIwDiqEAD0uQP9G1cGfAAAAABJRU5ErkJggg==', 'base64');
+  await box.locator('input[type=file]').setInputFiles({ name: 'diary.png', mimeType: 'image/png', buffer: png });
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent[1]).toMatchObject({ action: 'file_add', fields: { kind: 'photo', mime: 'image/jpeg', name: 'diary-page.jpg' } });
+  expect(sent[2]).toMatchObject({ action: 'link_add', fields: { from_table: 'check_log', from_id: 'clg-1', role: 'evidence', to_table: 'files', to_id: 'clg-2' } });
+  await expect(box).toContainText('Photo kept with the record');
+});
+
+test('a job done today (not Earlier) offers no diary photo', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await page.locator('[data-group="Grooming"]').click();
+  await page.getByRole('button', { name: 'Done: Nails' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await expect(page.locator('[data-diary-photo] [data-evidence]')).toHaveCount(0);
+});
+
 // Lisa 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
 test('a whole-site dog job: the Done N dogs button by the ticks saves the ticked dogs and the card says N of M dogs @regression', async ({ page }) => {
   const sent = await setup(page);
