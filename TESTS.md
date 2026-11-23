@@ -233,8 +233,9 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 
 ## When does it run?
 
-- **Every time a change is saved** (every "push") to GitHub.
-- **Every Monday about 06:17 UTC.**
+- **On every pull request**, and again each time a change is pushed to it (a newer push cancels the older run).
+- **On every push to main**, as the gate of "Publish site (after tests)": nothing is published unless it passes.
+- **Every night about 03:17 UTC**, unless main has had no new commit for 26 hours.
 - **Whenever you press the button:** GitHub > the **Actions** tab > **Dashboard tests** > **Run workflow**.
 
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
@@ -387,6 +388,8 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 15 Nov 2026 | CD Hub: each page ended in a "Next: X →" button that guessed where you wanted to go, so reaching a section's other views took several taps | "chips at the top of a section reach each" |
 | 15 Nov 2026 | CD Hub Back left the app or landed at the top of the list instead of where you were, and detail pages had no visible way back | "into a record and back: the phone Back and" |
 | 15 Nov 2026 | Caught after merge (PR 522 live retest, 13 Nov): The round's "Saving on this device" panel said off with an empty code box although the kept code saved fine (it never read the kept code); and the manifest was fetched without the Cloudflare sign-in cookie, so Android could only make a shortcut | "after a code is accepted, The round panel says on and masks the code @regression", "closing and reopening the browser keeps saving on: the panel says on and a save asks for no code @regression" (persistent browser profile; tests/mocked/cdhub-staff-code-save.spec.js) and the manifest check in tests/mocked/pwa-and-keys.spec.js |
+| 22 Nov 2026 | Lisa, live staff Jobs: a multi-dog job (Health check: all dogs) showed its ticks but no button to save them, so the card stayed Due | "a whole-site dog job: the Done N dogs button by the ticks saves the ticked dogs and the card says N of M dogs @regression" (tests/mocked/staff-jobs.spec.js) |
+| 22 Nov 2026 | Lisa, live staff Jobs: "Bedding washed" (As needed) saved but showed no tick, so a second Yes was refused as a repeat with only a red line | "an as-needed job done today stays on the site list with its tick when the screen opens again @regression", "an as-needed job refused as a repeat shows the tick, not only a red line @regression" (tests/mocked/staff-jobs.spec.js) |
 | 16 Nov 2026 | Lisa 15 Nov: Assocs, Table map, Litters, Vet and Enquiries were still on the live menus after she asked for them hidden (PR 472 never landed) | "with no rows, Assocs, Table map, Litters, Vet and Enquiries are off every menu and their addresses open Main @regression" (tests/mocked/cdhub-hidden-views.spec.js) |
 | 16 Nov 2026 | Live check (Chrome, 390px): the Records chip row scrolled sideways, hiding The round, SOPs and Temps | "phone: every Records chip is on screen at the top, no sideways scroll @regression" (tests/mocked/cdhub-chips-wrap.spec.js) |
 | 13 Nov 2026 | CD Hub print on A4: The round printed bars, menus and buttons and split cabins across 6 pages; Dogs split cards; kennel cards printed a blank first page, clipped the QR at 4 per A4 and wasted a third of the sheet at 2 per A4; a device in dark mode printed pale text | "the round prints as a two-column round sheet", "the Dogs page prints two whole cards a row", "kennel cards print whole, nothing clipped", "room cards print two a sheet, each whole, QR at least 50 mm (Lisa 18 Nov 2026)" and "the round sheet and kennel cards print dark text" (tests/mocked/cdhub-print-a4.spec.js) |
