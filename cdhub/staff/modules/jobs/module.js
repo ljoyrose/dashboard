@@ -280,6 +280,8 @@
           if (!r.ok) {
             var fe = r.fields && Object.keys(r.fields)[0], q = fe && (state.form || []).filter(function (x) { return 'values.' + x.field.field_key === fe; })[0];
             panelMsg.textContent = '';   // said once, on the card
+            /* Overseer 22 Nov 2026: a repeat means the first save landed (a slow reply, or a second tap), so show the tick, not only a red line */
+            if (r.code === 'DUPLICATE' && !paper) { state.rid = null; repeatTick(job, t, entry); return; }
             BLDDone.fail(state.card, r.code === 'DUPLICATE' ? (paper ? 'Not saved: this job was saved in the last 30 minutes. Try again later.' : 'Already saved a moment ago, so not saved twice. To add to it, use Note.')
               : 'Not saved: ' + (fe ? (q ? q.field.label + ': ' : '') + r.fields[fe] : (r.message || 'try again.')));
             if (r.code !== 'NETWORK') state.rid = null; return;
@@ -310,6 +312,21 @@
             fileName: 'diary-page.jpg', source: 'Diary page, ' + job.label, what: ids.length === 1 ? 'the record' : 'the ' + ids.length + ' records' });
         });
       }
+      /* a save refused as a repeat: the card ticks from today's line (or, with none read yet, from this tap) and says why nothing new was saved */
+      function repeatTick(job, t, entry) {
+        var dogs = entry.dog_ids ? entry.dog_ids.split('|') : [];
+        var has = todays(job.type_key).some(function (l) { return l.outcome !== 'not_done' && l.outcome !== 'note' && l.outcome !== 'part_done' && (dogs.length ? dogs.indexOf(l.subject_id) >= 0 : here(l)); });
+        if (!has) {
+          var line = Object.assign({}, entry, { taken_at: new Date().toISOString(), taken_by: '', _noId: true });
+          delete line.dog_ids;
+          logs = logs.concat(dogs.length ? dogs.map(function (dog, i) { return Object.assign({}, line, { id: 'dup-' + job.type_key + '-' + i, subject_id: dog }); }) : [Object.assign(line, { id: 'dup-' + job.type_key })]);
+        }
+        kept[job.type_key] = true;
+        draw();
+        var card = list.querySelector('[data-job="' + job.type_key + '"] .done-line');
+        if (card) { var n = document.createElement('span'); n.className = 'done-note'; n.textContent = 'Already saved a moment ago, so not saved twice. To add to it, use Note.'; card.appendChild(n); }
+      }
+
       /* one form question from a check_field row: text, number, date, yes or no, or a choice */
       function question(f, changed) {
         var label = f.label + (String(f.required).toLowerCase() === 'true' ? '' : ' (optional)'), el;
@@ -344,11 +361,19 @@
           var did = doneToday(t.type_key), dogs = BLDDue.dogsFor(t, target).slice().sort(function (x, y) { return String(labelOf[x.id]).localeCompare(String(labelOf[y.id])); });
           state.ticks = dogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, onchange: function () { state.rid = null; } }); });
           var all = h('button', { class: 'btn quiet job-all', type: 'button', text: 'Select all', onclick: function () {
-            state.ticks.forEach(function (b, i) { if (!did[dogs[i].id]) b.checked = true; }); state.rid = null;
+            state.ticks.forEach(function (b, i) { if (!did[dogs[i].id]) b.checked = true; }); state.rid = null; if (state.countTicks) state.countTicks();
           } });
           roomList = h('div', { class: 'job-dogs' }, (dogs.length > 1 ? [all] : []).concat(dogs.map(function (x, i) { return dogRow(state.ticks[i], labelOf[x.id], did[x.id]); })));
           state.dogIds = dogs.map(function (x) { return x.id; });
           if (site) { panel.insertBefore(roomList, panel.firstChild); roomList = null; }
+        }
+        /* Lisa 22 Nov 2026: a multi-dog job had no button by its ticks, so the ticked dogs were never saved. "Done: N dogs" saves them. */
+        if (state.ticks && state.ticks.length > 1) {
+          var tickBtn = h('button', { class: 'btn job-ticks-done', type: 'button', 'data-ticks-done': '1', onclick: function () { send(job, t, done, inputs, panelMsg, state); } });
+          var count = function () { var n = state.ticks.filter(function (x) { return x.checked; }).length; tickBtn.textContent = 'Done: ' + n + (n === 1 ? ' dog' : ' dogs'); tickBtn.disabled = !n; };
+          state.ticks.forEach(function (b) { b.addEventListener('change', count); });
+          var dogBox = roomList || panel.querySelector('.job-dogs');
+          dogBox.appendChild(tickBtn); state.countTicks = count; count();
         }
         /* Note (Lisa 13 Nov): not always a problem, just an explanation. On a job not done today it saves it as done, with the note.
            On a job already done today it waits for the save script's note record (outcome note + note_for_id). */
@@ -568,7 +593,7 @@
           jobs.filter(function (j) { return j.group === group; }).forEach(function (j) { list.appendChild(jobCard(j)); });
           return;
         }
-        var shown = site && !more ? jobs.filter(function (j) { return isDue(j) || kept[j.type_key]; }) : jobs, rest = jobs.length - shown.length, seen = {};
+        var shown = site && !more ? jobs.filter(function (j) { return isDue(j) || kept[j.type_key] || j.last_done === today; }) : jobs, rest = jobs.length - shown.length, seen = {};
         var screens = order.map(function (e, i) { return { e: e, i: i }; }).filter(function (x) { return x.e.indexOf('screen:') === 0; });
         function screensBefore(p) { while (screens.length && screens[0].i < p) { var card = screenCard(screens.shift().e); if (card) list.appendChild(card); } }
         shown.forEach(function (j) {

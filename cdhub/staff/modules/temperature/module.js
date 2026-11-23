@@ -43,6 +43,17 @@
     });
     return evidenceP;
   }
+  // Readings import (Lisa 22 Nov 2026): readings-import.js is loaded only when the owner opens it.
+  var importP = null;
+  function loadImport() {
+    if (window.BLDTempImport) return Promise.resolve(window.BLDTempImport);
+    if (!importP) importP = new Promise(function (ok) {
+      var s = document.createElement('script'); s.src = BASE + 'readings-import.js';
+      s.onload = function () { ok(window.BLDTempImport || null); }; s.onerror = function () { importP = null; ok(null); };
+      document.head.appendChild(s);
+    });
+    return importP;
+  }
   function keepRule(rules) {
     return (rules || []).some(function (r) { return r && String(r.rule_key || '').trim() === 'job.temps_keep_photo'; });
   }
@@ -404,7 +415,9 @@
     function go(f) {
       if (anyway) { anyway.remove(); anyway = null; }
       saveBtn.disabled = true; setMsg(msg, 'Saving...');
-      o.save.submit(table, f, { requestId: requestId }).then(function (r) {
+      // 20 Nov 2026 (OV12, STAFF PR 731): while saves queue on this device the line says "Waiting, 2 ahead", then "Saving...".
+      var onTurn = function (n) { var D = window.BLDDone; setMsg(msg, D && D.turn ? D.turn(n) : 'Saving...'); };
+      o.save.submit(table, f, { requestId: requestId, onTurn: onTurn }).then(function (r) {
         saveBtn.disabled = false;
         if (!r.ok && r.fields && r.fields.confirm_unusual && f.confirm_unusual !== 'yes') {
           var why = Object.keys(r.fields).filter(function (k) { return k !== 'confirm_unusual'; }).map(function (k) { return r.fields[k]; }).join(' ');
@@ -634,6 +647,67 @@
     }
   }
 
+  /* ------------------------------------------------------------------ readings import (owner) */
+  /* Lisa 22 Nov 2026: paper or spreadsheet readings into the temperature list. Check every row, show it, save only on
+     the press, one row at a time as the round saves (readings-import.js has the rules). */
+  function readingsImport(host, c, areas, thermos, readings) {
+    host.textContent = '';
+    host.appendChild(h('h2', { text: 'Import readings' }));
+    host.appendChild(h('p', { class: 'sub help', text: 'Readings from paper or a spreadsheet: one row per room, thermometer and slot. Columns: date, room, thermometer, slot (overnight or day), min, max, room_empty (yes or blank), note. Every row is checked first; nothing is saved until you press Import.' }));
+    var msg = say(''), out = h('div'), row = h('div', { class: 'tg-row' });
+    host.appendChild(row); host.appendChild(msg); host.appendChild(out);
+    loadImport().then(function (I) {
+      if (!I) { setMsg(msg, 'The import could not load. Check the connection and try again.', 'bad'); return; }
+      var p = londonParts(), base = { today: p.date, nowHour: p.hour, areas: areas, thermos: thermos, readings: readings, londonIso: londonIso };
+      var inUse = areas.filter(function (a) { return !a.retired; });
+      row.appendChild(h('a', { class: 'btn quiet', download: 'temperature-readings.csv', 'data-timp-template': '',
+        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(I.template({ today: p.date, areas: inUse, thermos: thermos })), text: 'Download a starter file' }));
+      var file = h('input', { class: 'inp', type: 'file', accept: '.csv,text/csv', 'aria-label': 'Readings file', 'data-timp-file': '' });
+      row.appendChild(file);
+      file.addEventListener('change', function () {
+        out.textContent = ''; setMsg(msg, '');
+        var f = file.files && file.files[0]; if (!f) return;
+        if (f.size > 5 * 1024 * 1024) { setMsg(msg, 'That file is too big (5 MB at most).', 'bad'); return; }
+        f.text().then(function (t) { show(I, I.parse(base, t)); });
+      });
+    });
+    function show(I, rows) {
+      out.textContent = '';
+      if (!rows.length) { setMsg(msg, 'No rows found in that file.', 'warn'); return; }
+      var ready = rows.filter(function (x) { return x.ok; });
+      out.appendChild(h('p', { 'data-timp-count': '', text: ready.length + ' of ' + rows.length + ' rows ready to import' + (ready.length < rows.length ? '; the others show the reason and will not be saved.' : '.') + ' Each is saved as typed; its entry time shows it was entered later.' }));
+      var tb = h('tbody');
+      rows.forEach(function (x) {
+        var status = x.ok ? (x.warn || (x.past ? 'ready (older than 7 days)' : 'ready')) : x.why;
+        tb.appendChild(h('tr', { 'data-ok': x.ok ? '1' : '0', class: x.ok ? '' : 'tg-br' }, [x.line, x.iso ? dayWords(x.iso) : x.date, x.roomCode || x.room, x.thermoName || x.thermometer,
+          x.hh ? (x.hh === '00' ? 'Overnight' : 'Day') : x.slot, x.empty && x.minC === '' ? 'Room empty' : (x.min + ' / ' + x.max), status].map(function (v) { return h('td', { text: String(v == null ? '' : v) }); })));
+      });
+      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Row', 'Date', 'Room', 'Thermometer', 'Slot', 'Low / high', ''].map(function (x) { return h('th', { text: x }); }))]), tb]));
+      if (ready.length) out.appendChild(h('button', { class: 'btn', type: 'button', 'data-timp-go': '', text: 'Import ' + ready.length + ' row' + (ready.length === 1 ? '' : 's'), onclick: function (e) { saveAll(I, ready, e.target); } }));
+    }
+    function saveAll(I, ready, btn) {
+      var b = c.save.banner('area_reading');
+      if (!b.canSave) { setMsg(msg, b.text, 'warn'); return; }
+      btn.disabled = true;
+      var i = 0, okN = 0, dup = 0, fails = [];
+      (function next() {
+        if (i >= ready.length) {
+          setMsg(msg, 'Imported ' + okN + ' of ' + ready.length + '.' + (dup ? ' ' + dup + ' already there.' : '') + (fails.length ? ' Not saved: ' + fails.join('; ') + '.' : ''), fails.length ? 'warn' : 'good');
+          msg.setAttribute('data-timp-done', '');
+          return;
+        }
+        var x = ready[i];
+        setMsg(msg, 'Saving ' + (i + 1) + ' of ' + ready.length + '...');
+        c.save.submit('area_reading', I.fields(x), { requestId: I.requestId(x) }).then(function (r) {
+          if (r && r.ok) { okN++; readings.push({ area_id: x.areaId, thermometer_id: x.thermoId, period_start: x.periodStart }); }
+          else if (r && r.code === 'DUPLICATE') dup++;
+          else fails.push('row ' + x.line + ' (' + ((r && r.message) || 'no answer') + ')');
+          i++; next();
+        });
+      }());
+    }
+  }
+
   /* ------------------------------------------------------------------ year report (the inspector's annualised record) */
   /* Report choices: one per room; a room with two or more thermometers also gets one per thermometer, by name
      ("H5/6 · H5"), value "areaId|thermometerId". The room choice keeps every reading in the room. */
@@ -798,12 +872,19 @@
     css();
     var h0 = c.h || h, stop = null;
     host.textContent = 'Loading...';
+    /* 22 Nov 2026: the round and Earlier need only recent readings. Asking for the last 31 days lets the save script read
+       just its newest rows instead of all ~31,000 (minutes on "Loading..."). Older days: the save still refuses a repeat. */
+    function recentReadings() {
+      var d = new Date(Date.parse(c.today() + 'T12:00:00Z') - 31 * 86400000).toISOString().slice(0, 10);
+      return c.save.read('area_reading', { from: d }).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read('area_reading'); })
+        .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
+    }
     c.addTable('sensor_reading', { label: 'Sensor back-up', file: 'BLD-sensor_reading.csv', fields: {
       area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' }, day: { type: 'date', required: true, label: 'Day' },
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('temperature_band'), recentReadings(), c.readOptional('thermometer'), c.readOptional('area_link'), c.readOptional('breeding_rule')]).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
@@ -820,13 +901,14 @@
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
       // Who may open Report or Import is an owner setting (permission keys temps.year_report,
       // temps.sensor_import), read through can(). Until BLD-permission is served, can() allows owner codes only.
-      var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import');
+      var mayReport = can(c, 'temps.year_report'), mayImport = can(c, 'temps.sensor_import'), mayReadings = can(c, 'temps.reading_import');
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back();
             backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: linked(v[2].ok ? v[2].rows : [], links), rules: rules, setStop: function (f) { stop = f; } }); } }, [h0('span', { class: 'ic', html: ICON.plus }), 'Earlier']),
           mayReport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands, v[3].ok ? v[3].rows : [], links); } }, [h0('span', { class: 'ic', html: ICON.page }), 'Report']) : null,
-          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null
+          mayImport ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import']) : null,
+          mayReadings ? h0('button', { class: 'btn quiet', type: 'button', onclick: function () { if (stop) stop(); stop = null; back(); readingsImport(sub, c, areas, v[3].ok ? v[3].rows : [], (v[2].ok ? v[2].rows : []).slice()); } }, [h0('span', { class: 'ic', html: ICON.upload }), 'Import readings']) : null
         ].filter(Boolean));
       }
       var sub = h('div');
