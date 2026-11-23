@@ -87,6 +87,8 @@
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables',
+      // ?demo=1 on CD Hub reads this folder instead: pretend job records for demos and videos, never licence records.
+      demoFolderId: '1W3axz-_p85ctrn2ZvBYn_Yi8T9-MoaZd',
       readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
       // The save script's /exec address. Left empty on purpose (this site is public): the hub reads it after sign-in from
       // BLD-save-webapp.json in the folder above ({"url": "..."}), so a phone only needs the staff code once.
