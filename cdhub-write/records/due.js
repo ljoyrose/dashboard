@@ -144,7 +144,29 @@
     if (!(n > 0)) n = pick('job.times_per_day');
     return n > 0 ? n : 1;
   }
-  /* opts.rules: the owner's rule rows (optional), for times_per_day */
+  /**
+   * Due by age (Lisa 22 Nov 2026, puppy weights): owner rule row job.by_age.<type_key>, the row in force on `day` (newest
+   * effective_from wins). Its value lists ages in days from birth, split by |: "a-b:n" = every n days from age a to age b,
+   * "a" = once at age a. E.g. "0-6:1|7-27:7|42|70" = daily in week 1, weekly in weeks 2 to 4, at 6 and 10 weeks.
+   * Returns the due dates for a litter born on `born`, oldest first; [] with no row or no birth date.
+   */
+  function ageDates(rules, typeKey, day, born) {
+    born = /^\d{4}-\d{2}-\d{2}/.test(born || '') ? String(born).slice(0, 10) : londonDate(born);
+    if (!born) return [];
+    var best = null, k = 'job.by_age.' + typeKey;
+    (rules || []).forEach(function (r) { if (String(r.rule_key || '').trim() === k && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    if (!best) return [];
+    var ages = {};
+    String(best.value || '').split('|').forEach(function (part) {
+      var m = /^\s*(\d+)\s*(?:-\s*(\d+)\s*:\s*(\d+))?\s*$/.exec(part);
+      if (!m) return;
+      var a = +m[1], b = m[2] == null ? a : +m[2], n = m[3] == null ? 1 : +m[3];
+      if (!(n > 0) || b < a) return;
+      for (var x = a; x <= b; x += n) ages[x] = true;
+    });
+    return Object.keys(ages).map(Number).sort(function (x, y) { return x - y; }).map(function (x) { return addDays(born, x); });
+  }
+  /* opts.rules: the owner's rule rows (optional), for times_per_day and by-age jobs. A litter target may carry born (its birth date) */
   function forTarget(types, logs, target, today, visits, opts) {
     var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
@@ -190,11 +212,21 @@
         doneToday = ids.length ? Math.min.apply(null, ids.map(function (id) { return per[id] || 0; })) : 0;
       }
       if (times > 1 && d && d.date === today && doneToday < times) status = 'today';   // done, but not yet as many times as today needs
+      var ages = target.litter_id && target.born ? ageDates(rules, j.type_key, today, target.born) : [];
+      if (ages.length) {
+        /* due by the litter's age: the latest age date up to today needs a record on or after it */
+        var past = ages.filter(function (x) { return x <= today; }), last = past[past.length - 1], coming = ages.filter(function (x) { return x > today; })[0] || '';
+        every = null;
+        status = !last ? 'ok' : d && d.date >= last ? 'ok' : last === today ? 'today' : 'late';
+        next = status === 'ok' ? coming : last;
+        return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: null, last_done: d ? d.date : '', next_due: next,
+          days_late: status === 'late' ? daysBetween(last, today) : 0, status: status, reset_by: d ? d.by : '', times_per_day: 1, done_today: doneToday, by_age: true };
+      }
       return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: every, last_done: d ? d.date : '',
         next_due: status === 'today' && times > 1 ? today : next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '',
         times_per_day: times, done_today: doneToday };
     });
   }
 
-  return { forTarget: forTarget, timesPerDay: timesPerDay, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

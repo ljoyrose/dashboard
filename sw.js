@@ -1,7 +1,7 @@
 // Phone install support. Keeps ONLY the site's own page files so the dashboard opens fast and opens at all
 // when offline. It never stores Google Drive data, the sign-in token, or anything from another address:
 // Google requests are not touched (no respondWith), so they go straight to the network as before.
-var CACHE = 'ljr-shell-v13'; // v13: CD Hub and the staff page share one kept code and address; switch-off kept as cdhub.save.off. v12: CD Hub dog size from the one helper shared with the print cards. v11: CD Hub panel reads the kept code; manifest sent with the sign-in cookie. v10: Dashboard Tech (More > Tech). v9: CD Hub tab list. v8: SOP category and role on the public index. Bump this when the page files change.
+var CACHE = 'ljr-shell-v14'; // v14: CD Hub demo mode (?demo=1). v13: CD Hub and the staff page share one kept code and address; switch-off kept as cdhub.save.off. v12: CD Hub dog size from the one helper shared with the print cards. v11: CD Hub panel reads the kept code; manifest sent with the sign-in cookie. v10: Dashboard Tech (More > Tech). v9: CD Hub tab list. v8: SOP category and role on the public index. Bump this when the page files change.
 var SHELL = [
   './', 'index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png',

@@ -275,3 +275,29 @@ test('a room job saved per dog: not due in an empty room; times a day counted pe
   j = D.forTarget(types, logs.slice(0, 3), { subject_id: 'd1', everyDog: true, dogArea: 'iso' }, '2026-10-02', null, { rules })[0];
   assert.equal(j.done_today, 2);
 });
+
+test('a litter job due by age (owner row job.by_age.<key>): daily in week 1, weekly to 4 weeks, then at 6 and 10 weeks', () => {
+  const types = [{ id: 'pw', type_key: 'pup_weights', label: 'Puppy weights', target: 'litter', every_days: '', active: 'true', effective_from: '2026-01-01' }];
+  const rules = [{ rule_key: 'job.by_age.pup_weights', value: '0-6:1|7-27:7|42|70', effective_from: '2026-01-01', source: 'Lisa 22 Nov 2026' }];
+  const born = '2026-03-01', t = { litter_id: 'lit1', born };
+  const log = (day) => ({ id: 'w' + day, check_type_id: 'pw', litter_id: 'lit1', outcome: 'ok', taken_at: day + 'T09:00:00Z' });
+  const at = (day, logs) => D.forTarget(types, logs, t, day, null, { rules })[0];
+  assert.equal(at('2026-03-03', []).status, 'today');                                   // day 2: daily
+  assert.equal(at('2026-03-03', [log('2026-03-03')]).next_due, '2026-03-04');
+  assert.deepEqual([at('2026-03-04', [log('2026-03-02')]).status, at('2026-03-04', [log('2026-03-02')]).days_late], ['today', 0]);
+  const wk2 = at('2026-03-10', [log('2026-03-08')]);                                    // weekly from day 7: done day 7, next day 14
+  assert.deepEqual([wk2.status, wk2.next_due], ['ok', '2026-03-15']);
+  const gap = at('2026-04-01', [log('2026-03-22')]);                                    // after 4 weeks nothing until 6 weeks
+  assert.deepEqual([gap.status, gap.next_due], ['ok', '2026-04-12']);
+  const missed = at('2026-04-14', [log('2026-03-22')]);                                 // 6-week weight missed
+  assert.deepEqual([missed.status, missed.days_late], ['late', 2]);
+  assert.equal(at('2026-06-01', [log('2026-05-10')]).status, 'ok');                     // after 10 weeks: done
+  assert.equal(D.forTarget(types, [], { litter_id: 'lit1' }, '2026-03-03', null, { rules })[0].status, 'as_needed');   // no birth date: as before
+  assert.equal(D.forTarget(types, [], t, '2026-03-03', null, {})[0].status, 'as_needed');                              // no row: as before
+});
+
+test('the by-age row in force on the day wins, and bad parts of it are skipped', () => {
+  const rules = [{ rule_key: 'job.by_age.x', value: '0', effective_from: '2026-01-01' }, { rule_key: 'job.by_age.x', value: '3|junk|5-1:1|7-9:0', effective_from: '2026-03-01' }];
+  assert.deepEqual(D.ageDates(rules, 'x', '2026-02-01', '2026-01-10'), ['2026-01-10']);
+  assert.deepEqual(D.ageDates(rules, 'x', '2026-03-02', '2026-03-01T10:00:00Z'), ['2026-03-04']);
+});
