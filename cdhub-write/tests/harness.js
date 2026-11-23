@@ -14,6 +14,7 @@ const fx = require('./fixtures');
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
 const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Visit', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'QrTag', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Visit', 'Delegate', 'Web', 'Admin'];
 const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 

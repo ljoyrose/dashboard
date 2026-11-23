@@ -414,7 +414,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(one).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
     await expect(one.locator('[data-k="sex"] dd')).toHaveText('Female');
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
-    await expect(one.locator('[data-k="size"]')).toHaveText('Size: Medium');
+    await expect(one.locator('[data-k="size"] .lab')).toHaveText('Size');
+    await expect(one.locator('[data-k="size"] b')).toHaveText('Medium');   // Lisa's v4 card: a Size tile
     await expect(one.locator('[data-k="size"]')).toHaveAttribute('data-size', 'medium');
     await expect(page.locator('.sheet')).not.toContainText('Room C');
     await page.getByRole('button', { name: 'Room cards' }).click();

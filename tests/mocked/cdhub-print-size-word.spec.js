@@ -71,7 +71,7 @@ test.describe('Print card size word from weight and the dated size rows', () => 
       n1: ['medium', 'Medium', 'green'], n2: ['large', 'Large', 'blue'] };
     for (const [id, [key, word, colour]] of Object.entries(want)) {
       await expect(card(id).locator('[data-k="size"]')).toHaveAttribute('data-size', key);
-      await expect(card(id).locator('[data-k="size"]')).toHaveText('Size: ' + word);
+      await expect(card(id).locator('[data-k="size"] b')).toHaveText(word);
       await expect(card(id)).toHaveAttribute('style', new RegExp('--c:var\\(--sz-' + colour + ', ' + colour + '\\)'));
     }
     await expect(card('n3').locator('[data-k="size"]')).toHaveCount(0);   // no weight and no size typed: no size, never a guess
