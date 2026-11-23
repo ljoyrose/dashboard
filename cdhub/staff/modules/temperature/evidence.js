@@ -91,9 +91,9 @@
     var file = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', hidden: true });
     var chooseBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Choose photo', onclick: function () { file.click(); } });
     var skipBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Skip', onclick: function () { stop(); box.remove(); } });
-    var box = h('div', { class: 'card tg-evidence' }, [
-      h('div', { class: 'nm', text: 'Photo for the records' }),
-      h('p', { class: 'sub', text: o.past ? 'Add the photo this reading came from.' : 'Photograph the thermometer screen before pressing CLR.' }),
+    var box = h('div', { class: 'card tg-evidence', 'data-evidence': o.fromTable || 'area_reading' }, [
+      h('div', { class: 'nm', text: o.title || 'Photo for the records' }),
+      h('p', { class: 'sub', text: o.sub || (o.past ? 'Add the photo this reading came from.' : 'Photograph the thermometer screen before pressing CLR.') }),
       h('div', { class: 'tg-row' }, [o.past ? null : takeBtn, chooseBtn, skipBtn].filter(Boolean)),
       file, camBox, msg
     ]);
@@ -135,17 +135,25 @@
       busy = true; setMsg(msg, 'Keeping photo...');
       [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.disabled = true; });
       var fileReq = o.save.newRequestId(), linkReq = o.save.newRequestId();
-      o.save.act('file_add', { kind: 'photo', mime: 'image/jpeg', data_base64: b64, name: 'thermometer.jpg', taken_on: o.day,
-        source: 'Temperature reading' + (o.areaLabel ? ', ' + o.areaLabel : '') }, fileReq).then(function (r) {
+      // 22 Nov 2026: also a diary page for job records entered Earlier (o.fromTable check_log, o.fromIds = every record
+      // that save made, e.g. one per dog): one stored photo, one evidence link per record, one at a time.
+      var table = o.fromTable || 'area_reading', ids = o.fromIds || [o.readingId], what = o.what || 'the reading';
+      o.save.act('file_add', { kind: 'photo', mime: 'image/jpeg', data_base64: b64, name: o.fileName || 'thermometer.jpg', taken_on: o.day,
+        source: o.source || ('Temperature reading' + (o.areaLabel ? ', ' + o.areaLabel : '')) }, fileReq).then(function (r) {
         if (!r.ok) throw r;
-        return o.save.linkAdd({ from_table: 'area_reading', from_id: o.readingId, role: 'evidence', to_table: 'files', to_id: r.id, from_date: o.day }, linkReq);
+        var fileId = r.id, chain = Promise.resolve({ ok: true });
+        ids.forEach(function (id, i) {
+          chain = chain.then(function (prev) { if (!prev.ok) throw prev;
+            return o.save.linkAdd({ from_table: table, from_id: id, role: 'evidence', to_table: 'files', to_id: fileId, from_date: o.day }, i ? o.save.newRequestId() : linkReq); });
+        });
+        return chain;
       }).then(function (r) {
         if (!r.ok) throw r;
         busy = false; [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.hidden = true; });
-        setMsg(msg, '✓ Photo kept with the reading.', 'good');
+        setMsg(msg, '✓ Photo kept with ' + what + '.', 'good');
       }).catch(function (r) {
         busy = false; [takeBtn, chooseBtn, skipBtn].forEach(function (b) { b.disabled = false; });
-        setMsg(msg, 'The reading is saved, but the photo was not kept: ' + ((r && r.message) || 'something went wrong') + ' Try again or skip.', 'bad');
+        setMsg(msg, (what === 'the reading' ? 'The reading is' : 'The record is') + ' saved, but the photo was not kept: ' + ((r && r.message) || 'something went wrong') + ' Try again or skip.', 'bad');
       });
     }
     return stop;
