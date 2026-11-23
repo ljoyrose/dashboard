@@ -687,6 +687,41 @@ h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
 }());
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;
+/* DEMO (Lisa 22 Nov 2026: "a demo copy ... for video"). ?demo=1 on this owner page reads ONLY the demo folder (pretend
+   records), never the live folder or the save script; nothing is sent anywhere (every non-GET request and every save-script
+   or Sheets request is refused here); no device copy; a DEMO banner on screen and in print; exports carry DEMO. Only this page
+   reads ?demo: the inspector, guest and staff pages never do, so an inspector link cannot open a demo. */
+var DEMO=/(?:^|&)demo=1(?:&|$)/.test(String(location.search||'').replace(/^\?/,'')) && !!window.DASH_CONFIG.cdhub.demoFolderId;
+var DEMO_WORDS='DEMO: pretend data, not real records';
+if(DEMO){
+ FOLDER=window.DASH_CONFIG.cdhub.demoFolderId; window.CD_DEMO=true;
+ (function(){
+  var realFetch=window.fetch.bind(window);
+  window.fetch=function(u,o){
+   var m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase(), url=String((u&&u.url)||u||'');
+   if((m!=='GET'&&m!=='HEAD')||/script\.google(usercontent)?\.com|sheets\.googleapis\.com/.test(url)) return Promise.reject(new Error('Demo: nothing is sent.'));
+   return realFetch(u,o);
+  };
+  var st=document.createElement('style');
+  st.textContent='.demo-banner{position:sticky;top:0;z-index:9999;background:var(--ljr-2-solid);color:var(--ljr-2-on);font-weight:600;text-align:center;padding:8px 16px;font-size:var(--fs-head)}'
+   +'@media print{.demo-banner{position:fixed;top:0;left:0;right:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{padding-top:40px}}';
+  document.head.appendChild(st);
+  var b=document.createElement('div'); b.className='demo-banner'; b.setAttribute('data-demo-banner',''); b.setAttribute('role','status'); b.textContent=DEMO_WORDS;
+  document.body.insertBefore(b,document.body.firstChild);
+  document.title='DEMO - '+document.title;
+  /* a demo never opens a live page (history, The Board, print cards): real and pretend data never mix in one session.
+     Every link to another CD Hub page becomes a plain note, and a click that still reaches one is stopped. */
+  var here=location.pathname, base=here.replace(/[^\/]*$/,'');
+  function livePage(a){ var u; try{ u=new URL(a.getAttribute('href')||'',location.href); }catch(e){ return false; }
+   return u.origin===location.origin && u.pathname.indexOf(base)===0 && u.pathname!==here && u.pathname!==base && u.pathname!==base+'index.html'; }
+  function swap(root){ (root.querySelectorAll?root.querySelectorAll('a[href]'):[]).forEach(function(a){ if(!livePage(a)) return;
+   var n=document.createElement('span'); n.className='mut'; n.setAttribute('data-demo-live-note',''); n.textContent='Live page: open from the normal hub'; a.replaceWith(n); }); }
+  swap(document);
+  new MutationObserver(function(ms){ ms.forEach(function(m){ m.addedNodes.forEach(function(x){ if(x.nodeType===1){ if(x.matches&&x.matches('a[href]')) swap(x.parentNode||document); else swap(x); } }); }); })
+   .observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('click',function(ev){ var a=ev.target.closest&&ev.target.closest('a[href]'); if(a&&livePage(a)){ ev.preventDefault(); ev.stopPropagation(); } },true);
+ }());
+}
 var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
@@ -1064,11 +1099,11 @@ function copyOpen(){ return new Promise(function(res,rej){ if(!window.indexedDB)
   var r; try{ r=indexedDB.open(COPY_DB,1); }catch(e){ rej(e); return; }
   r.onupgradeneeded=function(){ r.result.createObjectStore('copy'); };
   r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); }; r.onblocked=function(){ rej(new Error('blocked')); }; }); }
-function copyGet(){ return copyOpen().then(function(db){ return new Promise(function(res){
+function copyGet(){ if(DEMO) return Promise.resolve(null); return copyOpen().then(function(db){ return new Promise(function(res){
   try{ var q=db.transaction('copy','readonly').objectStore('copy').get('last');
     q.onsuccess=function(){ db.close(); res(q.result||null); }; q.onerror=function(){ db.close(); res(null); }; }catch(e){ db.close(); res(null); } }); })
   .catch(function(){ return null; }); }
-function copyPut(v){ var w=copyWiped; return copyOpen().then(function(db){ return new Promise(function(res){
+function copyPut(v){ if(DEMO) return Promise.resolve(); var w=copyWiped; return copyOpen().then(function(db){ return new Promise(function(res){
   if(w!==copyWiped){ db.close(); res(); return; }
   try{ var tx=db.transaction('copy','readwrite'); tx.objectStore('copy').put(v,'last');
     tx.oncomplete=function(){ db.close(); if(w!==copyWiped) copyWipe(); res(); }; tx.onerror=tx.onabort=function(){ db.close(); res(); }; }catch(e){ db.close(); res(); } }); })
@@ -1112,7 +1147,7 @@ function refused(e){ return !!(e&&(e.status===401||e.status===403||e.status===40
 /* Lisa 18 Nov 2026: a room marked empty (BLD-requirement room.empty, dated) shows Room empty on every screen, with its
    temperatures hidden. Only this page's copy is changed; the readings stay in the records. */
 function hideEmptyReadings(){ if(T['BLD-area_reading.csv']&&BLDOccupancy.hideEmpty) T['BLD-area_reading.csv']=BLDOccupancy.hideEmpty(T['BLD-area_reading.csv'],T['BLD-requirement.csv']||[]); }
-function showTables(){ BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; hideEmptyReadings(); foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
+function showTables(){ linkEndsApply(); BLDDates.setLocale(T['BLD-locale.csv']); DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF; hideEmptyReadings(); foldAreaReadings(T['BLD-area_reading.csv']||[]); build(); }
 async function load(){
   var ticket=++bootTicket;
   function live(){ return ticket===bootTicket; }
@@ -2805,22 +2840,47 @@ function galleryHtml(d,ph){
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
   +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
   +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates,true); }).join('')+'</ul></details>':'')
-  +'<p class="mut" data-gal-msg role="status"></p></div></details>';
+  +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
 var GAL_REMOVED='Removed from gallery';
+var GAL_MSG={};   /* each dog's last gallery message, drawn back in on a redraw so a read landing late cannot wipe it */
+/* Lisa 22 Nov 2026 ("pressing cross on image doesn't remove it; closes Photos and then photo still there"): the page shows
+   this phone's copy first and reads the live tables behind it, so a read that started before the save could land after it
+   and put the old link row back (and redraw the list with Photos shut). A saved removal is now kept on this phone and laid
+   over every read until a live read shows the row ended, then forgotten (two days at most). Only this page's copy changes. */
+var LINK_ENDS_KEY='cdhub.link.ends';
+function linkEndsGet(){ try{ var o=JSON.parse(localStorage.getItem(LINK_ENDS_KEY)||'{}'); return o&&typeof o==='object'?o:{}; }catch(e){ return {}; } }
+function linkEndsSet(o){ try{ if(Object.keys(o).length) localStorage.setItem(LINK_ENDS_KEY,JSON.stringify(o)); else localStorage.removeItem(LINK_ENDS_KEY); }catch(e){ /* private window: this visit still shows it */ } }
+var LINK_ENDS_MEM={};   /* the same, for a phone that will not keep it */
+function linkEndKeep(id,to,reason){ var o=linkEndsGet(); o[id]={to_date:to,end_reason:reason,at:Date.now()}; LINK_ENDS_MEM[id]=o[id]; linkEndsSet(o); }
+function linkEndsApply(){
+ var o=linkEndsGet(); Object.keys(LINK_ENDS_MEM).forEach(function(k){ if(!o[k]) o[k]=LINK_ENDS_MEM[k]; });
+ var ids=Object.keys(o); if(!ids.length) return;
+ var rows=T['BLD-links.csv']; if(!rows) return;
+ var live=!(LOAD&&LOAD.copy), now=Date.now(), drop=false;
+ ids.forEach(function(id){ var e=o[id], mine=rows.filter(function(l){ return l&&l.id===id; });
+  if(!e||now-(+e.at||0)>2*864e5){ delete o[id]; delete LINK_ENDS_MEM[id]; drop=true; return; }
+  if(live&&mine.length&&mine.every(function(l){ return String(l.to_date||'').trim()&&!l._local; })){ delete o[id]; delete LINK_ENDS_MEM[id]; drop=true; return; }   /* the live rows have it now */
+  mine.forEach(function(l){ if(!String(l.to_date||'').trim()){ l.to_date=e.to_date; l.end_reason=e.end_reason; l._local=1; } });   /* _local: set here, not read */
+ });
+ if(drop) linkEndsSet(o);
+}
 document.addEventListener('click',async function(ev){
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
- b.disabled=true; if(msg) msg.textContent='Saving\u2026';
+ b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  if(b.hasAttribute('data-gal-end')){
   var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
   var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; }
+  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
+     the screen says so instead of "Not saved". */
+  if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
+  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply(); }
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
   j=await sinkAct('link_add',{from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
@@ -2829,7 +2889,11 @@ document.addEventListener('click',async function(ev){
    links.push({id:j.result.id||'',from_table:'subjects',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
  }
  b.disabled=false;
- if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ if(msg) msg.textContent='Not saved: '+((j&&j.message)||'try again.'); return; }
+ /* a read may have redrawn the list while this saved: use the gallery on screen now, not the one tapped */
+ var gNow=dog?document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'):null;
+ if(gNow&&gNow!==g){ g=gNow; msg=g.querySelector('[data-gal-msg]'); }
+ if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); if(g){ g.open=true; GAL_OPEN[dog]=1; } if(msg) msg.textContent=GAL_MSG[dog]; return; }
+ GAL_MSG[dog]='\u2713 Saved';
  var open=g&&g.open; drawDogs();
  var again=document.querySelector('details.gal[data-dog="'+dog+'"]');
  if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
@@ -2905,6 +2969,10 @@ document.addEventListener('click',async function(ev){
  if(document.getElementById('adm-display')){ go('admin',false); var m3=document.querySelector('#adm-display [data-photo-dates-msg]'); if(m3) m3.textContent='\u2713 Saved'; return; }
  drawDogs();
 });
+/* which dogs' Photos are open, so a redraw (a save, or a read landing behind the copy) does not shut them (22 Nov 2026) */
+var GAL_OPEN={};
+document.addEventListener('toggle',function(e){ var el=e.target;
+ if(el&&el.matches&&el.matches('details.gal')&&el.isConnected){ var k=el.getAttribute('data-dog'); if(el.open) GAL_OPEN[k]=1; else delete GAL_OPEN[k]; } },true);
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
@@ -3367,7 +3435,9 @@ function drawDogs(){
   +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
   +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
  if(DOGFOCUS) h='<p class="filt" data-focus="dog">'+(list.length?'One dog.':'Dog not found.')+' <a href="#/dogs">All dogs</a></p>'+h;
- document.getElementById('rows').innerHTML=h;
+ var rowsEl=document.getElementById('rows');
+ rowsEl.innerHTML=h;
+ Array.prototype.forEach.call(rowsEl.querySelectorAll('details.gal'),function(x){ if(GAL_OPEN[x.getAttribute('data-dog')]) x.open=true; });   /* Photos left open stay open through any redraw (22 Nov 2026) */
  bindDogPhotos();
  document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(dogN<list.length?' · Showing '+dogN+' of '+list.length:'');
  fchips('dogs',['fs','fn','fa','fst','fc','ft']);
@@ -4335,6 +4405,7 @@ window.addEventListener('online',function(){ hubFlush(); });
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') hubFlush(); });
 window.addEventListener('load',function(){ hubBoxDraw(); hubRetry(4000); });
 async function sinkSend(body){
+ if(DEMO) return {ok:false,code:'DEMO',message:'Demo: nothing is saved.'};
  var g=await sinkGate();
  if(!g.ok&&g.code==='NO_CODE'){   /* no one signed in (the sign-in ended) and no code given: kept, not lost (22 Nov 2026) */
   body.v=1; body.request_id=body.request_id||sinkRid(); delete body.code; delete body.google_token;
@@ -4840,8 +4911,12 @@ function compTempsHtml(){
    meds-register.js loads on the first press, so the page is no heavier until it is used. */
 /* Every month from the first record to this one is offered, a month with none too, so its nil record can be printed. */
 /* The staff "Medicine given" job (check_type type_key medicine) saves to BLD-check_log: its records count here too. */
+/* A dog's name for the registers: the current list, then the archive (old dogs keep their history). Never an id. */
+function regDog(sid){ var d=(CD._byId||{})[sid]; if(d) return {name:d.name,chip:d.chip};
+ var a=(T['BLD-subject-Archive.csv']||[]).filter(function(r){ return r.id===sid; })[0]; return a&&a.name?{name:a.name,chip:''}:null; }
 function medsRows(){ var med={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(String(t.type_key||'').toLowerCase()==='medicine') med[t.id]=1; });
- return (T['BLD-dispense.csv']||[]).concat((T['BLD-check_log.csv']||[]).filter(function(r){ return med[r.check_type_id]&&!(r.outcome==='note'&&r.note_for_id); }).map(function(r){ return {given_at:r.happened_at||r.taken_at}; })); }
+ var disp=T['BLD-dispense.csv']||[], copied={}; disp.forEach(function(r){ (String(r.note||'').match(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi)||[]).forEach(function(i){ copied[i.toLowerCase()]=1; }); });   /* a dog-card row copied from a job (its note names the job) counts once */
+ return disp.concat((T['BLD-check_log.csv']||[]).filter(function(r){ return med[r.check_type_id]&&!(r.outcome==='note'&&r.note_for_id)&&!copied[String(r.id).toLowerCase()]; }).map(function(r){ return {given_at:r.happened_at||r.taken_at}; })); }
 function compMedsHtml(){
  var rows=medsRows(), ms={}, now=todayISO().slice(0,7); rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.given_at||r.given_on||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
  var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
@@ -4852,7 +4927,7 @@ function compMedsHtml(){
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
 function medsMake(R){ var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build((T['BLD-dispense.csv']||[]).concat(R.fromChecks(T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[])),{month:ym,dog:function(sid){ var d=(CD._byId||{})[sid]; return d?{name:d.name,chip:d.chip}:null; }});
+ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[]),{month:ym,dog:regDog});
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
@@ -4935,6 +5010,43 @@ document.addEventListener('click',async function(ev){
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
+/* Checks register (priority 2, 21 Nov 2026): print or CSV of one month's check records for an inspector. Read only.
+   checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
+   is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
+function compChecksRegHtml(){
+ var rows=(T['BLD-check_log.csv']||[]).filter(function(r){ return !(r.outcome==='note'&&r.note_for_id); }), ms={}, now=todayISO().slice(0,7);
+ rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.happened_at||r.taken_at||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
+ var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
+ while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
+ var types=(T['BLD-check_type.csv']||[]).filter(function(t){ return t.id&&t.label; });
+ return compFold('compChecksReg','checksreg','Checks register','<p class="mut help">One month of check records, for an inspector. Every column is printed; a detail the record does not hold says “not recorded”. A corrected record stays, with its correction on its own line.</p>'
+  +'<div class="frow"><label for="ckrMonth">Month</label> <select id="ckrMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
+  +'<label for="ckrType">Checks</label> <select id="ckrType"><option value="">All checks</option>'+types.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>'; }).join('')+'</select></div>'
+  +'<div class="frow"><button type="button" class="btn" id="ckrPrint">Print</button> <button type="button" class="btn" id="ckrCsv">Download CSV</button></div><p id="ckrMsg" class="mut" aria-live="polite"></p>');
+}
+function ckrLib(){ return window.BLDChecksRegister?Promise.resolve(window.BLDChecksRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='checks-register.js'; s.onload=function(){ ok(window.BLDChecksRegister); }; s.onerror=no; document.head.appendChild(s); }); }
+/* Names only, never ids (Lisa 23 Nov 2026): a dog, room, litter or item that is not on file says so in words. */
+function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ return x.id===r.area_id; })[0], l=r.litter_id&&(CD.litters||[]).filter(function(x){ return x.id===r.litter_id; })[0],
+  it=r.item_id&&(T['BLD-items.csv']||[]).filter(function(x){ return x.id===r.item_id; })[0], d=r.subject_id&&regDog(r.subject_id);
+ return [r.subject_id?(d?d.name:'Dog not on the current list'):'', r.area_id?(a?a.cabin:'Room not on the list'):'', r.litter_id?(l?'Litter '+litName(l):'Litter not on the list'):'',
+  r.item_id?(it&&(it.name||it.item_no)?'Item '+(it.name||it.item_no):'Item not on the list'):''].filter(Boolean).join(', ')||'Whole site'; }
+function ckrMake(R){ var ym=(document.getElementById('ckrMonth')||{}).value||'', ts=document.getElementById('ckrType'), tid=ts?ts.value:'';
+ var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject});
+ return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
+function bindChecksReg(){ var p=document.getElementById('ckrPrint'), c=document.getElementById('ckrCsv'), msg=document.getElementById('ckrMsg'); if(!p||!c) return;
+ var say=function(t){ if(msg) msg.textContent=t; }, n=function(x){ return x.lines.length+' entr'+(x.lines.length===1?'y':'ies'); };
+ ckrLib().catch(function(){});
+ p.addEventListener('click',function(){ ckrLib().then(function(R){
+   if(!document.getElementById('ckrCss')){ var st=document.createElement('style'); st.id='ckrCss'; st.textContent=R.CSS; document.head.appendChild(st); }
+   var x=ckrMake(R), box=document.getElementById('ckrReport'); if(!box){ box=document.createElement('section'); box.id='ckrReport'; document.body.appendChild(box); }
+   box.innerHTML=R.reportHtml(x.head,x.lines); document.body.classList.add('ckr-printing'); say('Printing '+n(x)+'. Choose “Save as PDF” to keep a copy.');
+   window.print(); })
+  .catch(function(){ say('Not printed: the register could not load. Try again.'); }); });
+ c.addEventListener('click',function(){ ckrLib().then(function(R){ var x=ckrMake(R);
+   saveBlob(new Blob([R.toCsv(x.head,x.lines)],{type:'text/csv;charset=utf-8'}),R.fileName(x.ym)); say('Downloaded '+n(x)+'.'); })
+  .catch(function(){ say('Not downloaded: the register could not load. Try again.'); }); });
+}
+window.addEventListener('afterprint',function(){ document.body.classList.remove('ckr-printing'); });
 function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
@@ -4961,7 +5073,7 @@ function pageCompliance(){
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes" data-calm="off">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src&&hideSource(x.src)?' ('+esc(hideSource(x.src))+')':'')+'</span></li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
- h+=compTempsHtml()+compMedsHtml();
+ h+=compTempsHtml()+compMedsHtml()+compChecksRegHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
@@ -5102,6 +5214,7 @@ function bindCompliance(){
  Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  bindRehearsal();
  bindMeds();
+ bindChecksReg();
  var aa=document.getElementById('compAsAt'), at=document.getElementById('compAsAtToday');
  if(aa) aa.addEventListener('change',function(){ var v=aa.value; COMP.asAt=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:''; go('compliance',false); });
  if(at) at.addEventListener('click',function(){ COMP.asAt=''; go('compliance',false); });
