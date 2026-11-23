@@ -335,6 +335,10 @@ function sinkHandleMany_(req, now, nowMs) {
           var spec = sinkSpecFor_(one, who);
           r = act === 'add_site' ? sinkSiteProcess_(spec, one, who, now, nowMs) : sinkProcess_(spec, one, who, now, nowMs);
         }
+        var one = { v: 1, request_id: rid, action: 'add', table: it.table, fields: it.fields && typeof it.fields === 'object' ? it.fields : {} };
+        if (it.values && typeof it.values === 'object') one.values = it.values;   // a check's form answers go with their item (22 Nov 2026)
+        var spec = sinkSpecFor_(one, who);
+        var r = sinkProcess_(spec, one, who, now, nowMs);
         cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
         out[i] = { request_id: rid, ok: true, result: r };
       } catch (e) {
