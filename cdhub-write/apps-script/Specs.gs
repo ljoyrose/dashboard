@@ -497,7 +497,7 @@ var TABLES = {
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
       { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
       { name: 'litter', file: 'BLD-litter.csv', idCol: 'id' },
-      { name: 'check_log_outcome', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'outcome' },   // a note points at a saved record
+      { name: 'check_log_outcome', file: 'BLD-check_log.csv', idCol: 'id', valCol: 'outcome', onlyIfField: 'note_for_id' },   // a note points at a saved record (read only for a note: 22 Nov 2026)
       { name: 'check_type_target', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'target' },
       { name: 'check_type_item_kind', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'item_kind' },
       { name: 'items', file: 'BLD-items.csv', idCol: 'id', valCol: 'kind_key' }                 // 14 Nov 2026 (ITEMS): an item test names the item
