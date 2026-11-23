@@ -65,7 +65,7 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(lines[0], 'product')).toBe(R.NR);
     expect(R.cell(lines[0], 'dose')).toBe(R.NR);
     // a dog no longer on the list keeps its id, and no chip is guessed
-    expect(R.cell(lines[2], 'dog')).toBe('sub-not-on-list (not on the current list)');
+    expect(R.cell(lines[2], 'dog')).toBe('Dog not on the current list');   // no id on paper
     expect(R.cell(lines[2], 'chip')).toBe(R.NR);
   });
 
@@ -197,7 +197,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
     expect(csv).toContain('2026-02-03,not recorded,Test Dog One,900000000000001,Sample Wormer,not recorded,not recorded,1 tablet,Oral,routine,not recorded,not recorded,with food,dog card');
-    expect(csv).toContain('sub-not-on-list (not on the current list)');
+    expect(csv).toContain('Dog not on the current list');
     expect(csv).toContain('2026-02-12,09:30,Test Dog Two,not recorded,Sample Drops,not recorded,not recorded,2 dose,not recorded,not recorded,not recorded,Sample Staff A,,staff job');
     await expect(card.locator('#medsMsg')).toHaveText('Downloaded 4 entries.');
 
@@ -254,5 +254,38 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await page.goto('cdhub/meds-print.html');
     await expect(page.locator('#medsPrintNone')).toContainText('Open this from CD Hub: Compliance, Medicines register, then Print.');
     await expect(page.locator('table')).toHaveCount(0);
+  });
+
+});
+
+// Lisa 23 Nov 2026: no internal codes on paper. A record id looks like clg-20261118-042020-vf20.
+const ID_PATTERN = /\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/i;
+test.describe('Medicines register: no internal codes, nothing counted twice', () => {
+  const disp = [
+    { id: 'dsp-a1', subject_id: 'sub-test-dog-1', given_on: '2026-02-04', product: 'Sample Drops', dose_volume: '2', note: 'from clg-20261118-042020-vf20' },
+    { id: 'dsp-a2', subject_id: 'sub-gone-77', given_on: '2026-02-05', product: 'Sample Wormer', note: 'with food (from chk-9x2k1)' },
+  ];
+  const logs = [
+    { id: 'clg-20261118-042020-vf20', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Sample Drops', amount: '2', outcome: 'ok', happened_at: '2026-02-04T08:00:00Z', taken_by: 'Sample Staff A' },
+    { id: 'clg-20261120-090000-ab12', check_type_id: 'ct-med', subject_id: 'sub-test-dog-2', item: 'Sample Tablet', outcome: 'ok', happened_at: '2026-02-06T08:00:00Z', taken_by: 'visit:lnk-4f9k2a', note: 'see rdg-20261120-01' },
+  ];
+  const types = [{ id: 'ct-med', type_key: 'medicine', amount_unit: 'dose' }];
+
+  test('"from <id>" is dropped, real note text stays; a dose copied to the dog card is printed once', () => {
+    const lines = R.build(R.combine(disp, logs, types), { month: '2026-02', dog });
+    expect(lines.map((l) => l.id)).toEqual(['dsp-a1', 'dsp-a2', 'clg-20261120-090000-ab12']);   // the copied job row is not repeated
+    expect(R.cell(lines[0], 'note')).toBe('');
+    expect(R.cell(lines[0], 'source')).toBe('dog card');
+    expect(R.cell(lines[1], 'note')).toBe('with food');
+    expect(R.cell(lines[1], 'dog')).toBe('Dog not on the current list');
+    expect(R.cell(lines[2], 'given_by')).toBe('Visitor (shared link)');
+    expect(R.cell(lines[2], 'source')).toBe('staff job');
+  });
+
+  test('no id pattern anywhere in the CSV or the print page', () => {
+    const lines = R.build(R.combine(disp, logs, types), { month: '2026-02', dog });
+    const head = { kennel: 'Sample Kennel', month: '2026-02', printed: '23 Nov 2026 10:00' };
+    expect(R.toCsv(head, lines)).not.toMatch(ID_PATTERN);
+    expect(R.toHtml(head, lines).replace(/<[^>]+>/g, ' ')).not.toMatch(ID_PATTERN);
   });
 });
