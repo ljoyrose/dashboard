@@ -24,6 +24,7 @@
   var screen = document.getElementById('screen'), tabs = document.getElementById('tabs');
   var save = BLDSave.create({});
   save.deviceCode = true;
+  if (window.BLDOutboxLine) BLDOutboxLine.mount(save, screen);   // never lose an entry: what this phone still holds to send (20 Nov 2026)
   var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '';
   var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
   var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';

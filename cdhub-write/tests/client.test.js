@@ -127,7 +127,8 @@ test('a network failure is honest and a retry reuses the same request id', async
   srv.state.fail = true;
   const a = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21', max_c: '22' }, { requestId: 'r-fixed-0001' });
   assert.equal(a.code, 'NETWORK');
-  assert.match(a.message, /not confirmed as saved/);
+  assert.equal(a.kept, true);
+  assert.match(a.message, /kept on this phone/);
   assert.equal(a.requestId, 'r-fixed-0001');
   srv.state.fail = false;
   await s.submit('area_reading', { area_id: 'area-t1', min_c: '21', max_c: '22' }, { requestId: 'r-fixed-0001' });
@@ -547,6 +548,25 @@ test('readMany: area, subject and occupancy are required; subject_status may be 
   assert.equal(no.ok, false); assert.match(no.message, /not allowed/);
 });
 
+test('readMany (speed): a wrong code costs one try; the rest go together; the first refusal in list order wins', async () => {
+  const bad = scriptFake({ reads: { area: { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' } } });
+  const s = mkSave(bad); await s.checkStatus(); s.setCode('WRONG');
+  const r = await s.readMany(['area', 'subject', 'occupancy']);
+  assert.equal(r.code, 'BAD_CODE');
+  assert.equal(bad.posts().length, 1);                                            // never one wrong try per list
+  const two = scriptFake({ reads: { subject: { ok: false, code: 'NOT_ALLOWED', message: 'subject no' }, occupancy: { ok: false, code: 'NOT_ALLOWED', message: 'occupancy no' } } });
+  const s2 = mkSave(two); await s2.checkStatus(); s2.setCode('C');
+  assert.equal((await s2.readMany(['area', 'subject', 'occupancy'])).message, 'subject no');
+  let open = 0, most = 0;
+  const srv = scriptFake();
+  const slow = (url, init) => { open += 1; most = Math.max(most, open); return new Promise((res) => setTimeout(res, 5)).then(() => { open -= 1; return srv.f(url, init); }); };
+  const s3 = BLDSave.create({ fetch: slow, localStorage: null, sessionStorage: null, scriptUrl: GOOD_URL }); await s3.checkStatus(); s3.setCode('C');
+  most = 0;
+  const all = await s3.readMany(['area', 'subject', 'occupancy', 'subject_status']);
+  assert.equal(all.ok, true);
+  assert.equal(most, 3);                                                          // after the first, the other three at once
+});
+
 test('banners for the live occupancy list, the daily check log and the still-proposed staff roster', async () => {
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
@@ -706,7 +726,7 @@ domTest('location check: if the daily log is switched off the button says so and
   srv2.st.fail = true;
   restBtn(host).click();
   await new Promise((r) => setTimeout(r, 30));
-  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /not confirmed as saved/);
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /kept on this phone/);
   assert.equal(restBtn(host).disabled, false);
   srv2.st.fail = false;
   restBtn(host).click();
@@ -972,6 +992,95 @@ test('submit passes its place in the line too, and a screen error in onTurn neve
   assert.deepEqual(told, [0]);
 });
 
+// NEVER LOSE AN ENTRY (OV12 20 Nov 2026: most of a temperature round was still waiting its turn when the app closed).
+function memStore() { const m = {}; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; }, m }; }
+test('outbox: every save is kept on the phone the moment it is pressed, without the code, and leaves once saved', async () => {
+  const local = memStore(); let release; const gate = new Promise((r) => { release = r; });
+  const posts = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    posts.push(JSON.parse(init.body)); await gate;
+    return { json: async () => ({ ok: true, result: { id: 'x' } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('SECRETCODE9');
+  const all = Promise.all(['a', 'b', 'c'].map((id) => s.act('link_end', { id })));
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(s.outbox.count(), 3);
+  assert.ok(!local.m['bld.outbox'].includes('SECRETCODE9'), 'the code is never kept');
+  release(); await all;
+  assert.equal(s.outbox.count(), 0);
+  assert.equal(local.m['bld.outbox'], undefined);
+});
+
+test('outbox: saves dropped when the phone sleeps or the app closes are sent when it opens again, with the same request ids', async () => {
+  const local = memStore();
+  const hang = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [], proposed: [] }) };
+    throw new TypeError('Load failed');   // the phone slept: the browser drops every waiting save (20 Nov 2026)
+  };
+  const a = BLDSave.create({ fetch: hang, localStorage: local, sessionStorage: null });
+  a.setScriptUrl(GOOD_URL); a.setCode('ABC');
+  ['r1', 'r2', 'r3'].forEach((id) => a.act('link_end', { id }, 'r-kept-000' + id.slice(1)));
+  await new Promise((r) => setTimeout(r, 5));
+  const posts = [];
+  const ok = async (url, init = {}) => { posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: { id: 'x' } }) }; };
+  const b = BLDSave.create({ fetch: ok, localStorage: local, sessionStorage: null });
+  b.setScriptUrl(GOOD_URL); b.setCode('NEWCODE');
+  assert.equal(b.outbox.count(), 3);
+  assert.equal(await b.outbox.flush(), 0);
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-kept-0001', 'r-kept-0002', 'r-kept-0003']);
+  assert.ok(posts.every((p) => p.code === 'NEWCODE'), 'the code held now is added when sent');
+});
+
+test('outbox: no answer, busy or saving off keeps it; a refusal is listed as not saved; DUPLICATE counts as saved', async () => {
+  const local = memStore();
+  const replies = { r1: { ok: false, code: 'BUSY', message: 'busy' }, r2: { ok: false, code: 'SAVE_OFF', message: 'off' }, r3: { ok: false, code: 'INVALID', message: 'Say which room.' }, r4: { ok: false, code: 'DUPLICATE', message: 'dup' } };
+  const f = async (url, init = {}) => { const b = JSON.parse(init.body); return { json: async () => replies[b.fields.id] }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, busyPauseMs: 0 });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const rs = await Promise.all(['r1', 'r2', 'r3', 'r4'].map((id) => s.act('link_end', { id })));
+  assert.equal(rs[0].kept, true); assert.match(rs[0].message, /kept on this phone/);
+  assert.equal(rs[1].kept, true);
+  assert.equal(rs[2].kept, false); assert.equal(rs[2].message, 'Say which room.');
+  assert.equal(s.outbox.count(), 2);
+  assert.deepEqual(s.outbox.refused().map((x) => x.message), ['Say which room.']);
+  s.outbox.dismissRefused(s.outbox.refused()[0].id);
+  assert.equal(s.outbox.refused().length, 0);
+});
+
+test('outbox: after 5 hours an entry is not sent by itself; the person can send it after checking, or remove it', async () => {
+  const local = memStore();
+  local.setItem('bld.outbox', JSON.stringify([
+    { id: 'r-old-00001', at: new Date(Date.now() - 6 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00001', action: 'link_end', fields: { id: 'a' } } },
+    { id: 'r-old-00002', at: new Date(Date.now() - 6 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00002', action: 'link_end', fields: { id: 'b' } } }
+  ]));
+  const posts = [];
+  const f = async (url, init = {}) => { posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: {} }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  assert.equal(await s.outbox.flush(), 2);
+  assert.equal(posts.length, 0);
+  assert.deepEqual(s.outbox.items().map((x) => x.old), [true, true]);
+  s.outbox.remove('r-old-00002');
+  assert.equal(await s.outbox.flush({ old: true }), 0);
+  assert.deepEqual(posts.map((p) => p.request_id), ['r-old-00001']);
+});
+
+test('outbox: a save still being sent from this page is not sent a second time by "Send now"', async () => {
+  const local = memStore(); let release; const gate = new Promise((r) => { release = r; });
+  const posts = [];
+  const f = async (url, init = {}) => { posts.push(JSON.parse(init.body).request_id); await gate; return { json: async () => ({ ok: true, result: {} }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const p = s.act('link_end', { id: 'a' }, 'r-once-00001');
+  const fl = s.outbox.flush();
+  await new Promise((r) => setTimeout(r, 5));
+  release(); await p; await fl;
+  assert.deepEqual(posts, ['r-once-00001']);
+  assert.equal(s.outbox.count(), 0);
+});
+
 // Lisa 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
 // sent again after a pause, up to 3 times; only then is the person told.
 test('BUSY (someone else saving) is retried with the same request id and then saves', async () => {
@@ -1001,4 +1110,109 @@ test('BUSY that never clears: after 3 retries the person is told, plainly', asyn
   assert.equal(r.ok, false);
   assert.equal(r.code, 'BUSY');
   assert.equal(n, 4);
+});
+
+// SIGN IN AGAIN (Lisa 22 Nov 2026: owner Google sign-in; she enters every reading and maybe only one saves). A Google
+// sign-in lasts about an hour. When it ends mid-round, nothing is lost or refused: every reading stays kept and goes
+// once she signs in again, each saved once.
+test('owner sign-in ends mid-round: every reading is kept, none refused, and all save once after signing in again', async () => {
+  const local = memStore();
+  let token = 'ya29.first-sign-in';
+  const saved = {}, posts = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
+    const b = JSON.parse(init.body); posts.push(b);
+    // the script: the first sign-in has ended on its side once the second reading arrives
+    if (b.google_token !== 'ya29.second-sign-in' && posts.length > 1) return { json: async () => ({ ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.' }) };
+    saved[b.request_id] = (saved[b.request_id] || 0) + 1;
+    return { json: async () => ({ ok: true, result: { status: 'saved', id: 'rdg-' + b.request_id } }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: () => token });
+  s.setScriptUrl(GOOD_URL); await s.checkStatus(); s.setLookups({ area: [{ id: 'area-1' }, { id: 'area-2' }, { id: 'area-3' }, { id: 'area-4' }] });
+  const r1 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' });
+  assert.equal(r1.ok, true, JSON.stringify(r1));
+  // the script turns down the sign-in: kept, never listed as Not saved, and the person is asked to sign in again
+  const r2 = await s.submit('area_reading', { area_id: 'area-2', min_c: '18.5', max_c: '21.5' });
+  assert.equal(r2.ok, false); assert.equal(r2.kept, true); assert.equal(r2.signIn, true); assert.match(r2.message, /sign in again/);
+  assert.equal(s.outbox.refused().length, 0, 'never refused for an ended sign-in');
+  assert.equal(s.outbox.needsSignIn(), true);
+  // it is not sent again with the same sign-in
+  const before = posts.length; await s.outbox.flush(); assert.equal(posts.length, before);
+  // the sign-in ends on the phone too: the next readings are kept without being sent
+  token = '';
+  const r3 = await s.submit('area_reading', { area_id: 'area-3', min_c: '19.0', max_c: '22.0' });
+  const r4 = await s.submit('area_reading', { area_id: 'area-4', min_c: '19.5', max_c: '22.5' });
+  assert.equal(r3.kept, true); assert.equal(r3.signIn, true); assert.equal(r4.kept, true);
+  assert.equal(posts.length, before, 'nothing is sent while no one is signed in');
+  assert.equal(s.outbox.count(), 3);
+  assert.ok(!local.m['bld.outbox'].includes('ya29.'), 'the Google sign-in is never kept');
+  // signed in again: every kept reading goes, each saved exactly once, and the box is empty
+  token = 'ya29.second-sign-in';
+  assert.equal(s.outbox.needsSignIn(), false);
+  assert.equal(await s.outbox.flush(), 0);
+  assert.deepEqual(Object.keys(saved).sort(), [r1.requestId, r2.requestId, r3.requestId, r4.requestId].sort());
+  assert.ok(Object.values(saved).every((n) => n === 1), 'each reading saved once');
+  assert.equal(s.outbox.refused().length, 0);
+});
+
+
+test('owner sign-in ended: with the shared quiet renewal on the page, waiting readings renew it and go by themselves', async () => {
+  const local = memStore(); let tok = ''; const posts = [];
+  global.window = {
+    DashAuth: { valid: () => (tok ? { access_token: tok } : null) },
+    BLDSave: { refreshOwnerToken: async () => { tok = 'ya29.renewed'; return tok; } }
+  };
+  try {
+    const f = async (url, init = {}) => { const b = JSON.parse(init.body); posts.push(b); return { json: async () => ({ ok: true, result: { status: 'saved' } }) }; };
+    const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null });
+    s.setScriptUrl(GOOD_URL);
+    const r = await s.act('link_end', { id: 'a' });
+    assert.equal(r.kept, true); assert.equal(r.signIn, true); assert.equal(posts.length, 0);
+    await s.outbox.flush();   // asks for a quiet renewal, then sends with it
+    for (let i = 0; i < 20 && s.outbox.count(); i++) await new Promise((res) => setTimeout(res, 5));
+    assert.equal(s.outbox.count(), 0);
+    assert.equal(posts.length, 1); assert.equal(posts[0].google_token, 'ya29.renewed'); assert.equal(posts[0].request_id, r.requestId);
+  } finally { delete global.window; }
+});
+
+// OV13 22 Nov 2026: saves took 19-60 s; the first try saved but its answer never came; the resend (same entry) was
+// answered DUPLICATE and the page said "Not saved". A DUPLICATE after a try with no answer means that try saved it.
+test('first try saved but its answer was lost: the resend answered DUPLICATE counts as saved, with nothing left kept', async () => {
+  const local = memStore(); const tries = [];
+  const f = async (url, init = {}) => {
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
+    const b = JSON.parse(init.body); tries.push(b.request_id);
+    if (tries.length === 1) throw new TypeError('Load failed');   // the script saved it, but the answer never reached the phone
+    return { json: async () => ({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.' }) };
+  };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); await s.checkStatus(); s.setLookups({ area: [{ id: 'area-1' }] }); s.setCode('ABC');
+  const r1 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' });
+  assert.equal(r1.kept, true);
+  // the screen keeps the same request id and the person presses Save again
+  const r2 = await s.submit('area_reading', { area_id: 'area-1', min_c: '18.0', max_c: '21.0' }, { requestId: r1.requestId });
+  assert.equal(r2.ok, true, JSON.stringify(r2)); assert.equal(r2.message, 'Saved.');
+  assert.equal(s.outbox.count(), 0); assert.equal(s.outbox.refused().length, 0);
+  assert.deepEqual(tries, [r1.requestId, r1.requestId]);
+});
+
+test('a DUPLICATE for an entry whose tries were all answered is still told as before (a different entry already saved)', async () => {
+  const local = memStore();
+  const f = async (url, init = {}) => ({ json: async () => ({ ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved.' }) });
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const r = await s.act('link_end', { id: 'a' });
+  assert.equal(r.ok, false); assert.equal(r.code, 'DUPLICATE');
+  assert.equal(s.outbox.count(), 0);
+});
+
+test('a kept entry resent after a lost answer and answered DUPLICATE leaves the box as saved, never as Not saved', async () => {
+  const local = memStore(); let n = 0;
+  const f = async (url, init = {}) => { n++; if (n === 1) throw new TypeError('Load failed'); return { json: async () => ({ ok: false, code: 'DUPLICATE', message: 'dup' }) }; };
+  const s = BLDSave.create({ fetch: f, localStorage: local, sessionStorage: null, google: false });
+  s.setScriptUrl(GOOD_URL); s.setCode('ABC');
+  const r = await s.act('link_end', { id: 'a' });
+  assert.equal(r.kept, true);
+  assert.equal(await s.outbox.flush(), 0);
+  assert.equal(s.outbox.refused().length, 0);
 });

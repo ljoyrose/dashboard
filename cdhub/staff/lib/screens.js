@@ -159,7 +159,7 @@
             result.className = 'bs-result bs-bad';
             result.textContent = r.message;
             if (r.fields) showErrors(errs, r.fields);
-            if (r.code !== 'NETWORK') requestId = null;
+            if (!r.kept && r.code !== 'NETWORK') requestId = null;
           }
         });
       });
@@ -217,7 +217,7 @@
       save.submit('staff', fields, { requestId: requestId }).then(function (r) {
         btn.disabled = !save.banner('staff').canSave;
         if (r.ok) { result.className = 'bs-result bs-ok'; result.textContent = r.message + ' (' + r.id + ')'; requestId = null; }
-        else { result.className = 'bs-result bs-bad'; result.textContent = r.message; if (r.fields) showErrors(errs, r.fields); if (r.code !== 'NETWORK') requestId = null; }
+        else { result.className = 'bs-result bs-bad'; result.textContent = r.message; if (r.fields) showErrors(errs, r.fields); if (!r.kept && r.code !== 'NETWORK') requestId = null; }
       });
     });
     [sel, role, emp, started, ended].forEach(function (i) { i.addEventListener('input', function () { requestId = null; }); });
@@ -354,7 +354,7 @@
           } else {
             go.disabled = false; if (offBtn) offBtn.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
             if (r.fields) Object.keys(r.fields).forEach(function (k) { err.textContent += r.fields[k] + ' '; });
-            if (r.code !== 'NETWORK') mrid = null;
+            if (!r.kept && r.code !== 'NETWORK') mrid = null;
           }
         });
       }
@@ -393,7 +393,7 @@
         } else {
           restBtn.disabled = false; restMsg.className = 'bs-result bs-bad';
           restMsg.textContent = r.message + (r.fields ? ' ' + Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' ') : '');
-          if (r.code !== 'NETWORK') crid = null;
+          if (!r.kept && r.code !== 'NETWORK') crid = null;
           refreshButtons();
         }
       });
