@@ -100,3 +100,54 @@ test('faster saves: a remembered list is never used past 2 minutes, and a big li
   env.ctx.store_readSmall_('BLD-area.csv');
   assert.equal(puts.filter((p) => p[0].indexOf('small:') === 0).length, 0);
 });
+
+/* ---- One request for a round (OV12 20 Nov 2026) ---- */
+const many = (env, items, over = {}) => save(env, Object.assign({ v: 1, request_id: 'r-batch-' + Math.random().toString(36).slice(2, 10), code: env.codes.staff, action: 'add_many', items }, over));
+
+test('list save: several readings in one request are each saved, in order, each with its own answer', () => {
+  const env = bigEnv(50);
+  const before = env.rows(T).length;
+  const r = many(env, [
+    { request_id: 'r-item-00001', table: 'area_reading', fields: { area_id: 'area-t1', min_c: '18.0', max_c: '21.0' } },
+    { request_id: 'r-item-00002', table: 'area_reading', fields: { area_id: 'area-t2', min_c: '17.5', max_c: '20.5' } }
+  ]);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.deepEqual(JSON.parse(JSON.stringify(r.result.items.map((x) => [x.request_id, x.ok, x.result && x.result.status]))), [['r-item-00001', true, 'saved'], ['r-item-00002', true, 'saved']]);
+  assert.equal(env.rows(T).length, before + 2);
+});
+
+test('list save: one refused entry does not stop the rest, and its reason comes back', () => {
+  const env = bigEnv(50);
+  const r = many(env, [
+    { request_id: 'r-item-00011', table: 'area_reading', fields: { area_id: 'area-nope', min_c: '18.0', max_c: '21.0' } },
+    { request_id: 'r-item-00012', table: 'area_reading', fields: { area_id: 'area-t1', min_c: '18.0', max_c: '21.0' } }
+  ]);
+  assert.equal(r.result.items[0].ok, false);
+  assert.equal(r.result.items[0].code, 'INVALID');
+  assert.equal(r.result.items[1].ok, true);
+});
+
+test('list save: sending the same list again saves nothing twice (each entry remembered by its own reference)', () => {
+  const env = bigEnv(50);
+  const items = [{ request_id: 'r-item-00021', table: 'area_reading', fields: { area_id: 'area-t1', min_c: '18.0', max_c: '21.0' } }];
+  many(env, items);
+  const n = env.rows(T).length;
+  const again = many(env, items);
+  assert.equal(again.result.items[0].ok, true);
+  assert.equal(again.result.items[0].result.repeat, true);
+  assert.equal(env.rows(T).length, n);
+  // and one entry of the list resent on its own gets the same first answer
+  const single = save(env, req(env, { request_id: 'r-item-00021', fields: items[0].fields }));
+  assert.equal(single.result.repeat, true);
+  assert.equal(env.rows(T).length, n);
+});
+
+test('list save: a wrong code, an empty list or more than 20 entries refuse the whole list and save nothing', () => {
+  const env = bigEnv(10);
+  const n = env.rows(T).length;
+  const it = (k) => ({ request_id: 'r-item-1' + String(k).padStart(4, '0'), table: 'area_reading', fields: { area_id: 'area-t1', min_c: '18.0', max_c: '21.0' } });
+  assert.equal(many(env, [it(1)], { code: 'not-a-code' }).ok, false);
+  assert.equal(many(env, Array.from({ length: 21 }, (_, k) => it(k))).code, 'BAD_REQUEST');
+  assert.equal(many(env, []).code, 'BAD_REQUEST');
+  assert.equal(env.rows(T).length, n);
+});
