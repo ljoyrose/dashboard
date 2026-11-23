@@ -198,6 +198,7 @@ var TABLES = {
     key: 'thermometer',
     file: 'BLD-thermometer.csv',
     idPrefix: 'thm',
+    qrKind: 'thermometer',   // 15 Nov 2026: QR on add per the qr.on_add.thermometer rule row (QrTag.gs)
     columns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
     proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
     computedColumns: [],
@@ -666,6 +667,7 @@ var TABLES = {
     key: 'items',
     file: 'BLD-items.csv',
     idPrefix: 'itm',
+    qrKind: 'item', qrSub: 'kind_key',   // 15 Nov 2026: QR on add per qr.on_add.item(.<kind_key>) rule rows (QrTag.gs)
     columns: ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'],
     proposedColumns: ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'],
     computedColumns: [],
@@ -971,7 +973,7 @@ var TABLES = {
     key: 'person',
     file: 'BLD-person.csv',
     idPrefix: 'per',
-    columns: ['id', 'tenant_id', 'full_name', 'known_as'],
+    columns: ['id', 'tenant_id', 'full_name', 'party_kind', 'title', 'first_name', 'last_name', 'pronouns', 'known_as', 'email', 'phone', 'phone_alt', 'email_alt', 'preferred_contact', 'best_time_to_call', 'address_line', 'address_line_2', 'address_locality', 'address_region', 'address_postal_code', 'address_country_code', 'is_vet', 'is_supplier_contact', 'marketing_consent', 'consent_basis', 'consent_recorded_on', 'source', 'effective_from', 'effective_to', 'date_of_birth', 'id_checked_on', 'do_not_contact', 'gdpr_erasure_requested_on', 'retention_review_on', 'notes', 'external_ref', 'external_ref_system', 'visibility', 'visible_from', 'visible_to', 'visibility_set_by'],   // 15 Nov 2026: the live header, column for column (owner-entered extras stay blank here)
     proposedColumns: [],
     computedColumns: [],
     lookups: [],
@@ -994,7 +996,7 @@ var TABLES = {
     key: 'household',
     file: 'BLD-household.csv',
     idPrefix: 'hhd',
-    columns: ['id', 'tenant_id', 'name', 'primary_person_id', 'stage'],
+    columns: ['id', 'tenant_id', 'household_name', 'primary_person_id', 'address_line', 'postcode', 'country', 'home_type', 'garden', 'other_pets', 'children_at_home', 'hours_alone_typical', 'work_pattern', 'stage', 'first_enquiry_on', 'source', 'notes', 'visibility', 'visible_from', 'visible_to', 'visibility_set_by'],   // 15 Nov 2026: the live header, column for column (owner-entered extras stay blank here)
     proposedColumns: [],
     computedColumns: [],
     lookups: [{ name: 'person', file: 'BLD-person.csv', idCol: 'id' }],
@@ -1008,7 +1010,7 @@ var TABLES = {
       stage: { type: 'enum', values: ['enquiry', 'deposit', 'working to collection', 'after collection'], required: true }
     },
     dupKey: ['primary_person_id', 'stage'], dupTimeCol: null,
-    stamp: function () {},
+    stamp: function (row) { row.household_name = row.name; },   // the page sends name; the live column is household_name
     checkRow: function () {}
   },
 
@@ -1017,7 +1019,7 @@ var TABLES = {
     key: 'household_member',
     file: 'BLD-household_member.csv',
     idPrefix: 'hhm',
-    columns: ['id', 'tenant_id', 'household_id', 'person_id'],
+    columns: ['id', 'tenant_id', 'household_id', 'person_id', 'role', 'is_decision_maker', 'is_primary_handler', 'relationship_note', 'from_date', 'to_date', 'visibility', 'visible_from', 'visible_to', 'visibility_set_by'],   // 15 Nov 2026: the live header, column for column (owner-entered extras stay blank here)
     proposedColumns: [],
     computedColumns: [],
     lookups: [
@@ -1043,7 +1045,7 @@ var TABLES = {
     key: 'subject_owner',
     file: 'BLD-subject_owner.csv',
     idPrefix: 'sow',
-    columns: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'role'],
+    columns: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'role', 'from_date', 'to_date', 'transfer_document_id', 'microchip_transferred_on', 'registry_transferred_on', 'notes', 'visibility', 'visible_from', 'visible_to', 'visibility_set_by'],   // 15 Nov 2026: the live header, column for column (owner-entered extras stay blank here)
     proposedColumns: [],
     computedColumns: [],
     lookups: [
@@ -1072,7 +1074,7 @@ var TABLES = {
     key: 'sale',
     file: 'BLD-sale.csv',
     idPrefix: 'sal',
-    columns: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'deposit', 'deposit_date', 'sold_on', 'price'],
+    columns: ['id', 'tenant_id', 'subject_id', 'person_id', 'household_id', 'sold_on', 'age_at_sale_days', 'microchip_number_at_sale', 'seen_with_dam', 'vet_record_given', 'price', 'deposit', 'deposit_date', 'contract_document_id', 'notes', 'visibility', 'visible_from', 'visible_to', 'visibility_set_by'],   // 15 Nov 2026: the live header, column for column (owner-entered extras stay blank here)
     proposedColumns: [],
     computedColumns: [],
     lookups: [
