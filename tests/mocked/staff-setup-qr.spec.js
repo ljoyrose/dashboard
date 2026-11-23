@@ -285,3 +285,55 @@ test('print page: an owner signed in to CD Hub prints thermometer cards with no 
   expect(sent.length).toBeGreaterThan(0);
   for (const b of sent) { expect(b.google_token).toBe('fake-owner-token-0002'); expect(b.code).toBe(''); }
 });
+
+// Area prints (21 Nov 2026): a room's "Print sign" in CD Hub opens the print page with ?sign=<area id>, and only that room's card shows.
+test('sign mode (?sign=<area id>): only that room card, its saved code reused; a missing code is made once (owner only; staff and a second open write nothing); an unknown room says so @regression', async ({ page }) => {
+  const tables = {
+    area: [{ id: 'area-r1', code: '3A.1' }, { id: 'area-r2', code: '3A.2' }, { id: 'area-r3', code: '3A.3' }],
+    subject: [], subject_status: [], litter: [], occupancy: [], requirement: [],
+    qr_tag: [{ tag: 'AAAA2222', kind: 'area', ref_id: 'area-r1', active: 'true' }, { tag: 'BBBB3333', kind: 'area', ref_id: 'area-r2', active: 'true' }]
+  };
+  const sent = [];
+  let role = 'OWNER';
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }], version: 'test' } });
+    const b = JSON.parse(route.request().postData());
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [], role } } });
+    sent.push(b);
+    if (b.table === 'qr_tag') tables.qr_tag.push({ ...b.fields, active: 'true' });   // the pretend sheet keeps the saved row, as the live one does
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: 'qrt-' + sent.length } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+
+  // a staff phone opening the link never writes: it is told only an owner code can make the code, and nothing is drawn
+  role = 'STAFF';
+  await page.goto('cdhub/staff/print/?sign=area-r3');
+  await expect(page.locator('.msg').filter({ hasText: 'Not printed' })).toContainText('owner code');
+  await expect(page.locator('.rcard')).toHaveCount(0);
+  expect(sent, 'a staff phone writes nothing').toEqual([]);
+  role = 'OWNER';
+
+  await page.goto('cdhub/staff/print/?sign=area-r2');
+  await expect(page.locator('.rcard')).toHaveCount(1);
+  await expect(page.locator('.rcard')).toHaveAttribute('data-room', 'area-r2');
+  await expect(page.locator('#sheet, .sheet').first()).toHaveClass(/\brooms\b/);
+  await expect(page.getByText('1 cards ready. Use your browser’s Print.')).toBeVisible();
+  expect(sent, 'a saved code is reused, nothing written').toEqual([]);
+
+  await page.goto('cdhub/staff/print/?sign=area-r3');
+  await expect(page.locator('.rcard')).toHaveCount(1);
+  await expect(page.locator('.rcard')).toHaveAttribute('data-room', 'area-r3');
+  expect(sent.map((b) => [b.table, b.fields.kind, b.fields.ref_id])).toEqual([['qr_tag', 'area', 'area-r3']]);
+  const made = sent[0].fields.tag;
+
+  // opening the same link again reuses that code: still one write in all, and the card shows the same code
+  await page.goto('cdhub/staff/print/?sign=area-r3');
+  await expect(page.locator('.rcard')).toHaveCount(1);
+  await expect(page.getByText('1 cards ready. Use your browser’s Print.')).toBeVisible();
+  expect(sent.length, 'a second open writes nothing').toBe(1);
+  expect(tables.qr_tag.filter((t) => t.ref_id === 'area-r3').map((t) => t.tag)).toEqual([made]);
+
+  await page.goto('cdhub/staff/print/?sign=area-gone');
+  await expect(page.getByText('That room is not on the list. Press Room cards to print them all.')).toBeVisible();
+  await expect(page.locator('.rcard')).toHaveCount(0);
+});
