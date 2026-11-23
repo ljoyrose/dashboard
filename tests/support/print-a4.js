@@ -108,8 +108,9 @@ function cardTables() {
       .concat(['Daily clean', 'Deep clean', 'Water bowls'].map((l, i) => ({ type_key: 'a' + i, label: l, target: 'area', every_days: i === 1 ? '7' : '1', effective_from: '2026-01-01', active: 'true' })))
   };
 }
-async function openCards(page) {
+async function openCards(page, change) {
   const tables = cardTables();
+  if (change) change(tables);
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
     return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
@@ -125,7 +126,7 @@ async function cardsFit(page) {
   await page.emulateMedia({ media: 'print' });
   const r = await page.evaluate(() => Array.from(document.querySelectorAll('.dcard')).map((c) => {
     const b = c.getBoundingClientRect();
-    const out = Array.from(c.querySelectorAll('.name,.dtop,.szb,.band,.cside,.code svg,.chipline,.jobs,.lst,.tag')).filter((e) => { const x = e.getBoundingClientRect(); return x.bottom > b.bottom + 1 || x.right > b.right + 1; }).map((e) => e.className.baseVal !== undefined ? 'svg' : e.className);
+    const out = Array.from(c.querySelectorAll('.name,.dtop,.facts,.photo,.szb,.band,.cside,.code svg,.chipline,.jobs,.lst,.tag')).filter((e) => { const x = e.getBoundingClientRect(); return x.bottom > b.bottom + 1 || x.right > b.right + 1; }).map((e) => e.className.baseVal !== undefined ? 'svg' : e.className);
     const qr = c.querySelector('.code svg').getBoundingClientRect();
     return { id: c.getAttribute('data-dog'), out, qr: Math.round(Math.min(qr.width, qr.height)), status: getComputedStyle(document.querySelector('.msg')).display };
   }));
