@@ -286,6 +286,20 @@ test.describe('GA Hub page', () => {
     await expect(tile).toContainText('aim 2');
     await expect(tile.locator('.v')).not.toHaveClass(/red/);
   });
+  test('growth tiles: a 0 never shows the red ring, even when down on the 30 days before or under the aim (22 Nov 2026) @regression', async ({ page }) => {
+    const old = (no, n) => [no, 'Shopify', 'DDF', 'GA', 'Shipped', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '', '1', new Date(Date.now() - n * 864e5).toISOString(), '[]', 'Shipped'];
+    const b = book();
+    b.orders = [b.orders[0], old('9401', 40), old('9402', 45)];   // none in the last 30 days, 2 in the 30 before
+    b.settings = b.settings.concat([['MIN_ORDERS_MONTH', '3', '']]);
+    await sheets(page, b);
+    await open(page, '#/review');
+    const last30 = page.locator('#view .growth .tile').nth(0);   // the Subscriptions tile also says "last 30 days"
+    await expect(last30).toContainText('Orders, last 30 days0down 2 on the 30 days before');
+    await expect(last30.locator('.v')).not.toHaveClass(/red/);
+    const month = page.locator('#view .tile', { hasText: 'Orders this month' });
+    await expect(month.locator('.v')).toHaveText('0');
+    await expect(month.locator('.v')).not.toHaveClass(/red/);
+  });
   // G3 (Lisa, 30 Oct 2026): order growth leads (on Review since the Hub Mains, 2 Nov 2026). Invented orders only; nothing is written, sent or discounted.
   const growRow = (no, daysAgo, type, nth, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Shipped', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', type, '', String(nth || 1), new Date(Date.now() - daysAgo * 864e5).toISOString(), '[]', 'Shipped'];
   function growBook(rows, extra) { const b = book(); b.orders = [b.orders[0]].concat(rows); b.settings = b.settings.concat(extra || []); return b; }
