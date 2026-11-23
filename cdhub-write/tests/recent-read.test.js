@@ -64,13 +64,13 @@ test('recent read: from a date, a big table reads only its newest rows and retur
   assert.ok(count.cells < whole * 0.6, 'read ' + count.cells + ' cells; the whole table is ' + whole);
 });
 
-test('recent read: was the bug — with no date the owner read stops at the first 3,000 rows and misses today', () => {
+test('recent read: was the bug (a read with no date stopped at the first 3,000 rows and missed today); now the newest rows are kept', () => {
   const now = standardEnv().nowMs;
   const old = Array.from({ length: 3500 }, (_, i) => ({ id: 'rdg-old' + i, at: now - 400 * DAY + i * 3600000 }));
   const env = sheetEnv(old.concat([{ id: 'rdg-today', at: now - 3600000 }]));
   const plain = read(env);
   assert.equal(plain.result.truncated, true);
-  assert.equal(Array.from(plain.result.rows).some((x) => x.id === 'rdg-today'), false);
+  assert.equal(Array.from(plain.result.rows).some((x) => x.id === 'rdg-today'), true);   // PR 751: past the limit the NEWEST rows are kept
   const recent = read(env, { from: ymd(now - 31 * DAY) });
   assert.deepEqual(Array.from(recent.result.rows).map((x) => x.id), ['rdg-today']);
 });
