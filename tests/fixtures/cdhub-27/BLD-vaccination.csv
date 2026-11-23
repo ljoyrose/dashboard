@@ -1,0 +1,12 @@
+id,tenant_id,subject_id,event_kind,product,product_shorthand,diseases_covered,batch,batch_use_by,given_on,route,administered_by,practice,titre_result,titre_lab,titre_protective,next_due_on_card,next_due_source,certificate_media_id,source,ruling_needed,note
+vac-a01,ten-sample,sub-a01,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-02,injection,sample vet,Sample Practice,,,,2026-04-02,card,,invented,,
+vac-a02,ten-sample,sub-a02,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-03,injection,sample vet,Sample Practice,,,,2026-04-03,card,,invented,,
+vac-a03,ten-sample,sub-a03,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-04,injection,sample vet,Sample Practice,,,,2026-04-04,card,,invented,,
+vac-a04,ten-sample,sub-a04,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-05,injection,sample vet,Sample Practice,,,,2026-04-05,card,,invented,,
+vac-a05,ten-sample,sub-a05,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-06,injection,sample vet,Sample Practice,,,,2026-04-06,card,,invented,,
+vac-a06,ten-sample,sub-a06,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-07,injection,sample vet,Sample Practice,,,,2026-04-07,card,,invented,,
+vac-a09,ten-sample,sub-a09,booster,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2025-04-01,injection,sample vet,Sample Practice,,,,2026-02-01,card,,invented,,
+vac-p01,ten-sample,sub-p01,primary,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2026-03-05,injection,sample vet,Sample Practice,,,,2026-04-02,card,,invented,,
+vac-p02,ten-sample,sub-p02,primary,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2026-03-05,injection,sample vet,Sample Practice,,,,2026-04-02,card,,invented,,
+vac-p03,ten-sample,sub-p03,primary,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2026-03-05,injection,sample vet,Sample Practice,,,,2026-04-02,card,,invented,,
+vac-p04,ten-sample,sub-p04,primary,Sample Vaccine,SV,sample diseases,B-SAMPLE,2027-01-01,2026-03-05,injection,sample vet,Sample Practice,,,,2026-04-02,card,,invented,,

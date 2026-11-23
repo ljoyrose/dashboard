@@ -120,6 +120,10 @@
     }
   },
   "cdhub": {
+    "BLD-breeding_rule.csv": {
+      "columns": ["id", "tenant_id", "rule_key", "value", "effective_from", "source", "note", "set_at", "set_by"],
+      "read": ["rule_key", "value", "effective_from"]
+    },
     "BLD-WORK.csv": {
       "columns": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"],
       "read": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"]
@@ -127,6 +131,10 @@
     "BLD-_MANIFEST.csv": {
       "columns": ["file", "rows", "note"],
       "read": ["rows", "note"]
+    },
+    "BLD-locale.csv": {
+      "columns": ["id", "tenant_id", "language_tag", "date_display", "first_day_of_week", "area_unit_id", "temperature_unit_id", "mass_unit_id", "length_unit_id", "currency_code", "set_by", "set_on", "notes", "time_zone", "from_date", "to_date", "source"],
+      "read": ["tenant_id", "time_zone", "from_date", "to_date"]
     },
     "BLD-area.csv": {
       "columns": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"],

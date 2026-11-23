@@ -7,21 +7,23 @@ const { test, expect } = require('../support/test');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+// Menu option A (Lisa 14 Nov 2026): Main, the starting sections, then More with every other view in colour order.
 const PRIMARY = [
   ['Main', './index.html#/map'],
-  ['Do', './index.html#/work'],
-  ['Today', './index.html#/today'],
-  ['Dogs', './index.html#/dogs'],
-  ['SOPs', './index.html#/sops'],
+  ['Compliance', './index.html#/compliance'],
+  ['Records', './index.html#/dogs'],
+  ['People', './index.html#/staff'],
 ];
 const MORE = [
-  ['Compliance', './index.html#/compliance'],
-  ['Table map', './index.html#/shape'],
-  ['The round', './index.html#/round'],
-  ['Areas', './index.html#/areas'],
+  ['Today', './index.html#/today'],
+  ['Do', './index.html#/work'],
+  ['Items', './index.html#/items'],
   ['Litters', './index.html#/litters'],
-  ['Assocs', './index.html#/buyers'],
+  ['Areas', './index.html#/areas'],
+  ['The round', './index.html#/round'],
+  ['SOPs', './index.html#/sops'],
   ['Temps', './history.html'],
+  ['Enquiries', './index.html#/enquiries'],
 ];
 
 test('one list draws hub buttons and history links, with Temps and without Breed Better', () => {
@@ -45,10 +47,8 @@ test('one list draws hub buttons and history links, with Temps and without Breed
   };
   vm.createContext(ctx);
   vm.runInContext(nav, ctx);
-  const labels = ctx.HubNav.MORE.map((m) => m.label);
-  expect(labels).toEqual(MORE.map((m) => m[0]));
-  expect(ctx.HubNav.MORE.find((m) => m.id === 'temps').href).toBe('./history.html');
-  const hub = ctx.HubNav.html({ counts: { map: 2 }, late: { map: true }, extraMore: [{ id: 'breed', label: 'Breed Better', slot: '5', icon: 's-check' }] });
+  expect(ctx.HubNav.VIEWS.temps.href).toBe('./history.html');
+  const hub = ctx.HubNav.html({ counts: { map: 2 }, late: { map: true }, has: () => true });
   const hist = ctx.HubNav.html({ links: 'href', current: 'temps' });
   const arch = ctx.HubNav.html({ links: 'href' });
   expect(hub).toContain('data-go="map"');
@@ -64,6 +64,7 @@ test('one list draws hub buttons and history links, with Temps and without Breed
     for (const [label, href] of PRIMARY.concat(MORE)) expect(html, label).toContain('href="' + href + '"');
   }
   expect(hist).toMatch(/href="\.\/history\.html"[^>]*aria-current="page"/);
+  expect(hist).toMatch(/data-section="ops"[^>]*aria-current="page"/);   // Temps sits in Records
   expect(arch).not.toContain('aria-current');
 });
 
@@ -98,7 +99,7 @@ async function bar(page, url, signedIn) {
 test('history.html: the bar is links, Temps is the current page, and the bar stays clear of the page', async ({ page }) => {
   const nav = await bar(page, 'cdhub/history.html', true);
   await expect(nav.locator('#houseMore a[href="./history.html"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('header a.house-ib')).toHaveAttribute('href', './index.html');
+  await expect(page.locator('header a.house-ib').first()).toHaveAttribute('href', './index.html');
   const pad = () => page.locator('.wrap').evaluate((e) => getComputedStyle(e).paddingBottom);
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(await pad()).toBe('140px');
@@ -112,7 +113,7 @@ test('history-archive.html: same links, Temps is not the current page, home retu
   const nav = await bar(page, 'cdhub/history-archive.html');
   await expect(nav.locator('[aria-current="page"]')).toHaveCount(0);
   await expect(nav.locator('#houseMore a[href="./history.html"]')).not.toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('header a.house-ib')).toHaveAttribute('href', './index.html');
+  await expect(page.locator('header a.house-ib').first()).toHaveAttribute('href', './index.html');
   await expect(page.locator('header a.house-ib')).toHaveAttribute('aria-label', 'CD Hub');
 });
 
@@ -133,3 +134,13 @@ test('the hub More menu includes the same Temps link, and it opens the history p
   await expect(page).toHaveURL(/\/history\.html$/);
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveAttribute('aria-current', 'page');
 });
+
+// Lisa 17 Nov 2026: closing Temperatures goes back to CD Hub, never the whole dashboard. The top-right button used to
+// be Sign out, which looked like close.
+test('history.html: the top-right button closes back to CD Hub; there is no Sign out button on this page', async ({ page }) => {
+  await bar(page, 'cdhub/history.html', true);
+  const close = page.getByRole('link', { name: 'Close Temperatures' });
+  await expect(close).toHaveAttribute('href', './index.html#/compliance');
+  await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
+});
+

@@ -29,6 +29,9 @@ textarea.inp{padding:10px 14px}
 .msg{font-size:var(--fs-small);margin:10px 0;min-height:1.2em}
 .msg.bad{color:var(--bad)}.msg.good{color:var(--good)}.msg.warn{color:var(--warn)}
 .back{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:var(--fs-small);padding:0;margin-bottom:6px;min-height:44px}
+.me{max-width:520px;margin:0 auto;padding:calc(10px + env(safe-area-inset-top,0px)) var(--house-gutter) 0;color:var(--muted);font-size:var(--fs-small);font-weight:600}
+.me[hidden]{display:none}
+.me .switch{border:0;background:transparent;color:var(--accent,inherit);font:inherit;text-decoration:underline;padding:8px 4px;min-height:44px;cursor:pointer}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:4px;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
 .tabs button{flex:1;max-width:110px;border:0;background:transparent;color:var(--muted);display:grid;justify-items:center;gap:2px;font-size:var(--fs-small);font-weight:600;min-height:52px;padding:4px;border-radius:var(--radius)}
 .tabs .ring{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center}
@@ -49,3 +52,19 @@ textarea.inp{padding:10px 14px}
 .dog-done{color:var(--good)}.dog-at{color:var(--muted);font-size:var(--fs-small);margin-left:auto}
 .btn.is-done{background:var(--paper);color:var(--muted);border-color:var(--line)}
 .job-all{margin-bottom:4px}
+.job-ticks-done{margin-top:8px;width:100%}
+.done-line{flex-wrap:wrap}.done-note{flex-basis:100%;padding-left:26px;color:var(--ink);font-weight:400}
+.done-note{white-space:pre-line}
+.job-paper-btn{margin-left:16px}
+.job-paper:not([hidden]){display:flex;gap:8px;margin-bottom:8px}
+.job-paper-btn{display:inline-flex;align-items:center;gap:4px}.job-paper-btn .ic-plus{width:16px;height:16px}
+.job-earlier-all{margin-top:12px}.job-grid{margin-top:8px}
+.job-paper [hidden]{display:none}
+/* room scan: who is in the room now (Lisa 18 Nov 2026); each name opens that dog's jobs */
+.here-now{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
+.here-now h3{width:100%;margin:0;font-size:15px}
+.here-now .chip{font:inherit;font-size:16px;font-weight:600;padding:8px 14px;min-height:44px;border:1px solid var(--line,#C7C0B4);border-radius:12px;background:transparent;color:inherit}
+.here-now button.chip{cursor:pointer}.here-now button.chip:hover{box-shadow:inset 3px 0 0 currentColor}
+/* Show help switch (Lisa 18 Nov 2026): on = ✓ and the selected side line */
+.btn[role="switch"][aria-checked="true"]{box-shadow:inset 3px 0 0 var(--ink)}
+.btn[role="switch"][aria-checked="true"]::before{content:"\2713\00a0"}

@@ -1,12 +1,9 @@
-const { tabClick } = require('../support/tabs');
+const { tabClick, openView } = require('../support/tabs');
 // JOB 34 (group B): CD Hub buttons, links and states that no other spec proves yet.
 // Gap map: kept outside the repo. Every dog, litter and buyer here is invented (Test Dog One, Sample Buyer, @example.test).
 const { test, expect, HUBS, IDS, fixture, DRIVE } = require('../fixtures/job34/load');
 
-const tab = async (page, id) => {
-  await tabClick(page, `#nav button[data-go="${id}"]`);
-  await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
-};
+const tab = (page, id) => openView(page, id);
 const addTable = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
   if (f) { f.content = content; f.size = String(content.length); }
@@ -30,21 +27,20 @@ test.describe('CD Hub: Dogs search, Clear filters and the weighings panel', () =
     await expect(page.locator('#cnt')).toHaveText('3 of 3');
   });
 
-  test('a dog\'s Weight opens its weighings (newest first, with the change), and close shuts it', async ({ page, guard }) => {
+  test('a dog\'s Weight opens its weighings in place (newest first, with the change)', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'dogs');
-    await page.locator('.dc', { hasText: 'Test Dog One' }).locator('.wtc').first().click();
-    const panel = page.locator('#wpanel');
-    await expect(panel).toContainText('Test Dog One: weighings');
-    await expect(panel.locator('tbody tr')).toHaveCount(2);
-    await expect(panel.locator('tbody tr').first()).toContainText('14.6 kg');
-    await expect(panel.locator('tbody tr').first()).toContainText('+0.4');
-    await expect(panel.locator('tbody tr').last()).toContainText('first');
+    const wt = page.locator('.dc', { hasText: 'Test Dog One' }).locator('details.wtc').first();
+    await wt.locator('> summary').click();   // in place on the card (Lisa 15 Nov 2026), no panel at the top
+    await expect(page.locator('#wpanel')).toBeEmpty();
+    const rows = wt.locator('[data-k="wrow"]');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('14.6 kg');
+    await expect(rows.first().locator('[data-k="wchange"]')).toHaveText('+0.4');
+    await expect(rows.last().locator('[data-k="wchange"]')).toHaveText('first');
     // the weight source column stays in the sheet but is not shown (Lisa, 12 Nov 2026)
-    await expect(panel.locator('thead th')).toHaveText(['date', 'weight', 'change', 'BCS']);
-    await expect(panel).not.toContainText('invented');
-    await panel.locator('#wclose').click();
-    await expect(panel).toBeEmpty();
+    await expect(wt).not.toContainText('invented');
+    await expect(wt.locator('form[data-weigh-form]')).toBeVisible();
   });
 });
 
@@ -65,7 +61,7 @@ test.describe('CD Hub: Today lists', () => {
     await panel.locator('.placesel').first().selectOption({ index: 1 });
     page.once('dialog', (d) => d.accept());
     await place.click();
-    await expect(msg).toHaveText('NOT saved — Could not reach the save script. Nothing is known to be saved.');
+    await expect(msg).toHaveText('Not saved: Could not reach the save script. Nothing is known to be saved.');
     await panel.locator('#tclose').click();
     await expect(panel).toBeEmpty();
   });
@@ -165,7 +161,7 @@ test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so
     const ra = await racc.getAttribute('data-area');
     const rv = await racc.locator('option').evaluateAll((o) => o.map((x) => x.value).filter(Boolean));
     await racc.selectOption(rv[rv.length - 1]);
-    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('NOT saved — Could not reach the save script. Nothing is known to be saved.');
+    await expect(page.locator(`.rsave[data-area="${ra}"]`)).toHaveText('Not saved: Could not reach the save script. Nothing is known to be saved.');
     await tab(page, 'areas');
     const aacc = page.locator('.aacc').first();
     const aa = await aacc.getAttribute('data-area');
@@ -194,7 +190,7 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
     await expect(mx).toHaveClass(/\bbad\b/);
     expect(sent).toHaveLength(0);
     await mx.fill('21.4'); await mx.blur();
-    await expect(msg).toHaveText('saved ✓');
+    await expect(msg).toHaveText(/^Saved \d\d:\d\d$/);
     await expect(mn).not.toHaveClass(/\bbad\b/);
     await expect(msg).not.toHaveAttribute('role', 'alert');
     expect(sent).toHaveLength(1);
@@ -218,7 +214,7 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
     await tab(page, 'shape');
     await expect(page.locator('#checksCard')).toContainText('Room temperatures');
     await expect(page.locator('#checksCard')).toContainText('1 reading has max lower than min');
-    await expect(page.locator('#checksCard')).toContainText('2 2026-01-15 20.00–12.00');
+    await expect(page.locator('#checksCard')).toContainText('2 15 Jan 2026 20.00–12.00');
     await tab(page, 'round');
     await page.locator('#rdate').fill('2026-01-15');
     await page.locator('#rdate').dispatchEvent('change');
@@ -235,7 +231,9 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
 
 test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and litters and matings are checked against them (Lisa, 8 Nov 2026)', () => {
   const LIT = (rows) => 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\n' + rows.join('\n') + '\n';
-  const RULES = (rows) => 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n' + rows.join('\n') + '\n';
+  // These tests replace the rules table, so they keep the test kennel's switched-on views (Table map, Litters).
+  const NAV_ON = ['nv1,ten-test,nav.view.litters,1,2020-01-01,invented,,,', 'nv3,ten-test,nav.view.shape,1,2020-01-01,invented,,,'];
+  const RULES = (rows) => 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n' + rows.concat(NAV_ON).join('\n') + '\n';
   const STD = ['brl-1,ten-test,min_months_between_litters,12,2020-01-01,invented,,2026-11-08,owner',
     'brl-2,ten-test,max_litters_per_dam,6,2020-01-01,invented,,2026-11-08,owner',
     'brl-3,ten-test,min_dam_age_months,12,2020-01-01,invented,,2026-11-08,owner'];
@@ -248,7 +246,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await expect(page.locator('#checksCard')).toContainText('not checked: set the shortest time between litters on Compliance');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('3 of 3 rules not set');
-    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(13);   // 3 breeding rules + look-back + due-soon + 2 staffing ratios + adult age + 4 gestation + litters look-back
+    await expect(page.locator('#compRules tr[data-rule]')).toHaveCount(17);   // 3 breeding rules + look-back + due-soon + 2 staffing ratios + adult age + 4 gestation + the sample file's 5 view switches
     await expect(page.locator('#compRules')).toContainText('not set');
   });
 
@@ -260,7 +258,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'shape');
     await expect(page.locator('#checksCard')).toContainText('Time between litters');
-    await expect(page.locator('#checksCard')).toContainText('2025-02-01 → 2025-11-01 (273 days, rule 12 months)');
+    await expect(page.locator('#checksCard')).toContainText('1 Feb 2025 → 1 Nov 2025 (273 days, rule 12 months)');
     await expect(page.locator('#checksCard')).toContainText('all 3 set');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('Litters too close: 273 days apart');
@@ -304,9 +302,9 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await tab(page, 'shape');
     const c = page.locator('#checksCard');
     await expect(c).toContainText('1 litter is closer');
-    await expect(c).toContainText('2024-03-01 → 2025-07-01');
+    await expect(c).toContainText('1 Mar 2024 → 1 Jul 2025');
     await expect(c).toContainText('rule 18 months');
-    await expect(c).not.toContainText('2023-01-01 → 2024-03-01');
+    await expect(c).not.toContainText('1 Jan 2023 → 1 Mar 2024');
     await tab(page, 'compliance');
     await expect(page.locator('#compRules tr[data-rule="min_months_between_litters"]')).toContainText('12 from');
     await expect(page.locator('#compRules tr[data-rule="min_months_between_litters"]')).toContainText('18 from');
@@ -319,7 +317,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await tab(page, 'shape');
     await expect(page.locator('#checksCard')).toContainText('Age at mating');
     await expect(page.locator('#checksCard')).toContainText('1 mating was younger than your rule allows');
-    await expect(page.locator('#checksCard')).toContainText('mated 2025-11-18, born 2022-03-01 (rule 48 months)');
+    await expect(page.locator('#checksCard')).toContainText('mated 18 Nov 2025, born 1 Mar 2022 (rule 48 months)');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('Mated too young');
   });
@@ -334,7 +332,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'shape');
     await expect(page.locator('#checksCard')).toContainText('Litters per bitch');
-    await expect(page.locator('#checksCard')).toContainText('litter 3 of 2 allowed (2025-01-01)');
+    await expect(page.locator('#checksCard')).toContainText('litter 3 of 2 allowed (1 Jan 2025)');
     await tab(page, 'compliance');
     await expect(page.locator('#compProblems')).toContainText('Too many litters');
   });
@@ -356,7 +354,7 @@ test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and 
     await page.locator('#brFrom').fill('2020-01-01');
     await page.locator('#brSrc').fill('licence condition');
     await page.locator('#brSave').click();
-    await expect(page.locator('#brMsg')).toHaveText('saved ✓');
+    await expect(page.locator('#brMsg')).toHaveText(/^Saved \d\d:\d\d$/);
     expect(sent.length).toBe(1);
     expect(sent[0]).toMatchObject({ table: 'breeding_rule', action: 'add', fields: { rule_key: 'min_months_between_litters', value: '12', effective_from: '2020-01-01', source: 'licence condition' } });
     await expect(page.locator('#compRules tr[data-rule="min_months_between_litters"]')).toContainText('12');
@@ -397,7 +395,7 @@ test.describe('CD Hub: The round saves through the save script (one row added, n
     expect(sent.length).toBe(0);
     const mx = page.locator(`.tmax[data-area="${area}"][data-slot="am"]`);
     await mx.fill('14.2'); await mx.blur();
-    await expect(msg).toHaveText('saved ✓');
+    await expect(msg).toHaveText(/^Saved \d\d:\d\d$/);
     expect(sent.length).toBe(1);
     expect(sent[0]).toMatchObject({ v: 1, table: 'area_reading', action: 'add', code: 'test-code-1', fields: { area_id: area, min_c: '11.3', max_c: '14.2' } });
     expect(sent[0].fields.period_start).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00[+-]\d{2}:\d{2}$/);
@@ -417,7 +415,7 @@ test.describe('CD Hub: The round saves through the save script (one row added, n
     await box.fill('11'); await box.blur();
     await page.locator(`.tmax[data-area="${area}"][data-slot="am"]`).fill('12');
     await page.locator(`.tmax[data-area="${area}"][data-slot="am"]`).blur();
-    await expect(page.locator(`.tmsg[data-area="${area}"][data-slot="am"]`)).toHaveText('NOT saved — This looks like the same entry as one already saved.');
+    await expect(page.locator(`.tmsg[data-area="${area}"][data-slot="am"]`)).toHaveText('Not saved: This looks like the same entry as one already saved.');
   });
 
   test('adding a dog to a cabin sends one move; a queued move says it is waiting for approval', async ({ page, guard }) => {
@@ -450,7 +448,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Enquiries sits under More
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
   });
 
   test('after a failed read, Try again reads the folder again and the tables load', async ({ page, guard, allowedConsole }) => {
@@ -463,7 +461,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     guard.world.failWith = null;
     await page.locator('#main button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Enquiries sits under More
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);   // Items added 14 Nov 2026   // Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
   });
 });
 

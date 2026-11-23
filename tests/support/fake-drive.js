@@ -81,12 +81,19 @@ class FakeDrive {
     _present(f) {
       const meta = Object.assign({}, f);
       delete meta.content;
+      delete meta._listed;
       meta.ownedByMe = f.mine !== false;
       if (meta.size != null) meta.size = String(meta.size);
       return meta;
     }
 
     _list(params) {
+    // Like real Drive: a file whose content was changed after it was last listed gets a later modifiedTime
+    // (CD Hub skips reading a file whose modifiedTime has not changed, 22 Nov 2026).
+    for (const f of this.files) {
+      if (f._listed !== undefined && f._listed !== f.content) f.modifiedTime = new Date(Math.max(Date.now(), Date.parse(f.modifiedTime || 0) + 1000)).toISOString();
+      f._listed = f.content;
+    }
     let out = this.files.filter((f) => this._match(f, params.get('q')));
     if (params.get('corpora') === 'drive' && params.get('driveId')) out = out.filter((f) => f.driveId === params.get('driveId'));
     const order = params.get('orderBy') || '';
@@ -123,6 +130,12 @@ class FakeDrive {
       }
       if (p === '/about') return json(200, { user: { emailAddress: this.email, displayName: 'Sample Person' } });
       if (p === '/drives') return json(200, { drives: this.drives });
+      // One shared drive by id (the private settings loader asks whether the drive is limited to its own domain).
+      const one = /^\/drives\/([^/]+)$/.exec(p);
+      if (one && req.method() === 'GET') {
+        const d = this.drives.find((x) => x.id === decodeURIComponent(one[1]));
+        return d ? json(200, d) : json(404, { error: { code: 404, message: 'Shared drive not found', errors: [{ reason: 'notFound' }] } });
+      }
       if (p === '/files' && req.method() === 'GET') return json(200, this._list(params));
       if (p === '/files/trash' && req.method() === 'DELETE') {
         const d = params.get('driveId');

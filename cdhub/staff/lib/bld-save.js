@@ -19,10 +19,12 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var URL_OK = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/exec$/;
+  var URL_OK = /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.\-]+|macros)\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
-  var TIMEOUT_MS = 20000;
+  var OWNER_SKIP_KEY = 'bld.owner.skip';   // this tab chose "Use a staff code instead" (sessionStorage)
+  var READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  var TIMEOUT_MS = 150000;  // live saves took 17-127 s (17 Nov 2026); a shorter wait said "could not reach" for saves that landed
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
   var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
@@ -71,6 +73,24 @@
   }
   function root_() { return (typeof window !== 'undefined') ? window : {}; }
 
+  /**
+   * Board A (Lisa 17 Nov 2026): an owner uses the SAME Google sign-in as CD Hub (auth.js keeps it in this browser),
+   * so no code is needed. Returns the live access token, or '' when there is none, it has expired, or this tab chose to
+   * use a staff code. The save script decides who is an owner (ADMIN_EMAILS); a token alone never grants anything.
+   */
+  function ownerToken() {
+    var g = root_(), A = g.DashAuth;
+    if (!A || typeof A.valid !== 'function') return '';
+    try { if (g.sessionStorage && g.sessionStorage.getItem(OWNER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
+    var s = A.valid();
+    if (!s || (A.hasScope && !A.hasScope(s, READ_SCOPE))) return '';
+    return s.access_token || '';
+  }
+  /** Stop (true) or allow again (false) the owner sign-in on this tab. */
+  function ownerSkip(on) {
+    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(OWNER_SKIP_KEY, '1'); else ss.removeItem(OWNER_SKIP_KEY); } } catch (e) { /* ignore */ }
+  }
+
   function create(opts) {
     opts = opts || {};
     var doFetch = opts.fetch || (typeof fetch !== 'undefined' ? fetch.bind(root_()) : null);
@@ -96,11 +116,17 @@
     if (opts.scriptUrl) setScriptUrl(opts.scriptUrl, false);
     else { var saved = get(local, URL_KEY); if (saved) setScriptUrl(saved, false); }
 
-    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; }
+    function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
+    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
+    /** A staff code, or an owner's Google sign-in. */
+    function hasAuth() { return !!getCode() || !!googleFn(); }
+    /** Adds the owner's Google token to a request body when there is one (the code still goes too, as the fallback). */
+    function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; return body; }
+    var lastName = '';   // the name held against this code, from the last read (Welcome line only)
     var lastRole = '';   // the role the script reported for this code on the last read: OWNER, STAFF, GUEST... ('' until a read). For showing buttons only; the script still decides.
-    function clearCode() { inMemoryCode = ''; lastRole = ''; put(session, CODE_KEY, ''); }
+    function clearCode() { inMemoryCode = ''; lastRole = ''; lastName = ''; put(session, CODE_KEY, ''); }
 
     function setLookups(l) { lookups = l || {}; }
     function lookupSize(name) { var l = lookups[name]; return !l ? 0 : (Array.isArray(l) ? l.length : Object.keys(l).length); }
@@ -123,12 +149,202 @@
         });
     }
 
+    // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
+    // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
+    // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
+    // 20 Nov 2026 (OV12: a round of saves all said "Saving..." for minutes): each save can be told its place in the
+    // line. onTurn(n) is called with n = how many saves are ahead of it on this device, again whenever that changes,
+    // and with 0 when it is actually being sent. Screens show "Waiting, n ahead" until 0, then "Saving...".
+    var saveTurn = Promise.resolve(), sending = 0, line = [];
+    function tellLine() {
+      line.forEach(function (e, i) {
+        if (e.onTurn && e.told !== i) { e.told = i; try { e.onTurn(i); } catch (x) { /* a screen's own error never stops a save */ } }
+      });
+    }
+    function oneAtATime(send, onTurn) {
+      sending++;
+      var me = { onTurn: typeof onTurn === 'function' ? onTurn : null, told: -1 };
+      line.push(me);
+      tellLine();
+      var p = saveTurn.then(send, send);
+      saveTurn = p.then(function () {}, function () {});
+      var done = function () { sending--; var i = line.indexOf(me); if (i >= 0) line.splice(i, 1); tellLine(); };
+      p.then(done, done);
+      return p;
+    }
+    // Leaving the page while saves are still waiting their turn would drop them (OV12 16 Nov 2026): the browser asks
+    // "Leave site?" first. Nothing is kept on the device: the staff code never goes into storage for this.
+    var win = root_();
+    if (win.addEventListener) win.addEventListener('beforeunload', function (e) {
+      if (sending > 0) { e.preventDefault(); e.returnValue = ''; return ''; }
+    });
+
+    // Two people saving at once (Lisa 16 Nov 2026): the script lets one save write at a time and answers BUSY to a save
+    // that waited too long. Nothing was written, so the same save (same request id) is sent again after a short,
+    // random pause, up to BUSY_TRIES times, before the person is told.
+    var BUSY_TRIES = 3;
+    var BUSY_PAUSE_MS = opts && typeof opts.busyPauseMs === 'number' ? opts.busyPauseMs : null;   // tests only
+    function busyRetry(sendOnce, tries) {
+      return sendOnce().then(function (j) {
+        if (j && j.ok === false && j.code === 'BUSY' && (tries || 0) < BUSY_TRIES) {
+          return new Promise(function (r) { setTimeout(r, BUSY_PAUSE_MS != null ? BUSY_PAUSE_MS : 1500 + Math.floor(Math.random() * 2500)); })
+            .then(function () { return busyRetry(sendOnce, (tries || 0) + 1); });
+        }
+        return j;
+      });
+    }
+
     function withTimeout(p) {
       return new Promise(function (resolve, reject) {
         var t = setTimeout(function () { reject(new Error('timeout')); }, TIMEOUT_MS);
         p.then(function (v) { clearTimeout(t); resolve(v); }, function (e) { clearTimeout(t); reject(e); });
       });
     }
+
+    /* NEVER LOSE AN ENTRY (Lisa 17 Nov 2026; OV12 20 Nov 2026: most of a temperature round was still waiting its turn
+       when the app closed, and nothing was kept). Every save is kept on this device the moment it is pressed, before
+       it waits its turn, and leaves only when the save script answers. With no answer (no signal, timeout, script busy,
+       saving switched off for a moment) it stays kept and is sent again by itself with the SAME request id: soon after
+       the page opens, every minute while anything waits, when the signal returns, and on "Send now".
+       - The script remembers each request id for 6 hours and answers a repeat with the first answer, so a resend never
+         saves twice. After 5 hours a kept entry is no longer sent by itself (the script may have forgotten it): it is
+         shown as "not confirmed" and the person checks the records, then sends it or removes it.
+       - A save the script refuses (a check failed) leaves the box and is listed as "Not saved" with the reason.
+       - The staff code and any Google token are never kept with an entry: they are added again when it is sent. */
+    var OUTBOX_KEY = 'bld.outbox', REFUSED_KEY = 'bld.outbox.refused';
+    var OUTBOX_AUTO_MS = 5 * 3600000;   // inside the script's 6-hour memory of request ids
+    // Answers that mean "not this time" (no signal, script busy or switched off, not set up yet): the entry stays kept
+    // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
+    // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
+    var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
+    /* SIGN IN AGAIN (Lisa 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
+       script says this sign-in may not save (or no one is signed in), nothing was wrong with the entry, so it is never refused for
+       that: it stays kept and waits until someone signs in again or enters a code, then goes by itself. It is not sent
+       again with the same sign-in. A wrong staff code is still refused and said plainly ("not recognised"). */
+    var SIGN_IN = { GOOGLE_NOT_OWNER: 1, NO_CODE: 1 };
+    var SIGNIN_MSG = 'Not sent yet: sign in again (or enter your code). It is kept on this phone and goes by itself once you do, so do not type it again.';
+    var authWait = null;   // the sign-in that was turned down; nothing is sent with it again
+    function authNow() { return getCode() + '|' + googleFn(); }
+    function refused(j) { return !!(j && !j.ok && j.code && !RETRY_ON[j.code] && !SIGN_IN[j.code]); }
+    var outboxFns = [], inFlight = {};
+    function jsonList(k) { try { var a = JSON.parse(get(local, k) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function outboxRead() { return jsonList(OUTBOX_KEY); }
+    function outboxNotify() { outboxFns.forEach(function (f) { try { f(outboxRead().length, jsonList(REFUSED_KEY)); } catch (e) { /* a screen's listener must not stop saving */ } }); }
+    function outboxWrite(a) { put(local, OUTBOX_KEY, a.length ? JSON.stringify(a) : ''); outboxNotify(); }
+    function keepEntry(body) {
+      var b = JSON.parse(JSON.stringify(body)); delete b.code; delete b.google_token;
+      var all = outboxRead(), was = all.filter(function (x) { return x.id === b.request_id; })[0];
+      var a = all.filter(function (x) { return x.id !== b.request_id; });
+      var item = { id: b.request_id, body: b, at: new Date().toISOString() };
+      if (was && was.unsure) item.unsure = true;
+      a.push(item);
+      outboxWrite(a);
+    }
+    /* SAVED, NOT "NOT SAVED" (OV13 22 Nov 2026: live saves took 19-60 s; the first try saved, its answer never came,
+       the resend was answered DUPLICATE and the page said Not saved). A try that got no answer may have saved. When
+       an entry sent again after such a try is answered DUPLICATE, its first try saved it: it counts as saved, with a
+       tick. A DUPLICATE for an entry whose every try was answered is still shown as before (a different entry). */
+    function markUnsure(id) {
+      var a = outboxRead(), hit = false;
+      a.forEach(function (x) { if (x.id === id && !x.unsure) { x.unsure = true; hit = true; } });
+      if (hit) put(local, OUTBOX_KEY, JSON.stringify(a));
+    }
+    function answerFor(id, j) {
+      if (!(j && j.ok === false && j.code === 'DUPLICATE')) return j;
+      var item = outboxRead().filter(function (x) { return x.id === id; })[0];
+      return item && item.unsure ? { ok: true, result: { status: 'saved', repeat: true, earlier_try: true } } : j;
+    }
+    function dropEntry(id) { var a = outboxRead(), b = a.filter(function (x) { return x.id !== id; }); if (b.length !== a.length) outboxWrite(b); }
+    function refuseEntry(id, j) {
+      var item = outboxRead().filter(function (x) { return x.id === id; })[0];
+      if (!item) return;
+      var rf = jsonList(REFUSED_KEY).filter(function (x) { return x.id !== id; });
+      rf.push({ id: id, at: item.at, table: item.body.table || '', action: item.body.action || '', fields: item.body.fields || {}, code: (j && j.code) || '', message: (j && j.message) || '' });
+      put(local, REFUSED_KEY, JSON.stringify(rf.slice(-50)));
+    }
+    /** After an answer: saved (or already saved) and refused leave the box; anything else keeps it for another try. */
+    function settle(id, j, auth) {
+      if (j && (j.ok || j.code === 'DUPLICATE')) { authWait = null; dropEntry(id); return true; }
+      if (refused(j)) { refuseEntry(id, j); dropEntry(id); return true; }
+      if (j && !j.ok && SIGN_IN[j.code] && auth != null) { authWait = auth; outboxNotify(); }
+      scheduleRetry(60000);
+      return false;
+    }
+    /* While entries wait for the owner to sign in again: if the page has the shared quiet renewal
+       (BLDSave.refreshOwnerToken, CLOUD SPEED 22 Nov 2026), try it at most every 5 minutes and send once it gives a new
+       sign-in. Without it, or when Google cannot renew quietly, they stay kept and the line asks to sign in again. */
+    var renewAt = 0;
+    function quietRenew() {
+      var B = root_().BLDSave;
+      if (googleFn !== ownerToken || !B || typeof B.refreshOwnerToken !== 'function' || Date.now() - renewAt < 300000 || !outboxRead().length) return;
+      renewAt = Date.now();
+      try { Promise.resolve(B.refreshOwnerToken()).then(function (t) { if (t && hasAuth() && authNow() !== authWait) flush(); }, function () { /* stays kept */ }); }
+      catch (e) { /* stays kept */ }
+    }
+    /** true while kept entries wait for someone to sign in again (or enter a code). */
+    function needsSignIn() { return outboxRead().length > 0 && (!hasAuth() || authWait === authNow()); }
+    /** An entry pressed while no one is signed in: kept, not sent, and goes once someone signs in. */
+    function keptForSignIn(body) {
+      keepEntry(body); scheduleRetry(60000);
+      return Promise.resolve({ ok: false, code: 'NO_CODE', kept: true, signIn: true, requestId: body.request_id, message: SIGNIN_MSG });
+    }
+    function keptAnswer(j) { return SIGN_IN[j.code] ? { ok: false, code: j.code, kept: true, signIn: true, message: SIGNIN_MSG } : { ok: false, code: j.code, kept: true, message: KEPT_MSG }; }
+    function postOnce(body) {
+      return busyRetry(function () { return withTimeout(doFetch(scriptUrl, {
+        method: 'POST', redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
+        body: JSON.stringify(body)
+      })).then(function (r) { return r.json(); }); });
+    }
+    /** One kept entry, sent with its own request id and the code held now. Never sent twice at once from this page. */
+    function sendKept(item) {
+      if (inFlight[item.id]) return inFlight[item.id];
+      var auth = authNow(), body = withGoogle(Object.assign({}, item.body, { code: getCode() }));
+      var p = oneAtATime(function () { return postOnce(body); })
+        .then(function (j) { settle(item.id, answerFor(item.id, j), auth); }, function () { markUnsure(item.id); scheduleRetry(60000); });
+      inFlight[item.id] = p;
+      var off = function () { delete inFlight[item.id]; };
+      p.then(off, off);
+      return p;
+    }
+    var flushing = null;
+    /** Send every kept entry younger than 5 hours again, oldest first. Resolves to how many are still kept. */
+    function flush(o) {
+      if (flushing) return flushing;
+      var now = Date.now(), all = outboxRead();
+      var due = all.filter(function (x) { return (o && o.old) || now - Date.parse(x.at) < OUTBOX_AUTO_MS; });
+      if (!due.length || !scriptUrl || !doFetch) return Promise.resolve(all.length);
+      if (!hasAuth() || authWait === authNow()) { quietRenew(); return Promise.resolve(all.length); }
+      flushing = due.reduce(function (p, item) { return p.then(function () { return sendKept(item); }); }, Promise.resolve())
+        .then(function () { flushing = null; outboxNotify(); return outboxRead().length; }, function () { flushing = null; return outboxRead().length; });
+      return flushing;
+    }
+    function isOld(x) { return Date.now() - Date.parse(x.at) >= OUTBOX_AUTO_MS; }
+    var outbox = {
+      count: function () { return outboxRead().length; },
+      items: function () { return outboxRead().map(function (x) { return { id: x.id, at: x.at, table: x.body.table || '', action: x.body.action || '', fields: x.body.fields || {}, old: isOld(x) }; }); },
+      refused: function () { return jsonList(REFUSED_KEY); },
+      /** true while kept entries wait for someone to sign in again (or enter a code). */
+      needsSignIn: needsSignIn,
+      dismissRefused: function (id) { put(local, REFUSED_KEY, JSON.stringify(jsonList(REFUSED_KEY).filter(function (x) { return x.id !== id; }))); outboxNotify(); },
+      /** Send now. {old: true} also sends entries past 5 hours, after the person has checked the records. */
+      flush: flush,
+      /** The person checked the records and the entry is there (or not wanted): take it out of the box. */
+      remove: function (id) { dropEntry(id); },
+      onChange: function (fn) { if (typeof fn === 'function') outboxFns.push(fn); }
+    };
+    // On a real page: try the box soon after opening, then every minute while something waits, and when the signal
+    // comes back. An empty box sets no timer. Tests pass their own fetch and get no timers.
+    var autoOn = opts.autoFlush !== false && !opts.fetch && typeof document !== 'undefined', retryTimer = null;
+    function scheduleRetry(ms) {
+      if (!autoOn || retryTimer || !outboxRead().length) return;
+      retryTimer = setTimeout(function () { retryTimer = null; flush().then(function (n) { if (n > 0) scheduleRetry(60000); }); }, ms);
+    }
+    if (autoOn) {
+      scheduleRetry(4000);
+      if (win.addEventListener) win.addEventListener('online', function () { flush(); });
+    }
+    var KEPT_MSG = 'No answer yet. It is kept on this phone and sent again by itself, so do not type it again.';
 
     /** Plain-English state for the banner and for disabling buttons. */
     function banner(tableKey) {
@@ -237,21 +453,27 @@
       if (!spec) return Promise.resolve({ ok: false, code: 'BAD_REQUEST', message: 'Unknown table.' });
       var b = banner(tableKey);
       if (!b.canSave) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: b.text });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      var signedIn = hasAuth();
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
       var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
+      withGoogle(body);
       if (action === 'correct') { body.corrects_id = o.correctsId || ''; body.reason = o.reason || ''; }
       if (o.values && action === 'add') body.values = o.values;   // a check's form answers {field_key: value}, saved with the record
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
-      return withTimeout(doFetch(scriptUrl, {
-        method: 'POST', redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // keeps it a "simple" request: no pre-flight needed
-        body: JSON.stringify(body)
-      })).then(function (r) { return r.json(); }).then(function (j) {
+      if (!signedIn) return keptForSignIn(body);
+      var auth = authNow();
+      keepEntry(body);
+      var sent = oneAtATime(function () { return postOnce(body); }, o.onTurn);
+      inFlight[body.request_id] = sent;
+      var off = function () { delete inFlight[body.request_id]; };
+      sent.then(off, off);
+      return sent.then(function (j) {
+        j = answerFor(body.request_id, j);
+        if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
         if (j && j.ok) {
           var res = j.result || {};
           res.ok = true;
@@ -261,14 +483,44 @@
             : 'Saved.';
           return res;
         }
-        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
       }).catch(function () {
-        return {
-          ok: false, code: 'NETWORK', requestId: body.request_id,
-          message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.'
-        };
+        markUnsure(body.request_id);
+        scheduleRetry(60000);
+        return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
       });
     }
+
+    /**
+     * Send one named save that is not a table row (e.g. link_add, link_end). Same code, same no-double-save reference.
+     * Resolves (never rejects): {ok:true, ...result, message:'Saved.'} or {ok:false, code, message, fields}.
+     */
+    function act(action, fields, requestId, onTurn) {
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'SAVE_OFF', message: 'Saving is off.' });
+      if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot send the save.' });
+      var body = withGoogle({ v: 1, request_id: requestId || newRequestId(), code: getCode(), action: action, fields: fields || {} });
+      if (!hasAuth()) return keptForSignIn(body);
+      var auth = authNow();
+      keepEntry(body);
+      var sent = oneAtATime(function () { return postOnce(body); }, onTurn);
+      inFlight[body.request_id] = sent;
+      var off = function () { delete inFlight[body.request_id]; };
+      sent.then(off, off);
+      return sent.then(function (j) {
+        j = answerFor(body.request_id, j);
+        if (!settle(body.request_id, j, auth) && j && j.ok === false) j = keptAnswer(j);
+        if (j && j.ok) { var res = j.result || {}; res.ok = true; res.requestId = body.request_id; res.message = 'Saved.'; return res; }
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', kept: !!(j && j.kept), signIn: !!(j && j.signIn), message: (j && j.message) || 'Something went wrong.', fields: j && j.fields, requestId: body.request_id };
+      }).catch(function () {
+        markUnsure(body.request_id);
+        scheduleRetry(60000);
+        return { ok: false, code: 'NETWORK', kept: true, requestId: body.request_id, message: KEPT_MSG };
+      });
+    }
+    /** Record-to-record links (14 Nov 2026): {from_table, from_id, role, to_table, to_id, sort?, note?, from_date?}. */
+    function linkAdd(fields, requestId) { return act('link_add', fields, requestId); }
+    /** End one link: {id, to_date?} (blank = today). */
+    function linkEnd(fields, requestId) { return act('link_end', fields, requestId); }
 
     /**
      * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
@@ -279,13 +531,13 @@
     function read(tableKey, filter) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
-      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
+        body: JSON.stringify(withGoogle(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey }))
       })).then(function (r) { return r.json(); }).then(function (j) {
-        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; return res; }
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; if (typeof res.role === 'string') lastRole = res.role; if (typeof res.name === 'string') lastName = res.name; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
       }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
     }
@@ -297,18 +549,24 @@
     function readMany(keys, optional) {
       var out = {}, optionalSet = {};
       (optional || ['subject_status']).forEach(function (k) { optionalSet[k] = true; });
-      var chain = Promise.resolve({ ok: true });
-      keys.forEach(function (k) {
-        chain = chain.then(function (prev) {
-          if (!prev.ok) return prev;
-          return read(k).then(function (r) {
-            if (r.ok) { out[k] = r.rows; return { ok: true }; }
-            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING')) { out[k] = []; return { ok: true }; }
-            return r;
-          });
+      var take = function (k, r) {
+        if (r.ok) { out[k] = r.rows; return { ok: true }; }
+        if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED'))   /* FILE_NOT_ALLOWED: the script does not know this list yet */ { out[k] = []; return { ok: true }; }
+        return r;
+      };
+      if (!keys.length) return Promise.resolve({ ok: true, tables: out });
+      // Speed (Lisa 13/11): the first list goes alone, so a wrong or ended code costs one try, not one per list
+      // (each wrong try counts toward the lock-out). The rest go together; the first refusal in list order is
+      // reported, exactly as when they went one after another.
+      return read(keys[0]).then(function (first) {
+        var r0 = take(keys[0], first);
+        if (!r0.ok) return r0;
+        var rest = keys.slice(1);
+        return Promise.all(rest.map(function (k) { return read(k); })).then(function (rs) {
+          for (var i = 0; i < rest.length; i++) { var r = take(rest[i], rs[i]); if (!r.ok) return r; }
+          return { ok: true, tables: out };
         });
       });
-      return chain.then(function (r) { return r.ok ? { ok: true, tables: out } : r; });
     }
 
     /**
@@ -340,15 +598,19 @@
     return {
       TABLES: TABLES,
       setScriptUrl: setScriptUrl, getScriptUrlSet: function () { return !!scriptUrl; },
-      setCode: setCode, getCode: getCode, clearCode: clearCode,
+      setCode: setCode, getCode: getCode, clearCode: clearCode, hasAuth: hasAuth, usingGoogle: function () { return !getCode() && !!googleFn(); },
       role: function () { return lastRole; },
+      name: function () { return lastName; },
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
+      outbox: outbox,
+      sending: function () { return sending; },
       loadConfigFromDrive: loadConfigFromDrive,
+      act: act, linkAdd: linkAdd, linkEnd: linkEnd,
       read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 
-  return { create: create, TABLES: TABLES, URL_OK: URL_OK };
+  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip };
 }));

@@ -76,3 +76,28 @@ test.describe('CD Hub: estimated mating date uses the gestation row', () => {
     expect(r).toEqual({ n: 1, on: '2024-10-02', est: true, unest: 0, old: '2020-03-30' });
   });
 });
+
+test.describe('CD Hub: Compliance links and findings', () => {
+  test('"set it" opens the rule box with that rule chosen and the cursor in the number', async ({ page, guard }) => {
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'compliance');
+    await page.evaluate(() => { const d = document.querySelector('#compAdd details'); if (d) d.open = false; });
+    await page.locator('#tempsUnset [data-change-window]').click();
+    await expect(page.locator('#compAdd details')).toHaveAttribute('open', '');
+    await expect(page.locator('#brKey')).toHaveValue('compliance.look_back_days');
+    await expect(page.locator('#brVal')).toBeFocused();
+  });
+
+  test('a finding shows in full with its dog link, not folded into an (i)', async ({ page, guard }) => {
+    put(guard.world, 'BLD-breeding_rule.csv', csv(RULE_H, [
+      'b1,t,min_dam_age_months,12,2010-01-01,Pretend law,,,', 'g1,t,gestation.due_days,63,2010-01-01,Pretend vet,,,']));
+    const lit = require('fs').readFileSync(require('path').join(__dirname, '../fixtures/bld/BLD-litter.csv'), 'utf8').replace(/\s*$/, '');
+    put(guard.world, 'BLD-litter.csv', lit + '\r\nlit-x,sub-test-dog-1,sub-test-dog-2,2022-12-01,invented\r\n');
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'compliance');
+    const p = page.locator('#compProblems ul.notes li');
+    await expect(p).toContainText('Mated too young');
+    await expect(p).toContainText('estimated from the litter');
+    await expect(p.locator('a[data-dog-link]')).toBeVisible();
+  });
+});

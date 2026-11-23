@@ -42,7 +42,7 @@
       if (!r.type_key || !r.effective_from || r.effective_from > today) return;
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
-    return Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active); });
+    return Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active) && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; });   // item tests (target item) are due per item on the Items page, never a job   // round.* = written by the Round itself, never a job (15 Nov 2026)
   }
 
   /** Log rows that still stand: a corrected row gives way to the row that corrects it. */
@@ -61,13 +61,30 @@
   /* the dogs such a job covers here: target.dogs ([{id, area_id}]) less those in rooms it never covers (isolation) */
   function dogsFor(job, target) {
     var never = listOf(job.not_in_areas);
-    return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0; });
+    return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0 && inGroups(job, x.groups); });
+  }
+  /* only_groups: group keys by |, the only dogs a dog job belongs to (e.g. breeding dogs); blank = every dog. An owner row, dated by
+     effective_from like the rest of the job. groups = that dog's groups on the day (groupsOf); not given = the caller does not know, so the job shows */
+  function inGroups(job, groups) {
+    var only = listOf(job.only_groups);
+    if (!only.length || !groups) return true;
+    return only.some(function (k) { return groups.indexOf(k) >= 0; });
+  }
+  /** A dog's groups on `day`: BLD-links rows role member_of from the dog (subject/subjects) to a group, open on that day. */
+  function groupsOf(links, subjectId, day) {
+    return (links || []).filter(function (k) {
+      return k.role === 'member_of' && (k.from_table === 'subject' || k.from_table === 'subjects') && k.from_id === subjectId && k.to_table === 'group'
+        && (!k.from_date || k.from_date <= day) && (!k.to_date || k.to_date >= day);
+    }).map(function (k) { return k.to_id; });
   }
   function appliesTo(job, target) {
     var t = job.target;
     if (target.litter_id) return t === 'litter';
     if (perDogSite(job) && target.dogs) return dogsFor(job, target).length > 0;
-    if (target.subject_id) return t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea));
+    if (target.subject_id) return (t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea))) && inGroups(job, target.groups);
+    /* a room job saved per dog needs a dog there: with roomDogIds given and none in the room, it is not due (Lisa 20 Nov 2026:
+       isolation checks only when someone is in there) */
+    if (target.area_id && perDogRoom(job) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
     if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
   }
@@ -83,22 +100,83 @@
     return (row.subject_id || '') === (target.subject_id || '') && (row.area_id || '') === (target.area_id || '');
   }
 
+  /* a visitor's record (taken_by visit:<link id>) is kept separate: it counts only when its counts_due stamp says true or, with no stamp,
+     when that visit's BLD-inspect_link row lists the job in record_counts */
+  function visitCounts(visits) {
+    var m = {};
+    (visits || []).forEach(function (v) { if (v && v.id) m[v.id] = listOf(v.record_counts); });
+    return m;
+  }
+  /** The visit a record was saved under: taken_by 'visit:<link id>' (or its visit_id / grant_id column); '' for staff. */
+  function visitOf(log) {
+    var by = String(log.taken_by || '');
+    return log.visit_id || log.grant_id || (by.indexOf('visit:') === 0 ? by.slice(6) : '');   // grant_id: the planned name for visit_id (schema Q-N2)
+  }
+  function counts(log, version, vm) {
+    var visit = visitOf(log);
+    if (!visit) return true;
+    var stamp = String(log.counts_due || '').toLowerCase();   // stamped on the row when it was saved: what the visit granted then
+    if (stamp === 'true' || stamp === 'false') return stamp === 'true';
+    var keys = vm[visit];
+    return !!keys && keys.indexOf(version.type_key) >= 0;
+  }
   /**
    * Every job for one dog ({subject_id}; add everyDog: true, and dogArea: the dog's room, to count that dog on room jobs saved per dog), one room ({area_id}),
+   * Room: add roomDogIds: [dog ids in the room] so a room job saved per dog is due only with a dog there, and counted per dog.
    * Add dogs: [{id, area_id}] (the dogs on site here) to show a whole-site job about dogs on a dog or room too, done once each of those dogs has a line.
    * one litter ({litter_id}: jobs with target litter) or the whole site ({}).
    * Status: late, today, ok, never (has a frequency, no record yet) or as_needed.
+   * visits: BLD-inspect_link rows (optional). A visitor's record counts only if stamped counts_due true or, unstamped, if its visit lists the job in record_counts;
+   * with no visits given, every visitor record is left out.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */
-  function forTarget(types, logs, target, today) {
-    var byId = {};
+  /**
+   * Times a day a daily job must be done (owner rule row job.times_per_day.<type_key>, else job.times_per_day; the row in
+   * force on that day, newest effective_from wins). No row = 1. Only a job due every day uses it (Isolation checks: 3).
+   */
+  function timesPerDay(rules, typeKey, day) {
+    function pick(k) {
+      var best = null;
+      (rules || []).forEach(function (r) { if (r.rule_key === k && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+      return best ? parseInt(best.value, 10) : NaN;
+    }
+    var n = pick('job.times_per_day.' + typeKey);
+    if (!(n > 0)) n = pick('job.times_per_day');
+    return n > 0 ? n : 1;
+  }
+  /**
+   * Due by age (Lisa 22 Nov 2026, puppy weights): owner rule row job.by_age.<type_key>, the row in force on `day` (newest
+   * effective_from wins). Its value lists ages in days from birth, split by |: "a-b:n" = every n days from age a to age b,
+   * "a" = once at age a. E.g. "0-6:1|7-27:7|42|70" = daily in week 1, weekly in weeks 2 to 4, at 6 and 10 weeks.
+   * Returns the due dates for a litter born on `born`, oldest first; [] with no row or no birth date.
+   */
+  function ageDates(rules, typeKey, day, born) {
+    born = /^\d{4}-\d{2}-\d{2}/.test(born || '') ? String(born).slice(0, 10) : londonDate(born);
+    if (!born) return [];
+    var best = null, k = 'job.by_age.' + typeKey;
+    (rules || []).forEach(function (r) { if (String(r.rule_key || '').trim() === k && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    if (!best) return [];
+    var ages = {};
+    String(best.value || '').split('|').forEach(function (part) {
+      var m = /^\s*(\d+)\s*(?:-\s*(\d+)\s*:\s*(\d+))?\s*$/.exec(part);
+      if (!m) return;
+      var a = +m[1], b = m[2] == null ? a : +m[2], n = m[3] == null ? 1 : +m[3];
+      if (!(n > 0) || b < a) return;
+      for (var x = a; x <= b; x += n) ages[x] = true;
+    });
+    return Object.keys(ages).map(Number).sort(function (x, y) { return x - y; }).map(function (x) { return addDays(born, x); });
+  }
+  /* opts.rules: the owner's rule rows (optional), for times_per_day and by-age jobs. A litter target may carry born (its birth date) */
+  function forTarget(types, logs, target, today, visits, opts) {
+    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
-      if (!version || log.outcome === 'not_done') return;
+      if (!version || log.outcome === 'not_done' || log.outcome === 'note' || log.outcome === 'part_done') return;   // a note, or part done, is never a done
+      if (!counts(log, version, vm)) return;
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
       if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
@@ -108,6 +186,13 @@
         return;
       }
       if (!sameTarget(log, target, version)) return;
+      if (date === today) {
+        todayCount[version.type_key] = (todayCount[version.type_key] || 0) + 1;
+        if (perDogRoom(version) && !target.subject_id && log.subject_id) {   // a room tap writes a line per dog: count times per dog
+          var c = dogToday[version.type_key] = dogToday[version.type_key] || {};
+          c[log.subject_id] = (c[log.subject_id] || 0) + 1;
+        }
+      }
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
@@ -120,10 +205,28 @@
     return jobsInForce(types, today).filter(function (j) { return appliesTo(j, target); }).map(function (j) {
       var every = everyDays(j.every_days), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
+      var times = every === 1 ? timesPerDay(rules, j.type_key, today) : 1, doneToday = todayCount[j.type_key] || 0;
+      if (perDogRoom(j) && target.area_id && !target.subject_id && dogToday[j.type_key]) {
+        /* a room job saved per dog: done as many times as its least-checked dog here (the dogs in the room if given) */
+        var per = dogToday[j.type_key], ids = Array.isArray(target.roomDogIds) ? target.roomDogIds : Object.keys(per);
+        doneToday = ids.length ? Math.min.apply(null, ids.map(function (id) { return per[id] || 0; })) : 0;
+      }
+      if (times > 1 && d && d.date === today && doneToday < times) status = 'today';   // done, but not yet as many times as today needs
+      var ages = target.litter_id && target.born ? ageDates(rules, j.type_key, today, target.born) : [];
+      if (ages.length) {
+        /* due by the litter's age: the latest age date up to today needs a record on or after it */
+        var past = ages.filter(function (x) { return x <= today; }), last = past[past.length - 1], coming = ages.filter(function (x) { return x > today; })[0] || '';
+        every = null;
+        status = !last ? 'ok' : d && d.date >= last ? 'ok' : last === today ? 'today' : 'late';
+        next = status === 'ok' ? coming : last;
+        return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: null, last_done: d ? d.date : '', next_due: next,
+          days_late: status === 'late' ? daysBetween(last, today) : 0, status: status, reset_by: d ? d.by : '', times_per_day: 1, done_today: doneToday, by_age: true };
+      }
       return { type_key: j.type_key, label: j.label, group: j.group || '', every_days: every, last_done: d ? d.date : '',
-        next_due: next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '' };
+        next_due: status === 'today' && times > 1 ? today : next, days_late: status === 'late' ? daysBetween(next, today) : 0, status: status, reset_by: d ? d.by : '',
+        times_per_day: times, done_today: doneToday };
     });
   }
 
-  return { forTarget: forTarget, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

@@ -18,8 +18,9 @@
       subject_id: { type: 'text', label: 'Dog' },
       item: { type: 'text', label: 'What' },
       amount: { type: 'text', label: 'Amount' },
-      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded'], required: true, label: 'Outcome' },
-      note: { type: 'text', label: 'Note' }
+      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded', 'note', 'part_done'], required: true, label: 'Outcome' },   // note = a note added to a job already done
+      note: { type: 'text', label: 'Note' },
+      note_for_id: { type: 'text', label: 'Note for' }
     }
   };
   var OUTCOMES = [['ok', 'Done, all fine'], ['concern', 'Done, with a concern'], ['not_done', 'Not done']];
@@ -32,7 +33,7 @@
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
     return Object.keys(best).map(function (k) { return best[k]; })
-      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter'; })   // litter jobs open from a litter card's code
+      .filter(function (r) { return r.active !== 'false' && r.target !== 'litter' && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; })   // litter jobs open from a litter card's code; round.* rows are written by the Round itself, never a job
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
   }
 
@@ -57,7 +58,8 @@
     if (a.item && !entry.item) e.item = 'This is needed.';
     if (a.amount && !entry.amount) e.amount = 'This is needed.';
     if (!entry.outcome) e.outcome = 'Choose one.';
-    if ((entry.outcome === 'concern' || entry.outcome === 'not_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
+    if ((entry.outcome === 'concern' || entry.outcome === 'not_done' || entry.outcome === 'part_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
+    else if (entry.outcome === 'note' && !entry.note) e.note = 'Write the note.';
     else if (a.noteRequired && !entry.note) e.note = 'This is needed.';
     return e;
   }
@@ -173,12 +175,12 @@
       if (Object.keys(problems).length) { showErrors(problems); return; }
       requestId = requestId || save.newRequestId();
       send.disabled = true; result.textContent = 'Saving...';
-      return save.submit('check_log', entry, { requestId: requestId }).then(function (r) {
+      return save.submit('check_log', entry, { requestId: requestId, onTurn: function (n) { result.textContent = typeof BLDDone === 'undefined' ? (n > 0 ? 'Waiting, ' + n + ' ahead' : 'Saving...') : BLDDone.turn(n); } }).then(function (r) {
         send.disabled = false;
-        if (r.ok) { reset(); result.textContent = r.message + ' ' + savedWhat(type, entry); return; }
+        if (r.ok) { reset(); result.textContent = (r.status === 'queued' || typeof BLDDone === 'undefined' ? r.message : BLDDone.by(r)) + ' ' + savedWhat(type, entry); return; }
         result.textContent = r.message;
         showErrors(r.fields);
-        if (r.code !== 'NETWORK') requestId = null;
+        if (!r.kept && r.code !== 'NETWORK') requestId = null;
       });
     });
 

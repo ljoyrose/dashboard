@@ -21,14 +21,14 @@ const ALL = {
 };
 // What each hub's bar shows, in order, and what sits under More (Lisa's picks; the first is Main, More is always last).
 const PLAN = {
-  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; MOVE is a link out (new tab)
+  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Tech', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; Tech (TECH-HUB-1); MOVE is a link out (new tab)
   money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], phone: ['Main', 'Money', 'Do', 'Dates', 'Acct', 'More'], more: ['Control'] },
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Compliance', 'Table map', 'The round', 'Areas', 'Litters', 'Assocs', 'Temps', 'Enquiries'] },
+  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
-  estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov)
+  estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'DNS & Email', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov); DNS & Email: JOB 6.3 (12 Nov)
 };
 // phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
 // Each tab's colour (Lisa's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).
@@ -82,7 +82,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       if (words.includes('Decide')) expect(words.indexOf('Decide'), 'Decide second').toBe(1);
       for (const t of m.tabs) {
         expect(['A', 'BUTTON'], `${t.word} is a real link or button`).toContain(t.tag);
-        expect(t.name, `${t.word} has a name`).toMatch(new RegExp('^' + t.full));
+        expect(t.name, `${t.word} has a name`).toMatch(new RegExp('^(' + t.full + '|' + t.word + ' .*\\(' + t.full + '\\))'));   // a short phone word starts the name, the full word follows in brackets
         expect(t.word, `${t.word}: one word, or two words each capitalised`).toMatch(/^[A-Z][a-z]+( [A-Z][a-z]+)?$|^SOPs$/);
         expect(Math.abs(t.height - m.tabs[0].height), `${t.word} same height as the others`).toBeLessThan(1);
         expect(Math.abs(t.top - m.tabs[0].top), `${t.word} on the one row`).toBeLessThan(1);
@@ -145,7 +145,7 @@ for (const [hub, H] of Object.entries(ALL)) {
     await expect(menu).toBeVisible();
     const items = menu.locator(':scope > a, :scope > button');
     // A view may carry its count after the word (e.g. "Kits1"): the word itself must match exactly.
-    await expect(items).toHaveText(PLAN[hub].more.concat(PLAN[hub].out || []).map((w) => new RegExp('^' + w + '\\d*$')));
+    await expect(items).toHaveText(PLAN[hub].more.concat(PLAN[hub].out || []).map((w) => new RegExp('^' + w + '\\s*\\d*$')));
     // A link out of the site (not a view) opens a new tab and so never shows "where you are".
     for (const w of PLAN[hub].out || []) await expect(menu.locator(':scope > a', { hasText: w })).toHaveAttribute('target', '_blank');
     // Each view in the menu takes its own colour in its icon on hover (grey only for slot 0).
@@ -174,7 +174,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       }
       await item.click();
       await expect(menu).toBeHidden();
-      await expect(menu.locator(':scope > [aria-current="page"]')).toHaveText(new RegExp('^' + word + '\\d*$'));
+      await expect(menu.locator(':scope > [aria-current="page"]')).toHaveText(new RegExp('^' + word + '\\s*\\d*$'));
       // The line grows with a short transition; wait for it to settle.
       await expect.poll(() => more.evaluate((b) => b.querySelector('.bar').getBoundingClientRect().width), { message: `More shows where you are (${word})` }).toBeCloseTo(40, 0);
     }
