@@ -2796,13 +2796,27 @@ function applyTurn(img,deg){
  var box=img.parentNode, w=box&&box.clientWidth||0, h=box&&box.clientHeight||0;
  img.style.cssText=BLDPhotos.turnStyle(deg,w,h);
 }
+/* Which element is the card's own main photo (never a gallery thumbnail that borrowed the id). */
+function isMainPhoto(img){
+ return !!(img&&img.classList&&img.classList.contains('dogphoto'));
+}
+/* Every element showing this photo id: the card's main one, or gallery thumbnails that carry it.
+   Scoped to one card when it is given, so a save restyles only the card the owner is working in. */
+function photoImgs(id,scope){
+ var all=(scope||document).querySelectorAll('img[data-photo-id="'+id+'"]'), out=[], i;
+ for(i=0;i<all.length;i++) out.push(all[i]);
+ return out;
+}
 function loadPhotoImg(img){
-  var id=img.getAttribute('data-photo-id');
+  var id=img.getAttribute('data-photo-id'), main=isMainPhoto(img);
   applyTurn(img);
   if(!id||!TOKEN){ pawDogPhoto(img); return; }
   img.addEventListener('load', function(){ if(img.getAttribute('src')){ showDogPhoto(img); applyTurn(img,+img.getAttribute('data-rot')||0); } });
   img.addEventListener('error', function(){
    if(img.getAttribute('data-tried')==='bytes'){ pawDogPhoto(img); return; }
+   if(main){ dogPhotoBytes(img,id); return; }
+   /* a gallery thumbnail: one bytes try only, then the paw, so it never retries a signed-out Drive thumbnail */
+   img.setAttribute('data-tried','bytes');
    dogPhotoBytes(img,id);
   });
   gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
@@ -2998,7 +3012,7 @@ document.addEventListener('click',async function(ev){
  if(!(r.ok&&r.result&&r.result.status==='saved')){ if(msg) msg.textContent=(r.fields&&r.fields.effective_from)?'Already turned today. Try again tomorrow.':sinkMsg(r); return; }
  (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:(r.result&&r.result.id)||'',rule_key:key,value:String(want),effective_from:day,source:'Turned on the dog card',note:'',set_at:(r.result&&r.result.at)||new Date().toISOString()});
  save.hidden=true; if(msg) msg.textContent='\u2713 Saved';
- Array.prototype.forEach.call(document.querySelectorAll('img[data-photo-id="'+img.getAttribute('data-photo-id')+'"]'),function(x){ applyTurn(x); });
+ photoImgs(img.getAttribute('data-photo-id'),card).forEach(function(x){ applyTurn(x); });
 });
 /* which dogs' Photos are open, so a redraw (a save, or a read landing behind the copy) does not shut them (22 Nov 2026) */
 var GAL_OPEN={};
