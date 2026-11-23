@@ -76,6 +76,7 @@ var BLD = {
     RETENTION_DEFAULT_YEARS: 6,
     REQUEST_CACHE_SEC: 21600,
     LOCK_WAIT_MS: 20000,
+    MAX_BATCH_ITEMS: 20,    // a list save (add_many, 20 Nov 2026): one round's readings, sent in parts of at most 20
     TEMP_MIN: -30,
     TEMP_MAX: 60,
     READ_MAX_ROWS: 3000,    // a read never returns more rows than this
