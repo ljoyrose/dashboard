@@ -224,7 +224,7 @@ test('Areas room card: limits as door-sign chips for the current flap mode, the 
   await expect(room.locator('table')).toBeHidden();
   await room.locator('details.allfig summary').click();
   await expect(room.locator('table')).toBeVisible();
-  await expect(room.locator('[data-print-sign="ar-a"]')).toHaveAttribute('href', 'staff/print/');
+  await expect(room.locator('[data-print-sign="ar-a"]')).toHaveAttribute('href', 'staff/print/?sign=ar-a');
 });
 
 test('Areas room card: today\'s temperature line in the round\'s words, the limit from the band rows, and a history link', async ({ page, guard }) => {

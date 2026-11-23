@@ -19,6 +19,11 @@ async function hold(page, world, name) {
   });
   return { release: async () => { held = false; await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {}))); }, waiting };
 }
+// make the device copy look `min` minutes old (Compliance shows a copy up to 5 minutes old, with its time)
+async function ageCopy(page, min) {
+  await page.waitForFunction(() => !READING);
+  await page.evaluate(async (m) => { const c = await copyGet(); c.at = new Date(Date.now() - m * 60000).toISOString(); await copyPut(c); }, min);
+}
 async function hasCopy(page) { return page.evaluate(async () => !!(await copyGet())); }
 async function fullRead(page) {
   await page.waitForFunction(() => window.LOAD && LOAD.state === 'ok' && LOAD.later === 'ok' && !LOAD.copy);
@@ -39,18 +44,20 @@ test.describe('CD Hub: owner speed', () => {
     await expect(page.locator('#main')).toContainText('Test Dog One');
   });
 
-  test('later tables are fewer than half the reads before the first screen, and are still read 6 at a time', async ({ page }) => {
+  test('later tables are fewer than half the reads before the first screen, and are still read 10 at a time', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const n = await page.evaluate(() => ({ want: WANT.length, later: WANT.filter((t) => LATER[t]).length, at: READ_AT_ONCE }));
     expect(n.later).toBeGreaterThan(20);
-    expect(n.at).toBe(6);
+    expect(n.at).toBe(10);
   });
 
-  test('reopening shows the device copy at once, marked "updated", while the live read runs; Compliance waits for live rows', async ({ page, guard }) => {
+  test('reopening shows the device copy at once, marked "updated", while the live read runs; Compliance waits when the copy is over 5 minutes old', async ({ page, guard }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await fullRead(page);
+    await ageCopy(page, 6);
+    guard.world.files.find((x) => x.name === 'BLD-subject.csv').content += '\n';   // changed in Drive, so it is read again
     const h = await hold(page, guard.world, 'BLD-subject.csv');   // a first-screen table: the live read stays open
     await page.reload();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();

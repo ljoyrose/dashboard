@@ -185,3 +185,17 @@ test('record delete: nobody by default, the owner included; with a row it remove
   // the change log itself can never be removed through this
   assert.throws(() => d.ctx.store_removeRow_('BLD-audit_log.csv', AUDIT_H, 0, d.ctx.store_read_('BLD-audit_log.csv', true)));
 });
+
+/* Printed dog cards (22 Nov 2026, DOGCARD): the print page reads the photo files a main link points at. Invented rows only. */
+test('files: readable only through visibility rows (owner print), never who set it; guests never', () => {
+  const env = env1();
+  env.addFile('BLD-files.csv', ['id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on,created_at,updated_at',
+    `fil-t1,${fx.TENANT},photo,pretendDriveId123,,image/jpeg,Pretend_main.jpg,,,,drive,Pretend Owner,2026-11-15,,`].join('\r\n') + '\r\n');
+  assert.equal(read(env, { table: 'files', code: env.codes.owner }).code, 'NOT_ALLOWED');
+  addVis(env, ['*', 'id', 'drive_file_id', 'kind', 'name'].map((f) => fv('files', f, 'aud-admin')));
+  const r = read(env, { table: 'files', code: env.codes.owner });
+  assert.equal(r.ok, true, JSON.stringify(r)); assert.equal(r.result.count, 1);
+  assert.equal(r.result.fields.includes('set_by'), false);
+  assert.equal(read(env, { table: 'files' }).code, 'NOT_ALLOWED');   // no staff rows
+  assert.equal(read(env, { table: 'files', code: env.ctx.adminAddGuestCode() }).code, 'NOT_ALLOWED');
+});
