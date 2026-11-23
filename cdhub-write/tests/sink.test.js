@@ -116,6 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
+    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-grant_right_link.csv', 'BLD-grant_scope.csv', 'BLD-guest_reading.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-person.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sale.csv', 'BLD-sensor_reading.csv', 'BLD-subject_owner.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
     ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-audit_log.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-item_kinds.csv', 'BLD-items.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-person.csv', 'BLD-qr_tag.csv', 'BLD-readings.csv', 'BLD-requirement.csv', 'BLD-sale.csv', 'BLD-sensor_reading.csv', 'BLD-subject_owner.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
 });
 
@@ -863,6 +864,24 @@ test('rows of another tenant are never returned, and a long list is capped', () 
   const c = read(env, { table: 'occupancy' });
   assert.equal(c.result.count, 2);
   assert.equal(c.result.truncated, true);
+});
+
+test('a capped read keeps the NEWEST rows (the last in the table), and the filters run before the cap', () => {
+  const env = withRead();
+  const f = env.file('BLD-occupancy.csv')[0];
+  const key = (x) => x.subject_id + '@' + x.area_id;
+  const before = read(env, { table: 'occupancy' }).result.rows.map(key);
+  f.content += 'occ-new1,' + fx.TENANT + ',sub-dezi,area-t1,,2026-11-22,,,\r\n' + 'occ-new2,' + fx.TENANT + ',sub-dezi,area-t2,,2026-11-22,,,\r\n';
+  env.ctx.BLD.LIMITS.READ_MAX_ROWS = 2;
+  const c = read(env, { table: 'occupancy' });
+  assert.equal(c.result.truncated, true);
+  assert.deepEqual(Array.from(c.result.rows, key), ['sub-dezi@area-t1', 'sub-dezi@area-t2']);   // was the first two rows of the table
+  assert.ok(before.length >= 1);
+  // a filter narrows first; the cap then keeps the newest of what is left
+  env.ctx.BLD.LIMITS.READ_MAX_ROWS = 1;
+  const one = read(env, { table: 'occupancy', filter: { area_id: 'area-t1' } });
+  assert.equal(one.ok, true, JSON.stringify(one));
+  assert.deepEqual(Array.from(one.result.rows, key), ['sub-dezi@area-t1']);
 });
 
 test('reading is a separate switch from saving, and works through doPost', () => {
