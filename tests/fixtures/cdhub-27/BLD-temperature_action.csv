@@ -1,0 +1,3 @@
+id,direction,threshold_c,action,source
+ta-1,below,10,Add bedding and switch the heater on,invented
+ta-2,above,26,Open the vents and add a fan,invented

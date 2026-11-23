@@ -1,0 +1,23 @@
+<!doctype html><html lang="en-GB"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Medicines register · CD Hub</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<style>body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#111111;background:#FFFFFF;margin:16px}</style>
+</head><body>
+<!-- Medicines register print page (21 Nov 2026). CD Hub > Compliance prepares the month's register and opens this page,
+     which shows it and prints it. Read only: nothing here reads Drive or writes a row. Opened on its own, it says where to go. -->
+<main id="medsPrintNone"><h1>Medicines register</h1><p>Open this from CD Hub: Compliance, Medicines register, then Print.</p>
+<p><a href="./#/compliance">Open Compliance</a></p></main>
+<script>
+(function () {
+  var h = '';
+  try { h = window.opener && window.opener.__medsPrint; } catch (e) { h = ''; }
+  if (typeof h !== 'string' || h.indexOf('<!doctype html>') !== 0) return;
+  try { window.opener.__medsPrint = ''; } catch (e) { /* the opener may have gone */ }
+  // after this page has loaded, so the register replaces it rather than being added below it
+  window.addEventListener('load', function () { setTimeout(function () { document.open(); document.write(h); document.close(); }, 0); });
+}());
+</script>
+</body></html>

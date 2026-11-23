@@ -10,6 +10,13 @@ Checks (each FAIL names file:line and a rule id, never the matched private text)
   PATH   a path that must never be committed (data, sends, runs, regression sets, .pyc, zips)
   AUTHOR a commit author/committer email that is not a GitHub/bot noreply address
 
+Invented fixtures. In test and fixture files ONLY (tests/, fixtures/, *.spec.js, *.test.js, test_*.py), values that
+are plainly made up are not findings: addresses on reserved example domains (example.com/.net/.org, .example, .test,
+.invalid), the textbook number (01234, then 567890) or a number ending in six zeros, and ids that say they are made
+up (SAMPLE, FAKE, TEST, EXAMPLE, DUMMY, INVENTED), are one short pattern repeated, or spell out the alphabet. A
+real-looking address, number or id in the same files still fails, and so does every denylist term. Outside those
+files nothing changes.
+
 The denylist is NEVER in the repo. It is read from env PRIVACY_DENYLIST (GitHub secret,
 one term per line) or from the file named by env PRIVACY_DENYLIST_FILE, which must be
 outside the repo. No denylist -> exit 2 (fail closed).
@@ -36,6 +43,13 @@ DRIVE_RES = [
 ]
 # Made-up ids in tests and samples say so (1SAMPLE..., 1FAKEFAKE...): not flagged.
 FIXTURE_ID = re.compile(r"SAMPLE|FAKE")
+# Invented fixtures (test and fixture files only; see the note at the top).
+FIXTURE_PATHS = ["tests/*", "*/tests/*", "fixtures/*", "*/fixtures/*", "*.spec.js", "*.test.js", "*.test.mjs", "test_*.py", "*/test_*.py"]
+ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+FIXTURE_ID_LOOSE = re.compile(r"SAMPLE|FAKE|TEST|EXAMPLE|DUMMY|INVENTED|([A-Za-z0-9_-]{1,4})\1{5,}|(?i:"
+                              + "|".join(ALPHABET[i:i + 8] for i in range(len(ALPHABET) - 7)) + ")")
+FIXTURE_MAIL = re.compile(r"@(?:[a-z0-9-]+\.)*(?:example\.(?:com|net|org)|example|test|invalid)$")
+FIXTURE_PHONE = re.compile(r"^(?:1234567890|\d{4}0{6})$")
 # UK numbers: 0 or +44, then 10 national digits starting 1, 2, 3 or 7; spaces, dashes, (0) allowed.
 PHONE_RE = re.compile(r"(?<![\w+.])(\+44[\s-]?(?:\(0\)[\s-]?)?|0)([1237](?:[\s-]?\d){9})(?![\w.])")
 # Ofcom's ranges reserved for fiction (07700 900xxx, 020 7946 0xxx, 0113 496 0xxx ...): safe for tests and samples.
@@ -129,16 +143,19 @@ def scan_text(path, text, deny, allow, where, out):
         if rx.search(path):
             out.append(("DENY", f"{where}{shown}: DENY term #{i} in the file name"))
     drive_ok = any(fnmatch.fnmatch(path, g) for g in allow["drive"])
+    fixture = any(fnmatch.fnmatch(path, g) for g in FIXTURE_PATHS)
+    made_up = FIXTURE_ID_LOOSE if fixture else FIXTURE_ID
     for n, line in enumerate(text.splitlines(), 1):
         for i, rx in enumerate(deny, 1):
             if rx.search(line):
                 out.append(("DENY", f"{where}{shown}:{n}: DENY term #{i}"))
         for m in EMAIL_RE.finditer(line):
-            if not email_ok(m.group(0), path, allow):
+            if not email_ok(m.group(0), path, allow) and not (fixture and FIXTURE_MAIL.search(m.group(0).lower())):
                 out.append(("EMAIL", f"{where}{shown}:{n}: EMAIL address not on the allow list"))
-        if not drive_ok and any(not FIXTURE_ID.search(m.group(0)) for rx in DRIVE_RES for m in rx.finditer(line)):
+        if not drive_ok and any(not made_up.search(m.group(0)) for rx in DRIVE_RES for m in rx.finditer(line)):
             out.append(("DRIVE", f"{where}{shown}:{n}: DRIVE id or link outside allow-listed files"))
-        if any(not FICTION_RE.match(re.sub(r"\D", "", m.group(2))) for m in PHONE_RE.finditer(line)):
+        digits = [re.sub(r"\D", "", m.group(2)) for m in PHONE_RE.finditer(line)]
+        if any(not FICTION_RE.match(d) and not (fixture and FIXTURE_PHONE.match(d)) for d in digits):
             out.append(("PHONE", f"{where}{shown}:{n}: PHONE number"))
 
 

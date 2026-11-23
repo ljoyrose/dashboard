@@ -37,9 +37,9 @@ test.describe('CD Hub: Compliance findings', () => {
     await expect(li.nth(0)).toContainText('Pretend requirement A');
     await expect(li.nth(0)).toContainText('Pretend major');
     await expect(li.nth(0)).toContainText('Pretend second thermometer');
-    await expect(li.nth(0).locator('[data-k="recur"]')).toContainText('Found 2 times: 10/01/26, 01/03/26');
+    await expect(li.nth(0).locator('[data-k="recur"]')).toContainText('Found 2 times: 10 Jan 2026, 1 Mar 2026');
     await expect(li.nth(1)).toHaveAttribute('data-finding', 'f3');
-    await expect(li.nth(1).locator('.dpill.late')).toContainText('15/03/26');
+    await expect(li.nth(1).locator('.dpill.late')).toContainText('15 Mar 2026');
     await expect(li.nth(1).locator('[data-k="recur"]')).toHaveText('First time');
     await expect(page.locator('#compFindings')).not.toContainText('Pretend private note');
     await expect(page.locator('#compFindings')).toContainText('1 closed.');

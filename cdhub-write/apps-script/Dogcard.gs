@@ -3,8 +3,10 @@
  *
  *   action 'weighing'          adds one row to BLD-weight.csv
  *   action 'vaccination'       adds one row to BLD-vaccination.csv (one row per vaccination; a dog can have many)
- *   action 'vaccination_void'  marks the dog's NEWEST vaccination row as removed (voided_on, voided_by). Never deletes.
- *                              Older rows are read only. A removed row can be added again as a new row.
+ *   action 'vaccination_void'  OWNER ONLY (Lisa 17 Nov 2026: "Archive"). Hides ANY one vaccination row of the dog by filling
+ *                              voided_on, voided_by. The row stays in the sheet.
+ *   action 'vaccination_delete' OWNER ONLY (Lisa 17 Nov 2026: "Delete forever"; the records are the owner's). Takes ONE
+ *                              vaccination row of the dog out of the sheet. Every other row must read back unchanged.
  *   action 'dog_details'       OWNER ONLY. Changes the dog card header in place: name, sex, date of birth, colour,
  *                              entire/neutered (BLD-subject.csv) and the microchip number (BLD-microchip.csv).
  *                              Switch: TABLE_ON_dog_details. Size is NOT here: it is worked out from the latest weight.
@@ -36,7 +38,7 @@ function dogcardFiles_() {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + DOGCARD_.subject_create.on) === 'true') {
     [DOGCARD_.subject_create.file, CHIP_FILE_, STATUS_FILE_].forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); });
   }
-  return out.concat(subjectLinkFiles_());
+  return out.concat(subjectLinkFiles_(), typeof filesStoreFiles_ === 'function' ? filesStoreFiles_() : []);
 }
 
 function dogcardText_(v, name, errors, max) {
@@ -67,7 +69,7 @@ function sinkDogcard_(req, kind, fn) {
   if (prop_(BLD.PROP.TABLE_ON_PREFIX + spec.on) !== 'true') throw err_('TABLE_OFF', 'Saving to ' + spec.file + ' is switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
-  var who = authStaff_(req.code);
+  var who = authSaver_(req);
   if (who.role !== 'OWNER' && (spec.owner || who.role !== 'STAFF')) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
   var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
@@ -126,28 +128,40 @@ function sinkVaccination_(req) {
   });
 }
 
-/** Remove the newest vaccination of one dog: fills voided_on and voided_by in that row only. */
+/** The row index of one vaccination of one dog (owner only), or a plain refusal. */
+function vaxOwnRow_(spec, f, who, cols) {
+  if (who.role !== 'OWNER') throw err_('NOT_ALLOWED', 'Only the owner can archive or delete a vaccination.');
+  var subjectId = String(f.subject_id || '').trim(), rowId = String(f.id || '').trim();
+  if (!ID_RE_.test(subjectId) || !ID_RE_.test(rowId)) throw err_('INVALID', 'Say which vaccination this is.');
+  var read = store_read_(spec.file, true);
+  dogcardHeader_(read, spec.need.concat(cols), spec.file);
+  var at = -1;
+  read.records.forEach(function (r, i) { if (r.id === rowId && r.subject_id === subjectId) at = i; });
+  if (at < 0) throw err_('NOT_FOUND', 'That vaccination was not found for this dog, so nothing was changed.');
+  return { read: read, at: at, subjectId: subjectId, rowId: rowId };
+}
+
+/** Archive one vaccination (owner only): fills voided_on and voided_by in that row only. The row stays. */
 function sinkVaccinationVoid_(req) {
   return sinkDogcard_(req, 'vaccination', function (spec, f, who, now) {
-    var subjectId = String(f.subject_id || '').trim(), rowId = String(f.id || '').trim();
-    if (!ID_RE_.test(subjectId) || !ID_RE_.test(rowId)) throw err_('INVALID', 'Say which vaccination to remove.');
-    var read = store_read_(spec.file, true);
-    dogcardHeader_(read, spec.need.concat(VOID_COLS_), spec.file);
-    var newest = -1;
-    read.records.forEach(function (r, i) {
-      if (r.subject_id !== subjectId || String(r.voided_on || '').trim()) return;
-      if (newest < 0 || String(r.given_on || '') >= String(read.records[newest].given_on || '')) newest = i;
-    });
-    if (newest < 0) throw err_('NOT_FOUND', 'That dog has no vaccinations to remove.');
-    if (read.records[newest].id !== rowId) throw err_('NOT_ALLOWED', 'Only the most recent vaccination can be removed.');
-    var rec = read.records[newest];
-    var row = read.header.map(function (h) {
+    var x = vaxOwnRow_(spec, f, who, VOID_COLS_), rec = x.read.records[x.at];
+    if (String(rec.voided_on || '').trim()) return { status: 'saved', id: x.rowId, subject_id: x.subjectId, voided: true };
+    var row = x.read.header.map(function (h) {
       if (h === 'voided_on') return Utilities.formatDate(now, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
       if (h === 'voided_by') return who.who;
       return rec[h] == null ? '' : String(rec[h]);
     });
-    store_replaceRow_(spec.file, read.header, newest, row, read);
-    return { status: 'saved', id: rowId, subject_id: subjectId, voided: true };
+    store_replaceRow_(spec.file, x.read.header, x.at, row, x.read);
+    return { status: 'saved', id: x.rowId, subject_id: x.subjectId, voided: true };
+  });
+}
+
+/** Delete one vaccination for good (owner only): the row leaves the sheet; nothing else may change. */
+function sinkVaccinationDelete_(req) {
+  return sinkDogcard_(req, 'vaccination', function (spec, f, who) {
+    var x = vaxOwnRow_(spec, f, who, []);
+    store_deleteRow_(spec.file, x.read.header, x.at, x.read);
+    return { status: 'deleted', id: x.rowId, subject_id: x.subjectId, deleted: true };
   });
 }
 
@@ -221,11 +235,10 @@ function dogcardPick_(word, allowed) {
   return hit;
 }
 
-/** sub-<name slug>, made unique against the ids already in the file. */
-function dogcardSubjectId_(name, ids) {
-  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'dog';
-  var id = 'sub-' + slug, n = 2;
-  while (ids[id]) id = 'sub-' + slug + '-' + (n++);
+/** A new dog's id: sub- and random letters (Q4, 15 Nov 2026), never the name. Unique against the ids already in the file. */
+function dogcardSubjectId_(ids) {
+  var id = newId_('sub');
+  while (ids[id]) id = newId_('sub');
   return id;
 }
 
@@ -320,7 +333,7 @@ function sinkSubjectCreate_(req) {
     }
 
     var allIds = {}; read.records.forEach(function (r) { allIds[r.id] = 1; });
-    var id = dogcardSubjectId_(name, allIds);
+    var id = dogcardSubjectId_(allIds);
     var host = dogcardText_(f.host, 'host', {}, 40) || 'CD Hub';
     var values = { id: id, tenant_id: tenant, name: name, sex: sex, dob: dob, size_band: '', coat_type: coatType, kind: kind,
       neuter_status: neuter, species: species, breed: breed, coat_colour_id: ids.coat_colour_id, coat_pattern_id: ids.coat_pattern_id,
@@ -334,7 +347,9 @@ function sinkSubjectCreate_(req) {
     dogcardAppend_({ file: STATUS_FILE_, need: ['id', 'subject_id', 'state', 'from_date'], idPrefix: 'sst' },
       { subject_id: id, state: activeWord, from_date: today, to_date: '', reason: 'added in ' + host });
     if (chip) dogcardAppend_({ file: CHIP_FILE_, need: ['id', 'subject_id', 'chip_number'], idPrefix: 'mc' }, { subject_id: id, chip_number: chip, source: 'CD Hub, ' + who.who });
-    return { status: 'saved', id: id };
+    // 15 Nov 2026 (BB): a pup gets its parents' open links of kinds the owner set to inherit at birth (e.g. a scheme)
+    var inherited = litterId ? linkInheritAtBirth_(id, litterId, dob, who, now) : [];
+    return inherited.length ? { status: 'saved', id: id, links: inherited } : { status: 'saved', id: id };
   });
 }
 
