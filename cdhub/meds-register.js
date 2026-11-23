@@ -38,6 +38,21 @@
   };
 
   function str(v) { return String(v == null ? '' : v).trim(); }
+
+  /* No internal codes on paper (Lisa, 23 Nov 2026). A record id looks like clg-20261118-042020-vf20 or sub-7k2q9x: 2 to 5
+     letters, a hyphen, then letters and digits with at least one digit. "from <id>" is dropped whole; a bare id too. */
+  var ID_SRC = '\\b[a-z]{2,5}-(?=[a-z0-9-]*\\d)[a-z0-9]+(?:-[a-z0-9]+)*\\b';
+  function ids(s) { return String(s == null ? '' : s).match(new RegExp(ID_SRC, 'gi')) || []; }
+  function clean(s) {
+    return String(s == null ? '' : s)
+      .replace(new RegExp('\\(?\\s*\\bfrom\\s+' + ID_SRC + '\\s*\\)?', 'gi'), ' ')
+      .replace(new RegExp(ID_SRC, 'gi'), ' ')
+      .replace(/\s+([.,;:])/g, '$1').replace(/([.,;:·|])(\s*[.,;:·|])+/g, '$1')
+      .replace(/\s{2,}/g, ' ').replace(/^[\s.,;:·|]+|[\s,;:·|]+$/g, '').trim();
+  }
+  /* Who did it: a name. A visitor's record says visit:<link id>; that prints as "Visitor (shared link)". */
+  function who(s) { s = str(s); return /^visit:/i.test(s) ? 'Visitor (shared link)' : clean(s); }
+
   function pick(r, cols) { for (var i = 0; i < cols.length; i++) { var v = str(r[cols[i]]); if (v) return v; } return ''; }
 
   /* A product written as "NOT STATED", "unknown" or flagged for a ruling is not a named medicine. */
@@ -76,8 +91,8 @@
       var out = str(r.outcome), amt = str(r.amount), u = unit[str(r.check_type_id)], o = byId[str(r.corrects_id)];
       var notes = [];
       if (out && out !== 'ok' && out !== 'done') notes.push('Job marked ' + (RESULT[out] || out) + '.');
-      if (str(r.note)) notes.push(str(r.note));
-      (later[str(r.id)] || []).forEach(function (n) { notes.push('Later, by ' + (str(n.taken_by) || NR) + ': ' + (str(n.note) || NR)); });
+      if (clean(r.note)) notes.push(clean(r.note));
+      (later[str(r.id)] || []).forEach(function (n) { notes.push('Later, by ' + (who(n.taken_by) || NR) + ': ' + (clean(n.note) || NR)); });
       if (str(r.corrects_id)) notes.push('Corrects the record of ' + (o ? (when({ given_at: o.happened_at || o.taken_at }).date || 'an earlier date') : 'an earlier date') + '.');
       if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
       return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
@@ -119,6 +134,7 @@
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
+      line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by);
       line.missing = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return k !== 'note' && k !== 'dog' && k !== 'source' && !line[k]; });
       if (!line.dog) line.missing.unshift('dog');
       out.push(line);
@@ -131,7 +147,7 @@
    *  iso: the date as YYYY-MM-DD (the CSV), so a spreadsheet in any country reads it the same. */
   function cell(line, key, iso) {
     if (key === 'date') return line.date ? (iso ? line.date : ymd(line.date)) : NR;
-    if (key === 'dog') return line.dog || (line.sid ? line.sid + ' (not on the current list)' : NR);
+    if (key === 'dog') return line.dog || (line.sid ? 'Dog not on the current list' : NR);
     if (key === 'note') return line.note || '';
     if (key === 'time' && line.noTime) return 'time not recorded';
     return line[key] || NR;
@@ -211,6 +227,17 @@
   /** A file name: medicines-register-YYYY-MM.csv (no kennel name, so nothing personal is in it). */
   function fileName(ym, ext) { return 'medicines-register-' + (str(ym) || 'month') + '.' + (ext || 'csv'); }
 
-  return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, build: build, cell: cell, gaps: gaps,
+  /**
+   * Every medicine record once: the dog card's rows, then the staff job's rows that no dog-card row came from. A dog-card
+   * row whose note names a job record (e.g. "from clg-...", written when it was copied) is that same dose, so the job row
+   * is left out rather than printed twice.
+   */
+  function combine(dispense, logs, types) {
+    var copied = {};
+    (dispense || []).forEach(function (r) { ids(r.note).forEach(function (i) { copied[i.toLowerCase()] = 1; }); });
+    return (dispense || []).concat(fromChecks(logs, types).filter(function (j) { return !copied[String(j.id).toLowerCase()]; }));
+  }
+
+  return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, combine: combine, clean: clean, build: build, cell: cell, gaps: gaps,
     toCsv: toCsv, toHtml: toHtml, fileName: fileName, monthWords: monthWords };
 }));
