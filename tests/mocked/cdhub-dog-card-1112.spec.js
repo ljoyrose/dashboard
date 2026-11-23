@@ -343,7 +343,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
   test('Round present saves a check_log row against the owner\'s round.presence row; the tick shows once the save lands; a failed save puts the buttons back (Lisa 15 Nov)', async ({ page, guard }) => {
     await open(page, guard);
     let fail = false;
-    const bodies = await saves(page, () => (fail ? { ok: false, code: 'NETWORK', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
+    const bodies = await saves(page, () => (fail ? { ok: false, code: 'BUSY_FOR_GOOD', message: 'Pretend failure' } : { ok: true, result: { status: 'saved', id: 'clg-new' } }));
     await page.evaluate(() => { T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-p', type_key: 'round.presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]); go('round'); });
     const here = page.locator('button[data-here]').first();
     const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');

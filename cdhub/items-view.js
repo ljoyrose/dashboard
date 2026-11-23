@@ -326,9 +326,20 @@
       .map(function (k) { return '<option value="' + v.esc(k.kind_key) + '"' + (k.kind_key === sel ? ' selected' : '') + '>' + v.esc(k.label) + '</option>'; }).join('');
   }
   // every room (cabins, corridors, site rooms) in its group, sorted by the group's order then code, so a moved item finds its new room fast
+  // A room is offered while it is in use today (room.in_use rows; a room with none is in use) or while a room.items row
+  // says it holds items only (site rooms kept off dog rounds). Retired rooms (in use ended) drop out; the item's own room stays.
+  function roomOpen(T, id, on) {
+    var req = rows(T, 'BLD-requirement.csv');
+    var cover = function (need, absent) {
+      var rs = req.filter(function (r) { return r.need_type === need && r.target_table === 'area' && t(r.target_id) === id; });
+      if (!rs.length) return absent;
+      return rs.some(function (r) { var f = day(r.from_date), to = day(r.to_date); return (!f || f <= on) && (!to || on <= to); });
+    };
+    return cover('room.in_use', true) || cover('room.items', false);
+  }
   function areaOptions(v, sel, noBlank) {
     var e = v.esc, groups = {}, order = [];
-    rows(v.T, 'BLD-area.csv').slice().sort(function (a, b) {
+    rows(v.T, 'BLD-area.csv').filter(function (a) { return a.id === sel || roomOpen(v.T, a.id, v.today); }).slice().sort(function (a, b) {
       return (Number(a.group_sort) || 0) - (Number(b.group_sort) || 0) || t(a.grouping).localeCompare(t(b.grouping)) || t(a.code || a.name).localeCompare(t(b.code || b.name), undefined, { numeric: true });
     }).forEach(function (a) { var g = t(a.grouping); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(a); });
     return (noBlank ? '<option value="">Pick a room</option>' : '<option value="">No room</option>') + order.map(function (g) {
@@ -602,13 +613,13 @@
   function report(v, how) {
     var on = v.today;
     if (how === 'csv') {
-      var blob = new Blob([csv(v.T, on)], { type: 'text/csv' }), a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = 'Items ' + on + '.csv'; document.body.appendChild(a); a.click(); a.remove();
+      var demo = typeof self !== 'undefined' && self.CD_DEMO, blob = new Blob([(demo ? 'DEMO: pretend data, not real records\r\n' : '') + csv(v.T, on)], { type: 'text/csv' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = (demo ? 'DEMO ' : '') + 'Items ' + on + '.csv'; document.body.appendChild(a); a.click(); a.remove();
       return;
     }
     var e = v.esc, xs = filtered(list(v.T, on)), w = window.open('', '_blank');
     if (!w) { S.msg = 'Allow pop-ups to print the report.'; v.redraw(); return; }
-    var body = '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
+    var body = (typeof self !== 'undefined' && self.CD_DEMO ? '<p style="background:#AF2420;color:#FFFFFF;font-weight:600;padding:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact">DEMO: pretend data, not real records</p>' : '') + '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
       + '<table><thead><tr><th>No.</th><th>Photo</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
       + xs.map(function (x) {
         var ls = x.s.lines.length ? x.s.lines : [null];
@@ -619,7 +630,7 @@
             + '<td>' + e(rec ? rec.values.map(function (val) { return val.label + ' ' + val.value + (val.unit ? ' ' + val.unit : '') + (val.inr === false ? ' (outside)' : ''); }).join(', ') : '') + '</td><td>' + (rec ? rec.files.map(function (f) { return '<a href="' + e(f.href) + '">' + e(f.label) + '</a>'; }).join(' ') : '') + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table>';
-    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}img.ph{width:90px;max-height:90px;object-fit:cover;display:block}tr{break-inside:avoid}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
+    w.document.write('<!doctype html><meta charset="utf-8"><title>' + (typeof self !== 'undefined' && self.CD_DEMO ? 'DEMO ' : '') + 'Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}img.ph{width:90px;max-height:90px;object-fit:cover;display:block}tr{break-inside:avoid}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
     w.document.close();
   }
 
