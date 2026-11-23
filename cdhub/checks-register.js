@@ -30,6 +30,21 @@
 
   function str(v) { return String(v == null ? '' : v).trim(); }
 
+  /* No internal codes on paper (Lisa, 23 Nov 2026). A record id looks like clg-20261118-042020-vf20 or sub-7k2q9x: 2 to 5
+     letters, a hyphen, then letters and digits with at least one digit. "from <id>" is dropped whole; a bare id too. */
+  var ID_SRC = '\\b[a-z]{2,5}-(?=[a-z0-9-]*\\d)[a-z0-9]+(?:-[a-z0-9]+)*\\b';
+  function ids(s) { return String(s == null ? '' : s).match(new RegExp(ID_SRC, 'gi')) || []; }
+  function clean(s) {
+    return String(s == null ? '' : s)
+      .replace(new RegExp('\\(?\\s*\\bfrom\\s+' + ID_SRC + '\\s*\\)?', 'gi'), ' ')
+      .replace(new RegExp(ID_SRC, 'gi'), ' ')
+      .replace(/\s+([.,;:])/g, '$1').replace(/([.,;:·|])(\s*[.,;:·|])+/g, '$1')
+      .replace(/\s{2,}/g, ' ').replace(/^[\s.,;:·|]+|[\s,;:·|]+$/g, '').trim();
+  }
+  /* Who did it: a name. A visitor's record says visit:<link id>; that prints as "Visitor (shared link)". */
+  function who(s) { s = str(s); return /^visit:/i.test(s) ? 'Visitor (shared link)' : clean(s); }
+
+
   /* UK date and time of an ISO instant: {date:'YYYY-MM-DD', time:'HH:MM'|''}. A bare date has no time. */
   var FMT = null;
   function london(at) {
@@ -77,22 +92,22 @@
       if (only && str(r.check_type_id) !== only) return;
       var t = types[str(r.check_type_id)], id = str(r.id), outcome = str(r.outcome);
       var notes = (later[id] || []).slice().sort(function (a, b) { return str(a.taken_at || a.happened_at) < str(b.taken_at || b.happened_at) ? -1 : 1; })
-        .map(function (n) { return 'Later, ' + stamp(n) + (str(n.taken_by) ? ', by ' + str(n.taken_by) : '') + ': ' + (str(n.note) || NR); });
-      var own = str(r.note), action = '';
+        .map(function (n) { return 'Later, ' + stamp(n) + (who(n.taken_by) ? ', by ' + who(n.taken_by) : '') + ': ' + (clean(n.note) || NR); });
+      var own = clean(r.note), action = '';
       if (NEEDS_ACTION[outcome]) action = [own ? 'At the time: ' + own : ''].concat(notes).filter(Boolean).join(' | ');
       else if (notes.length) action = notes.join(' | ');
       var corr = [];
       if (str(r.corrects_id)) { var o = byId[str(r.corrects_id)]; corr.push('Corrects the record of ' + (o ? stamp(o) : 'an earlier date') + (o && str(o.outcome) ? ' (was ' + (RESULT[str(o.outcome)] || str(o.outcome)) + ')' : '')); }
-      (fixedBy[id] || []).forEach(function (c) { corr.push('Corrected on ' + stamp(c) + (str(c.taken_by) ? ' by ' + str(c.taken_by) : '') + ' (now ' + (RESULT[str(c.outcome)] || str(c.outcome) || NR) + ')'); });
+      (fixedBy[id] || []).forEach(function (c) { corr.push('Corrected on ' + stamp(c) + (who(c.taken_by) ? ' by ' + who(c.taken_by) : '') + ' (now ' + (RESULT[str(c.outcome)] || str(c.outcome) || NR) + ')'); });
       var timeGiven = str(r.time_given).toLowerCase() !== 'false';
       out.push({
         id: id, sort: w.date + ' ' + (w.time || '99:99') + ' ' + id,
         date: w.date, time: timeGiven ? w.time : '', noTime: !timeGiven,
-        check: t ? str(t.label) : '', subject: str(name(r)),
+        check: t ? str(t.label) : '', subject: clean(name(r)),
         result: outcome ? (RESULT[outcome] || outcome) : '',
-        detail: [str(r.item), str(r.amount)].filter(Boolean).join(', '),
+        detail: [clean(r.item), clean(r.amount)].filter(Boolean).join(', '),
         note: own, action: action, needsAction: !!NEEDS_ACTION[outcome],
-        by: str(r.taken_by), how: HOW[str(r.how_recorded)] || str(r.how_recorded),
+        by: who(r.taken_by), how: HOW[str(r.how_recorded)] || str(r.how_recorded),
         correction: corr.join(' | ')
       });
     });
@@ -159,7 +174,7 @@
       + (lines.length
         ? '<table><thead><tr>' + COLUMNS.map(function (c) { return '<th scope="col">' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>'
           + lines.map(function (l) {
-            return '<tr data-ckr="' + esc(l.id) + '">' + COLUMNS.map(function (c) { var v = cell(l, c[0]); return '<td' + (v === NR || v === NO_TIME ? ' class="nr"' : '') + '>' + esc(v) + '</td>'; }).join('') + '</tr>';
+            return '<tr>' + COLUMNS.map(function (c) { var v = cell(l, c[0]); return '<td' + (v === NR || v === NO_TIME ? ' class="nr"' : '') + '>' + esc(v) + '</td>'; }).join('') + '</tr>';
           }).join('') + '</tbody></table>'
         : '<p>No checks recorded in ' + esc(monthWords(head.month)) + '.</p>')
       + (gk.length ? '<p><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
@@ -168,6 +183,6 @@
 
   function fileName(ym) { return 'checks-register-' + (str(ym) || 'month') + '.csv'; }
 
-  return { NR: NR, NO_TIME: NO_TIME, COLUMNS: COLUMNS, CSS: CSS, months: months, build: build, cell: cell, gaps: gaps,
+  return { NR: NR, NO_TIME: NO_TIME, COLUMNS: COLUMNS, CSS: CSS, clean: clean, months: months, build: build, cell: cell, gaps: gaps,
     toCsv: toCsv, reportHtml: reportHtml, fileName: fileName, monthWords: monthWords };
 }));

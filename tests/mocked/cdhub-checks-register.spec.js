@@ -163,4 +163,25 @@ test.describe('CD Hub: Checks register on Compliance', () => {
     await page.locator('#ckrPrint').click();
     await expect(page.locator('#ckrReport')).toContainText('No checks recorded in April 2026.');
   });
+
+});
+
+test.describe('Checks register: no internal codes on paper', () => {
+  const ID_PATTERN = /\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/i;
+  const coded = logs.concat([
+    { id: 'clg-20261118-042020-vf20', check_type_id: 'ct-clean', area_id: 'area-1', outcome: 'concern', happened_at: '2026-02-10T09:00:00Z', note: 'Mould (from rdg-20261110-77)', taken_by: 'visit:lnk-4f9k2a' },
+    { id: 'clg-20261118-050000-zz99', check_type_id: 'ct-clean', area_id: 'area-1', outcome: 'note', note_for_id: 'clg-20261118-042020-vf20', note: 'Treated, see chk-9x2k1', taken_by: 'Sample Staff B', taken_at: '2026-02-10T12:00:00Z' },
+  ]);
+  test('notes keep their words, ids go; a visitor prints as "Visitor (shared link)"', () => {
+    const l = R.build(coded, { month: '2026-02', types, subject }).find((x) => x.id === 'clg-20261118-042020-vf20');
+    expect(R.cell(l, 'note')).toBe('Mould');
+    expect(R.cell(l, 'by')).toBe('Visitor (shared link)');
+    expect(R.cell(l, 'action')).toBe('At the time: Mould | Later, 10 Feb 2026 12:00, by Sample Staff B: Treated, see');
+  });
+  test('no id pattern anywhere in the CSV or the print', () => {
+    const lines = R.build(coded, { month: '2026-02', types, subject });
+    const head = { kennel: 'Sample Kennel', month: '2026-02', printed: 'x' };
+    expect(R.toCsv(head, lines)).not.toMatch(ID_PATTERN);
+    expect(R.reportHtml(head, lines).replace(/<[^>]+>/g, ' ').replace(/data-ckr="[^"]*"/g, '')).not.toMatch(ID_PATTERN);
+  });
 });

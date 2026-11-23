@@ -4692,8 +4692,12 @@ function compTempsHtml(){
    meds-register.js loads on the first press, so the page is no heavier until it is used. */
 /* Every month from the first record to this one is offered, a month with none too, so its nil record can be printed. */
 /* The staff "Medicine given" job (check_type type_key medicine) saves to BLD-check_log: its records count here too. */
+/* A dog's name for the registers: the current list, then the archive (old dogs keep their history). Never an id. */
+function regDog(sid){ var d=(CD._byId||{})[sid]; if(d) return {name:d.name,chip:d.chip};
+ var a=(T['BLD-subject-Archive.csv']||[]).filter(function(r){ return r.id===sid; })[0]; return a&&a.name?{name:a.name,chip:''}:null; }
 function medsRows(){ var med={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(String(t.type_key||'').toLowerCase()==='medicine') med[t.id]=1; });
- return (T['BLD-dispense.csv']||[]).concat((T['BLD-check_log.csv']||[]).filter(function(r){ return med[r.check_type_id]&&!(r.outcome==='note'&&r.note_for_id); }).map(function(r){ return {given_at:r.happened_at||r.taken_at}; })); }
+ var disp=T['BLD-dispense.csv']||[], copied={}; disp.forEach(function(r){ (String(r.note||'').match(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi)||[]).forEach(function(i){ copied[i.toLowerCase()]=1; }); });   /* a dog-card row copied from a job (its note names the job) counts once */
+ return disp.concat((T['BLD-check_log.csv']||[]).filter(function(r){ return med[r.check_type_id]&&!(r.outcome==='note'&&r.note_for_id)&&!copied[String(r.id).toLowerCase()]; }).map(function(r){ return {given_at:r.happened_at||r.taken_at}; })); }
 function compMedsHtml(){
  var rows=medsRows(), ms={}, now=todayISO().slice(0,7); rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.given_at||r.given_on||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
  var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
@@ -4704,7 +4708,7 @@ function compMedsHtml(){
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
 function medsMake(R){ var ym=(document.getElementById('medsMonth')||{}).value||'';
- var lines=R.build((T['BLD-dispense.csv']||[]).concat(R.fromChecks(T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[])),{month:ym,dog:function(sid){ var d=(CD._byId||{})[sid]; return d?{name:d.name,chip:d.chip}:null; }});
+ var lines=R.build(R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[]),{month:ym,dog:regDog});
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindMeds(){ var p=document.getElementById('medsPrint'), c=document.getElementById('medsCsv'), msg=document.getElementById('medsMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; };
@@ -4786,8 +4790,11 @@ function compChecksRegHtml(){
   +'<div class="frow"><button type="button" class="btn" id="ckrPrint">Print</button> <button type="button" class="btn" id="ckrCsv">Download CSV</button></div><p id="ckrMsg" class="mut" aria-live="polite"></p>');
 }
 function ckrLib(){ return window.BLDChecksRegister?Promise.resolve(window.BLDChecksRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='checks-register.js'; s.onload=function(){ ok(window.BLDChecksRegister); }; s.onerror=no; document.head.appendChild(s); }); }
-function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ return x.id===r.area_id; })[0], l=r.litter_id&&(CD.litters||[]).filter(function(x){ return x.id===r.litter_id; })[0];
- return [r.subject_id?nameOf(r.subject_id):'', a?a.cabin:(r.area_id||''), l?'Litter '+litName(l):'', r.item_id?'Item '+r.item_id:''].filter(Boolean).join(', ')||(r.subject_id||r.area_id?'':'Whole site'); }
+/* Names only, never ids (Lisa 23 Nov 2026): a dog, room, litter or item that is not on file says so in words. */
+function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ return x.id===r.area_id; })[0], l=r.litter_id&&(CD.litters||[]).filter(function(x){ return x.id===r.litter_id; })[0],
+  it=r.item_id&&(T['BLD-items.csv']||[]).filter(function(x){ return x.id===r.item_id; })[0], d=r.subject_id&&regDog(r.subject_id);
+ return [r.subject_id?(d?d.name:'Dog not on the current list'):'', r.area_id?(a?a.cabin:'Room not on the list'):'', r.litter_id?(l?'Litter '+litName(l):'Litter not on the list'):'',
+  r.item_id?(it&&(it.name||it.item_no)?'Item '+(it.name||it.item_no):'Item not on the list'):''].filter(Boolean).join(', ')||'Whole site'; }
 function ckrMake(R){ var ym=(document.getElementById('ckrMonth')||{}).value||'', ts=document.getElementById('ckrType'), tid=ts?ts.value:'';
  var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject});
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
