@@ -243,6 +243,8 @@ test('plain names: data checks say Links between records, Date formats and Rule 
 });
 
 test('an enquiry card shows the buyer\'s name, with the reference small beside it', async ({ page }) => {
+  // Example enquiries show only with this flag (no sheet connected = "No enquiries yet").
+  await page.addInitScript(() => localStorage.setItem('cdhub.enquiries.examples', '1'));
   await page.goto('cdhub/');
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();

@@ -24,9 +24,26 @@
   var screen = document.getElementById('screen'), tabs = document.getElementById('tabs');
   var save = BLDSave.create({});
   save.deviceCode = true;
+  if (window.BLDOutboxLine) BLDOutboxLine.mount(save, screen);   // never lose an entry: what this phone still holds to send (20 Nov 2026)
   var modules = [], cleanup = null, dataP = null, started = false, join = null, urlTried = false, ownerNote = '';
   var CFG = window.DASH_CONFIG || {}, SCOPE = (CFG.scopes && CFG.scopes.read) || 'https://www.googleapis.com/auth/drive.readonly';
   var HUB_URL_KEYS = ['cdhub.sink.url', 'cdhub.save.url'], SAVE_URL_FILE = 'BLD-save-webapp.json';
+  /* Storage tidy, stage 2 (owner 15 Nov 2026): a phone set up here also keeps CD Hub's copy (cdhub.staff.code and
+     cdhub.save.url), so both pages share one code and one address. This page's own keys (bld.*) are still written and read. */
+  var HUB_CODE_KEY = 'cdhub.staff.code', HUB_URL_KEEP = 'cdhub.save.url', HUB_OFF_KEYS = ['cdhub.save.off', 'cdhub.sink.off'];
+  var URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/[a-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/;
+  /** A code the save script accepted on this page: CD Hub uses it too. Setting the phone up again here undoes "Switch off here". */
+  function shareWithHub(code) {
+    var u = storeGet('bld.scriptUrl');
+    if (code) storeSet(HUB_CODE_KEY, code);
+    if (URL_RE.test(u)) storeSet(HUB_URL_KEEP, u);
+    HUB_OFF_KEYS.forEach(function (k) { if (storeGet(k)) storeSet(k, ''); });
+  }
+  /** An owner's address found in the hub folder is kept for CD Hub too, unless CD Hub was switched off on this phone. */
+  function shareUrlWithHub() {
+    var u = storeGet('bld.scriptUrl');
+    if (URL_RE.test(u) && !HUB_OFF_KEYS.some(function (k) { return !!storeGet(k); })) storeSet(HUB_URL_KEEP, u);
+  }
   function owner() { return BLDSave.ownerToken ? BLDSave.ownerToken() : ''; }
 
   /** An owner's save address: one CD Hub kept in this browser, else the hub folder's BLD-save-webapp.json. */
@@ -42,7 +59,11 @@
         var f = (j && j.files) || [];
         if (f.length !== 1) return false;
         return fetch(base + '/' + encodeURIComponent(f[0].id) + '?alt=media&supportsAllDrives=true', hd).then(function (r) { return r.json(); })
-          .then(function (cfg) { return save.setScriptUrl(String((cfg && cfg.url) || '').trim(), true).ok && !!(cfg && cfg.url); });
+          .then(function (cfg) {   // set_at / set_by may be in the file too; only url is used
+            var ok = save.setScriptUrl(String((cfg && cfg.url) || '').trim(), true).ok && !!(cfg && cfg.url);
+            if (ok) shareUrlWithHub();
+            return ok;
+          });
       })
       .catch(function () { return false; });
   }
@@ -134,7 +155,7 @@
     return e;
   }
   function isSetUp() { return save.getScriptUrlSet() && (!!storeGet(CODE_KEY) || !!owner()); }
-  function forget() { storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
+  function forget() { var c = storeGet(CODE_KEY); if (c && storeGet(HUB_CODE_KEY) === c) storeSet(HUB_CODE_KEY, ''); storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
 
   /** Any read or save answering BAD_CODE means this phone was switched off: wipe it. */
   function guard(r) {
@@ -200,7 +221,7 @@
   function ownerBox() {
     var box = h('div', { class: 'owner-in' }, [
       h('button', { class: 'btn', type: 'button', 'data-owner-signin': '', text: 'Owner: sign in with Google', onclick: ownerSignIn }),
-      h('p', { class: 'sub', text: 'The same sign-in as CD Hub. No code needed.' })
+      h('p', { class: 'sub help', text: 'The same sign-in as CD Hub. No code needed.' })
     ]);
     if (ownerNote) box.appendChild(h('p', { class: 'msg bad', role: 'status', text: ownerNote }));
     return box;
@@ -251,7 +272,7 @@
       save.setCode(c, false);
       save.checkStatus().then(function () { return rawRead('area'); }).then(function (r) {
         btn.disabled = false;
-        if (r.ok) { if (!storeSet(CODE_KEY, c)) { msg.className = 'msg bad'; msg.textContent = 'This browser will not remember the code. Turn off private browsing and try again.'; return; } code.value = ''; go('home'); return; }
+        if (r.ok) { if (!storeSet(CODE_KEY, c)) { msg.className = 'msg bad'; msg.textContent = 'This browser will not remember the code. Turn off private browsing and try again.'; return; } shareWithHub(c); code.value = ''; go('home'); return; }
         save.clearCode(); msg.className = 'msg bad'; msg.textContent = r.message || 'That did not work.';
       });
     } });
@@ -271,7 +292,7 @@
     save.checkStatus().then(function () { return rawRead('area'); }).then(function (res) {
       if (!res.ok) { fail(res.code === 'BAD_CODE' ? 'That code was not accepted. Ask the owner for a new QR.' : (res.message || 'That did not work. Ask the owner for a new QR.')); return; }
       if (!storeSet(CODE_KEY, j.code)) { fail('This browser will not remember the code. Turn off private browsing and scan again.'); return; }
-      dataP = null; go('home');
+      shareWithHub(j.code); dataP = null; go('home');
     });
   }
 
@@ -291,15 +312,30 @@
     ]));
     screen.appendChild(list);
   }
+  /* Show help (Lisa 18 Nov 2026): off unless this person turns it on. Kept with the Look on this phone ('dash-look', the same
+     place the hub's Look menu keeps it); house.css hides every .help line while it is off. */
+  function helpOn() { try { return (JSON.parse(localStorage.getItem('dash-look') || '{}') || {}).help === 'on'; } catch (e) { return false; } }
+  function setHelp(on) {
+    var o = {}; try { o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; }
+    o.help = on ? 'on' : 'off';
+    try { localStorage.setItem('dash-look', JSON.stringify(o)); } catch (e) { /* private window: this page still changes */ }
+    document.documentElement.classList.toggle('show-help', on);
+  }
+  function helpSwitch() {
+    var b = h('button', { class: 'btn quiet', type: 'button', role: 'switch', 'data-k': 'show-help', 'aria-checked': String(helpOn()), text: 'Show help' });
+    b.onclick = function () { var on = !helpOn(); setHelp(on); b.setAttribute('aria-checked', String(on)); };
+    return b;
+  }
   function drawDevice() {
     clearScreen(); setTabs('device');
     screen.appendChild(h('h2', { text: 'This phone' }));
+    screen.appendChild(helpSwitch());
     if (!storeGet(CODE_KEY) && owner()) {
-      screen.appendChild(h('p', { class: 'sub', text: 'Signed in with your Google account, the same as CD Hub. Signing out of CD Hub signs out here too.' }));
+      screen.appendChild(h('p', { class: 'sub help', text: 'Signed in with your Google account, the same as CD Hub. Signing out of CD Hub signs out here too.' }));
       screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Use a staff code instead', onclick: function () { BLDSave.ownerSkip(true); forget(); go('home'); } }));
       return;
     }
-    screen.appendChild(h('p', { class: 'sub', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
+    screen.appendChild(h('p', { class: 'sub help', text: 'This phone is set up with your staff code. If it is lost, tell the owner, who switches the code off everywhere.' }));
     screen.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Remove my code from this phone', onclick: function () { forget(); go('home'); } }));
   }
   function openModule(id, params) {

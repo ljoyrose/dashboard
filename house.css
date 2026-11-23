@@ -26,6 +26,10 @@
 /* A control's meaning colour (green yes, rose no / delete, purple AI...). Set on the control itself, never inherited. */
 @property --hmc { syntax: '*'; inherits: false; }
 
+/* 1b Show help (Lisa 18 Nov 2026): help and explanation lines carry class "help" and are hidden, not deleted, until the person
+   turns on Show help (Look menu on the hub, This phone on the staff page). That adds one class, .show-help, to the page. */
+:root:not(.show-help) .help { display: none !important; }
+
 /* 2 Type: Lexend, weights 400 / 500 / 600, sizes from the tokens only (18 / 15 / 14), sentence case. */
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }

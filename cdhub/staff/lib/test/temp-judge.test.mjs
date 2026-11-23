@@ -23,6 +23,7 @@ test('puppy room: the room on the adult row, the bed spot on the puppy row', () 
   assert.equal(J.judge({ min: '8.0', max: '21.0', spot: '27.0' }, pup, adult, true), 'cold');  // the room itself too cold
   assert.equal(J.judge({ min: '18.0', max: '27.0', spot: '27.0' }, pup, adult, true), 'warm');
   assert.equal(J.isBreach('nospot'), false);
+  assert.equal(J.words('nospot'), '');   // Lisa 18 Nov 2026: no "bed spot not recorded" words anywhere
   assert.equal(J.isBreach('spotcold'), true);
 });
 

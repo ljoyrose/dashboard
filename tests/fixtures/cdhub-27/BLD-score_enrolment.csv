@@ -1,0 +1,4 @@
+id,tenant_id,scheme_id,subject_id,valid_from,is_active,source
+en-1,ten-sample,s-test,sub-a01,2026-01-01,TRUE,invented
+en-2,ten-sample,s-test,sub-a03,2026-01-01,TRUE,invented
+en-3,ten-sample,s-test,sub-a09,2026-01-01,TRUE,invented

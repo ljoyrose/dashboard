@@ -49,6 +49,23 @@ test('an owner with no save address on this phone: it is read from the hub folde
   expect(await page.evaluate(() => localStorage.getItem('bld.scriptUrl'))).toBe(SCRIPT);
 });
 
+// Storage tidy, stage 2 (owner 15 Nov 2026): the file may carry set_at and set_by (a role); only url is used. The address
+// found is kept for CD Hub too (cdhub.save.url), unless CD Hub was switched off on this phone (new or old key).
+for (const off of [null, 'cdhub.save.off', 'cdhub.sink.off']) {
+  test(`an owner's address from the hub folder (with set_at and set_by) is ${off ? 'not shared while ' + off + ' is set' : 'kept for CD Hub too'}`, async ({ page }) => {
+    await signedIn(page, false);
+    if (off) await page.addInitScript((k) => localStorage.setItem(k, '1'), off);
+    await fakeScript(page, () => ({ ok: true, result }));
+    await page.route(/https:\/\/www\.googleapis\.com\/drive\/v3\/files\?/, (route) => route.fulfill({ headers: CORS, json: { files: [{ id: 'fake-file-1' }] } }));
+    await page.route(/https:\/\/www\.googleapis\.com\/drive\/v3\/files\/fake-file-1\?alt=media/, (route) => route.fulfill({ headers: CORS, json: { url: SCRIPT, set_at: '2026-11-15', set_by: 'owner' } }));
+    await page.goto('cdhub/staff/');
+    await expect(page.getByRole('heading', { name: 'The Board' })).toBeVisible();
+    await expect(page.locator('#me')).toContainText('Owner');
+    expect(await page.evaluate(() => localStorage.getItem('bld.scriptUrl'))).toBe(SCRIPT);
+    expect(await page.evaluate(() => localStorage.getItem('cdhub.save.url'))).toBe(off ? null : SCRIPT);
+  });
+}
+
 test('a Google account the save script refuses drops to the staff code, with a plain reason', async ({ page }) => {
   await signedIn(page, true);
   await fakeScript(page, () => ({ ok: false, code: 'GOOGLE_NOT_OWNER', message: 'no' }));

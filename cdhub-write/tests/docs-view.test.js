@@ -52,3 +52,23 @@ test('the section draws a count and a Drive link per document; none says so', ()
   assert.match(h, new RegExp('href="https://drive.google.com/file/d/' + ID('a') + '/view"[^>]*data-doc="pedigree"[^>]*>Pedigree</a>'));
   assert.match(V.html(Object.assign({ esc: String, dmy: (s) => s }, v), 'nobody', ''), /no documents/);
 });
+
+test("files linked from the dog's own records show, named by the record (Lisa 18 Nov 2026)", () => {
+  const recs = { check_log: [{ id: 'c1', subject_id: 'd1', check_type_id: 'ct-ftb', happened_at: '2026-02-15T10:00:00Z' }, { id: 'c2', subject_id: 'd2', check_type_id: 'ct-ftb' }] };
+  const extra = [
+    L('certificate', 'f2', { from_table: 'check_log', from_id: 'c1' }),
+    L('certificate', 'f5', { from_table: 'check_log', from_id: 'c2' }),
+    L('evidence', 'f1', { from_table: 'check_log', from_id: 'c1' }),
+    L('certificate', 'f6', { from_table: 'check_log', from_id: 'nope' }),
+  ];
+  const w = Object.assign({}, v, { links: links.concat(extra), records: (t) => recs[t] || [], recordLabel: () => 'Fit to breed' });
+  const rows = V.forDog(w, 'd1');
+  assert.deepEqual(rows.map((r) => [r.label, r.on]), [
+    ['Lab report', '2026-02-20'],
+    ['Fit to breed certificate', '2026-02-10'],
+    ['OFA Hips certificate', '2026-02-10'],
+    ['Pedigree', '2024-05-01'],
+  ]);
+  assert.equal(V.forDog(w, 'd2').length, 2);
+  assert.equal(V.forDog(Object.assign({}, w, { records: undefined }), 'd1').length, 3);
+});

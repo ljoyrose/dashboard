@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -103,6 +103,8 @@ function makeEnv(opts = {}) {
 
   const wrap = (f) => ({
     getName: () => f.title, getId: () => f.id,
+    // Drive's "last changed" time: any change to the file's text or cells gives a different time
+    getLastUpdated: () => new Date(parseInt(crypto.createHash('sha256').update(JSON.stringify([f.content, f.sheet, f.title])).digest('hex').slice(0, 10), 16)),
     getMimeType: () => (f.sheet ? SHEET_MIME : 'text/csv'),
     moveTo(dest) { f.parent = 'folder'; return this; },
     getSize: () => Buffer.byteLength(f.content, 'utf8'),

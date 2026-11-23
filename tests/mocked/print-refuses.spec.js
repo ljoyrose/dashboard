@@ -21,7 +21,7 @@ async function open(page, role, saveReply) {
 
 test('print: a staff code is told new codes need an owner code, and nothing is saved or drawn', async ({ page }) => {
   const posts = await open(page, 'STAFF', { ok: true, result: { status: 'saved' } });
-  await page.getByRole('button', { name: 'Room signs' }).click();
+  await page.getByRole('button', { name: 'Room cards' }).click();
   await expect(page.locator('[role="status"], .msg, #msg').filter({ hasText: 'Not printed' }).first()).toContainText('owner code');
   await expect(page.locator('.sheet > *')).toHaveCount(0);
   expect(posts.length).toBe(0);
@@ -30,7 +30,7 @@ test('print: a staff code is told new codes need an owner code, and nothing is s
 test('print: a code that could not be saved is never drawn; the saved one is, and the rest are named as not printed', async ({ page }) => {
   tables.qr_tag = [{ tag: 'AAAAAAAA', kind: 'area', ref_id: 'ar-a', active: 'true' }];
   await open(page, 'OWNER', { ok: false, code: 'NOT_ALLOWED', message: 'Your role is not allowed to do this.' });
-  await page.getByRole('button', { name: 'Room signs' }).click();
+  await page.getByRole('button', { name: 'Room cards' }).click();
   await expect(page.locator('[role="status"], .msg, #msg').filter({ hasText: 'Not printed' }).first()).toContainText('Not printed: 1 card');
   await expect(page.locator('.sheet > *')).toHaveCount(1);
   await expect(page.locator('.sheet [data-room="ar-a"]')).toHaveCount(1);

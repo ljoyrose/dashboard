@@ -86,7 +86,7 @@
     var byId = {};
     rows(T, 'BLD-files.csv').forEach(function (f) { byId[f.id] = f; });
     return linksFrom(T, fromTable, fromId, kinds).filter(function (l) { return tbl(l.to_table) === 'file' && byId[l.to_id] && !t(l.to_date); })
-      .map(function (l) { var f = byId[l.to_id]; return { href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
+      .map(function (l) { var f = byId[l.to_id]; return { id: t(f.drive_file_id), on: day(f.taken_on || f.set_on), href: fileHref(f.drive_file_id || f.url), label: lk(l) === 'certificate' ? 'Certificate' : f.mime === 'application/pdf' ? 'PDF' : 'Photo' }; });
   }
 
   /** Test rows in force on a day for an item kind: latest effective_from per type_key, active, target item. */
@@ -264,7 +264,8 @@
     report: 'M14 3v4a1 1 0 0 0 1 1h4M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zM9 17h6M9 13h6',
     csv: 'M14 3v4a1 1 0 0 0 1 1h4M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zM12 11v6M9 14l3 3l3-3',
     place: 'M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11zM12 10m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
-    tick: 'M5 12l5 5L20 7'
+    tick: 'M5 12l5 5L20 7',
+    camera: 'M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 17a4 4 0 1 0 0-8a4 4 0 0 0 0 8z'
   };
   function ic(k, cls) { return '<svg class="ti' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + I[k] + '"/></svg>'; }
   (function () {
@@ -324,8 +325,16 @@
     return rows(v.T, 'BLD-item_kinds.csv').filter(function (k) { if (seen[k.kind_key]) return false; seen[k.kind_key] = 1; return true; })
       .map(function (k) { return '<option value="' + v.esc(k.kind_key) + '"' + (k.kind_key === sel ? ' selected' : '') + '>' + v.esc(k.label) + '</option>'; }).join('');
   }
-  function areaOptions(v, sel) {
-    return '<option value="">No room</option>' + rows(v.T, 'BLD-area.csv').map(function (a) { return '<option value="' + v.esc(a.id) + '"' + (a.id === sel ? ' selected' : '') + '>' + v.esc(a.code || a.name || a.id) + '</option>'; }).join('');
+  // every room (cabins, corridors, site rooms) in its group, sorted by the group's order then code, so a moved item finds its new room fast
+  function areaOptions(v, sel, noBlank) {
+    var e = v.esc, groups = {}, order = [];
+    rows(v.T, 'BLD-area.csv').slice().sort(function (a, b) {
+      return (Number(a.group_sort) || 0) - (Number(b.group_sort) || 0) || t(a.grouping).localeCompare(t(b.grouping)) || t(a.code || a.name).localeCompare(t(b.code || b.name), undefined, { numeric: true });
+    }).forEach(function (a) { var g = t(a.grouping); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(a); });
+    return (noBlank ? '<option value="">Pick a room</option>' : '<option value="">No room</option>') + order.map(function (g) {
+      var o = groups[g].map(function (a) { return '<option value="' + e(a.id) + '"' + (a.id === sel ? ' selected' : '') + '>' + e(a.code || a.name || a.id) + '</option>'; }).join('');
+      return g ? '<optgroup label="' + e(g) + '">' + o + '</optgroup>' : o;
+    }).join('');
   }
   function addForm(v, it) {
     var e = v.esc; it = it || {};
@@ -353,19 +362,21 @@
       + '<p class="mut">' + [x.kind, it.size, it.make, it.model, it.serial_no ? 'serial ' + it.serial_no : ''].filter(Boolean).map(e).join(' · ') + '</p>'
       + '<p>' + ic('place') + ' ' + e(x.place || 'No room') + (x.placeRow ? ' <span class="mut">since ' + e(v.dmy(x.placeRow.from_date)) + '</span>' : '') + '</p>'
       + (it.made_on || it.expires_on ? '<p class="mut">' + (it.made_on ? 'Made ' + e(v.dmy(it.made_on)) + ' ' : '') + (it.expires_on ? 'Expiry ' + e(v.dmy(it.expires_on)) : '') + '</p>' : '')
-      + (pics.length || it.photo ? '<p><a href="' + e(pics.length ? pics[pics.length - 1].href : fileHref(it.photo)) + '" target="_blank" rel="noopener">Photo</a></p>' : '')
+      + (pics.length || it.photo ? '<p><a href="' + e(pics.length ? pics[pics.length - 1].href : fileHref(it.photo)) + '" target="_blank" rel="noopener">Photo</a>' + (pics.length && pics[pics.length - 1].on ? ' <span class="mut">' + e(v.dmy(pics[pics.length - 1].on)) + '</span>' : '') + '</p>' : '')
       + (x.archived && x.useRow ? '<p class="mut">Last in use ' + e(v.dmy(x.useRow.to_date)) + (x.useRow.source ? ': ' + e(x.useRow.source) : '') + '</p>' : '')
       + (S.msg ? '<p role="status">' + e(S.msg) + '</p>' : '');
     if (!x.archived) {
-      h += '<div class="itm-btns">' + x.s.lines.map(function (l) { return '<button type="button" class="btn" data-itm-form="test:' + e(l.key) + '">' + ic('test') + e(l.label) + '</button>'; }).join('')
-        + '<button type="button" class="btn" data-itm-form="move">' + ic('place') + 'Room</button>'
+      h += '<div class="itm-btns"><button type="button" class="btn" data-itm-form="photo">' + ic('camera') + 'Photo</button>' + x.s.lines.map(function (l) { return '<button type="button" class="btn" data-itm-form="test:' + e(l.key) + '">' + ic('test') + e(l.label) + '</button>'; }).join('')
+        + '<button type="button" class="btn" data-itm-form="move">' + ic('place') + 'Move</button>'
         + '<button type="button" class="btn" data-itm-form="edit">Edit</button>'
         + '<button type="button" class="btn" data-itm-form="archive">' + ic('archive') + 'Archive</button></div>';
     }
     if (S.form.indexOf('test:') === 0) h += testForm(v, it, S.form.slice(5));
-    else if (S.form === 'move') h += '<form class="itm-form" data-itm-save="move"><label>Room<select name="area_id" required>' + areaOptions(v, x.placeRow ? x.placeRow.to_id : '') + '</select></label><label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
+    else if (S.form === 'move') h += '<form class="itm-form" data-itm-save="move"><p class="mut">Now: ' + e(x.place || 'no room') + (x.placeRow ? ' since ' + e(v.dmy(x.placeRow.from_date)) : '') + '</p><label>Move to<select name="area_id" required>' + areaOptions(v, '', true) + '</select></label><label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'archive') h += '<form class="itm-form" data-itm-save="archive"><label>Out of use from<input type="date" name="out_on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label><label>Why<select name="why"><option>Dead</option><option>Failed test</option><option>Replaced</option><option>Gone</option><option>Other</option></select></label><label>Note<input name="note"></label><div class="itm-btns"><button type="submit" class="btn yes">Archive</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'edit') h += addForm(v, it);
+    // one tap for a photo and its date, any item (Lisa 18 Nov 2026); saves the file and its link only, never an item change
+    else if (S.form === 'photo') h += '<form class="itm-form" data-itm-save="photo"><label>Photo<input type="file" name="file" accept="image/*" capture="environment" required></label><label>Date taken<input type="date" name="on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     if (x.s.lines.length) {
       h += '<h3>Tests</h3><table><thead><tr><th>test</th><th>last</th><th>next</th><th></th></tr></thead><tbody>' + x.s.lines.map(function (l) {
         return '<tr><td>' + e(l.label) + '</td><td>' + e(l.last ? v.dmy(l.last) : '—') + '</td><td>' + e(l.next ? v.dmy(l.next) : '—') + '</td><td>' + pill(l.st) + '</td></tr>';
@@ -458,7 +469,7 @@
     var join = function (r) {
       if (!r || !r.ok || !r.result || !r.result.id) return r || { ok: false };
       var res = r.result;
-      if (!rows(v.T, 'BLD-files.csv').some(function (f) { return f.id === res.id; })) (v.T['BLD-files.csv'] = v.T['BLD-files.csv'] || []).push({ id: res.id, drive_file_id: res.drive_file_id || '', url: d.link || '', mime: res.mime || (file ? file.type : '') });
+      if (!rows(v.T, 'BLD-files.csv').some(function (f) { return f.id === res.id; })) (v.T['BLD-files.csv'] = v.T['BLD-files.csv'] || []).push({ id: res.id, drive_file_id: res.drive_file_id || '', url: d.link || '', mime: res.mime || (file ? file.type : ''), taken_on: file ? (d.on || v.today) : '' });
       return linkAdd(v, { from_table: fromTable, from_id: fromId, to_table: 'files', to_id: res.id, role: kindKey, from_date: v.today });
     };
     if (!file) return /^https:\/\//.test(d.link) ? v.sinkSend({ action: 'file_add', fields: { kind: 'link', url: d.link, source: 'link' } }).then(join) : Promise.resolve({ ok: false, message: 'A link starts with https://' });
@@ -528,6 +539,8 @@
         rows(v.T, LINKS).forEach(function (l) { if (ended.indexOf(l.id) >= 0 && !t(l.to_date)) l.to_date = addDays(d.from_date, -1); });
         done(S.open, 'Saved.');
       }, fail);
+    } else if (kind === 'photo') {
+      fileAdd(v, form, d, 'items', S.open, 'main').then(function (r) { if (!r || !r.ok) return fail(r); done(S.open, 'Saved.'); }, fail);
     } else if (kind === 'archive') {
       var y = list(v.T, v.today).filter(function (z) { return z.it.id === S.open; })[0];
       var toDate = addDays(d.out_on, -1);   // the last day in use is the day before (dates are inclusive), so it leaves the list now
@@ -577,6 +590,15 @@
     }
   }
 
+  /** The item's latest main photo for the printed report (18 Nov 2026, Lisa: list, photo, type, expiry, then a PDF).
+      A Drive photo prints from Drive's thumbnail, as the print cards do (print.js); a web link prints as given. */
+  function photoCell(v, it) {
+    var pics = filesFor(v.T, 'items', it.id, ['main']), p = pics[pics.length - 1], id = p ? p.id : '', raw = p ? '' : t(it.photo);
+    if (!id && /^[A-Za-z0-9_\-]{20,}$/.test(raw)) id = raw;
+    var src = id ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w400' : /^https:\/\//.test(raw) ? raw : (p && /^https:\/\//.test(p.href) && !/drive\.google\.com/.test(p.href) ? p.href : '');
+    return src ? '<img class="ph" src="' + v.esc(src) + '" alt="" referrerpolicy="no-referrer">' + (p && p.on ? '<span>' + v.esc(v.dmy(p.on)) + '</span>' : '') : '';
+  }
+
   function report(v, how) {
     var on = v.today;
     if (how === 'csv') {
@@ -587,17 +609,17 @@
     var e = v.esc, xs = filtered(list(v.T, on)), w = window.open('', '_blank');
     if (!w) { S.msg = 'Allow pop-ups to print the report.'; v.redraw(); return; }
     var body = '<h1>Items</h1><p>As at ' + e(v.dmy(on)) + '. Printed ' + e(new Date().toLocaleString('en-GB')) + '. Filter: ' + e(S.filter) + (S.q ? ', search "' + e(S.q) + '"' : '') + '.</p>'
-      + '<table><thead><tr><th>No.</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>No.</th><th>Photo</th><th>Item</th><th>Kind</th><th>Room</th><th>Expiry</th><th>Test</th><th>Last</th><th>Next</th><th>Status</th><th>Readings</th><th>Evidence</th></tr></thead><tbody>'
       + xs.map(function (x) {
         var ls = x.s.lines.length ? x.s.lines : [null];
         return ls.map(function (l, i) {
           var rec = l ? records(v.T, x.it.id, x.it.kind_key).filter(function (r) { return r.type.type_key === l.key; })[0] : null;
-          return '<tr>' + (i ? '<td></td><td></td><td></td><td></td><td></td>' : '<td>' + e(x.it.item_no) + '</td><td>' + e(x.it.name) + (x.it.size ? ' ' + e(x.it.size) : '') + '</td><td>' + e(x.kind) + '</td><td>' + e(x.place) + '</td><td>' + e(x.it.expires_on ? v.dmy(x.it.expires_on) : '') + '</td>')
+          return '<tr>' + (i ? '<td></td><td></td><td></td><td></td><td></td><td></td>' : '<td>' + e(x.it.item_no) + '</td><td>' + photoCell(v, x.it) + '</td><td>' + e(x.it.name) + (x.it.size ? ' ' + e(x.it.size) : '') + '</td><td>' + e(x.kind) + '</td><td>' + e(x.place || x.it.note || '') + '</td><td>' + e(x.it.expires_on ? v.dmy(x.it.expires_on) : '') + '</td>')
             + '<td>' + e(l ? l.label : '') + '</td><td>' + e(l && l.last ? v.dmy(l.last) : '') + '</td><td>' + e(l && l.next ? v.dmy(l.next) : '') + '</td><td>' + e(x.archived ? 'Archived' : WORD[l ? l.st : x.s.st]) + '</td>'
             + '<td>' + e(rec ? rec.values.map(function (val) { return val.label + ' ' + val.value + (val.unit ? ' ' + val.unit : '') + (val.inr === false ? ' (outside)' : ''); }).join(', ') : '') + '</td><td>' + (rec ? rec.files.map(function (f) { return '<a href="' + e(f.href) + '">' + e(f.label) + '</a>'; }).join(' ') : '') + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table>';
-    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
+    w.document.write('<!doctype html><meta charset="utf-8"><title>Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}img.ph{width:90px;max-height:90px;object-fit:cover;display:block}tr{break-inside:avoid}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
     w.document.close();
   }
 

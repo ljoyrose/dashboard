@@ -41,7 +41,6 @@ async function setup(page, rules) {
 async function saveReading(page) {
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
-  await page.getByRole('button', { name: 'Type it' }).click();
   await page.getByLabel('MAX').fill('18.5');
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();

@@ -51,6 +51,7 @@ function world(w) {
 
 async function open(page, guard, opts) {
   world(guard.world);
+  if (opts && opts.before) opts.before(guard.world);
   const sent = [];
   let readingFails = (opts && opts.readingFails) || 0;
   await page.route(SINK, async (route) => {
@@ -58,7 +59,7 @@ async function open(page, guard, opts) {
     sent.push(b);
     const ok = (result) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result }) });
     if (b.action === 'file_add') return ok({ status: 'saved', id: 'fil-new', drive_file_id: 'drvfilenewpretend000000001' });
-    if (b.action === 'link_add') return ok({ status: 'saved', id: 'lnk-new-' + sent.length, role: b.fields.role, ended: [] });
+    if (b.action === 'link_add') return ok({ status: 'saved', id: 'lnk-new-' + sent.length, role: b.fields.role, ended: (b.fields.role === 'placed_in' && opts && opts.ended) || [] });
     // 16 Nov 2026: BUSY is now retried by the hub on its own, so the failed save here is one the person must retry.
     if (b.table === 'readings' && readingFails > 0) { readingFails--; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'CHANGED_DURING_WRITE', message: 'Try again.' }) }); }
     return ok({ status: 'saved', id: (b.table || 'x').slice(0, 3) + '-new-' + sent.length });
@@ -254,4 +255,69 @@ test.describe('CD Hub: items, click by click', () => {
     expect(small).toEqual([]);
     await shot(page, 'phone-test-form');
   });
+
+  test('phone: Photo on any item takes a photo with its date; only the file and its link are saved, then a tick (18 Nov 2026)', async ({ page, guard }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sent = await open(page, guard);
+    await page.locator('#itmPage .itm-row', { hasText: 'Pretend heater' }).click();
+    await card(page).locator('[data-itm-form="photo"]').click();
+    const f = page.locator('form[data-itm-save="photo"]');
+    await expect(f.locator('input[type="file"]')).toHaveAttribute('capture', 'environment');
+    await f.locator('input[type="file"]').setInputFiles({ name: 'heater.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+    await f.locator('input[name="on"]').fill('2026-11-17');
+    await f.locator('button[type="submit"]').click();
+    await expect(card(page).locator('.itm-tick')).toBeVisible();
+    await expect(card(page)).toContainText('Saved.');
+    const fa = sent.find((b) => b.action === 'file_add');
+    expect(fa.fields.taken_on).toBe('2026-11-17');
+    expect(fa.fields.kind).toBe('photo');
+    const la = sent.find((b) => b.action === 'link_add');
+    expect(la.fields).toMatchObject({ from_table: 'items', role: 'main', to_table: 'files', to_id: 'fil-new' });
+    expect(sent.some((b) => b.table === 'items')).toBe(false);
+    await expect(card(page)).toContainText('17 Nov 2026');
+    const box = await card(page).locator('[data-itm-form="photo"]').boundingBox();
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+  });
+  for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop', width: 1280, height: 800 }]) {
+    test(size.name + ': Move on an item lists every room in its group, shows where it is now, adds a dated row and ends the old one (18 Nov 2026)', async ({ page, guard }) => {
+      await page.setViewportSize({ width: size.width, height: size.height });
+      const sent = await open(page, guard, {
+        ended: ['p1'],
+        before: (w) => {
+          addTable(w, 'BLD-area.csv', csv('id,tenant_id,code,name,grouping,group_sort', [
+            'a-site,t,Pretend office,Pretend office,Pretend site,10', 'a-c2,t,C2,Cabin 2,Pretend cabins,1',
+            'a-c1,t,C1,Cabin 1,Pretend cabins,1', 'a-cor,t,Pretend corridor,Pretend corridor,Pretend corridors,5']));
+          addTable(w, 'BLD-links.csv', csv(LINK_H, [
+            'n1,t,reading_kinds,r1,reading_for_job,check_types,pretend_pat,2020-01-01,,x,o,2026-01-01,,,,',
+            'p1,t,items,i1,placed_in,area,a-c1,2025-05-28,,x,o,2026-01-01,,,,']));
+        }
+      });
+      await expect(page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' })).toContainText('C1');
+      await page.locator('#itmPage .itm-row', { hasText: 'Pretend kettle' }).click();
+      const btn = card(page).locator('[data-itm-form="move"]');
+      await expect(btn).toHaveText('Move');
+      await btn.click();
+      const f = page.locator('form[data-itm-save="move"]');
+      await expect(f).toContainText('Now: C1 since 28 May 2025');
+      expect(await f.locator('optgroup').evaluateAll((g) => g.map((x) => x.label + ': ' + Array.from(x.children).map((o) => o.textContent).join(', '))))
+        .toEqual(['Pretend cabins: C1, C2', 'Pretend corridors: Pretend corridor', 'Pretend site: Pretend office']);
+      // a day on or before the current room's start is refused before anything is sent
+      await f.locator('select[name="area_id"]').selectOption('a-site');
+      await f.locator('input[name="from_date"]').fill('2025-05-28');
+      await f.locator('button[type="submit"]').click();
+      await expect(card(page)).toContainText('Pick a day after 28 May 2025');
+      expect(sent.length).toBe(0);
+      await f.locator('input[name="from_date"]').fill('2026-11-18');
+      await f.locator('button[type="submit"]').click();
+      await expect(card(page).locator('.itm-tick')).toBeVisible();
+      expect(sent.map((b) => b.action)).toEqual(['link_add']);
+      expect(sent[0].fields).toMatchObject({ from_table: 'items', from_id: 'i1', role: 'placed_in', to_table: 'area', to_id: 'a-site', from_date: '2026-11-18' });
+      expect(sent.some((b) => b.table === 'items')).toBe(false);
+      await expect(card(page)).toContainText('Pretend office since 18 Nov 2026');
+      await expect(card(page)).not.toContainText('C1 since');
+      const box = await btn.boundingBox();
+      expect(box.x + box.width).toBeLessThanOrEqual(size.width);
+      if (size.width < 768) expect(box.height).toBeGreaterThanOrEqual(44);
+    });
+  }
 });

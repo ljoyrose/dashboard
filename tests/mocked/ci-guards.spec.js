@@ -148,6 +148,14 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
   });
 
+  // 20-22 Nov 2026: the gate's 35-minute limit cut off every publish once the suite ran past it, so github.io (where
+  // the printed QR codes point) went stale for two days while main moved on. The gate runs the same suite as the
+  // required check, so it gets at least the same time limit.
+  test('the publish gate has at least as long as the required check to run the suite @regression', () => {
+    const minutes = (wf, job) => Number(new RegExp('\\n  ' + job + ':[\\s\\S]*?\\n    timeout-minutes:\\s*(\\d+)').exec(wf)[1]);
+    expect(minutes(pages(), 'gate')).toBeGreaterThanOrEqual(minutes(read('.github/workflows/tests.yml'), '[a-z-]+'));
+  });
+
   test('nothing can bypass the gate: no always(), no continue-on-error, only push to main or a manual run', () => {
     const wf = pages();
     expect(wf).not.toMatch(/if:\s*\$?\{?\{?\s*always\(\)[^\n]*\n[^\n]*uses:\s*actions\/deploy-pages/);
