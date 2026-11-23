@@ -339,8 +339,8 @@
   }
   (function () {
     screen.insertBefore(asOf, msg);
-    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
     function roomItems() { return T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }); }
+    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
     opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; pickThen('area', roomItems(), roomCard); }));
     opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; pickThen('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
@@ -378,11 +378,9 @@
     if (sign) need('rooms').then(function (ok) {
       if (!ok) return;
       var signRoom = T.area.filter(function (a) { return a.id === sign; })[0];
-      if (signRoom) {
-        var rooms = roomItems(); if (!rooms.some(function (r) { return r.id === signRoom.id; })) rooms.unshift({ id: signRoom.id, label: signRoom.code || signRoom.id, a: signRoom });
-        sheet.className = 'sheet rooms'; pickThen('area', rooms, roomCard, [signRoom.id]);
-      }
-      else say('That room is not on the list. Press Room cards to print them all.', 'warn');
+      if (!signRoom) { say('That room is not on the list. Press Room cards to print them all.', 'warn'); return; }
+      var rooms = roomItems(); if (!rooms.some(function (r) { return r.id === signRoom.id; })) rooms.unshift({ id: signRoom.id, label: signRoom.code || signRoom.id, a: signRoom });
+      sheet.className = 'sheet rooms'; pickThen('area', rooms, roomCard, [signRoom.id]);
     });
   }());
 }());
