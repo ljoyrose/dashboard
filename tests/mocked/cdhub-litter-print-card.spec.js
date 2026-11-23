@@ -72,6 +72,15 @@ test('print: litter cards look like kennel cards and list only litters still on 
   await page.getByRole('button', { name: '2 per A4' }).click();
   await expect(page.locator('.sheet')).toHaveClass(/\blitters\b.*\bper2\b|\bper2\b.*\blitters\b/);
   await expect(card.locator('[data-k="jobs"] li')).toHaveText(['Socialisationdaily']);
+  // a litter has no photo: the size-colour frame prints blank, never the word "Photo" (overseer 21 Nov 2026, same as dog cards)
+  await page.emulateMedia({ media: 'print' });
+  const frame = await card.locator('[data-k="photo"]').evaluate((e) => { const st = getComputedStyle(e), r = e.getBoundingClientRect(); return { text: e.textContent.trim(), w: r.width, h: r.height, border: parseFloat(st.borderTopWidth), colour: st.borderTopColor }; });
+  expect(frame.text, 'no placeholder word printed').toBe('');
+  expect(frame.border, 'the frame is still there').toBeGreaterThan(0);
+  expect(frame.colour).not.toMatch(/rgba\(0, 0, 0, 0\)/);
+  expect(frame.w).toBeGreaterThan(20); expect(Math.abs(frame.w - frame.h)).toBeLessThan(2);
+  await expect(card).not.toContainText(/\bPhoto\b/);
+  await page.emulateMedia({ media: 'screen' });
   // Lisa's dog card (18 Nov 2026): name, Sex, Date of birth, photo in the size colour, Size, code, microchip in threes
   await page.getByRole('button', { name: 'Dog cards' }).click();
   const dam = page.locator('.dcard[data-dog="dam1"]');
