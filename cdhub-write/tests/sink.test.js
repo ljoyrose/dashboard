@@ -116,6 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
+    ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-grant_right_link.csv', 'BLD-grant_scope.csv', 'BLD-guest_reading.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-person.csv', 'BLD-qr_tag.csv', 'BLD-requirement.csv', 'BLD-sale.csv', 'BLD-sensor_reading.csv', 'BLD-subject_owner.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
     ['BLD-_pending.csv', 'BLD-area_access.csv', 'BLD-area_link.csv', 'BLD-area_reading.csv', 'BLD-audit_log.csv', 'BLD-breeding_rule.csv', 'BLD-check_field.csv', 'BLD-check_log.csv', 'BLD-check_type.csv', 'BLD-check_value.csv', 'BLD-guest_reading.csv', 'BLD-household.csv', 'BLD-household_member.csv', 'BLD-inspect_access.csv', 'BLD-inspect_link.csv', 'BLD-inspect_link_field.csv', 'BLD-inspect_link_subject.csv', 'BLD-item_kinds.csv', 'BLD-items.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv', 'BLD-person.csv', 'BLD-qr_tag.csv', 'BLD-readings.csv', 'BLD-requirement.csv', 'BLD-sale.csv', 'BLD-sensor_reading.csv', 'BLD-subject_owner.csv', 'BLD-thermometer.csv', 'BLD-vaccination.csv', 'BLD-weight.csv']);
 });
 
@@ -612,6 +613,19 @@ test('admin: health check changes nothing and speaks plainly', () => {
   assert.ok(env.logs.some((l) => /SAVE_ENABLED is TRUE/.test(l)));
 });
 
+// 15 Nov 2026: files and links saves only need their columns present, so the check no longer compares them with the queue header.
+test('admin: health check judges files and links by the columns their saves need, not the queue header', () => {
+  const env = standardEnv({ props: { TABLE_ON_files: 'true', TABLE_ON_links: 'true' } });
+  const links = env.ctx.LINKS_.need.slice().reverse().concat(['extra_col']);
+  env.addFile('BLD-links.csv', links.join(',') + '\r\n');
+  env.addFile('BLD-files.csv', env.ctx.DOGCARD_.files.need.filter((c) => c !== 'sha256').join(',') + '\r\n');
+  env.ctx.adminCheckSetup();
+  assert.equal(env.writes.length, 0);
+  assert.ok(env.logs.some((l) => /^OK   BLD-links.csv exists with 0 row\(s\); header has every column the save needs/.test(l)), env.logs.join('\n'));
+  assert.ok(env.logs.some((l) => /^FIX  BLD-files.csv exists with 0 row\(s\); header has no sha256/.test(l)));
+  assert.ok(!env.logs.some((l) => /BLD-(links|files).csv.*DOES NOT MATCH/.test(l)));
+});
+
 // ------------------------------------------------------------------ 10. the pending queue is itself append-only
 test('nothing the sink ever does shortens or edits any file', () => {
   const env = standardEnv();
@@ -850,6 +864,24 @@ test('rows of another tenant are never returned, and a long list is capped', () 
   const c = read(env, { table: 'occupancy' });
   assert.equal(c.result.count, 2);
   assert.equal(c.result.truncated, true);
+});
+
+test('a capped read keeps the NEWEST rows (the last in the table), and the filters run before the cap', () => {
+  const env = withRead();
+  const f = env.file('BLD-occupancy.csv')[0];
+  const key = (x) => x.subject_id + '@' + x.area_id;
+  const before = read(env, { table: 'occupancy' }).result.rows.map(key);
+  f.content += 'occ-new1,' + fx.TENANT + ',sub-dezi,area-t1,,2026-11-22,,,\r\n' + 'occ-new2,' + fx.TENANT + ',sub-dezi,area-t2,,2026-11-22,,,\r\n';
+  env.ctx.BLD.LIMITS.READ_MAX_ROWS = 2;
+  const c = read(env, { table: 'occupancy' });
+  assert.equal(c.result.truncated, true);
+  assert.deepEqual(Array.from(c.result.rows, key), ['sub-dezi@area-t1', 'sub-dezi@area-t2']);   // was the first two rows of the table
+  assert.ok(before.length >= 1);
+  // a filter narrows first; the cap then keeps the newest of what is left
+  env.ctx.BLD.LIMITS.READ_MAX_ROWS = 1;
+  const one = read(env, { table: 'occupancy', filter: { area_id: 'area-t1' } });
+  assert.equal(one.ok, true, JSON.stringify(one));
+  assert.deepEqual(Array.from(one.result.rows, key), ['sub-dezi@area-t1']);
 });
 
 test('reading is a separate switch from saving, and works through doPost', () => {

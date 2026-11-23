@@ -176,6 +176,9 @@ function newId_(prefix) {
   return prefix + '-' + id;
 }
 
+/** S4.2: a datetime as stored, in UTC: 'YYYY-MM-DDTHH:MM:SSZ'. Screens show London time. */
+function utcIso_(d) { return new Date(d.getTime()).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+
 function londonIso_(d) {
   return Utilities.formatDate(d, BLD.TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
 }
