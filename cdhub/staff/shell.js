@@ -186,14 +186,33 @@
       if (!r.ok) { dataP = null; guard(r); return { ok: false, code: r.code, message: r.message || 'Could not load the records.' }; }
       var t = r.tables, d = BLDOccupancy.dailyList(t), subjects = (t.subject || []).map(function (x) { return { id: x.id, label: x.name || x.id }; });
       save.setLookups({ area: t.area || d.areas, subject: subjects });   // every room, retired ones too: a late reading may name a retired room (screens still hide it)
-      return { ok: true, areas: d.areas, dogs: d.dogs, skipped: d.skipped, subjects: subjects, raw: t };
+      return (dataObj = { ok: true, areas: d.areas, dogs: d.dogs, skipped: d.skipped, subjects: subjects, raw: t, asOf: Date.now() });
     });
     return dataP;
   }
-  function refresh() { dataP = null; return data(); }
+  function refresh() { dataP = null; dataObj = null; return data(); }
+  /* Overseer 22 Nov 2026: a move showed the old room until a full reload. The loaded lists are changed in place instead. */
+  var dataObj = null;
+  function rebuild(o) { var d = BLDOccupancy.dailyList(o.raw); o.areas = d.areas; o.dogs = d.dogs; o.skipped = d.skipped; }
+  /** A move as it is sent: the dog shows in its new room at once. Returns undo(), for a save that is refused. */
+  function noteMove(row) {
+    var o = dataObj;
+    if (!o) return function () {};
+    o.raw.occupancy = (o.raw.occupancy || []).concat([row]); rebuild(o);
+    return function undo() { o.raw.occupancy = (o.raw.occupancy || []).filter(function (r) { return r !== row; }); rebuild(o); };
+  }
+  /** Read where the dogs are again (occupancy only, never the other lists). {ok, asOf} or the read's refusal. */
+  function refreshOccupancy() {
+    return save.read('occupancy').then(function (r) {
+      if (!r.ok) return r;
+      if (dataObj) { dataObj.raw.occupancy = r.rows || []; rebuild(dataObj); dataObj.asOf = Date.now(); }
+      return { ok: true, asOf: dataObj ? dataObj.asOf : Date.now() };
+    });
+  }
   function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
 
   var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
+  var ctx = { save: save, data: data, refresh: refresh, noteMove: noteMove, refreshOccupancy: refreshOccupancy, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
 
   /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
   function showMe() {
