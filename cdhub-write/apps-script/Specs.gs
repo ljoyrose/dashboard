@@ -198,6 +198,7 @@ var TABLES = {
     key: 'thermometer',
     file: 'BLD-thermometer.csv',
     idPrefix: 'thm',
+    qrKind: 'thermometer',   // 15 Nov 2026: QR on add per the qr.on_add.thermometer rule row (QrTag.gs)
     columns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
     proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'made_at', 'made_by'],
     computedColumns: [],
@@ -666,6 +667,7 @@ var TABLES = {
     key: 'items',
     file: 'BLD-items.csv',
     idPrefix: 'itm',
+    qrKind: 'item', qrSub: 'kind_key',   // 15 Nov 2026: QR on add per qr.on_add.item(.<kind_key>) rule rows (QrTag.gs)
     columns: ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'],
     proposedColumns: ['id', 'tenant_id', 'item_no', 'name', 'kind_key', 'make', 'model', 'serial_no', 'size', 'made_on', 'expires_on', 'photo', 'note', 'corrects_id', 'created_at', 'created_by'],
     computedColumns: [],
