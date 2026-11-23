@@ -124,3 +124,61 @@ test('fast save: a small table (all rows inside the tail) and a CSV table save a
   assert.equal(save(csv, req(csv)).ok, true);
   assert.equal(csv.ctx.store_read_(T, true).records.length, 1);
 });
+
+// 22 Nov 2026 (saves 30-62 s live): for a recent slot every row is read for its id and time only; the checked columns
+// come from the last rows. Same answers: a repeat inside the window is caught wherever it sits, a late reading still
+// finds its slot. Measured on 30,000 rows that end before now (one every 40 minutes, as a live table does).
+function pastEnv(n, extra) {
+  const env = bigEnv(0, extra), f = env.file(T)[0], now = env.nowMs;
+  for (let i = 0; i < n; i++) {
+    const at = now - (n - i) * 2400000, r = H.map(() => '');
+    r[col('id')] = 'rdg-p' + i; r[col('tenant_id')] = fx.TENANT; r[col('area_id')] = 'area-t2'; r[col('reading_type')] = 'temperature';
+    r[col('min_c')] = 18; r[col('max_c')] = 21.5; r[6] = 3.5; r[col('precision_dp')] = 1;
+    r[col('period_start')] = new Date(at - 300000); r[col('taken_at')] = new Date(at); r[col('taken_by')] = 'Hand'; f.sheet.push(r);
+  }
+  return env;
+}
+test('save tail: on 30,000 rows a recent reading reads 2 columns of every row (was 5), and is saved once', () => {
+  const env = pastEnv(30000);
+  const count = countReads(env);
+  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2' } }));
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(env.rows(T).length, 30002);
+  const before = 30000 * 5;   // id, area_id, thermometer_id, period_start, taken_at for every row
+  assert.ok(count.cells < before / 2, 'read ' + count.cells + ' cells; the checked columns of every row are ' + before);
+  assert.ok(count.cells < 30000 * 2 + 400 * H.length, 'read ' + count.cells);
+});
+
+test('save tail: a repeat inside the window at the end of 30,000 rows is still refused', () => {
+  const probe = standardEnv(), now = probe.nowMs;
+  const slot = new Date(now - 3600000).toISOString().slice(0, 13) + ':00:00Z';
+  const env = pastEnv(30000);
+  const first = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: slot } }));
+  assert.equal(first.ok, true, JSON.stringify(first));
+  const again = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: slot } }));
+  assert.equal(again.code, 'DUPLICATE', JSON.stringify(again));
+  assert.equal(env.rows(T).length, 30002);
+});
+
+test('save tail: a repeat inside the window at the TOP of 30,000 rows (sheet sorted) is still refused', () => {
+  const probe = standardEnv(), now = probe.nowMs;
+  const slot = new Date(now - 3600000).toISOString().slice(0, 13) + ':00:00Z';
+  const env = pastEnv(30000, [{ id: 'rdg-top', area: 'area-t1', ps: Date.parse(slot), at: now - 60000 }]);
+  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: slot } }));
+  assert.equal(r.code, 'DUPLICATE', JSON.stringify(r));
+});
+
+test('save tail: a late reading for a slot filled at the top of 30,000 rows is still refused', () => {
+  const probe = standardEnv();
+  const slot = new Date(probe.nowMs - 20 * 86400000).toISOString().slice(0, 10) + 'T07:00:00Z';
+  const env = pastEnv(30000, [{ id: 'rdg-slot', area: 'area-t1', ps: Date.parse(slot), at: Date.parse(slot) + 600000 }]);
+  const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22', period_start: slot } }));
+  assert.equal(r.code, 'DUPLICATE', JSON.stringify(r));
+});
+
+test('save tail: cells read grow at 2 per row, not 5 (3,000 vs 30,000 rows)', () => {
+  const cells = (n) => { const env = pastEnv(n), c = countReads(env); save(env, req(env, { fields: { area_id: 'area-t1', min_c: '11.3', max_c: '14.2' } })); return c.cells; };
+  const small = cells(3000), big = cells(30000);
+  const perRow = (big - small) / 27000;
+  assert.ok(perRow <= 2.05, 'extra cells per extra row: ' + perRow.toFixed(2));
+});
