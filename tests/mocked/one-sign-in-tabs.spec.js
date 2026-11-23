@@ -158,6 +158,17 @@ test.describe('Dashboard button (every page except home)', () => {
       expect(context.pages()).toEqual([page]);
       await expect(page).toHaveURL(at('(#/map)?'));
     });
+
+    test(`${url}: when the phone will not close the tab, "Dashboard" still goes to the dashboard (never a dead tap)`, async ({ page, context }) => {
+      await page.goto('./');
+      await signIn(page);
+      const link = '#hubTiles .hubtile a.hgo[href="' + url + '"]';
+      const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(link).click()]);
+      await expect(tab.locator('#backHome')).toBeVisible();
+      await tab.evaluate(() => { window.close = () => {}; });   // as on a phone or an installed app
+      await tab.locator('#backHome').click();
+      await expect(tab).toHaveURL(at('(#/map)?'));
+    });
   }
 });
 
