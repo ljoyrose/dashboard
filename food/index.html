@@ -357,11 +357,12 @@
   function growthHtml() {
     var g = growth(), mo = num(setting('MIN_ORDERS_MONTH')), d = g.last - g.prev;
     var h = '<section class="growth" aria-label="Grow orders"><p class="grp">Grow orders</p><div class="tiles">' +
-      '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
+      '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 && g.last > 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
       '<a class="tile" href="#/orders" aria-label="Repeat orders ' + g.repeat + '% from customers on their 2nd order or more. Open Orders"><span class="k">Repeat orders</span> <span class="v">' + g.repeat + '%</span> <span class="m">from customers on their 2nd order or more</span></a>' +
       '<a class="tile" href="#/orders?sub"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
       // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
-      (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
+      // A 0 never shows the red ring (house rule, Lisa 22 Nov 2026); the words still say "down n".
+      (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last > 0 && g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
     h += growCard(g);
     if (g.reorder.length) h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
       (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b>' + (o.species ? ' · ' + esc(o.species) : '') + '</div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')

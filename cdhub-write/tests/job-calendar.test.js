@@ -63,6 +63,52 @@ test('the calendar shows a Done today button until done, then a tick', () => {
   assert.equal(C.shift('2026-12', 1), '2027-01');
 });
 
+test('a pup counts on the health-check calendar only from its birth day, so the days before it are not "part done"', () => {
+  const pups = dogs.concat([{ id: 'p1', area_id: 'a1', dob: '2026-11-15' }]);
+  const v = Object.assign(base([log('1', 'cty-hc', '2026-11-14', 'd1'), log('2', 'cty-hc', '2026-11-14', 'd2'),
+    log('3', 'cty-hc', '2026-11-15', 'd1'), log('4', 'cty-hc', '2026-11-15', 'd2')]), { dogs: pups });
+  const day = (iso) => C.month(v, 'health_check_all', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(day('2026-11-14').state, 'done');     // before the pup was born: 2 of 2
+  assert.equal(day('2026-11-15').state, 'part');     // born today: 2 of 3
+  assert.equal(day('2026-11-15').need, 3);
+});
+
+test('a day with records opens who and when, notes, and its photos; a day with a photo shows a camera', () => {
+  const v = Object.assign(base([log('1', 'cty-fb', '2026-11-10', '', { taken_by: 'Pat', note: 'Diary page 12' }), log('2', 'cty-fb', '2026-11-12')]), {
+    dmy: (s) => s,
+    files: [{ id: 'f1', name: 'diary-10-nov.jpg', drive_file_id: '1FAKEDIARYPAGEIDFORTESTS000000aa', mime: 'image/jpeg' }, { id: 'f2', name: 'cert.pdf', drive_file_id: '1FAKEPDFIDFORTESTS0000000000000b', mime: 'application/pdf' }],
+    links: [{ from_table: 'check_log', from_id: '1', role: 'evidence', to_table: 'files', to_id: 'f1', from_date: '2026-11-10', to_date: '' },
+      { from_table: 'check_log', from_id: '1', role: 'certificate', to_table: 'files', to_id: 'f2', from_date: '2026-11-10', to_date: '' }],
+    calOpen: { key: 'food_bowls', iso: '2026-11-10' }
+  });
+  const html = C.html(v, '2026-11', false);
+  assert.match(html, /<button type="button" class="jd done ph open" data-day="2026-11-10" data-jcal-day="2026-11-10" data-jcal-key="food_bowls"/);
+  assert.match(html, /<button type="button" class="jd done" data-day="2026-11-12"/);   // records, no photo: opens, no camera
+  assert.match(html, /<span class="jd missed" data-day="2026-11-11"/);                  // nothing recorded: not a button
+  assert.match(html, /data-jcal-detail="2026-11-10"/);
+  assert.match(html, /<li>Pat · \d\d:\d\d<\/li>/);
+  assert.match(html, /Diary page 12/);
+  assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/1FAKEDIARYPAGEIDFORTESTS000000aa\/view"[^>]*data-jcal-photo[^>]*><img data-cal-photo-id="1FAKEDIARYPAGEIDFORTESTS000000aa"/);
+  assert.match(html, /1FAKEPDFIDFORTESTS0000000000000b\/view"[^>]*data-jcal-photo[^>]*><span>certificate<\/span>/);   // a PDF: a link, no picture
+});
+
+// Lisa 22 Nov 2026: "Cross reference the dogs vet visit dates": a vet day shows on the health-check calendar, never as a check.
+test('a vet visit shows on the per-dog calendar day (marker and details), not on one-line jobs, and never counts as a check', () => {
+  const v = Object.assign(base([log('1', 'cty-hc', '2026-11-10', 'd1'), log('2', 'cty-hc', '2026-11-10', 'd2'), log('3', 'cty-fb', '2026-11-10')]), {
+    dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
+    vetVisits: [{ subject_id: 'd1', performed_on: '2026-11-12', start_time: '10:30', kind: 'appointment', status: 'done', reason: 'pretend vaccine' },
+      { subject_id: 'd2', performed_on: '2026-11-13', start_time: '09:00', kind: 'appointment', status: 'booked', reason: 'not yet' }],
+    calOpen: { key: 'health_check_all', iso: '2026-11-12' }
+  });
+  const html = C.html(v, '2026-11', false);
+  const hc = html.slice(html.indexOf('data-jcal="health_check_all"'), html.indexOf('data-jcal="food_bowls"'));
+  assert.match(hc, /<button type="button" class="jd missed vet open" data-day="2026-11-12"[^>]*title="2026-11-12: missed · vet: Pretend Dog"/);
+  assert.match(hc, /data-jcal-vet><b>Vet<\/b><\/p><ul><li>Pretend Dog · 10:30 · pretend vaccine<\/li>/);
+  assert.doesNotMatch(hc, /data-day="2026-11-13"[^>]*vet/);          // booked, not a visit
+  assert.doesNotMatch(html.slice(html.indexOf('data-jcal="food_bowls"')), /class="jd [^"]*vet/);   // one-line jobs: no vet marker
+  assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
+});
+
 // Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
 test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
   const v = base([log('1', 'cty-fb', '2026-11-10')]);

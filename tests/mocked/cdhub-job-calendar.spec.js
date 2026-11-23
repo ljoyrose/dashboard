@@ -49,6 +49,34 @@ test('Main has The Board and Print cards', async ({ page, guard }) => {
   await expect(page.locator('[data-open-print]')).toHaveAttribute('href', './staff/print/');
 });
 
+// Lisa 22 Nov 2026: "can it also have the photos as then we would click and show image as we will for diary entries".
+test('tapping a day on a calendar opens who and when, and its diary photo; tapping again closes it', async ({ page, guard }) => {
+  const yest = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [`l1,t,j1,,,,,ok,,From the diary,${yest}T09:00:00Z,Pretend Staff,,,paper`]));
+  addTable(guard.world, 'BLD-files.csv', csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on,created_at,updated_at',
+    ['f1,t,upload,1FAKEDIARYPAGEIDFORTESTS000000aa,,image/jpeg,diary-page.jpg,1,,,,o,,,']));
+  addTable(guard.world, 'BLD-links.csv', csv('id,tenant_id,from_table,from_id,role,to_table,to_id,from_date,to_date,set_by,set_at',
+    [`k1,t,check_log,l1,evidence,files,f1,${yest},,o,`]));
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.route(/\/drive\/v3\/files\/1FAKEDIARYPAGEIDFORTESTS000000aa\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  if (yest.slice(0, 7) !== london(new Date()).slice(0, 7)) await page.locator('#jobCals [data-jcal-month]').first().click();
+  const day = page.locator(`[data-jcal="food_bowls"] [data-jcal-day="${yest}"]`);
+  await expect(day).toHaveClass(/\bph\b/);
+  await day.click();
+  const detail = page.locator(`[data-jcal="food_bowls"] [data-jcal-detail="${yest}"]`);
+  await expect(detail).toContainText('Pretend Staff');
+  await expect(detail).toContainText('From the diary');
+  await expect(detail.locator('[data-jcal-photo]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1FAKEDIARYPAGEIDFORTESTS000000aa/view');
+  await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('alt', 'evidence: diary-page.jpg');
+  await expect(detail.locator('[data-jcal-photo] img')).toHaveAttribute('src', /^blob:/);   // read with the sign-in, never a public Google address
+  await page.locator(`[data-jcal="food_bowls"] [data-jcal-day="${yest}"]`).click();
+  await expect(page.locator('[data-jcal-detail]')).toHaveCount(0);
+});
+
 // Lisa 22 Nov 2026 ("A"): import past daily records. The file is checked and shown first; one press saves the ready rows.
 test('Import: a chosen file is checked row by row; Import saves only the ready rows, marked import, and the days turn green', async ({ page, guard }) => {
   const today = london(new Date()), d1 = london(new Date(Date.now() - 2 * 86400000)), d2 = london(new Date(Date.now() - 3 * 86400000));
@@ -102,4 +130,35 @@ test('Import: Cancel clears the file with nothing saved; Stop during an import l
   await page.evaluate(() => window.__release());
   await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 1 of 3. Stopped: the other 2 were not sent.');
   expect(await page.evaluate(() => window.__sent.length)).toBe(1);
+// Lisa 23 Nov 2026 (phone screenshot): "Make it clearer between part done (orange) and missed (red)". Missed is a red
+// frame with a small cross, part done an orange frame on a light orange fill; the key shows all three the same way.
+test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark', async ({ page, guard }) => {
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [`l1,t,j1,,,,,ok,,,${london(new Date(Date.now() - 3 * 86400000))}T09:00:00Z,Pretend Staff,,,site_tap`]));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const key = page.locator('#jobCals .jcal-key');
+  await expect(key.locator('[data-jcal-legend]')).toHaveCount(3);
+  await expect(key).toContainText('done');
+  await expect(key).toContainText('part done');
+  await expect(key).toContainText('missed');
+  const lum = (rgb) => { const c = rgb.match(/\d+/g).slice(0, 3).map((v) => { v = v / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: scheme });
+    const look = await key.evaluate((k) => {
+      const s = (n) => getComputedStyle(k.querySelector('[data-jcal-legend="' + n + '"]'));
+      const a = getComputedStyle(k.querySelector('[data-jcal-legend="missed"]'), '::after');
+      const card = getComputedStyle(k.closest('.card') || document.body).backgroundColor;
+      return { part: { frame: s('part').boxShadow, fill: s('part').backgroundColor }, missed: { frame: s('missed').boxShadow, fill: s('missed').backgroundColor, mark: a.content, markColour: a.color }, done: s('done').backgroundColor, card: card };
+    });
+    expect(look.missed.mark).toBe('"✕"');                          // missed has its own mark, so it never relies on colour
+    expect(look.part.frame).not.toBe(look.missed.frame);           // different frame colours
+    expect(look.part.fill).not.toBe(look.missed.fill);             // part done has a fill, missed has none
+    expect(look.done).not.toBe(look.part.fill);
+    const [l1, l2] = [lum(look.missed.markColour), lum(look.card)].sort((x, y) => y - x);
+    expect((l1 + 0.05) / (l2 + 0.05), scheme + ' cross contrast').toBeGreaterThanOrEqual(4.5);
+  }
+  // a real missed day in the month carries the class (and so the cross)
+  await expect(page.locator('#jobCals [data-jcal="food_bowls"] .jd.missed').first()).toBeVisible();
 });
