@@ -144,6 +144,20 @@ function vaxOwnRow_(spec, f, who, cols) {
 /** Archive one vaccination (owner only): fills voided_on and voided_by in that row only. The row stays. */
 function sinkVaccinationVoid_(req) {
   return sinkDogcard_(req, 'vaccination', function (spec, f, who, now) {
+    var subjectId = String(f.subject_id || '').trim(), rowId = String(f.id || '').trim();
+    if (!ID_RE_.test(subjectId) || !ID_RE_.test(rowId)) throw err_('INVALID', 'Say which vaccination to remove.');
+    var read = store_read_(spec.file, true);
+    dogcardHeader_(read, spec.need.concat(VOID_COLS_), spec.file);
+    var newest = -1;
+    read.records.forEach(function (r, i) {
+      if (r.subject_id !== subjectId || String(r.voided_on || '').trim()) return;
+      if (newest < 0 || String(r.given_on || '') >= String(read.records[newest].given_on || '')) newest = i;
+    });
+    if (newest < 0) throw err_('NOT_FOUND', 'That dog has no vaccinations to remove.');
+    if (read.records[newest].id !== rowId) throw err_('NOT_ALLOWED', 'Only the most recent vaccination can be removed.');
+    var rec = read.records[newest];
+    var row = read.header.map(function (h) {
+      if (h === 'voided_on') return utcIso_(now);   // S4.2: UTC
     var x = vaxOwnRow_(spec, f, who, VOID_COLS_), rec = x.read.records[x.at];
     if (String(rec.voided_on || '').trim()) return { status: 'saved', id: x.rowId, subject_id: x.subjectId, voided: true };
     var row = x.read.header.map(function (h) {
