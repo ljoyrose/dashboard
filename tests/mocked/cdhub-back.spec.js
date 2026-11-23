@@ -61,4 +61,39 @@ test.describe('CD Hub Back', () => {
     await expect(page).toHaveURL(/#\/sops\/Microchip%20Audit$/);
     await expect(page.locator('#main .hback')).toHaveText('← Back to SOPs');
   });
+
+  test('one header on every page: Home on the left, Back in the top bar once there is somewhere to go back to', async ({ page }) => {
+    await signIn(page);
+    const hb = page.locator('header #hubBack');
+    await expect(page.locator('header #backHome')).toBeVisible();
+    await expect(hb).toBeHidden();                                   // opened cold: nowhere to go back to
+    await page.evaluate(() => go('dogs'));
+    await expect(hb).toBeVisible();
+    await expect(hb).toHaveAttribute('aria-label', 'Back (Main)');
+    await page.evaluate(() => { go('areas/area-2'); focusView(); });
+    await expect(hb).toHaveAttribute('aria-label', 'Back (Dogs)');
+    await expect(hb).toHaveAttribute('title', 'Back to Dogs');
+    const box = await hb.boundingBox();
+    expect(Math.round(box.height)).toBe(44);                          // the house icon button
+    await hb.click();
+    await expect(page).toHaveURL(/#\/dogs$/);
+    await expect(hb).toHaveAttribute('aria-label', 'Back (Main)');
+    await hb.click();
+    await expect(page).toHaveURL(/#\/map$|\/cdhub\/$/);
+  });
+
+  test('the temps page opened from the hub has Back to CD Hub; opened cold it has none', async ({ page }) => {
+    await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export\?/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: 'date,time,room,temp\n' }));
+    await signIn(page);
+    await page.evaluate(() => go('round'));
+    await page.locator('#chips a.hchip', { hasText: 'Temps' }).click();
+    await expect(page).toHaveURL(/history\.html/);
+    const hb = page.locator('header #hubBack');
+    await expect(hb).toBeVisible();
+    await expect(hb).toHaveAttribute('aria-label', 'Back (CD Hub)');
+    await hb.click();
+    await expect(page).toHaveURL(/#\/round$/);
+    await page.goto('cdhub/history.html');
+    await expect(page.locator('header #hubBack')).toBeHidden();
+  });
 });

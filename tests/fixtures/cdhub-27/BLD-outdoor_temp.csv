@@ -1,0 +1,7 @@
+on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source,rain_value,wind_kmh
+2026-03-10,observed,3,11,Mild,2026-03-10T06:00:00Z,invented,0,12
+2026-03-11,forecast,4,12,Mild,2026-03-10T06:00:00Z,invented,0,12
+2026-03-12,forecast,5,13,Cold and wet,2026-03-10T06:00:00Z,invented,6,12
+2026-03-13,forecast,6,14,Mild,2026-03-10T06:00:00Z,invented,0,45
+2026-03-14,forecast,7,15,Mild,2026-03-10T06:00:00Z,invented,0,12
+2026-03-15,forecast,8,16,Mild,2026-03-10T06:00:00Z,invented,0,12

@@ -175,12 +175,12 @@
       if (Object.keys(problems).length) { showErrors(problems); return; }
       requestId = requestId || save.newRequestId();
       send.disabled = true; result.textContent = 'Saving...';
-      return save.submit('check_log', entry, { requestId: requestId }).then(function (r) {
+      return save.submit('check_log', entry, { requestId: requestId, onTurn: function (n) { result.textContent = typeof BLDDone === 'undefined' ? (n > 0 ? 'Waiting, ' + n + ' ahead' : 'Saving...') : BLDDone.turn(n); } }).then(function (r) {
         send.disabled = false;
-        if (r.ok) { reset(); result.textContent = r.message + ' ' + savedWhat(type, entry); return; }
+        if (r.ok) { reset(); result.textContent = (r.status === 'queued' || typeof BLDDone === 'undefined' ? r.message : BLDDone.by(r)) + ' ' + savedWhat(type, entry); return; }
         result.textContent = r.message;
         showErrors(r.fields);
-        if (r.code !== 'NETWORK') requestId = null;
+        if (!r.kept && r.code !== 'NETWORK') requestId = null;
       });
     });
 

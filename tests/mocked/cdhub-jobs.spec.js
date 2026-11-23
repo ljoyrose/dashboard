@@ -6,7 +6,12 @@ const tab = async (page, id) => {
   await tabClick(page, `#nav button[data-go="${id}"]`);
   await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
 };
-const addTable = (world, name, content) => world.file('bld-jobs-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+// Replaces a sample table that already exists (two files with one name stop the hub), else adds it.
+const addTable = (world, name, content) => {
+  const f = world.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); }
+  else world.file('bld-jobs-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
 
 const TYPE_H = 'id,tenant_id,type_key,label,target,active,effective_from,source,every_days,group,includes,sop';
 const LOG_H = 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded';
@@ -28,7 +33,7 @@ test.describe('CD Hub: jobs', () => {
     expect((await msg(12, '10')).msg).not.toContain('fewer rows');
     const fewer = await msg(9, '10');
     expect(fewer.ok).toBe(false);
-    expect(fewer.msg).toContain('1 tables have fewer rows than the manifest: pretend');
+    expect(fewer.msg).toContain('1 table has fewer rows than the manifest: pretend');
     // the copy on this device can be older than the manifest: no warning while it shows
     const onCopy = await msg(9, '10', true);
     expect(onCopy.ok).toBe(true);
@@ -84,8 +89,10 @@ test.describe('CD Hub: jobs', () => {
     addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H + ',time_given', [
       'l1,t,t1,,sub-test-dog-1,,,ok,2026-01-05T09:00:00Z,,2026-01-05T09:00:00Z,Staff A,,,scanned',
       'l2,t,t1,,sub-test-dog-1,,,concern,2026-01-06T09:00:00Z,pretend note,2026-01-06T09:00:00Z,Staff A,,,tapped',
-      'l3,t,t2,area-x,sub-test-dog-1,,,ok,2026-01-04T12:00:00Z,,2026-01-07T09:00:00Z,Staff A,,,paper,false'
+      'l3,t,t2,area-x,sub-test-dog-1,,,ok,2026-01-04T12:00:00Z,,2026-01-07T09:00:00Z,Staff A,,,paper,false',
+      'l4,t,t2,area-x,sub-test-dog-1,,,ok,2026-01-03T09:00:00Z,,2026-01-07T09:00:00Z,Staff A,,,paper,part:morning'
     ]));
+    addTable(guard.world, 'BLD-breeding_rule.csv', csv('id,rule_key,value,effective_from,to_date,source', ['r1,job.day_part.morning.label,Pretend morning,2026-01-01,,test']));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
     const row = page.locator('#compJobs tr[data-job="nails"]');
@@ -95,15 +102,17 @@ test.describe('CD Hub: jobs', () => {
     await expect(page.locator('#compJobs tr[data-source=""]')).toContainText('No source entered');
     await tab(page, 'dogs');
     const hist = page.locator('[data-history="sub-test-dog-1"]');
-    await expect(hist).toContainText('3 job records');
+    await expect(hist).toContainText('4 job records');
     // job history sits behind More on the dog card (layout A, Lisa 12 Nov 2026)
     await page.locator('#rows article.dc', { has: hist }).locator('details.more > summary').click();
     await hist.locator('summary').click();
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
     await expect(hist).toContainText('6 Jan 2026');   // owner date: "2 Mar 2026"
-    await expect(hist).toContainText('entered earlier');   // how it came in: owner-only
-    await expect(hist).toContainText('time not given');
+    // Lisa 22 Nov 2026: "entered later" words show only when the owner's row display.entered_later is on (none here)
+    await expect(hist).not.toContainText('entered earlier');
+    await expect(hist).not.toContainText('time not given');
+    await expect(hist).toContainText('Pretend morning');   // a part of the day: the owner's label for it
     await expect(hist).not.toContainText(/verified|attended/i);
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
     expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Nothing here'))).toBe('');
