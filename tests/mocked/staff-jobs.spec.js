@@ -167,7 +167,8 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   const card = page.locator('[data-job="exercise"]');
   await expect(card.getByRole('checkbox')).toHaveCount(2);
   await card.getByRole('checkbox', { name: 'Pretend B' }).uncheck();
-  await card.getByRole('button', { name: /^Done/ }).click();
+  await expect(card.locator('[data-ticks-done]')).toHaveText('Done: 1 dog');
+  await card.getByRole('button', { name: 'Done: Exercise' }).click();
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].action).toBe('add_site');
   expect(sent[0].fields.dog_ids).toBe('dog-1');
@@ -458,7 +459,8 @@ test('a save refused as a repeat says so once, in plain words', async ({ page })
   await page.getByRole('button', { name: 'Done: Weigh' }).click();
   await weigh.getByLabel('Amount (kg)').fill('21.5');
   await page.getByRole('button', { name: 'Done: Weigh' }).click();
-  await expect(weigh.locator('.done-line.bad')).toContainText('Already saved a moment ago');
+  await expect(weigh.locator('.done-line.good')).toContainText(/Done \d\d:\d\d/);   // the first save landed: a tick, not only a red line
+  await expect(weigh.locator('.done-line .done-note')).toHaveText('Already saved a moment ago, so not saved twice. To add to it, use Note.');
   await expect(weigh.getByText('Already saved a moment ago')).toHaveCount(1);
   await expect(weigh.getByText('Saving...')).toHaveCount(0);
 });
@@ -667,4 +669,74 @@ test('check types starting round. belong to The round and never show as jobs, no
   await expect(page.locator('[data-job="round.presence"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Earlier: several days' }).click();
   await expect(page.getByLabel('Job').locator('option[value="round.presence"]')).toHaveCount(0);
+});
+
+// Lisa 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
+test('a whole-site dog job: the Done N dogs button by the ticks saves the ticked dogs and the card says N of M dogs @regression', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  const save = card.locator('[data-ticks-done]');
+  await expect(save).toBeVisible();
+  await expect(save).toHaveText('Done: 0 dogs');
+  await expect(save).toBeDisabled();
+  await card.getByRole('button', { name: 'Select all' }).click();
+  await expect(save).toHaveText('Done: 2 dogs');
+  await save.click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ action: 'add_site', fields: { check_type_id: 'cty-walk', dog_ids: 'dog-1|dog-2' } });
+  await expect(page.locator('[data-job="walk"] .done-line')).toContainText(/Done \d\d:\d\d · 2 of 2 dogs/);
+});
+
+test('a whole-site dog job: a refused tick save says "Not saved" with the reason on the card', async ({ page }) => {
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (b.action !== 'add_site') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'INVALID', message: 'None of those dogs can be covered by a whole-site tap.' } });
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="walk"]');
+  await card.getByRole('button', { name: 'Yes, done: Walk' }).click();
+  await card.getByRole('checkbox', { name: 'Pretend A' }).check();
+  await expect(card.locator('[data-ticks-done]')).toHaveText('Done: 1 dog');
+  await card.locator('[data-ticks-done]').click();
+  await expect(card.locator('.done-line')).toHaveText('Not saved: None of those dogs can be covered by a whole-site tap.');
+});
+
+// Lisa 22 Nov 2026: "Bedding washed" (As needed) saved, but its card showed no tick, so a second Yes was refused as a repeat.
+test('an as-needed job shows its tick straight after a save', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'More' }).click();
+  const card = page.locator('[data-job="toys"]');
+  await expect(card.locator('.ds')).toHaveText('As needed');
+  await card.getByRole('button', { name: 'Yes, done: Toys' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  await expect(page.locator('[data-job="toys"] .done-line')).toContainText(/Done \d\d:\d\d/);
+});
+
+test('an as-needed job done today stays on the site list with its tick when the screen opens again @regression', async ({ page }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  await setup(page, { check_log: [{ id: 'clg-1', check_type_id: 'cty-toys', outcome: 'ok', how_recorded: 'site_tap', taken_by: 'Pretend Owner', taken_at: today + 'T12:50:00Z' }] });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  const card = page.locator('[data-job="toys"]');
+  await expect(card).toBeVisible();
+  await expect(card.locator('.done-line')).toContainText(/Done \d\d:\d\d · Pretend Owner/);
+});
+
+test('an as-needed job refused as a repeat shows the tick, not only a red line @regression', async ({ page }) => {
+  await setup(page);
+  await page.route(SCRIPT, (route) => {
+    const b = route.request().method() === 'POST' ? JSON.parse(route.request().postData()) : {};
+    if (String(b.action).indexOf('read') === 0 || route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({ headers: CORS, json: { ok: false, code: 'DUPLICATE', message: 'This looks like the same entry as one already saved.' } });
+  });
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'Yes, done: Toys' }).click();
+  const card = page.locator('[data-job="toys"]');
+  await expect(card.locator('.done-line.good')).toContainText(/Done \d\d:\d\d/);
+  await expect(card.locator('.done-note')).toContainText('Already saved a moment ago');
 });
