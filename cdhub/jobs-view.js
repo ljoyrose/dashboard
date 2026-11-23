@@ -35,7 +35,7 @@
     var groups = function (d) { return Due.groupsOf(v.links, d.id, v.today); };
     add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
-    add(litters.map(function (l) { return { litter_id: l.id }; }), v.logs);
+    add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
     add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
        current litter, a Problem-button job (target optional). Its last record is still shown. */
@@ -74,11 +74,21 @@
   /** How a record was made, in the owner's words (Lisa 17 Nov 2026: "is that not for the app user to decide?"). Row
       job.how.<how>.label in force that day: its value is the words; "off" hides the words. No row = the starter words.
       The record always keeps how_recorded itself: only what the screen says is the owner's choice. */
+  /* Lisa 22 Nov 2026: "the user pays for the app, it is up to them what is displayed". Whether a screen says a record
+     was entered later (entered earlier / imported / time not given / "(entered <date>)") is the owner's row
+     display.entered_later in force that day: "on" shows it; no row or "off" hides it. The records always keep
+     happened_at, taken_at, how_recorded and time_given: only what the screen says changes. */
+  var LATE_HOW = { paper: 1, bulk: 1, import: 1 };
+  function showLate(v, day) {
+    var best = null;
+    (v.rules || []).forEach(function (r) { if (r.rule_key === 'display.entered_later' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
+    return !!best && /^on$/i.test(String(best.value || '').trim());
+  }
   function howLabel(v, how, day) {
     if (!how) return '';
     var best = null;
     (v.rules || []).forEach(function (r) { if (r.rule_key === 'job.how.' + how + '.label' && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
-    if (!best) return HOW[how] || '';
+    if (!best) return LATE_HOW[how] && !showLate(v, day) ? '' : (HOW[how] || '');   // an owner's own label row for it still shows
     var w = String(best.value || '').trim();
     return /^off$/i.test(w) ? '' : w;
   }
@@ -134,7 +144,8 @@
     var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'owner_note' && l.note; });
     var seenNote = {};
     notes.forEach(function (l) { var k = l.note; if (seenNote[k]) return; seenNote[k] = 1;
-      h += '<p class="note" data-owner-note>Owner\u2019s note: ' + e(l.note) + (l.taken_at ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
+      var lateOn = showLate(v, v.today || String(l.taken_at || '').slice(0, 10));
+      h += '<p class="note" data-owner-note>Owner\u2019s note: ' + e(l.note) + (l.taken_at && lateOn ? ' <span class="mut">(entered ' + e(v.dmy ? v.dmy(String(l.taken_at).slice(0, 10)) : String(l.taken_at).slice(0, 10)) + (l.taken_by ? ' by ' + e(l.taken_by) : '') + ')</span>' : '') + '</p>'; });
     h += '<p class="mut">From saved records. Counts are dogs, rooms or litters.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>SOP</th><th>job</th><th>done</th><th>due</th><th>late</th><th>last</th></tr></thead><tbody>'
       + rows.map(function (r) {
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
@@ -181,10 +192,11 @@
       + (rows.length ? '<b>' + rows.length + '</b> job record' + (rows.length === 1 ? '' : 's') : '<span class="mut">no job records</span>') + '</span></summary><div class="dcs-bd">'
       + (shown.length ? shown.map(function (r) {
         return '<div class="dcs-row"><span class="mut">' + e(v.dmy(Due.londonDate(r.at) || String(r.at).slice(0, 10))) + '</span><b>' + e(r.label) + '</b>' + (r.outcome === 'ok' ? '' : '<span class="pill">' + e(OUTCOME[r.outcome] || r.outcome) + '</span>')
-          + [r.item, r.amount, r.note, r.by, howLabel(v, r.how, Due.londonDate(r.at) || String(r.at).slice(0, 10)), r.part, r.noTime ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
+          + [r.item, r.amount, r.note, r.by, howLabel(v, r.how, Due.londonDate(r.at) || String(r.at).slice(0, 10)), r.part, r.noTime && showLate(v, Due.londonDate(r.at) || String(r.at).slice(0, 10)) ? 'time not given' : ''].filter(Boolean).map(function (x) { return '<span class="mut">' + e(x) + '</span>'; }).join('')
           + r.files.map(function (f) { return '<a href="' + e(f.url) + '" target="_blank" rel="noopener noreferrer" data-record-file title="' + e(f.name) + '">' + e(f.role) + '</a>'; }).join('') + '</div>';
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
   return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
+  return { showLate: showLate, summary: summary, everyWords: everyWords, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
 }));

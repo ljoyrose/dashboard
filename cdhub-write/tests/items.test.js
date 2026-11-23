@@ -129,3 +129,14 @@ test('qr_tag: a tag can open an item', () => {
   const env = env0();
   assert.ok(env.ctx.TABLES.qr_tag.input.kind.values.includes('item'));
 });
+
+test('list save: a check sent in a list keeps its form answers (22 Nov 2026)', () => {
+  const { env, kettle, pat } = setup();
+  ok(owner(env, 'check_field', { type_key: 'pat_class_1', field_key: 'insulation', label: 'Insulation', kind: 'number', effective_from: '2025-01-01' }));
+  const r = save(env, { v: 1, request_id: 'r-batch-forms01', code: env.codes.owner, action: 'add_many', items: [
+    { request_id: 'r-item-forms0001', table: 'check_log', fields: { check_type_id: pat, item_id: kettle, outcome: 'ok' }, values: { insulation: '19.99' } }
+  ] });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.items[0].ok, true, JSON.stringify(r.result.items[0]));
+  assert.deepEqual(recs(env, 'BLD-check_value.csv').map((v) => [v.field_key, v.value]), [['insulation', '19.99']]);
+});
