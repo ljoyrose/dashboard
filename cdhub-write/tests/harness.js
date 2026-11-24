@@ -151,7 +151,8 @@ function makeEnv(opts = {}) {
     }) },
     CacheService: { getScriptCache: () => ({
       get: (k) => (k in env.cache ? env.cache[k] : null),
-      put: (k, v) => { env.cache[k] = String(v); }
+      put: (k, v) => { env.cache[k] = String(v); },
+      remove: (k) => { delete env.cache[k]; }
     }) },
     ScriptApp: {
       getProjectTriggers: () => env.triggers,
@@ -159,6 +160,7 @@ function makeEnv(opts = {}) {
       newTrigger: (fn) => ({ timeBased() { return this; }, everyDays() { return this; }, atHour() { return this; }, create() { const t = { getHandlerFunction: () => fn }; env.triggers.push(t); return t; } })
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
+    Session: { getActiveUser: () => ({ getEmail: () => env.email }), getScriptTimeZone: () => 'Europe/London' },   // the project setting
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
     // Google's answers for the owner sign-in check (Auth.gs authOwnerGoogle_). Tests set env.google; none = Google unreachable.
     UrlFetchApp: { fetch: (url, o) => {

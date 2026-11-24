@@ -18,7 +18,7 @@
   function londonDate(value) {
     var d = new Date(value);
     if (isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    return new Intl.DateTimeFormat('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
   }
   function addDays(date, n) { return new Date(Date.parse(date + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10); }
   function daysBetween(from, to) { return Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / DAY); }
