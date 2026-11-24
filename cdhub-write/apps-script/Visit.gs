@@ -36,6 +36,10 @@ var VISIT_ = {
 function visitRightCode_(s) { s = String(s == null ? '' : s).trim(); return s === 'review' ? 'raise_finding' : s; }
 
 function visitOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + VISIT_.ON) === 'true'; }
+function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE, VISIT_.FINDING_FILE] : []; }
+
+/** Shared entry for OWNER visit actions: switches, owner code, repeat-tap guard, one lock. */
+function sinkVisitOwner_(req, fn) {
 function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE, VISIT_.FINDING_FILE].concat(delegFiles_()) : []; }
 
 /** Shared entry for OWNER visit actions: switches, owner code, repeat-tap guard, one lock. */
@@ -45,6 +49,12 @@ function sinkVisitOwner_(req, fn, holderOk) {
   if (!visitOn_()) throw err_('TABLE_OFF', 'Visits are switched off.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
+  var who = authStaff_(req.code);
+  if (who.role !== 'OWNER') throw err_('NOT_ALLOWED', 'Only the kennel owner can do this.');
+  var cache = CacheService.getScriptCache(), cached = cache.get('rid:' + rid);
+  if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
+  var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
+  var result = withLock_(function () { return fn(f, who, new Date()); });
   var who = authStaff_(req.code), f = req.fields && typeof req.fields === 'object' ? req.fields : {}, deleg = null;
   if (who.role !== 'OWNER') {
     // Delegate.gs: a role never implies this; only a live give_visit row the owner conferred (or one passed on under it)
@@ -295,6 +305,7 @@ function visitGrant_(rootId, day) {
 }
 
 function sinkVisitGive_(req) {
+  return sinkVisitOwner_(req, function (f, who, now) {
   return sinkVisitOwner_(req, function (f, who, now, deleg) {
     var errors = {}, bad = function (field, msg) { var e = {}; e[field] = msg; return err_('INVALID', msg, { fields: e }); };
     var tenant = prop_(BLD.PROP.TENANT_ID), salt = prop_(BLD.PROP.SALT);
@@ -334,6 +345,8 @@ function sinkVisitGive_(req) {
     var fieldRows = visitFieldRows_(visitList_(arr('fields'), function (s) { return VISIT_.FIELD_RE.test(s); }, 500) || ['?'], bad);
     var lists = [];
     fieldRows.forEach(function (r) { if (lists.indexOf(r[0]) < 0) lists.push(r[0]); });
+    var win = externalWindow_({ hours: f.hours, starts_at: f.from_at, ends_at: f.to_at }, role, now, bad,
+      { default_hours: Number(type.default_hours), max_hours: Number(type.max_hours) });
     var lim = deleg ? deleg.limits : null;
     if (lim) visitWithin_(lim, type, rights, lists, fieldRows, jobs);
     var capH = Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
@@ -398,6 +411,7 @@ function sinkVisitGive_(req) {
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: todayLondon_(new Date(win.endMs)), created_at: utcIso_(now),
       set_by: who.who, from_at: fromAt, to_at: toAt, supersedes_id: '', grant_type_id: typeId, person_id: personId,
       visitor_name: name, organisation: org, card_tag_id: cardId, as_of_from: dFrom, as_of_to: dTo, purpose_text: purpose,
+      grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '' };
       grant_basis: basis, identity_assurance: assurance, retention_until: keep, email_code: '',
       issued_by: deleg ? who.id : 'owner', delegation_id: deleg ? deleg.row.id : '' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
@@ -414,6 +428,9 @@ function sinkVisitGive_(req) {
       out.code = code;
       out.url = page && sid ? page + '#s=' + sid + '&c=' + code : '';
     }
+    out.logged = visitEvent_(now, who, 'visit_given', linkId, (cardId ? 'card ' + cardId : 'link') + ': ' + purpose);
+    return out;
+  });
     out.logged = visitEvent_(now, who, 'visit_given', linkId, (cardId ? 'card ' + cardId : 'link') + (deleg ? ' under ' + deleg.row.id : '') + ': ' + purpose);
     return out;
   }, true);
@@ -455,6 +472,7 @@ function visitCurrentRow_(L, rootId) {
 }
 
 function sinkVisitEnd_(req) {
+  return sinkVisitOwner_(req, function (f, who, now) {
   return sinkVisitOwner_(req, function (f, who, now, deleg) {
     var errors = {}, linkId = String(f.grant_id || '').trim(), reason = visitReason_(f, errors, true);
     if (!ID_RE_.test(linkId)) errors.grant_id = 'Say which visit to end.';
@@ -469,6 +487,11 @@ function sinkVisitEnd_(req) {
     var at = utcIso_(now);
     linkSupersede_(visitLinkRead_(), linkId, { ended_at: at, ended_by: who.who, end_reason: reason }, now);
     return { status: 'saved', grant_id: linkId, ended_at: at, logged: visitEvent_(now, who, 'visit_ended', linkId, reason) };
+  });
+}
+
+function sinkVisitExtend_(req) {
+  return sinkVisitOwner_(req, function (f, who, now) {
   }, true);
 }
 
@@ -493,6 +516,7 @@ function sinkVisitExtend_(req) {
     if (endMs <= nowMs || endMs <= startMs) throw bad('to_at', 'The end must be later than now and the start.');
     var type = rec.grant_type_id ? visitTypeById_(rec.grant_type_id) : null;
     var role = (type && type.role_code) || ROLE_INSPECTOR;
+    var max = externalMax_(role, todayLondon_(now), type ? Number(type.max_hours) : null);
     var tmax = type && Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
     if (deleg && deleg.limits.max_hours !== null && (tmax === null || deleg.limits.max_hours < tmax)) tmax = deleg.limits.max_hours;
     if (deleg && deleg.limits.to_ms !== null && endMs > deleg.limits.to_ms) throw bad('to_at', 'Your permission ends sooner than that.');
@@ -507,6 +531,7 @@ function sinkVisitExtend_(req) {
     }
     var row = linkSupersede_(L, linkId, { to_at: endsAt, ends: todayLondon_(new Date(endMs)) }, now);
     return { status: 'saved', grant_id: row.id, root_id: linkId, to_at: endsAt, logged: visitEvent_(now, who, 'visit_extended', linkId, 'to ' + endsAt + ': ' + reason) };
+  });
   }, true);
 }
 
