@@ -4980,6 +4980,16 @@ document.addEventListener('click',function(ev){
  var open=box.hidden; box.hidden=!open; t.setAttribute('aria-expanded',open?'true':'false');
  if(open&&!box.innerHTML) box.innerHTML=BLDJobCal.importPanel(jobsV());
 });
+/* Cancel (Lisa 22 Nov 2026): before Import, clears the file and the checked rows so another file can be chosen; nothing
+   was saved. During an import it reads Stop: rows not yet sent are not sent, those already saved stay. */
+document.addEventListener('click',function(ev){
+ var c=ev.target.closest&&ev.target.closest('[data-jcal-import-cancel]'); if(!c) return;
+ var go=document.querySelector('[data-jcal-import-go]');
+ if(go&&go.disabled){ JCAL.stop=true; c.disabled=true; c.textContent='Stopping\u2026'; return; }
+ JCAL.rows=null;
+ var out=document.querySelector('[data-jcal-preview]'); if(out) out.innerHTML='<p class="msg" data-jcal-cancelled>Cancelled. Nothing was saved. Choose another file.</p>';
+ var inp=document.querySelector('[data-jcal-file]'); if(inp) inp.value='';
+});
 document.addEventListener('change',function(ev){
  var inp=ev.target.closest&&ev.target.closest('[data-jcal-file]'); if(!inp||!inp.files||!inp.files[0]) return;
  var rd=new FileReader(), out=document.querySelector('[data-jcal-preview]');
@@ -4989,8 +4999,10 @@ document.addEventListener('change',function(ev){
 document.addEventListener('click',async function(ev){
  var b=ev.target.closest&&ev.target.closest('[data-jcal-import-go]'); if(!b||b.disabled) return;
  var v=jobsV(), ready=(JCAL.rows||[]).filter(function(x){ return x.ok; }), msg=document.querySelector('[data-jcal-imp-msg]'), done=0, bad=[];
- b.disabled=true;
+ b.disabled=true; JCAL.stop=false;
+ var cx=document.querySelector('[data-jcal-import-cancel]'); if(cx) cx.textContent='Stop';
  for(var i=0;i<ready.length;i++){
+  if(JCAL.stop) break;   /* Stop: the rows not yet sent are not saved; those already saved stay */
   var x=ready[i], f=BLDJobCal.importFields(v,x); if(!f){ bad.push(x.line); continue; }
   if(msg) msg.textContent='Saving '+(i+1)+' of '+ready.length+'…';
   var r=await sinkSend({table:'check_log',action:'add_site',fields:f});
@@ -5001,7 +5013,8 @@ document.addEventListener('click',async function(ev){
  JCAL.rows=null;
  var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
  var m2=document.createElement('p'); m2.className='msg'+(bad.length?' bad':''); m2.setAttribute('data-jcal-imp-done','');
- m2.textContent='Imported '+done+' of '+ready.length+'.'+(bad.length?' Not saved, row '+bad.join(', row ')+'.':'');
+ m2.textContent='Imported '+done+' of '+ready.length+'.'+(JCAL.stop&&done+bad.length<ready.length?' Stopped: the other '+(ready.length-done-bad.length)+' were not sent.':'')+(bad.length?' Not saved, row '+bad.join(', row ')+'.':'');
+ JCAL.stop=false;
  var w2=document.getElementById('jobCals'); if(w2) w2.appendChild(m2);
 });
 document.addEventListener('click',async function(ev){

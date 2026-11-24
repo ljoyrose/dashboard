@@ -37,6 +37,7 @@
  * are not recorded. Corrections go through the screen.
  */
 var BLD = {
+  VERSION: '1.2.0',
   VERSION: '1.3.0',
   TZ: 'Europe/London',
   PROP: {
@@ -74,7 +75,7 @@ var BLD = {
     // Lisa 9 Nov 2026: how long records are kept is user-set per section (BLD-retention_setting rows); with no row for
     // a section, the legal period, else this many years. Used only as that fallback.
     RETENTION_DEFAULT_YEARS: 6,
-    REQUEST_CACHE_SEC: 21600,
+    REQUEST_CACHE_SEC: 86400,   // 24 h: the phone may resend for up to 23 h (OV13, 24 Nov 2026)
     LOCK_WAIT_MS: 20000,
     MAX_BATCH_ITEMS: 20,    // a list save (add_many, 20 Nov 2026): one round's readings, sent in parts of at most 20
     TEMP_MIN: -30,
@@ -93,3 +94,65 @@ var BLD = {
     'kind', 'row_id', 'corrects_id', 'note', 'payload_json', 'result'
   ]
 };
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Time zone (14 Nov 2026; Lisa: "international app"; OV11: the locale row, not a new table). Live since 14 Nov 20:45.
+ * tzOn_(tenant, day) = the IANA time zone on the tenant's BLD-locale row in force on `day` (S4.15 from_date/to_date;
+ * latest from_date wins). No row in force: the Apps Script project time zone (a setting), never a fixed city.
+ * BLD.TZ is a getter for today's zone, so every existing BLD.TZ / todayLondon_ / londonIso_ / inspectEndOfDay_ call
+ * follows the row without each being rewritten (those names are kept as aliases; they are no longer London-only).
+ * Read once per run, and cached for 10 minutes, so it costs no extra Drive read on most saves.
+ * --------------------------------------------------------------------------------------------------------------- */
+var TZ_MEMO_ = {};
+var TZ_FILE_ = 'BLD-locale.csv';
+var TZ_RE_ = /^[A-Za-z]+(?:\/[A-Za-z0-9_+\-]+){1,2}$|^UTC$/;
+
+function tzFallback_() {
+  try { var z = Session.getScriptTimeZone(); if (z) return z; } catch (e) { /* not available */ }
+  return 'UTC';
+}
+
+/** The locale rows with a time zone: [{tz, from, to}], from the cache or one read. */
+function tzRows_(tenant) {
+  var key = 'tzrows:' + (tenant || ''), cache = null, hit;
+  if (TZ_MEMO_[key]) return TZ_MEMO_[key];
+  try { cache = CacheService.getScriptCache(); hit = cache.get(key); } catch (e) { cache = null; }
+  if (hit) { try { return (TZ_MEMO_[key] = JSON.parse(hit)); } catch (e) { /* re-read */ } }
+  var out = [], read = null;
+  try { read = store_read_(TZ_FILE_, false); } catch (e) { read = null; }
+  ((read && read.records) || []).forEach(function (r) {
+    var tz = String(r.time_zone || '').trim();
+    if (!tz || !TZ_RE_.test(tz) || (tenant && r.tenant_id && r.tenant_id !== tenant)) return;
+    out.push({ tz: tz, from: String(r.from_date || ''), to: String(r.to_date || '') });
+  });
+  if (cache) { try { cache.put(key, JSON.stringify(out), 600); } catch (e) { /* too big or unavailable */ } }
+  return (TZ_MEMO_[key] = out);
+}
+
+/** Forget the cached locale rows (after the owner changes BLD-locale, or in tests). */
+function tzForget_(tenant) {
+  var key = 'tzrows:' + (tenant || '');
+  delete TZ_MEMO_[key];
+  try { CacheService.getScriptCache().remove(key); } catch (e) { /* unavailable */ }
+}
+
+/** The time zone in force on `day` (YYYY-MM-DD; blank = today by UTC) for `tenant` (blank = this script's tenant). */
+function tzOn_(tenant, day) {
+  if (tenant === undefined || tenant === null || tenant === '') { try { tenant = prop_(BLD.PROP.TENANT_ID); } catch (e) { tenant = ''; } }
+  var d = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? String(day) : new Date().toISOString().slice(0, 10);
+  var best = null;
+  tzRows_(tenant).forEach(function (r) {
+    if ((r.from && r.from > d) || (r.to && r.to < d)) return;
+    if (!best || r.from >= best.from) best = r;
+  });
+  return best ? best.tz : tzFallback_();
+}
+
+/** True when no locale row gives a time zone today (Data checks shows "Time zone not set"). */
+function tzNotSet_() {
+  var tenant = ''; try { tenant = prop_(BLD.PROP.TENANT_ID); } catch (e) { tenant = ''; }
+  var d = new Date().toISOString().slice(0, 10);
+  return !tzRows_(tenant).some(function (r) { return !(r.from && r.from > d) && !(r.to && r.to < d); });
+}
+
+Object.defineProperty(BLD, 'TZ', { get: function () { return tzOn_(); }, enumerable: true });
