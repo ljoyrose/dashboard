@@ -36,6 +36,7 @@ function doPost(e) {
     if (big && (!req || (req.action !== 'dog_photo' && req.action !== 'file_add'))) throw err_('BAD_REQUEST', 'That request was too large.');
     if (req && typeof req === 'object' && req.action === 'dog_photo') return jsonOut_({ ok: true, result: sinkDogPhoto_(req) });
     if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
+    if (req && typeof req === 'object' && req.action === 'code_check') return jsonOut_({ ok: true, result: sinkCodeCheck_(req) });   // codes vault: ok or no only
     if (req && typeof req === 'object' && req.action === 'grant_open') return jsonOut_({ ok: true, result: sinkVisitOpen_(req) });
     if (req && typeof req === 'object' && req.action === 'grant_review') return jsonOut_({ ok: true, result: sinkVisitReview_(req) });
     if (req && typeof req === 'object' && req.action === 'grant_record') return jsonOut_({ ok: true, result: sinkVisitRecord_(req) });
