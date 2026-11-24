@@ -24,6 +24,11 @@ var INSPECT = {
   // addition 14 Nov, UTC; Lisa: "now for a specific time or scheduled date time from to"); as_of_from / as_of_to
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
+  // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant. Old 7-column files still read.
+  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'from_at', 'to_at', 'supersedes_id',
+    'grant_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
+    'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
+    'end_reason', 'tz', 'updated_at'],
   // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant.
   // issued_by = the code id that gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs).
   // Old 7-column files still read.

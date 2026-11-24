@@ -154,3 +154,27 @@ function sinkCodeRegisterSync_() {
     return { status: 'synced', added: added };
   });
 }
+
+/**
+ * Codes vault: is this typed code the one held for this public id? (Lisa 14 Nov 2026, option B; OV11: the hash and its
+ * salt never go to a browser, because short codes could be guessed offline.) Sent once, like a sign-in; the reply is
+ * match true or false only. The typed code is never logged, stored or sent back. A miss counts towards the same
+ * wrong-code limit as sign-in, so it cannot be used to guess.
+ * Who may: the vault gate (OWNER codes today; BLD-permission code_vault / open when served).
+ */
+function sinkCodeCheck_(req) {
+  var who = authStaff_(req && req.code);
+  if (!vaultMay_(who)) throw err_('NOT_ALLOWED', 'Only people the owner allows can use the vault.');
+  var id = String((req && req.code_id) || '');
+  if (!/^sc-[a-z0-9]{6}$/.test(id)) throw err_('INVALID', 'Say which code.');
+  var typed = req && req.typed;
+  if (!typed || typeof typed !== 'string' || typed.length > 64) throw err_('INVALID', 'Type the code.');
+  if (authBlocked_()) throw err_('TOO_MANY_TRIES', 'Too many wrong codes recently. Try again in a few minutes.');
+  var salt = prop_(BLD.PROP.SALT), entry = registry_()[hashCode_(typed.trim(), salt)];
+  var match = !!entry && String(entry.id) === id && entry.active !== false && !entry.revoked_at;
+  if (!match) authNoteFailure_();
+  return { match: match };
+}
+
+/** The vault gate on the server. Today OWNER codes; BLD-permission rows take over when the script serves them. */
+function vaultMay_(who) { return !!who && who.role === 'OWNER'; }
