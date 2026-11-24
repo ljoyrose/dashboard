@@ -201,6 +201,7 @@ const CASES = [
 // Paths that are not a code-signed POST. Each still has a test below or in its own suite.
 const MANUAL = {
   code_register: 'owner page (Google sign-in, not a code): exercised below with the harness owner session',
+  code_vaults: 'sealed text only, made in the browser from the vault password (tests/code-vault.test.js and the code-vault browser specs); a practice row would need a real sealed value',
   staff: 'proposed table: refused whatever its switch says (tested below)',
   parties: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
   products: 'proposed table (BLD schema v2, 15 Nov 2026): refused whatever its switch says (tests/schema-v2.test.js)',
