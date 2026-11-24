@@ -233,7 +233,12 @@
     var types = siteTypes(v), byName = {};
     Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
     var rows = csvRows(text), out = [], seen = {};
-    if (rows.length && /date/i.test(rows[0][0] || '') && /job/i.test(rows[0][1] || '')) rows = rows.slice(1);
+    // The heading row (date, job, ...) may sit under a title line: Numbers puts the table name above it ("daily-records",
+    // "Csv"; Lisa 22 Nov 2026). Everything above the heading row is left out; no heading row = every row is data.
+    for (var h = 0; h < Math.min(rows.length, 5); h++) {
+      var cells = rows[h].map(function (c) { return String(c).trim().toLowerCase(); });
+      if (cells.indexOf('date') >= 0 && cells.indexOf('job') >= 0) { rows = rows.slice(h + 1); break; }
+    }
     rows.forEach(function (r, i) {
       var iso = isoOf(r[0]), key = byName[String(r[1] || '').trim().toLowerCase()] || '', oc = IMP_OUTCOME[String(r[2] || '').trim().toLowerCase()];
       var x = { line: i + 1, date: String(r[0] || ''), job: String(r[1] || ''), iso: iso, key: key, label: key ? types[key].label || key : '', outcome: oc || '', note: String(r[3] || '').trim(), ok: false, why: '' };
@@ -244,6 +249,9 @@
       else if (seen[key + '|' + iso]) x.why = 'repeated in this file';
       else if (days(v, key)[iso] && oc === 'ok') x.why = 'already recorded that day';
       else { x.ok = true; seen[key + '|' + iso] = 1; }
+      // Older than 7 days: the save script asks "Save anyway?" for a typed record. Here the owner has seen every date in
+      // this list before pressing Import, so Import is that "save anyway" (Lisa 22 Nov 2026: 15 of 16 rows were refused).
+      x.old = !!(x.ok && (Date.parse(v.today + 'T00:00:00Z') - Date.parse(iso + 'T00:00:00Z')) / 864e5 >= 7);
       out.push(x);
     });
     return out;
@@ -253,6 +261,7 @@
     var t = siteTypes(v)[x.key]; if (!t) return null;
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
     if (x.note) f.note = x.note;
+    if (x.old) f.confirm_unusual = 'yes';
     if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
     return f;
   }
@@ -275,9 +284,10 @@
       + '<div class="scroll"><table class="jcal-imp-t"><thead><tr><th>Row</th><th>Date</th><th>Job</th><th>Outcome</th><th></th></tr></thead><tbody>'
       + rows.map(function (x) {
         return '<tr data-ok="' + (x.ok ? 1 : 0) + '"><td>' + x.line + '</td><td>' + e(x.iso ? (v.dmy ? v.dmy(x.iso) : x.iso) : x.date) + '</td><td>' + e(x.label || x.job) + '</td><td>'
-          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? 'ready' : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
+          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? (x.old ? 'ready (older than 7 days)' : 'ready') : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
       }).join('') + '</tbody></table></div>'
-      + (good ? '<p><button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>' : '');
+      + '<p>' + (good ? '<button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> ' : '')
+      + '<button class="btn quiet" type="button" data-jcal-import-cancel>Cancel</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>';
   }
 
   return { STARTER: STARTER, chosen: chosen, month: month, html: html, dayHtml: dayHtml, filesByLog: filesByLog, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };
