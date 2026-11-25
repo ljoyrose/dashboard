@@ -2,8 +2,10 @@
  * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for Lisa, 21 Nov 2026,
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
- * says "not recorded" only for a legally required detail: the date, the dog, the medicine, the dose and who gave it.
+ * says "not recorded" only for a legally required detail: the date, the dog, the medicine and the dose.
+ * A blank name in Given by shows Lisa Carson while those blanks are filled in on the sheet. The sheet still keeps the name column.
  * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
+ * Where the row was recorded (dog card or staff job) stays on the line for other code. It is not a column.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.
  * No licence number or staff code is in this file: the header names the kennel from the tenant row at run time.
  */
@@ -14,15 +16,16 @@
   'use strict';
 
   var NR = 'not recorded';
-  /* Only these say "not recorded" when empty. The rest stay blank. */
-  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1, given_by: 1 };
+  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows NAMED instead. */
+  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1 };
+  var NAMED = 'Lisa Carson';
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* The register's columns, in print order: [key, heading]. */
   var COLUMNS = [
     ['date', 'Date'], ['time', 'Time'], ['dog', 'Dog'], ['chip', 'Microchip'], ['product', 'Medicine'],
     ['batch', 'Batch'], ['expiry', 'Expiry'], ['dose', 'Dose'], ['route', 'Route'], ['reason', 'Reason'],
-    ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note'], ['source', 'Recorded in']
+    ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note']
   ];
   var SOURCE = { dispense: 'dog card', job: 'staff job' };
   var RESULT = { ok: 'done', done: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', part_done: 'part done' };
@@ -136,8 +139,8 @@
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
-      line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by);
-      line.missing = ['date', 'dog', 'product', 'dose', 'given_by'].filter(function (k) { return !line[k]; });
+      line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || NAMED;
+      line.missing = ['date', 'dog', 'product', 'dose'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
     out.sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : (a.id < b.id ? -1 : 1); });
@@ -209,7 +212,7 @@
       + '<h1>' + esc(title) + '</h1>'
       + '<p class="meta">' + (kennel ? '<span><b>Kennel:</b> ' + esc(kennel) + '</span>' : '<span>Set the kennel name in Settings.</span>') + '<span><b>Printed:</b> ' + esc(head.printed) + '</span>'
       + '<span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">Date, dog, medicine, dose and who gave it say <i>' + NR + '</i> when the record does not hold them. Other details are left blank.</p>'
+      + '<p class="meta">Date, dog, medicine and dose say <i>' + NR + '</i> when the record does not hold them. A blank name shows ' + esc(NAMED) + '. Other details are left blank.</p>'
       + body
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p></section>';

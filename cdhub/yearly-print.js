@@ -352,9 +352,29 @@
     return true;
   }
 
+  /** The day the daily run starts. Same rule as the calendars: a gap of more than 60 days means the earlier
+      entries did not start it. A day before that is not "missed". */
+  function trackedFrom(dates) {
+    var seen = {}, list = [];
+    (dates || []).forEach(function (d) {
+      d = str(d).slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && !seen[d]) { seen[d] = 1; list.push(d); }
+    });
+    list.sort();
+    if (!list.length) return '';
+    function num(iso) { return Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86400000; }
+    var start = list[0], prev = num(list[0]);
+    for (var i = 1; i < list.length; i++) {
+      var n = num(list[i]);
+      if (n - prev > 60) start = list[i];
+      prev = n;
+    }
+    return start;
+  }
+
   /** One month grid: {rows:[{id,name,expected}], days:[iso], marks:{rowId:{iso:mark}}, notes:[text]}. */
   function gridMonth(source, ym, ctx) {
-    var type = source.type || {}, mine = logsFor(source, ctx).filter(function (l) { return l.date && l.date.slice(0, 7) === ym; });
+    var type = source.type || {}, all = logsFor(source, ctx), mine = all.filter(function (l) { return l.date && l.date.slice(0, 7) === ym; });
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1, n = daysIn(y, m), days = [];
     for (var d = 1; d <= n; d++) days.push(isoDay(y, m, d));
     var axis = source.layout, byId = {}, order = [];
@@ -385,7 +405,7 @@
       add('site', 'Whole site', true, '');
     }
     order.sort(function (a, b) { return byId[a].name < byId[b].name ? -1 : byId[a].name > byId[b].name ? 1 : 0; });
-    var from = str(type.effective_from), marks = {}, notes = [];
+    var first = trackedFrom(all.map(function (l) { return l.date; })), marks = {}, notes = [];
     order.forEach(function (id) {
       marks[id] = {};
       days.forEach(function (iso) {
@@ -397,7 +417,7 @@
           return true;
         });
         var born = byId[id].dob && iso < String(byId[id].dob).slice(0, 10);
-        var required = byId[id].expected && !born && iso <= today && (!from || iso >= from);
+        var required = byId[id].expected && !born && iso <= today && !!first && iso >= first;
         var mark = markOf(hit, required);
         marks[id][iso] = mark;
         hit.forEach(function (l) {
@@ -620,12 +640,14 @@
 
   function gridHtml(source, g, ctx) {
     var counts = { tick: 0, part: 0, concern: 0, miss: 0 };
+    var noteMm = g.notes.length ? Math.min(18, 6 + g.notes.length * 3) : 0;
+    var tableMm = Math.max(100, 152 - noteMm);
     var colW = (PAGE_W - 36) / Math.max(1, g.days.length);
-    var rowH = (BODY_H - 12) / Math.max(1, g.rows.length + 1);
+    var rowH = tableMm / Math.max(1, g.rows.length + 1);
     var fs = Math.max(4.5, Math.min(8, colW * 3.78 / 1.4, rowH * 3.78 / 1.3));
     var h = '<p class="yp-key"><i class="yk tick">' + MARK.tick + '</i> done <i class="yk part">' + MARK.part + '</i> part <i class="yk concern">' + MARK.concern + '</i> concern <i class="yk miss">' + MARK.miss + '</i> missed</p>';
     if (!g.rows.length) return h + '<p>No dogs, rooms or items to list for this month.</p>';
-    h += '<table class="yp-t" style="--fs:' + fs.toFixed(2) + 'px"><thead><tr><th>' + (source.layout === 'dogs' ? 'Dog' : source.layout === 'areas' ? 'Area' : source.layout === 'items' ? 'Item' : '') + '</th>';
+    h += '<table class="yp-t yp-fit" style="height:' + tableMm.toFixed(1) + 'mm;--fs:' + fs.toFixed(2) + 'px"><thead><tr><th>' + (source.layout === 'dogs' ? 'Dog' : source.layout === 'areas' ? 'Area' : source.layout === 'items' ? 'Item' : '') + '</th>';
     g.days.forEach(function (iso) { h += '<th>' + Number(iso.slice(8)) + '</th>'; });
     h += '</tr></thead><tbody>';
     g.rows.forEach(function (row) {
@@ -639,6 +661,7 @@
     });
     h += '</tbody></table>';
     h += '<p class="yp-tot" data-yp-totals>Done <b>' + counts.tick + '</b> \u00b7 part <b>' + counts.part + '</b> \u00b7 concern <b>' + counts.concern + '</b> \u00b7 missed <b>' + counts.miss + '</b></p>';
+    if (!counts.tick && !counts.part && !counts.concern && !counts.miss) h += '<p data-yp-untracked>Not tracked yet this month.</p>';
     if (g.notes.length) h += '<ul class="yp-notes">' + g.notes.map(function (n) { return '<li>' + e(n) + '</li>'; }).join('') + '</ul>';
     return h;
   }
@@ -932,6 +955,7 @@
     + '#ypReport .yp-t th,#ypReport .yp-t td,#ypReport .yp-list th,#ypReport .yp-list td{border:0.5px solid var(--line);padding:0 1px;text-align:center;font-size:var(--fs,7px);line-height:1.2;white-space:nowrap;overflow:hidden}'
     + '#ypReport .yp-list td,#ypReport .yp-list th{text-align:left;white-space:normal;font-size:8px;padding:2px 3px;vertical-align:top}'
     + '#ypReport .yp-t tbody th{text-align:left;font-size:7px;width:32mm}'
+    + '#ypReport .yp-fit{table-layout:fixed}#ypReport .yp-fit tr{height:1px}'
     + '#ypReport td.m-tick{background:var(--ljr-5);color:var(--paper);font-weight:700}'
     + '#ypReport td.m-part{outline:1.5px solid var(--ljr-3);outline-offset:-1.5px;font-weight:700}'
     + '#ypReport td.m-concern{background:var(--ljr-3);color:var(--ink);font-weight:700}'
@@ -939,19 +963,15 @@
     + '#ypReport .yk{display:inline-block;width:12px;text-align:center;font-style:normal}'
     + '#ypReport .yk.tick{background:var(--ljr-5);color:var(--paper)}#ypReport .yk.part{outline:1.5px solid var(--ljr-3)}#ypReport .yk.concern{background:var(--ljr-3)}#ypReport .yk.miss{outline:1.5px solid var(--ljr-2-text)}'
     + '@media print{@page{size:A4 landscape;margin:8mm}html,body.yp-printing{background:none!important}body.yp-printing>*:not(#ypReport){display:none!important}body.yp-printing #ypReport{display:block}'
-    + '#ypReport .yp-page{height:194mm;page-break-after:always;break-after:page;break-inside:avoid}#ypReport .yp-page:last-child{page-break-after:auto;break-after:auto}}';
+    + '#ypReport .yp-page{height:auto;overflow:visible;page-break-after:always;break-after:page;break-inside:auto}'
+    + '#ypReport .yp-page[data-layout="dogs"],#ypReport .yp-page[data-layout="areas"],#ypReport .yp-page[data-layout="items"],#ypReport .yp-page[data-layout="site"],#ypReport .yp-page[data-layout="temps"]{height:194mm;max-height:194mm;overflow:hidden;break-inside:avoid}'
+    + '#ypReport .yp-page:last-child{page-break-after:auto;break-after:auto}}';
 
+  /** Grids are already one sheet tall. Chrome's print ignores zoom, so shrinking here turned each month into two sheets. */
   function fit(rep) {
-    if (!rep || !rep.classList) return;
-    rep.classList.add('yp-measure');
-    var max = PAGE_H * 96 / 25.4;
-    var nodes = rep.querySelectorAll ? rep.querySelectorAll('.yp-page') : [];
-    for (var i = 0; i < nodes.length; i++) {
-      nodes[i].style.zoom = '';
-      var h = nodes[i].scrollHeight;
-      if (h > max) nodes[i].style.zoom = zoomFor(h, PAGE_H).toString();
-    }
-    rep.classList.remove('yp-measure');
+    if (!rep || !rep.querySelectorAll) return;
+    var nodes = rep.querySelectorAll('.yp-page');
+    for (var i = 0; i < nodes.length; i++) nodes[i].style.zoom = '';
   }
 
   function choiceFrom(root) {

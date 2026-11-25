@@ -109,6 +109,43 @@ test('a vet visit shows on the per-dog calendar day (marker and details), not on
   assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
 });
 
+// Lisa 25 Nov 2026: Health check was red for all of September because a June paper row started the clock.
+// The other cards start in October, so September is not tracked. A vet dot belongs on Health only.
+test('September before the daily run is not tracked, and a vet dot is only on Health @regression', () => {
+  const extra = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
+  const v = Object.assign(base([
+    log('h1', 'cty-hc', '2026-06-02', 'd1'), log('h2', 'cty-hc', '2026-06-02', 'd2'),
+    log('h3', 'cty-hc', '2026-10-01', 'd1'), log('h4', 'cty-hc', '2026-10-01', 'd2'),
+    log('f1', 'cty-fb', '2026-10-01'),
+    log('e1', 'cty-ex', '2026-10-02', '', { covered_ids: 'd1|d2' })
+  ], [
+    { rule_key: 'compliance.calendar.health_check_all', value: '1', effective_from: '2026-01-01' },
+    { rule_key: 'compliance.calendar.food_bowls', value: '2', effective_from: '2026-01-01' },
+    { rule_key: 'compliance.calendar.exercise_all', value: '3', effective_from: '2026-01-01' }
+  ]), {
+    types: types.concat([extra]), today: '2026-11-25', dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
+    vetVisits: [
+      { subject_id: 'd1', performed_on: '2026-09-03', status: 'done', reason: 'check' },
+      { subject_id: 'd1', performed_on: '2026-09-24', status: 'done', reason: 'check' }
+    ]
+  });
+  const st = (key, iso) => C.month(v, key, iso.slice(0, 7)).cells.find((c) => c.iso === iso).state;
+  assert.equal(st('health_check_all', '2026-06-02'), 'done');
+  assert.equal(st('health_check_all', '2026-09-04'), 'before');
+  assert.equal(st('health_check_all', '2026-10-02'), 'missed');
+  assert.equal(st('food_bowls', '2026-09-04'), 'before');
+  assert.equal(st('food_bowls', '2026-10-02'), 'missed');
+  assert.equal(st('exercise_all', '2026-10-02'), 'done');
+  assert.equal(st('exercise_all', '2026-09-03'), 'before');
+  const html = C.html(v, '2026-09', false);
+  const health = html.slice(html.indexOf('data-jcal="health_check_all"'), html.indexOf('data-jcal="food_bowls"'));
+  const exercise = html.slice(html.indexOf('data-jcal="exercise_all"'));
+  assert.match(health, /class="jd before vet"[^>]*data-day="2026-09-03"/);
+  assert.match(health, /title="2026-09-03: not tracked yet · vet: Pretend Dog"/);
+  assert.doesNotMatch(exercise, /class="jd [^"]*vet/);
+  assert.match(exercise, /title="2026-09-03: not tracked yet"/);
+});
+
 // Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
 test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
   const v = base([log('1', 'cty-fb', '2026-11-10')]);
