@@ -28,8 +28,10 @@ var BLDPhotos = (function () {
   }
   /**
    * One record's photos on a day: {main, gallery, ended, galleryLabel, mainLabel}.
-   * main: the file row of the main link in force (or null). gallery: file rows of open gallery links, by sort
-   * (numbered first), then newest first. ended: file rows whose gallery link has ended (newest end first).
+   * main: the file row of the open main link (or null). gallery: file rows of open gallery links, by sort
+   * (numbered first), then newest first. ended: file rows whose gallery or main link has ended (newest end first).
+   * A link has ended when its end date is before today, or its end date is today and it has an end reason
+   * (a link added today can only end today, so the reason marks it removed at once). The same rule applies to main.
    * Each file row returned carries link_id. Links to a file id with no files row are left out.
    */
   function forRecord(links, files, rules, fromTable, id, day) {
@@ -40,15 +42,17 @@ var BLDPhotos = (function () {
       return l && sameTable(l.from_table, fromTable) && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
     });
     var main = null, gal = [], ended = [];
+    // Removed today (Lisa 16 Nov 2026): a link added today can only end today, so an end reason marks it ended at once
+    // instead of at midnight. Main uses the same rule as the gallery (Lisa 25 Nov 2026).
+    function removedToday(l) { return ymd(l.to_date) === day && String(l.end_reason || '').trim() !== ''; }
+    function hasEnded(l) { var t = ymd(l.to_date); return !!t && (t < day || removedToday(l)); }
     mine.forEach(function (l) {
       var key = String(l.role || '');
-      if (key === 'main') { if (on(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
-      if (key !== 'gallery') return;
-      // Removed from the gallery today (Lisa 16 Nov 2026): a link added today can only end today, so an end reason marks it
-      // ended at once instead of at midnight.
-      var removedToday = ymd(l.to_date) === day && String(l.end_reason || '').trim() !== '';
-      if (on(l, day) && !removedToday) gal.push(l);
-      else if (ymd(l.to_date) && (ymd(l.to_date) < day || removedToday)) ended.push(l);
+      if (key !== 'main' && key !== 'gallery') return;
+      if (on(l, day) && !removedToday(l)) {
+        if (key === 'main') { if (!main || stamp(l) > stamp(main)) main = l; }
+        else gal.push(l);
+      } else if (hasEnded(l)) ended.push(l);
     });
     gal.sort(function (a, b) {
       var sa = String(a.sort || '').trim(), sb = String(b.sort || '').trim();

@@ -2923,7 +2923,7 @@ function loadPhotoImg(img){
 }
 /* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
-/* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
+/* The card shows the open main link. The old photo cell is used only when there is no open main, and never when that file has ended. */
 function cardPhotoId(d,ph){
  var main=ph&&ph.main&&dogPhotoId(ph.main.drive_file_id);
  if(main) return main;

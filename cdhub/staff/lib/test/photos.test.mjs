@@ -45,10 +45,22 @@ test('main is the main link in force; on a change-over day the later set_on wins
 test('gallery: open links only, newest first; ended links listed apart; other records and missing files left out', () => {
   const r = P.forRecord(links, files, kinds, 'subjects', 'dog-a', '2026-11-14');
   assert.deepEqual(r.gallery.map((f) => f.id), ['f4', 'f3', 'f2', 'f1']);
-  assert.deepEqual(r.ended.map((f) => f.id), ['f5']);
+  assert.deepEqual(r.ended.map((f) => f.id), ['f1', 'f5']);   // the old main (ended 1 Jun) and the ended gallery photo
   assert.equal(r.gallery[0].link_id, 'l4');
   assert.equal(r.galleryLabel, 'Photos');
   assert.equal(r.mainLabel, 'Main photo');
+});
+
+test('a main link removed today is not the card photo; a past main is ended the same way', () => {
+  const day = '2026-11-14';
+  const removed = links.map((l) => (l.id === 'm2' ? Object.assign({}, l, { to_date: day, end_reason: 'Removed from gallery' }) : l));
+  const r = P.forRecord(removed, files, kinds, 'subjects', 'dog-a', day);
+  assert.equal(r.main, null);
+  assert.ok(r.ended.some((f) => f.link_id === 'm2' && f.id === 'f2'));
+  assert.ok(r.ended.some((f) => f.link_id === 'm1' && f.id === 'f1'));
+  assert.equal(r.gallery.some((f) => f.id === 'f2'), true);   // the gallery link is still open
+  const still = links.map((l) => (l.id === 'm2' ? Object.assign({}, l, { to_date: day }) : l));
+  assert.equal(P.forRecord(still, files, kinds, 'subjects', 'dog-a', day).main.id, 'f2');   // today's end date with no reason stays until midnight
 });
 
 test('a numbered sort comes first, in number order', () => {
