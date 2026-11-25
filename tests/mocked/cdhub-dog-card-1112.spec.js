@@ -351,7 +351,10 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await here.click();
     await expect(here).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => bodies.length).toBe(1);
-    expect(bodies[0]).toMatchObject({ table: 'check_log', fields: { check_type_id: 'cty-p', area_id: area, subject_id: sid, item: 'present', outcome: 'recorded', how_recorded: 'tapped' } });
+    // Present is one session row for the round (the dogs present, not one row per dog) unless Settings turns that off.
+    expect(bodies[0]).toMatchObject({ table: 'check_log', action: 'add_session', fields: { check_type_id: 'cty-p', area_id: area, outcome: 'recorded', how_recorded: 'tapped', dog_ids: sid, exceptions: '' } });
+    expect(bodies[0].fields.subject_id).toBeUndefined();
+    expect(bodies[0].fields.item).toBeUndefined();
     await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
     await here.click();   // a second tap on the saved button sends nothing
     await page.waitForTimeout(200); expect(bodies.length).toBe(1);
