@@ -2,8 +2,8 @@
  * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for Lisa, 21 Nov 2026,
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
- * shows "not recorded", never a guess. Today BLD-dispense holds no time, batch, expiry, vet instruction or who gave it,
- * so those columns say "not recorded" until the record keeps them (the form change is a separate PR).
+ * says "not recorded" only for a legally required detail: the date, the dog, the medicine, the dose and who gave it.
+ * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.
  * No licence number or staff code is in this file: the header names the kennel from the tenant row at run time.
  */
@@ -14,6 +14,8 @@
   'use strict';
 
   var NR = 'not recorded';
+  /* Only these say "not recorded" when empty. The rest stay blank. */
+  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1, given_by: 1 };
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* The register's columns, in print order: [key, heading]. */
@@ -135,8 +137,7 @@
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
       line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by);
-      line.missing = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return k !== 'note' && k !== 'dog' && k !== 'source' && !line[k]; });
-      if (!line.dog) line.missing.unshift('dog');
+      line.missing = ['date', 'dog', 'product', 'dose', 'given_by'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
     out.sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : (a.id < b.id ? -1 : 1); });
@@ -149,8 +150,10 @@
     if (key === 'date') return line.date ? (iso ? line.date : ymd(line.date)) : NR;
     if (key === 'dog') return line.dog || (line.sid ? 'Dog not on the current list' : NR);
     if (key === 'note') return line.note || '';
-    if (key === 'time' && line.noTime) return 'time not recorded';
-    return line[key] || NR;
+    if (key === 'time' && line.noTime) return '';
+    var v = line[key] || '';
+    if (v) return v;
+    return REQUIRED[key] ? NR : '';
   }
 
   /** How many lines miss each column: {key: n}. Only columns with a gap are listed. */
@@ -175,8 +178,8 @@
    */
   function toCsv(head, lines) {
     var out = [
-      ['Medicines register', str(head.kennel) || NR],
-      ['Month', monthWords(head.month)],
+      ['Medicines register', str(head.kennel)],
+      head.year ? ['Year', str(head.year)] : ['Month', monthWords(head.month)],
       ['Printed', str(head.printed)],
       ['Missing details', 'shown as "' + NR + '"; nothing is filled in or guessed'],
       [],
@@ -188,10 +191,10 @@
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  /** A whole printable page (A4 landscape). It prints itself once open. */
-  function toHtml(head, lines) {
+  /* One month is one A4 landscape sheet, shrunk to fit (the temperature history rule). A year is one sheet per month. */
+  function sheetHtml(head, lines, ym) {
     var g = gaps(lines), gk = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return g[k]; });
-    var title = 'Medicines register · ' + monthWords(head.month);
+    var title = 'Medicines register · ' + monthWords(ym || head.month);
     var body = lines.length
       ? '<table><thead><tr>' + COLUMNS.map(function (c) { return '<th scope="col">' + esc(c[1]) + '</th>'; }).join('') + '</tr></thead><tbody>'
         + lines.map(function (l) {
@@ -200,28 +203,50 @@
             return '<td' + (v === NR ? ' class="nr"' : '') + '>' + esc(v) + '</td>';
           }).join('') + '</tr>';
         }).join('') + '</tbody></table>'
-      : '<p>No medicine recorded in ' + esc(monthWords(head.month)) + '.</p>';
-    return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-      + '<title>' + esc(title) + '</title><meta name="robots" content="noindex,nofollow"><style>'
-      + '@page{size:A4 landscape;margin:12mm}'
-      + 'body{font:11px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;color:#111;background:#fff;margin:16px}'
-      + 'h1{font-size:16px;margin:0 0 4px}.meta{margin:0 0 10px}.meta span{margin-right:16px}'
-      + 'table{border-collapse:collapse;width:100%}th,td{border:1px solid #595959;padding:3px 5px;text-align:left;vertical-align:top}'
-      + 'th{background:#ECEAE6}thead{display:table-header-group}tr{break-inside:avoid}.nr{font-style:italic;color:#555}'
-      + '.gaps{margin:10px 0 0}.sign{margin-top:24px}.sign span{display:inline-block;min-width:240px;border-top:1px solid #111;margin-right:40px;padding-top:2px}'
-      + '@media print{.noprint{display:none}body{margin:0}}'
-      + '</style></head><body>'
+      : '<p>No records this month.</p>';
+    var kennel = str(head.kennel);
+    return '<section class="meds-sheet" data-meds-month="' + esc(ym || head.month) + '">'
       + '<h1>' + esc(title) + '</h1>'
-      + '<p class="meta"><span><b>Kennel:</b> ' + esc(str(head.kennel) || NR) + '</span><span><b>Printed:</b> ' + esc(head.printed) + '</span>'
+      + '<p class="meta">' + (kennel ? '<span><b>Kennel:</b> ' + esc(kennel) + '</span>' : '<span>Set the kennel name in Settings.</span>') + '<span><b>Printed:</b> ' + esc(head.printed) + '</span>'
       + '<span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">A detail the record does not hold is shown as <i>' + NR + '</i>. Nothing is filled in or guessed.</p>'
+      + '<p class="meta">Date, dog, medicine, dose and who gave it say <i>' + NR + '</i> when the record does not hold them. Other details are left blank.</p>'
       + body
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
-      + '<p class="sign"><span>Checked by</span><span>Date</span></p>'
+      + '<p class="sign"><span>Checked by</span><span>Date</span></p></section>';
+  }
+  var SHEET_CSS = '@page{size:A4 landscape;margin:8mm}'
+    + 'body{font:11px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;color:#111;background:#fff;margin:16px}'
+    + 'h1{font-size:16px;margin:0 0 4px}.meta{margin:0 0 10px}.meta span{margin-right:16px}'
+    + 'table{border-collapse:collapse;width:100%}th,td{border:1px solid #595959;padding:3px 5px;text-align:left;vertical-align:top}'
+    + 'th{background:#ECEAE6}thead{display:table-header-group}tr{break-inside:avoid}.nr{font-style:italic;color:#555}'
+    + '.gaps{margin:10px 0 0}.sign{margin-top:8px}.sign span{display:inline-block;min-width:240px;border-top:1px solid #111;margin-right:40px;padding-top:2px}'
+    + '.meds-sheet{width:281mm;box-sizing:border-box}'
+    + '@media print{.noprint{display:none}body{margin:0}.meds-sheet{height:194mm;overflow:hidden;page-break-after:always;break-after:page}.meds-sheet:last-child{page-break-after:auto;break-after:auto}}';
+  var SHEET_FIT = '<script>(function(){var done=0;function fit(){var max=194*96/25.4,nodes=document.querySelectorAll(".meds-sheet"),i,h;for(i=0;i<nodes.length;i++){nodes[i].style.zoom="";h=nodes[i].scrollHeight;if(h>max)nodes[i].style.zoom=String(Math.floor(max/h*1000)/1000);}}'
+    + 'function go(){if(done)return;done=1;fit();setTimeout(function(){window.print();},300);}'
+    + 'if(document.readyState==="complete")go();else window.addEventListener("load",go);}());<\/script>';
+
+  /** A whole printable page (A4 landscape, one month, shrunk to fit). It prints itself once open. */
+  function toHtml(head, lines) {
+    var title = 'Medicines register · ' + monthWords(head.month);
+    return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+      + '<title>' + esc(title) + '</title><meta name="robots" content="noindex,nofollow"><style>' + SHEET_CSS + '</style></head><body>'
+      + sheetHtml(head, lines, head.month)
       + '<p class="noprint"><button type="button" onclick="window.print()">Print</button></p>'
-      + '<script>(function(){var done=0;function go(){if(done)return;done=1;setTimeout(function(){window.print();},300);}'
-      + 'if(document.readyState==="complete")go();else window.addEventListener("load",go);}());<\/script>'
-      + '</body></html>';
+      + SHEET_FIT + '</body></html>';
+  }
+
+  /** A whole year: one A4 sheet per month that has a record. A year with none is one line. */
+  function toYearHtml(head, sheets) {
+    var title = 'Medicines register · ' + str(head.year);
+    var kept = (sheets || []).filter(function (s) { return s && s.lines && s.lines.length; });
+    var body = kept.length ? kept.map(function (s) { return sheetHtml(head, s.lines, s.month); }).join('')
+      : sheetHtml(head, [], str(head.year));
+    return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+      + '<title>' + esc(title) + '</title><meta name="robots" content="noindex,nofollow"><style>' + SHEET_CSS + '</style></head><body>'
+      + body
+      + '<p class="noprint"><button type="button" onclick="window.print()">Print</button></p>'
+      + SHEET_FIT + '</body></html>';
   }
 
   /** A file name: medicines-register-YYYY-MM.csv (no kennel name, so nothing personal is in it). */
@@ -239,5 +264,5 @@
   }
 
   return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, combine: combine, clean: clean, build: build, cell: cell, gaps: gaps,
-    toCsv: toCsv, toHtml: toHtml, fileName: fileName, monthWords: monthWords };
+    toCsv: toCsv, toHtml: toHtml, toYearHtml: toYearHtml, fileName: fileName, monthWords: monthWords };
 }));
