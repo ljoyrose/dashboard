@@ -143,8 +143,8 @@
     var h = '<section class="card jcal-wrap" id="jobCals"><div class="jcal-head"><h3>Daily records</h3><div class="jcal-nav">'
       + '<button class="btn quiet" type="button" data-jcal-month="' + prev + '" aria-label="Previous month">‹</button><b data-jcal-title>' + e(title) + '</b>'
       + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button>'
-      + '<button type="button" class="btn" data-yp="cal">Print / PDF</button>'
-      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div></div>'
+      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div>'
+      + '<button type="button" class="btn" data-yp="cal">Print / PDF</button></div>'
       + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
       + '<p class="mut jcal-key"><span class="jd done" data-jcal-legend="done">' + TICK + '</span> done <span class="jd part" data-jcal-legend="part"></span> part done <span class="jd missed" data-jcal-legend="missed"></span> missed'
       + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
@@ -183,7 +183,7 @@
     return f;
   }
 
-  var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.jcal-nav{display:flex;align-items:center;gap:8px}'
+  var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-width:0}.jcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}'
     + '.jcal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.jcal{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card)}'
     + '.jcal-t{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin-bottom:6px}.jcal-ok{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:700}'
     + '.jcal-ok svg,.jd svg{width:16px;height:16px}.jdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.jdh{font-size:10px;color:var(--muted);text-align:center}'
