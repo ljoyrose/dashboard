@@ -419,8 +419,9 @@ function sinkInspectMake_(spec, adminEmail) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
     var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by,
-      from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none',
-      as_of_from: dataFrom, as_of_to: dataTo };
+      made_at: londonIso_(now), made_by: by, from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)),
+      starts_at: win.starts_at, ends_at: win.ends_at, as_of_from: dataFrom, as_of_to: dataTo, data_from_date: dataFrom, data_to_date: dataTo,
+      purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';

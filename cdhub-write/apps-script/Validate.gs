@@ -59,7 +59,8 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
     }
     switch (def.type) {
       case 'text':
-        if (v.length > BLD.LIMITS.MAX_TEXT_CHARS) errors[name] = 'Too long (keep it under ' + BLD.LIMITS.MAX_TEXT_CHARS + ' characters).';
+        var textCap = def.max || BLD.LIMITS.MAX_TEXT_CHARS;
+        if (v.length > textCap) errors[name] = 'Too long (keep it under ' + textCap + ' characters).';
         else if (CONTROL_RE_.test(v)) errors[name] = 'Please use plain text on one line.';
         else if (/^[=+\-@\t]/.test(v)) errors[name] = 'Please do not start with = + - or @ (spreadsheets would treat it as a formula).';
         else clean[name] = v;
