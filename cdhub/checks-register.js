@@ -84,8 +84,14 @@
       if (isNoteFor(r)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r);
       if (str(r.corrects_id)) (fixedBy[str(r.corrects_id)] = fixedBy[str(r.corrects_id)] || []).push(r);
     });
-    var out = [];
+    var dogName = typeof opts.dogName === 'function' ? opts.dogName : function () { return ''; };
+    var flat = [];
     (logs || []).forEach(function (r) {
+      var parts = (typeof BLDCheckRules !== 'undefined' && BLDCheckRules.expandLog) ? BLDCheckRules.expandLog(r, dogName) : [r];
+      parts.forEach(function (p) { flat.push(p); });
+    });
+    var out = [];
+    flat.forEach(function (r) {
       if (isNoteFor(r)) return;
       var w = whenOf(r);
       if (!w.date || w.date.slice(0, 7) !== ym) return;
@@ -103,10 +109,10 @@
       out.push({
         id: id, sort: w.date + ' ' + (w.time || '99:99') + ' ' + id,
         date: w.date, time: timeGiven ? w.time : '', noTime: !timeGiven,
-        check: t ? str(t.label) : '', subject: clean(name(r)),
-        result: outcome ? (RESULT[outcome] || outcome) : '',
+        check: t ? str(t.label) : '', subject: r._dogName ? clean(r._dogName) : clean(name(r)),
+        result: r._exception ? r._exception : (outcome ? (RESULT[outcome] || outcome) : ''),
         detail: [clean(r.item), clean(r.amount)].filter(Boolean).join(', '),
-        note: own, action: action, needsAction: !!NEEDS_ACTION[outcome],
+        note: r._exception ? clean(r._exception + (own ? ': ' + own : '')) : own, action: action, needsAction: !!NEEDS_ACTION[outcome] && !r._exception,
         by: who(r.taken_by), how: HOW[str(r.how_recorded)] || str(r.how_recorded),
         correction: corr.join(' | ')
       });

@@ -239,7 +239,7 @@ function sinkHandle_(req) {
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
   if (req.action === 'add_many') return sinkHandleMany_(req, now, nowMs);
-  if (req.action !== 'add' && req.action !== 'correct' && req.action !== 'add_site') throw err_('BAD_REQUEST', 'Unknown action.');
+  if (req.action !== 'add' && req.action !== 'correct' && req.action !== 'add_site' && req.action !== 'add_session') throw err_('BAD_REQUEST', 'Unknown action.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
@@ -261,7 +261,7 @@ function sinkHandle_(req) {
     // 20 Nov 2026: a resend that arrived while the first try was still saving waited here; it gets the first answer.
     var inLock = cache.get('rid:' + rid);
     if (inLock) { var dup = JSON.parse(inLock); dup.repeat = true; return dup; }
-    var r = req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs);
+    var r = (req.action === 'add_site' || req.action === 'add_session') ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs);
     cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
     return r;
   });
@@ -281,8 +281,9 @@ function sinkSpecFor_(req, who) {
   if (req.action === 'correct' && spec.noCorrect) {
     throw err_('CORRECT_NOT_SUPPORTED', 'This list has no way to point at an earlier row. Fix a wrong room by moving the dog again.');
   }
-  if (req.action === 'add_site' && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
-  if (spec.perms[req.action === 'add_site' ? 'add' : req.action].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  if ((req.action === 'add_site' || req.action === 'add_session') && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
+  var permAction = (req.action === 'add_site' || req.action === 'add_session') ? 'add' : req.action;
+  if (!spec.perms[permAction] || spec.perms[permAction].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
   return spec;
 }
 
@@ -342,6 +343,39 @@ function sinkHandleMany_(req, now, nowMs) {
  * A room job about dogs (target area, site_scope per_dog) works the same way for the dogs ticked in that room; a dog
  * whose latest room is another room is left out, so a tap can only cover dogs the records place there.
  */
+/** The three checks that may be stored as one session row. Anything else stays one line per dog. */
+var SESSION_TYPE_ = { 'round.presence': 1, 'round_presence': 1, 'health_check_all': 1, 'exercise_all': 1 };
+
+/** The owner's check_setting row in force on a day, or null when none has been set (today's behaviour). */
+function checkSettingFor_(typeKey, day) {
+  var read = store_read_('BLD-check_setting.csv', false);
+  if (!read || !read.records) return null;
+  var rows = read.records.filter(function (r) { return String(r.type_key || '') === String(typeKey || ''); });
+  return latestInForce_(rows, day, 'from_date');
+}
+
+/** Print sheet only means the paper is the record. Logged and Both still write a check_log row. No setting = logged. */
+function assertCheckMayLog_(type, day) {
+  if (!type) return;
+  var s = checkSettingFor_(type.type_key, day);
+  if (s && String(s.record_as || '') === 'print') {
+    throw err_('INVALID', 'This check is print sheet only, so it is not saved in the log.', { fields: { check_type_id: 'Print sheet only. Change it in Settings if it should be logged.' } });
+  }
+}
+
+/** True when this check's setting says one session row. add_session with the switch off is refused. */
+function sessionWanted_(type, day, action) {
+  var on = false;
+  if (type && SESSION_TYPE_[type.type_key]) {
+    var s = checkSettingFor_(type.type_key, day);
+    on = !!(s && String(s.session_row || '').toLowerCase() === 'true');
+  }
+  if (action === 'add_session' && !on) {
+    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'Turn on one line for the round in Settings first.' } });
+  }
+  return on;
+}
+
 function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
@@ -350,13 +384,18 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var typeRead = store_read_(TABLES.check_type.file, true);
   var type = typeRead.records.filter(function (r) { return r.id === String(f.check_type_id || '') && r.tenant_id === tenant; })[0];
   if (!type) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check was not found.' } });
-  var room = type.target === 'area' && type.site_scope === 'per_dog';
-  if (type.target !== 'none' && !room) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
+  var today0 = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
+  assertCheckMayLog_(type, today0);
+  var session = sessionWanted_(type, today0, req.action);
+  var scopeSet = checkSettingFor_(type.type_key, today0);
+  var scope = (scopeSet && String(scopeSet.site_scope || '').trim()) || type.site_scope;   // no setting: the check's own site_scope, which is today's behaviour
+  var room = type.target === 'area' && scope === 'per_dog';
+  if (type.target !== 'none' && !room && !session) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
-  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : (f.how_recorded || 'site_tap') };  // the real route (scanned from a dog or room, tapped); site_tap only when none is sent
-  if (room) fields.area_id = f.area_id;
-  if (type.site_scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
+  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: f.how_recorded || ((room && !session) ? '' : 'site_tap') };
+  if (room || (session && f.area_id)) fields.area_id = f.area_id;
+  if (!session && scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
   var target = store_read_(spec.file, true);
   if (!sameHeader_(target.header, spec.columns)) {
@@ -373,7 +412,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   String(type.not_in_areas || '').split('|').forEach(function (a) { a = a.trim(); if (a) never[a] = true; });
   var occ = store_read_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
-  var ids = {}, rows = [], made = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
+  var ids = {}, rows = [], made = [], kept = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
   target.records.forEach(function (r) { ids[r.id] = true; });
   dogs.clean.dog_ids.split('|').forEach(function (dog) {
     var at = occupancyLatest_(occ, dog);
@@ -381,6 +420,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     if (!at || !at.area_id) { left.no_room++; return; }
     if (room && at.area_id !== v.clean.area_id) { left.no_room++; return; }
     if (never[at.area_id]) { left.isolation++; return; }
+    if (session) { kept.push(dog); return; }
     var clean = {}; for (var k in v.clean) if (Object.prototype.hasOwnProperty.call(v.clean, k)) clean[k] = v.clean[k];
     clean.subject_id = dog;
     if (findDuplicate_(spec, clean, target.records, nowMs, today)) { left.repeat++; return; }
@@ -390,6 +430,22 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     var row = buildRow_(spec, clean, { rowId: rowId, tenantId: tenant, nowIso: londonIso_(now), today: today, who: who.who, whoId: who.id || '', correctsId: '' });
     made.push(row); rows.push(rowValues_(spec.columns, row));
   });
+  if (session) {
+    var exIds = {}, exRaw = String(f.exceptions || '').trim();
+    exRaw.split('|').forEach(function (p) { var id = p.split(':')[0].trim(); if (id) exIds[id] = 1; });
+    var covered = kept.filter(function (id) { return !exIds[id]; });
+    if (!covered.length && !exRaw) {
+      throw err_('INVALID', room ? 'None of those dogs are shown in this room.' : 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
+    }
+    fields.covered_ids = covered.join('|');
+    fields.exceptions = exRaw;
+    fields.outcome = fields.outcome || 'recorded';
+    fields.subject_id = '';
+    req.fields = fields; req.action = 'add';
+    var one = sinkProcess_(spec, req, who, now, nowMs);
+    one.saved = 1; one.covered = covered.length; one.left_out = left; one.session = true;
+    return one;
+  }
   if (!rows.length) {
     if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.', { duplicate_of: '' });
     throw err_('INVALID', room ? 'None of those dogs are shown in this room.' : 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
@@ -471,6 +527,11 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
+  if (spec.key === 'check_log' && req.action === 'add') {
+    var logTypeId = String((req.fields && req.fields.check_type_id) || '');
+    var logKey = lookups.check_type_key && lookups.check_type_key[logTypeId];
+    if (typeof logKey === 'string') assertCheckMayLog_({ type_key: logKey }, today);
+  }
 
   var pendingRead = null, pendState = {};
   var needPending = req.action === 'correct' || spec.alwaysPending || modeFor_(spec) !== 'direct';

@@ -21,6 +21,7 @@
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
+<script src="check-rules.js"></script>
 <script src="staff/lib/date-words.js"></script>
 <script src="staff/lib/list-sort.js"></script>
 <script src="staff/lib/links.js"></script>
@@ -782,7 +783,7 @@ function currentLitters(){
  return (CD.litters||[]).filter(function(l){ return here[l.id]||(!pups[l.id]&&on[l.dam_subject_id]); }).map(function(l){
   return {id:l.id,dob:l.dob||l.born_on||'',born_on:l.born_on||l.dob||'',name:'Litter of '+(nameOf(l.dam_subject_id)||'a dam')}; });
 }
-function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types); return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types); return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
@@ -3464,6 +3465,7 @@ function drawDogs(){
     +'</div>'
 
     /* Lisa 12 Nov 2026: layout A (weight, medications, chip) with B's sections behind More */
+    +(typeof BLDCheckRules!=='undefined'?BLDCheckRules.dogLine(d,T,esc):'')
     +'<details class="dcs more" data-k="more"><summary><svg class="ricon" aria-hidden="true"><use href="#i-dots"/></svg><span class="dcs-label">More</span></summary><div class="dc-more">'
     +docsRow(d)
     +(d.findings.length?
@@ -3665,11 +3667,21 @@ function presenceType(date){ var rows=(T['BLD-check_type.csv']||[]).filter(funct
  var t=rows[rows.length-1]; return t&&String(t.active).toLowerCase()!=='false'?t:null; }
 function londonDayOf(iso){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso)); }catch(e){ return String(iso||'').slice(0,10); } }
 function savedSeen(areaId,date){ var ids={}, out={};
- (T['BLD-check_type.csv']||[]).forEach(function(r){ if(String(r.type_key||'').trim()==='round.presence') ids[r.id]=1; });
+ (T['BLD-check_type.csv']||[]).forEach(function(r){ if(String(r.type_key||'').trim()==='round.presence'||String(r.type_key||'').trim()==='round_presence') ids[r.id]=1; });
+ var session=null;
  (T['BLD-check_log.csv']||[]).filter(function(l){ return ids[l.check_type_id]&&l.area_id===areaId&&l.happened_at&&londonDayOf(l.happened_at)===date; })
   .sort(function(a,b){ return String(a.taken_at||a.happened_at).localeCompare(String(b.taken_at||b.happened_at)); })
-  .forEach(function(l){ out[l.subject_id]={state:l.item==='present'?'here':l.item==='not here'?'not':'',at:l.taken_at||l.happened_at}; });
+  .forEach(function(l){
+    if(l.subject_id) out[l.subject_id]={state:l.item==='present'?'here':l.item==='not here'?'not':'',at:l.taken_at||l.happened_at};
+    if((l.covered_ids||l.exceptions) && (!session || String(l.taken_at||l.happened_at)>=String(session.taken_at||session.happened_at))) session=l;
+  });
+ if(session && window.BLDCheckRules){
+  BLDCheckRules.covered(session).forEach(function(id){ out[id]={state:'here',at:session.taken_at||session.happened_at}; });
+  BLDCheckRules.exceptions(session).forEach(function(ex){ out[ex.id]={state:ex.kind==='not_here'?'not':'here',at:session.taken_at||session.happened_at,exception:ex.word}; });
+ }
  return out; }
+function presenceSessionOn(pt,date){ if(!pt||!window.BLDCheckRules) return false;
+ var s=BLDCheckRules.settingFor(T['BLD-check_setting.csv']||[], pt.type_key, date); return !!(s && String(s.session_row).toLowerCase()==='true'); }
 function markSeen(areaId, sid, state){
  var date=CD._roundDate||todayISO(), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:'',subjects:inCabin(areaId,date)});
  cur.seen=cur.seen||{};
@@ -3687,7 +3699,20 @@ function markSeen(areaId, sid, state){
  var m=document.querySelector('[data-hsave="'+CSS.escape(areaId+'|'+sid)+'"]'), pt=presenceType(date);
  if(!pt){ if(m) m.textContent=now?'noted on this page, not saved':''; return; }
  if(!now){ if(m) m.textContent=''; return; }
- presenceSave(areaId,sid,now,date,pt,m);
+ if(presenceSessionOn(pt,date)) presenceSessionSave(areaId,date,pt,m);
+ else presenceSave(areaId,sid,now,date,pt,m);
+}
+async function presenceSessionSave(areaId,date,pt,m){
+ if(m) m.textContent='saving\u2026';
+ var cur=ROUND[roundKey(date,areaId)]||{}, here=[], not=[];
+ inCabin(areaId,date).forEach(function(sid){ var st=cur.seen&&cur.seen[sid]; if(st==='here') here.push(sid); else if(st==='not') not.push(sid); });
+ var dogs=here.concat(not);
+ if(!dogs.length){ if(m) m.textContent=''; return; }
+ var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
+ var r=await sinkSend({table:'check_log',action:'add_session',fields:{check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'}});
+ var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
+ if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped'}); }
+ if(m) showSave(m,sinkMsg(r));
 }
 async function presenceSave(areaId,sid,state,date,pt,m){
  if(m) m.textContent='saving\u2026';
@@ -5285,7 +5310,7 @@ function ckrSubject(r){ var a=r.area_id&&(CD.allAreas||[]).filter(function(x){ r
  return [r.subject_id?(d?d.name:'Dog not on the current list'):'', r.area_id?(a?a.cabin:'Room not on the list'):'', r.litter_id?(l?'Litter '+litName(l):'Litter not on the list'):'',
   r.item_id?(it&&(it.name||it.item_no)?'Item '+(it.name||it.item_no):'Item not on the list'):''].filter(Boolean).join(', ')||'Whole site'; }
 function ckrMake(R){ var ym=(document.getElementById('ckrMonth')||{}).value||'', ts=document.getElementById('ckrType'), tid=ts?ts.value:'';
- var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject});
+ var lines=R.build(T['BLD-check_log.csv']||[],{month:ym,typeId:tid,types:T['BLD-check_type.csv']||[],subject:ckrSubject,dogName:function(id){ var d=regDog(id); return d&&d.name?d.name:'Dog not on the current list'; }});
  return {ym:ym,lines:lines,head:{kennel:(CD.tenant&&CD.tenant.name)||'',month:ym,which:tid&&ts?ts.options[ts.selectedIndex].textContent:'All checks',printed:dmy(todayISO())+' '+hhmmNow()}}; }
 function bindChecksReg(){ var p=document.getElementById('ckrPrint'), c=document.getElementById('ckrCsv'), msg=document.getElementById('ckrMsg'); if(!p||!c) return;
  var say=function(t){ if(msg) msg.textContent=t; }, n=function(x){ return x.lines.length+' entr'+(x.lines.length===1?'y':'ies'); };
@@ -5587,7 +5612,7 @@ if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
+function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Settings']);   /* the tab says Settings; the page and its chip say the same (17 Nov 2026) */
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
