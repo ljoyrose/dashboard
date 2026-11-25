@@ -3710,6 +3710,15 @@ async function presenceSessionSave(areaId,date,pt,m){
  var r=await sinkSend({table:'check_log',action:'add_session',fields:{check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'}});
  var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
  if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped'}); }
+ if(!ok&&!r.kept){   /* refused: the buttons go back to the last saved round. Kept for retry: they stay pressed */
+  var back=savedSeen(areaId,date), sel='[data-area="'+CSS.escape(areaId)+'"]';
+  inCabin(areaId,date).forEach(function(id){
+   if(back[id]) cur.seen[id]=back[id].state; else delete cur.seen[id];
+   var hb=document.querySelector('[data-here="'+CSS.escape(id)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(id)+'"]'+sel);
+   var w=back[id]?back[id].state:'';
+   if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); }
+  });
+ }
  if(m) showSave(m,sinkMsg(r));
 }
 async function presenceSave(areaId,sid,state,date,pt,m){
