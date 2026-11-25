@@ -38,7 +38,7 @@
   /* Lists, read only when a card type needs them (Lisa's demo, 22 Nov 2026: the page sat on "Loading..." for minutes while
      21 script calls ran one after another). The buttons show at once; each button reads only its lists, four at a time,
      and keeps them for this visit; "as of" says when, Refresh reads again. Lists marked optional may be off for this code. */
-  var T = {}, readAt = 0;
+  var T = {}, readAt = 0, readBlock = {};
   var REQUIRED = { area: 1, subject: 1, occupancy: 1, qr_tag: 1 };
   var BASE = ['qr_tag', 'breeding_rule'], SITE = ['area', 'subject', 'occupancy', 'subject_status', 'requirement'];
   var NEEDS = {
@@ -70,8 +70,8 @@
       if (!left.length || fail) return Promise.resolve();
       var k = left.shift();
       return save.read(k).then(function (r) {
-        if (r.ok) T[k] = r.rows || [];
-        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) T[k] = [];   /* owner-only or not switched on: the card leaves those lines out */
+        if (r.ok) { T[k] = r.rows || []; readBlock[k] = ''; }
+        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) { T[k] = []; readBlock[k] = r.code; }   /* owner-only or not switched on: the card leaves those lines out */
         else fail = fail || r;
         done++; if (!fail) say('Loading lists: ' + done + ' of ' + keys.length + '...');
         return worker();
@@ -328,7 +328,13 @@
   }
   function itemCards() {
     sheet.className = 'sheet dogs per' + per;
-    make('item', itemList(), itemCard);
+    var list = itemList();
+    if (readBlock.items || !list.length) {
+      sheet.textContent = '';
+      say(readBlock.items === 'NOT_ALLOWED' ? 'Not allowed.' : 'The item list is not switched on yet.', 'warn');
+      return;
+    }
+    make('item', list, itemCard);
     pickBox.textContent = '';
     var boxes = ITEM_COLS.map(function (c) { var on = (itemPick || itemFields('')).indexOf(c) >= 0;
       return h('label', { class: 'fpick' }, [h('input', Object.assign({ type: 'checkbox', value: c }, on ? { checked: 'checked' } : {})), ' ' + itemLabel(c)]); });
