@@ -59,14 +59,15 @@ test.describe('Medicines register: the rules', () => {
     expect(R.cell(one, 'dose')).toBe('1 tablet');
     expect(R.cell(one, 'reason')).toBe('routine');
     expect(R.cell(one, 'note')).toBe('with food');
-    // BLD-dispense holds none of these today: each says so
-    ['time', 'batch', 'expiry', 'vet', 'given_by'].forEach((k) => expect(R.cell(one, k)).toBe(R.NR));
+    // Dose and who gave it are required. Time, batch, expiry and the vet note are left blank.
+    expect(R.cell(one, 'given_by')).toBe(R.NR);
+    ['time', 'batch', 'expiry', 'vet'].forEach((k) => expect(R.cell(one, k)).toBe(''));
     // "NOT STATED" is not a medicine's name
     expect(R.cell(lines[0], 'product')).toBe(R.NR);
     expect(R.cell(lines[0], 'dose')).toBe(R.NR);
     // a dog no longer on the list keeps its id, and no chip is guessed
     expect(R.cell(lines[2], 'dog')).toBe('Dog not on the current list');   // no id on paper
-    expect(R.cell(lines[2], 'chip')).toBe(R.NR);
+    expect(R.cell(lines[2], 'chip')).toBe('');
   });
 
   test('a time, batch, expiry, vet instruction and who gave it print when the record holds them', () => {
@@ -102,7 +103,7 @@ test.describe('Medicines register: the rules', () => {
     expect(csv.charCodeAt(0)).toBe(0xfeff);
     expect(Buffer.from(csv, 'utf8').subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
     expect(csv).toContain('Café Kennel £');
-    expect(csv).toContain('\r\n2026-02-03,not recorded,Test Dog One,');
+    expect(csv).toContain('\r\n2026-02-03,,Test Dog One,');
     expect(csv).not.toContain('3 Feb 2026');
   });
 
@@ -126,9 +127,9 @@ test.describe('Medicines register: the rules', () => {
     expect(html).toContain('<title>Medicines register · February 2026</title>');
     expect(html).toContain('Sample &lt;Kennel&gt;');
     R.COLUMNS.forEach((c) => expect(html).toContain('<th scope="col">' + c[1] + '</th>'));
-    expect(html).toContain('Batch 3 of 3');
+    expect(html).not.toContain('Batch 3 of 3');
     expect(html).toContain('Given by 3 of 3');
-    expect(R.toHtml({ kennel: 'K', month: '2026-05', printed: '' }, [])).toContain('No medicine recorded in May 2026.');
+    expect(R.toHtml({ kennel: 'K', month: '2026-05', printed: '' }, [])).toContain('No records this month.');
   });
 });
 
@@ -152,7 +153,7 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
     expect(lines.map((l) => l.id)).toEqual(['dsp-2', 'dsp-1', 'j1', 'j6', 'j2', 'j4', 'dsp-3']);
     const j1 = lines.find((l) => l.id === 'j1');
     expect(R.COLUMNS.map((c) => R.cell(j1, c[0]))).toEqual(['4 Feb 2026', '08:15', 'Test Dog One', '900000000000001', 'Sample Drops',
-      R.NR, R.NR, '2 dose', R.NR, R.NR, R.NR, 'Sample Staff A', 'Corrected by a later record.', 'staff job']);
+      '', '', '2 dose', '', '', '', 'Sample Staff A', 'Corrected by a later record.', 'staff job']);
     expect(R.cell(lines.find((l) => l.id === 'dsp-1'), 'source')).toBe('dog card');
   });
 
@@ -161,7 +162,7 @@ test.describe('Medicines register: the staff "Medicine given" job counts too', (
     const get = (id) => lines.find((l) => l.id === id);
     expect(R.cell(get('j2'), 'note')).toBe('Job marked not done. Refused Later, by Sample Staff A: Vet told by phone');
     expect(R.cell(get('j2'), 'product')).toBe(R.NR);
-    expect(R.cell(get('j4'), 'time')).toBe('time not recorded');
+    expect(R.cell(get('j4'), 'time')).toBe('');
     expect(R.cell(get('j4'), 'dose')).toBe('1 dose');
     expect(R.cell(get('j6'), 'note')).toBe('Was 3 drops Corrects the record of 2026-02-04.');
     expect(R.cell(get('j1'), 'date')).toBe('4 Feb 2026');
@@ -196,9 +197,9 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const csv = fs.readFileSync(await dl.path(), 'utf8');
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
-    expect(csv).toContain('2026-02-03,not recorded,Test Dog One,900000000000001,Sample Wormer,not recorded,not recorded,1 tablet,Oral,routine,not recorded,not recorded,with food,dog card');
+    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Sample Wormer,,,1 tablet,Oral,routine,,not recorded,with food,dog card');
     expect(csv).toContain('Dog not on the current list');
-    expect(csv).toContain('2026-02-12,09:30,Test Dog Two,not recorded,Sample Drops,not recorded,not recorded,2 dose,not recorded,not recorded,not recorded,Sample Staff A,,staff job');
+    expect(csv).toContain('2026-02-12,09:30,Test Dog Two,,Sample Drops,,,2 dose,,,,Sample Staff A,,staff job');
     await expect(card.locator('#medsMsg')).toHaveText('Downloaded 4 entries.');
 
     await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
@@ -210,7 +211,8 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await expect(pop.locator('h1')).toHaveText('Medicines register · February 2026');
     await expect(pop.locator('tbody tr')).toHaveCount(4);
     await expect(pop.locator('.meta').first()).toContainText('Sample Kennel (invented)');
-    await expect(pop.locator('.gaps')).toContainText('Batch 4 of 4');
+    await expect(pop.locator('.gaps')).not.toContainText('Batch');
+    await expect(pop.locator('.gaps')).toContainText('Given by');
     await expect(card.locator('#medsMsg')).toHaveText('Opened 4 entries to print.');
     await pop.close();
   });
@@ -227,7 +229,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
     const [pop] = await Promise.all([context.waitForEvent('page'), card.locator('#medsPrint').click()]);
     await expect(pop.locator('h1')).toHaveText('Medicines register · April 2026');
-    await expect(pop.locator('body')).toContainText('No medicine recorded in April 2026.');
+    await expect(pop.locator('body')).toContainText('No records this month.');
     await expect(pop.locator('.meta').first()).toContainText('Entries: 0');
     await pop.close();
     const [dl] = await Promise.all([page.waitForEvent('download'), card.locator('#medsCsv').click()]);
@@ -246,7 +248,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     await expect(page.locator('#medsMonth option')).toHaveText([label(now, 0)]);
     await page.waitForFunction(() => !!window.BLDMedsRegister);   // fetched when Compliance opens
     const [pop] = await Promise.all([context.waitForEvent('page'), page.locator('#medsPrint').click()]);
-    await expect(pop.locator('body')).toContainText('No medicine recorded in ' + MONTH[Number(now.slice(5)) - 1] + ' ' + now.slice(0, 4) + '.');
+    await expect(pop.locator('body')).toContainText('No records this month.');
     await pop.close();
   });
 

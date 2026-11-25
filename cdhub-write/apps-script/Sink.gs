@@ -437,6 +437,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
   var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: f.how_recorded || ((room && !session) ? '' : 'site_tap') };
+  if (f.confirm_unusual) fields.confirm_unusual = f.confirm_unusual;   // Import (PR #770) sends this for a date 7 days or older; it is not a column
   if (room || (session && f.area_id)) fields.area_id = f.area_id;
   if (!session && scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 

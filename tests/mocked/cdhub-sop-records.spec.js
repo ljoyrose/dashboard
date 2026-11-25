@@ -105,10 +105,6 @@ test.describe('CD Hub: SOP record and print', () => {
     const body = page.locator('[data-sop-body="Sign-Off"]');
     await expect(body.getByRole('button', { name: 'Checked today' })).toBeVisible();
     await expect(body.getByRole('link', { name: 'Print records' })).toBeVisible();
-    await body.getByRole('link', { name: 'Print records' }).click();
-    await expect.poll(() => page.evaluate(() => window.__printed || 0)).toBe(1);
-    await expect(page.locator('#ypReport')).toContainText('Declarations');
-    await expect(page.locator('#ypReport')).toContainText('Verifications');
     await body.getByRole('button', { name: 'Checked today' }).click();
     await expect.poll(() => sent.length).toBe(2);
     expect(sent[0].table).toBe('check_type');
@@ -117,6 +113,26 @@ test.describe('CD Hub: SOP record and print', () => {
     expect(sent[1].fields).toMatchObject({ check_type_id: 'new-1', outcome: 'recorded', how_recorded: 'tapped', note: 'Checked today' });
     await expect(body.locator('[data-sop-checked="Sign-Off"]')).toHaveCount(0);
     await expect(body).toContainText('Checked: Sign-Off');
+    await body.getByRole('link', { name: 'Print records' }).click();
+    await expect(page).toHaveURL(/#\/yearly\/sop-/);
+    await expect.poll(() => page.evaluate(() => window.__printed || 0)).toBe(0);
+    await expect(page.locator('#ypPreview')).toContainText('Declarations');
+    await expect(page.locator('#ypPreview')).toContainText('Verifications');
+    await page.locator('#ypSopPrint').click();
+    await expect.poll(() => page.evaluate(() => window.__printed || 0)).toBe(1);
+  });
+
+  test('SOP Print records opens the print view and does not print the list @regression', async ({ page, guard }) => {
+    await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'sops');
+    await page.locator('[data-sop-open="Cleaning"]').click();
+    await page.locator('[data-sop-body="Cleaning"]').getByRole('link', { name: 'Print records' }).click();
+    await expect(page).toHaveURL(/#\/yearly\/sop-Cleaning$/);
+    await expect(page.locator('#ypPreview')).toBeVisible();
+    await expect(page.locator('h2').first()).toHaveText('Yearly print');
+    expect(await page.evaluate(() => window.__printed || 0)).toBe(0);
+    await expect(page.locator('#soprows')).toHaveCount(0);
   });
 
   test('a check whose SOP name was left blank still shows its record control @regression', async ({ page, guard }) => {
