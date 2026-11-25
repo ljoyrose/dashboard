@@ -21,6 +21,8 @@
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
+<script src="staff/lib/show-note.js"></script>
+<script src="meds-rows.js"></script>
 <script src="check-rules.js"></script>
 <script src="staff/lib/date-words.js"></script>
 <script src="staff/lib/list-sort.js"></script>
@@ -796,7 +798,11 @@ function currentLitters(){
  return (CD.litters||[]).filter(function(l){ return here[l.id]||(!pups[l.id]&&on[l.dam_subject_id]); }).map(function(l){
   return {id:l.id,dob:l.dob||l.born_on||'',born_on:l.born_on||l.dob||'',name:'Litter of '+(nameOf(l.dam_subject_id)||'a dam')}; });
 }
-function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types); return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types);
+ var day=todayISO(), occ=T['BLD-occupancy.csv']||[], st=T['BLD-subject_status.csv']||[], req=CD.req||[], subjects=CD.dogs||[];
+ var dogs=subjects.filter(function(d){ return BLDDue.onSite(d, occ, st, day); });
+ var areas=(CD.areas||[]).map(function(a){ return {id:a.id,code:a.code,use:a.use||'',grouping:a.grouping||'',kind:a.kind||'',retired:!BLDOccupancy.inUse(a,day,req),noDogs:BLDOccupancy.takesDogs?!BLDOccupancy.takesDogs(a,day,req):false}; });
+ return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
@@ -1267,10 +1273,29 @@ function build(){
       MC=idx(T['BLD-microchip.csv'],'subject_id');
   var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||''}); }); /* source column stays in the sheet, not shown (Lisa, 12 Nov 2026) */
   Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
-  var DSP={}; (T['BLD-dispense.csv']||[]).forEach(function(r){
-    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:r.given_on,product:r.product,pres:r.presentation,
+  var DSP={}, seenDose={}, copiedDose={};
+  function doseOn(v){ return String(v||'').slice(0,10); }
+  (T['BLD-dispense.csv']||[]).forEach(function(r){
+    if(window.BLDMedRows&&BLDMedRows.procedureDrug&&BLDMedRows.procedureDrug(r.product,r.note)) return;
+    (String(r.note||'').match(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi)||[]).forEach(function(i){ copiedDose[i.toLowerCase()]=1; });
+    var k=window.BLDMedRows?BLDMedRows.doseKey(r.subject_id,doseOn(r.given_on||r.given_at),r.product):'';
+    if(k&&seenDose[k]) return; if(k) seenDose[k]=1;
+    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:doseOn(r.given_on||r.given_at),product:r.product,pres:r.presentation,
       dose:r.dose_volume,band:r.weight_band,kg:r.weight_kg_used,basis:r.dosage_basis,route:r.route,
-      reason:r.reason,src:r.source,need:r.ruling_needed,note:r.note}); });
+      reason:r.reason,src:r.source,need:r.ruling_needed,note:window.BLDShowNote?BLDShowNote.human(r.note):r.note}); });
+  var medType={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(window.BLDMedRows&&BLDMedRows.isMedCheck(t)) medType[t.id]=t; });
+  (T['BLD-check_log.csv']||[]).forEach(function(r){
+    var t=medType[r.check_type_id]; if(!t) return;
+    if(r.outcome==='note'&&r.note_for_id) return;
+    if(String(t.type_key||'').toLowerCase()!=='medicine'&&(r.outcome==='not_done'||r.outcome==='part_done')) return;
+    if(copiedDose[String(r.id||'').toLowerCase()]) return;
+    if(BLDMedRows.procedureDrug(r.item,r.note)) return;
+    var on=doseOn(r.happened_at||r.taken_at), k=BLDMedRows.doseKey(r.subject_id,on,r.item);
+    if(k&&seenDose[k]) return; if(k) seenDose[k]=1;
+    if(!r.subject_id) return;
+    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:on,product:r.item||'',pres:'',dose:r.amount||'',band:'',kg:'',basis:'',route:'',
+      reason:'',src:'',need:'',note:BLDShowNote?BLDShowNote.human(r.note):r.note});
+  });
   Object.keys(DSP).forEach(function(k){ DSP[k].sort(byDateDesc); });
   CD.dispense=DSP;
 
@@ -3674,35 +3699,66 @@ async function applyDogOff(dogId, msgEl){
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
-/* Present / not here is saved as a check_log row (Lisa 15 Nov 2026), against the owner's check_type row with
-   type_key round.presence (in force on the round's date, never hard-coded). No such row: kept on this page only, and
-   the row says so. item = present | not here, outcome = recorded; the newest row for a dog in a room that day wins. */
-function presenceType(date){ var rows=(T['BLD-check_type.csv']||[]).filter(function(r){ return String(r.type_key||'').trim()==='round.presence'; });
- rows=BLDCapacity.inForce(rows,date,'effective_from').sort(function(a,b){ return String(a.effective_from||'').localeCompare(String(b.effective_from||'')); });
- var t=rows[rows.length-1]; return t&&String(t.active).toLowerCase()!=='false'?t:null; }
+/* Present / not here is one check_log for the dog for the day (Lisa 25 Nov 2026), against cty-round_presence-1 when
+   that row is in force, else the original Present row (round.presence or round_presence). A later round the same day,
+   including a thermometer round, does not write another row: the line says Done today. Correct writes one new row
+   that points at today's. No Present row: kept on this page only, and the line says so. */
+function isPresenceType(r){ var k=String(r&&r.type_key||'').trim();
+ return k==='round.presence'||k==='round_presence'||/^cty-round_presence-\d+$/.test(String(r&&r.id||'')); }
+function presenceType(date){ var rows=(T['BLD-check_type.csv']||[]).filter(isPresenceType);
+ rows=BLDCapacity.inForce(rows,date,'effective_from').filter(function(r){ return String(r.active).toLowerCase()!=='false'; });
+ var named=rows.filter(function(r){ return r.id==='cty-round_presence-1'; })[0];
+ if(named) return named;
+ if(window.BLDDue&&BLDDue.mainOf){ var m=BLDDue.mainOf(rows,date); if(m) return m; }
+ rows.sort(function(a,b){ return String(a.effective_from||'').localeCompare(String(b.effective_from||'')); });
+ return rows.length?rows[0]:null; }
 function londonDayOf(iso){ try{ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(iso)); }catch(e){ return String(iso||'').slice(0,10); } }
-function savedSeen(areaId,date){ var ids={}, out={};
- (T['BLD-check_type.csv']||[]).forEach(function(r){ if(String(r.type_key||'').trim()==='round.presence'||String(r.type_key||'').trim()==='round_presence') ids[r.id]=1; });
- var session=null;
- (T['BLD-check_log.csv']||[]).filter(function(l){ return ids[l.check_type_id]&&l.area_id===areaId&&l.happened_at&&londonDayOf(l.happened_at)===date; })
-  .sort(function(a,b){ return String(a.taken_at||a.happened_at).localeCompare(String(b.taken_at||b.happened_at)); })
-  .forEach(function(l){
-    if(l.subject_id) out[l.subject_id]={state:l.item==='present'?'here':l.item==='not here'?'not':'',at:l.taken_at||l.happened_at};
-    if((l.covered_ids||l.exceptions) && (!session || String(l.taken_at||l.happened_at)>=String(session.taken_at||session.happened_at))) session=l;
-  });
- if(session && window.BLDCheckRules){
-  BLDCheckRules.covered(session).forEach(function(id){ out[id]={state:'here',at:session.taken_at||session.happened_at}; });
-  BLDCheckRules.exceptions(session).forEach(function(ex){ out[ex.id]={state:ex.kind==='not_here'?'not':'here',at:session.taken_at||session.happened_at,exception:ex.word}; });
- }
+function presenceIdSet(){ var ids={};
+ (T['BLD-check_type.csv']||[]).forEach(function(r){ if(!isPresenceType(r)) return; ids[r.id]=1;
+  if(window.BLDDue&&BLDDue.familyIds) BLDDue.familyIds(T['BLD-check_type.csv'], r.id).forEach(function(id){ ids[id]=1; }); });
+ return ids; }
+function standingPresence(date){ var ids=presenceIdSet(), replaced={}, logs=T['BLD-check_log.csv']||[];
+ logs.forEach(function(l){ if(l.corrects_id) replaced[l.corrects_id]=1; });
+ return logs.filter(function(l){ return ids[l.check_type_id]&&!replaced[l.id]&&l.happened_at&&londonDayOf(l.happened_at)===date; }); }
+function presenceForDog(date,sid){ var best=null;
+ standingPresence(date).forEach(function(l){
+  var state='';
+  if(l.subject_id===sid) state=l.item==='present'?'here':l.item==='not here'?'not':'';
+  else if(window.BLDCheckRules){
+   if(BLDCheckRules.covered(l).indexOf(sid)>=0) state='here';
+   BLDCheckRules.exceptions(l).forEach(function(ex){ if(ex.id===sid) state=ex.kind==='not_here'?'not':'here'; });
+  }
+  if(!state) return;
+  if(!best||String(l.taken_at||l.happened_at)>=String(best.at)) best={id:l.id,state:state,at:l.taken_at||l.happened_at};
+ });
+ return best; }
+function savedSeen(areaId,date){ var out={};
+ standingPresence(date).forEach(function(l){ if(l.area_id&&l.area_id!==areaId) return;
+  if(l.subject_id) out[l.subject_id]={state:l.item==='present'?'here':l.item==='not here'?'not':'',at:l.taken_at||l.happened_at,id:l.id};
+  if(window.BLDCheckRules&&(l.covered_ids||l.exceptions)){
+   BLDCheckRules.covered(l).forEach(function(id){ out[id]={state:'here',at:l.taken_at||l.happened_at,id:l.id}; });
+   BLDCheckRules.exceptions(l).forEach(function(ex){ out[ex.id]={state:ex.kind==='not_here'?'not':'here',at:l.taken_at||l.happened_at,id:l.id,exception:ex.word}; });
+  }
+ });
  return out; }
 function presenceSessionOn(pt,date){ if(!pt||!window.BLDCheckRules||!BLDCheckRules.sessionAllowed(pt.type_key)) return false;
  var s=BLDCheckRules.settingFor(T['BLD-check_setting.csv']||[], pt.type_key, date); return BLDCheckRules.effective(pt,s).session_row; }
 function markSeen(areaId, sid, state){
  var date=CD._roundDate||todayISO(), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:'',subjects:inCabin(areaId,date)});
  cur.seen=cur.seen||{};
- if(presenceType(date)){   /* saved: a second tap on the same button changes nothing; the other button records a new row */
-  var sv=savedSeen(areaId,date)[sid], shown=cur.seen[sid]!==undefined?cur.seen[sid]:(sv?sv.state:'');
-  if(shown===state) return;
+ var pt=presenceType(date), already=pt?presenceForDog(date,sid):null, fixing=cur.fix&&cur.fix[sid];
+ if(pt){   /* once today: a later round does not write again. Correct is the only way to change it. */
+  var shown=cur.seen[sid]!==undefined?cur.seen[sid]:(already?already.state:'');
+  if(shown===state && !fixing) return;
+  if(already && !fixing){
+   cur.seen[sid]=already.state;
+   var sel0='[data-area="'+CSS.escape(areaId)+'"]';
+   var hb0=document.querySelector('[data-here="'+CSS.escape(sid)+'"]'+sel0), nb0=document.querySelector('[data-nothere="'+CSS.escape(sid)+'"]'+sel0);
+   if(hb0&&nb0){ hb0.setAttribute('aria-pressed',String(already.state==='here')); nb0.setAttribute('aria-pressed',String(already.state==='not')); hb0.parentNode.classList.toggle('on',!!already.state); }
+   var m0=document.querySelector('[data-hsave="'+CSS.escape(areaId+'|'+sid)+'"]');
+   if(m0){ var keep=m0.querySelector('[data-pcorrect]'); m0.innerHTML=saveHtml('Done today'); if(keep) m0.appendChild(keep); }
+   return;
+  }
   cur.seen[sid]=state;
  } else if(cur.seen[sid]===state) delete cur.seen[sid]; else cur.seen[sid]=state;
  /* update the two buttons in place: no redraw, no jump (Lisa 15 Nov 2026) */
@@ -3711,22 +3767,26 @@ function markSeen(areaId, sid, state){
  if(!hb||!nb){ go('round', false); return; }
  hb.setAttribute('aria-pressed',String(now==='here')); nb.setAttribute('aria-pressed',String(now==='not'));
  hb.parentNode.classList.toggle('on',!!now);
- var m=document.querySelector('[data-hsave="'+CSS.escape(areaId+'|'+sid)+'"]'), pt=presenceType(date);
+ var m=document.querySelector('[data-hsave="'+CSS.escape(areaId+'|'+sid)+'"]');
  if(!pt){ if(m) m.textContent=now?'noted on this page, not saved':''; return; }
  if(!now){ if(m) m.textContent=''; return; }
  if(presenceSessionOn(pt,date)) presenceSessionSave(areaId,date,pt,m);
- else presenceSave(areaId,sid,now,date,pt,m);
+ else presenceSave(areaId,sid,now,date,pt,m,fixing&&already?already.id:'');
 }
 async function presenceSessionSave(areaId,date,pt,m){
- if(m) m.textContent='saving\u2026';
- var cur=ROUND[roundKey(date,areaId)]||{}, here=[], not=[];
+ var cur=ROUND[roundKey(date,areaId)]||{}, here=[], not=[], fixing=cur.fix&&Object.keys(cur.fix).length;
  inCabin(areaId,date).forEach(function(sid){ var st=cur.seen&&cur.seen[sid]; if(st==='here') here.push(sid); else if(st==='not') not.push(sid); });
  var dogs=here.concat(not);
  if(!dogs.length){ if(m) m.textContent=''; return; }
+ if(!fixing && dogs.some(function(sid){ return presenceForDog(date,sid); })){ if(m) m.innerHTML=saveHtml('Done today'); return; }
+ if(m) m.textContent='saving\u2026';
  var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
- var r=await sinkSend({table:'check_log',action:'add_session',fields:{check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'}});
+ var fields={check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'};
+ var prev=fixing?standingPresence(date).filter(function(l){ return l.area_id===areaId; }).pop():null;
+ if(prev) fields.corrects_id=prev.id;
+ var r=await sinkSend({table:'check_log',action:'add_session',fields:fields});
  var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
- if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped'}); }
+ if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:fields.exceptions,outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped',corrects_id:fields.corrects_id||''}); if(cur.fix) cur.fix={}; }
  if(!ok&&!r.kept){   /* refused: the buttons go back to the last saved round. Kept for retry: they stay pressed */
   var back=savedSeen(areaId,date), sel='[data-area="'+CSS.escape(areaId)+'"]';
   inCabin(areaId,date).forEach(function(id){
@@ -3738,16 +3798,19 @@ async function presenceSessionSave(areaId,date,pt,m){
  }
  if(m) showSave(m,sinkMsg(r));
 }
-async function presenceSave(areaId,sid,state,date,pt,m){
+async function presenceSave(areaId,sid,state,date,pt,m,correctsId){
  if(m) m.textContent='saving\u2026';
  var at=date===todayISO()?new Date().toISOString():isoAt(date,'12');
- var r=await sinkPost('check_log',{check_type_id:pt.id,area_id:areaId,subject_id:sid,item:state==='here'?'present':'not here',outcome:'recorded',happened_at:at,how_recorded:'tapped'});
+ var fields={check_type_id:pt.id,area_id:areaId,subject_id:sid,item:state==='here'?'present':'not here',outcome:'recorded',happened_at:at,how_recorded:'tapped'};
+ if(correctsId) fields.corrects_id=correctsId;
+ var r=await sinkPost('check_log',fields);
  var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
- if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,subject_id:sid,item:state==='here'?'present':'not here',outcome:'recorded',happened_at:at,taken_at:new Date().toISOString()}); }
+ if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,subject_id:sid,item:fields.item,outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),corrects_id:correctsId||''});
+  var done=ROUND[roundKey(date,areaId)]; if(done&&done.fix) delete done.fix[sid]; }
  var cur=ROUND[roundKey(date,areaId)];
  if(!ok&&!r.kept&&cur&&cur.seen&&cur.seen[sid]===state){ delete cur.seen[sid];   /* refused: the buttons go back, the line says why. Kept for retry: they stay pressed */
   var sel='[data-area="'+CSS.escape(areaId)+'"]', hb=document.querySelector('[data-here="'+CSS.escape(sid)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(sid)+'"]'+sel);
-  var was=savedSeen(areaId,date)[sid], w=was?was.state:'';
+  var was=presenceForDog(date,sid), w=was?was.state:'';
   if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); } }
  if(m&&r.kept&&r.requestId) m.setAttribute('data-rid',r.requestId);   /* the kept entry's later answer lands on this line */
  if(m) showSave(m,sinkMsg(r));
@@ -4209,12 +4272,12 @@ function pageRound(){
    +'<span class="mut rsave" data-area="'+aid+'">'+(flash&&flash.area===aid?saveHtml(flash.text):'')+'</span>'
    +'</div>'
    +'<div class="chips" style="margin-bottom:4px">'
-   +(sel.length?sel.map(function(sid){ var d=CD._byId[sid], sv=savedRound[sid], seen=(r.seen&&r.seen[sid]!==undefined)?r.seen[sid]:(sv?sv.state:'');
+   +(sel.length?sel.map(function(sid){ var d=CD._byId[sid], sv=presenceForDog(date,sid)||savedRound[sid], fixing=r.fix&&r.fix[sid], seen=fixing&&r.seen&&r.seen[sid]!==undefined?r.seen[sid]:(sv?sv.state:(r.seen?r.seen[sid]:''));
        return '<span class="drow">'+dogMoveChip(d,aid,sid)
         +'<span class="herebtns'+(seen?' on':'')+'">'
         +'<button type="button" class="cb" data-here="'+sid+'" data-area="'+aid+'" aria-pressed="'+String(seen==='here')+'">present</button>'
         +'<button type="button" class="cb" data-nothere="'+sid+'" data-area="'+aid+'" aria-pressed="'+String(seen==='not')+'">not here</button>'
-        +'</span><span class="mut hsave" data-hsave="'+esc(aid+'|'+sid)+'">'+(sv&&sv.state&&(!r.seen||r.seen[sid]===undefined||r.seen[sid]===sv.state)?saveHtml('Saved '+hhmmOf(sv.at)):'')+'</span></span>'; }).join('')
+        +'</span><span class="mut hsave" data-hsave="'+esc(aid+'|'+sid)+'">'+(sv&&sv.state&&!fixing?saveHtml('Done today')+' <button type="button" class="cb" data-pcorrect="'+esc(sid)+'" data-area="'+esc(aid)+'">Correct</button>':'')+'</span></span>'; }).join('')
      :'<span class="mut">empty</span>')+'</div><div data-move-host="'+esc(aid)+'"></div>'
    +(function(){ var bd=bandFor(sel,date);
        if(!bd) return sel.length?'<div class="mut">no date of birth for anyone in here \u2014 no band can be set</div>':'';
@@ -4606,7 +4669,7 @@ function hhmmNow(){ return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Lon
 var SV_TICK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>',
     SV_CLOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 function saveHtml(text){ text=String(text||''); if(!text) return '';
- var k=/^(Saved|Moved|Removed|Archived|Deleted)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not sent yet/.test(text)?'wait':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
+ var k=/^(Saved|Moved|Removed|Archived|Deleted|Done today)\b/.test(text)&&!/still waiting/.test(text)?'good':/^Not sent yet/.test(text)?'wait':/^Not saved/.test(text)?'bad':/waiting/i.test(text)?'wait':'';
  if(!k) return esc(text);
  return '<span class="sv-line '+k+'" data-saved="'+k+'"><span class="sv-ic">'+(k==='good'?SV_TICK:k==='wait'?SV_CLOCK:'')+'</span><span>'+esc(text)+'</span></span>'; }
 function showSave(el,text){ if(el) el.innerHTML=saveHtml(text); }
@@ -5177,7 +5240,7 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine, dose and who gave it say \u201cnot recorded\u201d when the record does not hold them. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine and dose say \u201cnot recorded\u201d when the record does not hold them. A blank name shows Lisa Carson. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
@@ -5310,7 +5373,9 @@ function compChecksRegHtml(){
  rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.happened_at||r.taken_at||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
  var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
- var types=(T['BLD-check_type.csv']||[]).filter(function(t){ return t.id&&t.label; });
+ var types=(function(){ var rows=T['BLD-check_type.csv']||[];
+  if(window.BLDDue&&BLDDue.families) return BLDDue.families(rows).map(function(g){ return (BLDDue.mainOf&&BLDDue.mainOf(g,todayISO()))||g[0]; }).filter(function(t){ return t&&t.id&&t.label; });
+  return rows.filter(function(t){ return t.id&&t.label; }); })();
  return compFold('compChecksReg','checksreg','Checks register','<p class="mut help">One month of check records, for an inspector. Every column is printed; a detail the record does not hold says “not recorded”. A corrected record stays, with its correction on its own line.</p>'
   +'<div class="frow"><label for="ckrMonth">Month</label> <select id="ckrMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="ckrType">Checks</label> <select id="ckrType"><option value="">All checks</option>'+types.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>'; }).join('')+'</select></div>'
@@ -5701,6 +5766,7 @@ function navHas(id){
  if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
  if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
+ if(id==='qrprint') return typeof AdminView!=='undefined'&&AdminView.on(T);
  return !!PAGES[id];
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
@@ -5809,7 +5875,7 @@ function go(id,push){
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- if(LOAD.state==='loading'){ return; }
+ if(LOAD.state==='loading'){ document.getElementById('nav').innerHTML=''; return; }
  if(LOAD.state!=='ok'){
 
   main.innerHTML='<div style="margin-top:24px"><h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',error:(LOAD.state==='ambiguous'?'More than one file shares a title. Refusing to guess which is current: '+(LOAD.err||'')
@@ -6009,7 +6075,7 @@ function go(id,push){
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
- var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere]');
+ var t=e.target&&e.target.closest&&e.target.closest('[data-move-cancel],[data-over-move],[data-move-to],[data-move-off],[data-cabin-move],[data-move-dog],[data-here],[data-nothere],[data-pcorrect]');
  if(!t) return;
  if(t.hasAttribute('data-move-cancel')){
   var h=t.closest('[data-move-host]'); if(h) h.innerHTML='';
@@ -6021,6 +6087,8 @@ document.addEventListener('click',function(e){
  if(t.hasAttribute('data-move-off')){ applyDogOff(t.getAttribute('data-move-off'), t.parentNode&&t.parentNode.querySelector('[data-move-msg]')); return; }
  if(t.hasAttribute('data-cabin-move')){ var did=t.getAttribute('data-cabin-move'), d=CD._byId[did]; openMovePicker((d&&d.area_id)||'', did, t); return; }
  if(t.hasAttribute('data-move-dog')){ openMovePicker(t.getAttribute('data-from')||'', t.getAttribute('data-move-dog'), t); return; }
+ if(t.hasAttribute('data-pcorrect')){ var paid=t.getAttribute('data-area'), psid=t.getAttribute('data-pcorrect'), pdate=CD._roundDate||todayISO(), pk=roundKey(pdate,paid), pcur=ROUND[pk]||(ROUND[pk]={areaId:paid,date:pdate});
+  pcur.fix=pcur.fix||{}; pcur.fix[psid]=1; var pm=document.querySelector('[data-hsave="'+CSS.escape(paid+'|'+psid)+'"]'); if(pm) pm.textContent='Tap present or not here to correct today'; return; }
  if(t.hasAttribute('data-here')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-here'), 'here'); return; }
  if(t.hasAttribute('data-nothere')){ markSeen(t.getAttribute('data-area'), t.getAttribute('data-nothere'), 'not'); return; }
 });
@@ -6072,7 +6140,8 @@ function findViews(hit){
   if(s.id!=='main'&&!lay.on[s.id]) return;
   s.views.forEach(function(id){ var v=HubNav.VIEWS[id];
    if(!v||!navHas(id)||!hit(v.label+' '+s.label)) return;
-   out.push(v.href?{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,href:v.href}
+   var href=HubNav.viewHref(v);
+   out.push(href?{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,href:href}
     :{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,act:function(){ go(id); focusView(); }});
   });
  });
