@@ -525,6 +525,11 @@ var TABLES = {
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome', 'covered_ids', 'exceptions'], dupTimeCol: 'taken_at',
     dupNewestBy: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id'],   // 15 Nov 2026: a repeat only of the newest record for the same job, room, dog (round toggle present, not here, present)
+    // 25 Nov 2026: the live job log passed 4,900 rows and every Present tap read all of them while holding the lock.
+    // Rows are only ever appended, and a repeat is only a repeat inside 30 minutes, so a save reads the last rows
+    // (fastAppend) instead of every column of every row. A row inside that window higher up the sheet still forces
+    // the checked columns to be read. Nothing here rewrites an existing row.
+    fastAppend: true,
     dupDateCols: ['happened_at'],   // S2: a different day written on paper is a different record   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
