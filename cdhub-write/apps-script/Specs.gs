@@ -484,12 +484,15 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given', 'grant_id', 'counts_due'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id',
+              'item_id', 'time_given', 'grant_id', 'counts_due', 'covered_ids', 'exceptions'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id', 'item_id', 'time_given', 'grant_id', 'counts_due'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded', 'litter_id', 'note_for_id',
+                      'item_id', 'time_given', 'grant_id', 'counts_due', 'covered_ids', 'exceptions'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
+      { name: 'check_type_key', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'type_key' },
       { name: 'check_type_only', file: 'BLD-check_type.csv', idCol: 'id', valCol: 'only_in_areas' },
       { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
       { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' },
@@ -516,10 +519,17 @@ var TABLES = {
       litter_id:     { type: 'ref', lookup: 'litter' },                             // 12 Nov 2026: a litter job (check_type target litter)
       note_for_id:   { type: 'text' },                                              // 13 Nov 2026: the check_log row a note is added to (checked in checkRow)
       item_id:       { type: 'ref', lookup: 'items' },                              // 14 Nov 2026 (ITEMS): the item an item test is on (check_type target item)
-      time_given:    { type: 'enum', values: ['false'] }                           // 14 Nov 2026 (SOPJOBS S7): 'false' = the time is the owner's default (job.paper_default_time), not one written down; blank = given. Owner/admin-only (no staff visibility row)
+      time_given:    { type: 'enum', values: ['false'] },                          // 14 Nov 2026 (SOPJOBS S7): 'false' = the time is the owner's default (job.paper_default_time), not one written down; blank = given. Owner/admin-only (no staff visibility row)
+      covered_ids:  { type: 'idlist', lookup: 'subject' },                       // one session row: the dogs this tap covered (up to 500). Blank on a per-dog row.
+      exceptions:   { type: 'text', max: 8000 }                                 // dogId:not_here|dogId:concern:words|dogId:note:words. Those dogs are not covered.
     },
-    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome'], dupTimeCol: 'taken_at',
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id', 'item', 'outcome', 'covered_ids', 'exceptions'], dupTimeCol: 'taken_at',
     dupNewestBy: ['check_type_id', 'area_id', 'subject_id', 'litter_id', 'item_id'],   // 15 Nov 2026: a repeat only of the newest record for the same job, room, dog (round toggle present, not here, present)
+    // 25 Nov 2026: the live job log passed 4,900 rows and every Present tap read all of them while holding the lock.
+    // Rows are only ever appended, and a repeat is only a repeat inside 30 minutes, so a save reads the last rows
+    // (fastAppend) instead of every column of every row. A row inside that window higher up the sheet still forces
+    // the checked columns to be read. Nothing here rewrites an existing row.
+    fastAppend: true,
     dupDateCols: ['happened_at'],   // S2: a different day written on paper is a different record   // outcome: a concern, not done or part done after a done is a new record, not a repeat (Lisa 13 Nov 2026)
     dupSkip: function (r) { return r.outcome === 'note'; },   // a note is in addition to done: never a duplicate, never blocks one
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
@@ -550,6 +560,13 @@ var TABLES = {
       var only = lookups && lookups.check_type_only ? lookups.check_type_only[row.check_type_id] : true;
       if (!errors.area_id && row.area_id && typeof only === 'string' && only.split('|').indexOf(row.area_id) < 0) {
         errors.area_id = 'This job is not for this room.';
+      }
+      if (!errors.exceptions && row.exceptions) row.exceptions = checkExceptions_(row.exceptions, errors, lookups);
+      if (!errors.covered_ids && !errors.exceptions && row.covered_ids && row.exceptions) {
+        var skip = {};
+        row.exceptions.split('|').forEach(function (p) { skip[p.split(':')[0]] = 1; });
+        row.covered_ids = row.covered_ids.split('|').filter(function (id) { return !skip[id]; }).join('|');
+        if (!row.covered_ids && !row.exceptions) errors.covered_ids = 'Name the dogs this round covered, or the exceptions.';
       }
     }
   },
@@ -933,6 +950,102 @@ var TABLES = {
     dupKey: ['dog_ids'], dupTimeCol: 'confirmed_at',
     stamp: function (row, ctx) { row.confirmed_at = ctx.nowIso; row.confirmed_by = ctx.whoId || ctx.who; },
     checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- check_setting
+  // How the owner records each check (Lisa, settings steps 1 and 2). A change is a new row from a date, so a past
+  // print uses the row in force that day. No row = today's behaviour: logged, the check's own how-often and one line
+  // per dog where the check already says so. The live check_type row is the legal floor: more often is allowed, less
+  // often is not, and some checks cannot be print only.
+  check_setting: {
+    key: 'check_setting',
+    file: 'BLD-check_setting.csv',
+    idPrefix: 'cks',
+    columns: ['id', 'tenant_id', 'type_key', 'record_as', 'every_days', 'frequency', 'site_scope', 'session_row', 'from_date', 'to_date', 'source', 'set_by', 'set_at'],
+    proposedColumns: ['type_key', 'record_as', 'every_days', 'frequency', 'site_scope', 'session_row', 'from_date', 'to_date', 'source', 'set_by', 'set_at'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      type_key:    { type: 'text', required: true },
+      record_as:   { type: 'enum', values: ['logged', 'print', 'both'], required: true },
+      every_days:  { type: 'count' },
+      frequency:   { type: 'text' },
+      site_scope:  { type: 'enum', values: ['one_line', 'per_dog'] },
+      session_row: { type: 'bool', dflt: 'false' },
+      from_date:   { type: 'date', required: true },
+      to_date:     { type: 'date' },
+      source:      { type: 'text' }
+    },
+    dupKey: ['type_key', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.to_date && !errors.from_date && row.to_date && row.from_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+      if (!errors.type_key && row.type_key && !/^(round\.)?[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) errors.type_key = 'Use the check\'s short name.';
+      if (!errors.every_days && row.every_days === '0') errors.every_days = 'Use 1 or more, or leave blank for as needed.';
+      var sessionOk = { 'round.presence': 1, 'round_presence': 1, 'health_check_all': 1, 'exercise_all': 1 };
+      if (!errors.session_row && String(row.session_row) === 'true' && !sessionOk[row.type_key]) errors.session_row = 'One line for the round is only for Present, Health check: all dogs, and Exercise and play: all dogs.';
+      if (errors.type_key || !row.type_key) return;
+      var types = store_read_('BLD-check_type.csv', false);
+      var live = checkTypeInForce_(types && types.records, row.type_key, row.from_date || '9999-12-31');
+      if (!live) { errors.type_key = 'No check with that name is in force on that date.'; return; }
+      var ban = checkPrintBan_(live);
+      if (!errors.record_as && row.record_as === 'print' && ban) errors.record_as = ban;
+      var floor = checkEvery_(live.every_days), want = checkEvery_(row.every_days);
+      if (!errors.every_days && floor && (!want || want > floor)) errors.every_days = 'The legal minimum is every ' + floor + ' day' + (floor === 1 ? '' : 's') + '. It can be more often, not less.';
+    },
+    checkAgainst: function (clean, records, errors) {
+      if (errors.type_key || errors.from_date) return;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i].type_key === clean.type_key && (records[i].from_date || '') >= clean.from_date) {
+          errors.from_date = 'This check already has a setting from ' + records[i].from_date + '. A change must start after that date.';
+          return;
+        }
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- retention_setting
+  // How long a section's records are kept. User-set, else 6 years. Check records cannot be kept for less than 6 years.
+  retention_setting: {
+    key: 'retention_setting',
+    file: 'BLD-retention_setting.csv',
+    idPrefix: 'rtn',
+    columns: ['id', 'tenant_id', 'section', 'keep_years', 'basis', 'set_by', 'set_on', 'from_date', 'to_date'],
+    proposedColumns: ['section', 'keep_years', 'basis', 'set_by', 'set_on', 'from_date', 'to_date'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      section:    { type: 'text', required: true },
+      keep_years: { type: 'count', required: true },
+      basis:      { type: 'text' },
+      from_date:  { type: 'date', required: true },
+      to_date:    { type: 'date' }
+    },
+    dupKey: ['section', 'from_date'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_on = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.to_date && !errors.from_date && row.to_date && row.from_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+      if (!errors.section && row.section && !/^[a-z][a-z0-9_]{0,40}$/.test(row.section)) errors.section = 'Use a short name such as checks.';
+      var years = parseInt(row.keep_years, 10);
+      if (!errors.keep_years && (row.section === 'checks' || row.section === 'jobs') && !(years >= 6)) errors.keep_years = 'Check records are kept at least 6 years.';
+    },
+    checkAgainst: function (clean, records, errors) {
+      if (errors.section || errors.from_date) return;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i].section === clean.section && (records[i].from_date || '') >= clean.from_date) {
+          errors.from_date = 'This already has a period from ' + records[i].from_date + '. A change must start after that date.';
+          return;
+        }
+      }
+    }
   },
 
   // ---------------------------------------------------------------- breeding_rule
@@ -1610,6 +1723,56 @@ var RETIRED_TABLES = {
   }
 };
 
+/** dogId:not_here | dogId:concern:words | dogId:note:words. Concern and note need a few words. Returns the cleaned text. */
+function checkExceptions_(raw, errors, lookups) {
+  var parts = String(raw || '').split('|'), out = [], seen = {}, i;
+  for (i = 0; i < parts.length; i++) {
+    var bit = parts[i].trim();
+    if (!bit) continue;
+    var bits = bit.split(':'), id = bits[0].trim(), kind = String(bits[1] || '').trim(), text = bits.slice(2).join(':').trim();
+    if (!ID_RE_.test(id)) { errors.exceptions = 'Each exception starts with the dog\'s id.'; return raw; }
+    if (kind !== 'not_here' && kind !== 'concern' && kind !== 'note') { errors.exceptions = 'An exception is not here, a concern, or a note.'; return raw; }
+    if ((kind === 'concern' || kind === 'note') && !text) { errors.exceptions = 'Say briefly what the concern or note is.'; return raw; }
+    if (seen[id]) { errors.exceptions = 'A dog can only have one exception on a round.'; return raw; }
+    if (lookups && lookups.subject && !lookups.subject[id]) { errors.exceptions = 'That dog was not found.'; return raw; }
+    seen[id] = 1;
+    out.push(text ? (id + ':' + kind + ':' + text) : (id + ':' + kind));
+  }
+  return out.join('|');
+}
+
+/** The check_type row in force on a day (latest effective_from on or before it, still active). */
+function checkTypeInForce_(records, typeKey, day) {
+  var best = null;
+  (records || []).forEach(function (r) {
+    if (r.type_key !== typeKey || !r.effective_from || r.effective_from > day) return;
+    if (!best || r.effective_from >= best.effective_from) best = r;
+  });
+  if (best && String(best.active).toLowerCase() === 'false') return null;
+  return best;
+}
+
+/** Why this check cannot be print-only, or ''. Medicines, incidents, required evidence, and yearly vet, fitness or screening. */
+function checkPrintBan_(type) {
+  if (!type) return '';
+  if (String(type.evidence || '') === 'required') return 'Evidence is required, so this check cannot be print only.';
+  var blob = (String(type.type_key || '') + ' ' + String(type.label || '')).toLowerCase();
+  if (/\bmedicine\b|medicines/.test(blob) || blob.indexOf('medicine') >= 0) return 'Medicines cannot be print only.';
+  if (blob.indexOf('incident') >= 0) return 'Incidents cannot be print only.';
+  var every = parseInt(type.every_days, 10), freq = String(type.frequency || '').toLowerCase();
+  var yearly = (every >= 300) || /year|annual/.test(freq);
+  if (yearly && /vet|fitness|screen/.test(blob)) return 'A yearly vet, fitness or screening check cannot be print only.';
+  return '';
+}
+
+/** Whole days between checks. Blank = as needed (no floor). A bigger number is less often. */
+function checkEvery_(v) {
+  var s = String(v == null ? '' : v).trim();
+  if (!/^\d+$/.test(s)) return null;
+  var n = parseInt(s, 10);
+  return n > 0 ? n : null;
+}
+
 /** Resolve a table key or an exact file name to a spec. Anything else is refused. */
 function specFor_(keyOrFile) {
   var k;
@@ -1645,6 +1808,8 @@ var READABLE = {
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
   check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
   check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' },
+  check_setting:   { file: 'BLD-check_setting.csv',   vis: 'check_setting',   authorCol: 'set_by',      dateCol: 'set_at' },
+  retention_setting: { file: 'BLD-retention_setting.csv', vis: 'retention_setting', authorCol: 'set_by', dateCol: 'set_on' },
   check_field:     { file: 'BLD-check_field.csv',     vis: 'check_field',     authorCol: 'set_by',      dateCol: 'set_at' },
   check_value:     { file: 'BLD-check_value.csv',     vis: 'check_value',     authorCol: '',            dateCol: '' },
   qr_tag:          { file: 'BLD-qr_tag.csv',          vis: 'qr_tag',          authorCol: '',            dateCol: '' },

@@ -53,7 +53,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(page.locator('#main h2')).toContainText('Admin');
     await expect(page.locator('[data-adm-open]')).toHaveCount(12);
     await expect(page.locator('#main h2')).toContainText('Settings');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(12);   // Display added 17 Nov 2026 (photo dates setting)
+    await expect(page.locator('[data-adm-open]')).toHaveCount(13);   // Check settings added (photo dates setting was 12)
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
@@ -201,4 +201,15 @@ asOwner('Add staff has a Make a code button to the owner page codes section', as
   const link = page.locator('.adm-make a', { hasText: 'Make a code' });
   await expect(link).toHaveAttribute('href', /SAMPLE-fake-address\/exec\?page=approve&section=codes$/);
   await expect(page.locator('#adm-staff')).toContainText('name tag');
+});
+
+asOwner('Check settings shows the legal minimum and refuses a shorter keep period', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.locator('[data-adm-open="checks"]').click();
+  await expect(page.locator('#adm-checks')).toContainText('How long check records are kept');
+  await expect(page.locator('#adm-checks')).toContainText('Legal minimum: 6 years');
+  await page.locator('#adm-checks [data-ck-years]').fill('4');
+  await page.locator('#adm-checks [data-ck-keep]').click();
+  await expect(page.locator('#adm-checks [data-ck-msg]')).toContainText('at least 6 years');
 });

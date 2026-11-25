@@ -168,17 +168,54 @@
   }
   /* opts.rules: the owner's rule rows (optional), for times_per_day and by-age jobs. A litter target may carry born (its birth date) */
   function forTarget(types, logs, target, today, visits, opts) {
-    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], todayCount = {}, dogToday = {};
+    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], settings = (opts && opts.settings) || [], todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
+    function coveredOf(log) { return String(log.covered_ids || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean); }
+    function exceptionIds(log) { var m = {}; String(log.exceptions || '').split('|').forEach(function (p) { var id = String(p.split(':')[0] || '').trim(); if (id) m[id] = 1; }); return m; }
+    var sessionUse = {}, sessionAt = {};
+    standing(logs).forEach(function (log) {
+      if (!String(log.covered_ids || '').trim() && !String(log.exceptions || '').trim()) return;
+      var date = londonDate(log.happened_at || log.taken_at);
+      if (!date) return;
+      var slot = log.check_type_id + '|' + date + '|' + (log.area_id || ''), at = String(log.taken_at || log.happened_at || '');
+      if (!sessionAt[slot] || at >= sessionAt[slot]) { sessionAt[slot] = at; sessionUse[slot] = log.id; }
+    });
+    function settingNow(typeKey) {
+      var best = null;
+      settings.forEach(function (r) {
+        if (r.type_key !== typeKey || !r.from_date || r.from_date > today || (r.to_date && r.to_date < today)) return;
+        if (!best || r.from_date >= best.from_date) best = r;
+      });
+      return best;
+    }
+    /* How one tap is stored today. No setting, or a blank choice, keeps the check's own site_scope. */
+    function scoped(job) {
+      var s = settingNow(job.type_key), scope = s && String(s.site_scope || '').trim();
+      return scope ? Object.assign({}, job, { site_scope: scope }) : job;
+    }
     standing(logs).forEach(function (log) {
       var version = byId[log.check_type_id];
       if (!version || log.outcome === 'not_done' || log.outcome === 'note' || log.outcome === 'part_done') return;   // a note, or part done, is never a done
+      version = scoped(version);
       if (!counts(log, version, vm)) return;
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
+      var cov = coveredOf(log), exm = exceptionIds(log), slot = log.check_type_id + '|' + date + '|' + (log.area_id || '');
+      if ((cov.length || String(log.exceptions || '').trim()) && sessionUse[slot] === log.id) {
+        if (perDogSite(version) && target.dogs) {
+          var sm = dogDone[version.type_key] = dogDone[version.type_key] || {};
+          cov.forEach(function (id) { if (!exm[id] && (!sm[id] || date > sm[id])) sm[id] = date; });
+        }
+        if (target.subject_id && cov.indexOf(target.subject_id) >= 0 && !exm[target.subject_id]) {
+          mark(version.type_key, date, '');
+          includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });
+        }
+        return;   // the dogs are on the list; a blank subject_id is not its own done
+      }
+      if ((cov.length || String(log.exceptions || '').trim()) && !log.subject_id) return;   // an older session row for that day
       if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
       if (perDogSite(version) && target.dogs) {
         var m = dogDone[version.type_key] = dogDone[version.type_key] || {};
@@ -202,8 +239,14 @@
       for (var i = 0; i < dogs.length; i++) { var x = m[dogs[i].id]; if (!x) return undefined; if (!date || x < date) date = x; }
       return date ? { date: date, by: '' } : undefined;
     }
-    return jobsInForce(types, today).filter(function (j) { return appliesTo(j, target); }).map(function (j) {
-      var every = everyDays(j.every_days), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
+    function everyNow(j) {
+      var best = settingNow(j.type_key);
+      if (best && String(best.every_days || '').trim() !== '') return everyDays(best.every_days);
+      return everyDays(j.every_days);
+    }
+    return jobsInForce(types, today).filter(function (j) { return appliesTo(scoped(j), target); }).map(function (j) {
+      j = scoped(j);
+      var every = everyNow(j), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
       var times = every === 1 ? timesPerDay(rules, j.type_key, today) : 1, doneToday = todayCount[j.type_key] || 0;
       if (perDogRoom(j) && target.area_id && !target.subject_id && dogToday[j.type_key]) {

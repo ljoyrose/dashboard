@@ -79,6 +79,38 @@ test('a save with no answer is kept on the phone, says "Not sent yet", and Send 
   expect(sent[sent.length - 1].code).toBe('river-staff-441');
 });
 
+test('a validation failure with no code is not retried; one job is one notice, with Clear all and Show what is wrong @regression', async ({ page }) => {
+  let calls = 0;
+  await page.route(SINK, async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, message: 'Some details need fixing', fields: { happened_at: 'That is more than 7 days ago.' } }) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await page.evaluate((url) => { window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' }); }, SINK);
+  await page.evaluate(() => Promise.all([
+    sinkSend({ table: 'check_log', action: 'add_site', fields: { check_type_id: 'exercise_all-1', outcome: 'ok' } }),
+    sinkSend({ table: 'check_log', action: 'add_site', fields: { check_type_id: 'exercise_all-1', outcome: 'ok' } })
+  ]));
+  const bar = page.locator('#hub-outbox');
+  await expect(bar.locator('[data-outbox-refused]')).toHaveCount(1);
+  await expect(bar.locator('[data-outbox-refused]')).toContainText('exercise_all-1');
+  await expect(bar.locator('[data-outbox-refused]')).toContainText('2 times');
+  await expect(bar.locator('[data-outbox-refused]')).toContainText('happened at');
+  await expect(bar.locator('[data-outbox-refused]')).not.toContainText('Enter it again');
+  await expect(bar.getByRole('button', { name: 'Clear all' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: /Show what.s wrong/ })).toBeVisible();
+  await bar.getByRole('button', { name: /Show what.s wrong/ }).click();
+  await expect(bar.locator('[data-outbox-detail]')).toContainText('more than 7 days ago');
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+  const seen = calls;
+  await page.waitForTimeout(1500);
+  expect(calls).toBe(seen);
+  await bar.getByRole('button', { name: 'Clear all' }).click();
+  await expect(bar).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
+});
+
 test('a refusal (a check failed) is not kept: it is listed as Not saved with the reason, and OK clears it', async ({ page, guard }) => {
   rooms(guard.world);
   await page.route(SINK, async (route) => {
@@ -138,6 +170,40 @@ test('a script with no list save yet: the list is answered "Unknown action", not
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
   await expect(page.locator('#hub-outbox')).toBeHidden();
+});
+
+test('Send now sends the kept round taps as one list, not one at a time @regression', async ({ page }) => {
+  const sent = [];
+  const urls = [];
+  page.on('request', (r) => { if (r.method() === 'POST') urls.push(r.url()); });
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    sent.push(body);
+    const out = body.action === 'add_many'
+      ? { ok: true, result: { status: 'many', items: (body.items || []).map((it) => ({ request_id: it.request_id, ok: true, result: { status: 'saved', id: 'clg-x' } })) } }
+      : { ok: true, result: { status: 'saved', id: 'clg-one' } };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await page.evaluate((url) => {
+    window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' });
+    const items = ['a', 'b', 'c'].map((k) => ({
+      id: 'cd-kept-' + k + '00001',
+      at: new Date().toISOString(),
+      body: { v: 1, request_id: 'cd-kept-' + k + '00001', table: 'check_log', action: 'add', fields: { check_type_id: 'cty-' + k, subject_id: 'sub-' + k, outcome: 'recorded' } }
+    }));
+    localStorage.setItem('cdhub.outbox', JSON.stringify(items));
+    hubStopSending();
+    hubBoxDraw();
+  }, SINK);
+  const bar = page.locator('#hub-outbox');
+  await expect(bar.locator('[data-outbox-waiting="3"]')).toContainText('not sent yet');
+  await bar.locator('[data-outbox-send]').click();
+  await expect(bar).toBeHidden();
+  expect(sent.map((b) => b.action), urls.join('\n')).toEqual(['add_many']);
+  expect(sent[0].items.map((it) => it.fields.check_type_id).sort()).toEqual(['cty-a', 'cty-b', 'cty-c']);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
 });
 
 test('a list save keeps each item\'s form answers', async ({ page }) => {
