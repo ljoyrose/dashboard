@@ -358,15 +358,48 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(line.locator('[data-saved="good"]')).toContainText(/^Saved \d\d:\d\d$/);
     await here.click();   // a second tap on the saved button sends nothing
     await page.waitForTimeout(200); expect(bodies.length).toBe(1);
-    await page.evaluate(() => go('round', false));   // after a redraw (or reload) the saved row still shows pressed, with its tick
+    await not.click();   // already saved today: the other button does not write another row
+    await page.waitForTimeout(200); expect(bodies.length).toBe(1);
+    await expect(line).toContainText('Done today');
+    await page.evaluate(() => go('round', false));   // after a redraw the saved row still shows pressed, and says done today
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
     await expect(line.locator('[data-saved="good"]')).toHaveCount(1);
+    await page.locator(`[data-pcorrect="${sid}"][data-area="${area}"]`).click();
     fail = true;
     await not.click();
     await expect.poll(() => bodies.length).toBe(2);
     await expect(line).toContainText('Not saved');
     await expect(not).toHaveAttribute('aria-pressed', 'false');
     await expect(page.locator(`button[data-here="${sid}"][data-area="${area}"]`)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('Present already saved today is not written again on a later round @regression', async ({ page, guard }) => {
+    await open(page, guard);
+    const bodies = await saves(page);
+    await page.evaluate(() => {
+      T['BLD-check_type.csv'] = (T['BLD-check_type.csv'] || []).concat([{ id: 'cty-round_presence-1', type_key: 'round_presence', label: 'Present', target: 'dog', active: 'true', effective_from: '2026-01-01', source: 'Pretend' }]);
+      go('round');
+    });
+    const here = page.locator('button[data-here]').first();
+    const sid = await here.getAttribute('data-here'), area = await here.getAttribute('data-area');
+    await page.evaluate(({ sid, area }) => {
+      var date = todayISO();
+      (T['BLD-check_log.csv'] || (T['BLD-check_log.csv'] = [])).push({ id: 'clg-am', check_type_id: 'cty-round_presence-1', area_id: area, subject_id: sid, item: 'present', outcome: 'recorded', happened_at: date + 'T08:00:00Z', taken_at: date + 'T08:00:00Z' });
+      go('round', false);
+    }, { sid, area });
+    const line = page.locator(`[data-hsave="${area}|${sid}"]`);
+    await expect(line).toContainText('Done today');
+    await here.click();
+    await page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`).click();
+    await page.waitForTimeout(200);
+    expect(bodies).toEqual([]);
+    await page.locator(`[data-pcorrect="${sid}"][data-area="${area}"]`).click();
+    await page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`).click();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0].action).toBe('add_session');
+    expect(bodies[0].fields).toMatchObject({ check_type_id: 'cty-round_presence-1', outcome: 'recorded', corrects_id: 'clg-am' });
+    expect(bodies[0].fields.dog_ids).toContain(sid);
+    expect(bodies[0].fields.exceptions).toContain(sid + ':not_here');
   });
 
   test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {

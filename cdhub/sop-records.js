@@ -105,8 +105,10 @@
     return '1';
   }
 
-  /** Same rule as BLDDue.jobsInForce: the latest row on or before today, still on, not an item test, not the round. */
+  /** Same rule as BLDDue.jobsInForce: the latest row on or before today, still on, not an item test, not the round.
+   *  A later copy of the same check is one job, and new saves use the original. */
   function jobsInForce(types, today) {
+    if (typeof BLDDue !== 'undefined' && BLDDue.jobsInForce) return BLDDue.jobsInForce(types, today);
     var best = {};
     (types || []).forEach(function (r) {
       if (!r || !r.type_key || !r.effective_from || r.effective_from > today) return;
