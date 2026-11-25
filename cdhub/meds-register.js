@@ -2,8 +2,8 @@
  * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for Lisa, 21 Nov 2026,
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
- * shows "not recorded", never a guess. Today BLD-dispense holds no time, batch, expiry, vet instruction or who gave it,
- * so those columns say "not recorded" until the record keeps them (the form change is a separate PR).
+ * says "not recorded" only for a legally required detail: the date, the dog, the medicine, the dose and who gave it.
+ * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.
  * No licence number or staff code is in this file: the header names the kennel from the tenant row at run time.
  */
@@ -14,6 +14,8 @@
   'use strict';
 
   var NR = 'not recorded';
+  /* Only these say "not recorded" when empty. The rest stay blank. */
+  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1, given_by: 1 };
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* The register's columns, in print order: [key, heading]. */
@@ -135,8 +137,7 @@
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
       line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by);
-      line.missing = COLUMNS.map(function (c) { return c[0]; }).filter(function (k) { return k !== 'note' && k !== 'dog' && k !== 'source' && !line[k]; });
-      if (!line.dog) line.missing.unshift('dog');
+      line.missing = ['date', 'dog', 'product', 'dose', 'given_by'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
     out.sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : (a.id < b.id ? -1 : 1); });
@@ -149,8 +150,10 @@
     if (key === 'date') return line.date ? (iso ? line.date : ymd(line.date)) : NR;
     if (key === 'dog') return line.dog || (line.sid ? 'Dog not on the current list' : NR);
     if (key === 'note') return line.note || '';
-    if (key === 'time' && line.noTime) return 'time not recorded';
-    return line[key] || NR;
+    if (key === 'time' && line.noTime) return '';
+    var v = line[key] || '';
+    if (v) return v;
+    return REQUIRED[key] ? NR : '';
   }
 
   /** How many lines miss each column: {key: n}. Only columns with a gap are listed. */
@@ -175,7 +178,7 @@
    */
   function toCsv(head, lines) {
     var out = [
-      ['Medicines register', str(head.kennel) || NR],
+      ['Medicines register', str(head.kennel)],
       head.year ? ['Year', str(head.year)] : ['Month', monthWords(head.month)],
       ['Printed', str(head.printed)],
       ['Missing details', 'shown as "' + NR + '"; nothing is filled in or guessed'],
@@ -200,12 +203,13 @@
             return '<td' + (v === NR ? ' class="nr"' : '') + '>' + esc(v) + '</td>';
           }).join('') + '</tr>';
         }).join('') + '</tbody></table>'
-      : '<p>No medicine recorded in ' + esc(monthWords(ym || head.month)) + '.</p>';
+      : '<p>No records this month.</p>';
+    var kennel = str(head.kennel);
     return '<section class="meds-sheet" data-meds-month="' + esc(ym || head.month) + '">'
       + '<h1>' + esc(title) + '</h1>'
-      + '<p class="meta"><span><b>Kennel:</b> ' + esc(str(head.kennel) || NR) + '</span><span><b>Printed:</b> ' + esc(head.printed) + '</span>'
+      + '<p class="meta">' + (kennel ? '<span><b>Kennel:</b> ' + esc(kennel) + '</span>' : '<span>Set the kennel name in Settings.</span>') + '<span><b>Printed:</b> ' + esc(head.printed) + '</span>'
       + '<span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">A detail the record does not hold is shown as <i>' + NR + '</i>. Nothing is filled in or guessed.</p>'
+      + '<p class="meta">Date, dog, medicine, dose and who gave it say <i>' + NR + '</i> when the record does not hold them. Other details are left blank.</p>'
       + body
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p></section>';
@@ -232,12 +236,15 @@
       + SHEET_FIT + '</body></html>';
   }
 
-  /** A whole year: one A4 landscape sheet per month that has started, including a nil month. */
+  /** A whole year: one A4 sheet per month that has a record. A year with none is one line. */
   function toYearHtml(head, sheets) {
     var title = 'Medicines register · ' + str(head.year);
+    var kept = (sheets || []).filter(function (s) { return s && s.lines && s.lines.length; });
+    var body = kept.length ? kept.map(function (s) { return sheetHtml(head, s.lines, s.month); }).join('')
+      : sheetHtml(head, [], str(head.year));
     return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
       + '<title>' + esc(title) + '</title><meta name="robots" content="noindex,nofollow"><style>' + SHEET_CSS + '</style></head><body>'
-      + (sheets || []).map(function (s) { return sheetHtml(head, s.lines || [], s.month); }).join('')
+      + body
       + '<p class="noprint"><button type="button" onclick="window.print()">Print</button></p>'
       + SHEET_FIT + '</body></html>';
   }

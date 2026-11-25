@@ -56,8 +56,12 @@
 
   var FMT = null;
   function london(at) {
+    if (at instanceof Date && !isNaN(at.getTime())) at = at.toISOString();
     var s = str(at);
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return { date: s, time: '' };
+    /* A date and time with no zone is the clock time as written (noon stays that day). Z or an offset is UK time. */
+    var wall = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(s);
+    if (wall && !/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) return { date: wall[1], time: wall[2] + ':' + wall[3] };
     var d = new Date(s);
     if (!s || isNaN(d.getTime())) return { date: '', time: '' };
     if (!FMT) FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -151,15 +155,39 @@
   var CHECK_PRINT = 'Compliance > Yearly print. Also: Compliance > Daily records > Print / PDF (the calendars), and Compliance > Checks register > Print / PDF';
   var CHECK_CSV = 'Compliance > Yearly print > Download CSV. The Checks register Download CSV is the one-month table';
 
+  function canonKey(s) { return str(s).toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+  function baseId(id) { var m = /^(cty-.+)-\d+$/.exec(str(id)); return m ? m[1] : ''; }
+  function normLabel(s) { return str(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  /** Exercise and play, Exercise all, and the enrichment key are one check. */
+  function exerciseFamily(t) {
+    var c = canonKey(t && t.type_key), lab = normLabel(t && t.label);
+    return c === 'exerciseall' || c === 'exerciseandplay' || c === 'exerciseenrichment' || c === 'exercise' || /^exercise\b/.test(lab);
+  }
+
   function checkSources(ctx) {
     var today = str(ctx.today), out = [];
-    var rows = (ctx.types || []).filter(function (t) { return t && str(t.type_key) && str(t.id) && str(t.type_key).toLowerCase() !== 'medicine'; });
-    var groups = Due && Due.families ? Due.families(rows) : [];
-    if (!groups.length) rows.forEach(function (t) { groups.push([t]); });
-    groups.forEach(function (group) {
+    var rows = (ctx.types || []).filter(function (t) {
+      return t && str(t.type_key) && str(t.id) && str(t.type_key).toLowerCase() !== 'medicine';
+    });
+    /* Same check: shared type key, base id (cty-water_bowls-1 and -2), or label. Exercise and play and Exercise all are one check too. */
+    var parent = [], byKey = {}, byBase = {}, byLabel = {}, ex = null;
+    function find(i) { if (parent[i] == null) parent[i] = i; if (parent[i] !== i) parent[i] = find(parent[i]); return parent[i]; }
+    function unite(a, b) { a = find(a); b = find(b); if (a !== b) parent[Math.max(a, b)] = Math.min(a, b); }
+    rows.forEach(function (t, i) {
+      var k = canonKey(t.type_key), b = baseId(t.id), lab = normLabel(t.label);
+      if (k) { if (byKey[k] != null) unite(byKey[k], i); byKey[k] = find(i); }
+      if (b) { if (byBase[b] != null) unite(byBase[b], i); byBase[b] = find(i); }
+      if (lab.length > 2) { if (byLabel[lab] != null) unite(byLabel[lab], i); byLabel[lab] = find(i); }
+      if (exerciseFamily(t)) { if (ex != null) unite(ex, i); ex = find(i); }
+    });
+    var groups = {};
+    rows.forEach(function (t, i) { var g = find(i); (groups[g] = groups[g] || []).push(t); });
+    Object.keys(groups).forEach(function (g) {
+      var group = groups[g], keyRow = null;
+      group.forEach(function (r) { if (canonKey(r.type_key) === 'exerciseall') keyRow = r; });
       var main = Due && Due.mainOf ? Due.mainOf(group, today) : null;
       var t = main || group[group.length - 1];
-      var k = str(t.type_key);
+      var k = str((keyRow || t).type_key);
       var label = str(t.label);
       if (!label || /_/.test(label)) label = human(label || k);
       var layout = layoutOf(t);
@@ -231,16 +259,53 @@
     return (logs || []).filter(function (r) { return !replaced[str(r.id)]; });
   }
   function isNoteFor(r) { return str(r.outcome) === 'note' && !!str(r.note_for_id); }
+  /** The live log plus the archive, once each. A round row and a per-dog row both stay. */
+  function allLogs(ctx) {
+    var out = [], seen = {};
+    function add(list) {
+      (list || []).forEach(function (r) {
+        if (!r) return;
+        var id = str(r.id);
+        if (id && seen[id]) return;
+        if (id) seen[id] = 1;
+        out.push(r);
+      });
+    }
+    var tables = (ctx && ctx.tables) || {};
+    add(ctx && ctx.logs);
+    add(tables['BLD-check_log.csv']);
+    add(tables['BLD-check_log-Archive.csv']);
+    return out;
+  }
+  function logWhen(row) {
+    var w = london(row.happened_at);
+    if (!w.date) w = london(row.taken_at);
+    if (!w.date) w = london(row.period_start);
+    if (!w.date) w = dateOf(row);
+    return w;
+  }
+  /** Dogs a row counts for: the dog on the row, and each dog named on a round row (covered_ids). */
+  function dogsOf(row) {
+    var ids = [], skip = {};
+    str(row.exceptions).split('|').forEach(function (p) {
+      var bits = p.split(':'), id = str(bits[0]), kind = str(bits[1]).toLowerCase();
+      if (id && (kind === 'not_here' || kind === 'not_done' || kind === 'miss')) skip[id] = 1;
+    });
+    function add(id) { id = str(id); if (!id || skip[id] || ids.indexOf(id) >= 0) return; ids.push(id); }
+    add(row.subject_id);
+    str(row.covered_ids).split('|').forEach(add);
+    return ids;
+  }
   function logsFor(source, ctx) {
     var ids = {}, later = {};
     (source.typeIds || []).forEach(function (id) { ids[id] = 1; });
-    var rows = standing(ctx.logs || []).filter(function (r) { return ids[str(r.check_type_id)]; });
+    var rows = standing(allLogs(ctx)).filter(function (r) { return ids[str(r.check_type_id)]; });
     rows.forEach(function (r) { if (isNoteFor(r)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r); });
     return rows.filter(function (r) { return !isNoteFor(r); }).map(function (r) {
       var extra = (later[str(r.id)] || []).map(function (n) { return clean(n.note); }).filter(Boolean);
       var note = [clean(r.note)].concat(extra).filter(Boolean).join(' ');
-      var w = london(r.happened_at || r.taken_at);
-      return { row: r, date: w.date, time: str(r.time_given).toLowerCase() === 'false' ? '' : w.time, note: note, outcome: str(r.outcome).toLowerCase() };
+      var w = logWhen(r);
+      return { row: r, dogs: dogsOf(r), date: w.date, time: str(r.time_given).toLowerCase() === 'false' ? '' : w.time, note: note, outcome: str(r.outcome).toLowerCase() };
     });
   }
 
@@ -254,8 +319,32 @@
     return 'tick';
   }
 
-  function expectedDog(type, dog) {
+  function ageMonths(dob, today) {
+    dob = str(dob).slice(0, 10); today = str(today).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return null;
+    var m = (Number(today.slice(0, 4)) - Number(dob.slice(0, 4))) * 12 + (Number(today.slice(5, 7)) - Number(dob.slice(5, 7)));
+    if (Number(today.slice(8, 10)) < Number(dob.slice(8, 10))) m--;
+    return m < 0 ? null : m;
+  }
+  /** A litter puppy (kind Pup, still on its birth litter, or the generated "Dam x Sire 2026 - Black male 1" name). */
+  function litterPup(dog, today) {
+    if (!dog) return false;
+    if (dog.puppy === true) return true;
+    if (/^pup/i.test(str(dog.kind))) return true;
+    var name = str(dog.name);
+    if (/\bx\b/i.test(name) && /\b(male|female)\b/i.test(name) && /\b20\d{2}\b/.test(name)) return true;
+    if (dog.birth_litter_id || dog.birthLitter) {
+      var age = ageMonths(dog.dob, today);
+      if (age == null || age < 6) return true;
+    }
+    return false;
+  }
+  function checkWantsPups(type) {
+    return /pup/i.test(str(type && type.type_key) + ' ' + str(type && type.label) + ' ' + str(type && type.only_groups));
+  }
+  function expectedDog(type, dog, today) {
     if (!dog.onSite) return false;
+    if (litterPup(dog, today) && !checkWantsPups(type)) return false;
     var never = listOf(type.not_in_areas);
     if (dog.area_id && never.indexOf(dog.area_id) >= 0) return false;
     var only = listOf(type.only_in_areas);
@@ -274,9 +363,18 @@
       byId[id] = { id: id, name: name, expected: !!expected, dob: dob || '' };
       order.push(id);
     }
+    var today = str(ctx.today).slice(0, 10), pupsOk = checkWantsPups(type);
+    function dogById(id) { var list = ctx.dogs || [], i; for (i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
     if (axis === 'dogs') {
-      (ctx.dogs || []).forEach(function (dog) { if (expectedDog(type, dog)) add(dog.id, dog.name || dogName(ctx, dog.id), true, dog.dob); });
-      mine.forEach(function (l) { var id = str(l.row.subject_id); if (id) add(id, dogName(ctx, id), false, ''); });
+      (ctx.dogs || []).forEach(function (dog) { if (expectedDog(type, dog, today)) add(dog.id, dog.name || dogName(ctx, dog.id), true, dog.dob); });
+      mine.forEach(function (l) {
+        (l.dogs || []).forEach(function (id) {
+          var dog = dogById(id);
+          if (dog && litterPup(dog, today) && !pupsOk) return;
+          if (!dog && /\bx\b/i.test(dogName(ctx, id)) && /\b(male|female)\b/i.test(dogName(ctx, id)) && !pupsOk) return;
+          add(id, dogName(ctx, id), false, dog ? dog.dob : '');
+        });
+      });
     } else if (axis === 'areas') {
       (ctx.areas || []).forEach(function (a) { if (a.onSite) add(a.id, a.name || areaName(ctx, a.id), true, ''); });
       mine.forEach(function (l) { var id = str(l.row.area_id); if (id) add(id, areaName(ctx, id), false, ''); });
@@ -287,13 +385,13 @@
       add('site', 'Whole site', true, '');
     }
     order.sort(function (a, b) { return byId[a].name < byId[b].name ? -1 : byId[a].name > byId[b].name ? 1 : 0; });
-    var from = str(type.effective_from), today = str(ctx.today), marks = {}, notes = [];
+    var from = str(type.effective_from), marks = {}, notes = [];
     order.forEach(function (id) {
       marks[id] = {};
       days.forEach(function (iso) {
         var hit = mine.filter(function (l) {
           if (l.date !== iso) return false;
-          if (axis === 'dogs') return str(l.row.subject_id) === id;
+          if (axis === 'dogs') return (l.dogs || []).indexOf(id) >= 0;
           if (axis === 'areas') return str(l.row.area_id) === id;
           if (axis === 'items') return str(l.row.item_id) === id;
           return true;
@@ -483,8 +581,35 @@
 
   /* ---- pages ----------------------------------------------------------- */
 
+  /** The kennel name from the page, a Settings row, or the tenant row. A licence number is never used. */
+  function kennelName(ctx) {
+    ctx = ctx || {};
+    function ok(v) { v = str(v); if (!v || /licen[cs]e/i.test(v)) return ''; return v; }
+    var direct = ok(ctx.kennel);
+    if (direct) return direct;
+    var tables = ctx.tables || {}, today = str(ctx.today).slice(0, 10);
+    var want = { 'kennel.name': 1, 'kennel_name': 1, 'business.name': 1, 'print.kennel': 1 };
+    var best = null;
+    (tables['BLD-breeding_rule.csv'] || ctx.rules || []).forEach(function (r) {
+      var k = str(r.rule_key);
+      if (!want[k] || /licen[cs]e/i.test(k)) return;
+      var v = ok(r.value);
+      if (!v) return;
+      var from = str(r.effective_from);
+      if (from && today && from > today) return;
+      if (str(r.to_date) && today && str(r.to_date) < today) return;
+      if (!best || from >= str(best.effective_from)) best = r;
+    });
+    if (best) return ok(best.value);
+    var t = (tables['BLD-tenant.csv'] || [])[0] || {};
+    var cols = ['trading_name', 'display_name', 'legal_name', 'kennel_name', 'business_name', 'name'];
+    for (var i = 0; i < cols.length; i++) { var v = ok(t[cols[i]]); if (v) return v; }
+    return '';
+  }
   function head(kennel, title, sub) {
-    return '<div class="yp-head"><b>' + e(kennel || 'Kennel not recorded') + ' \u00b7 ' + e(title) + '</b><span>' + e(sub) + '</span></div>';
+    var name = str(kennel);
+    var left = name ? name + ' \u00b7 ' + title : title;
+    return '<div class="yp-head" data-kennel="' + (name ? 'set' : 'missing') + '"><b>' + e(left) + '</b><span>' + e(sub) + '</span></div>';
   }
   function foot(printed) {
     return '<div class="yp-foot"><span>Printed ' + e(printed || '') + '</span><span>Checked by ______________________ &nbsp; Signed ______________________</span></div>';
@@ -537,7 +662,8 @@
   function listPage(source, ym, lines, ctx, cols, cell) {
     var title = monthWords(ym);
     var shown = cell ? lines : lines.map(showLine);
-    var body = lines.length ? listHtml(cols, shown, cell) : '<p>No records in ' + e(title) + '.</p>';
+    var empty = source.id === 'medicines' ? 'No records this month.' : 'No records in ' + title + '.';
+    var body = lines.length ? listHtml(cols, shown, cell) : '<p>' + e(empty) + '</p>';
     var n = '<p class="yp-tot" data-yp-totals>Entries <b>' + lines.length + '</b></p>';
     return pageOpen(source, ym, 'list') + head(ctx.kennel, source.label, title) + body + n + foot(ctx.printed) + '</section>';
   }
@@ -547,9 +673,59 @@
    * ctx: kennel, printed, today, types, logs, tables, dogs, areas, items, dogName, areaName, itemName, litterName,
    *      meds: function(ym) -> {columns, lines, cell} | null
    */
+  /** One month of room temperatures: each room, each day, the lowest and the highest. One sheet, not one row per reading. */
+  function tempMonth(ym, ctx) {
+    var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1, n = daysIn(y, m), days = [];
+    for (var d = 1; d <= n; d++) days.push(isoDay(y, m, d));
+    var byArea = {}, order = [];
+    function room(id) {
+      if (!id) return null;
+      if (!byArea[id]) { byArea[id] = { id: id, name: areaName(ctx, id) || id, days: {} }; order.push(id); }
+      return byArea[id];
+    }
+    (ctx.areas || []).forEach(function (a) { if (a.onSite) room(a.id); });
+    rowsOf(ctx, 'BLD-area_reading.csv').forEach(function (r) {
+      if (str(r.linked_from)) return;
+      var day = london(r.period_start || r.taken_at || r.happened_at).date;
+      if (!day || day.slice(0, 7) !== ym) return;
+      var rec = room(str(r.area_id));
+      if (!rec) return;
+      var cell = rec.days[day] || (rec.days[day] = { min: null, max: null });
+      var lo = parseFloat(r.min_c), hi = parseFloat(r.max_c);
+      if (!isNaN(lo) && (cell.min == null || lo < cell.min)) cell.min = lo;
+      if (!isNaN(hi) && (cell.max == null || hi > cell.max)) cell.max = hi;
+    });
+    order.sort(function (a, b) { return byArea[a].name < byArea[b].name ? -1 : byArea[a].name > byArea[b].name ? 1 : 0; });
+    var any = false;
+    order.forEach(function (id) { if (Object.keys(byArea[id].days).length) any = true; });
+    return { days: days, rooms: order.map(function (id) { return byArea[id]; }), any: any };
+  }
+  function tempNum(n) { return n == null ? '' : (Math.round(n * 10) / 10).toFixed(1); }
+  function tempHtml(g) {
+    if (!g.any) return '<p>No readings this month.</p>';
+    var colW = (PAGE_W - 36) / Math.max(1, g.days.length);
+    var rowH = (BODY_H - 8) / Math.max(1, g.rooms.length + 1);
+    var fs = Math.max(4.5, Math.min(8, colW * 3.78 / 4.2, rowH * 3.78 / 1.3));
+    var h = '<p class="yp-key">Each day is that room\u2019s lowest and highest \u00b0C.</p>';
+    h += '<table class="yp-t" data-temp-grid style="--fs:' + fs.toFixed(2) + 'px"><thead><tr><th>Room</th>';
+    g.days.forEach(function (iso) { h += '<th>' + Number(iso.slice(8)) + '</th>'; });
+    h += '</tr></thead><tbody>';
+    g.rooms.forEach(function (room) {
+      h += '<tr><th>' + e(room.name) + '</th>';
+      g.days.forEach(function (iso) {
+        var c = room.days[iso];
+        var text = c && (c.min != null || c.max != null) ? tempNum(c.min) + '\u2013' + tempNum(c.max) : '';
+        h += '<td data-day="' + e(iso) + '">' + e(text) + '</td>';
+      });
+      h += '</tr>';
+    });
+    return h + '</tbody></table>';
+  }
+
   function build(choice, ctx) {
     ctx = ctx || {}; choice = choice || {};
     ctx.today = str(choice.today || ctx.today);
+    ctx.kennel = kennelName(ctx);
     var cat = catalogue(ctx), want = {}, pages = [], html = '';
     (choice.ids || []).forEach(function (id) { want[id] = 1; });
     var sources = cat.filter(function (s) { return want[s.id]; });
@@ -559,6 +735,21 @@
       return { html: html, pages: [{ id: '', month: '', layout: 'empty', html: html }] };
     }
     sources.forEach(function (source) {
+      if (source.id === 'area_reading') {
+        months.forEach(function (mo) {
+          var g = tempMonth(mo.ym, ctx);
+          if (choice.period === 'year' && !g.any) return;
+          var one = pageOpen(source, mo.ym, 'temps') + head(ctx.kennel, source.label, monthWords(mo.ym)) + tempHtml(g) + foot(ctx.printed) + '</section>';
+          pages.push({ id: source.id, month: mo.ym, layout: 'temps', html: one });
+          html += one;
+        });
+        if (!pages.some(function (p) { return p.id === source.id; })) {
+          var empty = pageOpen(source, '', 'temps') + head(ctx.kennel, source.label, String(choice.year || '')) + '<p>No readings this month.</p>' + foot(ctx.printed) + '</section>';
+          pages.push({ id: source.id, month: '', layout: 'temps', html: empty });
+          html += empty;
+        }
+        return;
+      }
       if (source.kind === 'check' && source.layout !== 'list') {
         months.forEach(function (mo) {
           var g = gridMonth(source, mo.ym, ctx);
@@ -569,14 +760,22 @@
         return;
       }
       if (source.id === 'medicines') {
+        var medsPages = 0;
         months.forEach(function (mo) {
           var pack = ctx.meds ? ctx.meds(mo.ym) : null;
           var cols = pack && pack.columns ? pack.columns : LIST5;
           var lines = pack && pack.lines ? pack.lines : [];
+          if (choice.period === 'year' && !lines.length) return;
           var one = listPage(source, mo.ym, lines, ctx, cols, pack && pack.cell);
           pages.push({ id: source.id, month: mo.ym, layout: 'meds', html: one });
           html += one;
+          medsPages++;
         });
+        if (!medsPages) {
+          var none = pageOpen(source, '', 'meds') + head(ctx.kennel, source.label, String(choice.year || '')) + '<p>No records this month.</p>' + foot(ctx.printed) + '</section>';
+          pages.push({ id: source.id, month: '', layout: 'meds', html: none });
+          html += none;
+        }
         return;
       }
       var all = source.kind === 'check' ? logsFor(source, ctx).map(function (l) { return checkLine(l, ctx); }) : tableLines(source, ctx).filter(function (l) { return !l._skip; });
@@ -655,7 +854,7 @@
     sources.forEach(function (source) {
       var got = linesOf(source, ctx, choice);
       var head = [
-        [source.label, str(ctx.kennel) || 'Kennel not recorded'],
+        [source.label, kennelName(ctx)],
         ['Period', choice.period === 'year' ? String(choice.year) : monthWords(period)],
         ['Printed', str(ctx.printed)],
         ['Missing details', 'left blank; nothing is filled in or guessed']
@@ -716,9 +915,10 @@
         h += '<label><input type="checkbox" name="ypType" value="' + e(s.id) + '"' + (preset[s.id] ? ' checked' : '') + '> ' + e(s.label) + '</label> ';
       });
       h += '</div>';
-      if (g === 'Temperatures') h += '<p class="mut">The room-by-room temperature grid stays on <a href="./history.html#report">Temperature history</a>.</p>';
+      if (g === 'Temperatures') h += '<p class="mut">Room temperatures print as one sheet a month: each room\u2019s lowest and highest each day, the same idea as Temperature history.</p>';
       h += '</section>';
     });
+    if (!kennelName(ctx)) h += '<p class="mut" data-kennel-hint>The kennel name is not set. Add it on the tenant row, or a Settings row named kennel.name. Printed pages leave it off.</p>';
     return h;
   }
 

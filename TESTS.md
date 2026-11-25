@@ -415,6 +415,13 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | #582's merge left the published staff copy of bld-save.js on a 5-hour outbox while the client copy was 23 hours | "the two bld-save.js copies are the same file @regression" (tests/mocked/bld-save-copies.spec.js; the write-path suite runs the same check in cdhub-write/tests/bld-save-copies.test.js) |
 | 25 Nov 2026 | Water bowls washed only showed the original check type, so ticks saved on the later copy were missing from the calendar | "copied water bowls ticks show on the calendar and new saves use the original @regression" (tests/mocked/cdhub-job-calendar.spec.js) |
 | 25 Nov 2026 | Present wrote a new row on every later round the same day, including a thermometer round | "Present already saved today is not written again on a later round @regression" (tests/mocked/cdhub-dog-card-1112.spec.js) |
+| 25 Nov 2026 | Exercise and play yearly grid left January to October blank and ignored round rows | "exercise rows on another type and round rows still fill the year grid @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
+| 25 Nov 2026 | The exercise grid listed litter puppies such as "Marble x Sammy 2026 - Black male 1" | "a litter puppy is left off the exercise grid @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
+| 25 Nov 2026 | Every yearly print page said "Kennel not recorded" | "the yearly print header uses the kennel name and never says Kennel not recorded @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
+| 25 Nov 2026 | Room temperatures in the yearly print were a long list, so one month became many pages | "room temperatures print as one daily min and max sheet a month @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
+| 25 Nov 2026 | Empty medicine months printed as blank pages, and optional fields said "not recorded" | "an empty medicines month says no records and optional fields stay blank @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
+| 25 Nov 2026 | SOP Print records printed the SOP list straight away and froze the page | "SOP Print records opens the print view and does not print the list @regression" (tests/mocked/cdhub-sop-records.spec.js) |
+| 25 Nov 2026 | The yearly print page wrote errors to the console | "the yearly print page loads with no console errors @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
