@@ -408,7 +408,8 @@
       h('p', { class: 'foot', text: footer() }),
       h('small', { class: 'tag', text: tag })]);
   }
-  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); fn(); } }); }
+  function beginPrint() { makeGen++; sheet.textContent = ''; }
+  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); beginPrint(); fn(); } }); }
   /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
   function privateQr() {
     var url = '', timer = 0; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
@@ -470,7 +471,7 @@
   (function () {
     screen.insertBefore(asOf, msg);
     function roomItems() { return T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }); }
-    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet per' + per; make('site', [{ id: 'site', label: 'Today' }]); }));
+    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet per' + per; make('site', [{ id: 'site', label: 'Whole site' }]); }));
     opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; pickThen('area', roomItems(), roomCard); }));
     opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; pickThen('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
