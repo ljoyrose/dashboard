@@ -211,8 +211,7 @@
   }
   function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
 
-  var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
-  var ctx = { save: save, data: data, refresh: refresh, noteMove: noteMove, refreshOccupancy: refreshOccupancy, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
+  var ctx = { save: save, data: data, refresh: refresh, noteMove: noteMove, refreshOccupancy: refreshOccupancy, readOptional: readOptional, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
   /** "Welcome <name> · <Role>" from the name and role held against this phone's code (shown once a read has told us). */
   function showMe() {
