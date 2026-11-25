@@ -37,7 +37,6 @@
  * are not recorded. Corrections go through the screen.
  */
 var BLD = {
-  VERSION: '1.2.0',
   VERSION: '1.3.0',
   TZ: 'Europe/London',
   PROP: {
@@ -77,7 +76,7 @@ var BLD = {
     RETENTION_DEFAULT_YEARS: 6,
     REQUEST_CACHE_SEC: 86400,   // 24 h: the phone may resend for up to 23 h (OV13, 24 Nov 2026)
     LOCK_WAIT_MS: 20000,
-    MAX_BATCH_ITEMS: 20,    // a list save (add_many, 20 Nov 2026): one round's readings, sent in parts of at most 20
+    MAX_BATCH_ITEMS: 200,   // a list save (add_many): a round's readings (the hub sends 20 at a time) or a Daily records import (22 Nov 2026)
     TEMP_MIN: -30,
     TEMP_MAX: 60,
     READ_MAX_ROWS: 3000,    // a read never returns more rows than this
