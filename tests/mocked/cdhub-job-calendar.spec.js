@@ -102,9 +102,38 @@ test('Import: a chosen file is checked row by row; Import saves only the ready r
   if (d2.slice(0, 7) === today.slice(0, 7)) await expect(page.locator(`[data-jcal="food_bowls"] [data-day="${d2}"]`)).toHaveClass(/\bdone\b/);
 });
 
-// Lisa 23 Nov 2026 (phone screenshot): "Make it clearer between part done (orange) and missed (red)". Missed is a red
+// Lisa 22 Nov 2026: "add a cancel function to the import". Cancel clears the checked file (nothing saved); during an
+// import it reads Stop, and rows not yet sent are not sent.
+test('Import: Cancel clears the file with nothing saved; Stop during an import leaves the unsent rows unsent', async ({ page, guard }) => {
+  const day = (n) => london(new Date(Date.now() - n * 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, []));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  await page.locator('[data-jcal-import]').click();
+  const file = `Csv,,,\ndate,job,outcome,note\n${day(2)},food_bowls,done,\n${day(3)},food_bowls,done,\n${day(4)},food_bowls,done,\n`;
+  await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
+  await expect(page.locator('[data-jcal-imp-count]')).toContainText('3 of 3 rows ready');   // the title line is not a row
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'x' } }; }; });
+  await page.locator('[data-jcal-import-cancel]').click();
+  await expect(page.locator('[data-jcal-cancelled]')).toContainText('Nothing was saved');
+  await expect(page.locator('[data-jcal-import-go]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__sent.length)).toBe(0);
+  // choose the file again; this time Import, then Stop after the first row
+  await page.locator('[data-jcal-file]').setInputFiles({ name: 'records.csv', mimeType: 'text/csv', buffer: Buffer.from(file) });
+  await expect(page.locator('[data-jcal-imp-count]')).toContainText('3 of 3 rows ready');
+  await page.evaluate(() => { window.__sent = []; let n = 0; window.sinkSend = (b) => { window.__sent.push(b); n++; return new Promise((r) => { window.__release = () => r({ ok: true, result: { status: 'saved', id: 's' + n } }); }); }; });
+  await page.locator('[data-jcal-import-go]').click();
+  await expect(page.locator('[data-jcal-import-cancel]')).toHaveText('Stop');
+  await page.locator('[data-jcal-import-cancel]').click();
+  await page.evaluate(() => window.__release());
+  await expect(page.locator('[data-jcal-imp-done]')).toHaveText('Imported 1 of 3. Stopped: the other 2 were not sent.');
+  expect(await page.evaluate(() => window.__sent.length)).toBe(1);
+});
+// Lisa 23 Nov 2026 (phone screenshot: "Make it clearer between part done (orange) and missed (red)". Missed is a red
 // frame with a small cross, part done an orange frame on a light orange fill; the key shows all three the same way.
-test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark', async ({ page, guard }) => {
+test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark @regression', async ({ page, guard }) => {
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
   addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [`l1,t,j1,,,,,ok,,,${london(new Date(Date.now() - 3 * 86400000))}T09:00:00Z,Pretend Staff,,,site_tap`]));
   await HUBS.cdhub.open(page, guard);
@@ -133,4 +162,7 @@ test('daily records: done, part done and missed look different (not by colour al
   }
   // a real missed day in the month carries the class (and so the cross)
   await expect(page.locator('#jobCals [data-jcal="food_bowls"] .jd.missed').first()).toBeVisible();
+  // done days are green, not the grey button fill (Lisa: the ticks were grey)
+  const doneBg = await page.locator('#jobCals button.jd.done').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(doneBg.replace(/\s/g, '')).toMatch(/81,173,87/);
 });

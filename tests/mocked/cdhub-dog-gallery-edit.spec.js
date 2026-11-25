@@ -60,7 +60,7 @@ test('Remove takes a bad photo out of the gallery at once (to Ended); Put back b
   await g2.locator('details[data-k="ended"] > summary').click();
   await g2.locator('details[data-k="ended"] [data-gal-back="fil-2"]').click();
   await expect.poll(() => sent.length).toBe(2);
-  expect(sent[1]).toMatchObject({ action: 'link_add', fields: { from_table: 'subjects', from_id: 'sub-g1', role: 'gallery', to_table: 'files', to_id: 'fil-2', from_date: today } });
+  expect(sent[1]).toMatchObject({ action: 'link_add', fields: { from_table: 'subject', from_id: 'sub-g1', role: 'gallery', to_table: 'files', to_id: 'fil-2', from_date: today } });
   await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] > summary')).toHaveText('Photos (3)');
 });
 

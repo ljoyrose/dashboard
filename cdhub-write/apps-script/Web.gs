@@ -57,8 +57,6 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'grant_extend') return jsonOut_({ ok: true, result: sinkVisitExtend_(req) });
     if (req && typeof req === 'object' && req.action === 'delegation_give') return jsonOut_({ ok: true, result: sinkDelegationGive_(req) });
     if (req && typeof req === 'object' && req.action === 'delegation_end') return jsonOut_({ ok: true, result: sinkDelegationEnd_(req) });
-    try { applyWaitingOccupancyMoves_(); } catch (ex) { Logger.log('applyWaitingOccupancyMoves_: ' + (ex && ex.message)); }
-    return jsonOut_({ ok: true, result: sinkHandle_(req) });
     if (req && typeof req === 'object' && req.action === 'file_add') return jsonOut_({ ok: true, result: sinkFileAdd_(req) });   // one file store (14 Nov 2026), OFF until TABLE_ON_files
     // record-to-record links (14 Nov 2026, Lisa decision C; OFF until TABLE_ON_links is true)
     if (req && typeof req === 'object' && req.action === 'link_add') return jsonOut_({ ok: true, result: sinkLinkAdd_(req) });
@@ -157,7 +155,7 @@ function statusBody_() {
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });
-  return { ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES) };
+  return { ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES), timeZone: tzOn_() };   // timeZone: not secret; phones show times in it. doGet wraps this once.
 }
 
 /**
