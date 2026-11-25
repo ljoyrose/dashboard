@@ -39,8 +39,8 @@
     add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
        current litter, a Problem-button job (target optional). Its last record is still shown. */
-    var keyOf = {}, lastOf = {};
-    v.types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+    var keyOf = Due.familyKeyOf ? Due.familyKeyOf(v.types, v.today) : {}, lastOf = {};
+    v.types.forEach(function (t) { if (!keyOf[t.id]) keyOf[t.id] = t.type_key; });
     v.logs.forEach(function (l) {
       var k = keyOf[l.check_type_id], d = Due.londonDate(l.happened_at || l.taken_at);
       if (!k || !d || d > v.today || l.outcome === 'note' || l.outcome === 'not_done' || l.outcome === 'part_done') return;

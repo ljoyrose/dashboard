@@ -12,8 +12,10 @@
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
 
-  /* the stop-gap until the owner has calendar rows (Lisa 17 Nov 2026: health checks, bowls washed, site cleaned) */
-  var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean'];
+  /* the stop-gap until the owner has calendar rows (Lisa 17 Nov 2026: health checks, bowls washed, site cleaned).
+     Bedding and Toys stay on the list even when the owner has chosen the other cards, unless a row turns them off. */
+  var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean', 'bedding', 'toys'];
+  var ALWAYS = ['bedding', 'toys'];
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var SKIP = { not_done: 1, note: 1, part_done: 1 };
 
@@ -27,23 +29,41 @@
       if (m && inForce(r, v.today) && (!best[m[1]] || r.effective_from > best[m[1]].effective_from)) best[m[1]] = r;
     });
     var keys = Object.keys(best);
-    if (!keys.length) return STARTER.filter(function (k) { return !!typeOf(v, k); });
-    return keys.map(function (k) { return { k: k, n: parseInt(best[k].value, 10) }; })
-      .filter(function (x) { return x.n > 0 && typeOf(v, x.k); })
-      .sort(function (a, b) { return a.n - b.n; }).map(function (x) { return x.k; });
+    var on = !keys.length ? STARTER.filter(function (k) { return !!typeOf(v, k); })
+      : keys.map(function (k) { return { k: k, n: parseInt(best[k].value, 10) }; })
+        .filter(function (x) { return x.n > 0 && typeOf(v, x.k); })
+        .sort(function (a, b) { return a.n - b.n; }).map(function (x) { return x.k; });
+    ALWAYS.forEach(function (k) {
+      if (on.indexOf(k) >= 0) return;
+      if (best[k] && !(parseInt(best[k].value, 10) > 0)) return;   // the owner turned this card off
+      if (typeOf(v, k)) on.push(k);
+    });
+    return on;
   }
 
-  /** The job row in force today for a type_key (the newest effective_from on or before today, switched on). */
+  /** Every check_type row of this job, including a later copy with another type_key or a -2 id. */
+  function familyFor(v, key) {
+    var hit = null;
+    (Due.families ? Due.families(v.types || []) : []).forEach(function (g) {
+      if (g.some(function (r) { return r.type_key === key || Due.canonKey(r.type_key) === Due.canonKey(key); })) hit = g;
+    });
+    return hit || [];
+  }
+
+  /** The row a new save uses: the original of the family, not a later copy. One type_key still uses its newest row. */
   function typeOf(v, key) {
+    var main = Due.mainOf ? Due.mainOf(familyFor(v, key), v.today) : null;
+    if (main) return String(main.active).toLowerCase() !== 'false' ? main : null;
     var best = null;
     (v.types || []).forEach(function (r) { if (r.type_key === key && r.effective_from && r.effective_from <= v.today && (!best || r.effective_from > best.effective_from)) best = r; });
     return best && String(best.active).toLowerCase() !== 'false' ? best : null;
   }
 
-  /** London day -> {dogs:{id:1}, n, lines:[{by, at}]} for every done record of this job (all its versions). */
+  /** London day -> {dogs:{id:1}, n, lines:[{by, at}]} for every done record of this job (all its versions and copies). */
   function days(v, key) {
     var ids = {}, replaced = {}, out = {};
-    (v.types || []).forEach(function (r) { if (r.type_key === key) ids[r.id] = 1; });
+    var group = familyFor(v, key);
+    (group.length ? group : (v.types || []).filter(function (r) { return r.type_key === key; })).forEach(function (r) { ids[r.id] = 1; });
     (v.logs || []).forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = 1; });
     (v.logs || []).forEach(function (l) {
       if (!ids[l.check_type_id] || replaced[l.id] || SKIP[l.outcome] || String(l.how_recorded || '') === 'owner_note') return;
@@ -204,7 +224,12 @@
      "imported" (how_recorded import), so the record always says it was entered afterwards from another source. */
   function siteTypes(v) {
     var by = {};
-    (v.types || []).forEach(function (r) { if (r.target === 'none' && r.effective_from <= v.today && String(r.active).toLowerCase() !== 'false' && (!by[r.type_key] || r.effective_from > by[r.type_key].effective_from)) by[r.type_key] = r; });
+    (Due.families ? Due.families(v.types || []) : []).forEach(function (g) {
+      var site = g.filter(function (r) { return r.target === 'none'; });
+      var main = Due.mainOf(site.length ? site : g, v.today);
+      if (!main || main.target !== 'none' || String(main.active).toLowerCase() === 'false' || (main.effective_from && main.effective_from > v.today)) return;
+      g.forEach(function (r) { if (r.type_key) by[r.type_key] = main; });
+    });
     return by;
   }
   function csvRows(text) {

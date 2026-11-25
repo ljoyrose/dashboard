@@ -158,6 +158,26 @@ test('import: a part-done day is not "already recorded"; a fully done day is, an
   assert.equal(C.importFields(v, rows[0]).check_type_id, 'cty-hc');
 });
 
+test('a copied water bowls row paints on the water bowls calendar, and Done today uses the original id', () => {
+  const extra = types.concat([
+    { id: 'cty-water_bowls-1', type_key: 'water_bowls', label: 'Water bowls washed', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-water_bowls-2', type_key: 'water_bowls_2', label: 'Water bowls washed', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-11-22' },
+    { id: 'cty-bedding-1', type_key: 'bedding', label: 'Bedding', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-toys-1', type_key: 'toys', label: 'Toys', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' }
+  ]);
+  const v = base([log('w2', 'cty-water_bowls-2', '2026-11-16')], [
+    { rule_key: 'compliance.calendar.food_bowls', value: '1', effective_from: '2026-01-01' }
+  ]);
+  v.types = extra;
+  const m = C.month(v, 'water_bowls', '2026-11');
+  assert.equal(m.cells.find((c) => c.iso === '2026-11-16').state, 'done');
+  assert.equal(C.doneFields(v, 'water_bowls').check_type_id, 'cty-water_bowls-1');
+  assert.deepEqual(C.chosen(v), ['food_bowls', 'bedding', 'toys']);
+  assert.match(C.html(v, '2026-11', true), /data-jcal="bedding"/);
+  assert.match(C.html(v, '2026-11', true), /data-jcal="toys"/);
+  assert.match(C.html(v, '2026-11', true), /data-yp="cal"/);
+});
+
 test('import: a row older than 7 days is sent with the save-anyway answer; a recent row is not', () => {
   const v = base([]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n2026-11-10,food_bowls,done,\r\n2026-11-11,food_bowls,done,\r\n2026-10-01,food_bowls,done,\r\n');

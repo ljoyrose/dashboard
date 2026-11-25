@@ -14,9 +14,9 @@
  * No staff code or licence number is read out. A column whose name is a secret is left off.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.BLDYearlyPrint = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./staff/lib/due.js'));
+  else root.BLDYearlyPrint = factory(root.BLDDue);
+}(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
 
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -152,28 +152,24 @@
   var CHECK_CSV = 'Compliance > Yearly print > Download CSV. The Checks register Download CSV is the one-month table';
 
   function checkSources(ctx) {
-    var today = str(ctx.today), by = {}, out = [];
-    (ctx.types || []).forEach(function (t) {
-      if (!t || !str(t.type_key) || !str(t.id)) return;
-      if (str(t.type_key).toLowerCase() === 'medicine') return;   // the medicines register prints these, with dose and dog
+    var today = str(ctx.today), out = [];
+    var rows = (ctx.types || []).filter(function (t) { return t && str(t.type_key) && str(t.id) && str(t.type_key).toLowerCase() !== 'medicine'; });
+    var groups = Due && Due.families ? Due.families(rows) : [];
+    if (!groups.length) rows.forEach(function (t) { groups.push([t]); });
+    groups.forEach(function (group) {
+      var main = Due && Due.mainOf ? Due.mainOf(group, today) : null;
+      var t = main || group[group.length - 1];
       var k = str(t.type_key);
-      (by[k] = by[k] || []).push(t);
-    });
-    Object.keys(by).sort().forEach(function (k) {
-      var rows = by[k], best = null;
-      rows.forEach(function (r) {
-        if (r.effective_from && r.effective_from <= today && (!best || r.effective_from > best.effective_from)) best = r;
-      });
-      var t = best || rows[rows.length - 1];
       var label = str(t.label);
       if (!label || /_/.test(label)) label = human(label || k);
       var layout = layoutOf(t);
       out.push({
         id: 'check:' + k, kind: 'check', typeKey: k, label: label, group: human(t.group) || (layout === 'list' ? 'Other checks' : 'Daily checks'),
-        table: 'BLD-check_log.csv', layout: layout, type: t, typeIds: rows.map(function (r) { return str(r.id); }),
+        table: 'BLD-check_log.csv', layout: layout, type: t, typeIds: group.map(function (r) { return str(r.id); }),
         printPath: CHECK_PRINT, exportPath: CHECK_CSV
       });
     });
+    out.sort(function (a, b) { return a.typeKey < b.typeKey ? -1 : a.typeKey > b.typeKey ? 1 : 0; });
     return out;
   }
 

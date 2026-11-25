@@ -166,3 +166,31 @@ test('daily records: done, part done and missed look different (not by colour al
   const doneBg = await page.locator('#jobCals button.jd.done').first().evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(doneBg.replace(/\s/g, '')).toMatch(/81,173,87/);
 });
+
+test('copied water bowls ticks show on the calendar and new saves use the original @regression', async ({ page, guard }) => {
+  const today = london(new Date()), yest = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
+    'cty-water_bowls-1,t,water_bowls,Water bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line',
+    'cty-water_bowls-2,t,water_bowls_2,Water bowls washed,none,true,2026-11-22,,1,,,Cleaning,one_line',
+    'cty-bedding-1,t,bedding,Bedding,none,true,2020-01-01,,1,,,Cleaning,one_line',
+    'cty-toys-1,t,toys,Toys,none,true,2020-01-01,,1,,,Cleaning,one_line'
+  ]));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    `l2,t,cty-water_bowls-2,,,,,ok,,,${yest}T09:00:00Z,Pretend Staff,,,site_tap`
+  ]));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const cal = page.locator('#jobCals');
+  await expect(cal.locator('[data-jcal="bedding"]')).toBeVisible();
+  await expect(cal.locator('[data-jcal="toys"]')).toBeVisible();
+  await expect(cal.locator('[data-yp="cal"]')).toBeVisible();
+  const bowls = cal.locator('[data-jcal="water_bowls"]');
+  await expect(bowls).toBeVisible();
+  if (yest.slice(0, 7) !== today.slice(0, 7)) await cal.locator('[data-jcal-month]').first().click();
+  await expect(bowls.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-wb', ids: ['chk-wb'], at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await bowls.locator('[data-jcal-done="water_bowls"]').click();
+  const sent = await page.evaluate(() => window.__sent);
+  expect(sent[0].fields.check_type_id).toBe('cty-water_bowls-1');
+});

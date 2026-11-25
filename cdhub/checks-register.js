@@ -11,9 +11,9 @@
  * Times are UK time (Europe/London). No staff code or licence number is in this file.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.BLDChecksRegister = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./staff/lib/due.js'));
+  else root.BLDChecksRegister = factory(root.BLDDue);
+}(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
 
   var NR = 'not recorded', NO_TIME = 'time not recorded';
@@ -78,6 +78,12 @@
     opts = opts || {};
     var ym = str(opts.month), only = str(opts.typeId), name = typeof opts.subject === 'function' ? opts.subject : function () { return ''; };
     var types = {}; (opts.types || []).forEach(function (t) { types[str(t.id)] = t; });
+    var allowed = null;
+    if (only && Due && Due.familyIds) {
+      allowed = {};
+      Due.familyIds(opts.types || [], only).forEach(function (id) { allowed[id] = 1; });
+      allowed[only] = 1;
+    }
     var byId = {}, later = {}, fixedBy = {};
     (logs || []).forEach(function (r) {
       byId[str(r.id)] = r;
@@ -95,7 +101,7 @@
       if (isNoteFor(r)) return;
       var w = whenOf(r);
       if (!w.date || w.date.slice(0, 7) !== ym) return;
-      if (only && str(r.check_type_id) !== only) return;
+      if (only && !(allowed ? allowed[str(r.check_type_id)] : str(r.check_type_id) === only)) return;
       var t = types[str(r.check_type_id)], id = str(r.id), outcome = str(r.outcome);
       var notes = (later[id] || []).slice().sort(function (a, b) { return str(a.taken_at || a.happened_at) < str(b.taken_at || b.happened_at) ? -1 : 1; })
         .map(function (n) { return 'Later, ' + stamp(n) + (who(n.taken_by) ? ', by ' + who(n.taken_by) : '') + ': ' + (clean(n.note) || NR); });
