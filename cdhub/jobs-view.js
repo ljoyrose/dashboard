@@ -8,6 +8,7 @@
   else root.BLDJobsView = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var HOW = { scanned: 'opened from tag', tapped: 'tapped', typed: 'typed', site_tap: 'whole-site tap', paper: 'entered earlier', bulk: 'entered earlier (several days)', import: 'imported' };
   var OUTCOME = { ok: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', note: 'note', part_done: 'part done' };
@@ -40,10 +41,14 @@
     add(v.areas.map(function (a) { return areaTarget(a, here); }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
     add([{ dogs: here.map(function (d) { return dogOne(v, d); }), litters: litters }], v.logs);   // a whole-site job about subjects is done once every one on site that day has a line
+    add(here.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
+    add(v.areas.map(function (a) { return areaTarget(a, here); }), v.logs);
+    add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
+    add([{ dogs: here.map(function (d) { return dogOne(v, d); }) }], v.logs);   // a whole-site job about subjects is done once every one on site that day has a line
     /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
        current litter, a Problem-button job (target optional). Its last record is still shown. */
-    var keyOf = {}, lastOf = {};
-    v.types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+    var keyOf = Due.familyKeyOf ? Due.familyKeyOf(v.types, v.today) : {}, lastOf = {};
+    v.types.forEach(function (t) { if (!keyOf[t.id]) keyOf[t.id] = t.type_key; });
     v.logs.forEach(function (l) {
       var k = keyOf[l.check_type_id], d = Due.londonDate(l.happened_at || l.taken_at);
       if (!k || !d || d > v.today || l.outcome === 'note' || l.outcome === 'not_done' || l.outcome === 'part_done') return;
@@ -153,7 +158,7 @@
     }).map(function (l) {
       var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '', bit = target.subject_id && l.subject_id !== target.subject_id ? sessionBit(l) : null;
       var inRound = target.subject_id && l.subject_id !== target.subject_id && (String(l.covered_ids || '').split('|').indexOf(target.subject_id) >= 0 || bit);
-      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: (bit && bit.text) || l.note || '', item: inRound ? ('included in the round' + (bit ? ' · ' + bit.word : '')) : (l.item || ''), amount: l.amount || '', files: docs[l.id] || [] };
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: Show.human((bit && bit.text) || l.note || ''), item: inRound ? ('included in the round' + (bit ? ' · ' + bit.word : '')) : (l.item || ''), amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -236,6 +241,8 @@
   function areaTarget(a, here) {
     var inRoom = (here || []).filter(function (d) { return (d.area_id || d.areaId) === a.id; });
     return { area_id: a.id, roomDogIds: inRoom.map(function (d) { return d.id; }), roomDogs: inRoom.map(function (d) { return { id: d.id, dob: d.dob || '' }; }), areaKind: a.kind || '', areaUse: a.use || '', areaGroup: a.grouping || a.group || '', areaRetired: !!a.retired, areaNoDogs: !!a.noDogs };
+    var ids = (here || []).filter(function (d) { return (d.area_id || d.areaId) === a.id; }).map(function (d) { return d.id; });
+    return { area_id: a.id, roomDogIds: ids, areaKind: a.kind || '', areaUse: a.use || '', areaGroup: a.grouping || a.group || '', areaRetired: !!a.retired, areaNoDogs: !!a.noDogs };
   }
   function dogGroups(v, d) { return d.groups || Due.groupsOf(v.links || [], d.id, v.today); }
   function dogOne(v, d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: dogGroups(v, d), dob: d.dob || '', kind: d.kind || '' }; }

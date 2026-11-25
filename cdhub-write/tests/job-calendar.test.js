@@ -109,6 +109,68 @@ test('a vet visit shows on the per-dog calendar day (marker and details), not on
   assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
 });
 
+// Lisa 25 Nov 2026: Health check was red for all of September because a June paper row started the clock.
+// The other cards start in October, so September is not tracked. A vet dot belongs on Health only.
+test('September before the daily run is not tracked, and a vet dot is only on Health @regression', () => {
+  const extra = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
+  const v = Object.assign(base([
+    log('h1', 'cty-hc', '2026-06-02', 'd1'), log('h2', 'cty-hc', '2026-06-02', 'd2'),
+    log('h3', 'cty-hc', '2026-10-01', 'd1'), log('h4', 'cty-hc', '2026-10-01', 'd2'),
+    log('f1', 'cty-fb', '2026-10-01'),
+    log('e1', 'cty-ex', '2026-10-02', '', { covered_ids: 'd1|d2' })
+  ], [
+    { rule_key: 'compliance.calendar.health_check_all', value: '1', effective_from: '2026-01-01' },
+    { rule_key: 'compliance.calendar.food_bowls', value: '2', effective_from: '2026-01-01' },
+    { rule_key: 'compliance.calendar.exercise_all', value: '3', effective_from: '2026-01-01' }
+  ]), {
+    types: types.concat([extra]), today: '2026-11-25', dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
+    vetVisits: [
+      { subject_id: 'd1', performed_on: '2026-09-03', status: 'done', reason: 'check' },
+      { subject_id: 'd1', performed_on: '2026-09-24', status: 'done', reason: 'check' }
+    ]
+  });
+  const st = (key, iso) => C.month(v, key, iso.slice(0, 7)).cells.find((c) => c.iso === iso).state;
+  assert.equal(st('health_check_all', '2026-06-02'), 'done');
+  assert.equal(st('health_check_all', '2026-09-04'), 'before');
+  assert.equal(st('health_check_all', '2026-10-02'), 'missed');
+  assert.equal(st('food_bowls', '2026-09-04'), 'before');
+  assert.equal(st('food_bowls', '2026-10-02'), 'missed');
+  assert.equal(st('exercise_all', '2026-10-02'), 'done');
+  assert.equal(st('exercise_all', '2026-09-03'), 'before');
+  const html = C.html(v, '2026-09', false);
+  const health = html.slice(html.indexOf('data-jcal="health_check_all"'), html.indexOf('data-jcal="food_bowls"'));
+  const exercise = html.slice(html.indexOf('data-jcal="exercise_all"'));
+  assert.match(health, /class="jd before vet"[^>]*data-day="2026-09-03"/);
+  assert.match(health, /title="2026-09-03: not tracked yet · vet: Pretend Dog"/);
+  assert.doesNotMatch(exercise, /class="jd [^"]*vet/);
+  assert.match(exercise, /title="2026-09-03: not tracked yet"/);
+});
+
+test('exercise counts the adult dogs only and hides a backfill note @regression', () => {
+  const ex = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
+  const dogs = [
+    { id: 'd1', area_id: 'a1', name: 'Ada', kind: 'Breeding Female', dob: '2020-01-01' },
+    { id: 'd2', area_id: 'a2', name: 'Bea', kind: 'Stud', dob: '2020-01-01' },
+    { id: 'p1', area_id: 'a1', name: 'Marble x Sammy 2026 - Black male 1', kind: 'Pup', dob: '2026-06-01', birthLitter: 'lit-1' }
+  ];
+  const logs = ['d1', 'd2'].map((id, i) => log('e' + i, 'cty-ex', '2026-11-08', id, { note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }));
+  logs.push(log('skin', 'cty-ex', '2026-11-09', 'd1', { note: 'Skin looked red. backfill Lisa 25 Nov' }));
+  logs.push(log('skin2', 'cty-ex', '2026-11-09', 'd2', { note: 'Skin looked red' }));
+  const v = Object.assign(base(logs, [
+    { rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }
+  ]), { types: [ex], dogs: dogs, today: '2026-11-25', dmy: (s) => s, calOpen: { key: 'exercise_all', iso: '2026-11-08' } });
+  const day = (iso) => C.month(v, 'exercise_all', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(C.month(v, 'exercise_all', '2026-11').need, 2);
+  assert.equal(day('2026-11-08').state, 'done');
+  assert.equal(day('2026-11-08').got, 2);
+  const html = C.html(v, '2026-11', false);
+  assert.match(html, /class="jd done[^"]*" data-day="2026-11-08"/);
+  assert.doesNotMatch(html, /backfill/i);
+  const html9 = C.html(Object.assign(v, { calOpen: { key: 'exercise_all', iso: '2026-11-09' } }), '2026-11', false);
+  assert.match(html9, /Skin looked red/);
+  assert.doesNotMatch(html9, /backfill/i);
+});
+
 test('a vet visit stays on the health-check calendar and is not shown on Exercise and play @regression', () => {
   const exercise = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
   const shared = {
@@ -210,6 +272,7 @@ test('the calendar counts subjects on site that day, and can leave juveniles out
     { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
     { id: 'sub-test-b', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
     { id: 'sub-test-d', area_id: 'area-a', kind: 'pup', dob: '2026-10-01' }
+    { id: 'sub-test-d', area_id: 'area-a', kind: '', dob: '2026-10-01' }
   ];
   const occupancy = [
     { subject_id: 'sub-test-a', area_id: 'area-a', moved_in: '2026-01-01' },
@@ -250,6 +313,28 @@ test('a past day uses the feeding band in force that day, and mixed ages take th
   assert.equal(day('food_bowls', '2026-11-14').need, 2);
   assert.equal(day('food_bowls', '2026-11-16').need, 4);
   assert.equal(day('water_bowls', '2026-11-16').need, 0);
+  const onlyYoung = Object.assign({}, ruled, { logs: [log('9', 'cty-hc', '2026-11-16', 'sub-test-d')] });
+  assert.equal(C.month(onlyYoung, 'health_check_all', '2026-11').cells.find((c) => c.iso === '2026-11-16').state, 'missed');
+});
+
+test('a copied water bowls row paints on the water bowls calendar, and Done today uses the original id', () => {
+  const extra = types.concat([
+    { id: 'cty-water_bowls-1', type_key: 'water_bowls', label: 'Water bowls washed', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-water_bowls-2', type_key: 'water_bowls_2', label: 'Water bowls washed', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-11-22' },
+    { id: 'cty-bedding-1', type_key: 'bedding', label: 'Bedding', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-toys-1', type_key: 'toys', label: 'Toys', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' }
+  ]);
+  const v = base([log('w2', 'cty-water_bowls-2', '2026-11-16')], [
+    { rule_key: 'compliance.calendar.food_bowls', value: '1', effective_from: '2026-01-01' }
+  ]);
+  v.types = extra;
+  const m = C.month(v, 'water_bowls', '2026-11');
+  assert.equal(m.cells.find((c) => c.iso === '2026-11-16').state, 'done');
+  assert.equal(C.doneFields(v, 'water_bowls').check_type_id, 'cty-water_bowls-1');
+  assert.deepEqual(C.chosen(v), ['food_bowls', 'bedding', 'toys']);
+  assert.match(C.html(v, '2026-11', true), /data-jcal="bedding"/);
+  assert.match(C.html(v, '2026-11', true), /data-jcal="toys"/);
+  assert.match(C.html(v, '2026-11', true), /data-yp="cal"/);
 });
 
 test('import: a row older than 7 days is sent with the save-anyway answer; a recent row is not', () => {

@@ -68,13 +68,13 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
-    await expect(page.locator('#adm-phone')).toContainText('ljoyrose.github.io');   // staff phones have no Cloudflare sign-in
-    await expect(page.locator('#adm-phone')).not.toContainText(new URL(page.url()).host);
+    const staff = await page.evaluate(() => location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/');
+    await expect(page.locator('#adm-phone')).toContainText(new URL(page.url()).host);
+    await expect(page.locator('#adm-phone')).not.toContainText('github.io');
     await page.locator('[data-adm-qr]').click();
     await expect(page.locator('.adm-qr svg')).toBeVisible();
-    // the QR itself holds the public staff page, not this page's address
     const held = await page.evaluate(() => { const b = BLDQr.svg; let t = ''; BLDQr.svg = (x, l) => { t = x; return b(x, l); }; go('admin', false); return new Promise((r) => setTimeout(() => r(t), 300)); });
-    expect(held.indexOf('https://ljoyrose.github.io/dashboard/cdhub/staff/#setup=')).toBe(0);
+    expect(held.indexOf(staff + '#setup=')).toBe(0);
     expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => /code/i.test(k)).map((k) => localStorage.getItem(k)).join(''))).toBe('');
   });
 

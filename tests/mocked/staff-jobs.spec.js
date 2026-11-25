@@ -298,6 +298,8 @@ test('a room job set for one room only shows on that room\'s scan', async ({ pag
     qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }]),
     area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }],
     occupancy: [{ subject_id: 'dog-1', area_id: 'area-1', moved_in: '2026-10-01' }, { subject_id: 'dog-2', area_id: 'area-iso', moved_in: '2026-10-01' }] });
+    subject: TABLES.subject.concat([{ id: 'sub-test-c', name: 'sub-test-c' }]),
+    occupancy: TABLES.occupancy.concat([{ subject_id: 'sub-test-c', area_id: 'area-iso', moved_in: '2026-10-01' }]) });
   await page.goto('cdhub/staff/#s/ROOMTAG2');
   await expect(page.locator('[data-job="clean"]')).toBeVisible();
   await expect(page.locator('[data-job="iso_clean"]')).toHaveCount(0);
