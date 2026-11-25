@@ -764,13 +764,8 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 wantLater('BLD-subject-Archive.csv');
 wantLater('BLD-litter-Archive.csv');   /* Lisa 17 Nov 2026: old litters (paper books) kept as history, so their vet visits resolve */
 wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
-var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1};
-/* LIVE_PAGES: Compliance ("What was true on", the inspection export) shows a read at most COMP_FRESH_MS old, always with its "As of" time; older waits for the live read */
-var LIVE_PAGES={compliance:1};
-/* Breed Better grading is Breed Better's only (Lisa 22 Nov 2026: "anything from breed better grading is BB only not
-   compliance"). A check type is Breed Better's when its row says so: group "Breed Better", or a note that starts
-   "Breed Better:". Every version of that type_key is left off Compliance, with its records; Breed Better, Jobs and the
-   records themselves are unchanged. Read from rows, no list here. */
+/* A check type is left off Compliance when its row says so: group "Breed Better", or a note that starts
+   "Breed Better:". Every version of that type_key is left off, with its records. Other pages still read the rows. */
 function bbOnlyType(t){ return !!t&&(String(t.group||'').trim().toLowerCase()==='breed better'||/^\s*breed better\s*:/i.test(String(t.note||''))); }
 function compJobsV(){ var v=jobsV(), keys={}, ids={};
  v.types.forEach(function(t){ if(bbOnlyType(t)&&String(t.type_key||'').trim()) keys[String(t.type_key).trim()]=1; });
@@ -5292,8 +5287,7 @@ function loadCalPhotos(){
    .catch(function(){ img.remove(); });
  });
 }
-function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=compJobsV();   /* Compliance only: no Breed Better grading */ v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
-function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=compJobsV(); v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
 function importFailText(r){
  var errs=r&&r.fields;
  if(errs&&typeof errs==='object'&&!Array.isArray(errs)){
@@ -5369,11 +5363,12 @@ document.addEventListener('click',async function(ev){
    checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
    is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
 function compChecksRegHtml(){
- var rows=(T['BLD-check_log.csv']||[]).filter(function(r){ return !(r.outcome==='note'&&r.note_for_id); }), ms={}, now=todayISO().slice(0,7);
+ var jobs=compJobsV();
+ var rows=jobs.logs.filter(function(r){ return !(r.outcome==='note'&&r.note_for_id); }), ms={}, now=todayISO().slice(0,7);
  rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.happened_at||r.taken_at||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
  var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
- var types=(function(){ var rows=T['BLD-check_type.csv']||[];
+ var types=(function(){ var rows=jobs.types;
   if(window.BLDDue&&BLDDue.families) return BLDDue.families(rows).map(function(g){ return (BLDDue.mainOf&&BLDDue.mainOf(g,todayISO()))||g[0]; }).filter(function(t){ return t&&t.id&&t.label; });
   return rows.filter(function(t){ return t.id&&t.label; }); })();
  return compFold('compChecksReg','checksreg','Checks register','<p class="mut help">One month of check records, for an inspector. Every column is printed; a detail the record does not hold says “not recorded”. A corrected record stays, with its correction on its own line.</p>'
@@ -5432,7 +5427,6 @@ function pageCompliance(){
   +'<p><a href="#/areas">Open Areas</a></p>');
  h+=BLDJobsView.complianceHtml(compJobsV(),cntPill);
  h+=compTempsHtml()+compMedsHtml()+compChecksRegHtml();
- h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
