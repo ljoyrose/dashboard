@@ -133,7 +133,7 @@ test('Import: Cancel clears the file with nothing saved; Stop during an import l
 });
 // Lisa 23 Nov 2026 (phone screenshot: "Make it clearer between part done (orange) and missed (red)". Missed is a red
 // frame with a small cross, part done an orange frame on a light orange fill; the key shows all three the same way.
-test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark', async ({ page, guard }) => {
+test('daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark @regression', async ({ page, guard }) => {
   addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, ['j1,t,food_bowls,Pretend bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line']));
   addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [`l1,t,j1,,,,,ok,,,${london(new Date(Date.now() - 3 * 86400000))}T09:00:00Z,Pretend Staff,,,site_tap`]));
   await HUBS.cdhub.open(page, guard);
@@ -162,4 +162,7 @@ test('daily records: done, part done and missed look different (not by colour al
   }
   // a real missed day in the month carries the class (and so the cross)
   await expect(page.locator('#jobCals [data-jcal="food_bowls"] .jd.missed').first()).toBeVisible();
+  // done days are green, not the grey button fill (Lisa: the ticks were grey)
+  const doneBg = await page.locator('#jobCals button.jd.done').first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(doneBg.replace(/\s/g, '')).toMatch(/81,173,87/);
 });
