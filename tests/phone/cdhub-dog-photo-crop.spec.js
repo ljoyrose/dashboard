@@ -50,12 +50,13 @@ test.describe('Phone: dog photo crop', () => {
     await openOneDog(page, guard);
     const ph = await page.locator('#rows article.dc .ph').boundingBox();
     expect(ph.width).toBeGreaterThanOrEqual(104);
+    await page.locator('#rows article.dc [data-photo-open]').tap();
+    for (const b of await page.locator('#rows article.dc [data-photo-menu] label').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
     const chooser = page.waitForEvent('filechooser');
     await page.locator('#rows article.dc label[data-photo-take]').tap();
     const opened = await chooser;
     expect(await opened.element().getAttribute('capture')).toBe('environment');
     await expect(page.locator('.pcam')).toHaveCount(0);   // no page camera on a phone: the phone's own camera opens
-    for (const b of await page.locator('#rows article.dc label.dogphoto-btn').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   });
 });
