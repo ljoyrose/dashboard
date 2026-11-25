@@ -8,6 +8,12 @@
 var BLDPhotos = (function () {
   'use strict';
   function ymd(v) { var s = String(v == null ? '' : v).slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
+  /** Dog photo links are stored as subject or subjects. Either name is the same dog list. */
+  function sameTable(a, b) {
+    a = String(a || ''); b = String(b || '');
+    if (a === b) return true;
+    return (a === 'subject' || a === 'subjects') && (b === 'subject' || b === 'subjects');
+  }
   function on(r, day) { var f = ymd(r.from_date), t = ymd(r.to_date); return (!f || f <= day) && (!t || day <= t); }
   function stamp(r) { return String(r.set_on || r.created_at || ''); }
   /** The word for a link role in force on a day, from rule rows link_kind.<role> (latest effective_from wins); '' when none. */
@@ -31,7 +37,7 @@ var BLDPhotos = (function () {
     (files || []).forEach(function (f) { if (f && f.id) byId[f.id] = f; });
     function withLink(f, l) { var o = {}; Object.keys(f).forEach(function (k) { o[k] = f[k]; }); o.link_id = l.id || ''; o.link_to_date = ymd(l.to_date); return o; }
     var mine = (links || []).filter(function (l) {
-      return l && l.from_table === fromTable && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
+      return l && sameTable(l.from_table, fromTable) && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
     });
     var main = null, gal = [], ended = [];
     mine.forEach(function (l) {

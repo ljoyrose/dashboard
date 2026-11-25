@@ -9,6 +9,20 @@ var BLDDisplay = (function () {
     s = s.replace(/\bLisa\s+\d{1,2}\s+\w+(?:\s+\d{4})?\b/gi, '');
     return s.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:])/g, '$1').trim();
   }
-  return { hideSource: hideSource };
+  /**
+   * Marble / merle pups: a long colour name is cut off on the card and sorts in the middle of the list.
+   * A short z- name (z-b-merle) sorts last and fits in full. Already short names stay. Not a marble pup: ''.
+   */
+  function marblePupName(name, colour) {
+    var n = String(name == null ? '' : name).trim();
+    var blob = (n + ' ' + String(colour == null ? '' : colour)).toLowerCase();
+    if (!/\b(merle|marble)\b/.test(blob)) return '';
+    if (/^z-[a-z]-merle(?:-\d+)?$/i.test(n)) return n.toLowerCase();
+    var hit = blob.match(/\b([a-z])[a-z]*\s+merle\b/);
+    var letter = hit ? hit[1] : ((n.toLowerCase().match(/\b([a-z])/) || [])[1] || 'x');
+    var num = (n.match(/\b(\d+)\b/) || [])[1];
+    return 'z-' + letter + '-merle' + (num ? '-' + num : '');
+  }
+  return { hideSource: hideSource, marblePupName: marblePupName };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = { BLDDisplay: BLDDisplay };

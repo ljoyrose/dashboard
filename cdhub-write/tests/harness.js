@@ -13,10 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Visit', 'Web', 'Admin'];
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'QrTag', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Sink', 'Read', 'Inspect', 'Codes', 'Visit', 'Delegate', 'Web', 'Admin'];
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Photo', 'Dogcard', 'Files', 'Links', 'QrTag', 'Edit', 'Scores', 'Sink', 'Read', 'Inspect', 'Codes', 'Visit', 'Delegate', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -151,7 +148,8 @@ function makeEnv(opts = {}) {
     }) },
     CacheService: { getScriptCache: () => ({
       get: (k) => (k in env.cache ? env.cache[k] : null),
-      put: (k, v) => { env.cache[k] = String(v); }
+      put: (k, v) => { env.cache[k] = String(v); },
+      remove: (k) => { delete env.cache[k]; }
     }) },
     ScriptApp: {
       getProjectTriggers: () => env.triggers,
@@ -159,7 +157,7 @@ function makeEnv(opts = {}) {
       newTrigger: (fn) => ({ timeBased() { return this; }, everyDays() { return this; }, atHour() { return this; }, create() { const t = { getHandlerFunction: () => fn }; env.triggers.push(t); return t; } })
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
-    Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
+    Session: { getActiveUser: () => ({ getEmail: () => env.email }), getScriptTimeZone: () => 'Europe/London' },   // the project setting
     // Google's answers for the owner sign-in check (Auth.gs authOwnerGoogle_). Tests set env.google; none = Google unreachable.
     UrlFetchApp: { fetch: (url, o) => {
       env.fetches.push({ url, headers: (o && o.headers) || {} });

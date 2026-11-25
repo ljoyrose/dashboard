@@ -32,7 +32,7 @@
   // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
   var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
   if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
-  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
+  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: owner ? 'The save address is not on this phone yet. Open CD Hub while signed in, then open this page again. An owner is not asked for a staff code.' : 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
   if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pick = h('div', { class: 'pick noprint' }), pickBox = h('div', { class: 'noprint' });
@@ -80,7 +80,11 @@
       });
     }
     return Promise.all([worker(), worker(), worker(), worker()]).then(function () {
-      if (fail) { say(fail.message || 'Could not load the lists.', 'bad'); return false; }
+      if (fail) {
+        var said = fail.message || 'Could not load the lists.';
+        if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
+        say(said, 'bad'); return false;
+      }
       readAt = Date.now(); showAsOf(); say(''); return true;
     });
   }
@@ -99,7 +103,7 @@
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
     // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
     var role = typeof save.role === 'function' ? save.role() : '';
-    if (missing.length && role && role !== 'OWNER') {
+    if (missing.length && role && role !== 'OWNER' && !(save.usingGoogle && save.usingGoogle())) {
       say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
       if (done) done();
       return;
@@ -213,21 +217,18 @@
       .then(function (m) { var link = m && m.thumbnailLink; if (link && /^https:\/\//i.test(link)) img.src = link.replace(/=s\d+$/, '=s800'); else bytes(); })
       .catch(bytes);
   }
-  function photoBox(s) {
-    var id = mainPhoto(s), box = h('div', { class: 'photo', text: id ? '' : 'Photo', 'data-k': 'photo' });
-    /* the photo's turn (photo.rotate.<file>, Lisa 15 Nov 2026) is drawn on top; the stored picture never changes */
-    var deg = id ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
-    if (id) box.appendChild(h('img', { src: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w800', alt: '', referrerpolicy: 'no-referrer',
-      'data-rot': String(deg),
-      onload: function () { if (deg) { box.style.position = 'relative'; this.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); } },
-      onerror: function () { box.textContent = 'Photo'; } }));
   /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
-     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
+     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper).
+     A saved turn (photo.rotate.<file>) is drawn on top; the stored picture never changes. */
   function photoBox(s, table) {
     var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
+    var deg = id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
     if (id) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer' });
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-rot': String(deg) });
       box.appendChild(img);
+      img.addEventListener('load', function () {
+        if (deg && BLDPhotos.turnStyle) { box.style.position = 'relative'; img.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); }
+      });
       loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
     }
     return box; }
@@ -243,13 +244,24 @@
   }
   /* a long name steps down a size so it stays on two lines at most */
   function nameFit(name) { var n = String(name).length; return n > 28 ? ' n3' : n > 16 ? ' n2' : ''; }
+  function cardName(s) {
+    var n = s.name || s.id;
+    if (typeof BLDDisplay === 'undefined' || !BLDDisplay.marblePupName) return n;
+    var young = isPup(s) || !!s.birth_litter_id;
+    if (s.birth_litter_id && s.dob) {
+      var wk = 26, born = Date.parse(String(s.dob).slice(0, 10) + 'T12:00:00Z'), today = Date.parse(BLDNeeds.today() + 'T12:00:00Z');
+      if (!isNaN(born) && !isNaN(today) && (today - born) / 864e5 >= wk * 7) young = false;
+    }
+    if (!young) return n;
+    return BLDDisplay.marblePupName(n, '') || n;
+  }
   function dogCard(tag, it) {
-    var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
+    var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || ''), nm = cardName(s);
     var facts = [];
     if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [sexIcon(s.sex), f ? 'Female' : 'Male'])]));
     if (s.dob) facts.push(h('div', { 'data-k': 'dob' }, [h('dt', { text: 'Date of birth' }), h('dd', { text: dmy(s.dob) })]));
     return h('article', { class: 'dcard vcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('h2', { class: 'name' + nameFit(s.name || s.id), text: s.name || s.id }),
+      h('h2', { class: 'name' + nameFit(nm), text: nm }),
       h('dl', { class: 'facts' }, facts),
       photoBox(s),
       (function (w) { return w ? h('div', { class: 'szb', 'data-size': sz || 'puppy', 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: w })]) : null; })(tileWord(s, sz)),

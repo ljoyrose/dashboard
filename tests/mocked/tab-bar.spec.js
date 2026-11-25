@@ -26,7 +26,7 @@ const PLAN = {
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
+  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Yearly print', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'DNS & Email', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov); DNS & Email: JOB 6.3 (12 Nov)
 };
@@ -223,11 +223,16 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   expect(f.ring).not.toMatch(TRANSPARENT);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/dates$/);
+  // The hash change focuses the page title after the address has already changed. Wait for that,
+  // or it can take the focus back off the More menu (the keyboard check then sees Control unfocused).
+  await expect(page.locator('#hereTitle')).toBeFocused();
   // More by keyboard: Enter opens, the first view takes the focus, Enter goes there.
   const more = page.locator('nav.house-tabs [data-house-more]');
+  const control = page.locator('#houseMore a', { hasText: 'Control' });
   await more.focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator('#houseMore a', { hasText: 'Control' })).toBeFocused();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await expect(control).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/control$/);
 });
