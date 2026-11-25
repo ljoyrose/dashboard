@@ -3682,8 +3682,8 @@ function savedSeen(areaId,date){ var ids={}, out={};
   BLDCheckRules.exceptions(session).forEach(function(ex){ out[ex.id]={state:ex.kind==='not_here'?'not':'here',at:session.taken_at||session.happened_at,exception:ex.word}; });
  }
  return out; }
-function presenceSessionOn(pt,date){ if(!pt||!window.BLDCheckRules) return false;
- var s=BLDCheckRules.settingFor(T['BLD-check_setting.csv']||[], pt.type_key, date); return !!(s && String(s.session_row).toLowerCase()==='true'); }
+function presenceSessionOn(pt,date){ if(!pt||!window.BLDCheckRules||!BLDCheckRules.sessionAllowed(pt.type_key)) return false;
+ var s=BLDCheckRules.settingFor(T['BLD-check_setting.csv']||[], pt.type_key, date); return BLDCheckRules.effective(pt,s).session_row; }
 function markSeen(areaId, sid, state){
  var date=CD._roundDate||todayISO(), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:'',subjects:inCabin(areaId,date)});
  cur.seen=cur.seen||{};
@@ -3714,6 +3714,15 @@ async function presenceSessionSave(areaId,date,pt,m){
  var r=await sinkSend({table:'check_log',action:'add_session',fields:{check_type_id:pt.id,area_id:areaId,dog_ids:dogs.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,how_recorded:'tapped'}});
  var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
  if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:not.map(function(id){ return id+':not_here'; }).join('|'),outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped'}); }
+ if(!ok&&!r.kept){   /* refused: the buttons go back to the last saved round. Kept for retry: they stay pressed */
+  var back=savedSeen(areaId,date), sel='[data-area="'+CSS.escape(areaId)+'"]';
+  inCabin(areaId,date).forEach(function(id){
+   if(back[id]) cur.seen[id]=back[id].state; else delete cur.seen[id];
+   var hb=document.querySelector('[data-here="'+CSS.escape(id)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(id)+'"]'+sel);
+   var w=back[id]?back[id].state:'';
+   if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); }
+  });
+ }
  if(m) showSave(m,sinkMsg(r));
 }
 async function presenceSave(areaId,sid,state,date,pt,m){
@@ -4943,7 +4952,7 @@ function sopLinks(c){
   return '<li><span class="soplink none" '+attr+'>'+icon+esc(lab)+' (no file linked)</span></li>';
  }).join('')+'</ul>';
 }
-function sopCtx(){ return {today:todayISO(),types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],tables:T,kennel:(CD.tenant&&CD.tenant.name)||'',dogName:function(id){ var d=regDog(id); return d&&d.name||''; }}; }
+function sopCtx(){ return {today:todayISO(),types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],tables:T,kennel:kennelNow(),dogName:function(id){ var d=regDog(id); return d&&d.name||''; }}; }
 function sopExtra(r){ return typeof BLDSopRecords==='undefined'?'':BLDSopRecords.extraHtml(sopCtx(), r); }
 function sopCardHtml(r){
  var head=(r.role?'<div class="sopmeta">'+sopIcon('user')+'Applies to: '+esc(sopRoleLabel(r.role))+'</div>':'')+BLDJobsView.sopHtml(jobsV(),r.short_name);
@@ -4977,7 +4986,8 @@ async function sopRecord(btn){
   var r=await sinkSend({table:'check_log',action:p.action,fields:p.fields});
   if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
   var res=r.result||{}, at=res.at||p.fields.happened_at, who=res.who||'';
-  if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
+  if(res.session){ logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:'',covered_ids:(res.covered_ids||p.fields.dog_ids||''),exceptions:p.fields.exceptions||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }
+  else if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
   else logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:p.fields.subject_id||'',area_id:p.fields.area_id||'',litter_id:p.fields.litter_id||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who});
  }
  drawSops();
@@ -5005,33 +5015,12 @@ async function sopChecked(btn){
 }
 /* Print records: the yearly print for this SOP's records (loaded if it is not on the page yet).
    A SOP the yearly print does not cover falls through to this month in the Checks register. */
-async function sopPrint(a){
- var name=a.getAttribute('data-sop-print'), msg=a.parentNode.querySelector('[data-sop-print-msg]');
- if(!msg){ msg=document.createElement('p'); msg.className='mut'; msg.setAttribute('data-sop-print-msg',''); msg.setAttribute('role','status'); a.insertAdjacentElement('afterend', msg); }
- msg.textContent='Getting the print ready\u2026';
- try{
-  var Y=await ypLib(), ids=BLDSopRecords.yearlyIds(name, Y.catalogue(ypCtx(null)));
-  if(ids.length){
-   var R=ids.indexOf('medicines')>=0?await medsLib().catch(function(){ return null; }):null;
-   var today=todayISO(), built=Y.build({period:'month',year:Number(today.slice(0,4)),month:Number(today.slice(5,7))-1,ids:ids,today:today}, ypCtx(R));
-   if(!document.getElementById('ypCss')){ var ys=document.createElement('style'); ys.id='ypCss'; ys.textContent=Y.CSS; document.head.appendChild(ys); }
-   var rep=document.getElementById('ypReport'); if(!rep){ rep=document.createElement('section'); rep.id='ypReport'; document.body.appendChild(rep); }
-   rep.innerHTML=built.html; document.body.classList.add('yp-printing'); if(Y.fit) Y.fit(rep);
-   msg.textContent='Printing this month. Choose \u201cSave as PDF\u201d to keep a copy.'; window.print();
-   setTimeout(function(){ document.body.classList.remove('yp-printing'); }, 0); return;
-  }
- }catch(e){ /* the Checks register print below still runs */ }
- msg.textContent='Getting the register ready\u2026';
- try{
-  var C=await ckrLib();
-  if(!document.getElementById('ckrCss')){ var st=document.createElement('style'); st.id='ckrCss'; st.textContent=C.CSS; document.head.appendChild(st); }
-  var pack=BLDSopRecords.printPack(sopCtx(), name, {month:todayISO().slice(0,7), printed:dmy(todayISO())+' '+hhmmNow()});
-  var box=document.getElementById('ckrReport'); if(!box){ box=document.createElement('section'); box.id='ckrReport'; document.body.appendChild(box); }
-  box.innerHTML=C.reportHtml(pack.head, pack.lines); document.body.classList.add('ckr-printing');
-  msg.textContent='Printing '+pack.lines.length+' entr'+(pack.lines.length===1?'y':'ies')+'. Choose \u201cSave as PDF\u201d to keep a copy.';
-  window.print();
-  setTimeout(function(){ document.body.classList.remove('ckr-printing'); }, 0);
- }catch(e2){ msg.textContent='Not printed: the register could not load. Try again.'; }
+/* Print records opens the print view first. The person presses Print there. It does not print the SOP list. */
+function sopPrint(a){
+ var name=a.getAttribute('data-sop-print');
+ if(!name) return;
+ YP.sop=name;
+ go('yearly/sop-'+encodeURIComponent(name));
 }
 function drawSops(){
  var rows=SOP.rows||[];
@@ -5169,7 +5158,7 @@ function compMedsHtml(){
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
  var years=[]; list.forEach(function(k){ var yy=k.slice(0,4); if(years.indexOf(yy)<0) years.push(yy); });
  if(years.length<2) years.push(String(Number(years[0]||todayISO().slice(0,4))-1));
- return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Every column is printed; a detail the record does not hold says \u201cnot recorded\u201d. A month with none prints as a nil record. A whole year is one page per month, each shrunk to fit one sheet.</p>'
+ return compFold('compMeds','meds','Medicines register','<p class="mut help">Medicines given, for an inspector. Date, dog, medicine, dose and who gave it say \u201cnot recorded\u201d when the record does not hold them. Other details are left blank. A month with none says \u201cNo records this month\u201d. A whole year skips those months.</p>'
   +'<div class="frow"><label for="medsPeriod">Period</label> <select id="medsPeriod" aria-label="Period"><option value="month" selected>One month</option><option value="year">Whole year</option></select></div>'
   +'<div class="frow"><label for="medsMonth">Month</label> <select id="medsMonth">'+list.map(function(k){ return '<option value="'+k+'">'+esc(UKMON[Number(k.slice(5))-1]+' '+k.slice(0,4))+' ('+(ms[k]||'none')+')</option>'; }).join('')+'</select> '
   +'<label for="medsYear">Year</label> <select id="medsYear" aria-label="Year">'+years.map(function(yy){ return '<option value="'+yy+'">'+yy+'</option>'; }).join('')+'</select> '
@@ -5177,7 +5166,7 @@ function compMedsHtml(){
 }
 function medsLib(){ return window.BLDMedsRegister?Promise.resolve(window.BLDMedsRegister):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='meds-register.js'; s.onload=function(){ ok(window.BLDMedsRegister); }; s.onerror=no; document.head.appendChild(s); }); }
 function medsMake(R){ var period=(document.getElementById('medsPeriod')||{}).value||'month';
- var kennel=(CD.tenant&&CD.tenant.name)||'', printed=dmy(todayISO())+' '+hhmmNow();
+ var kennel=kennelNow(), printed=dmy(todayISO())+' '+hhmmNow();
  var rows=R.combine(T['BLD-dispense.csv']||[],T['BLD-check_log.csv']||[],T['BLD-check_type.csv']||[]);
  if(period==='year'){ var y=(document.getElementById('medsYear')||{}).value||todayISO().slice(0,4), sheets=[], mi, flat=[];
   for(mi=1;mi<=12;mi++){ var ym=y+'-'+(mi<10?'0':'')+mi; if(ym+'-01'>todayISO()) continue;
@@ -5265,7 +5254,8 @@ document.addEventListener('click',async function(ev){
   if(msg) msg.textContent='Saving '+(i+1)+' of '+ready.length+'…';
   var r=await sinkSend({table:'check_log',action:'add_site',fields:f});
   if(r&&r.ok){ done++; var res=r.result||{}, ids=f.dog_ids?f.dog_ids.split('|'):[''], rows=T['BLD-check_log.csv']=T['BLD-check_log.csv']||[];
-   ids.forEach(function(d,k){ rows.push({id:(res.ids&&res.ids[k])||((res.id||'imp')+'-'+k),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''}); });
+   if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''});
+   else ids.forEach(function(d,k){ rows.push({id:(res.ids&&res.ids[k])||((res.id||'imp')+'-'+k),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''}); });
   } else bad.push(x.line+' ('+importFailText(r)+')');
  }
  JCAL.rows=null;
@@ -5287,7 +5277,8 @@ document.addEventListener('click',async function(ev){
  if(r&&r.ok){
   var res=r.result||{}, at=res.at||new Date().toISOString(), who=res.who||'', ids=f.dog_ids?f.dog_ids.split('|'):[''];
   var rows=T['BLD-check_log.csv']=T['BLD-check_log.csv']||[];
-  ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
+  if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who});
+  else ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
@@ -5519,20 +5510,37 @@ function bindCompliance(){
  });
 }
 function ypLib(){ return window.BLDYearlyPrint?Promise.resolve(window.BLDYearlyPrint):new Promise(function(ok,no){ var s=document.createElement('script'); s.src='yearly-print.js'; s.onload=function(){ ok(window.BLDYearlyPrint); }; s.onerror=no; document.head.appendChild(s); }); }
+function kennelNow(){
+ function ok(v){ v=String(v||'').trim(); if(!v||/licen[cs]e/i.test(v)) return ''; return v; }
+ var today=todayISO(), want={'kennel.name':1,'kennel_name':1,'business.name':1,'print.kennel':1}, best=null;
+ (T['BLD-breeding_rule.csv']||[]).forEach(function(r){
+  var k=String(r.rule_key||'').trim(); if(!want[k]||/licen[cs]e/i.test(k)) return;
+  var v=ok(r.value); if(!v) return;
+  var from=String(r.effective_from||''); if(from&&from>today) return;
+  if(r.to_date&&String(r.to_date)<today) return;
+  if(!best||from>=String(best.effective_from||'')) best=r;
+ });
+ if(best) return ok(best.value);
+ var t=CD.tenant||{}, cols=['trading_name','display_name','legal_name','kennel_name','business_name','name'], i, v;
+ for(i=0;i<cols.length;i++){ v=ok(t[cols[i]]); if(v) return v; }
+ return '';
+}
 function ypCtx(R){
  var dogs=[], seen={};
- function addDog(id,name,dob,area,on){ if(!id||seen[id]){ if(id&&seen[id]&&on) seen[id].onSite=true; return; } seen[id]={id:id,name:name||'',dob:dob||'',area_id:area||'',onSite:!!on}; dogs.push(seen[id]); }
+ function addDog(id,name,dob,area,on,kind,litter){ if(!id) return;
+  if(seen[id]){ if(on) seen[id].onSite=true; if(kind&&!seen[id].kind) seen[id].kind=kind; if(litter&&!seen[id].birth_litter_id) seen[id].birth_litter_id=litter; return; }
+  seen[id]={id:id,name:name||'',dob:dob||'',area_id:area||'',onSite:!!on,kind:kind||'',birth_litter_id:litter||''}; dogs.push(seen[id]); }
  var on={}; (CD.dogs||[]).forEach(function(d){ if(d&&d.area_id&&!d.off) on[d.id]=1; });
- (T['BLD-subject.csv']||[]).forEach(function(r){ addDog(r.id,r.name,r.dob,r.area_id,!!on[r.id]); });
- (CD.dogs||[]).forEach(function(d){ if(d) addDog(d.id,d.name,d.dob,d.area_id,!!(d.area_id&&!d.off)); });
- (T['BLD-subject-Archive.csv']||[]).forEach(function(r){ addDog(r.id,r.name,r.dob,'',false); });
+ (T['BLD-subject.csv']||[]).forEach(function(r){ addDog(r.id,r.name,r.dob,r.area_id,!!on[r.id],r.kind,r.birth_litter_id); });
+ (CD.dogs||[]).forEach(function(d){ if(d) addDog(d.id,typeof shownDogName==='function'?shownDogName(d):d.name,d.dob,d.area_id,!!(d.area_id&&!d.off),d.kind,d.birthLitter); });
+ (T['BLD-subject-Archive.csv']||[]).forEach(function(r){ addDog(r.id,r.name,r.dob,'',false,r.kind,r.birth_litter_id); });
  var areaOn={}; (CD.areas||[]).forEach(function(a){ areaOn[a.id]=1; });
  var areas=(CD.allAreas||CD.areas||[]).map(function(a){ return {id:a.id,name:a.code||a.cabin||a.name||'',onSite:!!areaOn[a.id]}; });
  var items=(T['BLD-items.csv']||[]).map(function(it){ return {id:it.id,name:it.name||it.item_no||'',onSite:true}; });
  function byId(list,id){ for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i]; return null; }
  var litters=(CD.litters||[]).concat(T['BLD-litter.csv']||[]);
  var calKeys=[]; try{ if(typeof BLDJobCal!=='undefined') calKeys=BLDJobCal.chosen(jobsV()); }catch(e){ calKeys=[]; }
- return { today:todayISO(), kennel:(CD.tenant&&CD.tenant.name)||'', printed:dmy(todayISO())+' '+hhmmNow(), preset:YP.sub||'',
+ return { today:todayISO(), kennel:kennelNow(), printed:dmy(todayISO())+' '+hhmmNow(), preset:YP.sub||'',
   types:T['BLD-check_type.csv']||[], logs:T['BLD-check_log.csv']||[], tables:T, dogs:dogs, areas:areas, items:items, calKeys:calKeys,
   dogName:function(id){ var d=byId(dogs,id); if(d&&d.name) return d.name; var g=regDog(id); return g&&g.name?g.name:''; },
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
@@ -5547,7 +5555,19 @@ function pageYearly(){
   return '<h2>Yearly print</h2><p class="mut">Getting the print ready\u2026</p>';
  }
  if(!document.getElementById('ypCss')){ var st=document.createElement('style'); st.id='ypCss'; st.textContent=BLDYearlyPrint.CSS; document.head.appendChild(st); }
- return BLDYearlyPrint.screenHtml(ypCtx(window.BLDMedsRegister||null));
+ var ctx=ypCtx(window.BLDMedsRegister||null);
+ var html=BLDYearlyPrint.screenHtml(ctx);
+ var sop=YP.sop||'';
+ if(!sop && YP.sub && String(YP.sub).indexOf('sop-')===0){ try{ sop=decodeURIComponent(String(YP.sub).slice(4)); }catch(e){ sop=String(YP.sub).slice(4); } YP.sop=sop; }
+ if(sop && window.BLDSopRecords){
+  var ids=BLDSopRecords.yearlyIds(sop, BLDYearlyPrint.catalogue(ctx)), today=todayISO();
+  var built=ids.length?BLDYearlyPrint.build({period:'month',year:Number(today.slice(0,4)),month:Number(today.slice(5,7))-1,ids:ids,today:today}, ctx):{html:'<p>No records are linked to this SOP yet.</p>'};
+  html+='<section class="card" id="ypPreview"><h3>'+esc(sop)+' records</h3>'
+   +'<p class="mut">This is the print view for this month. Nothing is sent until you press Print / PDF.</p>'
+   +'<p><button type="button" class="btn" id="ypSopPrint">Print / PDF</button></p>'
+   +'<div id="ypSopPages">'+built.html+'</div></section>';
+ }
+ return html;
 }
 function ypSay(t){ var m=document.getElementById('ypMsg'); if(m) m.textContent=t; }
 function ypTick(on){ Array.prototype.forEach.call(document.querySelectorAll('input[name="ypType"]'),function(b){ b.checked=!!on; }); ypSay(on?'All records ticked.':'Nothing ticked.'); }
@@ -5572,6 +5592,15 @@ document.addEventListener('click',function(ev){
  if(b){ var kind=b.getAttribute('data-yp')||'cal';
   if(kind==='checks'){ var tid=(document.getElementById('ckrType')||{}).value||''; go(tid&&/^[\w.-]+$/.test(tid)?'yearly/'+tid:'yearly/checks'); }
   else go('yearly/'+kind); return; }
+ if(ev.target.closest&&ev.target.closest('#ypSopPrint')){
+  var src=document.getElementById('ypSopPages'), rep=document.getElementById('ypReport');
+  if(!rep){ rep=document.createElement('div'); rep.id='ypReport'; document.body.appendChild(rep); }
+  rep.innerHTML=src?src.innerHTML:'';
+  if(window.BLDYearlyPrint&&BLDYearlyPrint.fit) BLDYearlyPrint.fit(rep);
+  document.body.classList.add('yp-printing');
+  window.print();
+  return;
+ }
  if(ev.target.closest&&ev.target.closest('#ypPrint')){ ypGo('print'); return; }
  if(ev.target.closest&&ev.target.closest('#ypCsv')){ ypGo('csv'); return; }
  if(ev.target.closest&&ev.target.closest('#ypAll')){ ypTick(true); return; }
@@ -5944,7 +5973,7 @@ function go(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed')?full:id;   /* breed: #/breed/<tab> and #/breed/score.<dog> stay in the address, so Back and reload keep the tab */
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;   /* breed and yearly keep the rest of the address, so Back and reload open the same view */
  if(push!==false && location.hash!=='#/'+at){
   /* a real history entry that remembers where you came from and how far down (Back returns there) */
   var pb=String(prevShown||'').split('/')[0];

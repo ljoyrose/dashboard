@@ -110,3 +110,99 @@ test('screenshots: a health-check month, a sparse month, and a medicines month',
   }
   expect(fs.existsSync(path.join(dir, 'health-check-month.png'))).toBe(true);
 });
+
+const YPrint = require('../../cdhub/yearly-print.js');
+const MedsReg = require('../../cdhub/meds-register.js');
+
+test('exercise rows on another type and round rows still fill the year grid @regression', () => {
+  const today = '2026-11-25';
+  const types = [
+    { id: 'cty-play-9', type_key: 'exercise_and_play', label: 'Exercise and play', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-01' },
+    { id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise all', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' }
+  ];
+  const dogs = [{ id: 'ada', name: 'Ada', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' }];
+  const logs = [];
+  for (let d = 1; d <= 31; d++) logs.push({ id: 'p' + d, check_type_id: 'cty-exercise_all-1', subject_id: 'ada', outcome: 'ok', happened_at: '2026-10-' + String(d).padStart(2, '0') + 'T12:00:00Z' });
+  logs.push({ id: 'round', check_type_id: 'cty-exercise_all-1', covered_ids: 'ada', outcome: 'recorded', happened_at: '2026-09-15T12:00:00Z' });
+  const ctx = { today, kennel: 'Pretend Kennel', types, logs, dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
+  const src = YPrint.catalogue(ctx).find((s) => s.id === 'check:exercise_all');
+  expect(src.typeIds.sort()).toEqual(['cty-exercise_all-1', 'cty-play-9']);
+  const oct = YPrint.gridMonth(src, '2026-10', ctx);
+  expect(oct.marks.ada['2026-10-01']).toBe('tick');
+  expect(oct.marks.ada['2026-10-31']).toBe('tick');
+  const sep = YPrint.gridMonth(src, '2026-09', ctx);
+  expect(sep.marks.ada['2026-09-15']).toBe('tick');
+});
+
+test('a litter puppy is left off the exercise grid @regression', () => {
+  const today = '2026-11-25';
+  const types = [{ id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise and play', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' }];
+  const dogs = [
+    { id: 'ada', name: 'Ada', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' },
+    { id: 'pup', name: 'Marble x Sammy 2026 - Black male 1', dob: '2026-06-01', kind: 'Pup', birth_litter_id: 'lit-1', onSite: true }
+  ];
+  const ctx = { today, kennel: 'Pretend Kennel', types, logs: [{ id: 'lp', check_type_id: 'cty-exercise_all-1', subject_id: 'pup', outcome: 'ok', happened_at: '2026-11-02T12:00:00Z' }], dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
+  const nov = YPrint.gridMonth(YPrint.catalogue(ctx).find((s) => s.typeKey === 'exercise_all'), '2026-11', ctx);
+  expect(nov.rows.map((r) => r.name)).toEqual(['Ada']);
+  expect(nov.rows.find((r) => r.id === 'pup')).toBeFalsy();
+});
+
+test('the yearly print header uses the kennel name and never says Kennel not recorded @regression', () => {
+  const ctx = {
+    today: '2026-11-25', kennel: '', types: [], logs: [], dogs: [], areas: [],
+    tables: {
+      'BLD-tenant.csv': [{ id: 'ten', name: '', licence_number: 'LIC-12345' }],
+      'BLD-breeding_rule.csv': [{ rule_key: 'kennel.name', value: 'Pretend Kennel', effective_from: '2020-01-01' }]
+    }
+  };
+  const html = YPrint.build({ period: 'month', year: 2026, month: 10, ids: ['area_reading'], today: '2026-11-25' }, ctx).html;
+  expect(html).toContain('Pretend Kennel');
+  expect(html).not.toContain('Kennel not recorded');
+  expect(html).not.toContain('LIC-12345');
+  const blank = YPrint.build({ period: 'month', year: 2026, month: 10, ids: ['area_reading'], today: '2026-11-25' }, { today: '2026-11-25', kennel: '', types: [], logs: [], areas: [], tables: { 'BLD-tenant.csv': [{ licence_number: 'LIC-12345' }] } }).html;
+  expect(blank).not.toContain('Kennel not recorded');
+  expect(blank).not.toContain('LIC-12345');
+});
+
+test('room temperatures print as one daily min and max sheet a month @regression', () => {
+  const rows = [];
+  for (let d = 1; d <= 20; d++) {
+    const day = '2026-10-' + String(d).padStart(2, '0');
+    rows.push({ id: 'a' + d, area_id: 'a1', min_c: '10', max_c: '18', period_start: day + 'T08:00:00Z' });
+    rows.push({ id: 'b' + d, area_id: 'a1', min_c: '12', max_c: '20', period_start: day + 'T18:00:00Z' });
+  }
+  const ctx = { today: '2026-11-25', kennel: 'Pretend Kennel', types: [], logs: [], areas: [{ id: 'a1', name: 'Cabin A', onSite: true }], tables: { 'BLD-area_reading.csv': rows }, areaName: () => 'Cabin A' };
+  const built = YPrint.build({ period: 'month', year: 2026, month: 9, ids: ['area_reading'], today: '2026-11-25' }, ctx);
+  expect(built.pages).toHaveLength(1);
+  expect(built.pages[0].layout).toBe('temps');
+  expect(built.html).toContain('data-temp-grid');
+  expect(built.html).toContain('10.0–20.0');
+  expect(built.html.match(/<tr>/g).length).toBeLessThan(5);
+});
+
+test('an empty medicines month says no records and optional fields stay blank @regression', () => {
+  const [line] = MedsReg.build([{ id: 'd', subject_id: 'a', given_on: '2026-02-03', product: 'Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
+  expect(MedsReg.cell(line, 'dose')).toBe('1 tablet');
+  expect(MedsReg.cell(line, 'given_by')).toBe(MedsReg.NR);
+  expect(MedsReg.cell(line, 'time')).toBe('');
+  expect(MedsReg.cell(line, 'batch')).toBe('');
+  expect(MedsReg.cell(line, 'expiry')).toBe('');
+  const html = MedsReg.toHtml({ kennel: '', month: '2026-03', printed: '1 Mar 2026' }, []);
+  expect(html).toContain('No records this month.');
+  expect(html).not.toContain('Kennel not recorded');
+  expect(html).not.toContain('not recorded</span>');
+});
+
+test('the yearly print page loads with no console errors @regression', async ({ page, guard }) => {
+  const errors = [];
+  page.on('pageerror', (err) => errors.push(String(err && err.message || err)));
+  page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
+  await page.goto('cdhub/');
+  await signIn(page);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  errors.length = 0;
+  await page.evaluate(() => { location.hash = '#/yearly'; });
+  await expect(page.locator('h2').first()).toHaveText('Yearly print');
+  await expect(page.locator('#ypPrint')).toBeVisible();
+  expect(errors).toEqual([]);
+});

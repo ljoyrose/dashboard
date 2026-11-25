@@ -36,9 +36,9 @@ const addType = (env, key, extra) => {
 const set = (env, fields) => save(env, req(env, { code: env.codes.owner, table: 'check_setting', fields }));
 const site = (env, fields, action) => save(env, req(env, { code: env.codes.staff, table: 'check_log', action: action || 'add_site', fields }));
 
-test('no setting row: a per-dog check still writes one line per dog', () => {
+test('no setting row: a per-dog check that is not a round still writes one line per dog', () => {
   const env = env0();
-  const id = addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
+  const id = addType(env, 'walk', { label: 'Walk', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
   const r = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b' });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.result.saved, 1);
@@ -47,10 +47,29 @@ test('no setting row: a per-dog check still writes one line per dog', () => {
   assert.equal(recs(env, 'BLD-check_log.csv')[0].covered_ids, '');
 });
 
+test('Exercise all and Health check all save one session row when no setting has been saved', () => {
+  const env = env0();
+  const exercise = addType(env, 'exercise_all', { label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
+  const health = addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
+  const ex = site(env, { check_type_id: exercise, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b', exceptions: 'sub-test-a:not_here' });
+  assert.equal(ex.ok, true, JSON.stringify(ex));
+  assert.equal(ex.result.session, true);
+  assert.equal(ex.result.saved, 1);
+  assert.equal(ex.result.covered_ids, 'sub-test-b');
+  const healthRow = site(env, { check_type_id: health, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' });
+  assert.equal(healthRow.result.session, true);
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].subject_id, '');
+  assert.equal(rows[0].covered_ids, 'sub-test-b');
+  assert.equal(rows[0].exceptions, 'sub-test-a:not_here');
+  assert.equal(rows[1].covered_ids, 'sub-test-a|sub-test-b');
+});
+
 test('how one tap is stored follows the setting; with no setting it stays one line per dog', () => {
   const env = env0();
   const id = addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
-  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', site_scope: 'one_line', from_date: '2026-01-01', to_date: '2026-12-31', source: 'owner' }).ok, true);
+  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', site_scope: 'one_line', session_row: 'false', from_date: '2026-01-01', to_date: '2026-12-31', source: 'owner' }).ok, true);
   const r = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' });
   assert.equal(r.ok, true, JSON.stringify(r));
   const rows = recs(env, 'BLD-check_log.csv');
@@ -98,22 +117,26 @@ test('one line for the round is only offered for the three checks, and a change 
   assert.match(again.fields.from_date, /after that date/);
 });
 
-test('session switch on: one check_log row lists the dogs; exceptions are not in the covered list; switch off refuses add_session', () => {
+test('session switch off writes one line per dog and refuses a session save; the default is one session row', () => {
   const env = env0();
-  const id = addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
+  const id = addType(env, 'exercise_all', { label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
+  assert.equal(set(env, { type_key: 'exercise_all', record_as: 'logged', every_days: '1', session_row: 'false', from_date: '2026-01-01', source: 'owner' }).ok, true);
   const off = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b' }, 'add_session');
   assert.equal(off.ok, false, JSON.stringify(off));
-  assert.match((off.fields && off.fields.check_type_id) || off.message || '', /one line per dog|one line for the round/);
-  assert.equal(set(env, { type_key: 'health_check_all', record_as: 'logged', every_days: '1', session_row: 'true', from_date: '2026-01-01', source: 'owner' }).ok, true);
-  const r = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b', exceptions: 'sub-test-a:not_here' });
+  assert.match((off.fields && off.fields.check_type_id) || off.message || '', /one line per dog|one line for the round/i);
+  const per = site(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b' });
+  assert.equal(per.result.session, undefined);
+  assert.equal(recs(env, 'BLD-check_log.csv')[0].subject_id, 'sub-test-b');
+  const health = addType(env, 'health_check_all', { label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', not_in_areas: 'none', every_days: '1' });
+  const r = site(env, { check_type_id: health, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b', exceptions: 'sub-test-a:not_here' });
   assert.equal(r.ok, true, JSON.stringify(r));
   assert.equal(r.result.session, true);
   assert.equal(r.result.saved, 1);
   const rows = recs(env, 'BLD-check_log.csv');
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].subject_id, '');
-  assert.equal(rows[0].covered_ids, 'sub-test-b');
-  assert.equal(rows[0].exceptions, 'sub-test-a:not_here');
+  assert.equal(rows.length, 2);
+  assert.equal(rows[1].subject_id, '');
+  assert.equal(rows[1].covered_ids, 'sub-test-b');
+  assert.equal(rows[1].exceptions, 'sub-test-a:not_here');
 });
 
 test('print only refuses a log row; logged and both still save', () => {
