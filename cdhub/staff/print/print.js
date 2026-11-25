@@ -95,7 +95,11 @@
   function lazy(text, what, fn) { return btn(text, function () { need(what).then(function (ok) { if (ok) fn(); }); }); }
   function current(kind, refId) { return BLDQrRules.tagFor(T.qr_tag, kind, refId); }
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
+  var makeGen = 0, tagSave = {};
   function make(kind, items, draw, done) {
+    var gen = ++makeGen, seenId = {}, list = [];
+    items.forEach(function (it) { if (!it || seenId[it.id]) return; seenId[it.id] = 1; list.push(it); });
+    items = list;
     sheet.textContent = '';
     if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
@@ -107,17 +111,34 @@
       return;
     }
     (function next() {
+      if (gen !== makeGen) return;
       if (i < missing.length && !failed) {
+        var it = missing[i];
+        if (current(kind, it.id)) { i++; next(); return; }
+        var key = kind + '\0' + it.id;
+        if (tagSave[key]) { tagSave[key].then(function () { next(); }); return; }
         say('Making code ' + (i + 1) + ' of ' + missing.length + '...');
-        var tag = newTag(), it = missing[i];
-        save.submit('qr_tag', { tag: tag, kind: kind, ref_id: it.id }).then(function (r) {
-          if (r.ok) { T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); i++; } else failed = r.message;
+        var tag = newTag();
+        tagSave[key] = save.submit('qr_tag', { tag: tag, kind: kind, ref_id: it.id }).then(function (r) {
+          delete tagSave[key];
+          if (r.ok) { if (!current(kind, it.id)) T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); }
+          if (gen !== makeGen) return;
+          if (!r.ok) failed = r.message;
+          i++;
           next();
         });
         return;
       }
+      if (gen !== makeGen) return;
+      sheet.textContent = '';
+      var seen = {};
       // only codes already saved are drawn (a code whose save failed is never shown); the rest are named as not printed
-      items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room)); });
+      items.forEach(function (it) {
+        if (seen[it.id]) return;
+        seen[it.id] = 1;
+        var t = current(kind, it.id);
+        if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room));
+      });
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
       say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
         : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
@@ -130,7 +151,7 @@
   function pickThen(kind, items, draw, only) {
     var list = BLDPick.create(pick, items, { only: only, onChange: show });
     function show(sel) {
-      if (!sel.length) { sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
+      if (!sel.length) { makeGen++; sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
       list.setBusy(true);
       make(kind, sel, draw, function () { list.setBusy(false); });
     }
@@ -385,7 +406,8 @@
       h('p', { class: 'foot', text: footer() }),
       h('small', { class: 'tag', text: tag })]);
   }
-  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); fn(); } }); }
+  function beginPrint() { makeGen++; sheet.textContent = ''; }
+  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); beginPrint(); fn(); } }); }
   /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
   function privateQr() {
     var url = '', timer = 0; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
@@ -447,13 +469,14 @@
   (function () {
     screen.insertBefore(asOf, msg);
     function roomItems() { return T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }); }
-    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
+    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet per' + per; make('site', [{ id: 'site', label: 'Whole site' }]); }));
     opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; pickThen('area', roomItems(), roomCard); }));
     opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; pickThen('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
-        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
+        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per);
+        else if (/\bper\d\b/.test(sheet.className)) sheet.className = 'sheet per' + per; } });
     }));
     opts.appendChild(perBox);
     opts.appendChild(lazy('Litter cards', 'litters', function () {

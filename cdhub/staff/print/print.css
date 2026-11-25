@@ -3,7 +3,16 @@
 .qcard b{display:block;font-size:18px}.qcard small{display:block;font-size:11px}
 .qcard.big{grid-column:1/-1;max-width:320px;margin:0 auto}.qcard.big b{font-size:34px}
 .opts{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-@media print{.noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}.sheet{grid-template-columns:repeat(3,1fr)}}
+.sheet.per1{grid-template-columns:1fr}
+.sheet.per1>.qcard{width:100%;max-width:none}
+@media print{
+ .noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}
+ .sheet{grid-template-columns:repeat(3,1fr)}
+ .sheet.per1{grid-template-columns:1fr}
+ .sheet.per1>.qcard{break-after:page;page-break-after:always;min-height:270mm;box-sizing:border-box}
+ .sheet.per1>.qcard svg{width:160mm;height:160mm}
+ .sheet.per1>.qcard:last-child{break-after:auto;page-break-after:auto}
+}
 .qcard .room{display:block;font-size:14px;font-weight:600}
 /* Lisa's "Dog Card Print-outs" v4. Size colours come from rule rows; these only turn a colour word into the print shade. */
 :root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon);--sz-purple:var(--ljr-7-icon)}
