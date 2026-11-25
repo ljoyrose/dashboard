@@ -1049,11 +1049,11 @@ test('outbox: no answer, busy or saving off keeps it; a refusal is listed as not
   assert.equal(s.outbox.refused().length, 0);
 });
 
-test('outbox: after 5 hours an entry is not sent by itself; the person can send it after checking, or remove it', async () => {
+test('outbox: after 23 hours an entry is not sent by itself; the person can send it after checking, or remove it', async () => {
   const local = memStore();
   local.setItem('bld.outbox', JSON.stringify([
-    { id: 'r-old-00001', at: new Date(Date.now() - 6 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00001', action: 'link_end', fields: { id: 'a' } } },
-    { id: 'r-old-00002', at: new Date(Date.now() - 6 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00002', action: 'link_end', fields: { id: 'b' } } }
+    { id: 'r-old-00001', at: new Date(Date.now() - 24 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00001', action: 'link_end', fields: { id: 'a' } } },
+    { id: 'r-old-00002', at: new Date(Date.now() - 24 * 3600000).toISOString(), body: { v: 1, request_id: 'r-old-00002', action: 'link_end', fields: { id: 'b' } } }
   ]));
   const posts = [];
   const f = async (url, init = {}) => { posts.push(JSON.parse(init.body)); return { json: async () => ({ ok: true, result: {} }) }; };
