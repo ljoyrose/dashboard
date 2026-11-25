@@ -49,7 +49,10 @@
       if (!ids[l.check_type_id] || replaced[l.id] || SKIP[l.outcome] || String(l.how_recorded || '') === 'owner_note') return;
       var d = Due.londonDate(l.happened_at || l.taken_at); if (!d) return;
       var x = out[d] = out[d] || { dogs: {}, n: 0, lines: [] };
-      if (l.subject_id) x.dogs[l.subject_id] = 1;
+      var skip = {};
+      String(l.exceptions || '').split('|').forEach(function (p) { var id = String(p.split(':')[0] || '').trim(); if (id) skip[id] = 1; });
+      String(l.covered_ids || '').split('|').forEach(function (id) { id = id.trim(); if (id && !skip[id]) x.dogs[id] = 1; });
+      if (l.subject_id && !skip[l.subject_id]) x.dogs[l.subject_id] = 1;
       x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: l.note || '' });
     });
     return out;
@@ -72,7 +75,7 @@
       var state = iso > v.today ? 'future' : (got && (!perDog || got >= want)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
       cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : 0, lines: x ? x.lines : [] });
     }
-    return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, need: need, typeId: t.id, cells: cells };
+    return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, vetCal: showsVet(t), need: need, typeId: t.id, cells: cells };
   }
 
   /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.
@@ -105,7 +108,7 @@
       (docs[l.id] || []).forEach(function (f) { if (!pics.some(function (p) { return p.url === f.url; })) pics.push(f); });
     });
     var part = x.state === 'part' && x.need ? ' (' + x.got + ' of ' + x.need + ')' : '';
-    var vet = c.perDog ? ((vets || vetByDay(v))[iso] || []) : [];
+    var vet = c.vetCal ? ((vets || vetByDay(v))[iso] || []) : [];
     return '<div class="jcal-day" data-jcal-detail="' + e(iso) + '"><b>' + e(v.dmy ? v.dmy(iso) : iso) + '</b> <span class="mut">' + e(WORD[x.state] || '') + part + '</span>'
       + (order.length ? '<ul>' + order.map(function (k) { var t = by[k].filter(Boolean).sort();
           return '<li>' + e(k) + (t.length ? ' · ' + e(t[0] + (t.length > 1 && t[t.length - 1] !== t[0] ? '–' + t[t.length - 1] : '')) : '') + (by[k].length > 1 ? ' · ' + by[k].length + ' records' : '') + '</li>'; }).join('') + '</ul>'
@@ -118,8 +121,14 @@
       + '</div>';
   }
 
-  /** Vet visits by day (BLD-visit rows, status done; booked ones are not shown as visits). Cross-referenced on the per-dog
-      calendars (health checks) so a vet day is visible next to the checks; a visit never counts as a check. */
+  /** A health-check calendar may show vet visits beside the checks. Exercise and every other card do not. */
+  function showsVet(t) {
+    if (!t || !Due.perDogSite(t)) return false;
+    return (String(t.type_key || '') + ' ' + String(t.label || '')).toLowerCase().indexOf('health') >= 0;
+  }
+
+  /** Vet visits by day (BLD-visit rows, status done; booked ones are not shown as visits). Shown on health-check
+      calendars only, so a visit never counts as a check and never appears on Exercise or any other card. */
   function vetByDay(v) {
     var out = {};
     (v.vetVisits || []).forEach(function (r) {
@@ -143,10 +152,11 @@
     var h = '<section class="card jcal-wrap" id="jobCals"><div class="jcal-head"><h3>Daily records</h3><div class="jcal-nav">'
       + '<button class="btn quiet" type="button" data-jcal-month="' + prev + '" aria-label="Previous month">‹</button><b data-jcal-title>' + e(title) + '</b>'
       + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button>'
-      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div></div>'
+      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div>'
+      + '<button type="button" class="btn" data-yp="cal">Print / PDF</button></div>'
       + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
       + '<p class="mut jcal-key"><span class="jd done" data-jcal-legend="done">' + TICK + '</span> done <span class="jd part" data-jcal-legend="part"></span> part done <span class="jd missed" data-jcal-legend="missed"></span> missed'
-      + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
+      + (keys.some(function (k) { return showsVet(typeOf(v, k)); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
     if (!keys.length) return h + '<p class="mut">No calendars chosen. Add rows compliance.calendar.&lt;job&gt; in Settings.</p></section>';
     h += '<div class="jcal-grid">' + keys.map(function (k) {
       var c = month(v, k, ym); if (!c) return '';
@@ -158,7 +168,7 @@
         + '</div><div class="jdays">' + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (w) { return '<span class="jdh">' + w + '</span>'; }).join('')
         + c.cells.map(function (x) {
           if (x.state === 'blank') return '<span class="jd blank"></span>';
-          var ph = x.lines.some(function (l) { return (docs[l.id] || []).length; }), vn = c.perDog && vets[x.iso] ? vets[x.iso].length : 0;
+          var ph = x.lines.some(function (l) { return (docs[l.id] || []).length; }), vn = c.vetCal && vets[x.iso] ? vets[x.iso].length : 0;
           var who = x.lines.length ? ' · ' + x.lines.map(function (l) { return l.by; }).filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; }).join(', ') : '';
           var part = x.state === 'part' && x.need ? ' (' + x.got + ' of ' + x.need + ')' : '';
           var label = (v.dmy ? v.dmy(x.iso) : x.iso) + (WORD[x.state] ? ': ' + WORD[x.state] : '') + part + who;
@@ -182,16 +192,16 @@
     return f;
   }
 
-  var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.jcal-nav{display:flex;align-items:center;gap:8px}'
+  var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-width:0}.jcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}'
     + '.jcal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.jcal{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card)}'
     + '.jcal-t{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin-bottom:6px}.jcal-ok{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:700}'
     + '.jcal-ok svg,.jd svg{width:16px;height:16px}.jdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.jdh{font-size:10px;color:var(--muted);text-align:center}'
     + '.jd{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:10px;color:var(--ink)}'
-    + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done{background:var(--ljr-5);box-shadow:none;color:var(--ljr-paper,#fff)}'
-    + '.jd.part{box-shadow:inset 0 0 0 2px var(--ljr-3);background:var(--ljr-3-tint)}.jd.missed{box-shadow:inset 0 0 0 2px var(--ljr-2-text);position:relative}.jd.missed::after{content:"\\2715";position:absolute;top:1px;right:2px;font-size:8px;line-height:1;font-weight:700;color:var(--ljr-2-text)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
+    + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done,#jobCals button.jd.done{background:var(--ljr-5);box-shadow:none;color:#fff}'
+    + '.jd.part,#jobCals button.jd.part{box-shadow:inset 0 0 0 2px var(--ljr-3);background:var(--ljr-3-tint);color:var(--ink)}.jd.missed,#jobCals button.jd.missed{background:transparent;box-shadow:inset 0 0 0 2px var(--ljr-2);position:relative;color:var(--ink)}.jd.missed::after{content:"\\2715";position:absolute;top:1px;right:2px;font-size:8px;line-height:1;font-weight:700;color:var(--ljr-2-text)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
     + 'button.jd{border:0;padding:0;font:inherit;cursor:pointer;position:relative;min-width:0}.jd.open{outline:3px solid var(--ink);outline-offset:-3px}'
     + '.jcam{position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center}.jcam svg{width:9px;height:9px}'
-    + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6-solid);color:var(--ljr-6-on);display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
+    + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6);color:#fff;display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
     + '.jcal-day{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.jcal-day ul{margin:6px 0;padding-left:18px}'
     + '.jcal-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.jcal-pics a{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;min-height:44px;color:var(--ink)}.jcal-pics img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}'
     + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}'
@@ -228,12 +238,25 @@
   }
   var IMP_OUTCOME = { '': 'ok', done: 'ok', ok: 'ok', yes: 'ok', concern: 'concern', 'not done': 'not_done', no: 'not_done' };
 
+  /** A day that is already fully done (every dog, or the one line). A part-done day can still be imported. */
+  function dayFullyDone(v, key, iso) {
+    var c = month(v, key, String(iso || '').slice(0, 7));
+    if (!c) return false;
+    var cell = null;
+    (c.cells || []).forEach(function (x) { if (x.iso === iso) cell = x; });
+    return !!(cell && cell.state === 'done');
+  }
   /** Checks every row: [{line, iso, key, label, outcome, note, ok, why}]. Nothing is saved here. */
   function parseImport(v, text) {
     var types = siteTypes(v), byName = {};
     Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
     var rows = csvRows(text), out = [], seen = {};
-    if (rows.length && /date/i.test(rows[0][0] || '') && /job/i.test(rows[0][1] || '')) rows = rows.slice(1);
+    // The heading row (date, job, ...) may sit under a title line: Numbers puts the table name above it ("daily-records",
+    // "Csv"; Lisa 22 Nov 2026). Everything above the heading row is left out; no heading row = every row is data.
+    for (var h = 0; h < Math.min(rows.length, 5); h++) {
+      var cells = rows[h].map(function (c) { return String(c).trim().toLowerCase(); });
+      if (cells.indexOf('date') >= 0 && cells.indexOf('job') >= 0) { rows = rows.slice(h + 1); break; }
+    }
     rows.forEach(function (r, i) {
       var iso = isoOf(r[0]), key = byName[String(r[1] || '').trim().toLowerCase()] || '', oc = IMP_OUTCOME[String(r[2] || '').trim().toLowerCase()];
       var x = { line: i + 1, date: String(r[0] || ''), job: String(r[1] || ''), iso: iso, key: key, label: key ? types[key].label || key : '', outcome: oc || '', note: String(r[3] || '').trim(), ok: false, why: '' };
@@ -242,8 +265,11 @@
       else if (!key) x.why = 'job not found: use its name as on the calendar';
       else if (!oc) x.why = 'outcome not understood (done, concern or not done)';
       else if (seen[key + '|' + iso]) x.why = 'repeated in this file';
-      else if (days(v, key)[iso] && oc === 'ok') x.why = 'already recorded that day';
+      else if (oc === 'ok' && dayFullyDone(v, key, iso)) x.why = 'already recorded';
       else { x.ok = true; seen[key + '|' + iso] = 1; }
+      // Older than 7 days: the save script asks "Save anyway?" for a typed record. Here the owner has seen every date in
+      // this list before pressing Import, so Import is that "save anyway" (Lisa 22 Nov 2026: 15 of 16 rows were refused).
+      x.old = !!(x.ok && (Date.parse(v.today + 'T00:00:00Z') - Date.parse(iso + 'T00:00:00Z')) / 864e5 >= 7);
       out.push(x);
     });
     return out;
@@ -253,6 +279,7 @@
     var t = siteTypes(v)[x.key]; if (!t) return null;
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
     if (x.note) f.note = x.note;
+    if (x.old) f.confirm_unusual = 'yes';
     if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
     return f;
   }
@@ -275,9 +302,10 @@
       + '<div class="scroll"><table class="jcal-imp-t"><thead><tr><th>Row</th><th>Date</th><th>Job</th><th>Outcome</th><th></th></tr></thead><tbody>'
       + rows.map(function (x) {
         return '<tr data-ok="' + (x.ok ? 1 : 0) + '"><td>' + x.line + '</td><td>' + e(x.iso ? (v.dmy ? v.dmy(x.iso) : x.iso) : x.date) + '</td><td>' + e(x.label || x.job) + '</td><td>'
-          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? 'ready' : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
+          + e(word[x.outcome] || '') + '</td><td>' + (x.ok ? (x.old ? 'ready (older than 7 days)' : 'ready') : '<span class="warn">' + e(x.why) + '</span>') + '</td></tr>';
       }).join('') + '</tbody></table></div>'
-      + (good ? '<p><button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>' : '');
+      + '<p>' + (good ? '<button class="btn" type="button" data-jcal-import-go>Import ' + good + ' row' + (good === 1 ? '' : 's') + '</button> ' : '')
+      + '<button class="btn quiet" type="button" data-jcal-import-cancel>Cancel</button> <span class="msg" data-jcal-imp-msg role="status"></span></p>';
   }
 
   return { STARTER: STARTER, chosen: chosen, month: month, html: html, dayHtml: dayHtml, filesByLog: filesByLog, doneFields: doneFields, shift: shift, CSS: CSS, parseImport: parseImport, importFields: importFields, template: template, importPanel: importPanel, previewHtml: previewHtml };

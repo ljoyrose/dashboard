@@ -48,7 +48,7 @@
       return b;
     }
     host.appendChild(banner);
-    if (save.deviceCode) codeRow.hidden = true;   // the staff page: this phone was set up once, so no box to type in
+    if (save.deviceCode || (save.usingGoogle && save.usingGoogle())) codeRow.hidden = true;   // set up once, or signed in as the owner: no staff code box
     host.appendChild(codeRow);
     paint();
     return { paint: paint, codeRow: codeRow };

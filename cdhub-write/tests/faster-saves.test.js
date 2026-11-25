@@ -142,12 +142,12 @@ test('list save: sending the same list again saves nothing twice (each entry rem
   assert.equal(env.rows(T).length, n);
 });
 
-test('list save: a wrong code, an empty list or more than 20 entries refuse the whole list and save nothing', () => {
+test('list save: a wrong code, an empty list or more than 200 entries refuse the whole list and save nothing', () => {
   const env = bigEnv(10);
   const n = env.rows(T).length;
   const it = (k) => ({ request_id: 'r-item-1' + String(k).padStart(4, '0'), table: 'area_reading', fields: { area_id: 'area-t1', min_c: '18.0', max_c: '21.0' } });
   assert.equal(many(env, [it(1)], { code: 'not-a-code' }).ok, false);
-  assert.equal(many(env, Array.from({ length: 21 }, (_, k) => it(k))).code, 'BAD_REQUEST');
+  assert.equal(many(env, Array.from({ length: 201 }, (_, k) => it(k))).code, 'BAD_REQUEST');
   assert.equal(many(env, []).code, 'BAD_REQUEST');
   assert.equal(env.rows(T).length, n);
 });

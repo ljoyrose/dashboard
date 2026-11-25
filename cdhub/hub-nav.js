@@ -22,6 +22,7 @@
     work: { label: 'Do', icon: 't-do' },
     map: { label: 'Main', icon: 't-main' },   /* the Live feed: Main's own page */
     compliance: { label: 'Compliance', icon: 's-check' },
+    yearly: { label: 'Yearly print', icon: 's-check' },
     items: { label: 'Items', icon: 't-box' },
     breed: { label: 'Breed Better', icon: 's-check' },
     dogs: { label: 'Dogs', icon: 't-paw' },
@@ -37,7 +38,7 @@
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
     { id: 'main', label: 'Main', slot: '1', icon: 't-main', go: 'map', views: ['map', 'today', 'work'] },
-    { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check', go: 'compliance', views: ['compliance', 'items', 'breed'] },   /* Breed Better: a welfare and standards scheme, its own brick */
+    { id: 'compliance', label: 'Compliance', slot: '2', icon: 's-check', go: 'compliance', views: ['compliance', 'items', 'breed', 'yearly'] },   /* Breed Better: a welfare and standards scheme, its own brick. Yearly print: one A4 page per month for every record */
     { id: 'money', label: 'Money', slot: '3', icon: 't-money', go: 'money', views: [] },
     { id: 'ops', label: 'Records', slot: '4', icon: 't-box', go: 'dogs', views: ['dogs', 'litters', 'areas', 'round', 'sops', 'temps'] },
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },

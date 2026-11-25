@@ -9,7 +9,7 @@
  */
 var AdminView = (function () {
   'use strict';
-  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv'];
+  var FILES = ['BLD-field_visibility.csv', 'BLD-audience.csv', 'BLD-inspect_link.csv', 'BLD-retention_setting.csv', 'BLD-code_register.csv', 'BLD-check_type.csv', 'BLD-check_setting.csv'];
   var S = { open: '', aud: '', cell: '', futureAll: false, future: null, futureErr: '', qr: false };
   var I = {   // Tabler outline paths, ours
     qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2',
@@ -39,7 +39,8 @@ var AdminView = (function () {
     ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
     ['inspect', 'Inspector link', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
     ['print', 'Print', 'print', 4, 'Tools'], ['rules', 'Rules & limits', 'rules', 3, 'Tools'],
-    ['records', 'Records kept', 'records', 0, 'Tools'], ['health', 'System health', 'health', 5, 'Tools'],
+    ['records', 'Records kept', 'records', 0, 'Tools'], ['checks', 'Check settings', 'check', 3, 'Tools'],
+    ['health', 'System health', 'health', 5, 'Tools'],
     ['display', 'Display', 'eye', 6, 'Tools']   // Lisa 17 Nov 2026: display choices are settings here, not buttons on cards
   ];
 
@@ -75,7 +76,11 @@ var AdminView = (function () {
       '.adm-why{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}.adm-why ul{margin:6px 0 0;padding-left:18px}.adm-why li{margin:3px 0}',
       '.adm-later{margin-top:8px}',
       '.adm-future{list-style:none;margin:0;padding:0}.adm-future li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}.adm-future li:last-child{border:0}',
-      '.adm-future span{flex:1}.adm-future em{font-style:normal;color:var(--muted);font-size:var(--fs-small)}'
+      '.adm-future span{flex:1}.adm-future em{font-style:normal;color:var(--muted);font-size:var(--fs-small)}',
+      '.adm-set{border-top:1px solid var(--line);padding:10px 0}.adm-set:first-of-type{border-top:0}',
+      '.adm-set b{display:block}.adm-set label{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);color:var(--muted);margin:6px 0}',
+      '.adm-set select,.adm-set input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:4px 8px}',
+      '.adm-floor{font-size:var(--fs-small);color:var(--muted);margin:2px 0 6px}'
     ].join('\n');
     document.head.appendChild(st);
   }());
@@ -177,6 +182,54 @@ var AdminView = (function () {
       + (later.length ? '<details class="adm-later"><summary class="mut">Website people, later (' + later.length + ')</summary>' + grid(later) + '</details>' : '')
       + '<p class="mut help">From BLD-field_visibility, today. Add and change: set in the save script, not rows yet (coming).</p>'
       + '</details></section>';
+  }
+
+  /* One row per check in force. The legal minimum sits next to each choice. A weaker choice is refused here and by the save. */
+  function checksBody(v) {
+    var R = window.BLDCheckRules, today = v.today, types = rows(v.T, 'BLD-check_type.csv'), settings = rows(v.T, 'BLD-check_setting.csv');
+    if (!R) return '<p class="mut">Check settings did not load. Reload the page.</p>';
+    var keys = {}, list = [];
+    types.forEach(function (t) {
+      if (!t.type_key) return;
+      var live = R.typeInForce(types, t.type_key, today);
+      if (live && live.id === t.id) { keys[t.type_key] = 1; list.push(live); }
+    });
+    list.sort(function (a, b) { return String(a.label).localeCompare(String(b.label)); });
+    var years = R.keepYears(rows(v.T, 'BLD-retention_setting.csv'), today);
+    function opt(val, cur, label) { return '<option value="' + v.esc(val) + '"' + (cur === val ? ' selected' : '') + '>' + label + '</option>'; }
+    var keep = '<div class="adm-set" data-ck="__keep"><b>How long check records are kept</b>'
+      + '<p class="adm-floor">Legal minimum: 6 years. With no row of your own, 6 years.</p>'
+      + '<label>Years<input type="number" min="6" max="99" data-ck-years value="' + years + '"></label>'
+      + '<label>From<input type="date" data-ck-from value="' + v.esc(today) + '"></label>'
+      + '<label>Why<input type="text" data-ck-source value="owner" maxlength="200"></label>'
+      + '<p><button type="button" class="btn" data-ck-keep="1">Save how long</button> <span class="mut" data-ck-msg role="status"></span></p></div>';
+    if (!list.length) return keep + '<p class="mut">No checks in force.</p>';
+    return keep + list.map(function (t) {
+      var s = R.settingFor(settings, t.type_key, today), e = R.effective(t, s), floor = R.every(t.every_days);
+      var ban = R.printBan(t), floorBits = [];
+      if (t.frequency) floorBits.push(String(t.frequency));
+      floorBits.push(floor ? ('every ' + floor + ' day' + (floor === 1 ? '' : 's')) : 'as needed');
+      if (t.evidence) floorBits.push('evidence ' + t.evidence);
+      if (t.sop) floorBits.push('SOP ' + t.sop);
+      if (ban) floorBits.push(ban);
+      var when = s ? (' · in force ' + v.esc(s.from_date || '') + (s.to_date ? ' to ' + v.esc(s.to_date) : '') + (s.set_by ? ', set by ' + v.esc(s.set_by) : '') + (s.source ? ', ' + v.esc(s.source) : '')) : '';
+      var scope = (t.target === 'none' || t.target === 'area')
+        ? '<label>How one tap is stored<select data-ck-scope>' + opt('per_dog', e.site_scope || 'per_dog', 'One line per dog') + opt('one_line', e.site_scope, 'One line for the session') + '</select></label>'
+        : '';
+      var session = R.sessionAllowed(t.type_key)
+        ? '<label>One line for the round<select data-ck-session>' + opt('false', e.session_row ? 'true' : 'false', 'Off: one line per dog') + opt('true', e.session_row ? 'true' : 'false', 'On: one row lists the dogs') + '</select></label>'
+        : '';
+      return '<div class="adm-set" data-ck="' + v.esc(t.type_key) + '"><b>' + v.esc(t.label || t.type_key) + '</b>'
+        + '<p class="adm-floor">Legal minimum: ' + v.esc(floorBits.join(' · ')) + when + '</p>'
+        + '<label>Record as<select data-ck-as>' + opt('logged', e.record_as, 'Logged') + opt('print', e.record_as, 'Print sheet only') + opt('both', e.record_as, 'Both') + '</select></label>'
+        + '<label>How often, in days<input type="number" min="1" max="999" data-ck-days value="' + v.esc(e.every_days || '') + '" placeholder="' + (floor ? floor : 'as needed') + '"></label>'
+        + '<label>How often, in words<input type="text" data-ck-freq value="' + v.esc(e.frequency || '') + '" maxlength="80"></label>'
+        + scope + session
+        + '<label>From<input type="date" data-ck-from value="' + v.esc(today) + '"></label>'
+        + '<label>To<input type="date" data-ck-to value="' + v.esc((s && s.to_date) || '') + '"></label>'
+        + '<label>Why<input type="text" data-ck-source value="' + v.esc((s && s.source) || 'owner') + '" maxlength="200"></label>'
+        + '<p><button type="button" class="btn" data-ck-save="' + v.esc(t.type_key) + '">Save</button> <span class="mut" data-ck-msg role="status"></span></p></div>';
+    }).join('');
   }
 
   /* ---- the cards ---- */
@@ -286,6 +339,7 @@ var AdminView = (function () {
         + '<p><button type="button" class="btn" data-photo-dates="' + (on1 ? '0' : '1') + '" aria-pressed="' + (on1 ? 'true' : 'false') + '">' + (on1 ? 'Hide dates' : 'Show dates') + '</button> <span class="mut" data-photo-dates-msg role="status"></span></p>'
         + '<p class="mut help">Your own choice, from today. Order never changes. One change a day.</p>';
     }
+    if (id === 'checks') return checksBody(v);
     if (id === 'records') {
       var K = rows(T, 'BLD-retention_setting.csv');
       return (v.hasTable('BLD-retention_setting.csv') && K.length ? '<ul class="adm-list">' + K.map(function (r) {
@@ -318,6 +372,7 @@ var AdminView = (function () {
     if (id === 'print') return 'Rooms · dogs · litters';
     if (id === 'rules') { var k = {}; rows(v.T, 'BLD-breeding_rule.csv').forEach(function (r) { if (r.rule_key) k[r.rule_key] = 1; }); return Object.keys(k).length + ' rules'; }
     if (id === 'records') return rows(v.T, 'BLD-retention_setting.csv').length ? 'Per section' : 'Coming';
+    if (id === 'checks') { var n = 0; rows(v.T, 'BLD-check_type.csv').forEach(function (r) { if (r.type_key && String(r.active).toLowerCase() !== 'false') n++; }); return n ? n + ' checks' : 'No checks'; }
     if (id === 'health') return v.load.state === 'ok' ? 'Read ✓' : 'Problem';
     if (id === 'display') return 'Photo dates ' + (v.photoDates && !v.photoDates() ? 'hidden' : 'shown');
     return '';
@@ -380,14 +435,49 @@ var AdminView = (function () {
   if (typeof document !== 'undefined') document.addEventListener('click', function (e) {
     var t = e.target.closest && e.target.closest('[data-adm-pre]'); if (t) { S.open = t.dataset.admPre; S.qr = false; }
   });
+  function field(box, sel) { var n = box.querySelector(sel); return n ? String(n.value || '').trim() : ''; }
+  function saveCheck(btn, v) {
+    var box = btn.closest('.adm-set'), msg = box.querySelector('[data-ck-msg]'), R = window.BLDCheckRules;
+    if (!v || typeof v.save !== 'function') { if (msg) msg.textContent = 'Saving is not available on this page.'; return; }
+    if (btn.hasAttribute('data-ck-keep')) {
+      var years = parseInt(field(box, '[data-ck-years]'), 10);
+      if (!(years >= 6)) { msg.textContent = 'Check records are kept at least 6 years.'; return; }
+      msg.textContent = 'Saving…';
+      v.save('retention_setting', { section: 'checks', keep_years: String(years), basis: field(box, '[data-ck-source]') || 'owner', from_date: field(box, '[data-ck-from]') || v.today }).then(function (r) {
+        if (r && r.ok && r.result && r.result.status === 'saved') {
+          (v.T['BLD-retention_setting.csv'] = v.T['BLD-retention_setting.csv'] || []).push({ section: 'checks', keep_years: String(years), from_date: field(box, '[data-ck-from]') || v.today, basis: field(box, '[data-ck-source]') || 'owner' });
+          msg.textContent = 'Saved.';
+        } else msg.textContent = (r && r.fields && r.fields.keep_years) || (r && r.message) || 'Not saved.';
+      });
+      return;
+    }
+    var key = btn.getAttribute('data-ck-save'), type = R.typeInForce(rows(v.T, 'BLD-check_type.csv'), key, v.today);
+    var choice = { record_as: field(box, '[data-ck-as]'), every_days: field(box, '[data-ck-days]'), frequency: field(box, '[data-ck-freq]'), session_row: field(box, '[data-ck-session]') || 'false' };
+    var bad = R.refuse(type, choice), first = Object.keys(bad)[0];
+    if (first) { msg.textContent = bad[first]; return; }
+    var fields = { type_key: key, record_as: choice.record_as, every_days: choice.every_days, frequency: choice.frequency, session_row: choice.session_row, from_date: field(box, '[data-ck-from]') || v.today, source: field(box, '[data-ck-source]') || 'owner' };
+    var to = field(box, '[data-ck-to]'); if (to) fields.to_date = to;
+    var scope = box.querySelector('[data-ck-scope]'); if (scope && scope.value) fields.site_scope = scope.value;
+    msg.textContent = 'Saving…';
+    v.save('check_setting', fields).then(function (r) {
+      if (r && r.ok && r.result && (r.result.status === 'saved' || r.result.status === 'queued')) {
+        (v.T['BLD-check_setting.csv'] = v.T['BLD-check_setting.csv'] || []).push(fields);
+        msg.textContent = r.result.status === 'queued' ? 'Sent, waiting for approval.' : 'Saved.';
+      } else {
+        var f = r && r.fields && Object.keys(r.fields)[0];
+        msg.textContent = (f && r.fields[f]) || (r && r.message) || 'Not saved.';
+      }
+    });
+  }
   var bound = false;
   function bind(v) {
     AdminView._v = v;
     if (bound) return; bound = true;
     document.addEventListener('click', function (e) {
-      var t = e.target.closest && e.target.closest('[data-adm-open],[data-adm-aud],[data-adm-cell],[data-adm-qr],[data-adm-future]');
+      var t = e.target.closest && e.target.closest('[data-adm-open],[data-adm-aud],[data-adm-cell],[data-adm-qr],[data-adm-future],[data-ck-save],[data-ck-keep]');
       if (!t || !AdminView._v) return;
       var d = t.dataset;
+      if (d.ckSave || d.ckKeep) { saveCheck(t, AdminView._v); return; }
       if (d.admOpen) { S.open = S.open === d.admOpen ? '' : d.admOpen; if (S.open !== 'phone') S.qr = false; }
       else if (d.admAud) { S.aud = S.aud === d.admAud ? '' : d.admAud; S.mapShut = false; }
       else if (d.admCell) S.cell = S.cell === d.admCell ? '' : d.admCell;

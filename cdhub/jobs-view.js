@@ -22,7 +22,7 @@
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
       targets.forEach(function (t) {
-        Due.forTarget(v.types, logs, t, v.today, v.visits, { rules: v.rules }).forEach(function (j) {
+        Due.forTarget(v.types, logs, t, v.today, v.visits, { rules: v.rules, settings: v.settings }).forEach(function (j) {
           if (t.area_id && perDog[j.type_key]) return;   // counted dog by dog instead
           var r = rows[j.type_key] = rows[j.type_key] || { key: j.type_key, label: j.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: '' };
           if (j.status === 'late') r.late++;
@@ -117,11 +117,26 @@
     var byId = {}, replaced = {}, docs = filesByLog(v);
     v.types.forEach(function (t) { byId[t.id] = t; });
     v.logs.forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
+    function sessionBit(l) {
+      if (!target.subject_id) return null;
+      var ids = String(l.covered_ids || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean);
+      var ex = null;
+      String(l.exceptions || '').split('|').forEach(function (p) {
+        var bits = p.split(':'), id = (bits[0] || '').trim();
+        if (id === target.subject_id) ex = { word: bits[1] === 'not_here' ? 'not here' : (bits[1] || 'note'), text: bits.slice(2).join(':').trim() };
+      });
+      if (ids.indexOf(target.subject_id) < 0 && !ex) return null;
+      return ex;
+    }
     return v.logs.filter(function (l) {
-      return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
+      if (replaced[l.id] || !byId[l.check_type_id]) return false;
+      if (target.litter_id) return l.litter_id === target.litter_id;
+      if (target.subject_id) return l.subject_id === target.subject_id || sessionBit(l) !== null || String(l.covered_ids || '').split('|').indexOf(target.subject_id) >= 0;
+      return l.area_id === target.area_id;
     }).map(function (l) {
-      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '';
-      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
+      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '', bit = target.subject_id && l.subject_id !== target.subject_id ? sessionBit(l) : null;
+      var inRound = target.subject_id && l.subject_id !== target.subject_id && (String(l.covered_ids || '').split('|').indexOf(target.subject_id) >= 0 || bit);
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: (bit && bit.text) || l.note || '', item: inRound ? ('included in the round' + (bit ? ' · ' + bit.word : '')) : (l.item || ''), amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -177,12 +192,154 @@
   /** Why a job has nothing to count today: no current litter, or it is recorded from the Problem button. */
   var NONE_NOW = { no_litter: 'no litter now', problem: 'Problem button' };
 
+  /** The job row in force today for a type_key, or null. */
+  function typeInForce(v, key) {
+    var list = Due.jobsInForce(v.types || [], v.today);
+    for (var i = 0; i < list.length; i++) if (list[i].type_key === key) return list[i];
+    return null;
+  }
+  function yes(v) { return String(v).toLowerCase() === 'true'; }
+  /** Due, late, or never recorded. A job with no litter on site has nothing to record. */
+  function needsRecord(r) {
+    if (!r || r.none_now === 'no_litter') return false;
+    if (r.due || r.late) return true;
+    return !r.last_done;
+  }
+  function openJob(j) {
+    if (!j) return false;
+    if (j.status === 'late' || j.status === 'today' || j.status === 'never') return true;
+    return j.status === 'as_needed' && !j.last_done;
+  }
+  function dogGroups(v, d) { return d.groups || Due.groupsOf(v.links || [], d.id, v.today); }
+  function dogOne(v, d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: dogGroups(v, d), dob: d.dob || '' }; }
+  function jobFor(v, target, key) {
+    var list = Due.forTarget(v.types, v.logs, target, v.today, v.visits || [], { rules: v.rules || [] });
+    for (var i = 0; i < list.length; i++) if (list[i].type_key === key) return list[i];
+    return null;
+  }
+  /**
+   * Who still needs this check recorded: dogs, rooms, litters, or one whole-site line.
+   * A dog job (target dog) is listed dog by dog. Board > Jobs never shows those, and has no Select all for them.
+   */
+  function dueItems(v, t) {
+    var dogs = v.dogs || [], areas = v.areas || [], litters = v.litters || [];
+    function dogItem(d) { return { kind: 'dog', id: d.id, area_id: d.area_id || d.areaId || '', label: d.name || d.label || d.id }; }
+    if (Due.perDogSite(t)) {
+      return dogs.filter(function (d) { return openJob(jobFor(v, { dogs: [dogOne(v, d)] }, t.type_key)); }).map(dogItem);
+    }
+    if (t.target === 'dog' || Due.perDogRoom(t)) {
+      return dogs.filter(function (d) {
+        return openJob(jobFor(v, { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: dogGroups(v, d) }, t.type_key));
+      }).map(dogItem);
+    }
+    if (t.target === 'area') {
+      return areas.filter(function (a) {
+        var ids = dogs.filter(function (d) { return (d.area_id || d.areaId) === a.id; }).map(function (d) { return d.id; });
+        return openJob(jobFor(v, { area_id: a.id, roomDogIds: ids }, t.type_key));
+      }).map(function (a) { return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id }; });
+    }
+    if (t.target === 'either') {
+      var ds = dogs.filter(function (d) {
+        return openJob(jobFor(v, { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: dogGroups(v, d) }, t.type_key));
+      }).map(dogItem);
+      var as = areas.filter(function (a) { return openJob(jobFor(v, { area_id: a.id }, t.type_key)); }).map(function (a) {
+        return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id };
+      });
+      return ds.concat(as);
+    }
+    if (t.target === 'litter') {
+      return litters.filter(function (l) {
+        return openJob(jobFor(v, { litter_id: l.id, born: l.dob || l.born_on || l.born || '' }, t.type_key));
+      }).map(function (l) { return { kind: 'litter', id: l.id, label: l.name || l.label || 'Litter' }; });
+    }
+    if (t.target === 'none') {
+      return openJob(jobFor(v, {}, t.type_key)) ? [{ kind: 'site', id: '', label: 'Whole site' }] : [];
+    }
+    if (t.target === 'optional') return [{ kind: 'site', id: '', label: t.label || 'This check' }];
+    return [];
+  }
+  /** What a save still needs, in the same words as the staff check form. */
+  function gaps(type, entry) {
+    var e = {};
+    if (type.target === 'area' && !entry.area_id) e.area_id = 'Choose the room.';
+    if (type.target === 'dog' && !entry.subject_id) e.subject_id = 'Choose the dog.';
+    if (type.target === 'litter' && !entry.litter_id) e.litter_id = 'Choose the litter.';
+    if (type.target === 'either' && !entry.area_id && !entry.subject_id) e.area_id = 'Choose a room or a dog.';
+    if (yes(type.asks_item) && !entry.item) e.item = (type.item_label || 'This') + ' is needed.';
+    if (yes(type.asks_amount) && !entry.amount) e.amount = 'Amount is needed.';
+    if (yes(type.note_required) && !entry.note) e.note = (type.note_label || 'A note') + ' is needed.';
+    return e;
+  }
+  /**
+   * The check_log saves for the ticked rows. Dog and room jobs are one add each (subject_id or area_id).
+   * A litter job sends litter_id and no subject_id. A whole-site job about dogs is one add_site.
+   * how_recorded is tapped, or site_tap for a whole-site line. happened_at is the real time. Never a paper catch-up.
+   */
+  function savePlans(v, key, picked, extra, now) {
+    var t = typeInForce(v, key);
+    if (!t) return { error: 'That check is not set up.' };
+    extra = extra || {};
+    var base = { check_type_id: t.id, outcome: String(t.asks_outcome).toLowerCase() === 'false' ? 'recorded' : 'ok', happened_at: now || '' };
+    if (extra.item) base.item = extra.item;
+    if (extra.amount) base.amount = extra.amount;
+    if (extra.note) base.note = extra.note;
+    var list = picked || [];
+    if (t.target === 'none' && Due.perDogSite(t)) {
+      var ids = list.filter(function (p) { return p.kind === 'dog' && p.id; }).map(function (p) { return p.id; });
+      if (!ids.length) return { error: 'Tick a dog.' };
+      var site = Object.assign({}, base, { how_recorded: 'site_tap', dog_ids: ids.join('|') });
+      var sg = gaps(t, site), sk = Object.keys(sg)[0];
+      if (sk) return { error: sg[sk] };
+      return { plans: [{ action: 'add_site', fields: site }] };
+    }
+    if (!list.length && (t.target === 'none' || t.target === 'optional')) list = [{ kind: 'site' }];
+    if (!list.length) return { error: 'Tick one.' };
+    var plans = [];
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i], f = Object.assign({}, base, { how_recorded: p.kind === 'site' && t.target === 'none' ? 'site_tap' : 'tapped' });
+      if (p.kind === 'dog') f.subject_id = p.id;
+      if (p.kind === 'area') f.area_id = p.id;
+      if (p.kind === 'dog' && Due.perDogRoom(t) && p.area_id) f.area_id = p.area_id;
+      if (p.kind === 'litter') { f.litter_id = p.id; delete f.subject_id; }
+      var g = gaps(t, f), first = Object.keys(g)[0];
+      if (first) return { error: g[first] };
+      plans.push({ action: 'add', fields: f });
+    }
+    return { plans: plans };
+  }
+  function recordFields(e, t) {
+    var h = '';
+    if (yes(t.asks_item)) h += '<div class="frow"><label>' + e(t.item_label || 'What') + ' <input data-sop-item="' + e(t.type_key) + '" aria-label="' + e(t.item_label || 'What') + '"></label></div>';
+    if (yes(t.asks_amount)) h += '<div class="frow"><label>' + e(t.amount_unit ? 'Amount (' + t.amount_unit + ')' : 'Amount') + ' <input data-sop-amount="' + e(t.type_key) + '" aria-label="Amount"></label></div>';
+    if (yes(t.note_required)) h += '<div class="frow"><label>' + e(t.note_label || 'Note') + ' <input data-sop-note="' + e(t.type_key) + '" aria-label="' + e(t.note_label || 'Note') + '"></label></div>';
+    return h;
+  }
+  /** Record / Done under a job that is due or not recorded. Many dogs or rooms: all ticked, untick any to leave out. */
+  function recordHtml(v, row) {
+    if (!needsRecord(row)) return '';
+    var e = v.esc, t = typeInForce(v, row.key);
+    if (!t) return '';
+    var items = dueItems(v, t);
+    if (!items.length) return '<p class="mut" data-sop-empty="' + e(row.key) + '">Nothing here to record.</p>';
+    var many = items.length > 1;
+    var verb = (!row.last_done && !row.due && !row.late) ? 'Record' : 'Done';
+    var text = many ? 'Mark all due as done today' : verb;
+    var ticks = many ? items.map(function (p) {
+      return '<label class="dcs-row"><input type="checkbox" data-sop-tick="' + e(row.key) + '" data-kind="' + e(p.kind) + '"' + (p.area_id ? ' data-area="' + e(p.area_id) + '"' : '') + ' value="' + e(p.id) + '" checked> ' + e(p.label) + '</label>';
+    }).join('') : '';
+    var one = many ? '' : ' data-one-kind="' + e(items[0].kind) + '" data-one-id="' + e(items[0].id || '') + '"' + (items[0].area_id ? ' data-one-area="' + e(items[0].area_id) + '"' : '');
+    var who = (!many && items[0].kind !== 'site') ? '<span class="mut">' + e(items[0].label) + '</span>' : '';
+    return '<div data-sop-record="' + e(row.key) + '"' + one + '>' + ticks + who + recordFields(e, t)
+      + '<button type="button" class="btn" data-sop-save="' + e(row.key) + '">' + e(text) + '</button>'
+      + '<p class="mut" data-sop-msg="' + e(row.key) + '" role="status"></p></div>';
+  }
+
   function sopHtml(v, name) {
     var e = v.esc, rows = summary(v).filter(function (r) { return r.sop === name; });
     if (!rows.length) return '';
     return '<div class="sopjobs" data-sopjobs="' + e(name) + '">' + rows.map(function (r) {
       var state = r.late ? '<span class="pill no">' + r.late + ' late</span>' : r.due ? '<span class="pill w">' + r.due + ' due</span>' : NONE_NOW[r.none_now] ? '<span class="mut" data-none>' + NONE_NOW[r.none_now] + '</span>' : '';
-      return '<div class="dcs-row"><b>' + e(r.label) + '</b><span class="mut" data-every>' + e(timing(r)) + '</span><span class="mut">' + e(r.last_done ? 'last ' + v.dmy(r.last_done) : 'not recorded') + '</span>' + state + '</div>';
+      return '<div class="dcs-row"><b>' + e(r.label) + '</b><span class="mut" data-every>' + e(timing(r)) + '</span><span class="mut">' + e(r.last_done ? 'last ' + v.dmy(r.last_done) : 'not recorded') + '</span>' + state + '</div>' + recordHtml(v, r);
     }).join('') + '</div>';
   }
 
@@ -197,6 +354,5 @@
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
-  return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
-  return { showLate: showLate, summary: summary, everyWords: everyWords, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
+  return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml, needsRecord: needsRecord, dueItems: dueItems, savePlans: savePlans, recordHtml: recordHtml };
 }));
