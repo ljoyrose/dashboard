@@ -27,6 +27,7 @@
 <script src="staff/lib/links.js"></script>
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
+<script src="sop-records.js"></script>
 <script src="job-calendar.js"></script>
 <script src="docs-view.js"></script>
 <script src="../breed-better/score.js"></script>
@@ -302,6 +303,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .sopsigns{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:var(--fs-small);font-weight:600}
 .sopsigns .ti{width:18px;height:18px}
 .sopbody{margin:0 0 12px;padding:4px 0 4px 12px;border-left:3px solid var(--hc,var(--line));border-radius:var(--radius);overflow-wrap:anywhere}
+.sopbody .sopprint{margin:8px 0}
 .sopbody p,.sopbody ol,.sopbody ul{margin:6px 0}
 .sopbody ol,.sopbody ul{padding-left:20px}
 .sopbody .sopmeta{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);color:var(--muted);margin:4px 0}
@@ -781,7 +783,7 @@ function currentLitters(){
  return (CD.litters||[]).filter(function(l){ return here[l.id]||(!pups[l.id]&&on[l.dam_subject_id]); }).map(function(l){
   return {id:l.id,dob:l.dob||l.born_on||'',born_on:l.born_on||l.dob||'',name:'Litter of '+(nameOf(l.dam_subject_id)||'a dam')}; });
 }
-function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types); return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
@@ -4948,17 +4950,20 @@ function sopLinks(c){
   return '<li><span class="soplink none" '+attr+'>'+icon+esc(lab)+' (no file linked)</span></li>';
  }).join('')+'</ul>';
 }
+function sopCtx(){ return {today:todayISO(),types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],tables:T,kennel:(CD.tenant&&CD.tenant.name)||'',dogName:function(id){ var d=regDog(id); return d&&d.name||''; }}; }
+function sopExtra(r){ return typeof BLDSopRecords==='undefined'?'':BLDSopRecords.extraHtml(sopCtx(), r); }
 function sopCardHtml(r){
  var head=(r.role?'<div class="sopmeta">'+sopIcon('user')+'Applies to: '+esc(sopRoleLabel(r.role))+'</div>':'')+BLDJobsView.sopHtml(jobsV(),r.short_name);
- if(SOP.cardsErr) return head+'<p class="note">'+esc(SOP.cardsErr)+'</p>';
- if(!SOP.cards) return head+'<p class="note">Reading the SOP…</p>';
+ var extra=sopExtra(r);
+ if(SOP.cardsErr) return head+'<p class="note">'+esc(SOP.cardsErr)+'</p>'+extra;
+ if(!SOP.cards) return head+'<p class="note">Reading the SOP…</p>'+extra;
  var c=SOP.cards[r.short_name];
- if(!c) return head+'<p class="note">Not written yet: this SOP has no text in the master.</p>';
+ if(!c) return head+'<p class="note">Not written yet: this SOP has no text in the master.</p>'+extra;
  return head+sopLinks(c)+sopBlocks(c.intro)+(c.sections||[]).map(function(s){
   var n=(s.blocks||[]).reduce(function(a,b){ return a+(b.items?b.items.length:1); },0);
   if(!n) return '';
   return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
- }).join('');
+ }).join('')+extra;
 }
 /* Record a due or never-recorded SOP check. One check_log row per dog, room or litter (litter_id, not subject_id).
    A whole-site job about dogs is one add_site. how_recorded is tapped or site_tap, at the real time, through the same save as other checks. */
@@ -4985,6 +4990,56 @@ async function sopRecord(btn){
  }
  drawSops();
  if(bad){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) again.textContent=bad; }
+}
+/* Checked today: an SOP with no check in force. The first time also adds the check_type row, then one check_log. */
+async function sopChecked(btn){
+ var name=btn.getAttribute('data-sop-checked'), box=btn.closest('[data-sop-record]'); if(!box||typeof BLDSopRecords==='undefined') return;
+ var msg=box.querySelector('[data-sop-msg]'), sop=(SOP.rows||[]).filter(function(r){ return r.short_name===name; })[0]||{short_name:name};
+ var plan=BLDSopRecords.checkedPlan(sopCtx(), sop, new Date().toISOString());
+ if(plan.error){ if(msg) msg.textContent=plan.error; return; }
+ btn.disabled=true; var typeId=plan.typeId||'', bad='';
+ for(var i=0;i<plan.steps.length;i++){
+  var step=plan.steps[i], fields={}; Object.keys(step.fields).forEach(function(k){ fields[k]=step.fields[k]; });
+  if(step.needsType) fields.check_type_id=typeId;
+  if(msg) msg.textContent='Saving '+(i+1)+' of '+plan.steps.length+'\u2026';
+  var r=await sinkSend({table:step.table,action:step.action,fields:fields});
+  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
+  var res=r.result||{};
+  if(step.table==='check_type'){ typeId=res.id||typeId; (T['BLD-check_type.csv']||(T['BLD-check_type.csv']=[])).push(Object.assign({id:typeId}, fields)); }
+  else (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:res.id||'',check_type_id:fields.check_type_id,outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at,note:fields.note||'',taken_at:res.at||fields.happened_at,taken_by:res.who||''});
+ }
+ drawSops();
+ if(bad){ var again=document.querySelector('[data-sop-checked="'+CSS.escape(name)+'"]'); if(again){ again.disabled=false; var m=again.parentNode.querySelector('[data-sop-msg]'); if(m) m.textContent=bad; } }
+}
+/* Print records: the yearly print for this SOP's records (loaded if it is not on the page yet).
+   A SOP the yearly print does not cover falls through to this month in the Checks register. */
+async function sopPrint(a){
+ var name=a.getAttribute('data-sop-print'), msg=a.parentNode.querySelector('[data-sop-print-msg]');
+ if(!msg){ msg=document.createElement('p'); msg.className='mut'; msg.setAttribute('data-sop-print-msg',''); msg.setAttribute('role','status'); a.insertAdjacentElement('afterend', msg); }
+ msg.textContent='Getting the print ready\u2026';
+ try{
+  var Y=await ypLib(), ids=BLDSopRecords.yearlyIds(name, Y.catalogue(ypCtx(null)));
+  if(ids.length){
+   var R=ids.indexOf('medicines')>=0?await medsLib().catch(function(){ return null; }):null;
+   var today=todayISO(), built=Y.build({period:'month',year:Number(today.slice(0,4)),month:Number(today.slice(5,7))-1,ids:ids,today:today}, ypCtx(R));
+   if(!document.getElementById('ypCss')){ var ys=document.createElement('style'); ys.id='ypCss'; ys.textContent=Y.CSS; document.head.appendChild(ys); }
+   var rep=document.getElementById('ypReport'); if(!rep){ rep=document.createElement('section'); rep.id='ypReport'; document.body.appendChild(rep); }
+   rep.innerHTML=built.html; document.body.classList.add('yp-printing'); if(Y.fit) Y.fit(rep);
+   msg.textContent='Printing this month. Choose \u201cSave as PDF\u201d to keep a copy.'; window.print();
+   setTimeout(function(){ document.body.classList.remove('yp-printing'); }, 0); return;
+  }
+ }catch(e){ /* the Checks register print below still runs */ }
+ msg.textContent='Getting the register ready\u2026';
+ try{
+  var C=await ckrLib();
+  if(!document.getElementById('ckrCss')){ var st=document.createElement('style'); st.id='ckrCss'; st.textContent=C.CSS; document.head.appendChild(st); }
+  var pack=BLDSopRecords.printPack(sopCtx(), name, {month:todayISO().slice(0,7), printed:dmy(todayISO())+' '+hhmmNow()});
+  var box=document.getElementById('ckrReport'); if(!box){ box=document.createElement('section'); box.id='ckrReport'; document.body.appendChild(box); }
+  box.innerHTML=C.reportHtml(pack.head, pack.lines); document.body.classList.add('ckr-printing');
+  msg.textContent='Printing '+pack.lines.length+' entr'+(pack.lines.length===1?'y':'ies')+'. Choose \u201cSave as PDF\u201d to keep a copy.';
+  window.print();
+  setTimeout(function(){ document.body.classList.remove('ckr-printing'); }, 0);
+ }catch(e2){ msg.textContent='Not printed: the register could not load. Try again.'; }
 }
 function drawSops(){
  var rows=SOP.rows||[];
@@ -5282,7 +5337,7 @@ function bindChecksReg(){ var p=document.getElementById('ckrPrint'), c=document.
    saveBlob(new Blob([R.toCsv(x.head,x.lines)],{type:'text/csv;charset=utf-8'}),R.fileName(x.ym)); say('Downloaded '+n(x)+'.'); })
   .catch(function(){ say('Not downloaded: the register could not load. Try again.'); }); });
 }
-window.addEventListener('afterprint',function(){ document.body.classList.remove('ckr-printing'); });
+window.addEventListener('afterprint',function(){ document.body.classList.remove('ckr-printing'); document.body.classList.remove('yp-printing'); });
 function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
@@ -5813,6 +5868,8 @@ function go(id,push){
     var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
   var sr=document.getElementById('soprows');
   if(sr) sr.addEventListener('click',function(ev){
+   var pr=ev.target.closest('[data-sop-print]'); if(pr){ ev.preventDefault(); sopPrint(pr); return; }
+   var checked=ev.target.closest('[data-sop-checked]'); if(checked){ sopChecked(checked); return; }
    var save=ev.target.closest('[data-sop-save]'); if(save){ sopRecord(save); return; }
    var b=ev.target.closest('[data-sop-open]'); if(!b) return;
    var name=b.getAttribute('data-sop-open');
