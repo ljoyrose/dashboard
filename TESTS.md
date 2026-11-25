@@ -424,6 +424,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | SOP Print records printed the SOP list straight away and froze the page | "SOP Print records opens the print view and does not print the list @regression" (tests/mocked/cdhub-sop-records.spec.js) |
 | 25 Nov 2026 | The yearly print page wrote errors to the console | "the yearly print page loads with no console errors @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 | 25 Nov 2026 | Whole-site code with Full A4 drew the one site code three times, three across the page | "whole-site code on Full A4 is one card, and a second click stays one card @regression" (tests/mocked/cdhub-print-site-card.spec.js) |
+| 25 Nov 2026 | A code run kept its progress line after another card type was opened | "switching card type stops the previous code run @regression" (tests/mocked/cdhub-print-run.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

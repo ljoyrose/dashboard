@@ -99,7 +99,9 @@
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
   var makeGen = 0, tagSave = {};
   function make(kind, items, draw, done) {
-    var gen = ++makeGen;
+    var gen = ++makeGen, seenId = {}, list = [];
+    items.forEach(function (it) { if (!it || seenId[it.id]) return; seenId[it.id] = 1; list.push(it); });
+    items = list;
     sheet.textContent = '';
     if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
@@ -122,7 +124,8 @@
         tagSave[key] = save.submit('qr_tag', { tag: tag, kind: kind, ref_id: it.id }).then(function (r) {
           delete tagSave[key];
           if (r.ok) { if (!current(kind, it.id)) T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); }
-          else failed = r.message;
+          if (gen !== makeGen) return;
+          if (!r.ok) failed = r.message;
           i++;
           next();
         });
@@ -150,7 +153,7 @@
   function pickThen(kind, items, draw, only) {
     var list = BLDPick.create(pick, items, { only: only, onChange: show });
     function show(sel) {
-      if (!sel.length) { sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
+      if (!sel.length) { makeGen++; sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
       list.setBusy(true);
       make(kind, sel, draw, function () { list.setBusy(false); });
     }
