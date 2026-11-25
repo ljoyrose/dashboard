@@ -2830,6 +2830,58 @@ function pawDogPhoto(img){
  var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
  if(paw) paw.classList.remove('off');
 }
+/* Gallery pictures stay small and are kept on this phone (Lisa 25 Nov 2026: grey tiles, reloaded on every tap).
+   The grid asks Drive for a thumbnail about 200px wide, never the full file. The bytes sit in memory, in
+   localStorage (the thumbnail address) and in the browser Cache, so the next tap does not download them again.
+   Sort photos is the one place a full-size picture is fetched, and the next and previous ones are fetched ahead. */
+var PHOTO_MEM={}, PHOTO_URLS_KEY='cdhub.photo.urls', PHOTO_CACHE='cdhub-photos-v1';
+function photoUrlsGet(){ try{ var o=JSON.parse(localStorage.getItem(PHOTO_URLS_KEY)||'{}'); return o&&typeof o==='object'?o:{}; }catch(e){ return {}; } }
+function photoUrlsSet(o){ try{ localStorage.setItem(PHOTO_URLS_KEY, JSON.stringify(o)); }catch(e){} }
+function thumbSize(url){ url=String(url||''); if(!url) return ''; var re=/=s\d+/; return re.test(url)?url.replace(re,'=s200'):url; }
+function photoCacheOpen(){ try{ return window.caches?caches.open(PHOTO_CACHE):Promise.resolve(null); }catch(e){ return Promise.resolve(null); } }
+function photoCacheKey(kind,id){ return 'https://cdhub.photo/'+kind+'/'+encodeURIComponent(id); }
+function photoCacheGet(kind,id){ return photoCacheOpen().then(function(c){ return c?c.match(photoCacheKey(kind,id)):null; }).then(function(res){ return res?res.blob():null; }).catch(function(){ return null; }); }
+function photoCachePut(kind,id,blob){ if(!blob) return Promise.resolve(); return photoCacheOpen().then(function(c){ if(!c) return; return c.put(photoCacheKey(kind,id), new Response(blob,{headers:{'Content-Type':blob.type||'image/jpeg'}})); }).catch(function(){}); }
+function photoMemUrl(id,kind,blob){ var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); if(slot[kind]) return slot[kind]; var url=URL.createObjectURL(blob); slot[kind]=url; DOGPHOTO_URLS.push(url); return url; }
+function photoRememberLink(id,link){ var o=photoUrlsGet(); o[id]={thumb:link,at:Date.now()}; photoUrlsSet(o); var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); slot.thumbLink=link; }
+function photoShow(img,url,id){ if(!img||!url) return; img.src=url; if(id) img.setAttribute('data-loaded',id); showDogPhoto(img); }
+function loadGalleryThumb(img){
+ var id=img&&(img.getAttribute('data-gal-id')||img.getAttribute('data-photo-id')); if(!id) return;
+ img.setAttribute('loading','lazy'); img.setAttribute('data-photo-id',id);
+ var mem=PHOTO_MEM[id]; if(mem&&mem.thumb){ photoShow(img,mem.thumb,id); return; }
+ photoCacheGet('thumb',id).then(function(blob){
+  if(!img.isConnected) return;
+  if(blob){ photoShow(img,photoMemUrl(id,'thumb',blob),id); return; }
+  var saved=photoUrlsGet()[id], link=(mem&&mem.thumbLink)||(saved&&saved.thumb)||'';
+  if(link){ fetchThumb(img,id,link); return; }
+  if(!TOKEN){ pawDogPhoto(img); return; }
+  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+   var raw=meta&&meta.thumbnailLink, sized=thumbSize(raw);
+   if(sized&&/^https:\/\//i.test(sized)){ photoRememberLink(id,sized); fetchThumb(img,id,sized); }
+  }).catch(function(){});
+ });
+}
+function fetchThumb(img,id,link){
+ if(PHOTO_MEM[id]&&PHOTO_MEM[id].thumb){ photoShow(img,PHOTO_MEM[id].thumb,id); return; }
+ fetch(link).then(function(res){ if(!res.ok) throw new Error('thumb'); return res.blob(); }).then(function(blob){
+  photoCachePut('thumb',id,blob); if(img.isConnected) photoShow(img,photoMemUrl(id,'thumb',blob),id);
+ }).catch(function(){ if(img.isConnected) photoShow(img,link,id); });
+}
+function photoFull(id){
+ if(!id) return Promise.resolve('');
+ var mem=PHOTO_MEM[id]; if(mem&&mem.full) return Promise.resolve(mem.full);
+ return photoCacheGet('full',id).then(function(blob){
+  if(blob) return photoMemUrl(id,'full',blob);
+  if(!TOKEN) return '';
+  return DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+   if(!res.ok) return null; return res.blob();
+  }).then(function(blob){ if(!blob||!/^image\//.test(blob.type||'')) return ''; photoCachePut('full',id,blob); return photoMemUrl(id,'full',blob); });
+ }).catch(function(){ return ''; });
+}
+function photoPreloadNeighbours(){
+ var S=PHOTO_SORT; if(!S) return;
+ [S.i-1,S.i+1].forEach(function(n){ if(n<0||n>=S.list.length) return; var id=dogPhotoId(S.list[n].drive_file_id); if(id) photoFull(id); });
+}
 function dogPhotoBytes(img,id){
  img.setAttribute('data-tried','bytes');
  if(!TOKEN){ pawDogPhoto(img); return; }
@@ -2845,18 +2897,25 @@ function loadDogPhotos(){
  Array.prototype.forEach.call(document.querySelectorAll('img.dogphoto[data-photo-id]'), loadPhotoImg);
 }
 function loadPhotoImg(img){
+  if(img&&img.classList&&img.classList.contains('galph')){ loadGalleryThumb(img); return; }
   var id=img.getAttribute('data-photo-id');
   if(!id||!TOKEN){ pawDogPhoto(img); return; }
+  var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
+  if(img.getAttribute('data-wired')==='1') return;
+  img.setAttribute('data-wired','1');
   img.addEventListener('load', function(){ if(img.getAttribute('src')) showDogPhoto(img); });
   img.addEventListener('error', function(){
    if(img.getAttribute('data-tried')==='bytes'){ pawDogPhoto(img); return; }
    dogPhotoBytes(img,id);
   });
-  gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
-   var link=meta&&meta.thumbnailLink;
-   if(link&&/^https:\/\//i.test(link)){ img.src=link; return; }
-   dogPhotoBytes(img,id);
-  }).catch(function(){ dogPhotoBytes(img,id); });
+  photoCacheGet('thumb',id).then(function(blob){
+   if(blob){ photoShow(img,photoMemUrl(id,'thumb',blob),id); return; }
+   gget(DRIVE+'/'+encodeURIComponent(id)+'?fields=thumbnailLink&supportsAllDrives=true').then(function(meta){
+    var link=thumbSize(meta&&meta.thumbnailLink);
+    if(link&&/^https:\/\//i.test(link)){ photoRememberLink(id,link); fetchThumb(img,id,link); return; }
+    dogPhotoBytes(img,id);
+   }).catch(function(){ dogPhotoBytes(img,id); });
+  });
 }
 /* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
@@ -2897,7 +2956,7 @@ function galleryItem(f,mainId,dates,ended){
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryHtml(d,ph){
@@ -2978,7 +3037,8 @@ function photoSortPaint(){
  if(img){ img.hidden=!item; if(item){ img.alt=item.name||'Photo';
   if(item._preview) img.src=item._preview;
   else { var drive=dogPhotoId(item.drive_file_id);
-   if(drive&&img.getAttribute('data-photo-id')!==drive){ img.setAttribute('data-photo-id',drive); loadPhotoImg(img); } } } }
+   if(drive&&img.getAttribute('data-full')!==drive){ img.setAttribute('data-full',drive); photoFull(drive).then(function(url){ if(url&&PHOTO_SORT&&PHOTO_SORT.list[PHOTO_SORT.i]===item) img.src=url; }); } }
+  photoPreloadNeighbours(); } }
  var mainBtn=S.box.querySelector('[data-sort="main"]'); if(mainBtn) mainBtn.disabled=!item||item.id===S.mainId;
  ['keep','remove','edit'].forEach(function(k){ var b=S.box.querySelector('[data-sort="'+k+'"]'); if(b) b.disabled=!item; });
  var undo=S.box.querySelector('[data-sort="undo"]'); if(undo) undo.disabled=!S.stack.length;
@@ -3063,14 +3123,10 @@ function photoSortSaveEdit(pic){
  }).then(null, finish);
 }
 async function photoLoadDrive(drive){
- if(!drive||!TOKEN) return null;
- try{
-  var res=await DashKit.googleFetch(DRIVE+'/'+encodeURIComponent(drive)+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+TOKEN}});
-  var blob=res.ok?await res.blob():null; if(!blob||!/^image\//.test(blob.type||'')) return null;
-  var url=URL.createObjectURL(blob), img=new Image();
-  await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
-  return img;
- }catch(e){ return null; }
+ var url=await photoFull(drive); if(!url) return null;
+ var img=new Image();
+ await new Promise(function(ok,no){ img.onload=ok; img.onerror=no; img.src=url; });
+ return img;
 }
 function photoTour(dog, fileId){
  var list=photoGalleryList(dog), at=0; list.forEach(function(x,i){ if(x.id===fileId) at=i; });
@@ -3094,11 +3150,63 @@ async function photoSortEdit(){
  if(pic.error){ var n2=S.box.querySelector('[data-k="sort-note"]'); if(n2) n2.textContent=pic.error; return; }
  photoSortSaveEdit(pic);
 }
+function galBox(dog){ return document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); }
+function galleryRetile(li,f,mainId,dates,ended){
+ var img=li.querySelector('img.galph'), drive=dogPhotoId(f.drive_file_id);
+ var box=document.createElement('div'); box.innerHTML=galleryItem(f,mainId,dates,ended);
+ var neu=box.firstChild; if(!neu) return li;
+ var fresh=neu.querySelector('img.galph');
+ if(img&&fresh&&img.getAttribute('data-gal-id')===drive&&img.getAttribute('src')) fresh.replaceWith(img);
+ else if(fresh) loadGalleryThumb(fresh);
+ li.replaceWith(neu); return neu;
+}
+function cardPhotoSync(dog,ph){
+ var card=document.querySelector('.dc[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(!card) return;
+ var img=card.querySelector('img.dogphoto'); if(!img) return;
+ var id=cardPhotoId(CD._byId[dog]||{id:dog},ph); if(!id) return;
+ if(img.getAttribute('data-photo-id')===id&&img.getAttribute('src')) return;
+ img.setAttribute('data-photo-id',id);
+ var mem=PHOTO_MEM[id]; if(mem&&(mem.thumb||mem.full)){ photoShow(img,mem.thumb||mem.full,id); return; }
+ loadGalleryThumb(img);
+}
+/* Rebuild only this dog's photo list. Loaded pictures stay on their elements, so a tap does not fetch them again. */
+function gallerySync(dog){
+ var g=galBox(dog); if(!g) return;
+ var d=CD._byId[dog]||{id:dog}, ph=dogPhotos(d), dates=photoDatesOn(todayISO()), word=ph.galleryLabel||'Photos';
+ var label=g.querySelector(':scope > summary .dcs-label'); if(label) label.textContent=word+' ('+ph.gallery.length+')';
+ var bd=g.querySelector(':scope > .dcs-bd'); if(!bd) return;
+ var open=bd.querySelector(':scope > ul.glist');
+ if(!open){ open=document.createElement('ul'); open.className='glist'; bd.insertBefore(open,bd.firstChild); }
+ var pool={}; Array.prototype.forEach.call(g.querySelectorAll('.gi[data-file]'),function(li){ pool[li.getAttribute('data-file')]=li; });
+ function fill(list,ul,ended){
+  if(!ul) return; var keep={};
+  list.forEach(function(f){
+   if(f.kind!=='photo'&&f.kind!=='link'&&f.kind!=='upload') return;
+   var li=pool[f.id];
+   if(li&&f.kind==='photo') li=galleryRetile(li,f,ph.main&&ph.main.id,dates,ended);
+   else if(!li){ var box=document.createElement('div'); box.innerHTML=galleryItem(f,ph.main&&ph.main.id,dates,ended); li=box.firstChild;
+    var im=li&&li.querySelector('img.galph'); if(im) loadGalleryThumb(im); }
+   if(!li) return; pool[f.id]=li; keep[f.id]=1; ul.appendChild(li);
+  });
+  Array.prototype.forEach.call(ul.querySelectorAll(':scope > .gi'),function(li){ if(!keep[li.getAttribute('data-file')]) li.remove(); });
+ }
+ fill(ph.gallery,open,false);
+ var ended=ph.ended||[], det=bd.querySelector(':scope > details.gal-ended');
+ if(ended.length){
+  if(!det){ det=document.createElement('details'); det.className='gal-ended'; det.setAttribute('data-k','ended');
+   det.innerHTML='<summary>Ended ('+ended.length+')</summary><ul class="glist"></ul>';
+   var anchor=bd.querySelector('[data-photo-sort]')||bd.querySelector('[data-gal-msg]'); bd.insertBefore(det,anchor);
+  } else { var sum=det.querySelector(':scope > summary'); if(sum) sum.textContent='Ended ('+ended.length+')'; }
+  fill(ended,det.querySelector('ul.glist'),true);
+ } else if(det) det.remove();
+ cardPhotoSync(dog,ph);
+}
 function photoSortClose(){
  var dog=PHOTO_SORT&&PHOTO_SORT.dog, box=PHOTO_SORT&&PHOTO_SORT.box, key=PHOTO_SORT&&PHOTO_SORT.key;
  if(key) document.removeEventListener('keydown', key, true);
- if(box) box.remove(); PHOTO_SORT=null; drawDogs();
- var again=dog&&document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'); if(again) again.open=true;
+ if(box) box.remove(); PHOTO_SORT=null;
+ if(dog) gallerySync(dog);
+ var again=dog&&galBox(dog); if(again) again.open=true;
 }
 function photoSortOpen(dog){
  if(PHOTO_SORT) photoSortClose();
@@ -3144,29 +3252,32 @@ document.addEventListener('click',async function(ev){
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
  if(b.hasAttribute('data-gal-end')){
   var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
+  var to=galEndDate(row), wasTo=row.to_date||'', wasWhy=row.end_reason||'';
+  if(row.id&&!String(row.to_date||'').trim()){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); }
+  gallerySync(dog);   /* the tile leaves at once; the other pictures stay */
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
-     the screen says so instead of "Not saved". */
   if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply();
-   await clearCardPhoto(dog, row.to_id); }
+  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+   if(row.id){ row.to_date=wasTo; row.end_reason=wasWhy; } gallerySync(dog);
+   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
+   return; }
+  clearCardPhoto(dog, row.to_id);
  } else {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
+  if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
+  var local='local-'+sinkRid();
+  links.push({id:local,from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString(),_local:1});
+  gallerySync(dog);
   j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
-  if(j.ok&&j.result&&j.result.status==='saved'){
-   if(role==='main') links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!l.to_date) l.to_date=dayMinus(day,1)<String(l.from_date||'')?day:dayMinus(day,1); });
-   links.push({id:j.result.id||'',from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()}); }
+  if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+   var ix=links.findIndex(function(l){ return l.id===local; }); if(ix>=0) links.splice(ix,1); gallerySync(dog);
+   GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mNo=galBox(dog); if(mNo){ mNo.open=true; var mn=mNo.querySelector('[data-gal-msg]'); if(mn) mn.textContent=GAL_MSG[dog]; }
+   return; }
+  var patched=links.filter(function(l){ return l.id===local; })[0]; if(patched&&j.result.id) patched.id=j.result.id;
  }
- b.disabled=false;
- /* a read may have redrawn the list while this saved: use the gallery on screen now, not the one tapped */
- var gNow=dog?document.querySelector('details.gal[data-dog="'+(window.CSS&&CSS.escape?CSS.escape(dog):dog)+'"]'):null;
- if(gNow&&gNow!==g){ g=gNow; msg=g.querySelector('[data-gal-msg]'); }
- if(!(j&&j.ok&&j.result&&j.result.status==='saved')){ GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); if(g){ g.open=true; GAL_OPEN[dog]=1; } if(msg) msg.textContent=GAL_MSG[dog]; return; }
  GAL_MSG[dog]='\u2713 Saved';
- var open=g&&g.open; drawDogs();
- var again=document.querySelector('details.gal[data-dog="'+dog+'"]');
- if(again){ again.open=open||true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
+ var again=galBox(dog);
+ if(again){ again.open=true; var m2=again.querySelector('[data-gal-msg]'); if(m2) m2.textContent='\u2713 Saved'; }
 });
 /* ✎ Crop or adjust a photo already saved (Lisa 17 Nov 2026: "a crop / adjust tool anywhere there is a photo, starting
    with dog photos"). The same crop tool as Take/Upload photo opens on the saved picture (read from Drive with this
@@ -3198,10 +3309,10 @@ async function photoEdit(dog,fileId,msg){
   say('Removing the photo\u2026');
   var jr=await sinkAct('link_end',{id:lid, to_date:to, reason:GAL_REMOVED});
   if(jr&&jr.ok&&jr.result&&jr.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(lid, to, GAL_REMOVED); linkEndsApply(); }
-  drawDogs();
-  var ag=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
+  gallerySync(dog);
+  var ag=galBox(dog); if(ag){ ag.open=true; var mm=ag.querySelector('[data-gal-msg]'); if(mm) mm.textContent=jr&&jr.ok?'\u2713 Removed':'Not saved: '+sinkMsg(jr); }
   return; }
- if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); drawDogs();
+ if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); gallerySync(dog);
   var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
   if(gm) gm.textContent='Photo removed'; return; }
  if(pic.error){ say(pic.error); return; }
@@ -3227,8 +3338,8 @@ async function photoEdit(dog,fileId,msg){
    gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
  }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
- drawDogs();   /* the message is set after the redraw, so it is not wiped by it (17 Nov 2026) */
- var again=document.querySelector('details.gal[data-dog="'+dog+'"]'); if(again&&fileId) again.open=true;
+ gallerySync(dog);   /* one tile changes; the other pictures are not fetched again */
+ var again=galBox(dog); if(again&&fileId) again.open=true;
  var card=document.querySelector('.dc[data-dog="'+dog+'"]'), m=(again&&fileId)?again.querySelector('[data-gal-msg]'):card&&card.querySelector('[data-photo-msg]');
  if(m) m.textContent=done;
 }
@@ -3259,9 +3370,9 @@ document.addEventListener('toggle',function(e){ var el=e.target;
 /* gallery pictures load only when that gallery is opened (one Drive call each) */
 document.addEventListener('toggle',function(e){
  var el=e.target; if(!el||!el.open||!el.querySelectorAll||!el.matches('details.gal,details.gal-ended')) return;
- Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-photo-id])'),function(img){
+ Array.prototype.forEach.call(el.querySelectorAll('img.galph[data-gal-id]:not([data-loaded])'),function(img){
   if(img.closest('details')!==el) return;   /* an ended list loads only when it is opened itself */
-  img.setAttribute('data-photo-id',img.getAttribute('data-gal-id')); loadPhotoImg(img);
+  loadGalleryThumb(img);
  });
 },true);
 function photoMsg(inp,text){
