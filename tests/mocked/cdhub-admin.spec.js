@@ -50,10 +50,8 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('Admin is in More; set-up QR is one tap away and names the public staff address (Lisa 18 Nov 2026)', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
-    await expect(page.locator('#main h2')).toContainText('Admin');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(12);
     await expect(page.locator('#main h2')).toContainText('Settings');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(13);   // Check settings added (photo dates setting was 12)
+    await expect(page.locator('[data-adm-open]')).toHaveCount(14);   // visits card plus check settings
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();

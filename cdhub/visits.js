@@ -529,7 +529,7 @@ var VisitView = (function () {
       S.busy = true;
       var btn = form.querySelector('[type=submit]'); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
       var job = k === 'give' ? give(vv, form) : k === 'type' ? saveType(vv, form) : k === 'deleg' ? saveDeleg(vv, form) : k === 'dend' ? endDeleg(vv, form) : endOrExtend(vv, form, k);
-      job.then(function (bad) { S.busy = false; if (bad) S.msg = /^NOT/.test(bad) ? bad : 'NOT saved — ' + bad; redraw(); },
+      job.then(function (bad) { S.busy = false; if (bad) { var text = String(bad).replace(/^Not saved:\s*/i, ''); S.msg = /^NOT/.test(text) ? text : 'NOT saved — ' + text; } redraw(); },
         function () { S.busy = false; S.msg = 'NOT saved — something went wrong.'; redraw(); });
     });
   }
