@@ -152,6 +152,9 @@ test('each top-level page loads, and its links stay on this origin or are https 
   page.on('crash', () => crashes.push('crashed'));
   await page.route(/https:\/\/docs\.google\.com\/spreadsheets\//, (route) =>
     route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
+  // A tap on Food or Marketplace signs in and reads a sheet. Answer it here so the crawl never calls out.
+  await page.route(/https:\/\/sheets\.googleapis\.com\//, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"values":[],"valueRanges":[]}' }));
   const bad = [];
   for (const [url, heading] of PAGES) {
     const res = await page.goto(url, { waitUntil: 'domcontentloaded' });
