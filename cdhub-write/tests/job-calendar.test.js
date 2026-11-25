@@ -234,6 +234,24 @@ test('the calendar counts subjects on site that day, and can leave juveniles out
   assert.equal(C.month(onlyPup, 'health_check_all', '2026-11').cells.find((c) => c.iso === '2026-11-16').state, 'missed');
 });
 
+test('a past day uses the feeding band in force that day, and mixed ages take the highest', () => {
+  const types2 = types.concat([
+    { id: 'cty-feed', type_key: 'feeding', label: 'Feeding', target: 'dog', every_days: '1', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-wb', type_key: 'water_bowls', label: 'Water bowls', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' }
+  ]);
+  const dogs2 = [{ id: 'sub-test-a', dob: '2026-11-01', area_id: 'a1' }, { id: 'sub-test-b', dob: '2020-01-01', area_id: 'a1' }];
+  const rules = [
+    { rule_key: 'job.times_per_day.feeding', value: '2', effective_from: '2026-01-01' },
+    { rule_key: 'job.times_per_day.feeding.by_age', value: '0-:2', effective_from: '2026-01-01' },
+    { rule_key: 'job.times_per_day.feeding.by_age', value: '0-20:4|21-:2', effective_from: '2026-11-15' }
+  ];
+  const v = Object.assign(base([], rules), { types: types2, dogs: dogs2, today: '2026-11-20' });
+  const day = (key, iso) => C.month(v, key, '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(day('food_bowls', '2026-11-14').need, 2);
+  assert.equal(day('food_bowls', '2026-11-16').need, 4);
+  assert.equal(day('water_bowls', '2026-11-16').need, 0);
+});
+
 test('import: a row older than 7 days is sent with the save-anyway answer; a recent row is not', () => {
   const v = base([]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n2026-11-10,food_bowls,done,\r\n2026-11-11,food_bowls,done,\r\n2026-10-01,food_bowls,done,\r\n');

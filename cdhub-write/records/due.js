@@ -268,19 +268,158 @@
    * with no visits given, every visitor record is left out.
    * reset_by is the type_key of the bigger job that last restarted this one, if it did.
    */
-  /**
-   * Times a day a daily job must be done (owner rule row job.times_per_day.<type_key>, else job.times_per_day; the row in
-   * force on that day, newest effective_from wins). No row = 1. Only a job due every day uses it (Isolation checks: 3).
-   */
-  function timesPerDay(rules, typeKey, day) {
-    function pick(k) {
-      var best = null;
-      (rules || []).forEach(function (r) { if (r.rule_key === k && r.effective_from && r.effective_from <= day && (!r.to_date || r.to_date >= day) && (!best || r.effective_from > best.effective_from)) best = r; });
-      return best ? parseInt(best.value, 10) : NaN;
+  /** Birth day as YYYY-MM-DD, or '' when none was given. */
+  function oneBirth(x) {
+    if (x == null) return '';
+    if (typeof x !== 'object') {
+      var s = String(x);
+      if (!s) return '';
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+      return londonDate(s) || '';
     }
-    var n = pick('job.times_per_day.' + typeKey);
-    if (!(n > 0)) n = pick('job.times_per_day');
-    return n > 0 ? n : 1;
+    return oneBirth(x.dob || x.born || x.born_on || x.birth_date || '');
+  }
+  /** Birth days in scope, or null when the caller did not name anyone. '' is a missing birth date. */
+  function listedBirths(scope) {
+    if (scope == null) return null;
+    if (Array.isArray(scope)) return scope.length ? scope.map(oneBirth) : null;
+    if (Array.isArray(scope.births)) return scope.births.length ? scope.births.map(oneBirth) : null;
+    var list = [];
+    (scope.subjects || []).forEach(function (s) { list.push(oneBirth(s)); });
+    (scope.dogs || []).forEach(function (s) { list.push(oneBirth(s)); });
+    (scope.litters || []).forEach(function (s) { list.push(oneBirth(s)); });
+    if (!list.length && (scope.dob || scope.born || scope.born_on)) list.push(oneBirth(scope));
+    return list.length ? list : null;
+  }
+  /** Birth days for one due target. A litter uses its birth date. One dog uses that dog. Several dogs: each of them. */
+  function scopeBirths(target) {
+    if (!target) return null;
+    if (target.litter_id) return [oneBirth(target.born || target.dob || '')];
+    if (target.subject_id) {
+      var own = oneBirth(target.dob || target.born || '');
+      if (!own && target.dogs) {
+        for (var i = 0; i < target.dogs.length; i++) if (target.dogs[i] && target.dogs[i].id === target.subject_id) { own = oneBirth(target.dogs[i]); break; }
+      }
+      return [own];
+    }
+    if (target.dogs && target.dogs.length) {
+      var list = target.dogs.map(oneBirth);
+      (target.litters || []).forEach(function (l) { list.push(oneBirth(l)); });
+      return list;
+    }
+    if (target.roomDogs && target.roomDogs.length) return target.roomDogs.map(oneBirth);
+    if (target.litters && target.litters.length) return target.litters.map(oneBirth);
+    return null;
+  }
+  /** "from-to:n|from-:n" -> [{from, to, n}]. Blank end age is open. Bad parts are skipped. */
+  function mealBands(value) {
+    var out = [];
+    String(value || '').split('|').forEach(function (part) {
+      if (!String(part || '').trim()) return;
+      var m = /^\s*(\d+)\s*-\s*(\d*)\s*:\s*(\d+)\s*$/.exec(part);
+      if (!m) return;
+      var from = parseInt(m[1], 10), to = m[2] === '' ? null : parseInt(m[2], 10), n = parseInt(m[3], 10);
+      if (!(n > 0) || (to != null && to < from)) return;
+      out.push({ from: from, to: to, n: n });
+    });
+    return out;
+  }
+  function mealBandText(rows) {
+    var parts = [];
+    (rows || []).forEach(function (r) {
+      var from = String(r.from == null ? '' : r.from).trim();
+      var to = String(r.to == null ? '' : r.to).trim();
+      var n = String(r.n == null ? '' : r.n).trim();
+      if (!from && !to && !n) return;
+      parts.push(String(parseInt(from, 10)) + '-' + (to === '' ? '' : String(parseInt(to, 10))) + ':' + String(parseInt(n, 10)));
+    });
+    return parts.join('|');
+  }
+  /** '' when every row is empty or complete. A half-filled row is an error. An empty list writes nothing. */
+  function checkMealRows(rows) {
+    var bad = '';
+    (rows || []).forEach(function (r) {
+      if (bad) return;
+      var from = String(r.from == null ? '' : r.from).trim();
+      var to = String(r.to == null ? '' : r.to).trim();
+      var n = String(r.n == null ? '' : r.n).trim();
+      if (!from && !to && !n) return;
+      if (!/^\d+$/.test(from) || !/^\d+$/.test(n) || (to !== '' && !/^\d+$/.test(to))) bad = 'Each age band needs whole days and meals a day.';
+      else if (to !== '' && parseInt(to, 10) < parseInt(from, 10)) bad = 'The end age cannot be before the start age.';
+      else if (!(parseInt(n, 10) > 0)) bad = 'Meals a day must be at least 1.';
+    });
+    return bad;
+  }
+  /**
+   * Rule rows to add for a daily check. Empty times and an empty band table add nothing.
+   * Feeding bands are one job.times_per_day.feeding.by_age row. Incomplete bands are an error and add nothing.
+   */
+  function timesRules(typeKey, timesRaw, bandRows) {
+    var times = String(timesRaw == null ? '' : timesRaw).trim();
+    var rules = [], error = '';
+    if (times) {
+      if (!/^\d+$/.test(times) || !(parseInt(times, 10) > 0)) error = 'Times a day must be a whole number.';
+      else rules.push({ rule_key: 'job.times_per_day.' + typeKey, value: String(parseInt(times, 10)) });
+    }
+    if (typeKey === 'feeding') {
+      var bandError = checkMealRows(bandRows || []);
+      if (bandError) error = error || bandError;
+      else {
+        var text = mealBandText(bandRows || []);
+        if (text) rules.push({ rule_key: 'job.times_per_day.feeding.by_age', value: text });
+      }
+    }
+    return { error: error, rules: error ? [] : rules };
+  }
+  function ruleValue(rules, key, day) {
+    var row = ruleRow(rules, key, day);
+    return row ? String(row.value == null ? '' : row.value) : '';
+  }
+  function feedingLive(types, day) {
+    if (!types) return true;
+    var best = null;
+    types.forEach(function (r) {
+      if (!r || String(r.type_key || '') !== 'feeding') return;
+      if (!r.effective_from || r.effective_from > day) return;
+      if (!best || r.effective_from > best.effective_from) best = r;
+    });
+    return !!(best && !isOff(best.active));
+  }
+  /**
+   * Times a day a daily job must be done. The row in force on that day wins (newest effective_from; a later row never
+   * edits an older one). job.times_per_day.<type_key>.by_age is "from-to:n|from-:n" (whole days from birth, inclusive).
+   * Each dog or litter in scope uses the band for its age; the highest count wins. Feeding is the only banded check.
+   * No matching band, no bands, or no birth date: job.times_per_day.<type_key>, else job.times_per_day, else 1.
+   * food_bowls uses Feeding's count when that check is in force; otherwise its own row or 1.
+   * scope may be omitted.
+   */
+  function timesPerDay(rules, typeKey, day, scope) {
+    day = ymd(day) || String(day || '').slice(0, 10);
+    if (typeKey === 'food_bowls' && feedingLive(scope && scope.types, day)) return timesPerDay(rules, 'feeding', day, scope);
+    function flat(key) {
+      var row = ruleRow(rules, 'job.times_per_day.' + key, day);
+      var n = row ? parseInt(row.value, 10) : NaN;
+      if (!(n > 0)) { row = ruleRow(rules, 'job.times_per_day', day); n = row ? parseInt(row.value, 10) : NaN; }
+      return n > 0 ? n : 1;
+    }
+    var fb = flat(typeKey);
+    var bands = typeKey === 'feeding' ? mealBands(ruleValue(rules, 'job.times_per_day.feeding.by_age', day)) : [];
+    var births = listedBirths(scope);
+    if (!bands.length || !births) return fb;
+    var max = 0;
+    births.forEach(function (born) {
+      var c = fb;
+      if (born) {
+        var age = daysBetween(born, day);
+        if (age >= 0) {
+          var hit = 0;
+          bands.forEach(function (b) { if (age >= b.from && (b.to == null || age <= b.to) && b.n > hit) hit = b.n; });
+          if (hit > 0) c = hit;
+        }
+      }
+      if (c > max) max = c;
+    });
+    return max > 0 ? max : fb;
   }
   /**
    * Due by age (Lisa 22 Nov 2026, puppy weights): owner rule row job.by_age.<type_key>, the row in force on `day` (newest
@@ -431,7 +570,7 @@
       foldOwn(j);
       var every = everyNow(j), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
-      var times = every === 1 ? timesPerDay(rules, j.type_key, today) : 1, doneToday = todayCount[j.type_key] || 0;
+      var times = every === 1 ? timesPerDay(rules, j.type_key, today, { births: scopeBirths(target), types: types }) : 1, doneToday = todayCount[j.type_key] || 0;
       if (perDogRoom(j) && target.area_id && !target.subject_id && dogToday[j.type_key]) {
         /* a room job saved per dog: done as many times as its least-checked dog here (the dogs in the room if given) */
         var per = dogToday[j.type_key], ids = Array.isArray(target.roomDogIds) ? target.roomDogIds : Object.keys(per);
@@ -454,5 +593,5 @@
     });
   }
 
-  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, subjectsFor: subjectsFor, onSite: onSite, excludeJuvenile: excludeJuvenile, isJuvenile: isJuvenile, ownKey: ownKey, ownDate: ownDate, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, subjectsFor: subjectsFor, onSite: onSite, excludeJuvenile: excludeJuvenile, isJuvenile: isJuvenile, ownKey: ownKey, ownDate: ownDate, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate, mealBands: mealBands, mealBandText: mealBandText, checkMealRows: checkMealRows, timesRules: timesRules, ruleValue: ruleValue };
 }));

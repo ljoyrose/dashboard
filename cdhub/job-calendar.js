@@ -73,7 +73,7 @@
     var cells = [];
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso);
+      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso, dayScope(v, t, iso));
       var mine = perDog ? Due.subjectsFor(t, roster, iso, opt) : [], want = perDog ? mine.length : times, got = 0, allow = {};
       mine.forEach(function (s) { allow[s.id] = 1; });
       if (x) {
@@ -87,6 +87,18 @@
       cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : (times > 1 ? times : 0), lines: x ? x.lines : [] });
     }
     return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, vetCal: showsVet(t), need: need, typeId: t.id, cells: cells };
+  }
+
+  /** Dogs and litters in scope on one day, so a past day uses the band in force then. */
+  function dayScope(v, t, iso) {
+    var roster = v.subjects || v.dogs || [];
+    var opt = { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings };
+    var dogs = t && Due.subjectsFor ? Due.subjectsFor(t, roster, iso, opt) : roster;
+    var litters = (v.litters || []).filter(function (l) {
+      var b = String(l.dob || l.born_on || l.born || '').slice(0, 10);
+      return !b || b <= iso;
+    });
+    return { subjects: dogs, litters: litters, types: v.types || [] };
   }
 
   /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.

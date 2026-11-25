@@ -28,6 +28,19 @@ function world({ owner = true, codes = CODES } = {}) {
 const asOwner = base.extend({ world: async ({}, use) => use(world()) });
 const asOther = base.extend({ world: async ({}, use) => use(world({ owner: false })) });
 const asOwnerEmpty = base.extend({ world: async ({}, use) => use(world({ codes: 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\n' })) });
+function putTable(d, name, content) {
+  const f = d.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); return; }
+  d.file('adm-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+}
+function worldChecks() {
+  const d = world();
+  putTable(d, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,active,effective_from,every_days\ncty-feed,t,feeding,Feeding,dog,true,2026-01-01,1\ncty-week,t,weekly_test,Weekly test,dog,true,2026-01-01,7\n');
+  putTable(d, 'BLD-check_setting.csv', 'id,tenant_id,type_key,record_as,every_days,frequency,session_row,from_date,to_date,source\n');
+  putTable(d, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date\n');
+  return d;
+}
+const asChecks = base.extend({ world: async ({}, use) => use(worldChecks()) });
 
 const open = async (page) => {
   await page.goto('cdhub/');
@@ -210,4 +223,44 @@ asOwner('Check settings shows the legal minimum and refuses a shorter keep perio
   await page.locator('#adm-checks [data-ck-years]').fill('4');
   await page.locator('#adm-checks [data-ck-keep]').click();
   await expect(page.locator('#adm-checks [data-ck-msg]')).toContainText('at least 6 years');
+});
+
+asChecks('Check settings saves times a day and feeding age bands as breeding rules', async ({ page }) => {
+  const url = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+  const sent = [];
+  await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); } catch (e) {} }, url);
+  await page.route(url, (route) => {
+    const b = JSON.parse(route.request().postData() || '{}');
+    sent.push(b);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'row-test-' + sent.length } }) });
+  });
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.locator('[data-adm-open="checks"]').click();
+  const feed = page.locator('[data-ck="feeding"]');
+  await expect(feed.locator('[data-ck-times]')).toBeVisible();
+  await expect(feed.locator('[data-ck-band]')).toHaveCount(1);
+  await expect(page.locator('[data-ck="weekly_test"] [data-ck-times]')).toHaveCount(0);
+  await feed.locator('[data-ck-age-from]').fill('0');
+  await feed.locator('[data-ck-save]').click();
+  await expect(feed.locator('[data-ck-msg]')).toContainText('whole days');
+  expect(sent).toHaveLength(0);
+  await feed.locator('[data-ck-age-from]').fill('');
+  await feed.locator('[data-ck-times]').fill('2');
+  await feed.locator('[data-ck-add]').click();
+  await expect(feed.locator('[data-ck-band]')).toHaveCount(2);
+  const bands = feed.locator('[data-ck-band]');
+  await bands.nth(0).locator('[data-ck-age-from]').fill('0');
+  await bands.nth(0).locator('[data-ck-age-to]').fill('10');
+  await bands.nth(0).locator('[data-ck-meals]').fill('4');
+  await bands.nth(1).locator('[data-ck-age-from]').fill('11');
+  await bands.nth(1).locator('[data-ck-meals]').fill('2');
+  await feed.locator('[data-ck-save]').click();
+  await expect(feed.locator('[data-ck-msg]')).toHaveText('Saved.');
+  expect(sent.map((b) => b.table)).toEqual(['check_setting', 'breeding_rule', 'breeding_rule']);
+  expect(sent[0].fields.type_key).toBe('feeding');
+  expect(sent[0].fields.times_per_day).toBeUndefined();
+  expect(JSON.stringify(sent[0].fields)).not.toContain('by_age');
+  expect(sent[1].fields).toMatchObject({ rule_key: 'job.times_per_day.feeding', value: '2' });
+  expect(sent[2].fields).toMatchObject({ rule_key: 'job.times_per_day.feeding.by_age', value: '0-10:4|11-:2' });
 });

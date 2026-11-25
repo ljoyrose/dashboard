@@ -66,12 +66,13 @@
       if (!d.ok) { host.appendChild(h('p', { class: 'msg bad', text: d.message })); return; }
       if (off) { host.appendChild(h('p', { class: 'msg', text: typesRead.ok ? c.save.banner('check_log').text : 'Jobs are not switched on yet.' })); return; }
 
-      var target = {}, title = 'Today', site = true;
+      var target = {}, title = 'Today', site = true, dobOf = {};
+      ((d.raw && d.raw.subject) || []).forEach(function (s) { if (s && s.id) dobOf[s.id] = s.dob || ''; });
       if (tag) {
         var row = (tags.rows || []).filter(function (t) { return t.tag === tag && isOn(t); })[0];
         if (!row || ['subject', 'area', 'site', 'litter'].indexOf(row.kind) < 0) { moves(); return; }
         site = row.kind === 'site';
-        if (row.kind === 'subject') { target.subject_id = row.ref_id; title = ((d.subjects.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Dog'; }
+        if (row.kind === 'subject') { target.subject_id = row.ref_id; target.dob = dobOf[row.ref_id] || ''; title = ((d.subjects.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Dog'; }
         if (row.kind === 'litter') {
           var lit = (v[4].rows || []).filter(function (x) { return x.id === row.ref_id; })[0] || {}, dam = d.subjects.filter(function (x) { return x.id === lit.dam_subject_id; })[0];
           target.litter_id = row.ref_id; target.born = lit.dob || lit.born_on || ''; title = dam ? 'Litter of ' + dam.label : 'Litter';
@@ -85,7 +86,7 @@
       var labelOf = {};
       if (!target.litter_id) {
         target.dogs = d.dogs.filter(function (x) { return !x.away && x.areaId && (site || x.areaId === target.area_id || x.id === target.subject_id); })
-          .map(function (x) { labelOf[x.id] = x.label; return { id: x.id, area_id: x.areaId }; });
+          .map(function (x) { labelOf[x.id] = x.label; return { id: x.id, area_id: x.areaId, dob: dobOf[x.id] || '' }; });
       }
 
       /* owner rule rows (the shared rule list): key.<type_key> beats key; the row in force on that day; none = the starting default */
