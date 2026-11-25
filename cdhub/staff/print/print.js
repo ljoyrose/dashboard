@@ -44,7 +44,7 @@
   var NEEDS = {
     site: BASE,
     rooms: BASE.concat(['area', 'requirement', 'area_capacity', 'area_access', 'check_type']),
-    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
+    dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type', 'subject_video']),
     litters: BASE.concat(SITE, ['litter', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
     thermo: BASE.concat(['thermometer', 'requirement', 'area']),
     items: BASE.concat(['items', 'item_kinds', 'links', 'files'])   /* item cards (print any item, Lisa 15 Nov 2026) */
@@ -269,6 +269,18 @@
     if (!young) return n;
     return BLDDisplay.marblePupName(n, '') || n;
   }
+  /* The main RoseQuest clip only. No video: nothing extra is printed. The dog's own code stays as it is. */
+  function mainVideoUrl(id) {
+    var rows = (T.subject_video || []).filter(function (r) { return r && r.subject_id === id; });
+    var replaced = {};
+    rows.forEach(function (r) { if (r.corrects_id) replaced[r.corrects_id] = 1; });
+    var live = rows.filter(function (r) {
+      return r.id && !replaced[r.id] && String(r.active || '') !== 'no' && /^https:\/\/share\.puppyclassroom\.com\/v\/[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(String(r.video_url || ''));
+    }).sort(function (a, b) { return String(b.created_at || '').localeCompare(String(a.created_at || '')); });
+    var mains = live.filter(function (r) { return String(r.is_main) === 'yes'; });
+    var main = mains[0] || live[0] || null;
+    return main ? main.video_url : '';
+  }
   function dogCard(tag, it) {
     var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || ''), nm = cardName(s);
     var facts = [];
@@ -280,6 +292,7 @@
       photoBox(s),
       (function (w) { return w ? h('div', { class: 'szb', 'data-size': sz || 'puppy', 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: w })]) : null; })(tileWord(s, sz)),
       qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
+      (function () { var url = mainVideoUrl(s.id); return url ? h('div', { class: 'vqr', 'data-k': 'video-qr', 'data-url': url, html: BLDQr.svg(url, 'Watch video') }) : null; })(),
       chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
   }
   /* Item cards (print any item, Lisa 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields

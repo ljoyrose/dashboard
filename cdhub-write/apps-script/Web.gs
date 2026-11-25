@@ -49,6 +49,7 @@ function doPost(e) {
     if (req && typeof req === 'object' && req.action === 'subject_create') return jsonOut_({ ok: true, result: sinkSubjectCreate_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link') return jsonOut_({ ok: true, result: sinkSubjectLink_(req) });
     if (req && typeof req === 'object' && req.action === 'subject_link_end') return jsonOut_({ ok: true, result: sinkSubjectLinkEnd_(req) });
+    if (req && typeof req === 'object' && req.action === 'subject_video') return jsonOut_({ ok: true, result: sinkSubjectVideo_(req) });
     // visits (V9, Visit.gs; OWNER code, OFF until TABLE_ON_visit is true)
     if (req && typeof req === 'object' && req.action === 'grant_type_save') return jsonOut_({ ok: true, result: sinkVisitTypeSave_(req) });
     if (req && typeof req === 'object' && req.action === 'card_add') return jsonOut_({ ok: true, result: sinkCardAdd_(req) });

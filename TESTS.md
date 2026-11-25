@@ -414,6 +414,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Daily records: done days were grey buttons, so the green / orange / red / blue key did not show on the calendar | "daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark @regression" (tests/mocked/cdhub-job-calendar.spec.js) |
 | 25 Nov 2026 | A save the records refused (no code, or a field error such as a date over 7 days) was sent again every minute and each failure added another notice | "a validation failure with no code is not retried; one job is one notice, with Clear all and Show what is wrong @regression" (tests/mocked/cdhub-never-lose.spec.js) |
 | 25 Nov 2026 | #582's merge left the published staff copy of bld-save.js on a 5-hour outbox while the client copy was 23 hours | "the two bld-save.js copies are the same file @regression" (tests/mocked/bld-save-copies.spec.js; the write-path suite runs the same check in cdhub-write/tests/bld-save-copies.test.js) |
+<<<<<<< HEAD
 | 25 Nov 2026 | Water bowls washed only showed the original check type, so ticks saved on the later copy were missing from the calendar | "copied water bowls ticks show on the calendar and new saves use the original @regression" (tests/mocked/cdhub-job-calendar.spec.js) |
 | 25 Nov 2026 | Present wrote a new row on every later round the same day, including a thermometer round | "Present already saved today is not written again on a later round @regression" (tests/mocked/cdhub-dog-card-1112.spec.js) |
 | 25 Nov 2026 | Lisa 25 Nov: a dog's medications opened with the oldest at the top (31 Aug 2020 above 13 Aug 2026) | "dog card medications list the newest first, and the same date keeps its order @regression" (tests/mocked/cdhub-dog-meds-order.spec.js) |
@@ -435,6 +436,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Whole-site code with Full A4 drew the one site code three times, three across the page | "whole-site code on Full A4 is one card, and a second click stays one card @regression" (tests/mocked/cdhub-print-site-card.spec.js) |
 | 25 Nov 2026 | A code run kept its progress line after another card type was opened | "switching card type stops the previous code run @regression" (tests/mocked/cdhub-print-run.spec.js) |
 | 25 Nov 2026 | One thermometer code was drawn once for every finished pass, so the print held seven of each | "one card per ticked item for every kind and layout @regression" (tests/mocked/cdhub-print-count.spec.js) |
+| 25 Nov 2026 | A dog can have many RoseQuest clips. The card must keep the main clip first and the rest newest first, and the printed card must show one QR for that main clip only | "dog card lists every clip: main first, then newest, with Show all past five @regression" (tests/mocked/cdhub-dog-videos.spec.js) and "printed dog card: one QR for the main clip, none when there is no RoseQuest video @regression" (tests/mocked/cdhub-print-dog-video.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
