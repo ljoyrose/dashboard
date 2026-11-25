@@ -4669,13 +4669,15 @@ async function roundSave(areaId,patch,msgEl,sel){
   go('round',false); }
 }
 function sinkCard(){
- saveUrlLoad(); var on=sinkOn(), goog=!!sinkGoogle();
+ saveUrlLoad(); var on=sinkOn(), goog=!!sinkGoogle(), remembered=!!staffCodeNow();
+ /* A remembered code still shows, masked. The box is left off only when the owner sign-in is on and no code is kept, so nobody is asked to type one. */
+ var hideCode=goog&&!remembered;
  return '<div class="card '+(on?'acc5':'acc2')+'" id="sinkcard"><h4>Saving on this device: '+(on?'on':'off')+'</h4>'
   +(!on&&!goog&&SINK_RE.test(sinkGet(SINK_URL_KEY))?'<p class="mut">The save address is already on this phone: type your staff code and tap Use these.</p>':'')
   +(goog?'<p class="mut">Signed in as the owner. A staff code is not needed.</p>':'')
   +'<p class="mut" data-device-line>'+deviceLine()+'</p>'
   +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(sinkGet(SINK_URL_KEY))+'"'+(SINK_RE.test(sinkGet(SINK_URL_KEY))?' hidden style="display:none"':'')+'>'
-  +(goog?'':'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(staffCodeNow()?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">')
+  +(hideCode?'':'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(remembered?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">')
   +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
   +'<span class="mut" id="sinkmsg" role="status"></span></div></div>';
 }
