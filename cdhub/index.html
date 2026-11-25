@@ -5619,7 +5619,7 @@ var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],[
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve':'',
+function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve&section=inspect':'',
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,saveScore:bbSaveScore,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
 /* Breed Better enrol / un-enrol (Lisa 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
    Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
