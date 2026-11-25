@@ -120,3 +120,52 @@ test.describe('CD Hub: jobs', () => {
     await expect(page.locator('[data-history]').first()).toContainText('no job records');
   });
 });
+
+test.describe('CD Hub: record an SOP check', () => {
+  const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+  const REC = csv(TYPE_H, [
+    't-chip,t,microchip_check,Microchip checked,dog,true,2020-01-01,,365,,,Microchip Audit',
+    't-pup,t,pup_microchip,Puppy microchips checked,litter,true,2020-01-01,,,,,Microchip Audit'
+  ]);
+
+  test('Mark all saves each ticked dog, and a litter check saves litter_id @regression', async ({ page, guard }) => {
+    addTable(guard.world, 'BLD-check_type.csv', REC);
+    await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) { /* private */ } }, URL_);
+    const sent = [];
+    await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
+      const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
+      const dogs = b.fields && b.fields.dog_ids ? b.fields.dog_ids.split('|') : null;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'clg-test', ids: dogs ? dogs.map((_, i) => 'clg-' + i) : undefined, at: '2026-11-25T12:00:00.000Z', who: 'Test Owner' } }) });
+    });
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'sops');
+    await page.locator('[data-sop-open="Microchip Audit"]').click();
+    const body = page.locator('[data-sop-body="Microchip Audit"]');
+    const ticks = body.locator('[data-sop-tick="microchip_check"]');
+    await expect(ticks).toHaveCount(2);
+    await expect(body).toContainText('2 due');
+    await expect(body.getByRole('button', { name: 'Mark all due as done today' })).toBeVisible();
+    await ticks.nth(0).uncheck();
+    const kept = await ticks.nth(1).inputValue();
+    await body.locator('[data-sop-save="microchip_check"]').click();
+    await expect(body).toContainText('1 due');
+    expect(sent).toHaveLength(1);
+    expect(sent[0].action).toBe('add');
+    expect(sent[0].table).toBe('check_log');
+    expect(sent[0].fields.subject_id).toBe(kept);
+    expect(sent[0].fields.check_type_id).toBe('t-chip');
+    expect(sent[0].fields.how_recorded).toBe('tapped');
+    expect(sent[0].fields.happened_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(sent[0].fields.time_given).toBeUndefined();
+    expect(sent[0].fields.litter_id).toBeUndefined();
+    expect(sent[0].fields.how_recorded).not.toBe('bulk');
+    await body.locator('[data-sop-save="pup_microchip"]').click();
+    await expect.poll(() => sent.length).toBe(2);
+    expect(sent[1].action).toBe('add');
+    expect(sent[1].fields.litter_id).toBe('lit-test-1');
+    expect(sent[1].fields.subject_id).toBeUndefined();
+    expect(sent[1].fields.how_recorded).toBe('tapped');
+    expect(sent[1].fields.check_type_id).toBe('t-pup');
+    await expect(body.locator('[data-sop-save="pup_microchip"]')).toHaveCount(0);
+  });
+});
