@@ -53,6 +53,7 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - name: Run the same tests as the required check
+        # Same suite as the required check, including the route crawl (tests/mocked/route-crawl.spec.js).
         run: npx playwright test --project=mocked --project=phone
       - name: Write the short summary
         if: always()

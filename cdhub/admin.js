@@ -99,6 +99,8 @@ var AdminView = (function () {
      on the Cloudflare copy must not point at it). The owner's qr.base_url rule row in force wins (https, ending in /), as on
      the print page; this is only the starting default. */
   var QR_BASE_START = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
+  /* Phone set-up QR opens the staff page on this same site. The owner's qr.base_url rule row in force wins
+     (https, ending in /), as on the print page. */
   function qrBase(T, today) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
@@ -106,7 +108,7 @@ var AdminView = (function () {
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(val) || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
       if (!best || f >= best.f) best = { f: f, v: val };
     });
-    return best ? best.v : QR_BASE_START;
+    return best ? best.v : staffBase();
   }
   function ownerPage(v, label, section) {
     var u = scriptUrl();

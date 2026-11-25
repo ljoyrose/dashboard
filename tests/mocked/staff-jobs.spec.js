@@ -295,7 +295,10 @@ test('a job with form questions opens its form, needs the required answers, and 
 
 test('a room job set for one room only shows on that room\'s scan', async ({ page }) => {
   await setup(page, { check_type: TYPES.concat([J('iso_clean', 'Isolation clean', 'area', { every_days: '1', only_in_areas: 'area-iso' })]),
-    qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }]), area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }] });
+    qr_tag: TABLES.qr_tag.concat([{ tag: 'ISOTAG22', kind: 'area', ref_id: 'area-iso', active: 'true' }]),
+    area: [{ id: 'area-1', code: 'R1' }, { id: 'area-iso', code: 'R2' }],
+    subject: TABLES.subject.concat([{ id: 'sub-test-c', name: 'sub-test-c' }]),
+    occupancy: TABLES.occupancy.concat([{ subject_id: 'sub-test-c', area_id: 'area-iso', moved_in: '2026-10-01' }]) });
   await page.goto('cdhub/staff/#s/ROOMTAG2');
   await expect(page.locator('[data-job="clean"]')).toBeVisible();
   await expect(page.locator('[data-job="iso_clean"]')).toHaveCount(0);

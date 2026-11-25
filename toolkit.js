@@ -103,6 +103,7 @@
     't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
     't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
     't-temp': '<path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0z"/><path d="M10 9h4"/>',
+    't-print': '<path d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4M7 13h10v8H7z"/>',
     // Status icons for badges (quality review, 12 Nov 2026: house icons, not emoji). Tabler shapes, the same stroke.
     's-check': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/>',
     's-x': '<circle cx="12" cy="12" r="9"/><path d="M10 10l4 4m0-4l-4 4"/>',
@@ -340,6 +341,34 @@
     var s = root.document && root.document.currentScript;
     try { return new URL('./', s && s.src ? s.src : root.location.href).href; } catch (e) { return './'; }
   })();
+  // An address that belongs to this site, as a path on the current copy. The old pages host and a /dashboard/
+  // prefix are rewritten so a tap stays here. A hash on this document stays a hash (a full load of index.html
+  // plus a hash re-parses every icon and can recurse until the tab runs out of memory).
+  var OLD_HOST = 'ljoyrose.github.io';
+  function localHref(href) {
+    var h = String(href == null ? '' : href).trim();
+    if (!h || /^(#|mailto:|tel:|sms:)/i.test(h) || !root.location) return h;
+    var u;
+    try { u = new URL(h, root.location.href); } catch (e) { return h; }
+    var old = u.hostname === OLD_HOST, same = u.origin === root.location.origin;
+    if (!old && !same) return h;
+    if (!old && !/^https?:/i.test(h)) return h;
+    var path = u.pathname;
+    if (old) path = path.replace(/^\/dashboard(?=\/|$)/, '') || '/';
+    var pre = '';
+    try { pre = new URL(SITE).pathname.replace(/\/$/, ''); } catch (e) { pre = ''; }
+    if (pre && path !== pre && path.indexOf(pre + '/') !== 0) path = pre + (path.charAt(0) === '/' ? path : '/' + path);
+    else if (!pre && (path === '/dashboard' || path.indexOf('/dashboard/') === 0)) path = path.slice('/dashboard'.length) || '/';
+    var here = root.location.pathname, dir = here.charAt(here.length - 1) === '/' ? here : here.replace(/[^/]*$/, '');
+    if (path === here || path === dir || path === dir + 'index.html') return u.hash || '#';
+    return path + u.search + u.hash;
+  }
+  if (root.document) root.document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest && e.target.closest('a[href]');
+    if (!a) return;
+    var next = localHref(a.getAttribute('href'));
+    if (next && next !== a.getAttribute('href')) a.setAttribute('href', next);
+  }, true);
 
   // ---- Phone install (service worker keeps page files only, never Drive data or the token) ----
   if (root.navigator && 'serviceWorker' in root.navigator && root.isSecureContext) {
@@ -731,5 +760,5 @@
     return '<div class="hm" data-hub-main="' + escHtml(spec.hub || '') + '">' + h + '</div>';
   }
 
-  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, count: { why: countWhy, kind: countKind, cls: countCls, say: countSay }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help, hubMain: hubMain, hubMainSort: hmSort, fold: { run: foldAll, key: FOLD_KEY } };
+  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, count: { why: countWhy, kind: countKind, cls: countCls, say: countSay }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, localHref: localHref, showKeys: help, hubMain: hubMain, hubMainSort: hmSort, fold: { run: foldAll, key: FOLD_KEY } };
 })(typeof window !== 'undefined' ? window : this);

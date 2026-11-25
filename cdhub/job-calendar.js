@@ -11,9 +11,14 @@
   else root.BLDJobCal = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   /* the stop-gap until the owner has calendar rows (the owner 17 Nov 2026: health checks, bowls washed, site cleaned) */
   var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean'];
+  /* the stop-gap until the owner has calendar rows (Lisa 17 Nov 2026: health checks, bowls washed, site cleaned).
+     Bedding and Toys stay on the list even when the owner has chosen the other cards, unless a row turns them off. */
+  var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean', 'bedding', 'toys'];
+  var ALWAYS = ['bedding', 'toys'];
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var SKIP = { not_done: 1, note: 1, part_done: 1 };
 
@@ -27,53 +32,132 @@
       if (m && inForce(r, v.today) && (!best[m[1]] || r.effective_from > best[m[1]].effective_from)) best[m[1]] = r;
     });
     var keys = Object.keys(best);
-    if (!keys.length) return STARTER.filter(function (k) { return !!typeOf(v, k); });
-    return keys.map(function (k) { return { k: k, n: parseInt(best[k].value, 10) }; })
-      .filter(function (x) { return x.n > 0 && typeOf(v, x.k); })
-      .sort(function (a, b) { return a.n - b.n; }).map(function (x) { return x.k; });
+    var on = !keys.length ? STARTER.filter(function (k) { return !!typeOf(v, k); })
+      : keys.map(function (k) { return { k: k, n: parseInt(best[k].value, 10) }; })
+        .filter(function (x) { return x.n > 0 && typeOf(v, x.k); })
+        .sort(function (a, b) { return a.n - b.n; }).map(function (x) { return x.k; });
+    ALWAYS.forEach(function (k) {
+      if (on.indexOf(k) >= 0) return;
+      if (best[k] && !(parseInt(best[k].value, 10) > 0)) return;   // the owner turned this card off
+      if (typeOf(v, k)) on.push(k);
+    });
+    return on;
   }
 
-  /** The job row in force today for a type_key (the newest effective_from on or before today, switched on). */
+  /** Every check_type row of this job, including a later copy with another type_key or a -2 id. */
+  function familyFor(v, key) {
+    var hit = null;
+    (Due.families ? Due.families(v.types || []) : []).forEach(function (g) {
+      if (g.some(function (r) { return r.type_key === key || Due.canonKey(r.type_key) === Due.canonKey(key); })) hit = g;
+    });
+    return hit || [];
+  }
+
+  /** The row a new save uses: the original of the family, not a later copy. One type_key still uses its newest row. */
   function typeOf(v, key) {
+    var main = Due.mainOf ? Due.mainOf(familyFor(v, key), v.today) : null;
+    if (main) return String(main.active).toLowerCase() !== 'false' ? main : null;
     var best = null;
     (v.types || []).forEach(function (r) { if (r.type_key === key && r.effective_from && r.effective_from <= v.today && (!best || r.effective_from > best.effective_from)) best = r; });
     return best && String(best.active).toLowerCase() !== 'false' ? best : null;
   }
 
-  /** London day -> {dogs:{id:1}, n, lines:[{by, at}]} for every done record of this job (all its versions). */
+  /** London day -> {dogs:{id:1}, n, lines:[{by, at}]} for every done record of this job (all its versions and copies).
+      A round row counts each dog in covered_ids. A dog marked not here, not done or missed on that row does not count. */
   function days(v, key) {
     var ids = {}, replaced = {}, out = {};
-    (v.types || []).forEach(function (r) { if (r.type_key === key) ids[r.id] = 1; });
+    var group = familyFor(v, key);
+    (group.length ? group : (v.types || []).filter(function (r) { return r.type_key === key; })).forEach(function (r) { ids[r.id] = 1; });
     (v.logs || []).forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = 1; });
     (v.logs || []).forEach(function (l) {
       if (!ids[l.check_type_id] || replaced[l.id] || SKIP[l.outcome] || String(l.how_recorded || '') === 'owner_note') return;
       var d = Due.londonDate(l.happened_at || l.taken_at); if (!d) return;
-      var x = out[d] = out[d] || { dogs: {}, n: 0, lines: [] };
+      var x = out[d] = out[d] || { dogs: {}, dogN: {}, n: 0, lines: [] };
       var skip = {};
+      function hit(id) { id = String(id || '').trim(); if (!id || skip[id]) return; x.dogs[id] = 1; x.dogN[id] = (x.dogN[id] || 0) + 1; }
       String(l.exceptions || '').split('|').forEach(function (p) { var id = String(p.split(':')[0] || '').trim(); if (id) skip[id] = 1; });
-      String(l.covered_ids || '').split('|').forEach(function (id) { id = id.trim(); if (id && !skip[id]) x.dogs[id] = 1; });
-      if (l.subject_id && !skip[l.subject_id]) x.dogs[l.subject_id] = 1;
-      x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: l.note || '' });
+      String(l.covered_ids || '').split('|').forEach(hit);
+      if (l.subject_id) hit(l.subject_id);
+      x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: Show.human(l.note) });
     });
     return out;
   }
 
+  /** The day the daily run starts. A gap of more than 60 days means the earlier entries did not start it
+      (a paper sheet typed in months later). Days before that stay "not tracked", even if one old day has a row. */
+  function trackedFrom(days) {
+    var list = Object.keys(days || {}).sort();
+    if (!list.length) return '';
+    function num(iso) { return Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86400000; }
+    var start = list[0], prev = num(list[0]);
+    for (var i = 1; i < list.length; i++) {
+      var n = num(list[i]);
+      if (n - prev > 60) start = list[i];
+      prev = n;
+    }
+    return start;
+  }
+  function isHealth(t) {
+    var k = String((t && t.type_key) || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    return k === 'healthcheckall' || k === 'healthcheck';
+  }
+  function ageMonths(dob, today) {
+    dob = String(dob || '').slice(0, 10); today = String(today || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return null;
+    var m = (Number(today.slice(0, 4)) - Number(dob.slice(0, 4))) * 12 + (Number(today.slice(5, 7)) - Number(dob.slice(5, 7)));
+    if (Number(today.slice(8, 10)) < Number(dob.slice(8, 10))) m--;
+    return m < 0 ? null : m;
+  }
+  /** Same puppy rule as the year print: a litter pup, a Pup, or a generated "Dam x Sire 2026 - male" name. */
+  function litterPup(dog, today) {
+    if (!dog) return false;
+    if (dog.puppy === true) return true;
+    if (/^pup/i.test(String(dog.kind || ''))) return true;
+    var name = String(dog.name || '');
+    if (/\bx\b/i.test(name) && /\b(male|female)\b/i.test(name) && /\b20\d{2}\b/.test(name)) return true;
+    if (dog.birth_litter_id || dog.birthLitter) {
+      var age = ageMonths(dog.dob, today);
+      if (age == null || age < 6) return true;
+    }
+    return false;
+  }
+  function wantsPups(t) {
+    return /pup/i.test(String((t && t.type_key) || '') + ' ' + String((t && t.label) || '') + ' ' + String((t && t.only_groups) || ''));
+  }
+  /** Dogs a per-dog card counts on one day: on site that day, born, without litter puppies unless the check is for puppies. */
+  function dogsOn(v, t, iso) {
+    iso = iso || v.today;
+    var opt = { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings };
+    var list = v.occupancy
+      ? Due.subjectsFor(t, v.subjects || v.dogs || [], iso, opt)
+      : Due.dogsFor(t, { dogs: v.dogs || [] }).filter(function (x) { return !x.dob || String(x.dob).slice(0, 10) <= iso; });
+    if (!wantsPups(t)) list = list.filter(function (d) { return !litterPup(d, iso); });
+    return list;
+  }
+
   /** One month for one job: {key, label, ym, first, need, cells:[{iso, day, state, got, need}]}. State: done, part,
-      missed, due (today, not yet), future, before (before this job's first record: not tracked here), blank (padding). */
+      missed, due (today, not yet), future, before (before this job's daily run: not tracked here), blank (padding). */
   function month(v, key, ym) {
     var t = typeOf(v, key); if (!t) return null;
-    var perDog = Due.perDogSite(t), mine = perDog ? Due.dogsFor(t, { dogs: v.dogs || [] }) : [], need = perDog ? mine.length : 1;
-    /* a dog counts on a day only once it is born: a pup born mid-month does not make the days before it "part done" */
-    var needOn = function (iso) { return mine.filter(function (x) { return !x.dob || String(x.dob).slice(0, 10) <= iso; }).length; };
-    var d = days(v, key), first = Object.keys(d).sort()[0] || '';
+    var perDog = Due.perDogSite(t), need = perDog ? dogsOn(v, t, v.today).length : 1;
+    var d = days(v, key), first = trackedFrom(d);
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10);
     var len = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
     var cells = [];
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).length : x.n) : 0, want = perDog ? needOn(iso) : 1;
-      var state = iso > v.today ? 'future' : (got && (!perDog || got >= want)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
-      cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : 0, lines: x ? x.lines : [] });
+      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso);
+      var mine = perDog ? dogsOn(v, t, iso) : [], want = perDog ? mine.length : times, got = 0, allow = {};
+      mine.forEach(function (s) { allow[s.id] = 1; });
+      if (x) {
+        if (!perDog) got = x.n;
+        else if (times > 1) Object.keys(x.dogN || {}).forEach(function (id) { if (allow[id] && x.dogN[id] >= times) got++; });
+        else Object.keys(x.dogs).forEach(function (id) { if (allow[id]) got++; });
+      }
+      var full = perDog ? (want > 0 && got >= want) : got >= Math.max(times, 1);
+      var noneHere = perDog && v.occupancy && want === 0;
+      var state = iso > v.today ? 'future' : noneHere ? ((!first || iso < first) ? 'before' : 'done') : full ? 'done' : (got || (perDog && times > 1 && x && x.n)) ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
+      cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : (times > 1 ? times : 0), lines: x ? x.lines : [] });
     }
     return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, vetCal: showsVet(t), need: need, typeId: t.id, cells: cells };
   }
@@ -188,18 +272,18 @@
   function doneFields(v, key) {
     var t = typeOf(v, key); if (!t) return null;
     var f = { check_type_id: t.id, outcome: String(t.asks_outcome).toLowerCase() === 'false' ? 'recorded' : 'ok', how_recorded: 'site_tap' };
-    if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
+    if (Due.perDogSite(t)) f.dog_ids = dogsOn(v, t, v.today).map(function (d) { return d.id; }).join('|');
     return f;
   }
 
   var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-width:0}.jcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}'
     + '.jcal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.jcal{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card)}'
     + '.jcal-t{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin-bottom:6px}.jcal-ok{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:700}'
-    + '.jcal-ok svg,.jd svg{width:16px;height:16px}.jdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.jdh{font-size:10px;color:var(--muted);text-align:center}'
+    + '.jcal-ok svg,.jd svg{width:16px;height:16px}.jdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:10px}.jdh{font-size:10px;color:var(--muted);text-align:center}'
     + '.jd{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:10px;color:var(--ink)}'
     + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done,#jobCals button.jd.done{background:var(--ljr-5);box-shadow:none;color:#fff}'
     + '.jd.part,#jobCals button.jd.part{box-shadow:inset 0 0 0 2px var(--ljr-3);background:var(--ljr-3-tint);color:var(--ink)}.jd.missed,#jobCals button.jd.missed{background:transparent;box-shadow:inset 0 0 0 2px var(--ljr-2);position:relative;color:var(--ink)}.jd.missed::after{content:"\\2715";position:absolute;top:1px;right:2px;font-size:8px;line-height:1;font-weight:700;color:var(--ljr-2-text)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
-    + 'button.jd{border:0;padding:0;font:inherit;cursor:pointer;position:relative;min-width:0}.jd.open{outline:3px solid var(--ink);outline-offset:-3px}'
+    + 'button.jd{border:0;padding:0;margin:0;font-family:inherit;font-size:inherit;line-height:inherit;-webkit-appearance:none;appearance:none;cursor:pointer;position:relative;min-width:0}.jd.open{outline:3px solid var(--ink);outline-offset:-3px}'
     + '.jcam{position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center}.jcam svg{width:9px;height:9px}'
     + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6);color:#fff;display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
     + '.jcal-day{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.jcal-day ul{margin:6px 0;padding-left:18px}'
@@ -213,7 +297,12 @@
      "imported" (how_recorded import), so the record always says it was entered afterwards from another source. */
   function siteTypes(v) {
     var by = {};
-    (v.types || []).forEach(function (r) { if (r.target === 'none' && r.effective_from <= v.today && String(r.active).toLowerCase() !== 'false' && (!by[r.type_key] || r.effective_from > by[r.type_key].effective_from)) by[r.type_key] = r; });
+    (Due.families ? Due.families(v.types || []) : []).forEach(function (g) {
+      var site = g.filter(function (r) { return r.target === 'none'; });
+      var main = Due.mainOf(site.length ? site : g, v.today);
+      if (!main || main.target !== 'none' || String(main.active).toLowerCase() === 'false' || (main.effective_from && main.effective_from > v.today)) return;
+      g.forEach(function (r) { if (r.type_key) by[r.type_key] = main; });
+    });
     return by;
   }
   function csvRows(text) {
@@ -280,7 +369,7 @@
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
     if (x.note) f.note = x.note;
     if (x.old) f.confirm_unusual = 'yes';
-    if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
+    if (Due.perDogSite(t)) f.dog_ids = dogsOn(v, t, x.iso).map(function (d) { return d.id; }).join('|');
     return f;
   }
   /** A starter file: the heading row and one example row per calendar job (yesterday), to fill in and import. */

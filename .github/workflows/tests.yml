@@ -83,6 +83,8 @@ jobs:
       - name: Run tests (desktop suite, then the small phone-sized set)
         if: steps.scope.outputs.browser == 'true'
         id: run
+        # The desktop suite includes the route crawl (tests/mocked/route-crawl.spec.js): every top-level page,
+        # and every hash route, tab, chip and SOP row, must stay on this origin and paint without hanging.
         run: npx playwright test --project=mocked --project=phone
 
       - name: Docs-only branch or private-repo push - run the checks that need no browser (secret scan, CI guards)

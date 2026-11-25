@@ -166,3 +166,81 @@ test('daily records: done, part done and missed look different (not by colour al
   const doneBg = await page.locator('#jobCals button.jd.done').first().evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(doneBg.replace(/\s/g, '')).toMatch(/81,173,87/);
 });
+
+test('copied water bowls ticks show on the calendar and new saves use the original @regression', async ({ page, guard }) => {
+  const today = london(new Date()), yest = london(new Date(Date.now() - 86400000));
+  addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
+    'cty-water_bowls-1,t,water_bowls,Water bowls washed,none,true,2020-01-01,,1,,,Cleaning,one_line',
+    'cty-water_bowls-2,t,water_bowls_2,Water bowls washed,none,true,2026-11-22,,1,,,Cleaning,one_line',
+    'cty-bedding-1,t,bedding,Bedding,none,true,2020-01-01,,1,,,Cleaning,one_line',
+    'cty-toys-1,t,toys,Toys,none,true,2020-01-01,,1,,,Cleaning,one_line'
+  ]));
+  addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+    `l2,t,cty-water_bowls-2,,,,,ok,,,${yest}T09:00:00Z,Pretend Staff,,,site_tap`
+  ]));
+  await HUBS.cdhub.open(page, guard);
+  await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok');
+  await tabClick(page, '#nav button[data-go="compliance"]');
+  const cal = page.locator('#jobCals');
+  await expect(cal.locator('[data-jcal="bedding"]')).toBeVisible();
+  await expect(cal.locator('[data-jcal="toys"]')).toBeVisible();
+  await expect(cal.locator('[data-yp="cal"]')).toBeVisible();
+  const bowls = cal.locator('[data-jcal="water_bowls"]');
+  await expect(bowls).toBeVisible();
+  if (yest.slice(0, 7) !== today.slice(0, 7)) await cal.locator('[data-jcal-month]').first().click();
+  await expect(bowls.locator(`[data-day="${yest}"]`)).toHaveClass(/\bdone\b/);
+  await page.evaluate(() => { window.__sent = []; window.sinkSend = async (b) => { window.__sent.push(b); return { ok: true, result: { status: 'saved', id: 'chk-wb', ids: ['chk-wb'], at: new Date().toISOString(), who: 'Pretend Owner' } }; }; });
+  await bowls.locator('[data-jcal-done="water_bowls"]').click();
+  const sent = await page.evaluate(() => window.__sent);
+  expect(sent[0].fields.check_type_id).toBe('cty-water_bowls-1');
+});
+
+test('September before the daily run is not tracked, and a vet dot is only on Health @regression', () => {
+  const assert = require('node:assert/strict');
+  const C = require('../../cdhub/job-calendar.js');
+  const testTypes = [
+    { id: 'cty-hc', type_key: 'health_check_all', label: 'Health check: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' },
+    { id: 'cty-fb', type_key: 'food_bowls', label: 'Food bowls washed', target: 'none', site_scope: 'one_line', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' }
+  ];
+  const dogs = [{ id: 'd1', area_id: 'a1' }, { id: 'd2', area_id: 'a2' }, { id: 'd3', area_id: 'iso' }];
+  const log = (id, type, day, dog) => ({ id, check_type_id: type, outcome: 'ok', taken_at: day + 'T10:00:00Z', subject_id: dog || '', taken_by: 'Pretend' });
+  const v = {
+    today: '2026-11-25', types: testTypes, dogs, esc: (s) => String(s), dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
+    logs: [log('h1', 'cty-hc', '2026-06-02', 'd1'), log('h2', 'cty-hc', '2026-06-02', 'd2'), log('h3', 'cty-hc', '2026-10-01', 'd1'), log('h4', 'cty-hc', '2026-10-01', 'd2'), log('f1', 'cty-fb', '2026-10-01', '')],
+    rules: [
+      { rule_key: 'compliance.calendar.health_check_all', value: '1', effective_from: '2026-01-01' },
+      { rule_key: 'compliance.calendar.food_bowls', value: '2', effective_from: '2026-01-01' },
+      { rule_key: 'compliance.calendar.exercise_all', value: '3', effective_from: '2026-01-01' }
+    ],
+    vetVisits: [{ subject_id: 'd1', performed_on: '2026-09-03', status: 'done', reason: 'check' }]
+  };
+  const st = (key, iso) => C.month(v, key, iso.slice(0, 7)).cells.find((c) => c.iso === iso).state;
+  assert.equal(st('health_check_all', '2026-09-04'), 'before');
+  assert.equal(st('food_bowls', '2026-09-04'), 'before');
+  const html = C.html(v, '2026-09', false);
+  assert.match(html.slice(html.indexOf('data-jcal="health_check_all"'), html.indexOf('data-jcal="food_bowls"')), /class="jd before vet"/);
+  assert.doesNotMatch(html.slice(html.indexOf('data-jcal="exercise_all"')), /class="jd [^"]*vet/);
+});
+
+test('exercise counts the adult dogs only and hides a backfill note @regression', () => {
+  const assert = require('node:assert/strict');
+  const C = require('../../cdhub/job-calendar.js');
+  const ex = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01' };
+  const dogs = [
+    { id: 'd1', area_id: 'a1', name: 'Ada', kind: 'Breeding Female', dob: '2020-01-01' },
+    { id: 'p1', area_id: 'a1', name: 'Marble x Sammy 2026 - Black male 1', kind: 'Pup', dob: '2026-06-01', birthLitter: 'lit-1' }
+  ];
+  const v = {
+    today: '2026-11-25', types: [ex], dogs, esc: (s) => String(s), dmy: (s) => s,
+    logs: [{ id: 'e1', check_type_id: 'cty-ex', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }],
+    rules: [{ rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }],
+    calOpen: { key: 'exercise_all', iso: '2026-11-08' }
+  };
+  const day = C.month(v, 'exercise_all', '2026-11').cells.find((c) => c.iso === '2026-11-08');
+  assert.equal(day.state, 'done');
+  assert.equal(day.need, 1);
+  const html = C.html(v, '2026-11', false);
+  assert.match(html, /class="jd done"/);
+  assert.doesNotMatch(html, /backfill/i);
+});
