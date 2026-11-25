@@ -155,7 +155,7 @@ function statusBody_() {
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });
-  return { ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES), timeZone: tzOn_() };   // timeZone: not secret; phones show times in it
+  return { ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES), timeZone: tzOn_() };   // timeZone: not secret; phones show times in it. doGet wraps this once.
 }
 
 /**

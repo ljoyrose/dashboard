@@ -230,7 +230,7 @@
        - A save the script refuses (a check failed) leaves the box and is listed as "Not saved" with the reason.
        - The staff code and any Google token are never kept with an entry: they are added again when it is sent. */
     var OUTBOX_KEY = 'bld.outbox', REFUSED_KEY = 'bld.outbox.refused';
-    var OUTBOX_AUTO_MS = 5 * 3600000;   // inside the script's 6-hour memory of request ids
+    var OUTBOX_AUTO_MS = 23 * 3600000;   // inside the script's 6-hour memory of request ids
     // Answers that mean "not this time" (no signal, script busy or switched off, not set up yet): the entry stays kept
     // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
     // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
@@ -474,7 +474,7 @@
       var signedIn = hasAuth();
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
-      var action = o.action === 'correct' || o.action === 'add_site' || o.action === 'add_session' ? o.action : 'add';
+      var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };

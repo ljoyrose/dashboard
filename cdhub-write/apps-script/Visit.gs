@@ -36,9 +36,6 @@ var VISIT_ = {
 function visitRightCode_(s) { s = String(s == null ? '' : s).trim(); return s === 'review' ? 'raise_finding' : s; }
 
 function visitOn_() { return prop_(BLD.PROP.TABLE_ON_PREFIX + VISIT_.ON) === 'true'; }
-function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE, VISIT_.FINDING_FILE] : []; }
-
-/** Shared entry for OWNER visit actions: switches, owner code, repeat-tap guard, one lock. */
 function visitFiles_() { return visitOn_() ? [VISIT_.TYPE_FILE, VISIT_.FINDING_FILE].concat(delegFiles_()) : []; }
 
 /** Shared entry for OWNER visit actions: switches, owner code, repeat-tap guard, one lock. */
@@ -337,8 +334,6 @@ function sinkVisitGive_(req) {
     var fieldRows = visitFieldRows_(visitList_(arr('fields'), function (s) { return VISIT_.FIELD_RE.test(s); }, 500) || ['?'], bad);
     var lists = [];
     fieldRows.forEach(function (r) { if (lists.indexOf(r[0]) < 0) lists.push(r[0]); });
-    var win = externalWindow_({ hours: f.hours, starts_at: f.from_at, ends_at: f.to_at }, role, now, bad,
-      { default_hours: Number(type.default_hours), max_hours: Number(type.max_hours) });
     var lim = deleg ? deleg.limits : null;
     if (lim) visitWithin_(lim, type, rights, lists, fieldRows, jobs);
     var capH = Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
@@ -498,7 +493,6 @@ function sinkVisitExtend_(req) {
     if (endMs <= nowMs || endMs <= startMs) throw bad('to_at', 'The end must be later than now and the start.');
     var type = rec.grant_type_id ? visitTypeById_(rec.grant_type_id) : null;
     var role = (type && type.role_code) || ROLE_INSPECTOR;
-    var max = externalMax_(role, todayLondon_(now), type ? Number(type.max_hours) : null);
     var tmax = type && Number(type.max_hours) > 0 ? Number(type.max_hours) : null;
     if (deleg && deleg.limits.max_hours !== null && (tmax === null || deleg.limits.max_hours < tmax)) tmax = deleg.limits.max_hours;
     if (deleg && deleg.limits.to_ms !== null && endMs > deleg.limits.to_ms) throw bad('to_at', 'Your permission ends sooner than that.');

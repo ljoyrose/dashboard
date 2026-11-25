@@ -1780,7 +1780,7 @@ function specFor_(keyOrFile) {
 
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
-  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(visitFiles_()).concat(linksFiles_()).concat(editFiles_()).concat(scoresFiles_());   // visit, links, edits and scores are each behind their own switch
+  var out = [BLD.PENDING_FILE].concat(inspectFiles_()).concat(dogcardFiles_()).concat(codeRegisterFiles_()).concat(visitFiles_()).concat(linksFiles_()).concat(editFiles_()).concat(scoresFiles_());   // each extra list is empty until its own switch is on
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
