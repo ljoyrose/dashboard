@@ -5797,7 +5797,7 @@ function go(id,push){
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
- if(LOAD.state==='loading'){ return; }
+ if(LOAD.state==='loading'){ document.getElementById('nav').innerHTML=''; return; }
  if(LOAD.state!=='ok'){
 
   main.innerHTML='<div style="margin-top:24px"><h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',error:(LOAD.state==='ambiguous'?'More than one file shares a title. Refusing to guess which is current: '+(LOAD.err||'')
