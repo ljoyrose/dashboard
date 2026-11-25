@@ -433,8 +433,8 @@ table.house-table .num { text-align: right; font-variant-numeric: tabular-nums; 
   table.house-table, table.house-table tbody, table.house-table tr { display: block; width: 100%; }
   table.house-table tr { border-bottom: 1px solid var(--line); padding: 6px 0; }
   table.house-table tr:last-child { border-bottom: 0; }
-  table.house-table td, table.house-table tbody th { display: grid; grid-template-columns: minmax(6em, 40%) 1fr; gap: 8px; border: 0; padding: 4px 12px; }
-  table.house-table td::before, table.house-table tbody th::before { content: attr(data-label); color: var(--muted); font-weight: 600; }
+  table.house-table td, table.house-table.tstack td, table.house-table tbody th, table.house-table.tstack tbody th { display: grid; grid-template-columns: minmax(6em, 40%) 1fr; gap: 8px; border: 0; padding: 4px 12px; }
+  table.house-table td::before, table.house-table.tstack td::before, table.house-table tbody th::before, table.house-table.tstack tbody th::before { content: attr(data-label); color: var(--muted); font-weight: 600; }
   table.house-table tbody th[scope="row"] { grid-template-columns: 1fr; }
   table.house-table tbody th[scope="row"]::before { content: none; }
   table.house-table .num { text-align: left; }

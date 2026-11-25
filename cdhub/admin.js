@@ -76,7 +76,7 @@ var AdminView = (function () {
       '.adm-why{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}.adm-why ul{margin:6px 0 0;padding-left:18px}.adm-why li{margin:3px 0}',
       '.adm-later{margin-top:8px}',
       '.adm-codes,.adm-future{margin:0 0 10px}',
-      '.adm-map table.house-table th,.adm-map table.house-table td{text-align:center}.adm-map table.house-table tbody th{text-align:left}'
+      '.adm-map table.house-table th,.adm-map table.house-table td{text-align:center}.adm-map table.house-table tbody th{text-align:left}',
       '.adm-future{list-style:none;margin:0;padding:0}.adm-future li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}.adm-future li:last-child{border:0}',
       '.adm-future span{flex:1}.adm-future em{font-style:normal;color:var(--muted);font-size:var(--fs-small)}',
       '.adm-set{border-top:1px solid var(--line);padding:10px 0}.adm-set:first-of-type{border-top:0}',
@@ -396,10 +396,6 @@ var AdminView = (function () {
           return '<tr><td>' + v.esc(j.job) + '</td><td class="mut">' + v.esc(j.often) + '</td><td>' + tag(j.exists) + '</td></tr>';
         }).join('') + '</tbody></table></div>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
       + '<p class="mut">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
-        : '<ul class="adm-future">' + shown.map(function (j) {
-          return '<li><span>' + v.esc(j.job) + '</span><em>' + v.esc(j.often) + '</em>' + tag(j.exists) + '</li>';
-        }).join('') + '</ul>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
-      + '<p class="mut help">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
   }
 
   function page(v) {
