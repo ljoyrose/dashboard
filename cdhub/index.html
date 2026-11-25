@@ -5714,11 +5714,8 @@ if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Admin']);
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Settings']);   /* the tab says Settings; the page and its chip say the same (17 Nov 2026) */
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Settings']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
@@ -5762,10 +5759,20 @@ function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],
 /* Settings, Menu (menu PR 3): which sections are on and which sit on the bar, as owner-setting rows (nav.on.*, nav.tab.OWNER.*),
    in force from today. Nothing is deleted: a change is a newer row. No rows: the starting layout, said so. */
 function navPickable(){ return HubNav.SECTIONS.filter(function(s){ return s.id!=='main'&&s.id!=='settings'; }); }
+function navMenuSet(){
+ var iso=todayISO();
+ return (T['BLD-breeding_rule.csv']||[]).some(function(r){
+  var k=String(r&&r.rule_key||''), f=String(r&&r.effective_from||'').slice(0,10), t=String(r&&r.to_date||'').slice(0,10);
+  if(k.indexOf('nav.on.')!==0&&k.indexOf('nav.tab.')!==0) return false;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f)) return false;
+  if(iso&&(f>iso||(/^\d{4}-\d{2}-\d{2}$/.test(t)&&iso>t))) return false;
+  return true;
+ });
+}
 function navMenuCard(){
- var lay=navLayout(), any=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'});
+ var any=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'});
  var h='<section class="card" id="navMenu" style="margin-top:24px"><h3 class="hx4">Menu</h3>'
-  +'<p class="mut">'+(lay.set?'Your menu, in force from the dates saved.':'Starting layout, not set.')+' Main is always first and More always last; up to 3 sections sit between.</p>'
+  +'<p class="mut">'+(navMenuSet()?'Your menu, in force from the dates saved.':'Starting layout, not set.')+' Main is always first and More always last; up to 3 sections sit between.</p>'
   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>Section</th><th>On</th><th>On the bar</th></tr></thead><tbody>'
   +navPickable().map(function(sc){ var pos=any.tabs.indexOf(sc.id)+1;
     return '<tr data-nav="'+sc.id+'"><td><b>'+esc(sc.label)+'</b></td>'
@@ -5946,7 +5953,6 @@ function go(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin'){ AdminView.bind(admV()); bindNavMenu(); }
- if(id==='admin') AdminView.bind(admV());
  if(id==='bin') CDBin.bind(main,binV());
  if(id==='work'&&typeof CDWork!=='undefined') CDWork.bind(main,workV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }

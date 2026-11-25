@@ -55,7 +55,7 @@ asOwner.describe('CD Hub Settings: Menu', () => {
     await open(page, sent);
     await page.locator('#navOn-ops').uncheck();
     await page.locator('#navSave').click();
-    await expect(page.locator('#navMsg')).toHaveText('Ops is on the bar but switched off.');
+    await expect(page.locator('#navMsg')).toHaveText('Records is on the bar but switched off.');
     await page.locator('#navOn-ops').check();
     await page.locator('#navTab-sales').selectOption('1');
     await page.locator('#navSave').click();
