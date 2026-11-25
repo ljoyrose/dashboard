@@ -14,15 +14,142 @@
   'use strict';
 
   var DAY = 86400000;
+  var londonFmt = null, londonTz = '';
 
   function londonDate(value) {
     var d = new Date(value);
     if (isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London'), year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    var tz = (typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London';
+    if (!londonFmt || londonTz !== tz) {
+      londonTz = tz;
+      londonFmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+    }
+    return londonFmt.format(d);
   }
   function addDays(date, n) { return new Date(Date.parse(date + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10); }
   function daysBetween(from, to) { return Math.round((Date.parse(to + 'T00:00:00Z') - Date.parse(from + 'T00:00:00Z')) / DAY); }
   function isOff(v) { return String(v).toLowerCase() === 'false'; }
+  function flagOn(v) { var s = String(v == null ? '' : v).trim().toLowerCase(); return s === 'true' || s === 'on' || s === 'yes' || s === '1'; }
+  function ymd(v) { var s = String(v || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
+  var GONE_STATE = { sold: 1, collected: 1, deceased: 1 };
+  var OCCUPIED_KEY = { daily_clean: 1, isolation_clean: 1, iso_clean: 1 };
+  var ROOM_ONLY_KEY = { deep_clean: 1, room_disinfected: 1, full_clean: 1, room_emptied: 1 };
+  var OWN_TABLE = { weight: 'weight', weighing: 'weight', weights: 'weight', medicine: 'dispense', medicines: 'dispense', meds: 'dispense', dispense: 'dispense', vaccination: 'vaccination', vaccinations: 'vaccination', vaccine: 'vaccination', microchip: 'microchip', microchips: 'microchip' };
+
+  function ruleRow(rules, key, day) {
+    var best = null;
+    (rules || []).forEach(function (r) {
+      if (r.rule_key !== key || !r.effective_from || r.effective_from > day || (r.to_date && r.to_date < day)) return;
+      if (!best || r.effective_from > best.effective_from) best = r;
+    });
+    return best;
+  }
+  function ruleOn(rules, key, day) { var row = ruleRow(rules, key, day); return !!(row && flagOn(row.value)); }
+  /** All-subject checks can leave juveniles out. No row and no setting = include them. */
+  function excludeJuvenile(rules, typeKey, day, settings) {
+    var best = null;
+    (settings || []).forEach(function (r) {
+      if (r.type_key !== typeKey || !r.from_date || r.from_date > day || (r.to_date && r.to_date < day)) return;
+      if (!best || String(r.from_date) >= String(best.from_date)) best = r;
+    });
+    if (best && flagOn(best.exclude_juvenile)) return true;
+    return ruleOn(rules, 'job.exclude_juvenile.' + typeKey, day) || ruleOn(rules, 'job.exclude_juvenile', day);
+  }
+  function adultMonths(rules, day) {
+    var row = ruleRow(rules, 'dog.adult_from_months', day);
+    var n = row ? parseInt(row.value, 10) : 6;
+    return n > 0 ? n : 6;
+  }
+  function ageMonths(dob, day) {
+    dob = ymd(dob); day = ymd(day);
+    if (!dob || !day) return null;
+    var m = (Number(day.slice(0, 4)) - Number(dob.slice(0, 4))) * 12 + (Number(day.slice(5, 7)) - Number(dob.slice(5, 7)));
+    if (Number(day.slice(8, 10)) < Number(dob.slice(8, 10))) m--;
+    return m < 0 ? null : m;
+  }
+  function isJuvenile(subject, day, rules) {
+    if (!subject) return false;
+    var kind = String(subject.kind || '').trim().toLowerCase();
+    if (kind.indexOf('pup') === 0) return true;
+    if (kind === 'adult') return false;
+    var age = ageMonths(subject.dob, day);
+    if (age == null) return false;
+    return age < adultMonths(rules, day);
+  }
+  function recordOn(rows, subjectId, day) {
+    var best = null, bestKey = '', bestIdx = -1;
+    for (var i = 0; i < (rows || []).length; i++) {
+      var r = rows[i];
+      if (r.subject_id !== subjectId) continue;
+      var mi = ymd(r.moved_in);
+      if (mi && day && mi > day) continue;
+      var key = mi || '';
+      if (best === null || key > bestKey || (key === bestKey && i >= bestIdx)) { best = r; bestKey = key; bestIdx = i; }
+    }
+    return best;
+  }
+  function placedOn(rows, subjectId, day) {
+    var best = recordOn(rows, subjectId, day);
+    if (!best) return null;
+    var mo = ymd(best.moved_out);
+    if (mo && day && mo < day) return null;
+    if (!best.area_id) return null;
+    var kind = String(best.off_site_kind || '').toLowerCase();
+    if (kind === 'sold' || kind === 'owned_by_family' || kind === 'deceased' || kind === 'temporary') return null;
+    var cls = String(best.classification || '').toLowerCase();
+    if (cls === 'collected' || cls === 'deceased') return null;
+    return best;
+  }
+  function statusOn(rows, subjectId, day) {
+    var best = null, bestFrom = '', bestIdx = -1;
+    for (var i = 0; i < (rows || []).length; i++) {
+      var s = rows[i];
+      if (s.subject_id !== subjectId) continue;
+      var from = ymd(s.from_date), to = ymd(s.to_date);
+      if (from && day && from > day) continue;
+      if (to && day && to < day) continue;
+      if (best === null || from > bestFrom || (from === bestFrom && i >= bestIdx)) { best = s; bestFrom = from; bestIdx = i; }
+    }
+    return best;
+  }
+  /** On site that day: a placement in force, and a status that is not sold, collected or deceased. No occupancy list = the caller already chose. */
+  function onSite(subject, occupancy, statuses, day) {
+    if (!subject || !subject.id) return false;
+    if (!occupancy) return true;
+    day = ymd(day);
+    var st = statusOn(statuses || [], subject.id, day);
+    if (st && GONE_STATE[String(st.state || '').toLowerCase()]) return false;
+    return !!placedOn(occupancy, subject.id, day);
+  }
+  function jobToken(job) { return (String(job.type_key || '') + ' ' + String(job.label || '')).toLowerCase().replace(/[_-]+/g, ' '); }
+  function occupiedOnly(job) {
+    if (perDogRoom(job)) return true;
+    if (OCCUPIED_KEY[String(job.type_key || '')]) return true;
+    var t = jobToken(job);
+    return t.indexOf('daily clean') >= 0 || t.indexOf('isolation clean') >= 0 || t.indexOf('iso clean') >= 0;
+  }
+  function roomOnlyJob(job) {
+    if (ROOM_ONLY_KEY[String(job.type_key || '')]) return true;
+    var t = jobToken(job);
+    return t.indexOf('deep clean') >= 0 || t.indexOf('room disinfected') >= 0 || t.indexOf('full clean') >= 0 || t.indexOf('room emptied') >= 0;
+  }
+  function nonRoomKind(v) {
+    var k = String(v || '').toLowerCase().replace(/[\s_-]+/g, '');
+    return k === 'field' || k === 'fields' || k === 'corridor' || k === 'corridors';
+  }
+  function ownKey(job) {
+    var k = String(job.type_key || '').trim().toLowerCase();
+    if (OWN_TABLE[k]) return OWN_TABLE[k];
+    var lab = String(job.label || '').trim().toLowerCase();
+    return OWN_TABLE[lab] || '';
+  }
+  function ownDate(table, row) {
+    if (!row || ymd(row.voided_on)) return '';
+    if (table === 'weight') return ymd(row.performed_on || row.on || row.taken_at);
+    if (table === 'dispense' || table === 'vaccination') return ymd(row.given_on || row.performed_on);
+    if (table === 'microchip') return ymd(row.fitted_on || row.implanted_on || row.chipped_on || row.registered_on || row.performed_on || row.given_on || row.from_date);
+    return '';
+  }
 
   /** A whole number of days above zero, or null for as needed. */
   function everyDays(v) {
@@ -63,6 +190,17 @@
     var never = listOf(job.not_in_areas);
     return (target.dogs || []).filter(function (x) { return never.indexOf(x.area_id || '') < 0 && inGroups(job, x.groups); });
   }
+  /** Subjects a whole-site job covers on one day: on site then, born, and juveniles only when the check still includes them. */
+  function subjectsFor(job, subjects, day, opts) {
+    opts = opts || {};
+    day = ymd(day);
+    var list = subjects || [];
+    if (opts.occupancy) list = list.filter(function (d) { return onSite(d, opts.occupancy, opts.statuses, day); });
+    list = list.filter(function (d) { return !d.dob || ymd(d.dob) <= day; });
+    list = dogsFor(job, { dogs: list });
+    if (perDogSite(job) && excludeJuvenile(opts.rules, job.type_key, day, opts.settings)) list = list.filter(function (d) { return !isJuvenile(d, day, opts.rules); });
+    return list;
+  }
   /* only_groups: group keys by |, the only dogs a dog job belongs to (e.g. breeding dogs); blank = every dog. An owner row, dated by
      effective_from like the rest of the job. groups = that dog's groups on the day (groupsOf); not given = the caller does not know, so the job shows */
   function inGroups(job, groups) {
@@ -82,9 +220,9 @@
     if (target.litter_id) return t === 'litter';
     if (perDogSite(job) && target.dogs) return dogsFor(job, target).length > 0;
     if (target.subject_id) return (t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea))) && inGroups(job, target.groups);
-    /* a room job saved per dog needs a dog there: with roomDogIds given and none in the room, it is not due (Lisa 20 Nov 2026:
-       isolation checks only when someone is in there) */
-    if (target.area_id && perDogRoom(job) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
+    /* a room job saved per dog, and daily clean / isolation clean, need someone there that day when roomDogIds is given */
+    if (target.area_id && occupiedOnly(job) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
+    if (target.area_id && roomOnlyJob(job) && (target.areaRetired || target.areaNoDogs || nonRoomKind(target.areaKind) || nonRoomKind(target.areaUse) || nonRoomKind(target.areaGroup))) return false;
     if (target.area_id) return (t === 'area' || t === 'either') && inRooms(job, target.area_id);
     return t === 'none';
   }
@@ -166,9 +304,10 @@
     });
     return Object.keys(ages).map(Number).sort(function (x, y) { return x - y; }).map(function (x) { return addDays(born, x); });
   }
-  /* opts.rules: the owner's rule rows (optional), for times_per_day and by-age jobs. A litter target may carry born (its birth date) */
+  /* opts.rules: the owner's rule rows (optional), for times_per_day and by-age jobs. A litter target may carry born (its birth date).
+     opts.records: weight, dispense, vaccination, microchip rows, used for those jobs' last date. */
   function forTarget(types, logs, target, today, visits, opts) {
-    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], settings = (opts && opts.settings) || [], todayCount = {}, dogToday = {};
+    var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], settings = (opts && opts.settings) || [], records = (opts && opts.records) || {}, todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
@@ -233,19 +372,63 @@
       mark(version.type_key, date, '');
       includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
     });
-    /* done once every dog it covers here has a line: the date is the oldest dog's last line */
+    function liveDogs(j) {
+      var dogs = dogsFor(j, target);
+      if (perDogSite(j) && excludeJuvenile(rules, j.type_key, today, settings)) dogs = dogs.filter(function (x) { return !isJuvenile(x, today, rules); });
+      return dogs;
+    }
+    /* done once every subject it covers here has a line: the date is the oldest one's last line */
     function allDogs(j) {
-      var m = dogDone[j.type_key] || {}, dogs = dogsFor(j, target), date = '';
+      var m = dogDone[j.type_key] || {}, dogs = liveDogs(j), date = '';
       for (var i = 0; i < dogs.length; i++) { var x = m[dogs[i].id]; if (!x) return undefined; if (!date || x < date) date = x; }
       return date ? { date: date, by: '' } : undefined;
+    }
+    function foldOwn(j) {
+      var table = ownKey(j), rows = records[table] || [];
+      if (!table || !rows.length) return;
+      if (perDogSite(j) && target.dogs) {
+        var m = dogDone[j.type_key] = dogDone[j.type_key] || {};
+        liveDogs(j).forEach(function (one) {
+          var n = 0;
+          rows.forEach(function (r) {
+            if (r.subject_id !== one.id) return;
+            var date = ownDate(table, r);
+            if (!date || date > today) return;
+            if (!m[one.id] || date > m[one.id]) m[one.id] = date;
+            if (date === today) n++;
+          });
+          if (n) {
+            var c = dogToday[j.type_key] = dogToday[j.type_key] || {};
+            c[one.id] = Math.max(c[one.id] || 0, n);
+          }
+        });
+        return;
+      }
+      var best = '', nToday = 0, sid = target.subject_id || '';
+      rows.forEach(function (r) {
+        if (sid && r.subject_id && r.subject_id !== sid) return;
+        var date = ownDate(table, r);
+        if (!date || date > today) return;
+        if (date > best) best = date;
+        if (date === today) nToday++;
+      });
+      if (best) mark(j.type_key, best, '');
+      if (nToday) todayCount[j.type_key] = Math.max(todayCount[j.type_key] || 0, nToday);
     }
     function everyNow(j) {
       var best = settingNow(j.type_key);
       if (best && String(best.every_days || '').trim() !== '') return everyDays(best.every_days);
       return everyDays(j.every_days);
     }
-    return jobsInForce(types, today).filter(function (j) { return appliesTo(scoped(j), target); }).map(function (j) {
+    return jobsInForce(types, today).filter(function (j) {
+      var s = scoped(j);
+      if (!appliesTo(s, target)) return false;
+      if (target.area_id && ruleOn(rules, 'job.when_occupied.' + s.type_key, today) && !occupiedOnly(s) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
+      if (perDogSite(s) && target.dogs && excludeJuvenile(rules, s.type_key, today, settings) && !liveDogs(s).length) return false;
+      return true;
+    }).map(function (j) {
       j = scoped(j);
+      foldOwn(j);
       var every = everyNow(j), d = perDogSite(j) && target.dogs ? allDogs(j) : done[j.type_key], next = d && every ? addDays(d.date, every) : '';
       var status = !every ? 'as_needed' : !d ? 'never' : next < today ? 'late' : next === today ? 'today' : 'ok';
       var times = every === 1 ? timesPerDay(rules, j.type_key, today) : 1, doneToday = todayCount[j.type_key] || 0;
@@ -271,5 +454,5 @@
     });
   }
 
-  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, subjectsFor: subjectsFor, onSite: onSite, excludeJuvenile: excludeJuvenile, isJuvenile: isJuvenile, ownKey: ownKey, ownDate: ownDate, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
 }));

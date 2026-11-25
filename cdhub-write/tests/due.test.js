@@ -301,3 +301,101 @@ test('the by-age row in force on the day wins, and bad parts of it are skipped',
   assert.deepEqual(D.ageDates(rules, 'x', '2026-02-01', '2026-01-10'), ['2026-01-10']);
   assert.deepEqual(D.ageDates(rules, 'x', '2026-03-02', '2026-03-01T10:00:00Z'), ['2026-03-04']);
 });
+
+test('londonDate keeps one formatter for the time zone', () => {
+  const Real = Intl.DateTimeFormat;
+  function count(rel) {
+    const p = require.resolve(rel);
+    delete require.cache[p];
+    let n = 0;
+    Intl.DateTimeFormat = function (a, b) { n++; return new Real(a, b); };
+    const M = require(rel);
+    M.londonDate('2026-07-01T23:30:00Z');
+    M.londonDate('2026-11-01T00:30:00Z');
+    Intl.DateTimeFormat = Real;
+    delete require.cache[p];
+    return n;
+  }
+  assert.equal(count('../records/due.js'), 1);
+  assert.equal(count('../../cdhub/staff/lib/due.js'), 1);
+});
+
+test('daily clean and isolation clean are due only when the room is occupied that day', () => {
+  const types = [T('daily_clean', 'area', '1', { label: 'Daily clean' }), T('iso_clean', 'area', '1', { label: 'Isolation clean', only_in_areas: 'area-b' })];
+  const day = '2026-11-02';
+  assert.equal(D.forTarget(types, [], { area_id: 'area-a', roomDogIds: [] }, day).length, 0);
+  assert.equal(D.forTarget(types, [], { area_id: 'area-b', roomDogIds: [] }, day).length, 0);
+  assert.deepEqual(D.forTarget(types, [], { area_id: 'area-a', roomDogIds: ['sub-test-a'] }, day).map((j) => j.type_key), ['daily_clean']);
+  assert.deepEqual(D.forTarget(types, [], { area_id: 'area-b', roomDogIds: ['sub-test-b'] }, day).map((j) => j.type_key).sort(), ['daily_clean', 'iso_clean']);
+  assert.equal(D.forTarget(types, [], { area_id: 'area-a' }, day).some((j) => j.type_key === 'daily_clean'), true);
+});
+
+test('deep clean, room disinfected, full clean and room emptied skip retired areas and field or corridor kinds', () => {
+  const types = ['deep_clean', 'room_disinfected', 'full_clean', 'room_emptied'].map((k) => T(k, 'area', '7', { label: k }));
+  const day = '2026-11-02';
+  const keys = (target) => D.forTarget(types, [], target, day).map((j) => j.type_key).sort();
+  assert.deepEqual(keys({ area_id: 'area-a', roomDogIds: [] }), ['deep_clean', 'full_clean', 'room_disinfected', 'room_emptied']);
+  assert.deepEqual(keys({ area_id: 'area-a', areaRetired: true }), []);
+  assert.deepEqual(keys({ area_id: 'area-b', areaKind: 'field' }), []);
+  assert.deepEqual(keys({ area_id: 'area-c', areaUse: 'corridor' }), []);
+  assert.deepEqual(keys({ area_id: 'area-d', areaGroup: 'fields', areaNoDogs: true }), []);
+});
+
+test('weight, medicine, vaccination and microchip use their own tables for the last date', () => {
+  const types = [
+    T('weight', 'dog', '7', { label: 'Weight' }),
+    T('medicine', 'dog', '1', { label: 'Medicine' }),
+    T('vaccination', 'dog', '365', { label: 'Vaccination' }),
+    T('microchip', 'dog', '365', { label: 'Microchip' })
+  ];
+  const records = {
+    weight: [{ subject_id: 'sub-test-a', performed_on: '2026-11-01', weight_kg: '1' }, { subject_id: 'sub-test-b', performed_on: '2026-10-01' }],
+    dispense: [{ subject_id: 'sub-test-a', given_on: '2026-11-02' }],
+    vaccination: [{ subject_id: 'sub-test-a', given_on: '2026-01-02' }, { subject_id: 'sub-test-a', given_on: '2026-06-01', voided_on: '2026-06-02' }],
+    microchip: [{ subject_id: 'sub-test-a', fitted_on: '2024-03-01' }]
+  };
+  const row = (key) => D.forTarget(types, [], { subject_id: 'sub-test-a' }, '2026-11-02', null, { records }).find((j) => j.type_key === key);
+  assert.equal(row('weight').last_done, '2026-11-01');
+  assert.equal(row('weight').next_due, '2026-11-08');
+  assert.equal(row('weight').status, 'ok');
+  assert.equal(row('medicine').last_done, '2026-11-02');
+  assert.equal(row('medicine').status, 'ok');
+  assert.equal(row('vaccination').last_done, '2026-01-02');
+  assert.equal(row('microchip').last_done, '2024-03-01');
+  assert.equal(D.forTarget(types, [], { subject_id: 'sub-test-b' }, '2026-11-02', null, { records }).find((j) => j.type_key === 'weight').last_done, '2026-10-01');
+});
+
+test('on site that day uses occupancy and status dates; juveniles stay in until a rule or setting says otherwise', () => {
+  const occ = [
+    { subject_id: 'sub-test-a', area_id: 'area-a', moved_in: '2026-01-01' },
+    { subject_id: 'sub-test-b', area_id: 'area-a', moved_in: '2026-11-16', moved_out: '2026-11-20' },
+    { subject_id: 'sub-test-c', area_id: 'area-a', moved_in: '2026-01-01' },
+    { subject_id: 'sub-test-d', area_id: 'area-a', moved_in: '2026-10-01' }
+  ];
+  const statuses = [
+    { subject_id: 'sub-test-a', state: 'active', from_date: '2020-01-01' },
+    { subject_id: 'sub-test-b', state: 'active', from_date: '2026-11-16' },
+    { subject_id: 'sub-test-c', state: 'active', from_date: '2020-01-01' },
+    { subject_id: 'sub-test-c', state: 'deceased', from_date: '2026-11-10' }
+  ];
+  const subjects = [
+    { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-b', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-c', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-d', area_id: 'area-a', kind: 'pup', dob: '2026-10-01' }
+  ];
+  assert.equal(D.onSite(subjects[0], occ, statuses, '2026-11-15'), true);
+  assert.equal(D.onSite(subjects[1], occ, statuses, '2026-11-15'), false);
+  assert.equal(D.onSite(subjects[1], occ, statuses, '2026-11-16'), true);
+  assert.equal(D.onSite(subjects[1], occ, statuses, '2026-11-21'), false);
+  assert.equal(D.onSite(subjects[2], occ, statuses, '2026-11-15'), false);
+  const job = T('health_check_all', 'none', '1', { site_scope: 'per_dog', label: 'Health check' });
+  const day = '2026-11-16';
+  assert.equal(D.subjectsFor(job, subjects, day, { occupancy: occ, statuses }).some((d) => d.id === 'sub-test-d'), true);
+  const rules = [{ rule_key: 'job.exclude_juvenile.health_check_all', value: 'on', effective_from: '2026-01-01' }];
+  assert.equal(D.subjectsFor(job, subjects, day, { occupancy: occ, statuses, rules }).some((d) => d.id === 'sub-test-d'), false);
+  assert.equal(D.subjectsFor(job, subjects, day, { occupancy: occ, statuses, rules }).some((d) => d.id === 'sub-test-a'), true);
+  const settings = [{ type_key: 'health_check_all', exclude_juvenile: 'true', from_date: '2026-01-01' }];
+  assert.equal(D.excludeJuvenile([], 'health_check_all', day, settings), true);
+  assert.equal(D.excludeJuvenile([], 'health_check_all', day, []), false);
+});

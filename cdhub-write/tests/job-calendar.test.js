@@ -189,6 +189,51 @@ test('import: a part-done day is not "already recorded"; a fully done day is, an
   assert.equal(C.importFields(v, rows[0]).check_type_id, 'cty-hc');
 });
 
+test('a vet day button keeps the day size and drops native button chrome @regression', () => {
+  assert.match(C.CSS, /button\.jd\{border:0;padding:0;margin:0;font-family:inherit;font-size:inherit;line-height:inherit;-webkit-appearance:none;appearance:none;cursor:pointer;position:relative;min-width:0\}/);
+  assert.doesNotMatch(C.CSS, /font:inherit/);
+  assert.match(C.CSS, /\.jdays\{[^}]*font-size:10px/);
+});
+
+test('a day is done only after times_per_day records, and part done before that', () => {
+  const rules = [{ rule_key: 'job.times_per_day.food_bowls', value: '2', effective_from: '2026-01-01' }];
+  const v = base([log('1', 'cty-fb', '2026-11-10'), log('2', 'cty-fb', '2026-11-12'), log('3', 'cty-fb', '2026-11-12')], rules);
+  const st = (iso) => C.month(v, 'food_bowls', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(st('2026-11-10').state, 'part');
+  assert.equal(st('2026-11-10').got, 1);
+  assert.equal(st('2026-11-10').need, 2);
+  assert.equal(st('2026-11-12').state, 'done');
+});
+
+test('the calendar counts subjects on site that day, and can leave juveniles out @regression', () => {
+  const subjects = [
+    { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-b', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-d', area_id: 'area-a', kind: 'pup', dob: '2026-10-01' }
+  ];
+  const occupancy = [
+    { subject_id: 'sub-test-a', area_id: 'area-a', moved_in: '2026-01-01' },
+    { subject_id: 'sub-test-b', area_id: 'area-a', moved_in: '2026-11-16' },
+    { subject_id: 'sub-test-d', area_id: 'area-a', moved_in: '2026-10-01' }
+  ];
+  const statuses = subjects.map((s) => ({ subject_id: s.id, state: 'active', from_date: '2020-01-01' }));
+  const v = Object.assign(base([log('1', 'cty-hc', '2026-11-15', 'sub-test-a'), log('2', 'cty-hc', '2026-11-15', 'sub-test-d')]), {
+    dogs: subjects, subjects, occupancy, statuses
+  });
+  const day = (iso) => C.month(v, 'health_check_all', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(day('2026-11-15').need, 2);
+  assert.equal(day('2026-11-15').state, 'done');
+  assert.equal(day('2026-11-16').need, 3);
+  assert.equal(day('2026-11-16').state, 'missed');
+  const ruled = Object.assign({}, v, { rules: [{ rule_key: 'job.exclude_juvenile.health_check_all', value: 'on', effective_from: '2026-01-01' }] });
+  const cut = (iso) => C.month(ruled, 'health_check_all', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(cut('2026-11-15').need, 1);
+  assert.equal(cut('2026-11-15').state, 'done');
+  assert.equal(cut('2026-11-16').need, 2);
+  const onlyPup = Object.assign({}, ruled, { logs: [log('9', 'cty-hc', '2026-11-16', 'sub-test-d')] });
+  assert.equal(C.month(onlyPup, 'health_check_all', '2026-11').cells.find((c) => c.iso === '2026-11-16').state, 'missed');
+});
+
 test('import: a row older than 7 days is sent with the save-anyway answer; a recent row is not', () => {
   const v = base([]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n2026-11-10,food_bowls,done,\r\n2026-11-11,food_bowls,done,\r\n2026-10-01,food_bowls,done,\r\n');
