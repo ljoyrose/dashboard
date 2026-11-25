@@ -623,13 +623,14 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 @media (max-width: 600px) { #nav.house-tabs > .ht, #nav.house-tabs > .ht-more { max-width: calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)); } }
 /* Print (13 Nov 2026): A4 from the browser's Print or Save as PDF. Bars, buttons and forms stay off the paper; no card
    splits across pages. The round prints as a two-column round sheet with blank min/max boxes; Dogs prints two cards a row.
-   Inline-block, not grid, so Safari and Chrome break pages the same way. Screen is unchanged. */
+   The Videos section stays off this paper (the kennel card carries the one video QR). Inline-block, not grid, so Safari
+   and Chrome break pages the same way. Screen is unchanged. */
 @media print{
 @page{size:A4;margin:0}   /* no room for the browser's header and footer: no page address on the paper */
 html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
 body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 *{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.vids button,.whor{display:none!important}
+.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.vids,.whor{display:none!important}
 .wrap{padding:0!important;margin:0!important;max-width:none!important}
 #main{max-width:none!important;margin:0!important;padding:0!important}
 #main [data-house-folded]>[data-fold-part]{display:revert!important}
