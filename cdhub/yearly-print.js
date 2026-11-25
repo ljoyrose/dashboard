@@ -14,10 +14,11 @@
  * No staff code or licence number is read out. A column whose name is a secret is left off.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.BLDYearlyPrint = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./staff/lib/due.js'));
+  else root.BLDYearlyPrint = factory(root.BLDDue);
+}(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var PAGE_W = 281, PAGE_H = 194, BODY_H = 168;
@@ -169,6 +170,7 @@
     var rows = (ctx.types || []).filter(function (t) {
       return t && str(t.type_key) && str(t.id) && str(t.type_key).toLowerCase() !== 'medicine';
     });
+    /* Same check: shared type key, base id (cty-water_bowls-1 and -2), or label. Exercise and play and Exercise all are one check too. */
     var parent = [], byKey = {}, byBase = {}, byLabel = {}, ex = null;
     function find(i) { if (parent[i] == null) parent[i] = i; if (parent[i] !== i) parent[i] = find(parent[i]); return parent[i]; }
     function unite(a, b) { a = find(a); b = find(b); if (a !== b) parent[Math.max(a, b)] = Math.min(a, b); }
@@ -182,12 +184,10 @@
     var groups = {};
     rows.forEach(function (t, i) { var g = find(i); (groups[g] = groups[g] || []).push(t); });
     Object.keys(groups).forEach(function (g) {
-      var group = groups[g], best = null, keyRow = null;
-      group.forEach(function (r) {
-        if (canonKey(r.type_key) === 'exerciseall') keyRow = r;
-        if (r.effective_from && r.effective_from <= today && (!best || r.effective_from > best.effective_from)) best = r;
-      });
-      var t = best || group[group.length - 1];
+      var group = groups[g], keyRow = null;
+      group.forEach(function (r) { if (canonKey(r.type_key) === 'exerciseall') keyRow = r; });
+      var main = Due && Due.mainOf ? Due.mainOf(group, today) : null;
+      var t = main || group[group.length - 1];
       var k = str((keyRow || t).type_key);
       var label = str(t.label);
       if (!label || /_/.test(label)) label = human(label || k);
@@ -304,7 +304,7 @@
     rows.forEach(function (r) { if (isNoteFor(r)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r); });
     return rows.filter(function (r) { return !isNoteFor(r); }).map(function (r) {
       var extra = (later[str(r.id)] || []).map(function (n) { return clean(n.note); }).filter(Boolean);
-      var note = [clean(r.note)].concat(extra).filter(Boolean).join(' ');
+      var note = Show.human([clean(r.note)].concat(extra).filter(Boolean).join(' '));
       var w = logWhen(r);
       return { row: r, dogs: dogsOf(r), date: w.date, time: str(r.time_given).toLowerCase() === 'false' ? '' : w.time, note: note, outcome: str(r.outcome).toLowerCase() };
     });
@@ -351,6 +351,25 @@
     var only = listOf(type.only_in_areas);
     if (only.length && only.indexOf(dog.area_id || '') < 0) return false;
     return true;
+  }
+
+  /** The day the daily run starts. A gap of more than 60 days means the earlier entries did not start it. */
+  function trackedFrom(dates) {
+    var seen = {}, list = [];
+    (dates || []).forEach(function (d) {
+      d = str(d).slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && !seen[d]) { seen[d] = 1; list.push(d); }
+    });
+    list.sort();
+    if (!list.length) return '';
+    function num(iso) { return Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10))) / 86400000; }
+    var start = list[0], prev = num(list[0]);
+    for (var i = 1; i < list.length; i++) {
+      var n = num(list[i]);
+      if (n - prev > 60) start = list[i];
+      prev = n;
+    }
+    return start;
   }
 
   function initials(s) {
@@ -434,9 +453,9 @@
     });
   }
 
-  /** One month grid: {rows:[{id,name,expected}], days:[iso], marks:{rowId:{iso:mark}}, notes:[text], entries:[]}. */
+  /** One month grid: {rows, days, marks, notes, entries, untracked}. */
   function gridMonth(source, ym, ctx) {
-    var type = source.type || {}, mine = logsFor(source, ctx).filter(function (l) { return l.date && l.date.slice(0, 7) === ym; });
+    var type = source.type || {}, all = logsFor(source, ctx), mine = all.filter(function (l) { return l.date && l.date.slice(0, 7) === ym; });
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1, n = daysIn(y, m), days = [];
     for (var d = 1; d <= n; d++) days.push(isoDay(y, m, d));
     var axis = source.layout, byId = {}, order = [];
@@ -460,7 +479,7 @@
       add('site', 'Whole site', true, '');
     }
     order.sort(function (a, b) { return byId[a].name < byId[b].name ? -1 : byId[a].name > byId[b].name ? 1 : 0; });
-    var from = str(type.effective_from), marks = {}, notes = [], entries = [];
+    var first = trackedFrom(all.map(function (l) { return l.date; })), marks = {}, notes = [], entries = [];
     order.forEach(function (id) {
       marks[id] = {};
       days.forEach(function (iso) {
@@ -472,7 +491,7 @@
           return true;
         });
         var born = byId[id].dob && iso < String(byId[id].dob).slice(0, 10);
-        var required = byId[id].expected && !born && iso <= today && (!from || iso >= from);
+        var required = byId[id].expected && !born && iso <= today && !!first && iso >= first;
         var mark = markOf(hit, required);
         marks[id][iso] = mark;
         hit.forEach(function (l) {
@@ -484,7 +503,9 @@
         });
       });
     });
-    return { rows: order.map(function (id) { return byId[id]; }), days: days, marks: marks, notes: notes, entries: entries };
+    var end = days.length ? days[days.length - 1] : ym + '-01';
+    var untracked = !!first && end < first;
+    return { rows: order.map(function (id) { return byId[id]; }), days: days, marks: marks, notes: notes, entries: entries, untracked: untracked };
   }
 
   function checkLine(l, ctx) {
@@ -732,6 +753,7 @@
       });
       h += '</ul>';
     }
+    if (!counts.tick && !counts.part && !counts.concern && !counts.miss) h += '<p data-yp-untracked>Not tracked yet this month.</p>';
     if (g.notes.length) h += '<ul class="yp-notes">' + g.notes.map(function (n) { return '<li>' + e(n) + '</li>'; }).join('') + '</ul>';
     return h;
   }
@@ -853,7 +875,7 @@
         months.forEach(function (mo) {
           var g = gridMonth(source, mo.ym, ctx);
           var title = monthWords(mo.ym);
-          var body = g.entries.length ? gridHtml(source, g, ctx) : '<p>No records in ' + e(title) + '.</p>';
+          var body = g.entries.length ? gridHtml(source, g, ctx) : (g.untracked ? '<p data-yp-untracked>Not tracked yet this month.</p>' : '<p>No records in ' + e(title) + '.</p>');
           var one = sheet(source, mo.ym, source.layout, ctx.kennel, source.label, title, body, ctx.printed);
           pages.push({ id: source.id, month: mo.ym, layout: source.layout, html: one });
           html += one;
@@ -1139,6 +1161,7 @@
     + '#ypReport .yp-t thead,#ypReport .yp-list thead{display:table-header-group}'
     + '#ypReport .yp-t tr,#ypReport .yp-list tr{break-inside:avoid;page-break-inside:avoid}}';
 
+  /** Grids are already one sheet tall. Chrome's print ignores zoom, so shrinking here turned each month into two sheets. */
   function fit(rep) {
     if (!rep || !rep.querySelectorAll) return;
     var nodes = rep.querySelectorAll('.yp-page');

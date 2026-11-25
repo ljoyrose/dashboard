@@ -35,14 +35,93 @@
     return String(row.includes || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean);
   }
 
-  /** For each type_key, the row in force today. A job whose latest row is switched off is left out. */
+  /** type_key with dots and underscores ignored, so round.presence and round_presence are one check. */
+  function canonKey(typeKey) { return String(typeKey || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+  /** cty-water_bowls-2 and cty-water_bowls-1 share cty-water_bowls. A random id has no base. */
+  function baseId(id) { var m = /^(cty-.+)-\d+$/.exec(String(id || '').trim()); return m ? m[1] : ''; }
+  function normLabel(s) { return String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  /** 0 = the original (no trailing number, or -1). 2, 3… = a later copy such as cty-water_bowls-2. */
+  function copyRank(id) { var m = /-(\d+)$/.exec(String(id || '')); if (!m) return 0; var n = parseInt(m[1], 10); return n <= 1 ? 0 : n; }
+
+  /**
+   * Rows that are the same check: the same type_key (punctuation ignored), the same base id
+   * (cty-water_bowls-1 and cty-water_bowls-2), or the same label on the same target.
+   * A real version change keeps one type_key and a later effective_from; that stays one group.
+   */
+  function families(types) {
+    var rows = (types || []).filter(function (r) { return r && (r.id || r.type_key); });
+    var parent = [];
+    function find(i) { if (parent[i] == null) parent[i] = i; if (parent[i] !== i) parent[i] = find(parent[i]); return parent[i]; }
+    function unite(a, b) { a = find(a); b = find(b); if (a !== b) parent[Math.max(a, b)] = Math.min(a, b); }
+    var byKey = {}, byBase = {}, byLabel = {};
+    rows.forEach(function (r, i) {
+      var k = canonKey(r.type_key), b = baseId(r.id), lab = normLabel(r.label);
+      if (k) { if (byKey[k] != null) unite(byKey[k], i); byKey[k] = find(i); }
+      if (b) { if (byBase[b] != null) unite(byBase[b], i); byBase[b] = find(i); }
+      if (lab.length > 2) { var lk = lab + '\n' + String(r.target || ''); if (byLabel[lk] != null) unite(byLabel[lk], i); byLabel[lk] = find(i); }
+    });
+    var groups = {};
+    rows.forEach(function (r, i) { var g = find(i); (groups[g] = groups[g] || []).push(r); });
+    return Object.keys(groups).map(function (k) { return groups[k]; });
+  }
+
+  /**
+   * The row a new save should name. One type_key: the newest row in force (a real change of frequency or wording).
+   * Several type_keys that are the same check: the original, not the later copy.
+   */
+  function mainOf(group, today) {
+    var day = String(today || '9999-12-31').slice(0, 10);
+    var live = (group || []).filter(function (r) { return !isOff(r.active) && (!r.effective_from || String(r.effective_from).slice(0, 10) <= day); });
+    if (!live.length) return null;
+    var byKey = {};
+    live.forEach(function (r) {
+      var k = canonKey(r.type_key) || r.id, cur = byKey[k];
+      if (!cur || String(r.effective_from || '') > String(cur.effective_from || '')) byKey[k] = r;
+    });
+    var reps = Object.keys(byKey).map(function (k) { return byKey[k]; });
+    reps.sort(function (a, b) { var d = copyRank(a.id) - copyRank(b.id); return d || String(a.effective_from || '').localeCompare(String(b.effective_from || '')); });
+    return reps[0];
+  }
+
+  /** check_type id -> the type_key new saves and calendars use for that family. */
+  function familyKeyOf(types, today) {
+    var map = {};
+    families(types).forEach(function (g) {
+      var main = mainOf(g, today) || g[0], key = main && main.type_key;
+      g.forEach(function (r) { if (r.id && key) map[r.id] = key; });
+    });
+    return map;
+  }
+
+  /** Every check_type id in the same family as this id or type_key. */
+  function familyIds(types, keyOrId) {
+    var want = String(keyOrId || ''), hit = null;
+    families(types).forEach(function (g) {
+      if (g.some(function (r) { return r.id === want || r.type_key === want || canonKey(r.type_key) === canonKey(want); })) hit = g;
+    });
+    return hit ? hit.map(function (r) { return r.id; }) : (want ? [want] : []);
+  }
+
+  function roundFamily(g) {
+    return g.some(function (r) { return String(r.type_key || '').indexOf('round.') === 0 || canonKey(r.type_key) === 'roundpresence'; });
+  }
+
+  /** For each check, the row in force today. A later copy of the same check (same name or base id) is not a second job.
+   *  A job whose latest row of that type_key is switched off is left out. */
   function jobsInForce(types, today) {
     var best = {};
     (types || []).forEach(function (r) {
       if (!r.type_key || !r.effective_from || r.effective_from > today) return;
       if (!best[r.type_key] || r.effective_from > best[r.type_key].effective_from) best[r.type_key] = r;
     });
-    return Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active) && r.target !== 'item' && String(r.type_key).indexOf('round.') !== 0; });   // item tests (target item) are due per item on the Items page, never a job   // round.* = written by the Round itself, never a job (15 Nov 2026)
+    var list = Object.keys(best).map(function (k) { return best[k]; }).filter(function (r) { return !isOff(r.active) && r.target !== 'item'; });
+    var out = [];
+    families(list).forEach(function (g) {
+      if (roundFamily(g)) return;   // Present and the rest of the round are written by The round, never a job
+      var main = mainOf(g, today);
+      if (main && best[main.type_key]) out.push(best[main.type_key]);
+    });
+    return out;
   }
 
   /** Log rows that still stand: a corrected row gives way to the row that corrects it. */
@@ -170,6 +249,13 @@
   function forTarget(types, logs, target, today, visits, opts) {
     var byId = {}, vm = visitCounts(visits), rules = (opts && opts.rules) || [], settings = (opts && opts.settings) || [], todayCount = {}, dogToday = {};
     (types || []).forEach(function (r) { byId[r.id] = r; });
+    var alias = familyKeyOf(types, today);
+    function asKey(id) { return alias[id] || (byId[id] && byId[id].type_key) || ''; }
+    function aliasType(typeKey) {
+      var found = typeKey;
+      (types || []).some(function (t) { if (t.type_key === typeKey && alias[t.id]) { found = alias[t.id]; return true; } });
+      return found;
+    }
     var done = {};              // type_key -> { date, by }
     var dogDone = {};           // per-dog whole-site job: type_key -> { dog id -> last date }
     function mark(key, date, by) { if (!done[key] || date > done[key].date) done[key] = { date: date, by: by }; else if (date === done[key].date && !by) done[key].by = ''; }
@@ -203,35 +289,35 @@
       if (!counts(log, version, vm)) return;
       var date = londonDate(log.happened_at || log.taken_at);
       if (!date || date > today) return;
-      var cov = coveredOf(log), exm = exceptionIds(log), slot = log.check_type_id + '|' + date + '|' + (log.area_id || '');
+      var cov = coveredOf(log), exm = exceptionIds(log), slot = log.check_type_id + '|' + date + '|' + (log.area_id || ''), key = asKey(log.check_type_id);
       if ((cov.length || String(log.exceptions || '').trim()) && sessionUse[slot] === log.id) {
         if (perDogSite(version) && target.dogs) {
-          var sm = dogDone[version.type_key] = dogDone[version.type_key] || {};
+          var sm = dogDone[key] = dogDone[key] || {};
           cov.forEach(function (id) { if (!exm[id] && (!sm[id] || date > sm[id])) sm[id] = date; });
         }
         if (target.subject_id && cov.indexOf(target.subject_id) >= 0 && !exm[target.subject_id]) {
-          mark(version.type_key, date, '');
-          includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });
+          mark(key, date, '');
+          includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); });
         }
         return;   // the dogs are on the list; a blank subject_id is not its own done
       }
       if ((cov.length || String(log.exceptions || '').trim()) && !log.subject_id) return;   // an older session row for that day
-      if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(k, date, version.type_key); }); return; }
+      if (siteCoversRoom(version, target)) { includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); }); return; }
       if (perDogSite(version) && target.dogs) {
-        var m = dogDone[version.type_key] = dogDone[version.type_key] || {};
+        var m = dogDone[key] = dogDone[key] || {};
         if (log.subject_id && (!m[log.subject_id] || date > m[log.subject_id])) m[log.subject_id] = date;
         return;
       }
       if (!sameTarget(log, target, version)) return;
       if (date === today) {
-        todayCount[version.type_key] = (todayCount[version.type_key] || 0) + 1;
+        todayCount[key] = (todayCount[key] || 0) + 1;
         if (perDogRoom(version) && !target.subject_id && log.subject_id) {   // a room tap writes a line per dog: count times per dog
-          var c = dogToday[version.type_key] = dogToday[version.type_key] || {};
+          var c = dogToday[key] = dogToday[key] || {};
           c[log.subject_id] = (c[log.subject_id] || 0) + 1;
         }
       }
-      mark(version.type_key, date, '');
-      includesOf(version).forEach(function (k) { mark(k, date, version.type_key); });   // the row in force when the job was done
+      mark(key, date, '');
+      includesOf(version).forEach(function (k) { mark(aliasType(k), date, key); });   // the row in force when the job was done
     });
     /* done once every dog it covers here has a line: the date is the oldest dog's last line */
     function allDogs(j) {
@@ -271,5 +357,5 @@
     });
   }
 
-  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate };
+  return { forTarget: forTarget, timesPerDay: timesPerDay, ageDates: ageDates, groupsOf: groupsOf, visitOf: visitOf, perDogRoom: perDogRoom, perDogSite: perDogSite, dogsFor: dogsFor, jobsInForce: jobsInForce, everyDays: everyDays, londonDate: londonDate, families: families, mainOf: mainOf, familyKeyOf: familyKeyOf, familyIds: familyIds, canonKey: canonKey };
 }));

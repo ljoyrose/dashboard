@@ -183,7 +183,7 @@ test('room temperatures print as one daily min and max sheet a month @regression
 test('an empty medicines month says no records and optional fields stay blank @regression', () => {
   const [line] = MedsReg.build([{ id: 'd', subject_id: 'a', given_on: '2026-02-03', product: 'Wormer', dose_volume: '1 tablet' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
   expect(MedsReg.cell(line, 'dose')).toBe('1 tablet');
-  expect(MedsReg.cell(line, 'given_by')).toBe(MedsReg.NR);
+  expect(MedsReg.cell(line, 'given_by')).toBe('Lisa Carson');
   expect(MedsReg.cell(line, 'time')).toBe('');
   expect(MedsReg.cell(line, 'batch')).toBe('');
   expect(MedsReg.cell(line, 'expiry')).toBe('');
@@ -305,6 +305,40 @@ test('types flow onto the next page only when the page is full @regression', asy
   expect(flow[headPage]).toContain('First line');
   expect(flow[headPage]).toContain('Row 1');
   expect(flow[0]).not.toContain('Heading A');
+});
+
+test('a month with exercise records paints marks in the yearly grid @regression', () => {
+  const today = '2026-11-25';
+  const types = [
+    { id: 'cty-exercise-1', type_key: 'exercise', label: 'Exercise and play', target: 'area', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-09' },
+    { id: 'cty-exercise_all-1', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-11-17', includes: 'exercise' }
+  ];
+  const dogs = [
+    { id: 'ada', name: 'Ada', dob: '2020-01-01', onSite: true, kind: 'Breeding Female' },
+    { id: 'pup', name: 'Marble x Sammy 2026 - Black male 1', dob: '2026-06-01', onSite: true, kind: 'Pup' }
+  ];
+  const logs = [
+    { id: 'e1', check_type_id: 'cty-exercise_all-1', subject_id: 'ada', outcome: 'ok', happened_at: '2026-10-01T12:00:00Z' },
+    { id: 'e2', check_type_id: 'cty-exercise_all-1', covered_ids: 'ada', outcome: 'recorded', happened_at: '2026-10-02T12:00:00Z' }
+  ];
+  const ctx = { today, kennel: 'Pretend Kennel', types, logs, dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
+  const src = YPrint.catalogue(ctx).find((s) => s.id === 'check:exercise_all');
+  const oct = YPrint.gridMonth(src, '2026-10', ctx);
+  expect(oct.rows.map((r) => r.name)).toEqual(['Ada']);
+  expect(oct.marks.ada['2026-10-01']).toBe('tick');
+  expect(oct.marks.ada['2026-10-02']).toBe('tick');
+  expect(oct.marks.ada['2026-10-03']).toBe('miss');
+  const jan = YPrint.build({ period: 'month', year: 2026, month: 0, ids: ['check:exercise_all'], today }, ctx);
+  expect(jan.html).not.toContain('data-mark="tick"');
+  expect(jan.html).toContain('Not tracked yet this month.');
+  expect(jan.html).toContain('Pretend Kennel');
+  expect(jan.html).not.toContain('Kennel not recorded');
+  expect(jan.html).not.toContain('Marble x Sammy');
+  const year = YPrint.build({ period: 'year', year: 2026, ids: ['check:exercise_all'], today }, ctx);
+  expect(year.pages).toHaveLength(11);
+  expect(year.pages.every((p) => p.layout === 'dogs')).toBe(true);
+  const octPage = year.pages.find((p) => p.month === '2026-10');
+  expect(octPage.html).toContain('data-mark="tick"');
 });
 
 test('the yearly print page loads with no console errors @regression', async ({ page, guard }) => {
