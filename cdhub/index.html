@@ -5747,6 +5747,7 @@ function navHas(id){
  if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
  if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
+ if(id==='qrprint') return typeof AdminView!=='undefined'&&AdminView.on(T);
  return !!PAGES[id];
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
@@ -6120,7 +6121,8 @@ function findViews(hit){
   if(s.id!=='main'&&!lay.on[s.id]) return;
   s.views.forEach(function(id){ var v=HubNav.VIEWS[id];
    if(!v||!navHas(id)||!hit(v.label+' '+s.label)) return;
-   out.push(v.href?{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,href:v.href}
+   var href=HubNav.viewHref(v);
+   out.push(href?{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,href:href}
     :{group:'Go to',slot:+s.slot,title:v.label,sub:s.label,act:function(){ go(id); focusView(); }});
   });
  });
