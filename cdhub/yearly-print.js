@@ -689,10 +689,19 @@
     return '<div class="yp-head" data-kennel="' + (name ? 'set' : 'missing') + '"><b>' + e(left) + '</b><span>' + e(sub) + '</span></div>';
   }
   function foot(printed) {
-    return '<div class="yp-foot"><span>Printed ' + e(printed || '') + '</span><span data-yp-pages>yp-page-slot</span><span>Checked by ______________________ &nbsp; Signed ______________________</span></div>';
+    return '<div class="yp-foot"><span>Printed ' + e(printed || '') + '</span><span>Checked by ______________________ &nbsp; Signed ______________________</span></div>';
   }
   function pageOpen(source, ym, layout) {
     return '<section class="yp-page" data-yp-page data-yp-id="' + e(source.id) + '" data-month="' + e(ym) + '" data-layout="' + e(layout) + '">';
+  }
+  /** Heading stays with the first paragraph. The rest flows, and a new page starts only when the page is full. */
+  function sheet(source, ym, layout, kennel, label, sub, body, printed) {
+    var rest = body || '', lead = '';
+    var m = /^\s*(<p\b[\s\S]*?<\/p>)/.exec(rest);
+    if (m) { lead = m[1]; rest = rest.slice(m[0].length); }
+    return pageOpen(source, ym, layout)
+      + '<div class="yp-stick">' + head(kennel, label, sub) + lead + '</div>'
+      + rest + foot(printed) + '</section>';
   }
 
   function gridHtml(source, g, ctx) {
@@ -749,7 +758,7 @@
     var empty = source.id === 'medicines' ? 'No records this month.' : 'No records in ' + title + '.';
     var body = lines.length ? listHtml(cols, shown, cell) : '<p>' + e(empty) + '</p>';
     var n = '<p class="yp-tot" data-yp-totals>Entries <b>' + lines.length + '</b></p>';
-    return pageOpen(source, ym, 'list') + head(ctx.kennel, source.label, title) + body + n + foot(ctx.printed) + '</section>';
+    return sheet(source, ym, 'list', ctx.kennel, source.label, title, body + n, ctx.printed);
   }
 
   /**
@@ -809,10 +818,6 @@
   }
 
   function pack(pages) {
-    var n = pages.length || 1;
-    pages.forEach(function (p, i) {
-      p.html = String(p.html || '').split('yp-page-slot').join('Page ' + (i + 1) + ' of ' + n);
-    });
     return { html: pages.map(function (p) { return p.html; }).join(''), pages: pages };
   }
 
@@ -825,7 +830,7 @@
     var sources = cat.filter(function (s) { return want[s.id]; });
     var months = monthsFor({ period: choice.period, year: choice.year, month: choice.month, today: ctx.today });
     if (!sources.length || !months.length) {
-      html = '<section class="yp-page" data-yp-page data-layout="empty"><p>Nothing to print for that choice.</p>' + foot(ctx.printed) + '</section>';
+      html = sheet({ id: '', label: 'Yearly print' }, '', 'empty', ctx.kennel, 'Yearly print', '', '<p>Nothing to print for that choice.</p>', ctx.printed);
       return pack([{ id: '', month: '', layout: 'empty', html: html }]);
     }
     sources.forEach(function (source) {
@@ -833,12 +838,12 @@
         months.forEach(function (mo) {
           var g = tempMonth(mo.ym, ctx);
           if (choice.period === 'year' && !g.any) return;
-          var one = pageOpen(source, mo.ym, 'temps') + head(ctx.kennel, source.label, monthWords(mo.ym)) + tempHtml(g) + foot(ctx.printed) + '</section>';
+          var one = sheet(source, mo.ym, 'temps', ctx.kennel, source.label, monthWords(mo.ym), tempHtml(g), ctx.printed);
           pages.push({ id: source.id, month: mo.ym, layout: 'temps', html: one });
           html += one;
         });
         if (!pages.some(function (p) { return p.id === source.id; })) {
-          var empty = pageOpen(source, '', 'temps') + head(ctx.kennel, source.label, String(choice.year || '')) + '<p>No readings this month.</p>' + foot(ctx.printed) + '</section>';
+          var empty = sheet(source, '', 'temps', ctx.kennel, source.label, String(choice.year || ''), '<p>No readings this month.</p>', ctx.printed);
           pages.push({ id: source.id, month: '', layout: 'temps', html: empty });
           html += empty;
         }
@@ -849,7 +854,7 @@
           var g = gridMonth(source, mo.ym, ctx);
           var title = monthWords(mo.ym);
           var body = g.entries.length ? gridHtml(source, g, ctx) : '<p>No records in ' + e(title) + '.</p>';
-          var one = pageOpen(source, mo.ym, source.layout) + head(ctx.kennel, source.label, title) + body + foot(ctx.printed) + '</section>';
+          var one = sheet(source, mo.ym, source.layout, ctx.kennel, source.label, title, body, ctx.printed);
           pages.push({ id: source.id, month: mo.ym, layout: source.layout, html: one });
           html += one;
         });
@@ -868,7 +873,7 @@
           medsPages++;
         });
         if (!medsPages) {
-          var none = pageOpen(source, '', 'meds') + head(ctx.kennel, source.label, String(choice.year || '')) + '<p>No records this month.</p>' + foot(ctx.printed) + '</section>';
+          var none = sheet(source, '', 'meds', ctx.kennel, source.label, String(choice.year || ''), '<p>No records this month.</p>', ctx.printed);
           pages.push({ id: source.id, month: '', layout: 'meds', html: none });
           html += none;
         }
@@ -885,9 +890,9 @@
         html += one;
       });
       if (undated.length) {
-        var u = pageOpen(source, 'undated', 'list') + head(ctx.kennel, source.label, 'No date on the record')
-          + listHtml(columnsFor(source), undated.map(showLine), null)
-          + '<p class="yp-tot" data-yp-totals>Entries <b>' + undated.length + '</b></p>' + foot(ctx.printed) + '</section>';
+        var u = sheet(source, 'undated', 'list', ctx.kennel, source.label, 'No date on the record',
+          listHtml(columnsFor(source), undated.map(showLine), null)
+          + '<p class="yp-tot" data-yp-totals>Entries <b>' + undated.length + '</b></p>', ctx.printed);
         pages.push({ id: source.id, month: 'undated', layout: 'list', html: u });
         html += u;
       }
@@ -1108,7 +1113,7 @@
 
   var CSS = '#ypReport{display:none}#ypReport.yp-measure{display:block;position:absolute;left:-10000px;top:0;width:281mm}'
     + '#ypReport{color:var(--ink);font:9px/1.25 system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-    + '#ypReport .yp-page{width:281mm;box-sizing:border-box;overflow:hidden}'
+    + '#ypReport .yp-page{box-sizing:border-box}'
     + '#ypReport .yp-head{display:flex;justify-content:space-between;gap:8px;font-size:13px;border-bottom:1px solid var(--ink);margin-bottom:4px}'
     + '#ypReport .yp-foot{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:8px}'
     + '#ypReport .yp-key{margin:2px 0 4px}#ypReport .yp-tot{margin:4px 0}#ypReport .yp-notes{margin:2px 0 0 14px;padding:0}'
@@ -1124,24 +1129,20 @@
     + '#ypReport td.m-miss{outline:1.5px solid var(--ljr-2-text);outline-offset:-1.5px;font-weight:700}'
     + '#ypReport .yk{display:inline-block;width:12px;text-align:center;font-style:normal}'
     + '#ypReport .yk.tick{background:var(--ljr-5);color:var(--paper)}#ypReport .yk.part{outline:1.5px solid var(--ljr-3)}#ypReport .yk.concern{background:var(--ljr-3)}#ypReport .yk.miss{outline:1.5px solid var(--ljr-2-text)}'
-    + '@media print{@page{size:A4 landscape;margin:8mm}'
+    + '@media print{@page{size:A4 landscape;margin:8mm 8mm 12mm 8mm;'
+    + '@bottom-center{content:"Page " counter(page) " of " counter(pages);font:8px system-ui,sans-serif}}'
     + 'html,body.yp-printing{background:none!important;margin:0!important;padding:0!important;height:auto!important;box-decoration-break:slice!important;-webkit-box-decoration-break:slice!important}'
     + 'body.yp-printing>*:not(#ypReport){display:none!important}body.yp-printing #ypReport{display:block;margin:0;padding:0}'
-    + '#ypReport .yp-page{height:auto;max-height:190mm;overflow:hidden;margin:0;padding:0;break-after:page;page-break-after:always;break-inside:auto;page-break-inside:auto}'
-    + '#ypReport .yp-page:last-child{break-after:avoid!important;page-break-after:avoid!important}}';
+    + '#ypReport .yp-page{width:auto;height:auto;max-height:none;overflow:visible;margin:0 0 4mm;padding:0;break-after:auto;page-break-after:auto;break-inside:auto;page-break-inside:auto}'
+    + '#ypReport .yp-stick{break-inside:avoid;page-break-inside:avoid;break-after:avoid;page-break-after:avoid}'
+    + '#ypReport .yp-t,#ypReport .yp-list{break-before:avoid;page-break-before:avoid}'
+    + '#ypReport .yp-t thead,#ypReport .yp-list thead{display:table-header-group}'
+    + '#ypReport .yp-t tr,#ypReport .yp-list tr{break-inside:avoid;page-break-inside:avoid}}';
 
   function fit(rep) {
-    if (!rep || !rep.classList) return;
-    rep.classList.add('yp-measure');
-    var sheet = 190;
-    var max = sheet * 96 / 25.4;
-    var nodes = rep.querySelectorAll ? rep.querySelectorAll('.yp-page') : [];
-    for (var i = 0; i < nodes.length; i++) {
-      nodes[i].style.zoom = '';
-      var h = nodes[i].scrollHeight;
-      if (h > max) nodes[i].style.zoom = zoomFor(h, sheet).toString();
-    }
-    rep.classList.remove('yp-measure');
+    if (!rep || !rep.querySelectorAll) return;
+    var nodes = rep.querySelectorAll('.yp-page');
+    for (var i = 0; i < nodes.length; i++) nodes[i].style.zoom = '';
   }
 
   function choiceFrom(root) {

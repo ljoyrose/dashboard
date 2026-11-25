@@ -260,19 +260,51 @@ test('select all and select all with entries follow the period counts', async ({
   await expect(box('weight')).toBeChecked();
 });
 
-test('two yearly sheets print as two pages @regression', async ({ page }) => {
+function pdfPageText(buf) {
+  const zlib = require('zlib');
+  const raw = Buffer.from(buf).toString('latin1');
+  const out = [];
+  const re = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let m;
+  while ((m = re.exec(raw))) {
+    let txt;
+    try { txt = zlib.inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1'); } catch (e) { continue; }
+    if (!/Tj/.test(txt)) continue;
+    let s = '', h;
+    const hex = /<([0-9A-Fa-f]+)>/g;
+    while ((h = hex.exec(txt))) {
+      for (let i = 0; i < h[1].length; i += 4) s += String.fromCharCode(parseInt(h[1].slice(i, i + 4), 16) + 0x1d);
+    }
+    if (s.trim()) out.push(s);
+  }
+  return out;
+}
+
+test('types flow onto the next page only when the page is full @regression', async ({ page }) => {
   const css = YPrint.CSS;
-  const clash = '@media print{@page{size:A4;margin:0}body{padding:10mm!important;box-decoration-break:clone}}';
-  const sheet = (text) => '<section class="yp-page" data-yp-page><p>' + text + '</p></section>';
-  await page.setContent('<!doctype html><html><head><style>' + clash + css + '</style></head><body class="yp-printing"><div id="ypReport">'
-    + sheet('Sheet one Room Alpha') + sheet('Sheet two Room Beta with a long label') + '</div></body></html>');
-  const pdf = await page.pdf({ printBackground: true, preferCSSPageSize: true });
-  const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-  expect(pages).toBe(2);
-  await page.setContent('<!doctype html><html><head><style>' + clash + css + '</style></head><body class="yp-printing"><div id="ypReport">'
-    + '<section class="yp-page" data-yp-page><div style="height:400mm">Tall sheet</div></section></div></body></html>');
-  const tall = await page.pdf({ printBackground: true, preferCSSPageSize: true });
-  expect((tall.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length).toBe(1);
+  const clash = '@media print{body{padding:10mm!important;box-decoration-break:clone}}';
+  const block = (title, line) => '<section class="yp-page"><div class="yp-stick"><div class="yp-head">' + title + '</div><p>' + line + '</p></div></section>';
+  const wrap = (inner) => '<!doctype html><html><head><style>' + clash + css + '</style></head><body class="yp-printing"><div id="ypReport">' + inner + '</div></body></html>';
+  await page.setContent(wrap(block('Block A', 'Line A') + block('Block B', 'Line B')));
+  const shortPdf = await page.pdf({ printBackground: true, preferCSSPageSize: true });
+  const shortPages = pdfPageText(shortPdf);
+  expect(shortPages.length).toBe(1);
+  expect(shortPages[0]).toContain('Page 1 of 1');
+  expect(shortPages[0]).toContain('Block A');
+  expect(shortPages[0]).toContain('Block B');
+
+  await page.setContent(wrap('<section class="yp-page"><div style="height:400mm">Tall block</div></section>'));
+  const tallPages = pdfPageText(await page.pdf({ printBackground: true, preferCSSPageSize: true }));
+  expect(tallPages.length).toBeGreaterThan(1);
+
+  const rows = Array.from({ length: 6 }, (_, i) => '<tr><td>Row ' + (i + 1) + '</td><td>Value</td></tr>').join('');
+  await page.setContent(wrap('<div style="height:186mm">Filler</div><section class="yp-page"><div class="yp-stick"><div class="yp-head">Heading A</div><p>First line</p></div><table class="yp-t"><tr><th>H</th><th>V</th></tr>' + rows + '</table></section>'));
+  const flow = pdfPageText(await page.pdf({ printBackground: true, preferCSSPageSize: true }));
+  const headPage = flow.findIndex((t) => t.includes('Heading A'));
+  expect(headPage).toBeGreaterThan(0);
+  expect(flow[headPage]).toContain('First line');
+  expect(flow[headPage]).toContain('Row 1');
+  expect(flow[0]).not.toContain('Heading A');
 });
 
 test('the yearly print page loads with no console errors @regression', async ({ page, guard }) => {

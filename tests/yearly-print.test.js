@@ -259,7 +259,7 @@ test('area rows keep one active room, names stay unique, and an empty grid is on
     { id: 'r1', name: 'Room A', onSite: true },
     { id: 'r2', name: 'Room A', onSite: true },
     { id: 'r3', name: 'Room B', onSite: false, retired: true },
-    { id: 'r4', name: 'Hall', onSite: true, kind: 'corridor' },
+    { id: 'r4', name: 'Kind X', onSite: true, kind: 'corridor' },
     { id: 'r5', name: 'Room C', onSite: true, empty: true },
     { id: 'r9', name: 'Room D', onSite: false, retired: true }
   ];
@@ -277,20 +277,22 @@ test('area rows keep one active room, names stay unique, and an empty grid is on
   assert.deepEqual(g.rows.map((r) => r.name), ['Room A', 'Room A (2)', 'Room D']);
   const built = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:water_bowls'], today: today }, c);
   assert.match(built.html, /AB 09:15/);
-  assert.match(built.html, /Page 1 of 1/);
+  assert.match(built.html, /class="yp-stick"/);
   assert.match(built.html, /Room A/);
-  assert.doesNotMatch(built.html, /Hall/);
+  assert.doesNotMatch(built.html, /Kind X/);
   assert.doesNotMatch(built.html, />Room C</);
   const blank = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:water_bowls'], today: today }, ctx({
     today, types, dogs: [], logs: [], areas: [{ id: 'r1', name: 'Room A', onSite: true }]
   }));
-  assert.match(blank.html, /No records in March 2026/);
+  assert.match(blank.html, /yp-stick[\s\S]*No records in March 2026/);
   assert.doesNotMatch(blank.html, /data-mark=/);
-  assert.match(Y.CSS, /max-height:190mm/);
+  assert.match(Y.CSS, /counter\(pages\)/);
+  assert.doesNotMatch(Y.CSS, /page-break-after:always/);
   assert.match(Y.CSS, /padding:0!important/);
   assert.match(Y.CSS, /width:46mm/);
   assert.match(Y.CSS, /tbody th\{[^}]*white-space:normal/);
-  assert.match(Y.CSS, /page-break-after:avoid!important/);
+  assert.match(Y.CSS, /\.yp-t tr,#ypReport \.yp-list tr\{break-inside:avoid/);
+  assert.match(Y.CSS, /\.yp-stick\{break-inside:avoid/);
 });
 
 test('an all-subject grid lists only subjects on site in that month', () => {
@@ -319,7 +321,7 @@ test('an all-subject grid lists only subjects on site in that month', () => {
   assert.match(html, /AB 08:05/);
   assert.match(html, /One/);
   assert.doesNotMatch(html, /CD/);
-  assert.match(html, /Page 1 of 1/);
+  assert.match(html, /class="yp-stick"/);
 });
 
 test('zoom shrinks a page that is taller than one sheet and leaves a short page alone', () => {
