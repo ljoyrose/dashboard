@@ -55,8 +55,8 @@ base('More shows Inspector links, and Set it up when this browser has no save ad
   await expect(item).toBeVisible();
   await expect(item).toContainText('Inspector links');
   await expect(item).toContainText('No save address in this browser.');
-  await expect(item.locator('a')).toHaveCount(0);
-  await item.getByRole('button', { name: 'Set it up' }).click();
+  await expect(item.locator('a')).toHaveAttribute('href', '#/round');
+  await item.getByRole('link', { name: 'Set it up' }).click();
   await expect(page).toHaveURL(/#\/round$/);
   await expect(page.locator('#main h2').first()).toHaveText('The round');
 });

@@ -133,9 +133,7 @@
     if (u) {
       return '<a href="' + esc(u + '?page=approve&section=inspect') + '" target="_blank" rel="noopener" data-inspect-links>' + icon + '<span class="htl">Inspector links</span></a>';
     }
-    var setup = opts.links === 'href'
-      ? '<a class="cb" href="./index.html#/round">Set it up</a>'
-      : '<button type="button" class="cb" data-go="round">Set it up</button>';
+    var setup = '<a class="cb" href="' + (opts.links === 'href' ? './index.html#/round' : '#/round') + '">Set it up</a>';
     return '<div class="mut" data-inspect-links>' + icon + '<span class="htl">Inspector links</span> No save address in this browser. ' + setup + '</div>';
   }
   function viewItem(id, slot, opts, has) {
