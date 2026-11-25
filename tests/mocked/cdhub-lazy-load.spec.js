@@ -7,7 +7,7 @@ const signIn = async (page) => {
   await page.locator('#signinbtn').click();
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
-const LAZY_JS = /\/(breed-better\/(score|dna-kit|hub-view)\.js|enquiries\/(core|reader|requests|examples)\.js|cdhub\/enquiries-view\.js)$/;
+const LAZY_JS = /\/(breed-better\/(score|dna-panel|hub-view)\.js|enquiries\/(core|reader|requests|examples)\.js|cdhub\/enquiries-view\.js)$/;
 const own = (page, list) => page.on('requestfinished', (r) => {
   const u = new URL(r.url());
   if (u.hostname === '127.0.0.1') list.push({ path: u.pathname, size: r.sizes().then((s) => s.responseBodySize).catch(() => 0) });

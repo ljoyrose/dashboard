@@ -33,15 +33,7 @@
 <script src="sop-records.js"></script>
 <script src="job-calendar.js"></script>
 <script src="docs-view.js"></script>
-<script src="../breed-better/score.js"></script>
-<script src="../breed-better/dna-panel.js"></script>
 <script src="staff/lib/viewer-levels.js"></script>
-<script src="../breed-better/hub-view.js"></script>
-<script src="../enquiries/core.js"></script>
-<script src="../enquiries/reader.js"></script>
-<script src="../enquiries/requests.js"></script>
-<script src="../enquiries/examples.js"></script>
-<script src="enquiries-view.js"></script>
 <script src="admin.js"></script>
 <script src="items-view.js"></script>
 <script src="bin-view.js"></script>
@@ -759,8 +751,8 @@ function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTION
 /* LAZY: heavier parts load the first time a page that uses them opens, not on first open (OV11, 15 Nov 2026).
    files = the tables each part reads; they must match the part's own FILES (tests/mocked/cdhub-lazy-load.spec.js checks). */
 var LAZY={
- bb:{src:['../breed-better/score.js','../breed-better/dna-kit.js','../breed-better/hub-view.js'],ready:function(){return typeof BBHubView!=='undefined';},
-  files:['BLD-score_scheme.csv','BLD-score_band.csv','BLD-score_criterion.csv','BLD-score_point.csv','BLD-score_enrolment.csv','BLD-fit_to_breed.csv','BLD-score_judgement.csv']},
+ bb:{src:['../breed-better/score.js','../breed-better/dna-panel.js','../breed-better/hub-view.js'],ready:function(){return typeof BBHubView!=='undefined';},
+  files:['BLD-score_scheme.csv','BLD-score_band.csv','BLD-score_criterion.csv','BLD-score_point.csv','BLD-score_enrolment.csv','BLD-fit_to_breed.csv','BLD-score_judgement.csv','BLD-score_assessment.csv','BLD-grade_band.csv','BLD-viewer_level.csv','BLD-check_value.csv']},
  enq:{src:['../enquiries/core.js','../enquiries/reader.js','../enquiries/requests.js','../enquiries/examples.js','enquiries-view.js'],ready:function(){return typeof CDEnquiries!=='undefined';},
   files:['BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv']}
 };
@@ -2712,8 +2704,7 @@ function showTreats(id){
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', DOGQ='';
-var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='';   /* MEDDOG: the dog picked from the medicine table */
+var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='', DOGQ='';   /* MEDDOG: the dog picked from the medicine table. DOGQ: a find that opens Dogs after its parts load */
 /* one size band to its colour key (small, medium, large) */
 var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
@@ -5901,20 +5892,14 @@ function go(id,push){
  document.getElementById('nav').innerHTML=navHtml();
  if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.open(sub||'home');
- var wait=LIVE_PAGES[id]&&LOAD.copy?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
+ /* A read up to COMP_FRESH_MS old is shown at once with its time; an older one is read again first. */
+ if(LIVE_PAGES[id]&&!LOAD.copy&&!READING&&readAgeMs()>COMP_FRESH_MS&&TOKEN&&Date.now()<TOKEN_EXP){ load(); return; }
+ var wait=LIVE_PAGES[id]&&LOAD.copy&&readAgeMs()>COMP_FRESH_MS?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
  var lzErr='';
  if(!wait){ var lz=lazyWait(id); if(lz&&lz.err){ wait='err'; lzErr='This page could not load: '+lz.err; } else if(lz) wait='loading'; }
  if(wait){
   main.innerHTML='<div class="card" id="cdWait" style="margin-top:24px"><h2 class="hx4">'+esc(label(id))+'</h2>'
    +(wait==='err'?'<p>'+(lzErr?esc(lzErr):'These records could not be read. '+esc(LOAD.laterErr||''))+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
-    :'<p class="mut">'+(wait==='live'?'Reading the live records. This page never shows the copy on this device.':'Getting these records ready…')+'</p>')+'</div>';
- /* Compliance (Lisa 22 Nov 2026): a read up to COMP_FRESH_MS old is shown at once with its "As of" time and Refresh;
-    an older one is read again first (the page waits for it, as before). Never shown without the time. */
- if(LIVE_PAGES[id]&&!LOAD.copy&&!READING&&readAgeMs()>COMP_FRESH_MS&&TOKEN&&Date.now()<TOKEN_EXP){ load(); return; }
- var wait=LIVE_PAGES[id]&&LOAD.copy&&readAgeMs()>COMP_FRESH_MS?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
- if(wait){
-  main.innerHTML='<div class="card" id="cdWait" style="margin-top:24px"><h2 class="hx4">'+esc(label(id))+'</h2>'
-   +(wait==='err'?'<p>These records could not be read. '+esc(LOAD.laterErr||'')+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
     :'<p class="mut">'+(wait==='live'?'Reading the live records. This page shows the copy on this device only when it is under 5 minutes old.':'Getting these records ready…')+'</p>')+'</div>';
   navCurrent(id);
   chipsDraw(id); goPush(id,sub,full,push,prevShown,leaveY); return;   /* the wait card is a stop on Back too */
@@ -6076,26 +6061,20 @@ function go(id,push){
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
  goPush(id,sub,full,push,prevShown,leaveY);
- /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
+ /* a record page: back to where you came from, or a way to its list when opened cold. Breed Better draws its own. */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });
+ if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();
  window.scrollTo(0,keepY);
+ var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);
 }
-/* The history entry for a move (also called by the wait card, so Back has one step per move). */
+/* History for a move. The wait card calls this too, so Back has one step per move. */
 function goPush(id,sub,full,push,prevShown,leaveY){
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops')?full:id;
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed')?full:id;   /* breed: #/breed/<tab> and #/breed/score.<dog> stay in the address, so Back and reload keep the tab */
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;   /* breed and yearly keep the rest of the address, so Back and reload open the same view */
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;
  if(push!==false && location.hash!=='#/'+at){
-  /* a real history entry that remembers where you came from and how far down (Back returns there) */
   var pb=String(prevShown||'').split('/')[0];
-  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});   /* the name the menu uses */
+  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});
  }
- /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
- if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
- Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });   /* kept words still hide what they hid */
- if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();   /* the folds (and their heading rows' height) are in place before the page goes back to where it was, so a redraw never shifts it (17 Nov 2026) */
- window.scrollTo(0,keepY);
- var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);   /* a brick may add its own from (BB) */
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
