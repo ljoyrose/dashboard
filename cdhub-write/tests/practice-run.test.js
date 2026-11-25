@@ -31,7 +31,7 @@ const H = {
   check_type: 'id,tenant_id,type_key,label,target,asks_item,item_label,asks_amount,amount_unit,note_label,note_required,asks_outcome,frequency,active,effective_from,source,note,set_at,set_by,every_days,group,includes,sop,evidence,site_scope,not_in_areas,only_in_areas,item_kind,only_groups',
   check_field: 'id,tenant_id,type_key,field_key,label,kind,choices,required,sort,active,effective_from,set_at,set_by,unit,limit_low,limit_high,source',
   check_value: 'id,tenant_id,check_log_id,check_field_id,field_key,value',
-  check_log: 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded,litter_id,note_for_id,item_id,time_given',
+  check_log: 'id,tenant_id,check_type_id,area_id,subject_id,item,amount,outcome,happened_at,note,taken_at,taken_by,corrects_id,photo,how_recorded,litter_id,note_for_id,item_id,time_given,grant_id,counts_due',
   weight: 'id,subject_id,performed_on,weight_kg,unit,body_condition_score,bcs_scale,source',
   vaccination: 'id,tenant_id,subject_id,event_kind,product,product_shorthand,diseases_covered,batch,batch_use_by,given_on,route,administered_by,practice,titre_result,titre_lab,titre_protective,next_due_on_card,next_due_source,certificate_media_id,source,ruling_needed,note,voided_on,voided_by',
   subject_link: 'id,tenant_id,subject_id,other_subject_id,kind,from_date,to_date,source,note,set_at,set_by',

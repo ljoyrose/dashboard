@@ -313,7 +313,7 @@
    * a reading outside the limit in an empty room is flagged "Room empty" and never counted as non-compliant, so no
    * "What was done" is asked. Staff only (area_reading), never guests.
    */
-  /* who saved it and when, from the save reply (Lisa's demo, 18 Nov 2026: "shows who did it and when"): " · Grace · 09:14" */
+  /* who saved it and when, from the save reply */
   function whoWhen(r) {
     var at = r && r.at ? new Date(r.at) : null, t = '';
     if (at && !isNaN(at.getTime())) t = at.toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -333,7 +333,7 @@
     var camBtn = h('button', { class: 'btn', type: 'button', text: 'Read with camera', onclick: startCam });
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
     // An earlier reading comes from paper, a photo or an app (e.g. Govee): the thermometer no longer shows that day's numbers.
-    // Demo 18 Nov 2026 (Lisa: "temperatures ... one tap each"): the MAX and MIN boxes are open at once, so a reading is one
+    // the MAX and MIN boxes are open at once, so a reading is one
     // entry and one Save; the camera stays as a choice, and "Type it" is no longer needed.
     if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn]));
     var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
