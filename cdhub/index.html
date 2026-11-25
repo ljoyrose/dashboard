@@ -1248,6 +1248,8 @@ function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(
  var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
  /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
  m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
+/* Newest first. The same date keeps the order the rows were read in (Lisa 25 Nov 2026). */
+function byDateDesc(a, b){ var x=String(a.on||''), y=String(b.on||''); return x>y?-1:(x<y?1:0); }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
   var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
@@ -1277,7 +1279,7 @@ function build(){
     (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:on,product:r.item||'',pres:'',dose:r.amount||'',band:'',kg:'',basis:'',route:'',
       reason:'',src:'',need:'',note:BLDShowNote?BLDShowNote.human(r.note):r.note});
   });
-  Object.keys(DSP).forEach(function(k){ DSP[k].sort(function(a,b){return a.on<b.on?1:(a.on>b.on?-1:0);}); });
+  Object.keys(DSP).forEach(function(k){ DSP[k].sort(byDateDesc); });
   CD.dispense=DSP;
 
   CD.markers={}; (T['BLD-dna_marker.csv']||[]).forEach(function(r){ CD.markers[r.code]=r; });
