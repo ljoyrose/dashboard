@@ -289,6 +289,8 @@ test('a Jobs tick uses the Board tap: site is one add_site, a dog is one add, an
   assert.equal(per.plans[0].fields.dog_ids, 'd1|d2');
   assert.equal(per.plans[0].fields.how_recorded, 'site_tap');
   assert.match(V.tapPlans(world(job('microchip_check')), 'microchip_check', [], {}, '2026-11-25', NOW).error, /Tick/);
+});
+
 test('the jobs table counts subjects on site that day, occupied rooms, and own-table last dates', () => {
   const subjects = [
     { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },

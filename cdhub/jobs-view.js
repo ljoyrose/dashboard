@@ -311,7 +311,7 @@
    */
   function pickList(v, t) {
     if (!t) return [];
-    var dogs = v.dogs || [], areas = v.areas || [], litters = v.litters || [];
+    var dogs = dogsNow(v), areas = v.areas || [], litters = v.litters || [];
     function dogItem(d) {
       var target = { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: dogGroups(v, d) };
       if (Due.perDogSite(t)) target = { dogs: [dogOne(v, d)] };
@@ -330,15 +330,14 @@
     }
     if (t.target === 'area') {
       return areas.map(function (a) {
-        var ids = dogs.filter(function (d) { return (d.area_id || d.areaId) === a.id; }).map(function (d) { return d.id; });
-        var j = jobFor(v, { area_id: a.id, roomDogIds: ids }, t.type_key);
+        var j = jobFor(v, areaTarget(a, dogs), t.type_key);
         if (!j) return null;
         return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id, due: openJob(j) };
       }).filter(Boolean);
     }
     if (t.target === 'either') {
       return dogs.map(dogItem).filter(Boolean).concat(areas.map(function (a) {
-        var j = jobFor(v, { area_id: a.id }, t.type_key);
+        var j = jobFor(v, areaTarget(a, dogs), t.type_key);
         if (!j) return null;
         return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id, due: openJob(j) };
       }).filter(Boolean));
