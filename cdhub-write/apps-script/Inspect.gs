@@ -25,11 +25,6 @@ var INSPECT = {
   // the data period. A row is never edited: an extension or a revoke is a NEW row whose supersedes_id names the row it
   // replaces; the current row is the one nothing points at. Child rows and the code or card stay on the ROOT row's id.
   // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant. Old 7-column files still read.
-  LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'from_at', 'to_at', 'supersedes_id',
-    'grant_type_id', 'person_id', 'visitor_name', 'organisation', 'sign_in_id', 'card_tag_id', 'as_of_from', 'as_of_to', 'purpose_text',
-    'grant_basis', 'identity_assurance', 'id_checked_by', 'accompanied_by', 'retention_until', 'email_code', 'ended_at', 'ended_by',
-    'end_reason', 'tz', 'updated_at'],
-  // What a visit may see and do are rows (grant_scope, grant_right_link), not columns. inspect_link = the grant.
   // issued_by = the code id that gave it, or 'owner'; delegation_id = the BLD-delegation row it was given under (Delegate.gs).
   // Old 7-column files still read.
   LINK_COLUMNS: ['id', 'tenant_id', 'code_id', 'label', 'ends', 'created_at', 'set_by', 'from_at', 'to_at', 'supersedes_id',
@@ -277,8 +272,10 @@ function inspectSinkRead_(req, who, now) {
     if (fields.indexOf(subjCol) < 0) fields.unshift(subjCol);
     cols[subjCol] = '';
   }
-  var dFrom = isRealDate_(String(link.data_from_date || '')) ? String(link.data_from_date) : '';
-  var dTo = isRealDate_(String(link.data_to_date || '')) ? String(link.data_to_date) : '';
+  var dFromRaw = String(link.as_of_from || link.data_from_date || '');
+  var dToRaw = String(link.as_of_to || link.data_to_date || '');
+  var dFrom = isRealDate_(dFromRaw) ? dFromRaw : '';
+  var dTo = isRealDate_(dToRaw) ? dToRaw : '';
 
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0, rows = [], truncated = false, redacted = {};
   fields.forEach(function (c) { if (cols[c]) redacted[c] = cols[c]; });
@@ -414,18 +411,16 @@ function sinkInspectMake_(spec, adminEmail) {
     var linkId = newId_('ilk', now), codeId = newCodeId_(), endsAt = win.ends_at, by = adminEmail || 'owner';
     var v1 = sameHeader_(L.header, INSPECT.LINK_COLUMNS_V1);
     if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the from_at and to_at columns in BLD-inspect_link. Ask STAFF to add them.');
-    if (v1 && (dataFrom || dataTo)) throw bad('data_from_date', 'Limiting the days needs the data_from_date and data_to_date columns in BLD-inspect_link. Ask STAFF to add them.');
-    if (v1 && win.later) throw bad('starts_at', 'A link that opens later needs the starts_at and ends_at columns in BLD-inspect_link. Ask STAFF to add them.');
+    if (v1 && (dataFrom || dataTo)) throw bad('data_from_date', 'Limiting the days needs the as_of_from and as_of_to columns in BLD-inspect_link. Ask STAFF to add them.');
     store_appendMany_(INSPECT.SUBJECT_FILE, INSPECT.SUBJECT_COLUMNS, subjects.map(function (s, i) {
       return [linkId + '-s' + (i + 1), tenant, linkId, s, todayLondon_(new Date(win.startMs)), ends];
     }), S);
     store_appendMany_(INSPECT.FIELD_FILE, INSPECT.FIELD_COLUMNS, fieldRows.map(function (r, i) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by, made_at: utcIso_(now), made_by: by,
-      from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: londonIso_(now), made_by: by,
-      starts_at: win.starts_at, ends_at: win.ends_at, data_from_date: dataFrom, data_to_date: dataTo };
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by,
+      from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none',
+      as_of_from: dataFrom, as_of_to: dataTo };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';

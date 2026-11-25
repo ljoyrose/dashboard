@@ -408,6 +408,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 22 Nov 2026 | github.io (where the printed QR codes point) stopped updating on 20 Nov 22:47: the publish gate's 35-minute limit cut off every run once the suite ran past it, so #715 to #765 never went live there | "the publish gate has at least as long as the required check to run the suite @regression" (tests/mocked/ci-guards.spec.js) |
 | 25 Nov 2026 | Lisa, live SOPs: a due check (annual microchip audit, 27 dogs) listed what was expected and gave no way to record it as done | "Mark all saves each ticked dog, and a litter check saves litter_id @regression" (tests/mocked/cdhub-jobs.spec.js) |
 | 25 Nov 2026 | Daily records Import: a row 7 days or older was refused even though the page already sends confirm_unusual=yes. The whole-site save rebuilt the fields and dropped that flag | cdhub-write/tests/site-import-age.test.js (refused without the flag, saved when confirm_unusual is yes) |
+| 25 Nov 2026 | #582's merge left the published staff copy of bld-save.js on a 5-hour outbox while the client copy was 23 hours | "the two bld-save.js copies are the same file @regression" (tests/mocked/bld-save-copies.spec.js; the write-path suite runs the same check in cdhub-write/tests/bld-save-copies.test.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
