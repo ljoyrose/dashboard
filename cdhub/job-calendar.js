@@ -143,7 +143,8 @@
     var h = '<section class="card jcal-wrap" id="jobCals"><div class="jcal-head"><h3>Daily records</h3><div class="jcal-nav">'
       + '<button class="btn quiet" type="button" data-jcal-month="' + prev + '" aria-label="Previous month">‹</button><b data-jcal-title>' + e(title) + '</b>'
       + '<button class="btn quiet" type="button" data-jcal-month="' + next + '" aria-label="Next month"' + (atNow ? ' disabled' : '') + '>›</button>'
-      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div></div>'
+      + (canSave ? '<button class="btn quiet" type="button" data-jcal-import aria-expanded="false">Import</button>' : '') + '</div>'
+      + '<button type="button" class="btn" data-yp="cal">Print / PDF</button></div>'
       + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
       + '<p class="mut jcal-key"><span class="jd done" data-jcal-legend="done">' + TICK + '</span> done <span class="jd part" data-jcal-legend="part"></span> part done <span class="jd missed" data-jcal-legend="missed"></span> missed'
       + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
@@ -182,16 +183,16 @@
     return f;
   }
 
-  var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.jcal-nav{display:flex;align-items:center;gap:8px}'
+  var CSS = '.jcal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-width:0}.jcal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}'
     + '.jcal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.jcal{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--card)}'
     + '.jcal-t{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin-bottom:6px}.jcal-ok{display:inline-flex;align-items:center;gap:4px;color:var(--ink);font-weight:700}'
     + '.jcal-ok svg,.jd svg{width:16px;height:16px}.jdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.jdh{font-size:10px;color:var(--muted);text-align:center}'
     + '.jd{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:10px;color:var(--ink)}'
-    + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done{background:var(--ljr-5);box-shadow:none;color:var(--ljr-paper,#fff)}'
-    + '.jd.part{box-shadow:inset 0 0 0 2px var(--ljr-3);background:var(--ljr-3-tint)}.jd.missed{box-shadow:inset 0 0 0 2px var(--ljr-2-text);position:relative}.jd.missed::after{content:"\\2715";position:absolute;top:1px;right:2px;font-size:8px;line-height:1;font-weight:700;color:var(--ljr-2-text)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
+    + '.jd.blank{background:transparent;box-shadow:none}.jd.future,.jd.before{opacity:.4}.jd.done,#jobCals button.jd.done{background:var(--ljr-5);box-shadow:none;color:#fff}'
+    + '.jd.part,#jobCals button.jd.part{box-shadow:inset 0 0 0 2px var(--ljr-3);background:var(--ljr-3-tint);color:var(--ink)}.jd.missed,#jobCals button.jd.missed{background:transparent;box-shadow:inset 0 0 0 2px var(--ljr-2);position:relative;color:var(--ink)}.jd.missed::after{content:"\\2715";position:absolute;top:1px;right:2px;font-size:8px;line-height:1;font-weight:700;color:var(--ljr-2-text)}.jd.due{box-shadow:inset 0 0 0 2px var(--line)}.jd.today{outline:2px solid var(--ink);outline-offset:-2px}'
     + 'button.jd{border:0;padding:0;font:inherit;cursor:pointer;position:relative;min-width:0}.jd.open{outline:3px solid var(--ink);outline-offset:-3px}'
     + '.jcam{position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center}.jcam svg{width:9px;height:9px}'
-    + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6-solid);color:var(--ljr-6-on);display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
+    + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6);color:#fff;display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
     + '.jcal-day{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.jcal-day ul{margin:6px 0;padding-left:18px}'
     + '.jcal-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.jcal-pics a{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;min-height:44px;color:var(--ink)}.jcal-pics img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}'
     + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}'
@@ -228,6 +229,14 @@
   }
   var IMP_OUTCOME = { '': 'ok', done: 'ok', ok: 'ok', yes: 'ok', concern: 'concern', 'not done': 'not_done', no: 'not_done' };
 
+  /** A day that is already fully done (every dog, or the one line). A part-done day can still be imported. */
+  function dayFullyDone(v, key, iso) {
+    var c = month(v, key, String(iso || '').slice(0, 7));
+    if (!c) return false;
+    var cell = null;
+    (c.cells || []).forEach(function (x) { if (x.iso === iso) cell = x; });
+    return !!(cell && cell.state === 'done');
+  }
   /** Checks every row: [{line, iso, key, label, outcome, note, ok, why}]. Nothing is saved here. */
   function parseImport(v, text) {
     var types = siteTypes(v), byName = {};
@@ -247,7 +256,7 @@
       else if (!key) x.why = 'job not found: use its name as on the calendar';
       else if (!oc) x.why = 'outcome not understood (done, concern or not done)';
       else if (seen[key + '|' + iso]) x.why = 'repeated in this file';
-      else if (days(v, key)[iso] && oc === 'ok') x.why = 'already recorded that day';
+      else if (oc === 'ok' && dayFullyDone(v, key, iso)) x.why = 'already recorded';
       else { x.ok = true; seen[key + '|' + iso] = 1; }
       // Older than 7 days: the save script asks "Save anyway?" for a typed record. Here the owner has seen every date in
       // this list before pressing Import, so Import is that "save anyway" (Lisa 22 Nov 2026: 15 of 16 rows were refused).

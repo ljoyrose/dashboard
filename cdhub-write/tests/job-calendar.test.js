@@ -124,6 +124,7 @@ test('import: rows are checked (date, job by name or key, outcome, future, repea
     + '2026-11-12,Health check: all dogs,concern,"skin, ears"\r\n');
   assert.deepEqual(rows.map((x) => x.ok), [true, true, false, false, false, false, false, false, true]);
   assert.match(rows[2].why, /already recorded/);
+  assert.equal(rows[2].ok, false);
   assert.match(rows[3].why, /repeated/);
   assert.match(rows[4].why, /future/);
   assert.match(rows[5].why, /date not understood/);
@@ -148,6 +149,15 @@ test('import: title lines above the heading row are left out, never shown as a r
 
 // Lisa 22 Nov 2026: "Imported 1 of 16", the rest refused as "more than 7 days ago. Save anyway?". The owner has seen every
 // date before pressing Import, so a row older than 7 days is sent with the save-anyway answer; a recent row is not.
+test('import: a part-done day is not "already recorded"; a fully done day is, and is not sent', () => {
+  const v = base([log('1', 'cty-hc', '2026-11-15', 'd1'), log('2', 'cty-hc', '2026-11-16', 'd1'), log('3', 'cty-hc', '2026-11-16', 'd2')]);
+  const rows = C.parseImport(v, 'date,job,outcome,note\r\n2026-11-15,health_check_all,done,\r\n2026-11-16,health_check_all,done,\r\n');
+  assert.equal(rows[0].ok, true);
+  assert.equal(rows[1].ok, false);
+  assert.match(rows[1].why, /already recorded/);
+  assert.equal(C.importFields(v, rows[0]).check_type_id, 'cty-hc');
+});
+
 test('import: a row older than 7 days is sent with the save-anyway answer; a recent row is not', () => {
   const v = base([]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n2026-11-10,food_bowls,done,\r\n2026-11-11,food_bowls,done,\r\n2026-10-01,food_bowls,done,\r\n');
