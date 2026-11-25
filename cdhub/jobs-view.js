@@ -8,6 +8,7 @@
   else root.BLDJobsView = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var HOW = { scanned: 'opened from tag', tapped: 'tapped', typed: 'typed', site_tap: 'whole-site tap', paper: 'entered earlier', bulk: 'entered earlier (several days)', import: 'imported' };
   var OUTCOME = { ok: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', note: 'note', part_done: 'part done' };
@@ -16,13 +17,15 @@
   /** One line per job in force: how many of its dogs or rooms are late, due or fine, and when it was last done. */
   function summary(v) {
     var litters = v.litters || [];   // only the litters the caller counts as current (a row decides; none = no litter jobs counted)
-    var key = v.today + '|' + (v.visits || []).length + '|' + (v.rules || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.map(function (t) { return t.id; }).join(',') + '|' + v.dogs.length + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
+    function mix(rows) { var n = 0; (rows || []).forEach(function (r, i) { n = (n + i + String(r.performed_on || r.given_on || r.fitted_on || r.moved_in || r.moved_out || r.state || r.from_date || r.value || '').length * 13) % 1000003; }); return n; }
+    var recN = v.records ? Object.keys(v.records).map(function (k) { return k + ':' + ((v.records[k] || []).length) + ':' + mix(v.records[k]); }).join(',') : '';
+    var key = v.today + '|' + (v.visits || []).length + '|' + (v.rules || []).length + '|' + (v.links || []).length + '|' + v.logs.length + '|' + v.types.map(function (t) { return t.id; }).join(',') + '|' + (v.dogs || []).length + '|' + (v.subjects || []).length + '|' + (v.occupancy || []).length + ':' + mix(v.occupancy) + '|' + (v.statuses || []).length + ':' + mix(v.statuses) + '|' + recN + '|' + v.areas.length + '|' + litters.map(function (l) { return l.id; }).join(',');
     if (memo && memo.key === key) return memo.rows;
     var rows = {}, perDog = {};
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
       targets.forEach(function (t) {
-        Due.forTarget(v.types, logs, t, v.today, v.visits, { rules: v.rules, settings: v.settings }).forEach(function (j) {
+        Due.forTarget(v.types, logs, t, v.today, v.visits, dueOpts(v)).forEach(function (j) {
           if (t.area_id && perDog[j.type_key]) return;   // counted dog by dog instead
           var r = rows[j.type_key] = rows[j.type_key] || { key: j.type_key, label: j.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: '' };
           if (j.status === 'late') r.late++;
@@ -32,23 +35,38 @@
         });
       });
     }
+    var here = dogsNow(v);
     var groups = function (d) { return Due.groupsOf(v.links, d.id, v.today); };
-    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
-    add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
+    add(here.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
+    add(v.areas.map(function (a) { return areaTarget(a, here); }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
-    add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
+    add([{ dogs: here.map(function (d) { return dogOne(v, d); }) }], v.logs);   // a whole-site job about subjects is done once every one on site that day has a line
     /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
        current litter, a Problem-button job (target optional). Its last record is still shown. */
-    var keyOf = {}, lastOf = {};
-    v.types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+    var keyOf = Due.familyKeyOf ? Due.familyKeyOf(v.types, v.today) : {}, lastOf = {};
+    v.types.forEach(function (t) { if (!keyOf[t.id]) keyOf[t.id] = t.type_key; });
     v.logs.forEach(function (l) {
       var k = keyOf[l.check_type_id], d = Due.londonDate(l.happened_at || l.taken_at);
       if (!k || !d || d > v.today || l.outcome === 'note' || l.outcome === 'not_done' || l.outcome === 'part_done') return;
       if (!lastOf[k] || d > lastOf[k]) lastOf[k] = d;
     });
+    function ownLast(t) {
+      if (!Due.ownKey || !v.records) return '';
+      var table = Due.ownKey(t);
+      if (!table) return '';
+      var best = '';
+      (v.records[table] || []).forEach(function (r) {
+        var d = Due.ownDate(table, r);
+        if (d && d <= v.today && d > best) best = d;
+      });
+      return best;
+    }
     var inForce = Due.jobsInForce(v.types, v.today);
     inForce.forEach(function (t) {
-      if (!rows[t.type_key]) rows[t.type_key] = { key: t.type_key, label: t.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: lastOf[t.type_key] || '', none_now: t.target === 'optional' ? 'problem' : t.target === 'litter' ? 'no_litter' : 'none' };
+      var own = ownLast(t), last = lastOf[t.type_key] || '';
+      if (own > last) last = own;
+      if (!rows[t.type_key]) rows[t.type_key] = { key: t.type_key, label: t.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: last, none_now: t.target === 'optional' ? 'problem' : t.target === 'litter' ? 'no_litter' : 'none' };
+      else if (last > rows[t.type_key].last_done) rows[t.type_key].last_done = last;
     });
     var list = inForce.map(function (t) {
       return Object.assign(rows[t.type_key], { sop: t.sop || '', source: t.source || '', every_days: Due.everyDays(t.every_days), frequency: String(t.frequency || '').trim() });
@@ -136,7 +154,7 @@
     }).map(function (l) {
       var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '', bit = target.subject_id && l.subject_id !== target.subject_id ? sessionBit(l) : null;
       var inRound = target.subject_id && l.subject_id !== target.subject_id && (String(l.covered_ids || '').split('|').indexOf(target.subject_id) >= 0 || bit);
-      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: (bit && bit.text) || l.note || '', item: inRound ? ('included in the round' + (bit ? ' · ' + bit.word : '')) : (l.item || ''), amount: l.amount || '', files: docs[l.id] || [] };
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: Show.human((bit && bit.text) || l.note || ''), item: inRound ? ('included in the round' + (bit ? ' · ' + bit.word : '')) : (l.item || ''), amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -210,10 +228,20 @@
     if (j.status === 'late' || j.status === 'today' || j.status === 'never') return true;
     return j.status === 'as_needed' && !j.last_done;
   }
+  function dueOpts(v) { return { rules: v.rules || [], settings: v.settings || [], records: v.records || null }; }
+  function dogsNow(v) {
+    var list = v.subjects || v.dogs || [];
+    if (!v.occupancy) return v.dogs || [];
+    return list.filter(function (d) { return Due.onSite(d, v.occupancy, v.statuses || [], v.today); });
+  }
+  function areaTarget(a, here) {
+    var ids = (here || []).filter(function (d) { return (d.area_id || d.areaId) === a.id; }).map(function (d) { return d.id; });
+    return { area_id: a.id, roomDogIds: ids, areaKind: a.kind || '', areaUse: a.use || '', areaGroup: a.grouping || a.group || '', areaRetired: !!a.retired, areaNoDogs: !!a.noDogs };
+  }
   function dogGroups(v, d) { return d.groups || Due.groupsOf(v.links || [], d.id, v.today); }
-  function dogOne(v, d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: dogGroups(v, d), dob: d.dob || '' }; }
+  function dogOne(v, d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: dogGroups(v, d), dob: d.dob || '', kind: d.kind || '' }; }
   function jobFor(v, target, key) {
-    var list = Due.forTarget(v.types, v.logs, target, v.today, v.visits || [], { rules: v.rules || [] });
+    var list = Due.forTarget(v.types, v.logs, target, v.today, v.visits || [], dueOpts(v));
     for (var i = 0; i < list.length; i++) if (list[i].type_key === key) return list[i];
     return null;
   }
@@ -222,7 +250,7 @@
    * A dog job (target dog) is listed dog by dog. Board > Jobs never shows those, and has no Select all for them.
    */
   function dueItems(v, t) {
-    var dogs = v.dogs || [], areas = v.areas || [], litters = v.litters || [];
+    var dogs = dogsNow(v), areas = v.areas || [], litters = v.litters || [];
     function dogItem(d) { return { kind: 'dog', id: d.id, area_id: d.area_id || d.areaId || '', label: d.name || d.label || d.id }; }
     if (Due.perDogSite(t)) {
       return dogs.filter(function (d) { return openJob(jobFor(v, { dogs: [dogOne(v, d)] }, t.type_key)); }).map(dogItem);
@@ -234,15 +262,14 @@
     }
     if (t.target === 'area') {
       return areas.filter(function (a) {
-        var ids = dogs.filter(function (d) { return (d.area_id || d.areaId) === a.id; }).map(function (d) { return d.id; });
-        return openJob(jobFor(v, { area_id: a.id, roomDogIds: ids }, t.type_key));
+        return openJob(jobFor(v, areaTarget(a, dogs), t.type_key));
       }).map(function (a) { return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id }; });
     }
     if (t.target === 'either') {
       var ds = dogs.filter(function (d) {
         return openJob(jobFor(v, { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: dogGroups(v, d) }, t.type_key));
       }).map(dogItem);
-      var as = areas.filter(function (a) { return openJob(jobFor(v, { area_id: a.id }, t.type_key)); }).map(function (a) {
+      var as = areas.filter(function (a) { return openJob(jobFor(v, areaTarget(a, dogs), t.type_key)); }).map(function (a) {
         return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id };
       });
       return ds.concat(as);
