@@ -785,7 +785,11 @@ function currentLitters(){
  return (CD.litters||[]).filter(function(l){ return here[l.id]||(!pups[l.id]&&on[l.dam_subject_id]); }).map(function(l){
   return {id:l.id,dob:l.dob||l.born_on||'',born_on:l.born_on||l.dob||'',name:'Litter of '+(nameOf(l.dam_subject_id)||'a dam')}; });
 }
-function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types); return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords!=='undefined') types=BLDSopRecords.withSop(types);
+ var day=todayISO(), occ=T['BLD-occupancy.csv']||[], st=T['BLD-subject_status.csv']||[], req=CD.req||[], subjects=CD.dogs||[];
+ var dogs=subjects.filter(function(d){ return BLDDue.onSite(d, occ, st, day); });
+ var areas=(CD.areas||[]).map(function(a){ return {id:a.id,code:a.code,use:a.use||'',grouping:a.grouping||'',kind:a.kind||'',retired:!BLDOccupancy.inUse(a,day,req),noDogs:BLDOccupancy.takesDogs?!BLDOccupancy.takesDogs(a,day,req):false}; });
+ return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
@@ -829,7 +833,7 @@ function sopNorm(r){
  var category=String(r.category||'').trim(), role=String(r.role||'').trim();
  var has=String(r.has_form||'').toUpperCase()==='Y'?'Y':'N';
  var raw=String(r.form_url||'').trim();
- var form_url=(has==='Y'&&/^https:\/\/[^\s"'<>]+$/i.test(raw))?raw:'';
+ var form_url=(has==='Y'&&/^https:\/\/[^\s"'<>]+$/i.test(raw))?(window.DashKit&&DashKit.localHref?DashKit.localHref(raw):raw):'';
  var type_code=assetCode(r.type_code);
  var kind=assetCode(String(r.kind||'').toLowerCase());
  return {colour:colour,frequency:frequency,category:category,role:role,short_name:short_name,has_form:has,form_url:form_url,type_code:type_code,kind:kind};
@@ -944,7 +948,8 @@ function sopStart(){
  }).catch(function(){
   SOP.err='The SOP list could not be read.';
  }).then(function(){
-  if(LOAD.state==='ok' && /^#\/sops(?:$|\?)/.test(location.hash||'') && !document.getElementById('soprows')) go('sops',false);
+  var h=location.hash||'';
+  if(LOAD.state==='ok' && /^#\/sops(?:\/|$|\?)/.test(h) && !document.getElementById('soprows')) go(h.replace(/^#\//,''),false);
  });
  return SOP.pending;
 }
@@ -5013,7 +5018,10 @@ function sopLinks(c){
  return '<ul class="soplinks">'+c.links.map(function(l){
   var t=sopTypeOf(l.type_code), lab=String(l.label||''), icon=t?sopIcon(t.icon_key):'';
   var attr='data-type-code="'+esc(l.type_code||'')+'"';
-  if(/^https:\/\/[^\s"'<>]+$/i.test(String(l.url||''))) return '<li><a class="soplink" '+attr+' href="'+esc(l.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc((t?t.label+': ':'')+lab)+'">'+icon+esc(lab)+'</a></li>';
+  var href=String(l.url||'');
+  if(window.DashKit&&DashKit.localHref) href=DashKit.localHref(href);
+  if(/^https:\/\/[^\s"'<>]+$/i.test(href)) return '<li><a class="soplink" '+attr+' href="'+esc(href)+'" target="_blank" rel="noopener" aria-label="Open '+esc((t?t.label+': ':'')+lab)+'">'+icon+esc(lab)+'</a></li>';
+  if(href && href.charAt(0)!=='j' && !/^https?:/i.test(href)) return '<li><a class="soplink" '+attr+' href="'+esc(href)+'" aria-label="Open '+esc((t?t.label+': ':'')+lab)+'">'+icon+esc(lab)+'</a></li>';
   return '<li><span class="soplink none" '+attr+'>'+icon+esc(lab)+' (no file linked)</span></li>';
  }).join('')+'</ul>';
 }
@@ -5088,6 +5096,12 @@ function sopPrint(a){
  go('yearly/sop-'+encodeURIComponent(name));
 }
 function drawSops(){
+ if(drawSops.busy) return;
+ drawSops.busy=1;
+ try{ drawSopsBody(); }
+ finally{ drawSops.busy=0; }
+}
+function drawSopsBody(){
  var rows=SOP.rows||[];
  if(!SOP.cards&&!SOP.cardsErr&&!SOP.cardsPending) sopCardsLoad();
  var v=function(i){ var e=document.getElementById(i); return e?(e.value||''):''; };
@@ -5122,8 +5136,9 @@ function drawSops(){
       +(document.getElementById('i-'+type.icon_key)?'<svg class="ti" aria-hidden="true"><use href="#i-'+type.icon_key+'"/></svg>':'')
       +'<span>'+esc(type.label)+'</span></span>'
     : '';
-  var form=r.form_url
-    ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
+  var formHref=r.form_url||'', formExt=/^https:\/\//i.test(formHref);
+  var form=formHref
+    ? '<a class="cb" href="'+esc(formHref)+'"'+(formExt?' target="_blank" rel="noopener"':'')+' aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
     : '';
   var card=SOP.cards&&SOP.cards[r.short_name], signs=card&&card.links?card.links.filter(function(l){ return l.type_code==='sign'||l.type_code==='poster'; }):[];
   var signType=signs.length?sopTypeOf(signs[0].type_code):null;
@@ -5840,6 +5855,11 @@ function navCurrent(id){
   if(on) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
 }
 function go(id,push){
+ if((go.depth=(go.depth||0)+1)>8){ go.depth--; return; }
+ try{ goBody(id,push); }
+ finally{ go.depth--; }
+}
+function goBody(id,push){
  var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
  var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=LOAD.state==='ok'?String(id||''):''; chipsDraw('');   /* a page drawn before the rows land is not kept: the start row decides once they do */
  var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);

@@ -237,6 +237,47 @@ test('a room job and a whole-site line each name the place, and a note is requir
   assert.equal(ok.plans[0].fields.how_recorded, 'tapped');
 });
 
+test('the jobs table counts subjects on site that day, occupied rooms, and own-table last dates', () => {
+  const subjects = [
+    { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-b', area_id: 'area-b', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-d', area_id: 'area-a', kind: 'pup', dob: '2026-10-01' }
+  ];
+  const occupancy = [
+    { subject_id: 'sub-test-a', area_id: 'area-a', moved_in: '2026-01-01' },
+    { subject_id: 'sub-test-d', area_id: 'area-a', moved_in: '2026-10-01' }
+  ];
+  const statuses = [
+    { subject_id: 'sub-test-a', state: 'active', from_date: '2020-01-01' },
+    { subject_id: 'sub-test-b', state: 'deceased', from_date: '2026-01-01' },
+    { subject_id: 'sub-test-d', state: 'active', from_date: '2026-10-01' }
+  ];
+  const types = [
+    Object.assign(T('daily_clean', 'area', '1'), { label: 'Daily clean', sop: 'Cleaning' }),
+    Object.assign(T('deep_clean', 'area', '7'), { label: 'Deep clean', sop: 'Cleaning' }),
+    Object.assign(T('health_check_all', 'none', '1'), { label: 'Health check', site_scope: 'per_dog', sop: 'Health' }),
+    Object.assign(T('weight', 'dog', '7'), { label: 'Weight', sop: 'Health' })
+  ];
+  const areas = [
+    { id: 'area-a', kind: 'room' },
+    { id: 'area-b', kind: 'field' },
+    { id: 'area-c', use: 'corridor' },
+    { id: 'area-d', retired: true }
+  ];
+  const v = {
+    today: '2026-11-16', logs: [], litters: [], types, dogs: subjects, subjects, occupancy, statuses, areas,
+    records: { weight: [{ subject_id: 'sub-test-a', performed_on: '2026-11-10' }], dispense: [], vaccination: [], microchip: [] },
+    rules: [], esc: (s) => String(s), dmy: (s) => s
+  };
+  const row = (key) => V.summary(v).find((r) => r.key === key);
+  assert.equal(row('daily_clean').due, 1);
+  assert.equal(row('deep_clean').due, 1);
+  assert.equal(row('health_check_all').due, 1);
+  assert.equal(row('weight').last_done, '2026-11-10');
+  const ruled = Object.assign({}, v, { rules: [{ rule_key: 'job.exclude_juvenile.health_check_all', value: 'on', effective_from: '2026-01-01' }], logs: [{ id: 'h1', check_type_id: 'cty-health_check_all', subject_id: 'sub-test-a', outcome: 'ok', taken_at: '2026-11-16T09:00:00Z' }] });
+  assert.equal(V.summary(ruled).find((r) => r.key === 'health_check_all').ok, 1);
+});
+
 test('only the owner hub loads jobs-view.js: inspector, print, temperature and register pages do not', () => {
   const fs = require('node:fs'), path = require('node:path');
   const root = path.join(__dirname, '..', '..', 'cdhub');
