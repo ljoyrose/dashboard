@@ -506,7 +506,7 @@ test.describe('CD Hub house look', () => {
     const lines = new Set();
     for (const tab of ['map', 'today', 'round', 'dogs', 'litters', 'areas']) {
       await openTab(page, tab);
-      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible');
+      const ctls = page.locator('#main button:visible:not(.tile):not(.phbtn), #main select:visible');
       const n = await ctls.count();
       expect(n, tab).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {

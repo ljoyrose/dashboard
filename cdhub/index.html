@@ -132,7 +132,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .card .card{box-shadow:none}
 
 
-.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.phbtn),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
+.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate,.frow input{font-weight:400;cursor:text}
@@ -379,7 +379,8 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ph .off{display:none !important}
 .dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:120px}
 /* The photo itself is the button (Lisa, 25 Nov 2026). Take and Upload open under it, only while that menu is open. */
-.phbtn{position:absolute;inset:0;display:grid;place-items:center;width:100%;height:100%;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit}
+#main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd){position:absolute;inset:0;display:grid;place-items:center;width:100%;height:100%;min-height:0;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;box-shadow:none}
+#main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd):hover{background:transparent;border:0}
 .phbtn:focus-visible{outline:2px solid var(--ljr-6);outline-offset:-3px}
 .phmenu{display:flex;flex-direction:column;gap:4px}
 .phmenu[hidden]{display:none}
