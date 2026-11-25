@@ -49,7 +49,10 @@
       if (!ids[l.check_type_id] || replaced[l.id] || SKIP[l.outcome] || String(l.how_recorded || '') === 'owner_note') return;
       var d = Due.londonDate(l.happened_at || l.taken_at); if (!d) return;
       var x = out[d] = out[d] || { dogs: {}, n: 0, lines: [] };
-      if (l.subject_id) x.dogs[l.subject_id] = 1;
+      var skip = {};
+      String(l.exceptions || '').split('|').forEach(function (p) { var id = String(p.split(':')[0] || '').trim(); if (id) skip[id] = 1; });
+      String(l.covered_ids || '').split('|').forEach(function (id) { id = id.trim(); if (id && !skip[id]) x.dogs[id] = 1; });
+      if (l.subject_id && !skip[l.subject_id]) x.dogs[l.subject_id] = 1;
       x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: l.note || '' });
     });
     return out;
@@ -72,7 +75,7 @@
       var state = iso > v.today ? 'future' : (got && (!perDog || got >= want)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
       cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : 0, lines: x ? x.lines : [] });
     }
-    return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, need: need, typeId: t.id, cells: cells };
+    return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, vetCal: showsVet(t), need: need, typeId: t.id, cells: cells };
   }
 
   /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.
@@ -105,7 +108,7 @@
       (docs[l.id] || []).forEach(function (f) { if (!pics.some(function (p) { return p.url === f.url; })) pics.push(f); });
     });
     var part = x.state === 'part' && x.need ? ' (' + x.got + ' of ' + x.need + ')' : '';
-    var vet = c.perDog ? ((vets || vetByDay(v))[iso] || []) : [];
+    var vet = c.vetCal ? ((vets || vetByDay(v))[iso] || []) : [];
     return '<div class="jcal-day" data-jcal-detail="' + e(iso) + '"><b>' + e(v.dmy ? v.dmy(iso) : iso) + '</b> <span class="mut">' + e(WORD[x.state] || '') + part + '</span>'
       + (order.length ? '<ul>' + order.map(function (k) { var t = by[k].filter(Boolean).sort();
           return '<li>' + e(k) + (t.length ? ' · ' + e(t[0] + (t.length > 1 && t[t.length - 1] !== t[0] ? '–' + t[t.length - 1] : '')) : '') + (by[k].length > 1 ? ' · ' + by[k].length + ' records' : '') + '</li>'; }).join('') + '</ul>'
@@ -118,8 +121,14 @@
       + '</div>';
   }
 
-  /** Vet visits by day (BLD-visit rows, status done; booked ones are not shown as visits). Cross-referenced on the per-dog
-      calendars (health checks) so a vet day is visible next to the checks; a visit never counts as a check. */
+  /** A health-check calendar may show vet visits beside the checks. Exercise and every other card do not. */
+  function showsVet(t) {
+    if (!t || !Due.perDogSite(t)) return false;
+    return (String(t.type_key || '') + ' ' + String(t.label || '')).toLowerCase().indexOf('health') >= 0;
+  }
+
+  /** Vet visits by day (BLD-visit rows, status done; booked ones are not shown as visits). Shown on health-check
+      calendars only, so a visit never counts as a check and never appears on Exercise or any other card. */
   function vetByDay(v) {
     var out = {};
     (v.vetVisits || []).forEach(function (r) {
@@ -147,7 +156,7 @@
       + '<button type="button" class="btn" data-yp="cal">Print / PDF</button></div>'
       + (canSave ? '<div class="jcal-imp" data-jcal-imp hidden></div>' : '')
       + '<p class="mut jcal-key"><span class="jd done" data-jcal-legend="done">' + TICK + '</span> done <span class="jd part" data-jcal-legend="part"></span> part done <span class="jd missed" data-jcal-legend="missed"></span> missed'
-      + (keys.some(function (k) { var t = typeOf(v, k); return t && Due.perDogSite(t); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
+      + (keys.some(function (k) { return showsVet(typeOf(v, k)); }) && (v.vetVisits || []).length ? ' <b class="jvet jkey">' + VET + '</b> vet visit' : '') + '</p>';
     if (!keys.length) return h + '<p class="mut">No calendars chosen. Add rows compliance.calendar.&lt;job&gt; in Settings.</p></section>';
     h += '<div class="jcal-grid">' + keys.map(function (k) {
       var c = month(v, k, ym); if (!c) return '';
@@ -159,7 +168,7 @@
         + '</div><div class="jdays">' + ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function (w) { return '<span class="jdh">' + w + '</span>'; }).join('')
         + c.cells.map(function (x) {
           if (x.state === 'blank') return '<span class="jd blank"></span>';
-          var ph = x.lines.some(function (l) { return (docs[l.id] || []).length; }), vn = c.perDog && vets[x.iso] ? vets[x.iso].length : 0;
+          var ph = x.lines.some(function (l) { return (docs[l.id] || []).length; }), vn = c.vetCal && vets[x.iso] ? vets[x.iso].length : 0;
           var who = x.lines.length ? ' · ' + x.lines.map(function (l) { return l.by; }).filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; }).join(', ') : '';
           var part = x.state === 'part' && x.need ? ' (' + x.got + ' of ' + x.need + ')' : '';
           var label = (v.dmy ? v.dmy(x.iso) : x.iso) + (WORD[x.state] ? ': ' + WORD[x.state] : '') + part + who;

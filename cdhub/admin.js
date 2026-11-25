@@ -217,7 +217,7 @@ var AdminView = (function () {
         ? '<label>How one tap is stored<select data-ck-scope>' + opt('per_dog', e.site_scope || 'per_dog', 'One line per dog') + opt('one_line', e.site_scope, 'One line for the session') + '</select></label>'
         : '';
       var session = R.sessionAllowed(t.type_key)
-        ? '<label>One line for the round<select data-ck-session>' + opt('false', e.session_row ? 'true' : 'false', 'Off') + opt('true', e.session_row ? 'true' : 'false', 'On: one row lists the dogs') + '</select></label>'
+        ? '<label>One line for the round<select data-ck-session>' + opt('false', e.session_row ? 'true' : 'false', 'Off: one line per dog') + opt('true', e.session_row ? 'true' : 'false', 'On: one row lists the dogs') + '</select></label>'
         : '';
       return '<div class="adm-set" data-ck="' + v.esc(t.type_key) + '"><b>' + v.esc(t.label || t.type_key) + '</b>'
         + '<p class="adm-floor">Legal minimum: ' + v.esc(floorBits.join(' · ')) + when + '</p>'
