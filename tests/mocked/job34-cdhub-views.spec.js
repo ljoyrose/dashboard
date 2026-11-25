@@ -442,8 +442,12 @@ test.describe('CD Hub: slow and failed reads', () => {
   test('while Drive is slow the pill says it is reading, and no section shows yet; then it goes live', async ({ page }) => {
     await page.goto('cdhub/');
     await expect(page.locator('#signinbtn')).toBeEnabled();
-    let held = false; // hold only the first Drive call (the folder listing), so the test stays quick
-    await page.route(DRIVE, async (route) => { if (!held) { held = true; await new Promise((r) => setTimeout(r, 2500)); } return route.fallback(); });
+    let held = false; // hold the folder listing (not whichever Drive call happens to be first), so the test stays quick
+    await page.route(DRIVE, async (route) => {
+      const url = decodeURIComponent(route.request().url()).replace(/\+/g, ' ');
+      if (!held && /in parents/.test(url)) { held = true; await new Promise((r) => setTimeout(r, 2500)); }
+      return route.fallback();
+    });
     await page.locator('#signinbtn').click();
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
