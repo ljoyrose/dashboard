@@ -425,6 +425,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | The yearly print page wrote errors to the console | "the yearly print page loads with no console errors @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 | 25 Nov 2026 | Whole-site code with Full A4 drew the one site code three times, three across the page | "whole-site code on Full A4 is one card, and a second click stays one card @regression" (tests/mocked/cdhub-print-site-card.spec.js) |
 | 25 Nov 2026 | A code run kept its progress line after another card type was opened | "switching card type stops the previous code run @regression" (tests/mocked/cdhub-print-run.spec.js) |
+| 25 Nov 2026 | One thermometer code was drawn once for every finished pass, so the print held seven of each | "one card per ticked item for every kind and layout @regression" (tests/mocked/cdhub-print-count.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
