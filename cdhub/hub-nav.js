@@ -34,7 +34,8 @@
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
     admin: { label: 'Settings', icon: 't-box' },
-    bin: { label: 'Bin', icon: 't-box' }
+    bin: { label: 'Bin', icon: 't-box' },
+    qrprint: { label: 'Print QR cards', icon: 't-print', href: printCardsHref }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
   var SECTIONS = [
@@ -45,7 +46,7 @@
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin', 'qrprint'] }
   ];
   /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
@@ -64,6 +65,12 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+  /* Same address as staffBase() + 'print/': origin + this directory + staff/print/. */
+  function printCardsHref() {
+    var loc = root.location || {};
+    return String(loc.origin || '') + String(loc.pathname || '').replace(/[^/]*$/, '') + 'staff/print/';
+  }
+  function viewHref(v) { return !v ? '' : (typeof v.href === 'function' ? v.href() : (v.href || '')); }
   function section(id) { for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].id === id) return SECTIONS[i]; return null; }
   function sectionOf(view) { for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].views.indexOf(view) >= 0) return SECTIONS[i]; return null; }
   function day(v) { var s = String(v || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ''; }
@@ -141,9 +148,9 @@
     if (!v || !has(id)) return '';
     var icon = root.DashKit.icon(v.icon);
     var current = opts.current === id ? ' aria-current="page"' : '';
-    if (opts.links === 'href' || v.href) {
-      var href = v.href || ('./index.html#/' + id);
-      return '<a href="' + esc(href) + '" data-slot="' + esc(slot) + '"' + current + '>' + icon + '<span class="htl">' + esc(v.label) + '</span></a>';
+    var href = viewHref(v);
+    if (opts.links === 'href' || href) {
+      return '<a href="' + esc(href || ('./index.html#/' + id)) + '" data-slot="' + esc(slot) + '"' + current + '>' + icon + '<span class="htl">' + esc(v.label) + '</span></a>';
     }
     return '<button type="button" data-go="' + esc(id) + '" data-slot="' + esc(slot) + '"' + current + '>' + icon + '<span class="htl">' + esc(v.label) + '</span></button>';
   }
@@ -152,7 +159,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin'; };   /* pages without the rows (temperature history); Bin is the owner's, like Settings */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin' && id !== 'qrprint'; };   /* pages without the rows (temperature history); Bin and Print QR cards are the owner's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
@@ -161,7 +168,7 @@
     var tabs = bar.map(function (s) {
       var go = goOf(s);
       var o = { slot: s.slot, icon: s.icon, label: s.label, nav: s.id };
-      if (opts.links === 'href') o.href = VIEWS[go] && VIEWS[go].href ? VIEWS[go].href : './index.html#/' + go;
+      if (opts.links === 'href') o.href = viewHref(VIEWS[go]) || ('./index.html#/' + go);
       else o.go = go;
       if (opts.counts) {
         var n = 0, late = false;
@@ -193,11 +200,11 @@
     return live.map(function (id) {
       /* the house chip (house.css 4, 5) and house count (.cnt; 0 writes nothing). Selected (Lisa 15 Nov 2026): the 3px section-colour
          side line (.house-lbar, --sc from data-slot) and a tick; no fill. */
-      var v = VIEWS[id], n = opts.counts && opts.counts[id], on = opts.current === id;
+      var v = VIEWS[id], n = opts.counts && opts.counts[id], on = opts.current === id, href = viewHref(v);
       var cls = 'chip hchip' + (on ? ' house-lbar' : ''), cur = on ? ' aria-current="page"' : '';
       var cnt = n ? ' <span class="cnt' + (opts.late && opts.late[id] ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '">' + esc(n) + '</span>' : '';
       var inner = (on ? '<span class="hck" aria-hidden="true">\u2713</span>' : '') + '<span class="hcl">' + esc(v.label) + '</span>' + cnt;
-      return v.href ? '<a class="' + cls + '" href="' + esc(v.href) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</a>'
+      return href ? '<a class="' + cls + '" href="' + esc(href) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</a>'
         : '<button type="button" class="' + cls + '" data-go="' + esc(id) + '" data-slot="' + esc(s.slot) + '"' + cur + '>' + inner + '</button>';
     }).join('');
   }
@@ -255,5 +262,5 @@
       || (o.starter || []).filter(function (id) { return cards.indexOf(id) >= 0; });
   }
 
-  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, viewOn: viewOn, STARTER_OFF: STARTER_OFF, sectionOf: sectionOf, html: html, chips: chips, back: back };
+  root.HubNav = { VIEWS: VIEWS, SECTIONS: SECTIONS, STARTER: STARTER, layout: layout, home: home, viewOn: viewOn, STARTER_OFF: STARTER_OFF, sectionOf: sectionOf, html: html, chips: chips, back: back, viewHref: viewHref };
 })(typeof window !== 'undefined' ? window : this);

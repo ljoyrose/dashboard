@@ -95,8 +95,8 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
-  /* QR codes open the staff pages on the host serving this site. A configured https address
-     (cdhub.publicStaffBase, ending in /) wins over that, then a qr.base_url rule row in force. */
+  /* Phone set-up QR opens the staff page on this site. A configured https address
+     (cdhub.publicStaffBase, ending in /) wins over that. A qr.base_url rule row in force wins over both. */
   function staffPublicBase() {
     var cfg = '';
     try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }

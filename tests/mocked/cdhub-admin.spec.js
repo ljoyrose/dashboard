@@ -59,7 +59,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
       var path = location.pathname, i = path.indexOf('/cdhub/');
       return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
     });
-    await expect(page.locator('#adm-phone')).toContainText(new URL(staff).host);
+    await expect(page.locator('#adm-phone')).toContainText(new URL(page.url()).host);
     await expect(page.locator('#adm-phone')).not.toContainText('github.io');
     await page.locator('[data-adm-qr]').click();
     await expect(page.locator('.adm-qr svg')).toBeVisible();

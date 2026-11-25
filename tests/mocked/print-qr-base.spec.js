@@ -1,4 +1,4 @@
-// Printed QRs open the staff pages on the host serving this site (or a configured https address), never a fixed host.
+// Printed QRs open the staff page on this site (or a configured https address), never a fixed host.
 // A qr.base_url rule row in force wins. Invented rows only.
 const { test, expect } = require('../support/test');
 
@@ -28,7 +28,7 @@ async function open(page, rules) {
   await page.goto('cdhub/staff/print/');
 }
 
-test('printed QRs open the staff pages on this host, not a fixed host and not the print page', async ({ page }) => {
+test('printed QRs open the staff page on this site, not a fixed host and not the print page', async ({ page }) => {
   await open(page);
   const staff = await page.evaluate(() => {
     var path = location.pathname, i = path.indexOf('/cdhub/');
@@ -44,7 +44,7 @@ test('printed QRs open the staff pages on this host, not a fixed host and not th
   expect(qr).toContain(staff + '#s/AAAAAAAA');
   expect(qr).toContain(staff + '#s/EEEEEEEE');
   expect(qr.some((t) => t.indexOf(staff + '#setup=') === 0)).toBe(true);
-  expect(qr.filter((t) => t.includes('github.io') || t.includes('/print/'))).toEqual([]);
+  expect(qr.filter((t) => /github\.io/.test(t) || t.indexOf('/print/') >= 0)).toEqual([]);
   expect(await page.locator('.sheet').innerText()).not.toMatch(/https?:|www\./);
 });
 
