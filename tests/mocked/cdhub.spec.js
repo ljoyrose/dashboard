@@ -144,7 +144,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await Promise.all(waiting.splice(0).map((r) => r.fallback().catch(() => {})));
     await expect(page.locator('#livepill')).toContainText('live');
     await expect(page.locator('#boot')).toHaveCount(0);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);   // Items added 14 Nov 2026; Decide 15 Nov
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(14);   // Yearly print added beside Items; Decide added in Main
   });
 
   test('a failed Drive read shows the message @regression', async ({ page, guard, allowedConsole }) => {
@@ -218,7 +218,7 @@ test.describe('CD Hub: navigation', () => {
     expect(await bar.evaluateAll((b) => b.map((x) => [x.dataset.go, x.dataset.slot]))).toEqual([['map', '1'], ['compliance', '2'], ['dogs', '4'], ['staff', '5']]);
     const more = page.locator('#nav .house-more > [data-slot]');
     expect(await more.evaluateAll((b) => b.map((x) => x.dataset.slot))).toEqual(await more.evaluateAll((b) => b.map((x) => x.dataset.slot).sort()));   // colour order
-    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Decide', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
+    await expect(page.locator('#nav .house-more > [data-slot] .htl')).toHaveText(['Today', 'Do', 'Decide', 'Items', 'Yearly print', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
     await expect(page.locator('#nav .house-more a[href="./history.html"]')).toHaveText('Temps');
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
@@ -441,6 +441,7 @@ test.describe('CD Hub house look', () => {
       for (const tab of LOOK_TABS) {
         await openTab(page, tab);
         if (tab === 'dogs') await page.locator('[data-fpanel="fp-dogs"]').click(); // the open Filter panel is checked too
+        await page.mouse.move(0, 0);   // opening More leaves the pointer on the page; the check is the resting look
         const a = await page.evaluate(cdAudit);
         for (const k of Object.keys(a)) expect(a[k], `${look} ${scheme} #/${tab}: ${k}`).toEqual([]);
       }

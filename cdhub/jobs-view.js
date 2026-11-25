@@ -8,6 +8,7 @@
   else root.BLDJobsView = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var HOW = { scanned: 'opened from tag', tapped: 'tapped', typed: 'typed', site_tap: 'whole-site tap', paper: 'entered earlier', bulk: 'entered earlier (several days)', import: 'imported' };
   var OUTCOME = { ok: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', note: 'note', part_done: 'part done' };
@@ -22,7 +23,7 @@
     v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
       targets.forEach(function (t) {
-        Due.forTarget(v.types, logs, t, v.today, v.visits, { rules: v.rules }).forEach(function (j) {
+        Due.forTarget(v.types, logs, t, v.today, v.visits, { rules: v.rules, settings: v.settings }).forEach(function (j) {
           if (t.area_id && perDog[j.type_key]) return;   // counted dog by dog instead
           var r = rows[j.type_key] = rows[j.type_key] || { key: j.type_key, label: j.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: '' };
           if (j.status === 'late') r.late++;
@@ -39,8 +40,8 @@
     add([{ dogs: v.dogs.map(function (d) { return { id: d.id, area_id: d.area_id || d.areaId || '', groups: groups(d) }; }) }], v.logs);   // a whole-site job about dogs is done once every dog has a line
     /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
        current litter, a Problem-button job (target optional). Its last record is still shown. */
-    var keyOf = {}, lastOf = {};
-    v.types.forEach(function (t) { keyOf[t.id] = t.type_key; });
+    var keyOf = Due.familyKeyOf ? Due.familyKeyOf(v.types, v.today) : {}, lastOf = {};
+    v.types.forEach(function (t) { if (!keyOf[t.id]) keyOf[t.id] = t.type_key; });
     v.logs.forEach(function (l) {
       var k = keyOf[l.check_type_id], d = Due.londonDate(l.happened_at || l.taken_at);
       if (!k || !d || d > v.today || l.outcome === 'note' || l.outcome === 'not_done' || l.outcome === 'part_done') return;
@@ -117,11 +118,26 @@
     var byId = {}, replaced = {}, docs = filesByLog(v);
     v.types.forEach(function (t) { byId[t.id] = t; });
     v.logs.forEach(function (l) { if (l.corrects_id) replaced[l.corrects_id] = true; });
+    function sessionBit(l) {
+      if (!target.subject_id) return null;
+      var ids = String(l.covered_ids || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean);
+      var ex = null;
+      String(l.exceptions || '').split('|').forEach(function (p) {
+        var bits = p.split(':'), id = (bits[0] || '').trim();
+        if (id === target.subject_id) ex = { word: bits[1] === 'not_here' ? 'not here' : (bits[1] || 'note'), text: bits.slice(2).join(':').trim() };
+      });
+      if (ids.indexOf(target.subject_id) < 0 && !ex) return null;
+      return ex;
+    }
     return v.logs.filter(function (l) {
-      return !replaced[l.id] && byId[l.check_type_id] && (target.litter_id ? l.litter_id === target.litter_id : target.subject_id ? l.subject_id === target.subject_id : l.area_id === target.area_id);
+      if (replaced[l.id] || !byId[l.check_type_id]) return false;
+      if (target.litter_id) return l.litter_id === target.litter_id;
+      if (target.subject_id) return l.subject_id === target.subject_id || sessionBit(l) !== null || String(l.covered_ids || '').split('|').indexOf(target.subject_id) >= 0;
+      return l.area_id === target.area_id;
     }).map(function (l) {
-      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '';
-      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: l.note || '', item: l.item || '', amount: l.amount || '', files: docs[l.id] || [] };
+      var tg = String(l.time_given || ''), at = l.happened_at || l.taken_at || '', bit = target.subject_id && l.subject_id !== target.subject_id ? sessionBit(l) : null;
+      var inRound = target.subject_id && l.subject_id !== target.subject_id && (String(l.covered_ids || '').split('|').indexOf(target.subject_id) >= 0 || bit);
+      return { at: at, noTime: tg.toLowerCase() === 'false', part: /^part:/i.test(tg) ? partLabel(v, tg.slice(5), Due.londonDate(at)) : '', label: byId[l.check_type_id].label, outcome: l.outcome, by: l.taken_by || '', how: l.how_recorded || '', note: Show.human((bit && bit.text) || l.note || ''), item: inRound ? ('included in the round' + (bit ? ' · ' + bit.word : '')) : (l.item || ''), amount: l.amount || '', files: docs[l.id] || [] };
     }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
   }
 
@@ -340,5 +356,4 @@
   }
 
   return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml, needsRecord: needsRecord, dueItems: dueItems, savePlans: savePlans, recordHtml: recordHtml };
-  return { showLate: showLate, summary: summary, everyWords: everyWords, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml };
 }));

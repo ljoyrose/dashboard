@@ -11,10 +11,11 @@
  * Times are UK time (Europe/London). No staff code or licence number is in this file.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.BLDChecksRegister = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./staff/lib/due.js'));
+  else root.BLDChecksRegister = factory(root.BLDDue);
+}(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded', NO_TIME = 'time not recorded';
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -78,22 +79,34 @@
     opts = opts || {};
     var ym = str(opts.month), only = str(opts.typeId), name = typeof opts.subject === 'function' ? opts.subject : function () { return ''; };
     var types = {}; (opts.types || []).forEach(function (t) { types[str(t.id)] = t; });
+    var allowed = null;
+    if (only && Due && Due.familyIds) {
+      allowed = {};
+      Due.familyIds(opts.types || [], only).forEach(function (id) { allowed[id] = 1; });
+      allowed[only] = 1;
+    }
     var byId = {}, later = {}, fixedBy = {};
     (logs || []).forEach(function (r) {
       byId[str(r.id)] = r;
       if (isNoteFor(r)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r);
       if (str(r.corrects_id)) (fixedBy[str(r.corrects_id)] = fixedBy[str(r.corrects_id)] || []).push(r);
     });
-    var out = [];
+    var dogName = typeof opts.dogName === 'function' ? opts.dogName : function () { return ''; };
+    var flat = [];
     (logs || []).forEach(function (r) {
+      var parts = (typeof BLDCheckRules !== 'undefined' && BLDCheckRules.expandLog) ? BLDCheckRules.expandLog(r, dogName) : [r];
+      parts.forEach(function (p) { flat.push(p); });
+    });
+    var out = [];
+    flat.forEach(function (r) {
       if (isNoteFor(r)) return;
       var w = whenOf(r);
       if (!w.date || w.date.slice(0, 7) !== ym) return;
-      if (only && str(r.check_type_id) !== only) return;
+      if (only && !(allowed ? allowed[str(r.check_type_id)] : str(r.check_type_id) === only)) return;
       var t = types[str(r.check_type_id)], id = str(r.id), outcome = str(r.outcome);
       var notes = (later[id] || []).slice().sort(function (a, b) { return str(a.taken_at || a.happened_at) < str(b.taken_at || b.happened_at) ? -1 : 1; })
-        .map(function (n) { return 'Later, ' + stamp(n) + (who(n.taken_by) ? ', by ' + who(n.taken_by) : '') + ': ' + (clean(n.note) || NR); });
-      var own = clean(r.note), action = '';
+        .map(function (n) { var bit = Show.human(clean(n.note)); return bit ? 'Later, ' + stamp(n) + (who(n.taken_by) ? ', by ' + who(n.taken_by) : '') + ': ' + bit : ''; }).filter(Boolean);
+      var own = Show.human(clean(r.note)), action = '';
       if (NEEDS_ACTION[outcome]) action = [own ? 'At the time: ' + own : ''].concat(notes).filter(Boolean).join(' | ');
       else if (notes.length) action = notes.join(' | ');
       var corr = [];
@@ -103,10 +116,10 @@
       out.push({
         id: id, sort: w.date + ' ' + (w.time || '99:99') + ' ' + id,
         date: w.date, time: timeGiven ? w.time : '', noTime: !timeGiven,
-        check: t ? str(t.label) : '', subject: clean(name(r)),
-        result: outcome ? (RESULT[outcome] || outcome) : '',
+        check: t ? str(t.label) : '', subject: r._dogName ? clean(r._dogName) : clean(name(r)),
+        result: r._exception ? r._exception : (outcome ? (RESULT[outcome] || outcome) : ''),
         detail: [clean(r.item), clean(r.amount)].filter(Boolean).join(', '),
-        note: own, action: action, needsAction: !!NEEDS_ACTION[outcome],
+        note: r._exception ? clean(r._exception + (own ? ': ' + own : '')) : own, action: action, needsAction: !!NEEDS_ACTION[outcome] && !r._exception,
         by: who(r.taken_by), how: HOW[str(r.how_recorded)] || str(r.how_recorded),
         correction: corr.join(' | ')
       });

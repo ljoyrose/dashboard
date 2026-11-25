@@ -103,6 +103,7 @@
     't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
     't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
     't-temp': '<path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0z"/><path d="M10 9h4"/>',
+    't-print': '<path d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4M7 13h10v8H7z"/>',
     // Status icons for badges (quality review, 12 Nov 2026: house icons, not emoji). Tabler shapes, the same stroke.
     's-check': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2l4-4"/>',
     's-x': '<circle cx="12" cy="12" r="9"/><path d="M10 10l4 4m0-4l-4 4"/>',

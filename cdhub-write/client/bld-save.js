@@ -474,7 +474,7 @@
       var signedIn = hasAuth();
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
-      var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
+      var action = o.action === 'correct' || o.action === 'add_site' || o.action === 'add_session' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };
