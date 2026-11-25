@@ -186,9 +186,9 @@ test('medicines: a year is one A4 sheet per month and keeps dose, dog and who', 
     { month: '2026-02', lines: lines }
   ]);
   assert.match(html, /@page\{size:A4 landscape/);
-  assert.equal((html.match(/class="meds-sheet"/g) || []).length, 2);
-  assert.match(html, /Medicines register · January 2026/);
-  assert.match(html, /No medicine recorded in January 2026/);
+  assert.equal((html.match(/class="meds-sheet"/g) || []).length, 1);
+  assert.doesNotMatch(html, /January 2026/);
+  assert.match(Meds.toYearHtml({ kennel: '', year: '2026', printed: '' }, [{ month: '2026-01', lines: [] }, { month: '2026-02', lines: [] }]), /No records this month/);
   assert.match(html, /Medicines register · February 2026/);
   assert.match(html, />Dose</);
   assert.match(html, /Ada/);
