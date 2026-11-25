@@ -86,6 +86,10 @@ function sinkDogPhotoLocked_(req) {
   var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
   var subjectId = String(f.subject_id || '').trim();
   if (!ID_RE_.test(subjectId)) throw err_('INVALID', 'Say which dog the photo is for.');
+  if (String(f.remove || '') === 'yes') {
+    store_setSubjectPhoto_(subjectPhotoSlot_(subjectId), '');
+    return { status: 'saved', subject_id: subjectId, file_id: '' };
+  }
   var mime = String(f.mime || '').toLowerCase();
   if (PHOTO_MIMES_.indexOf(mime) < 0) throw err_('INVALID', 'Choose a picture.');
   var b64 = String(f.image_base64 || '').replace(/\s/g, '');
