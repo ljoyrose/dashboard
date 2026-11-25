@@ -1247,6 +1247,8 @@ function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(
  var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
  /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
  m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
+/* Newest first. The same date keeps the order the rows were read in (Lisa 25 Nov 2026). */
+function byDateDesc(a, b){ var x=String(a.on||''), y=String(b.on||''); return x>y?-1:(x<y?1:0); }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
   var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
@@ -1257,7 +1259,7 @@ function build(){
     (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:r.given_on,product:r.product,pres:r.presentation,
       dose:r.dose_volume,band:r.weight_band,kg:r.weight_kg_used,basis:r.dosage_basis,route:r.route,
       reason:r.reason,src:r.source,need:r.ruling_needed,note:r.note}); });
-  Object.keys(DSP).forEach(function(k){ DSP[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
+  Object.keys(DSP).forEach(function(k){ DSP[k].sort(byDateDesc); });
   CD.dispense=DSP;
 
   CD.markers={}; (T['BLD-dna_marker.csv']||[]).forEach(function(r){ CD.markers[r.code]=r; });
@@ -2651,7 +2653,7 @@ function showTreats(id){
  if(!t.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(shownDogName(d))+' has no treatments recorded</h4></div>'; return; }
  var h='<div class="card"><h4>'+esc(shownDogName(d))+': treatments'+cntPill(t.length)+'</h4>'
   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
- for(var i=t.length-1;i>=0;i--){ var r=t[i];
+ for(var i=0;i<t.length;i++){ var r=t[i];
   var unk=/NOT STATED/.test(r.product||'');
   h+='<tr><td>'+esc(dmy(r.on))+'</td>'
    +'<td>'+(unk?'<span class="pill no">not stated</span>':'<b>'+esc(r.product)+'</b>'+(r.pres?'<br><span class="mut">'+esc(r.pres)+'</span>':''))+'</td>'
