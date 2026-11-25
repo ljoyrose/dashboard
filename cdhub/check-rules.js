@@ -1,7 +1,8 @@
 /*!
  * BLDCheckRules - the owner's check settings, worked out from rows. No screen and no saving.
- * A check with no setting row behaves as it does today: logged, its own how-often, one line per dog
- * where the check already says so. A past day uses the setting in force that day.
+ * A check with no setting row stays logged, on its own how-often, one line per dog where it already
+ * says so. Present, Health check all, and Exercise all are one session row unless a setting says off.
+ * A past day uses the setting in force that day.
  * The live check_type row is the legal floor (more often is allowed, less often is not).
  */
 (function (root, factory) {
@@ -74,15 +75,20 @@
     return msg;
   }
 
-  /** What is in force for a check on a day. No setting row = the check's own row, logged, session off. */
+  /**
+   * What is in force for a check on a day. No setting row = the check's own cadence, logged.
+   * Present, Health check all, and Exercise all are one session row unless a setting says off.
+   */
   function effective(type, setting) {
     var s = setting || {};
+    var session = sessionAllowed(type && type.type_key);
+    if (setting && str(setting.session_row) !== '') session = on(setting.session_row);
     return {
       record_as: str(s.record_as) || 'logged',
       every_days: str(s.every_days) !== '' ? s.every_days : (type ? type.every_days : ''),
       frequency: str(s.frequency) !== '' ? s.frequency : (type ? type.frequency : ''),
       site_scope: str(s.site_scope) || (type ? str(type.site_scope) : ''),
-      session_row: on(s.session_row),
+      session_row: session,
       from_date: str(s.from_date),
       to_date: str(s.to_date),
       source: str(s.source),

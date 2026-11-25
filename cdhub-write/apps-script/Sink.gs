@@ -363,15 +363,15 @@ function assertCheckMayLog_(type, day) {
   }
 }
 
-/** True when this check's setting says one session row. add_session with the switch off is refused. */
+/** One session row for Present, Health check all, and Exercise all, unless Settings says off. add_session while off is refused. */
 function sessionWanted_(type, day, action) {
-  var on = false;
-  if (type && SESSION_TYPE_[type.type_key]) {
+  var on = !!(type && SESSION_TYPE_[type.type_key]);
+  if (on) {
     var s = checkSettingFor_(type.type_key, day);
-    on = !!(s && String(s.session_row || '').toLowerCase() === 'true');
+    if (s && String(s.session_row || '').toLowerCase() === 'false') on = false;
   }
   if (action === 'add_session' && !on) {
-    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'Turn on one line for the round in Settings first.' } });
+    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'One line for the round is off in Settings.' } });
   }
   return on;
 }
@@ -394,6 +394,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
   var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: f.how_recorded || ((room && !session) ? '' : 'site_tap') };
+  if (f.confirm_unusual) fields.confirm_unusual = f.confirm_unusual;   // Import (PR #770) sends this for a date 7 days or older; it is not a column
   if (room || (session && f.area_id)) fields.area_id = f.area_id;
   if (!session && scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
@@ -443,7 +444,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     fields.subject_id = '';
     req.fields = fields; req.action = 'add';
     var one = sinkProcess_(spec, req, who, now, nowMs);
-    one.saved = 1; one.covered = covered.length; one.left_out = left; one.session = true;
+    one.saved = 1; one.covered = covered.length; one.covered_ids = fields.covered_ids; one.exceptions = fields.exceptions || ''; one.left_out = left; one.session = true;
     return one;
   }
   if (!rows.length) {

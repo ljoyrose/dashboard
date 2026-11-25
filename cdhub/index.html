@@ -3722,8 +3722,8 @@ function savedSeen(areaId,date){ var out={};
   }
  });
  return out; }
-function presenceSessionOn(pt,date){ if(!pt||!window.BLDCheckRules) return false;
- var s=BLDCheckRules.settingFor(T['BLD-check_setting.csv']||[], pt.type_key, date); return !!(s && String(s.session_row).toLowerCase()==='true'); }
+function presenceSessionOn(pt,date){ if(!pt||!window.BLDCheckRules||!BLDCheckRules.sessionAllowed(pt.type_key)) return false;
+ var s=BLDCheckRules.settingFor(T['BLD-check_setting.csv']||[], pt.type_key, date); return BLDCheckRules.effective(pt,s).session_row; }
 function markSeen(areaId, sid, state){
  var date=CD._roundDate||todayISO(), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:'',subjects:inCabin(areaId,date)});
  cur.seen=cur.seen||{};
@@ -3768,6 +3768,15 @@ async function presenceSessionSave(areaId,date,pt,m){
  var r=await sinkSend({table:'check_log',action:'add_session',fields:fields});
  var ok=r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued');
  if(ok&&r.result.status==='saved'){ (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:r.result.id||'',check_type_id:pt.id,area_id:areaId,covered_ids:here.join('|'),exceptions:fields.exceptions,outcome:'recorded',happened_at:at,taken_at:new Date().toISOString(),how_recorded:'tapped',corrects_id:fields.corrects_id||''}); if(cur.fix) cur.fix={}; }
+ if(!ok&&!r.kept){   /* refused: the buttons go back to the last saved round. Kept for retry: they stay pressed */
+  var back=savedSeen(areaId,date), sel='[data-area="'+CSS.escape(areaId)+'"]';
+  inCabin(areaId,date).forEach(function(id){
+   if(back[id]) cur.seen[id]=back[id].state; else delete cur.seen[id];
+   var hb=document.querySelector('[data-here="'+CSS.escape(id)+'"]'+sel), nb=document.querySelector('[data-nothere="'+CSS.escape(id)+'"]'+sel);
+   var w=back[id]?back[id].state:'';
+   if(hb&&nb){ hb.setAttribute('aria-pressed',String(w==='here')); nb.setAttribute('aria-pressed',String(w==='not')); hb.parentNode.classList.toggle('on',!!w); }
+  });
+ }
  if(m) showSave(m,sinkMsg(r));
 }
 async function presenceSave(areaId,sid,state,date,pt,m,correctsId){
@@ -5034,7 +5043,8 @@ async function sopRecord(btn){
   var r=await sinkSend({table:'check_log',action:p.action,fields:p.fields});
   if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
   var res=r.result||{}, at=res.at||p.fields.happened_at, who=res.who||'';
-  if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
+  if(res.session){ logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:'',covered_ids:(res.covered_ids||p.fields.dog_ids||''),exceptions:p.fields.exceptions||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }
+  else if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
   else logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:p.fields.subject_id||'',area_id:p.fields.area_id||'',litter_id:p.fields.litter_id||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who});
  }
  drawSops();
@@ -5301,7 +5311,8 @@ document.addEventListener('click',async function(ev){
   if(msg) msg.textContent='Saving '+(i+1)+' of '+ready.length+'…';
   var r=await sinkSend({table:'check_log',action:'add_site',fields:f});
   if(r&&r.ok){ done++; var res=r.result||{}, ids=f.dog_ids?f.dog_ids.split('|'):[''], rows=T['BLD-check_log.csv']=T['BLD-check_log.csv']||[];
-   ids.forEach(function(d,k){ rows.push({id:(res.ids&&res.ids[k])||((res.id||'imp')+'-'+k),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''}); });
+   if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''});
+   else ids.forEach(function(d,k){ rows.push({id:(res.ids&&res.ids[k])||((res.id||'imp')+'-'+k),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'import',happened_at:f.happened_at,note:f.note||'',taken_at:res.at||new Date().toISOString(),taken_by:res.who||''}); });
   } else bad.push(x.line+' ('+importFailText(r)+')');
  }
  JCAL.rows=null;
@@ -5323,7 +5334,8 @@ document.addEventListener('click',async function(ev){
  if(r&&r.ok){
   var res=r.result||{}, at=res.at||new Date().toISOString(), who=res.who||'', ids=f.dog_ids?f.dog_ids.split('|'):[''];
   var rows=T['BLD-check_log.csv']=T['BLD-check_log.csv']||[];
-  ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
+  if(res.session) rows.push({id:res.id||'',check_type_id:f.check_type_id,subject_id:'',covered_ids:res.covered_ids||f.dog_ids||'',exceptions:f.exceptions||'',outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who});
+  else ids.forEach(function(d,i){ rows.push({id:(res.ids&&res.ids[i])||((res.id||'jcal')+'-'+i),check_type_id:f.check_type_id,subject_id:d,outcome:f.outcome,how_recorded:'site_tap',taken_at:at,taken_by:who}); });
   var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
  } else { b.disabled=false; b.textContent='Done today'; var p=document.createElement('p'); p.className='msg bad'; p.setAttribute('data-jcal-msg',''); p.textContent=sinkMsg(r||{},''); b.closest('.jcal').appendChild(p); }
 });
