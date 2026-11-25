@@ -287,7 +287,7 @@
     return 'Yes — Checked today';
   }
   function printWords(spec) {
-    var yearly = 'Compliance → Yearly print (#788) and Download CSV';
+    var yearly = 'Compliance → Yearly print and Download CSV';
     var bits = (spec.yearlyIds || []).slice();
     bits.unshift('its check log');
     if (spec.meds) return 'SOPs → Print records (this month). Also Compliance → Medicines register → Print and Download CSV. ' + yearly + ' (' + bits.join(', ') + ')';
