@@ -406,15 +406,15 @@ function assertCheckMayLog_(type, day) {
   }
 }
 
-/** True when this check's setting says one session row. add_session with the switch off is refused. */
+/** One session row for Present, Health check all, and Exercise all, unless Settings says off. add_session while off is refused. */
 function sessionWanted_(type, day, action) {
-  var on = false;
-  if (type && SESSION_TYPE_[type.type_key]) {
+  var on = !!(type && SESSION_TYPE_[type.type_key]);
+  if (on) {
     var s = checkSettingFor_(type.type_key, day);
-    on = !!(s && String(s.session_row || '').toLowerCase() === 'true');
+    if (s && String(s.session_row || '').toLowerCase() === 'false') on = false;
   }
   if (action === 'add_session' && !on) {
-    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'Turn on one line for the round in Settings first.' } });
+    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'One line for the round is off in Settings.' } });
   }
   return on;
 }
@@ -492,7 +492,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     fields.subject_id = '';
     req.fields = fields; req.action = 'add';
     var one = sinkProcess_(spec, req, who, now, nowMs);
-    one.saved = 1; one.covered = covered.length; one.left_out = left; one.session = true;
+    one.saved = 1; one.covered = covered.length; one.covered_ids = fields.covered_ids; one.exceptions = fields.exceptions || ''; one.left_out = left; one.session = true;
     return one;
   }
   if (!rows.length) {
