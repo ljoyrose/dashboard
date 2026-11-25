@@ -314,6 +314,39 @@ function sinkHandleMany_(req, now, nowMs) {
   var tLock = Date.now(), tIn = 0;
   if (todo.length) withLock_(function () {
     tIn = Date.now();
+    // One read for the whole list (25 Nov 2026: 16 Present taps each read all 4,972 job-log rows). Plain adds to the
+    // same table are checked against the rows already accepted in this list, then written in one append. A form, a
+    // QR or a different table is written on its own, after any staged rows, so a later check still sees them.
+    var held = { read: null, defer: [], extra: [] };
+    function flushStaged_() {
+      if (!held.defer.length) return;
+      var groups = {};
+      held.defer.forEach(function (s) {
+        (groups[s.spec.file] = groups[s.spec.file] || { spec: s.spec, target: s.target, items: [] }).items.push(s);
+      });
+      Object.keys(groups).forEach(function (file) {
+        var g = groups[file];
+        try {
+          store_appendMany_(g.spec.file, g.spec.columns, g.items.map(function (s) { return s.written; }), g.target);
+          g.items.forEach(function (s) {
+            cache.put('rid:' + s.rid, JSON.stringify(s.result), BLD.LIMITS.REQUEST_CACHE_SEC);
+            out[s.i] = { request_id: s.rid, ok: true, result: s.result };
+          });
+        } catch (e) {
+          g.items.forEach(function (s) {
+            logWriteFailure_(e, g.spec, s.result.id, who.who, now);
+            var b = errorBody_(e); b.request_id = s.rid; out[s.i] = b;
+          });
+        }
+      });
+      held.defer = []; held.extra = []; held.read = null;
+    }
+    function sameRead_(spec, one) {
+      if (!held.read || held.read.file !== spec.file) return false;
+      var fast = !!spec.fastAppend && one.action === 'add' && !spec.checkAgainst;
+      var tailWanted = fast && !!spec.dupTimeCol && !lateSlot_(spec, one.fields, nowMs);
+      return held.read.fast === fast && held.read.tailWanted === tailWanted;
+    }
     todo.forEach(function (i) {
       var it = items[i], rid = String(it.request_id);
       try {
@@ -322,13 +355,23 @@ function sinkHandleMany_(req, now, nowMs) {
         var one = { v: 1, request_id: rid, action: 'add', table: it.table, fields: it.fields && typeof it.fields === 'object' ? it.fields : {} };
         if (it.values && typeof it.values === 'object') one.values = it.values;   // a check's form answers go with their item (22 Nov 2026)
         var spec = sinkSpecFor_(one, who);
-        var r = sinkProcess_(spec, one, who, now, nowMs);
-        cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
-        out[i] = { request_id: rid, ok: true, result: r };
+        var stage = one.action === 'add' && !one.values && !spec.qrKind;
+        if (held.defer.length && (!stage || !sameRead_(spec, one))) flushStaged_();
+        var n0 = held.defer.length;
+        var r = sinkProcess_(spec, one, who, now, nowMs, stage ? held : null);
+        if (held.defer.length > n0) held.defer[held.defer.length - 1].i = i;
+        else {
+          cache.put('rid:' + rid, JSON.stringify(r), BLD.LIMITS.REQUEST_CACHE_SEC);
+          out[i] = { request_id: rid, ok: true, result: r };
+          // This item was not staged. Write any rows already accepted, then drop the read: the sheet moved,
+          // or this item was queued and the next one must not trust a read from before that decision.
+          if (n0) flushStaged_(); else { held.read = null; held.extra = []; }
+        }
       } catch (e) {
         var b = errorBody_(e); b.request_id = rid; out[i] = b;
       }
     });
+    flushStaged_();
   });
   timing_('before_lock', tLock - nowMs); timing_('lock_wait', tIn ? tIn - tLock : 0); timing_('work', tIn ? Date.now() - tIn : 0);
   if (SAVE_TIMING_) { SAVE_TIMING_.table = 'add_many'; SAVE_TIMING_.items = items.length; }
@@ -363,15 +406,15 @@ function assertCheckMayLog_(type, day) {
   }
 }
 
-/** True when this check's setting says one session row. add_session with the switch off is refused. */
+/** One session row for Present, Health check all, and Exercise all, unless Settings says off. add_session while off is refused. */
 function sessionWanted_(type, day, action) {
-  var on = false;
-  if (type && SESSION_TYPE_[type.type_key]) {
+  var on = !!(type && SESSION_TYPE_[type.type_key]);
+  if (on) {
     var s = checkSettingFor_(type.type_key, day);
-    on = !!(s && String(s.session_row || '').toLowerCase() === 'true');
+    if (s && String(s.session_row || '').toLowerCase() === 'false') on = false;
   }
   if (action === 'add_session' && !on) {
-    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'Turn on one line for the round in Settings first.' } });
+    throw err_('INVALID', 'This check is saved one line per dog.', { fields: { check_type_id: 'One line for the round is off in Settings.' } });
   }
   return on;
 }
@@ -394,13 +437,10 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
   var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: f.how_recorded || ((room && !session) ? '' : 'site_tap') };
+  if (f.confirm_unusual) fields.confirm_unusual = f.confirm_unusual;   // Import (PR #770) sends this for a date 7 days or older; it is not a column
   if (room || (session && f.area_id)) fields.area_id = f.area_id;
   if (!session && scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
-  var target = store_read_(spec.file, true);
-  if (!sameHeader_(target.header, spec.columns)) {
-    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
-  }
   var lookups = store_lookups_(spec, tenant, req.fields);
   var v = validateInput_(spec, fields, lookups, nowMs);
   var dogs = validateInput_({ input: { dog_ids: { type: 'idlist', lookup: 'subject', required: true } } }, { dog_ids: f.dog_ids }, lookups, nowMs);
@@ -413,7 +453,16 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var occ = store_read_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
   var ids = {}, rows = [], made = [], kept = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
-  target.records.forEach(function (r) { ids[r.id] = true; });
+  // A session row is one ordinary add (it reads the log itself). A per-dog tap reads the tail, not every column.
+  var read = null, pool = null;
+  if (!session) {
+    read = appendRead_(spec, { action: 'add', fields: fields }, nowMs);
+    if (!sameHeader_(read.target.header, spec.columns)) {
+      throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+    }
+    pool = dupRows_(read);
+    fillIds_(read, ids);
+  }
   dogs.clean.dog_ids.split('|').forEach(function (dog) {
     var at = occupancyLatest_(occ, dog);
     if (at && (String(at.off_site_kind || '') !== '' || permanentlyGone_(at))) { left.off_site++; return; }
@@ -423,7 +472,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     if (session) { kept.push(dog); return; }
     var clean = {}; for (var k in v.clean) if (Object.prototype.hasOwnProperty.call(v.clean, k)) clean[k] = v.clean[k];
     clean.subject_id = dog;
-    if (findDuplicate_(spec, clean, target.records, nowMs, today)) { left.repeat++; return; }
+    if (findDuplicate_(spec, clean, pool, nowMs, today)) { left.repeat++; return; }
     var rowId = newId_(spec.idPrefix, now);
     while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
     ids[rowId] = true;
@@ -443,16 +492,46 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     fields.subject_id = '';
     req.fields = fields; req.action = 'add';
     var one = sinkProcess_(spec, req, who, now, nowMs);
-    one.saved = 1; one.covered = covered.length; one.left_out = left; one.session = true;
+    one.saved = 1; one.covered = covered.length; one.covered_ids = fields.covered_ids; one.exceptions = fields.exceptions || ''; one.left_out = left; one.session = true;
     return one;
   }
   if (!rows.length) {
     if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.', { duplicate_of: '' });
     throw err_('INVALID', room ? 'None of those dogs are shown in this room.' : 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
   }
-  try { store_appendMany_(spec.file, spec.columns, rows, target); }
+  try { store_appendMany_(spec.file, spec.columns, rows, read.target); }
   catch (e) { logWriteFailure_(e, spec, made[0].id, who.who, now); throw e; }
   return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at, who: who.who };
+}
+
+/**
+ * Read a table before an append. fastAppend tables (room temperatures, and the job log) do not read every column of
+ * every row. The last SAVE_TAIL_ROWS rows are read in full. Every other row contributes only its id and its time,
+ * and only when every row inside the repeat window sits in that tail (rows are appended, so a normal save does).
+ * If a row inside the window sits higher up, the columns the repeat check compares are read for every row: still
+ * not the whole sheet. A correction, or a table without fastAppend, reads every row as before.
+ * Returns {target, tailOnly, fast, tailWanted, file}. Nothing is written.
+ */
+function appendRead_(spec, req, nowMs) {
+  var fast = !!spec.fastAppend && req && req.action === 'add' && !spec.checkAgainst;
+  var fields = req && req.fields;
+  var tailWanted = fast && !!spec.dupTimeCol && !lateSlot_(spec, fields, nowMs);
+  var tailOnly = tailWanted;
+  var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, tailOnly ? ['id', spec.dupTimeCol] : fastCols_(spec)) : store_read_(spec.file, true);
+  if (tailOnly && target.tail && !target.complete && windowAboveTail_(spec, target, nowMs)) {
+    tailOnly = false;
+    target = store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec));
+  }
+  return { target: target, tailOnly: tailOnly, fast: fast, tailWanted: tailWanted, file: spec.file };
+}
+/** Rows a duplicate check must see: the last rows in full, or every row's checked columns when the window sits higher up. */
+function dupRows_(read) {
+  return read.target.tail && !read.tailOnly ? fastRecords_(read.target) : read.target.records;
+}
+/** Ids already used. A tail read still carries every id, so a new id cannot collide with an old row. */
+function fillIds_(read, ids) {
+  dupRows_(read).forEach(function (r) { if (r && r.id) ids[r.id] = true; });
+  if (read.tailOnly && read.target.full && read.target.full.id) read.target.full.id.forEach(function (id) { if (id) ids[id] = true; });
 }
 
 /** The columns a fast append reads for every row: id and whatever the repeat checks compare (sameSlot_ included). */
@@ -495,25 +574,24 @@ function fastRecords_(read) {
   return out;
 }
 
-function sinkProcess_(spec, req, who, now, nowMs) {
+function sinkProcess_(spec, req, who, now, nowMs, held) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
   if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
 
-  // fastAppend (16 Nov 2026, saves took ~25 s on ~31,000 rows): an add reads the last rows in full and, for EVERY row,
-  // only the columns the repeat and id checks look at, so the checks still cover the whole table. A correction needs
-  // the whole row it points at, so it reads everything as before.
-  var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
-  // 22 Nov 2026 (saves 30-62 s, the lock held while ~5 columns of every row were read): a repeat is only a repeat
-  // inside DUP_WINDOW_MIN of its time, so for a recent slot every row needs only its id and its time. If every row
-  // inside the window is among the last rows (read in full), those rows are all the repeat check needs: the same
-  // answer, about 2 columns read instead of 5. A row inside the window above the last rows (the sheet was sorted),
-  // or a late reading (sameSlot_ looks at every row for that slot): every checked column is read, as before.
-  var tailOnly = fast && !!spec.dupTimeCol && !spec.dupNewestBy && !lateSlot_(spec, req.fields, nowMs);
+  // fastAppend (16 Nov 2026, saves took ~25 s on ~31,000 rows): an add reads the last rows in full and, for the rest,
+  // only id and time when the repeat window is inside that tail. The job log uses the same read (25 Nov 2026): a
+  // Present tap was reading every column of every row. A correction still reads the whole row it points at.
+  // A list save passes `held` so the next item in the same lock reuses this read instead of reading the sheet again.
   var tRead = Date.now();
-  var target = fast ? store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, tailOnly ? ['id', spec.dupTimeCol] : fastCols_(spec)) : store_read_(spec.file, true);
-  if (tailOnly && target.tail && !target.complete && windowAboveTail_(spec, target, nowMs)) {
-    tailOnly = false;
-    target = store_readTail_(spec.file, BLD.LIMITS.SAVE_TAIL_ROWS, fastCols_(spec));
+  var fast = !!spec.fastAppend && req.action === 'add' && !spec.checkAgainst;
+  var tailWanted = fast && !!spec.dupTimeCol && !lateSlot_(spec, req.fields, nowMs);
+  var read, tailOnly, target;
+  if (held && held.read && held.read.file === spec.file && held.read.fast === fast && held.read.tailWanted === tailWanted) {
+    read = held.read; tailOnly = read.tailOnly; target = read.target;
+  } else {
+    read = appendRead_(spec, req, nowMs);
+    tailOnly = read.tailOnly; target = read.target; fast = read.fast;
+    if (held) held.read = read;
   }
   timing_(fast ? (tailOnly ? 'read_tail' : 'read_fast') : 'read', Date.now() - tRead);
   if (!sameHeader_(target.header, spec.columns)) {
@@ -564,8 +642,9 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
   }
 
+  var extra = (held && held.extra) || [];
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, all.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, all.concat(waiting), nowMs) : null);
+    var dup = findDuplicate_(spec, v.clean, all.concat(waiting, extra), nowMs, today) || (late ? sameSlot_(late, v.clean, all.concat(waiting, extra), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
@@ -573,8 +652,8 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   var ids = {};
-  all.forEach(function (r) { ids[r.id] = true; });
-  if (tailOnly && target.full && target.full.id) target.full.id.forEach(function (id) { ids[id] = true; });   // a new id is still checked against every row
+  fillIds_(read, ids);   // a new id is still checked against every row, including rows above the tail
+  extra.forEach(function (r) { if (r && r.id) ids[r.id] = true; });
   var rowId = newId_(spec.idPrefix, now);
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
 
@@ -597,9 +676,18 @@ function sinkProcess_(spec, req, who, now, nowMs) {
       try { store_appendMany_(vSpec.file, vSpec.columns, vRows, form.read); }
       catch (e) { logWriteFailure_(e, vSpec, rowId, who.who, now); throw e; }
     }
+    var written = rowValues_(spec.columns, row);
+    // A list of plain adds is written once, after every item in the list has been checked. The rows accepted
+    // earlier in this list are already in `extra`, so a second tap of the same dog is still a repeat.
+    if (held && held.defer && !(form && form.answers.length) && !spec.qrKind) {
+      held.extra.push(row);
+      var staged = { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '', who: who.who };
+      held.defer.push({ spec: spec, written: written, target: target, result: staged, rid: String(req.request_id || '') });
+      return staged;
+    }
     var tWrite = Date.now();
     try {
-      store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
+      store_append_(spec.file, spec.columns, written, target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
     timing_('write', Date.now() - tWrite);
     // 15 Nov 2026 (print job, Addendum 2): a new item's QR code in the same save, when the owner's qr.on_add rule says yes.

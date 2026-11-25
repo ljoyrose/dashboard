@@ -172,6 +172,40 @@ test('a script with no list save yet: the list is answered "Unknown action", not
   await expect(page.locator('#hub-outbox')).toBeHidden();
 });
 
+test('Send now sends the kept round taps as one list, not one at a time @regression', async ({ page }) => {
+  const sent = [];
+  const urls = [];
+  page.on('request', (r) => { if (r.method() === 'POST') urls.push(r.url()); });
+  await page.route(SINK, async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    sent.push(body);
+    const out = body.action === 'add_many'
+      ? { ok: true, result: { status: 'many', items: (body.items || []).map((it) => ({ request_id: it.request_id, ok: true, result: { status: 'saved', id: 'clg-x' } })) } }
+      : { ok: true, result: { status: 'saved', id: 'clg-one' } };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(out) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await page.evaluate((url) => {
+    window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' });
+    const items = ['a', 'b', 'c'].map((k) => ({
+      id: 'cd-kept-' + k + '00001',
+      at: new Date().toISOString(),
+      body: { v: 1, request_id: 'cd-kept-' + k + '00001', table: 'check_log', action: 'add', fields: { check_type_id: 'cty-' + k, subject_id: 'sub-' + k, outcome: 'recorded' } }
+    }));
+    localStorage.setItem('cdhub.outbox', JSON.stringify(items));
+    hubStopSending();
+    hubBoxDraw();
+  }, SINK);
+  const bar = page.locator('#hub-outbox');
+  await expect(bar.locator('[data-outbox-waiting="3"]')).toContainText('not sent yet');
+  await bar.locator('[data-outbox-send]').click();
+  await expect(bar).toBeHidden();
+  expect(sent.map((b) => b.action), urls.join('\n')).toEqual(['add_many']);
+  expect(sent[0].items.map((it) => it.fields.check_type_id).sort()).toEqual(['cty-a', 'cty-b', 'cty-c']);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+});
+
 test('a list save keeps each item\'s form answers', async ({ page }) => {
   const { sent, answers } = await listPage(page, false);
   expect(answers.map((a) => a.ok)).toEqual([true, true, true]);

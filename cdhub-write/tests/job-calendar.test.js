@@ -109,6 +109,37 @@ test('a vet visit shows on the per-dog calendar day (marker and details), not on
   assert.match(html, /vet visit<\/p>/);                                // the key explains the marker
 });
 
+test('a vet visit stays on the health-check calendar and is not shown on Exercise and play @regression', () => {
+  const exercise = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
+  const shared = {
+    types: types.concat([exercise]),
+    dmy: (s) => s, dogNames: { d1: 'Dezi Pokey' },
+    vetVisits: [{ subject_id: 'd1', performed_on: '2026-10-29', start_time: '', kind: 'appointment', status: 'done', reason: 'Two lesions on ear flap, likely tick bite; Isaderm gel' }],
+    rules: [
+      { rule_key: 'compliance.calendar.health_check_all', value: '1', effective_from: '2026-01-01' },
+      { rule_key: 'compliance.calendar.exercise_all', value: '2', effective_from: '2026-01-01' }
+    ]
+  };
+  const exHtml = C.html(Object.assign(base([log('1', 'cty-hc', '2026-11-10', 'd1')]), shared, { calOpen: { key: 'exercise_all', iso: '2026-10-29' } }), '2026-10', false);
+  const ex = exHtml.slice(exHtml.indexOf('data-jcal="exercise_all"'));
+  assert.doesNotMatch(ex, /data-jcal-vet/);
+  assert.doesNotMatch(ex, /Dezi Pokey/);
+  assert.doesNotMatch(ex, /Isaderm/);
+  assert.doesNotMatch(ex, /class="jd [^"]*\bvet\b/);
+  const hcHtml = C.html(Object.assign(base([log('1', 'cty-hc', '2026-11-10', 'd1')]), shared, { calOpen: { key: 'health_check_all', iso: '2026-10-29' } }), '2026-10', false);
+  const hc = hcHtml.slice(hcHtml.indexOf('data-jcal="health_check_all"'), hcHtml.indexOf('data-jcal="exercise_all"'));
+  assert.match(hc, /data-jcal-vet/);
+  assert.match(hc, /Dezi Pokey/);
+  assert.match(hc, /Isaderm gel/);
+});
+
+test('one session row marks every listed dog done, and an exception stays outstanding', () => {
+  const v = base([log('s', 'cty-hc', '2026-11-16', '', { subject_id: '', covered_ids: 'd1|d2', exceptions: 'd2:concern:limping' })]);
+  const day = C.month(v, 'health_check_all', '2026-11').cells.find((c) => c.iso === '2026-11-16');
+  assert.equal(day.got, 1);
+  assert.equal(day.state, 'part');
+});
+
 // Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
 test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
   const v = base([log('1', 'cty-fb', '2026-11-10')]);
