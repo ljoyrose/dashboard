@@ -49,7 +49,7 @@
         var r = el(doc, 'div', 'row'); r.appendChild(p); r.appendChild(send); r.appendChild(rm); box.appendChild(r);
       });
       rf.forEach(function (x) {
-        var p2 = el(doc, 'p', '', 'Not saved: ' + what(x.fields, x.table) + ' (' + hhmm(x.at) + '). ' + (x.message || x.code || '') + ' Enter it again.');
+        var p2 = el(doc, 'p', '', 'Not saved: ' + what(x.fields, x.table) + ' (' + hhmm(x.at) + '). ' + (x.message || x.code || '') + ' It will not be sent again.');
         p2.setAttribute('data-outbox-refused', x.id);
         var ok = btn(doc, 'OK', true, function () { save.outbox.dismissRefused(x.id); });
         var r2 = el(doc, 'div', 'row'); r2.appendChild(p2); r2.appendChild(ok); box.appendChild(r2);

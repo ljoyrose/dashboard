@@ -3043,7 +3043,9 @@ async function photoEdit(dog,fileId,msg){
   if(gl){ var y=dayMinus(day,1), to=String(gl.from_date||'').slice(0,10)<=y?y:day;
    await add('gallery');
    var e=await sinkAct('link_end',{id:gl.id,to_date:to,reason:GAL_EDITED});
-   if(!(e.ok&&e.result&&e.result.status==='saved')) throw new Error(sinkMsg(e));
+   var endedOk=e&&e.ok&&e.result&&e.result.status==='saved';
+   var endedAlready=e&&!e.ok&&e.code==='NOT_ALLOWED'&&/already ended/i.test(e.message||'');
+   if(!endedOk&&!endedAlready) throw new Error(sinkMsg(e));
    gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
  }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
@@ -4581,8 +4583,9 @@ function hubRefuse(id,j){
   hubPut(HUB_REFUSED,rf.slice(-50)); }
  hubDrop(id);
 }
+function hubAlreadyEnded(j){ return !!(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')); }
 function hubSettle(id,j,auth){
- if(j&&(j.ok||j.code==='DUPLICATE')){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
+ if(j&&(j.ok||j.code==='DUPLICATE'||hubAlreadyEnded(j))){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
  if(j&&!j.ok&&hubTerminal(j)){ hubRefuse(id,j); return true; }
  if(j&&!j.ok&&HUB_SIGN_IN[j.code]){ if(auth!=null) HUB_AUTH_WAIT=auth; hubBoxDraw(); if(!hubStop) hubRetry(60000); return false; }
  if(j&&!j.ok&&j.code&&!HUB_RETRY[j.code]){ hubRefuse(id,j); return true; }
