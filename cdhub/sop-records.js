@@ -265,13 +265,20 @@
   }
 
   /** Yearly-print source ids for this SOP (check:<type_key> plus the fixed tables). Empty until that catalogue is passed in. */
+  /** Yearly-print source ids for this SOP: its known checks, its fixed tables, and any check whose SOP name matches. */
   function yearlyIds(name, catalogue) {
     var spec = specOf(name), want = {};
-    typesFor([], name); /* slug is always a candidate */
     (spec.keys || []).forEach(function (k) { want['check:' + k] = 1; });
     want['check:' + slug(name)] = 1;
     (spec.yearlyIds || []).forEach(function (id) { want[id] = 1; });
-    return (catalogue || []).filter(function (s) { return s && want[s.id]; }).map(function (s) { return s.id; });
+    return (catalogue || []).filter(function (s) {
+      if (!s) return false;
+      if (want[s.id]) return true;
+      if (s.kind !== 'check') return false;
+      var sop = s.type && str(s.type.sop);
+      if (!sop && s.typeKey) sop = KEY_SOP[str(s.typeKey)] || '';
+      return sop === name;
+    }).map(function (s) { return s.id; });
   }
 
   function recordWords(spec) {

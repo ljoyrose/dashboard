@@ -79,8 +79,13 @@ test('Print records for a month keeps that month’s mating and leaves last mont
   expect(pack.head.which).toBe('Mating Plan');
   expect(pack.lines).toHaveLength(1);
   expect(pack.lines[0]).toMatchObject({ date: '2026-11-02', check: 'Mating', subject: 'Ada' });
-  const cat = [{ id: 'check:mating_plan', typeKey: 'mating_plan' }, { id: 'mating' }, { id: 'weight' }];
-  expect(R.yearlyIds('Mating Plan', cat)).toEqual(['check:mating_plan', 'mating']);
+  const cat = [
+    { id: 'check:mating_plan', kind: 'check', typeKey: 'mating_plan' },
+    { id: 'mating', kind: 'table' },
+    { id: 'weight', kind: 'table' },
+    { id: 'check:custom', kind: 'check', typeKey: 'custom', type: { sop: 'Mating Plan' } }
+  ];
+  expect(R.yearlyIds('Mating Plan', cat)).toEqual(['check:mating_plan', 'mating', 'check:custom']);
 });
 
 test.describe('CD Hub: SOP record and print', () => {
@@ -102,7 +107,8 @@ test.describe('CD Hub: SOP record and print', () => {
     await expect(body.getByRole('link', { name: 'Print records' })).toBeVisible();
     await body.getByRole('link', { name: 'Print records' }).click();
     await expect.poll(() => page.evaluate(() => window.__printed || 0)).toBe(1);
-    await expect(page.locator('#ckrReport')).toContainText('Sign-Off');
+    await expect(page.locator('#ypReport')).toContainText('Declarations');
+    await expect(page.locator('#ypReport')).toContainText('Verifications');
     await body.getByRole('button', { name: 'Checked today' }).click();
     await expect.poll(() => sent.length).toBe(2);
     expect(sent[0].table).toBe('check_type');

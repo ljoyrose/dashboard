@@ -141,6 +141,19 @@ test('a Sheet is the first tab, and the photo header is used even when it is not
   assert.equal(rows[2][rows[0].indexOf('name')], 'Test B');
 });
 
+test('remove clears the photo cell and does not store a new file', () => {
+  const env = ready();
+  const saved = post(env, photoBody(env));
+  assert.equal(saved.ok, true);
+  const gone = post(env, photoBody(env, { fields: { subject_id: 'sub-test-a', remove: 'yes' } }));
+  assert.equal(gone.ok, true, JSON.stringify(gone));
+  assert.equal(gone.result.file_id, '');
+  assert.equal(env.photos.length, 1);
+  const t = cells(env);
+  assert.equal(t.rows[0][t.head.indexOf('photo')], '');
+  assert.equal(t.rows[0][t.head.indexOf('note')], 'keep');
+});
+
 test('saving switched off refuses the picture and writes nothing', () => {
   const env = ready();
   env.props.SAVE_ENABLED = 'false';
