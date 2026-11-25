@@ -409,6 +409,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Lisa, live SOPs: a due check (annual microchip audit, 27 dogs) listed what was expected and gave no way to record it as done | "Mark all saves each ticked dog, and a litter check saves litter_id @regression" (tests/mocked/cdhub-jobs.spec.js) |
 | 25 Nov 2026 | Daily records: done days were grey buttons, so the green / orange / red / blue key did not show on the calendar | "daily records: done, part done and missed look different (not by colour alone), the key matches, and the cross reads in light and dark @regression" (tests/mocked/cdhub-job-calendar.spec.js) |
 | 25 Nov 2026 | A save the records refused (no code, or a field error such as a date over 7 days) was sent again every minute and each failure added another notice | "a validation failure with no code is not retried; one job is one notice, with Clear all and Show what is wrong @regression" (tests/mocked/cdhub-never-lose.spec.js) |
+| 25 Nov 2026 | #582's merge left the published staff copy of bld-save.js on a 5-hour outbox while the client copy was 23 hours | "the two bld-save.js copies are the same file @regression" (tests/mocked/bld-save-copies.spec.js; the write-path suite runs the same check in cdhub-write/tests/bld-save-copies.test.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

@@ -223,11 +223,16 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   expect(f.ring).not.toMatch(TRANSPARENT);
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/dates$/);
+  // The hash change focuses the page title after the address has already changed. Wait for that,
+  // or it can take the focus back off the More menu (the keyboard check then sees Control unfocused).
+  await expect(page.locator('#hereTitle')).toBeFocused();
   // More by keyboard: Enter opens, the first view takes the focus, Enter goes there.
   const more = page.locator('nav.house-tabs [data-house-more]');
+  const control = page.locator('#houseMore a', { hasText: 'Control' });
   await more.focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator('#houseMore a', { hasText: 'Control' })).toBeFocused();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await expect(control).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#\/control$/);
 });
