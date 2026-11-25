@@ -396,7 +396,10 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.locator(`[data-pcorrect="${sid}"][data-area="${area}"]`).click();
     await page.locator(`button[data-nothere="${sid}"][data-area="${area}"]`).click();
     await expect.poll(() => bodies.length).toBe(1);
-    expect(bodies[0].fields).toMatchObject({ check_type_id: 'cty-round_presence-1', subject_id: sid, item: 'not here', corrects_id: 'clg-am' });
+    expect(bodies[0].action).toBe('add_session');
+    expect(bodies[0].fields).toMatchObject({ check_type_id: 'cty-round_presence-1', outcome: 'recorded', corrects_id: 'clg-am' });
+    expect(bodies[0].fields.dog_ids).toContain(sid);
+    expect(bodies[0].fields.exceptions).toContain(sid + ':not_here');
   });
 
   test('Round "add a dog": puppies under their litter heading, a whole-litter-with-dam choice, cabin names not codes', async ({ page, guard }) => {
