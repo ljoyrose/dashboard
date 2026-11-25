@@ -35,6 +35,35 @@ function put(world, name, content) {
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
 
+test('a parasite dose is on the dog card medications, once, newest first @regression', async ({ page, guard }) => {
+  const w = guard.world;
+  put(w, 'BLD-subject.csv', SUBJECT);
+  put(w, 'BLD-subject_status.csv', STATUS);
+  put(w, 'BLD-dispense.csv', csv('id,subject_id,given_on,product,dose_volume,route,note', [
+    'm1,sub-x1,2026-11-01,Moxiclear,1 pipette,Topical,'
+  ]));
+  put(w, 'BLD-check_type.csv', csv('id,tenant_id,type_key,label,target,active,effective_from', [
+    'cty-parasites-1,t,parasites,Flea worm and tick,dog,true,2026-01-01',
+    'ct-med,t,medicine,Medicine given,dog,true,2026-01-01'
+  ]));
+  put(w, 'BLD-check_log.csv', csv('id,tenant_id,check_type_id,subject_id,item,amount,outcome,happened_at,note,taken_by', [
+    'clg-1,t,cty-parasites-1,sub-x1,Moxiclear,1 pipette,ok,2026-11-01T12:00:00Z,backfill Lisa 25 Nov,Lisa Carson',
+    'clg-2,t,cty-parasites-1,sub-x1,Panacur,4.5 ml,ok,2026-11-20T12:00:00Z,with food,Lisa Carson',
+    'clg-3,t,ct-med,sub-x1,Propofol,2 ml,ok,2026-11-21T12:00:00Z,vet procedure,Lisa Carson'
+  ]));
+  await HUBS.cdhub.open(page, guard);
+  await page.evaluate(() => go('dogs/sub-x1'));
+  const card = page.locator('#rows article.dc');
+  await expect(card.locator('[data-k="meds"]')).toContainText('2 medications');
+  await card.locator('details.meds summary').click();
+  const rows = card.locator('details.meds .dcs-bd > .dcs-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('Panacur');
+  await expect(rows.nth(1)).toContainText('Moxiclear');
+  await expect(card.locator('details.meds')).not.toContainText('Propofol');
+  await expect(card.locator('details.meds')).not.toContainText('backfill');
+});
+
 test.describe('CD Hub dog card summary', () => {
   test('weight change, last medication, DNA pills and litters as dam', async ({ page, guard }) => {
     const w = guard.world;
