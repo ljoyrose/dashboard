@@ -132,7 +132,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .card .card{box-shadow:none}
 
 
-.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.gx):not(.ged),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
+.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.gx):not(.ged):not(.gpick),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate,.frow input{font-weight:400;cursor:text}
@@ -142,7 +142,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
 @media (hover:hover){.filt select:hover, .fpanel select:hover, .frow select:hover {background:var(--hov);}
-.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not(.jd):not(.gx):not(.ged):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):not(.jd):not(.gx):not(.ged):not(.gpick):hover, .sortsel:hover, .mrow.go:hover {background:var(--hov);}}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{background:var(--sel-fill);outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 .sv-line{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}.sv-ic{display:inline-flex}.sv-ic svg{width:16px;height:16px}
@@ -158,7 +158,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .sbox input:is(:focus,:focus-visible){outline:none!important}
 .sbox:focus-within{border-color:var(--ink)}
 /* any touch screen too (Lisa 17 Nov 2026: the folding phone open is 860px wide) */
-@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.gx):not(.ged),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
+@media (max-width:544px),(pointer:coarse){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel):not(.jd):not(.gx):not(.ged):not(.gpick),.filt select,.filt textarea,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate,.frow select,.frow input{min-height:44px}}
 
 
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
@@ -413,6 +413,11 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 #main .gph .gx,#main .gph .ged{box-sizing:border-box;position:absolute;top:4px;width:24px;height:24px;min-width:24px;min-height:24px;max-width:24px;max-height:24px;padding:0;border-radius:999px;display:flex;align-items:center;justify-content:center;
  background:color-mix(in srgb,var(--card) 65%,transparent);color:var(--ink);border:1px solid var(--line);font-size:14px;line-height:1;cursor:pointer;opacity:.85}
 .gx{right:4px}.ged{left:4px}
+#main .gph .gpick{box-sizing:border-box;position:absolute;left:4px;bottom:4px;width:24px;height:24px;min-width:24px;min-height:24px;max-width:24px;max-height:24px;padding:0;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 80%,transparent);color:var(--ink);font-size:14px;line-height:1;cursor:pointer}
+.gal:not([data-select]) .gpick{display:none}
+.gpick[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.gal-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gal:not([data-select]) .gal-bulk{display:none}
 .gx:focus-visible,.ged:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
 .gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
 .gi .gtools .cb{font-size:var(--fs-small)}
@@ -2863,9 +2868,8 @@ function loadGalleryThumb(img){
 }
 function fetchThumb(img,id,link){
  if(PHOTO_MEM[id]&&PHOTO_MEM[id].thumb){ photoShow(img,PHOTO_MEM[id].thumb,id); return; }
- fetch(link).then(function(res){ if(!res.ok) throw new Error('thumb'); return res.blob(); }).then(function(blob){
-  photoCachePut('thumb',id,blob); if(img.isConnected) photoShow(img,photoMemUrl(id,'thumb',blob),id);
- }).catch(function(){ if(img.isConnected) photoShow(img,link,id); });
+ var slot=PHOTO_MEM[id]||(PHOTO_MEM[id]={}); slot.thumb=link;   /* the small address, so the next paint does not ask Drive again */
+ photoShow(img,link,id);   /* the picture itself is the browser's own cache; a second fetch here was a console error */
 }
 function photoFull(id){
  if(!id) return Promise.resolve('');
@@ -2946,7 +2950,8 @@ function galleryTools(f,main,ended){
 /* the × and ✎ that sit on a gallery photo (not in the Ended list) */
 function galleryPhotoMarks(f,ended){
  if(ended||!f.link_id) return '';
- return '<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
+ return '<button type="button" class="gpick" data-gal-pick="'+esc(f.id)+'" aria-pressed="false" aria-label="Select this photo">\u2713</button>'
+  +'<button type="button" class="ged" data-gal-edit="'+esc(f.id)+'" aria-label="Crop or adjust this photo" title="Crop or adjust">\u270e</button>'
   +'<button type="button" class="gx" data-gal-end="'+esc(f.link_id)+'" aria-label="Remove this photo from the gallery" title="Remove">\u00d7</button>';
 }
 function galleryItem(f,mainId,dates,ended){
@@ -2956,22 +2961,48 @@ function galleryItem(f,mainId,dates,ended){
   var host=u.replace(/^https?:\/\//i,'').split(/[\/?#]/)[0];
   return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="link"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name||host)+'</a> '+cap+'</li>'; }
  var id=dogPhotoId(f.drive_file_id); if(!id) return '';
- if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
+ if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-link="'+esc(f.link_id||'')+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" loading="lazy" decoding="async" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryHtml(d,ph){
- if(!ph.gallery.length&&!ph.ended.length) return '';
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
+ if(!ph.gallery.length) return '';   /* an ended link stays in the sheet and is not shown on the card (Lisa, 25 Nov 2026) */
+ var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO()), photos=ph.gallery.some(function(f){ return f.kind==='photo'; });
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
   +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates,true); }).join('')+'</ul></details>':'')
-  +(ph.gallery.some(function(f){ return f.kind==='photo'; })?'<button type="button" class="btn" data-photo-sort="'+esc(d.id)+'">Sort photos</button>':'')
+  +(photos?'<button type="button" class="btn" data-gal-select="'+esc(d.id)+'">Select</button><span class="gal-bulk"><button type="button" class="btn" data-gal-bulk="'+esc(d.id)+'">Remove selected</button></span><button type="button" class="btn" data-photo-sort="'+esc(d.id)+'">Sort photos</button>':'')
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
-var GAL_REMOVED='Removed from gallery';
+var GAL_REMOVED='Removed from gallery', GAL_LISA='Removed by Lisa', GAL_PICK={};
+function galleryBulkRemove(dog){
+ var g=galBox(dog); if(!g) return;
+ var picks=g.querySelectorAll('.gpick[aria-pressed="true"]'), n=picks.length; if(!n) return;
+ if(!window.confirm('Remove '+n+' photo'+(n===1?'':'s')+' from the gallery? The files are kept.')) return;
+ var links=T['BLD-links.csv']||[], ends=[], files=[];
+ Array.prototype.forEach.call(picks, function(btn){
+  var li=btn.closest('.gi'), id=li&&li.getAttribute('data-link');
+  var row=links.filter(function(l){ return l.id===id; })[0];
+  if(!row||String(row.to_date||'').trim()) return;
+  var to=galEndDate(row);
+  row.to_date=to; row.end_reason=GAL_LISA; row._local=1; linkEndKeep(id,to,GAL_LISA);
+  ends.push({id:id, to_date:to}); if(li) files.push(li.getAttribute('data-file'));
+ });
+ delete GAL_PICK[dog];
+ var sel=g.querySelector('[data-gal-select]'); if(sel) sel.textContent='Select';
+ g.removeAttribute('data-select');
+ gallerySync(dog);   /* the chosen tiles go at once; the rest stay */
+ files.forEach(function(fid){ clearCardPhoto(dog, fid); });
+ var msg=g.querySelector('[data-gal-msg]'); if(msg) msg.textContent=ends.length+' saving';
+ sinkSend({action:'link_end', fields:{reason:GAL_LISA, ends:ends}, request_id:sinkRid()}).then(function(j){
+  var ok=j&&j.ok&&j.result&&j.result.status==='saved';
+  function say(t){ var box=galBox(dog), m=box&&box.querySelector('[data-gal-msg]'); if(m) m.textContent=t; }
+  if(ok){ say('\u2713 Removed '+ends.length); return; }
+  ends.reduce(function(p,e){ return p.then(function(){ return sinkSend({action:'link_end', fields:{id:e.id, to_date:e.to_date, reason:GAL_LISA}, request_id:sinkRid()}); }); }, Promise.resolve())
+   .then(function(){ say('\u2713 Removed '+ends.length); });
+ });
+}
 /* Take a removed photo off the dog card: end any other open link to the same file, and clear the old photo cell when it is that file. */
 async function clearCardPhoto(dog, fileRowId){
  var files=T['BLD-files.csv']||[], links=T['BLD-links.csv']||[], d=CD._byId[dog]||{}, day=todayLondon();
@@ -3008,6 +3039,7 @@ function linkEndsGet(){ try{ var o=JSON.parse(localStorage.getItem(LINK_ENDS_KEY
 function linkEndsSet(o){ try{ if(Object.keys(o).length) localStorage.setItem(LINK_ENDS_KEY,JSON.stringify(o)); else localStorage.removeItem(LINK_ENDS_KEY); }catch(e){ /* private window: this visit still shows it */ } }
 var LINK_ENDS_MEM={};   /* the same, for a phone that will not keep it */
 function linkEndKeep(id,to,reason){ var o=linkEndsGet(); o[id]={to_date:to,end_reason:reason,at:Date.now()}; LINK_ENDS_MEM[id]=o[id]; linkEndsSet(o); }
+function linkEndDrop(id){ var o=linkEndsGet(); if(!o[id]&&!LINK_ENDS_MEM[id]) return; delete o[id]; delete LINK_ENDS_MEM[id]; linkEndsSet(o); }
 function linkEndsApply(){
  var o=linkEndsGet(); Object.keys(LINK_ENDS_MEM).forEach(function(k){ if(!o[k]) o[k]=LINK_ENDS_MEM[k]; });
  var ids=Object.keys(o); if(!ids.length) return;
@@ -3191,14 +3223,7 @@ function gallerySync(dog){
   Array.prototype.forEach.call(ul.querySelectorAll(':scope > .gi'),function(li){ if(!keep[li.getAttribute('data-file')]) li.remove(); });
  }
  fill(ph.gallery,open,false);
- var ended=ph.ended||[], det=bd.querySelector(':scope > details.gal-ended');
- if(ended.length){
-  if(!det){ det=document.createElement('details'); det.className='gal-ended'; det.setAttribute('data-k','ended');
-   det.innerHTML='<summary>Ended ('+ended.length+')</summary><ul class="glist"></ul>';
-   var anchor=bd.querySelector('[data-photo-sort]')||bd.querySelector('[data-gal-msg]'); bd.insertBefore(det,anchor);
-  } else { var sum=det.querySelector(':scope > summary'); if(sum) sum.textContent='Ended ('+ended.length+')'; }
-  fill(ended,det.querySelector('ul.glist'),true);
- } else if(det) det.remove();
+ var det=bd.querySelector(':scope > details.gal-ended'); if(det) det.remove();   /* ended links are not listed */
  cardPhotoSync(dog,ph);
 }
 function photoSortClose(){
@@ -3246,6 +3271,19 @@ function photoSortOpen(dog){
 document.addEventListener('click',async function(ev){
  var sortBtn=ev.target&&ev.target.closest?ev.target.closest('[data-photo-sort]'):null;
  if(sortBtn){ ev.preventDefault(); photoSortOpen(sortBtn.getAttribute('data-photo-sort')); return; }
+ var selBtn=ev.target&&ev.target.closest?ev.target.closest('[data-gal-select]'):null;
+ if(selBtn){ ev.preventDefault(); var sd=selBtn.getAttribute('data-gal-select'), sg=galBox(sd); if(!sg) return;
+  if(sg.getAttribute('data-select')){ delete GAL_PICK[sd]; sg.removeAttribute('data-select'); selBtn.textContent='Select'; }
+  else { GAL_PICK[sd]={}; sg.setAttribute('data-select','1'); selBtn.textContent='Done'; }
+  var sb=sg.querySelector('[data-gal-bulk]'); if(sb) sb.textContent='Remove selected'; return; }
+ var tick=ev.target&&ev.target.closest?ev.target.closest('[data-gal-pick]'):null;
+ if(tick){ ev.preventDefault(); var tg=tick.closest('details.gal'), td=tg&&tg.getAttribute('data-dog'), on=tick.getAttribute('aria-pressed')!=='true';
+  tick.setAttribute('aria-pressed', on?'true':'false'); var bag=GAL_PICK[td]||(GAL_PICK[td]={});
+  if(on) bag[tick.getAttribute('data-gal-pick')]=1; else delete bag[tick.getAttribute('data-gal-pick')];
+  var nb=tg.querySelectorAll('.gpick[aria-pressed="true"]').length, bb=tg.querySelector('[data-gal-bulk]');
+  if(bb) bb.textContent='Remove selected'+(nb?' ('+nb+')':''); return; }
+ var bulk=ev.target&&ev.target.closest?ev.target.closest('[data-gal-bulk]'):null;
+ if(bulk){ ev.preventDefault(); galleryBulkRemove(bulk.getAttribute('data-gal-bulk')); return; }
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
@@ -3258,7 +3296,11 @@ document.addEventListener('click',async function(ev){
   j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
   if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
   if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
-   if(row.id){ row.to_date=wasTo; row.end_reason=wasWhy; } gallerySync(dog);
+   linkEndDrop(id);
+   var back=(T['BLD-links.csv']||[]).filter(function(l){ return l.id===id; })[0];
+   if(back){ back.to_date=wasTo; back.end_reason=wasWhy; delete back._local; }
+   if(row.id&&row!==back){ row.to_date=wasTo; row.end_reason=wasWhy; }
+   gallerySync(dog);
    GAL_MSG[dog]='Not saved: '+((j&&j.message)||'try again.'); var mBad=galBox(dog); if(mBad){ mBad.open=true; var mm=mBad.querySelector('[data-gal-msg]'); if(mm) mm.textContent=GAL_MSG[dog]; }
    return; }
   clearCardPhoto(dog, row.to_id);

@@ -438,6 +438,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | One thermometer code was drawn once for every finished pass, so the print held seven of each | "one card per ticked item for every kind and layout @regression" (tests/mocked/cdhub-print-count.spec.js) |
 | 25 Nov 2026 | Lisa 25 Nov: the gallery pencil and × covered the photo, and once she was cropping she could not remove that photo or move to the next one. Each remove also reloaded the whole card | "Sort photos: one at a time, small corner buttons, and the card is not reloaded between photos @regression" (tests/mocked/cdhub-dog-photo-sort.spec.js) |
 | 25 Nov 2026 | Lisa 25 Nov: gallery tiles were blank grey and every tap downloaded the pictures again | "gallery thumbs are about 200px and a remove does not download the other pictures again @regression" (tests/mocked/cdhub-dog-photo-cache.spec.js) |
+| 25 Nov 2026 | Lisa 25 Nov: removing Haila's photos one at a time reloaded the card each time | "Select ticks several photos and Remove selected ends them in one save @regression" (tests/mocked/cdhub-dog-gallery-edit.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

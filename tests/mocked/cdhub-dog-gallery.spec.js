@@ -55,8 +55,8 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
   await expect(gal.locator('.gi[data-kind="upload"] a')).toHaveText('Pretend cert.pdf');
   await expect(gal.locator('.gi[data-file="fil-1"] [data-k="main"]')).toHaveText('Main');
   await expect(gal.locator('.gi[data-file="fil-2"] img.galph')).toHaveAttribute('data-photo-id', 'DRIVEoldPhoto002');   // loaded once opened
-  await expect(gal.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
-  await expect(gal.locator('details[data-k="ended"] img.galph')).not.toHaveAttribute('data-photo-id', /./);   // not loaded until opened
+  await expect(gal.locator('details[data-k="ended"]')).toHaveCount(0);   // an ended link stays in the sheet and is not on the card
+  await expect(gal.locator('.gi[data-file="fil-5"]')).toHaveCount(0);
 
   // a dog with no link rows keeps its old photo cell and shows no gallery
   const p = page.locator('.dc[data-dog="sub-g2"]');

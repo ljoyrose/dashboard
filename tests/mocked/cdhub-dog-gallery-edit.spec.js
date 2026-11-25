@@ -1,6 +1,6 @@
-// Dog gallery: Remove, Make main and Put back (Lisa 16 Nov 2026: "some are bad so need to be able to remove").
-// Nothing is deleted: Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link,
-// Make main adds a main link. Invented rows only; pretend save script.
+// Dog gallery: Remove and Make main (Lisa 16 Nov 2026: "some are bad so need to be able to remove").
+// Nothing is deleted: Remove ends the photo's gallery link. An ended link is not shown again.
+// Make main adds a main link. Select ends several links in one save. Invented rows only; pretend save script.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
 
@@ -44,7 +44,7 @@ async function setUp(page, guard, today) {
   return { sent, gal };
 }
 
-test('Remove takes a bad photo out of the gallery at once (to Ended); Put back brings it back; nothing is deleted', async ({ page, guard }) => {
+test('Remove takes a bad photo out of the gallery; it is not listed again, and the file is kept', async ({ page, guard }) => {
   const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())).catch(() => null) || new Date().toISOString().slice(0, 10);
   const { sent, gal } = await setUp(page, guard, today);
   await expect(gal.locator('> summary')).toHaveText('Photos (3)');
@@ -55,13 +55,9 @@ test('Remove takes a bad photo out of the gallery at once (to Ended); Put back b
   expect(sent[0].fields.to_date < today).toBe(true);   // an older photo ends yesterday, so it is gone from today
   const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
   await expect(g2.locator('> summary')).toHaveText('Photos (2)');
-  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
-
-  await g2.locator('details[data-k="ended"] > summary').click();
-  await g2.locator('details[data-k="ended"] [data-gal-back="fil-2"]').click();
-  await expect.poll(() => sent.length).toBe(2);
-  expect(sent[1]).toMatchObject({ action: 'link_add', fields: { from_table: 'subject', from_id: 'sub-g1', role: 'gallery', to_table: 'files', to_id: 'fil-2', from_date: today } });
-  await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] > summary')).toHaveText('Photos (3)');
+  await expect(g2.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
+  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
+  expect(sent[0].action).not.toBe('file_add');
 });
 
 test('a photo added today is removed at once too (end date today, marked removed)', async ({ page, guard }) => {
@@ -111,7 +107,29 @@ test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old
   await expect(g2.locator('[data-gal-msg]')).toHaveText('✓ Edited copy saved');
   await expect(g2.locator('> summary')).toHaveText('Photos (3)');
   await expect(g2.locator('.gi[data-file="fil-new"]')).toHaveCount(1);
-  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
+  await expect(g2.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
+  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
+});
+
+test('Select ticks several photos and Remove selected ends them in one save @regression', async ({ page, guard }) => {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+  const { sent, gal } = await setUp(page, guard, today);
+  await gal.locator('[data-gal-select]').click();
+  await expect(gal).toHaveAttribute('data-select', '1');
+  await gal.locator('[data-gal-pick="fil-2"]').click();
+  await gal.locator('[data-gal-pick="fil-3"]').click();
+  await expect(gal.locator('[data-gal-bulk]')).toHaveText('Remove selected (2)');
+  page.once('dialog', (d) => d.accept());
+  await gal.locator('[data-gal-bulk]').click();
+  await expect(gal.locator('> summary')).toHaveText('Photos (1)');
+  await expect(gal.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
+  await expect(gal.locator('.gi[data-file="fil-3"]')).toHaveCount(0);
+  await expect(gal.locator('.gi[data-file="fil-1"]')).toHaveCount(1);
+  await expect(gal.locator('details[data-k="ended"]')).toHaveCount(0);
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].action).toBe('link_end');
+  expect(sent[0].fields.reason).toBe('Removed by Lisa');
+  expect(sent[0].fields.ends.map((e) => e.id).sort()).toEqual(['l2', 'l3']);
 });
 
 test('card: ✎ Edit on the main photo saves an edited copy that becomes the main photo; Cancel saves nothing', async ({ page, guard }) => {

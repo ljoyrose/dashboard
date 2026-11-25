@@ -72,7 +72,8 @@ test('× removes the photo at once even when a live read lands during a slow sav
   await page.reload();
   await page.evaluate(() => go('dogs'));
   await expect(gal('sub-g1').locator('> summary')).toHaveText('Photos (1)');
-  await expect(gal('sub-g1').locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
+  await expect(gal('sub-g1').locator('details[data-k="ended"]')).toHaveCount(0);
+  await expect(gal('sub-g1').locator('.gi[data-file="fil-2"]')).toHaveCount(0);
 });
 
 test('the kept removal is forgotten once the live rows show the photo ended', async ({ page, guard }) => {
