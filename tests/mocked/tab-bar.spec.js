@@ -26,7 +26,7 @@ const PLAN = {
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
+  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Yearly print', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'DNS & Email', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov); DNS & Email: JOB 6.3 (12 Nov)
 };

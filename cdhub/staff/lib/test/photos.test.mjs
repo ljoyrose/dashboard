@@ -29,6 +29,12 @@ const links = [
   L('x2', 'missing', 'gallery', '2025-01-01', '')
 ];
 
+test('a main link stored as subject (not subjects) is the chosen photo', () => {
+  const singular = links.map((l) => Object.assign({}, l, { from_table: 'subject' }));
+  assert.equal(P.forRecord(singular, files, kinds, 'subjects', 'dog-a', '2026-11-14').main.id, 'f2');
+  assert.equal(P.forRecord(singular, files, kinds, 'subject', 'dog-a', '2026-11-14').main.id, 'f2');
+});
+
 test('main is the main link in force; on a change-over day the later set_on wins', () => {
   assert.equal(P.forRecord(links, files, kinds, 'subjects', 'dog-a', '2026-11-14').main.id, 'f2');
   assert.equal(P.forRecord(links, files, kinds, 'subjects', 'dog-a', '2026-06-01').main.id, 'f2');
