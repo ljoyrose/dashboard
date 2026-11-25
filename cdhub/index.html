@@ -771,7 +771,16 @@ function compAsOfHtml(){ var copy=!!(LOAD.copy||LOAD.laterCopy), at=LOAD.copy?LO
  return '<p class="mut" id="compAsOf" role="status" data-state="'+(copy?'copy':'live')+'">As of '+esc(hhmm(at))
   +(copy?' (the copy on this device) \u00b7 checking the live records\u2026':' \u00b7 live')
   +' <button type="button" class="btn" data-reload="1" data-comp-refresh'+(READING?' disabled':'')+'>Refresh</button></p>'; }
-function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+/* Litters still here: a pup on site, or the dam on site and no pups entered yet. Litter jobs (puppy microchips) count and record against these. */
+function currentLitters(){
+ var on={};
+ (CD.dogs||[]).forEach(function(d){ if(d.area_id&&!d.off) on[d.id]=1; });
+ var pups={}, here={};
+ (CD.dogs||[]).forEach(function(d){ if(!d.birthLitter) return; pups[d.birthLitter]=(pups[d.birthLitter]||0)+1; if(on[d.id]) here[d.birthLitter]=1; });
+ return (CD.litters||[]).filter(function(l){ return here[l.id]||(!pups[l.id]&&on[l.dam_subject_id]); }).map(function(l){
+  return {id:l.id,dob:l.dob||l.born_on||'',born_on:l.born_on||l.dob||'',name:'Litter of '+(nameOf(l.dam_subject_id)||'a dam')}; });
+}
+function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],today:todayISO(),esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
@@ -4741,18 +4750,49 @@ function pageSops(){
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
-/* SOP wording is private: it is read after sign-in from a file in the Drive folder, never from this public site. */
+/* SOP wording is private: it is read after sign-in from a file in the Drive folder, never from this public site.
+   A spreadsheet export is CSV, and JSON.parse of that fails: say so, instead of a generic "could not be read". */
+function sopCardsMessage(e){
+ var m=e&&e.message?String(e.message):'', st=e&&e.status;
+ if(m==='missing') return 'The SOP wording file is not in the Drive folder yet.';
+ if(m==='more than one') return 'There are two SOP wording files in the Drive folder, so neither is shown. Remove the extra one.';
+ if(m==='sheet'||(e&&e.code==='sheet')) return 'The SOP wording could not be read. The file is a spreadsheet, so this page cannot use it as wording. It needs to be the JSON file.';
+ if(st===401||m==='Sign-in expired') return 'The SOP wording could not be read. Sign in again, then open this SOP.';
+ if(e&&e.name==='SyntaxError') return 'The SOP wording could not be read. The file is not valid JSON ('+m+').';
+ if(e&&e.code==='not-json') return 'The SOP wording could not be read. '+m;
+ if(e&&typeof e.code==='string'&&e.code&&e.code!==m) return 'The SOP wording could not be read. '+e.code;
+ if(m) return 'The SOP wording could not be read: '+m;
+ return 'The SOP wording could not be read.';
+}
+function sopCardsParse(txt){
+ var s=String(txt==null?'':txt).replace(/^\uFEFF/,'').trim();
+ if(!s){ var empty=new Error('The file was empty.'); empty.code='not-json'; throw empty; }
+ var head=s.charAt(0);
+ if(head!=='{'&&head!=='['){
+  var kind=/^[^,\n]+,/.test(s)?'a spreadsheet':'plain text';
+  var e=new Error('The file is not JSON. It starts as '+kind+'.'); e.code='not-json'; throw e;
+ }
+ var data; try{ data=JSON.parse(s); }catch(err){ var e2=new Error(err&&err.message?err.message:'not valid JSON'); e2.name='SyntaxError'; throw e2; }
+ var cards=Array.isArray(data)?data:(data&&data.cards);
+ if(!Array.isArray(cards)){ var e3=new Error('The file has no cards list.'); e3.code='not-json'; throw e3; }
+ var by={}; cards.forEach(function(c){ if(c&&c.short_name) by[c.short_name]=c; });
+ return by;
+}
+function readSopWording(f){
+ var sheet='application/vnd.google-apps.spreadsheet', doc='application/vnd.google-apps.document';
+ if(f.mimeType===sheet){ var e=new Error('sheet'); e.code='sheet'; return Promise.reject(e); }
+ if(f.mimeType===doc) return gget(DRIVE+'/'+encodeURIComponent(f.id)+'/export?mimeType=text%2Fplain&supportsAllDrives=true',true);
+ return readDriveFile(f);
+}
 function sopCardsLoad(){
  if(SOP.cards||SOP.cardsPending) return SOP.cardsPending||Promise.resolve();
  SOP.cardsErr='';
- SOP.cardsPending=listFolder().then(function(files){
-  var hits=files.filter(function(f){ return f.name===SOP_CARDS_FILE; });
+ var listed=(window._driveFiles&&window._driveFiles.length)?Promise.resolve(window._driveFiles):listFolder();
+ SOP.cardsPending=listed.then(function(files){
+  var hits=(files||[]).filter(function(f){ return f.name===SOP_CARDS_FILE; });
   if(hits.length!==1) throw new Error(hits.length?'more than one':'missing');
-  return readDriveFile(hits[0]);
- }).then(function(txt){
-  var by={}; (JSON.parse(txt).cards||[]).forEach(function(c){ if(c&&c.short_name) by[c.short_name]=c; });
-  SOP.cards=by;
- }).catch(function(e){ var m=e&&e.message; SOP.cardsErr=m==='missing'?'The SOP wording file is not in the Drive folder yet.':m==='more than one'?'There are two SOP wording files in the Drive folder, so neither is shown. Remove the extra one.':'The SOP wording could not be read. Close this and tap again.'; })
+  return readSopWording(hits[0]);
+ }).then(function(txt){ SOP.cards=sopCardsParse(txt); }).catch(function(e){ SOP.cardsErr=sopCardsMessage(e); })
  .then(function(){ SOP.cardsPending=null; drawSops(); });
  return SOP.cardsPending;
 }
@@ -4786,6 +4826,31 @@ function sopCardHtml(r){
   if(!n) return '';
   return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
  }).join('');
+}
+/* Record a due or never-recorded SOP check. One check_log row per dog, room or litter (litter_id, not subject_id).
+   A whole-site job about dogs is one add_site. how_recorded is tapped or site_tap, at the real time, through the same save as other checks. */
+async function sopRecord(btn){
+ var key=btn.getAttribute('data-sop-save'), box=btn.closest('[data-sop-record]'); if(!box) return;
+ var msg=box.querySelector('[data-sop-msg]'), picked=[];
+ var ticks=box.querySelectorAll('[data-sop-tick]');
+ if(ticks.length) Array.prototype.forEach.call(ticks,function(el){ if(!el.checked) return; picked.push({kind:el.getAttribute('data-kind')||'',id:el.value||'',area_id:el.getAttribute('data-area')||''}); });
+ else if(box.hasAttribute('data-one-kind')) picked.push({kind:box.getAttribute('data-one-kind'),id:box.getAttribute('data-one-id')||'',area_id:box.getAttribute('data-one-area')||''});
+ var extra={}, item=box.querySelector('[data-sop-item]'), amount=box.querySelector('[data-sop-amount]'), note=box.querySelector('[data-sop-note]');
+ if(item) extra.item=item.value.trim(); if(amount) extra.amount=amount.value.trim(); if(note) extra.note=note.value.trim();
+ var plan=BLDJobsView.savePlans(jobsV(),key,picked,extra,new Date().toISOString());
+ if(plan.error){ if(msg) msg.textContent=plan.error; return; }
+ btn.disabled=true;
+ var bad='', logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), n=plan.plans.length;
+ for(var i=0;i<n;i++){
+  var p=plan.plans[i]; if(msg) msg.textContent='Saving '+(i+1)+' of '+n+'\u2026';
+  var r=await sinkSend({table:'check_log',action:p.action,fields:p.fields});
+  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
+  var res=r.result||{}, at=res.at||p.fields.happened_at, who=res.who||'';
+  if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
+  else logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:p.fields.subject_id||'',area_id:p.fields.area_id||'',litter_id:p.fields.litter_id||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who});
+ }
+ drawSops();
+ if(bad){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) again.textContent=bad; }
 }
 function drawSops(){
  var rows=SOP.rows||[];
@@ -4970,6 +5035,16 @@ document.addEventListener('click',function(ev){
  var open=box.hidden; box.hidden=!open; t.setAttribute('aria-expanded',open?'true':'false');
  if(open&&!box.innerHTML) box.innerHTML=BLDJobCal.importPanel(jobsV());
 });
+/* Cancel (Lisa 22 Nov 2026): before Import, clears the file and the checked rows so another file can be chosen; nothing
+   was saved. During an import it reads Stop: rows not yet sent are not sent, those already saved stay. */
+document.addEventListener('click',function(ev){
+ var c=ev.target.closest&&ev.target.closest('[data-jcal-import-cancel]'); if(!c) return;
+ var go=document.querySelector('[data-jcal-import-go]');
+ if(go&&go.disabled){ JCAL.stop=true; c.disabled=true; c.textContent='Stopping\u2026'; return; }
+ JCAL.rows=null;
+ var out=document.querySelector('[data-jcal-preview]'); if(out) out.innerHTML='<p class="msg" data-jcal-cancelled>Cancelled. Nothing was saved. Choose another file.</p>';
+ var inp=document.querySelector('[data-jcal-file]'); if(inp) inp.value='';
+});
 document.addEventListener('change',function(ev){
  var inp=ev.target.closest&&ev.target.closest('[data-jcal-file]'); if(!inp||!inp.files||!inp.files[0]) return;
  var rd=new FileReader(), out=document.querySelector('[data-jcal-preview]');
@@ -4979,8 +5054,10 @@ document.addEventListener('change',function(ev){
 document.addEventListener('click',async function(ev){
  var b=ev.target.closest&&ev.target.closest('[data-jcal-import-go]'); if(!b||b.disabled) return;
  var v=jobsV(), ready=(JCAL.rows||[]).filter(function(x){ return x.ok; }), msg=document.querySelector('[data-jcal-imp-msg]'), done=0, bad=[];
- b.disabled=true;
+ b.disabled=true; JCAL.stop=false;
+ var cx=document.querySelector('[data-jcal-import-cancel]'); if(cx) cx.textContent='Stop';
  for(var i=0;i<ready.length;i++){
+  if(JCAL.stop) break;   /* Stop: the rows not yet sent are not saved; those already saved stay */
   var x=ready[i], f=BLDJobCal.importFields(v,x); if(!f){ bad.push(x.line); continue; }
   if(msg) msg.textContent='Saving '+(i+1)+' of '+ready.length+'…';
   var r=await sinkSend({table:'check_log',action:'add_site',fields:f});
@@ -4991,7 +5068,8 @@ document.addEventListener('click',async function(ev){
  JCAL.rows=null;
  var w=document.getElementById('jobCals'); if(w) w.outerHTML=jobCalHtml();
  var m2=document.createElement('p'); m2.className='msg'+(bad.length?' bad':''); m2.setAttribute('data-jcal-imp-done','');
- m2.textContent='Imported '+done+' of '+ready.length+'.'+(bad.length?' Not saved, row '+bad.join(', row ')+'.':'');
+ m2.textContent='Imported '+done+' of '+ready.length+'.'+(JCAL.stop&&done+bad.length<ready.length?' Stopped: the other '+(ready.length-done-bad.length)+' were not sent.':'')+(bad.length?' Not saved, row '+bad.join(', row ')+'.':'');
+ JCAL.stop=false;
  var w2=document.getElementById('jobCals'); if(w2) w2.appendChild(m2);
 });
 document.addEventListener('click',async function(ev){
@@ -5529,6 +5607,7 @@ function go(id,push){
     var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
   var sr=document.getElementById('soprows');
   if(sr) sr.addEventListener('click',function(ev){
+   var save=ev.target.closest('[data-sop-save]'); if(save){ sopRecord(save); return; }
    var b=ev.target.closest('[data-sop-open]'); if(!b) return;
    var name=b.getAttribute('data-sop-open');
    SOP.open=SOP.open===name?'':name;
