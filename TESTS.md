@@ -433,6 +433,9 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | The medicines register showed a last column of dog card, and a blank name said not recorded | "the medicines register does not show where it was recorded, and a blank name is Lisa Carson @regression" (tests/mocked/cdhub-meds-register.spec.js) |
 | 25 Nov 2026 | Exercise showed part done 27 of 34 because litter puppies were in the count, and the day panel showed a backfill note | "exercise counts the adult dogs only and hides a backfill note @regression" (tests/mocked/cdhub-job-calendar.spec.js) |
 | 25 Nov 2026 | Parasite control recorded on the check log was missing from the medicines register and the dog card | "a parasite dose joins the medicines register once, and a vet procedure drug does not @regression" (tests/mocked/cdhub-meds-register.spec.js) and "a parasite dose is on the dog card medications, once, newest first @regression" (tests/mocked/cdhub-dog-card-summary.spec.js) |
+| 25 Nov 2026 | Whole-site code with Full A4 drew the one site code three times, three across the page | "whole-site code on Full A4 is one card, and a second click stays one card @regression" (tests/mocked/cdhub-print-site-card.spec.js) |
+| 25 Nov 2026 | A code run kept its progress line after another card type was opened | "switching card type stops the previous code run @regression" (tests/mocked/cdhub-print-run.spec.js) |
+| 25 Nov 2026 | One thermometer code was drawn once for every finished pass, so the print held seven of each | "one card per ticked item for every kind and layout @regression" (tests/mocked/cdhub-print-count.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
