@@ -277,8 +277,9 @@ function inspectSinkRead_(req, who, now) {
     if (fields.indexOf(subjCol) < 0) fields.unshift(subjCol);
     cols[subjCol] = '';
   }
-  var dFrom = isRealDate_(String(link.data_from_date || '')) ? String(link.data_from_date) : '';
-  var dTo = isRealDate_(String(link.data_to_date || '')) ? String(link.data_to_date) : '';
+  var dFromRaw = String(link.data_from_date || link.as_of_from || ''), dToRaw = String(link.data_to_date || link.as_of_to || '');
+  var dFrom = isRealDate_(dFromRaw) ? dFromRaw : '';
+  var dTo = isRealDate_(dToRaw) ? dToRaw : '';
 
   var hasTenantCol = data.header.indexOf('tenant_id') >= 0, rows = [], truncated = false, redacted = {};
   fields.forEach(function (c) { if (cols[c]) redacted[c] = cols[c]; });
@@ -422,10 +423,10 @@ function sinkInspectMake_(spec, adminEmail) {
     store_appendMany_(INSPECT.FIELD_FILE, INSPECT.FIELD_COLUMNS, fieldRows.map(function (r, i) {
       return [linkId + '-f' + (i + 1), tenant, linkId, r[0], r[1], r[2]];
     }), F);
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by, made_at: utcIso_(now), made_by: by,
-      from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)), purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
-    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, made_at: londonIso_(now), made_by: by,
-      starts_at: win.starts_at, ends_at: win.ends_at, data_from_date: dataFrom, data_to_date: dataTo };
+    var lv = { id: linkId, tenant_id: tenant, code_id: codeId, label: label, ends: endsAt, created_at: utcIso_(now), set_by: by,
+      made_at: londonIso_(now), made_by: by, from_at: utcIso_(new Date(win.startMs)), to_at: utcIso_(new Date(win.endMs)),
+      starts_at: win.starts_at, ends_at: win.ends_at, as_of_from: dataFrom, as_of_to: dataTo, data_from_date: dataFrom, data_to_date: dataTo,
+      purpose_text: 'Inspector link: ' + label, grant_basis: 'voluntary', identity_assurance: 'none' };
     store_appendMany_(INSPECT.LINK_FILE, L.header, [L.header.map(function (h) { return lv[h] == null ? '' : lv[h]; })], L);
 
     var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
