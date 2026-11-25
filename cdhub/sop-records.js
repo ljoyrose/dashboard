@@ -176,7 +176,9 @@
     var jobs = shownOn(ctx && ctx.types, str(ctx && ctx.today), name);
     var h = '';
     if (!jobs.length) {
-      h += '<div data-sop-record="' + esc(slug(name)) + '" data-one-kind="site">'
+      var day = esc(str(ctx && ctx.today));
+      h += '<div class="frow" data-sop-record="' + esc(slug(name)) + '" data-one-kind="site">'
+        + '<input type="date" data-sop-day="' + esc(slug(name)) + '" max="' + day + '" value="' + day + '" aria-label="Day done">'
         + '<button type="button" class="btn" data-sop-checked="' + esc(name) + '">Checked today</button>'
         + '<p class="mut" data-sop-msg role="status"></p></div>';
     }

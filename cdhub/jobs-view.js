@@ -166,8 +166,8 @@
         var sop = r.sop ? (v.sopHref ? '<a href="' + e(v.sopHref(r.sop)) + '">' + e(r.sop) + '</a>' : e(r.sop)) : '—';
         var done = NONE_NOW[r.none_now] ? '<td data-n="done"><span class="mut">' + NONE_NOW[r.none_now] + '</span></td>'
           : r.as_needed && !r.ok ? '<td data-n="done"><span class="mut">as needed</span></td>' : cell(r, r.ok, 'ok', 'done');
-        return '<tr data-job="' + e(r.key) + '"><td class="mut">' + sop + '</td><td><b>' + e(r.label) + '</b> <span class="mut" data-every>' + e(timing(r)) + '</span></td>' + done + cell(r, r.due, 'w', 'due') + cell(r, r.late, 'no', 'late')
-          + '<td class="mut">' + e(r.last_done ? v.dmy(r.last_done) : '—') + '</td></tr>';
+        return '<tr data-job="' + e(r.key) + '"><td class="mut">' + sop + '</td><td><b>' + e(r.label) + '</b> <span class="mut" data-every>' + e(timing(r)) + '</span>' + rowDoneHtml(v, r) + '</td>' + done + cell(r, r.due, 'w', 'due') + cell(r, r.late, 'no', 'late')
+          + '<td class="mut" data-n="last">' + e(r.last_done ? v.dmy(r.last_done) : '—') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     h += '<h4>By licence source</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>source</th><th>jobs</th><th>due</th><th>late</th></tr></thead><tbody>'
       + bySource(rows).sort(function (a, b) { return a.late - b.late || a.due - b.due || String(a.source).localeCompare(String(b.source)); }).map(function (s) {
@@ -199,6 +199,26 @@
     return null;
   }
   function yes(v) { return String(v).toLowerCase() === 'true'; }
+  /** A London wall-clock date and time as a UTC ISO time. Noon is the earlier-day default. */
+  function londonIso(date, time) {
+    var p = String(date || '').split('-').map(Number), q = String(time || '12:00').split(':').map(Number);
+    if (p.length < 3 || !(p[0] > 0)) return '';
+    var guess = Date.UTC(p[0], p[1] - 1, p[2], q[0] || 0, q[1] || 0);
+    var f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(guess));
+    var g = {};
+    f.forEach(function (x) { g[x.type] = Number(x.value); });
+    return new Date(guess - (Date.UTC(g.year, g.month - 1, g.day, g.hour, g.minute) - guess)).toISOString();
+  }
+  /** Put the chosen day on a tap. Today keeps the real time. An earlier day is noon London, and confirm_unusual so an old day is kept. */
+  function applyDay(fields, day, today, now) {
+    if (day && day > today) return false;
+    if (!day || day === today) { if (now) fields.happened_at = now; return true; }
+    var at = londonIso(day, '12:00');
+    if (!at) return false;
+    fields.happened_at = at;
+    fields.confirm_unusual = 'yes';
+    return true;
+  }
   /** Due, late, or never recorded. A job with no litter on site has nothing to record. */
   function needsRecord(r) {
     if (!r || r.none_now === 'no_litter') return false;
@@ -258,6 +278,64 @@
     if (t.target === 'optional') return [{ kind: 'site', id: '', label: t.label || 'This check' }];
     return [];
   }
+  /**
+   * Dogs, rooms or litters this job can be recorded against, including ones already done.
+   * due is true when that one is still late, due or never recorded. A whole-site line is a single site item.
+   */
+  function pickList(v, t) {
+    if (!t) return [];
+    var dogs = v.dogs || [], areas = v.areas || [], litters = v.litters || [];
+    function dogItem(d) {
+      var target = { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: dogGroups(v, d) };
+      if (Due.perDogSite(t)) target = { dogs: [dogOne(v, d)] };
+      var j = jobFor(v, target, t.type_key);
+      if (!j) return null;
+      return { kind: 'dog', id: d.id, area_id: d.area_id || d.areaId || '', label: d.name || d.label || d.id, due: openJob(j) };
+    }
+    if (Due.perDogSite(t)) {
+      var covered = {}, out = [];
+      Due.dogsFor(t, { dogs: dogs.map(function (d) { return dogOne(v, d); }) }).forEach(function (x) { covered[x.id] = x; });
+      dogs.forEach(function (d) { if (!covered[d.id]) return; var item = dogItem(d); if (item) out.push(item); });
+      return out;
+    }
+    if (t.target === 'dog' || Due.perDogRoom(t)) {
+      return dogs.map(dogItem).filter(Boolean);
+    }
+    if (t.target === 'area') {
+      return areas.map(function (a) {
+        var ids = dogs.filter(function (d) { return (d.area_id || d.areaId) === a.id; }).map(function (d) { return d.id; });
+        var j = jobFor(v, { area_id: a.id, roomDogIds: ids }, t.type_key);
+        if (!j) return null;
+        return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id, due: openJob(j) };
+      }).filter(Boolean);
+    }
+    if (t.target === 'either') {
+      return dogs.map(dogItem).filter(Boolean).concat(areas.map(function (a) {
+        var j = jobFor(v, { area_id: a.id }, t.type_key);
+        if (!j) return null;
+        return { kind: 'area', id: a.id, label: a.code || a.name || a.label || a.id, due: openJob(j) };
+      }).filter(Boolean));
+    }
+    if (t.target === 'litter') {
+      return litters.map(function (l) {
+        var j = jobFor(v, { litter_id: l.id, born: l.dob || l.born_on || l.born || '' }, t.type_key);
+        if (!j) return null;
+        return { kind: 'litter', id: l.id, label: l.name || l.label || 'Litter', due: openJob(j) };
+      }).filter(Boolean);
+    }
+    if (t.target === 'none') {
+      var jn = jobFor(v, {}, t.type_key);
+      return [{ kind: 'site', id: '', label: 'Whole site', due: openJob(jn) }];
+    }
+    if (t.target === 'optional') return [{ kind: 'site', id: '', label: t.label || 'This check', due: true }];
+    return [];
+  }
+  /** A dog, room or litter job needs the same chooser the Board opens before it saves. A whole-site line does not. */
+  function needsPick(t) {
+    if (!t) return false;
+    if (Due.perDogSite(t) || Due.perDogRoom(t)) return true;
+    return t.target === 'dog' || t.target === 'area' || t.target === 'litter' || t.target === 'either';
+  }
   /** What a save still needs, in the same words as the staff check form. */
   function gaps(type, entry) {
     var e = {};
@@ -307,30 +385,127 @@
     }
     return { plans: plans };
   }
-  function recordFields(e, t) {
+  /**
+   * The save a tap on The Board, Jobs, sends for this job. Whole-site lines are one add_site
+   * (how_recorded site_tap). A dog, room or litter line is one add (how_recorded tapped), and a
+   * room job about dogs is one add_site for the ticked dogs in that room. Today uses the real time.
+   * An earlier day is noon Europe/London. taken_by is stamped by the save from the signed-in user.
+   */
+  function tapPlans(v, key, picked, extra, day, now) {
+    var t = typeInForce(v, key);
+    if (!t) return { error: 'That check is not set up.' };
+    day = day || v.today;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return { error: 'Pick today or an earlier day.' };
+    if (day > v.today) return { error: 'Pick today or an earlier day.' };
+    extra = extra || {};
+    var outcome = String(t.asks_outcome).toLowerCase() === 'false' ? 'recorded' : 'ok';
+    function withExtra(fields) {
+      if (extra.item) fields.item = extra.item;
+      if (extra.amount) fields.amount = extra.amount;
+      if (extra.note) fields.note = extra.note;
+      return fields;
+    }
+    function dated(fields) {
+      if (!applyDay(fields, day, v.today, now)) return null;
+      return fields;
+    }
+    if (Due.perDogSite(t)) {
+      var ids = (picked || []).filter(function (p) { return p.kind === 'dog' && p.id; }).map(function (p) { return p.id; });
+      if (!ids.length) return { error: 'Tick a dog.' };
+      var site = dated(withExtra({ check_type_id: t.id, outcome: outcome, how_recorded: 'site_tap', dog_ids: ids.join('|') }));
+      if (!site) return { error: 'Pick today or an earlier day.' };
+      var sg = gaps(t, site), sk = Object.keys(sg)[0];
+      if (sk) return { error: sg[sk] };
+      return { plans: [{ action: 'add_site', fields: site }] };
+    }
+    if (Due.perDogRoom(t)) {
+      var groups = {};
+      (picked || []).forEach(function (p) {
+        if (p.kind !== 'dog' || !p.id || !p.area_id) return;
+        (groups[p.area_id] = groups[p.area_id] || []).push(p.id);
+      });
+      var areas = Object.keys(groups);
+      if (!areas.length) return { error: 'Tick a dog.' };
+      var roomPlans = [];
+      for (var i = 0; i < areas.length; i++) {
+        var rf = dated(withExtra({ check_type_id: t.id, outcome: outcome, how_recorded: 'site_tap', area_id: areas[i], dog_ids: groups[areas[i]].join('|') }));
+        if (!rf) return { error: 'Pick today or an earlier day.' };
+        var rg = gaps(t, rf), rk = Object.keys(rg)[0];
+        if (rk) return { error: rg[rk] };
+        roomPlans.push({ action: 'add_site', fields: rf });
+      }
+      return { plans: roomPlans };
+    }
+    var list = picked || [];
+    if (!list.length && (t.target === 'none' || t.target === 'optional')) list = [{ kind: 'site' }];
+    var plan = savePlans(v, key, list, extra, now || '');
+    if (plan.error || !plan.plans) return plan;
+    if (t.target === 'none') plan.plans.forEach(function (p) { p.action = 'add_site'; p.fields.how_recorded = 'site_tap'; });
+    for (var j = 0; j < plan.plans.length; j++) {
+      if (!dated(plan.plans[j].fields)) return { error: 'Pick today or an earlier day.' };
+    }
+    return plan;
+  }
+  function recordFields(e, t, prefix) {
+    prefix = prefix || 'sop';
     var h = '';
-    if (yes(t.asks_item)) h += '<div class="frow"><label>' + e(t.item_label || 'What') + ' <input data-sop-item="' + e(t.type_key) + '" aria-label="' + e(t.item_label || 'What') + '"></label></div>';
-    if (yes(t.asks_amount)) h += '<div class="frow"><label>' + e(t.amount_unit ? 'Amount (' + t.amount_unit + ')' : 'Amount') + ' <input data-sop-amount="' + e(t.type_key) + '" aria-label="Amount"></label></div>';
-    if (yes(t.note_required)) h += '<div class="frow"><label>' + e(t.note_label || 'Note') + ' <input data-sop-note="' + e(t.type_key) + '" aria-label="' + e(t.note_label || 'Note') + '"></label></div>';
+    if (yes(t.asks_item)) h += '<div class="frow"><label>' + e(t.item_label || 'What') + ' <input data-' + prefix + '-item="' + e(t.type_key) + '" aria-label="' + e(t.item_label || 'What') + '"></label></div>';
+    if (yes(t.asks_amount)) h += '<div class="frow"><label>' + e(t.amount_unit ? 'Amount (' + t.amount_unit + ')' : 'Amount') + ' <input data-' + prefix + '-amount="' + e(t.type_key) + '" aria-label="Amount"></label></div>';
+    if (yes(t.note_required)) h += '<div class="frow"><label>' + e(t.note_label || 'Note') + ' <input data-' + prefix + '-note="' + e(t.type_key) + '" aria-label="' + e(t.note_label || 'Note') + '"></label></div>';
     return h;
   }
-  /** Record / Done under a job that is due or not recorded. Many dogs or rooms: all ticked, untick any to leave out. */
-  function recordHtml(v, row) {
-    if (!needsRecord(row)) return '';
+  function dayInput(e, attr, key, today, label) {
+    return '<input type="date" ' + attr + '="' + e(key) + '" max="' + e(today || '') + '" value="' + e(today || '') + '" aria-label="Day done: ' + e(label) + '">';
+  }
+  /** Tick rows for a dog, room or litter chooser. Due ones start ticked, except a whole-site job about dogs (those start clear, as on the Board). */
+  function choiceHtml(e, attr, allAttr, key, items, precheck) {
+    var ticks = items.map(function (p) {
+      var on = precheck(p) ? ' checked' : '';
+      return '<label class="dcs-row"><input type="checkbox" ' + attr + '="' + e(key) + '" data-kind="' + e(p.kind) + '"' + (p.area_id ? ' data-area="' + e(p.area_id) + '"' : '') + (p.due ? '' : ' data-done="1"') + ' value="' + e(p.id) + '"' + on + '> ' + e(p.label) + '</label>';
+    }).join('');
+    var all = items.length > 1 ? '<button type="button" class="btn quiet" ' + allAttr + '="' + e(key) + '">Select all</button>' : '';
+    return all + ticks;
+  }
+  /** Date plus a tick on each Jobs row. Dog, room and litter jobs keep a chooser, hidden until the tick is pressed. */
+  function rowDoneHtml(v, row) {
     var e = v.esc, t = typeInForce(v, row.key);
     if (!t) return '';
-    var items = dueItems(v, t);
-    if (!items.length) return '<p class="mut" data-sop-empty="' + e(row.key) + '">Nothing here to record.</p>';
-    var many = items.length > 1;
+    var items = needsPick(t) ? pickList(v, t).filter(function (p) { return p.kind !== 'site'; }) : [];
+    var asks = yes(t.asks_item) || yes(t.asks_amount) || yes(t.note_required);
+    var pick = '';
+    if (items.length || asks) {
+      var pre = !Due.perDogSite(t);
+      pick = '<div data-job-pick="' + e(row.key) + '" hidden>' + choiceHtml(e, 'data-job-tick', 'data-job-all', row.key, items, function (p) { return pre && p.due; }) + recordFields(e, t, 'job') + '</div>';
+    }
+    var flash = v.doneNote && v.doneNote.key === row.key ? (v.doneNote.html || '') : '';
+    return '<div class="frow" data-job-box="' + e(row.key) + '">' + dayInput(e, 'data-job-day', row.key, v.today, row.label)
+      + '<button type="button" class="btn" data-job-done="' + e(row.key) + '" aria-label="Done: ' + e(row.label) + '">\u2713</button></div>'
+      + pick + '<p class="mut" data-job-msg="' + e(row.key) + '" role="status">' + flash + '</p>';
+  }
+  /** Record / Done under a job. Due dogs or rooms start ticked. When none are due, the same control stays so an earlier day can still be recorded. */
+  function recordHtml(v, row) {
+    var e = v.esc, t = typeInForce(v, row.key);
+    if (!t) return '';
+    var open = dueItems(v, t);
+    var items = open.length ? open : (needsPick(t) ? pickList(v, t).filter(function (p) { return p.kind !== 'site'; }) : (t.target === 'none' || t.target === 'optional' ? [{ kind: 'site', id: '', label: 'Whole site' }] : []));
+    var pre = open.length > 0;
     var verb = (!row.last_done && !row.due && !row.late) ? 'Record' : 'Done';
-    var text = many ? 'Mark all due as done today' : verb;
+    var day = dayInput(e, 'data-sop-day', row.key, v.today, row.label);
+    if (!items.length) {
+      return '<div data-sop-record="' + e(row.key) + '"><p class="mut" data-sop-empty="' + e(row.key) + '">Nothing here to record.</p><div class="frow">' + day
+        + '<button type="button" class="btn" data-sop-save="' + e(row.key) + '">' + e(verb) + '</button></div>'
+        + '<p class="mut" data-sop-msg="' + e(row.key) + '" role="status"></p></div>';
+    }
+    var many = items.length > 1;
+    var text = pre && many ? 'Mark all due as done today' : verb;
     var ticks = many ? items.map(function (p) {
-      return '<label class="dcs-row"><input type="checkbox" data-sop-tick="' + e(row.key) + '" data-kind="' + e(p.kind) + '"' + (p.area_id ? ' data-area="' + e(p.area_id) + '"' : '') + ' value="' + e(p.id) + '" checked> ' + e(p.label) + '</label>';
+      var on = pre ? ' checked' : '';
+      return '<label class="dcs-row"><input type="checkbox" data-sop-tick="' + e(row.key) + '" data-kind="' + e(p.kind) + '"' + (p.area_id ? ' data-area="' + e(p.area_id) + '"' : '') + ' value="' + e(p.id) + '"' + on + '> ' + e(p.label) + '</label>';
     }).join('') : '';
     var one = many ? '' : ' data-one-kind="' + e(items[0].kind) + '" data-one-id="' + e(items[0].id || '') + '"' + (items[0].area_id ? ' data-one-area="' + e(items[0].area_id) + '"' : '');
     var who = (!many && items[0].kind !== 'site') ? '<span class="mut">' + e(items[0].label) + '</span>' : '';
     return '<div data-sop-record="' + e(row.key) + '"' + one + '>' + ticks + who + recordFields(e, t)
-      + '<button type="button" class="btn" data-sop-save="' + e(row.key) + '">' + e(text) + '</button>'
+      + '<div class="frow">' + day + '<button type="button" class="btn" data-sop-save="' + e(row.key) + '">' + e(text) + '</button></div>'
       + '<p class="mut" data-sop-msg="' + e(row.key) + '" role="status"></p></div>';
   }
 
@@ -354,5 +529,5 @@
       }).join('') : '<span class="mut">No records</span>') + '</div></details>';
   }
 
-  return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml, needsRecord: needsRecord, dueItems: dueItems, savePlans: savePlans, recordHtml: recordHtml };
+  return { summary: summary, everyWords: everyWords, timing: timing, bySource: bySource, history: history, howLabel: howLabel, complianceHtml: complianceHtml, sopHtml: sopHtml, historyHtml: historyHtml, needsRecord: needsRecord, dueItems: dueItems, pickList: pickList, savePlans: savePlans, tapPlans: tapPlans, londonIso: londonIso, recordHtml: recordHtml };
 }));
