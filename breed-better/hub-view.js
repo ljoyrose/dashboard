@@ -120,8 +120,7 @@
     var names = Object.keys(T).sort(), held = names.map(function (f) { return T[f]; });
     if (memo && memo.key === key && memo.names === names.join('|') && memo.held.every(function (x, i) { return x === held[i]; })) return memo;
     var all = enrolments(T);
-    var out = { key: key, results: [], byId: {}, error: '', ended: [], enrol: {}, young: {}, setUp: !!all.length };
-    var out = { key: key, T: T, names: names.join('|'), held: held, results: [], byId: {}, error: '', ended: [], enrol: {}, setUp: !!all.length };
+    var out = { key: key, T: T, names: names.join('|'), held: held, results: [], byId: {}, error: '', ended: [], enrol: {}, young: {}, setUp: !!all.length };
     var subjects = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subjects[s.id] = s; });
     var showFrom = showFromMonths(T, v.today);
@@ -391,10 +390,9 @@
     }).filter(function (x) { return isFinite(x.from) && x.from >= 0 && !isNaN(x.to) && x.to > x.from; })
       .sort(function (a, b) { return a.from - b.from || a.label.localeCompare(b.label); });
   }
-  /* Owner setting (Lisa, 18 Nov 2026: "puppies not appear til 12 months"): one dated rule row,
-     breed_better.show_from_months = whole months. An animal younger than that (by date of birth) is left out of every
-     Breed Better list, count and card; its enrolment stays and it appears on the day it reaches that age.
-     No row, 0 or no date of birth = shown. The newest row in force today wins. */
+  /* Owner setting: one dated rule row, breed_better.show_from_months = whole months. A record younger than that
+     (by date of birth) is left out of every list, count and card; its enrolment stays and it appears on the day it
+     reaches that age. No row, 0 or no date of birth = shown. The newest row in force today wins. */
   var SHOW_KEY = 'breed_better.show_from_months';
   function showFromMonths(T, today) {
     var best = null;
@@ -1553,10 +1551,9 @@
   function setState(o) { Object.keys(o || {}).forEach(function (k) { state[k] = o[k]; }); }
   function getState() { return Object.assign({}, state); }
 
-  return { withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay, FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, showFromMonths: showFromMonths, page: page, chip: chip, section: section, open: open, setTab: setTab, age: age, months: months, ageGroups: ageGroups, inAge: inAge, bandStats: bandStats, day: day, lineHtml: lineHtml, wordsFor: wordsFor, SORTS: SORTS, sortRows: function (rows, k) { return rows.slice().sort(SORT_FN[k] || SORT_FN.verdict); } };
   return {
     scoreFields: scoreFields, withValues: withValues, ruleOn: ruleOn, autoKey: autoKey, autoOn: autoOn, autoNext: autoNext, enrolments: enrolments, endDay: endDay,
-    FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, page: page, chip: chip, section: section,
+    FILES: FILES, bandColour: bandColour, secResult: secResult, secIcon: secIcon, compute: compute, showFromMonths: showFromMonths, page: page, chip: chip, section: section,
     open: open, setTab: setTab, setState: setState, getState: getState, age: age, months: months, ageGroups: ageGroups, inAge: inAge,
     bandStats: bandStats, bandCount: bandCount, day: day, lineHtml: lineHtml, wordsFor: wordsFor, pctLine: pctLine, judgementsFor: judgementsFor,
     calItems: calItems, calCounts: calCounts, evidenceItems: evidenceItems, historyRows: historyRows, mustPassFor: mustPassFor, cssText: cssText,
