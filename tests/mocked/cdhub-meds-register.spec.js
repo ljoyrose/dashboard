@@ -269,6 +269,24 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
 
 // Lisa 23 Nov 2026: no internal codes on paper. A record id looks like clg-20261118-042020-vf20.
 const ID_PATTERN = /\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/i;
+test('a parasite dose joins the medicines register once, and a vet procedure drug does not @regression', () => {
+  const types = [
+    { id: 'ct-med', type_key: 'medicine', label: 'Medicine given', amount_unit: 'dose' },
+    { id: 'cty-parasites-1', type_key: 'parasites', label: 'Flea, worm and tapeworm treatment', amount_unit: '' }
+  ];
+  const logs = [
+    { id: 'clg-par-1', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' },
+    { id: 'clg-par-2', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Moxiclear', amount: '1 pipette', outcome: 'ok', happened_at: '2026-11-08T12:00:00Z', note: 'same dose again' },
+    { id: 'clg-op', check_type_id: 'ct-med', subject_id: 'sub-test-dog-1', item: 'Propofol', amount: '2 ml', outcome: 'ok', happened_at: '2026-11-09T12:00:00Z', note: 'vet procedure' }
+  ];
+  const dispense = [{ id: 'dsp-same', subject_id: 'sub-test-dog-1', given_on: '2026-11-20', product: 'Panacur', dose_volume: '4.5 ml', note: 'from clg-par-9' }];
+  const lines = R.build(R.combine(dispense, logs.concat([{ id: 'clg-par-9', check_type_id: 'cty-parasites-1', subject_id: 'sub-test-dog-1', item: 'Panacur', amount: '4.5 ml', outcome: 'ok', happened_at: '2026-11-20T12:00:00Z' }]), types), { month: '2026-11', dog });
+  expect(lines.map((l) => l.product)).toEqual(['Moxiclear', 'Panacur']);
+  expect(lines.map((l) => l.id)).toEqual(['clg-par-1', 'dsp-same']);
+  expect(R.cell(lines[0], 'note')).not.toMatch(/backfill/i);
+  expect(R.toHtml({ kennel: 'Sample Kennel', month: '2026-11', printed: '25 Nov 2026' }, lines)).not.toMatch(/Propofol|backfill/i);
+});
+
 test('the medicines register does not show where it was recorded, and a blank name is Lisa Carson @regression', () => {
   const [blank, named] = R.build([
     { id: 'a', subject_id: 'sub-test-dog-1', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet' },

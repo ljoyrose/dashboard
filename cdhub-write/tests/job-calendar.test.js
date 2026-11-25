@@ -146,6 +146,31 @@ test('September before the daily run is not tracked, and a vet dot is only on He
   assert.match(exercise, /title="2026-09-03: not tracked yet"/);
 });
 
+test('exercise counts the adult dogs only and hides a backfill note @regression', () => {
+  const ex = { id: 'cty-ex', type_key: 'exercise_all', label: 'Exercise and play: all dogs', target: 'none', site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01', not_in_areas: 'iso' };
+  const dogs = [
+    { id: 'd1', area_id: 'a1', name: 'Ada', kind: 'Breeding Female', dob: '2020-01-01' },
+    { id: 'd2', area_id: 'a2', name: 'Bea', kind: 'Stud', dob: '2020-01-01' },
+    { id: 'p1', area_id: 'a1', name: 'Marble x Sammy 2026 - Black male 1', kind: 'Pup', dob: '2026-06-01', birthLitter: 'lit-1' }
+  ];
+  const logs = ['d1', 'd2'].map((id, i) => log('e' + i, 'cty-ex', '2026-11-08', id, { note: 'backfill Lisa 25 Nov', taken_by: 'Lisa Carson' }));
+  logs.push(log('skin', 'cty-ex', '2026-11-09', 'd1', { note: 'Skin looked red. backfill Lisa 25 Nov' }));
+  logs.push(log('skin2', 'cty-ex', '2026-11-09', 'd2', { note: 'Skin looked red' }));
+  const v = Object.assign(base(logs, [
+    { rule_key: 'compliance.calendar.exercise_all', value: '1', effective_from: '2026-01-01' }
+  ]), { types: [ex], dogs: dogs, today: '2026-11-25', dmy: (s) => s, calOpen: { key: 'exercise_all', iso: '2026-11-08' } });
+  const day = (iso) => C.month(v, 'exercise_all', '2026-11').cells.find((c) => c.iso === iso);
+  assert.equal(C.month(v, 'exercise_all', '2026-11').need, 2);
+  assert.equal(day('2026-11-08').state, 'done');
+  assert.equal(day('2026-11-08').got, 2);
+  const html = C.html(v, '2026-11', false);
+  assert.match(html, /class="jd done[^"]*" data-day="2026-11-08"/);
+  assert.doesNotMatch(html, /backfill/i);
+  const html9 = C.html(Object.assign(v, { calOpen: { key: 'exercise_all', iso: '2026-11-09' } }), '2026-11', false);
+  assert.match(html9, /Skin looked red/);
+  assert.doesNotMatch(html9, /backfill/i);
+});
+
 // Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
 test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
   const v = base([log('1', 'cty-fb', '2026-11-10')]);

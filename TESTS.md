@@ -425,6 +425,8 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | Health check painted every September day missed because a June paper row started its clock, and Exercise showed vet dots | "September before the daily run is not tracked, and a vet dot is only on Health @regression" (cdhub-write/tests/job-calendar.test.js) |
 | 25 Nov 2026 | Exercise and play for January listed the dogs and painted no marks, and each yearly page printed as two sheets | "a month with exercise records paints marks in the yearly grid @regression" (tests/mocked/cdhub-yearly-print.spec.js) |
 | 25 Nov 2026 | The medicines register showed a last column of dog card, and a blank name said not recorded | "the medicines register does not show where it was recorded, and a blank name is Lisa Carson @regression" (tests/mocked/cdhub-meds-register.spec.js) |
+| 25 Nov 2026 | Exercise showed part done 27 of 34 because litter puppies were in the count, and the day panel showed a backfill note | "exercise counts the adult dogs only and hides a backfill note @regression" (tests/mocked/cdhub-job-calendar.spec.js) |
+| 25 Nov 2026 | Parasite control recorded on the check log was missing from the medicines register and the dog card | "a parasite dose joins the medicines register once, and a vet procedure drug does not @regression" (tests/mocked/cdhub-meds-register.spec.js) and "a parasite dose is on the dog card medications, once, newest first @regression" (tests/mocked/cdhub-dog-card-summary.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

@@ -21,6 +21,8 @@
 <script src="staff/lib/display.js"></script>
 <script src="staff/lib/area-temp-line.js"></script>
 <script src="staff/lib/due.js"></script>
+<script src="staff/lib/show-note.js"></script>
+<script src="meds-rows.js"></script>
 <script src="check-rules.js"></script>
 <script src="staff/lib/date-words.js"></script>
 <script src="staff/lib/list-sort.js"></script>
@@ -1252,11 +1254,30 @@ function build(){
       MC=idx(T['BLD-microchip.csv'],'subject_id');
   var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||''}); }); /* source column stays in the sheet, not shown (Lisa, 12 Nov 2026) */
   Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
-  var DSP={}; (T['BLD-dispense.csv']||[]).forEach(function(r){
-    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:r.given_on,product:r.product,pres:r.presentation,
+  var DSP={}, seenDose={}, copiedDose={};
+  function doseOn(v){ return String(v||'').slice(0,10); }
+  (T['BLD-dispense.csv']||[]).forEach(function(r){
+    if(window.BLDMedRows&&BLDMedRows.procedureDrug&&BLDMedRows.procedureDrug(r.product,r.note)) return;
+    (String(r.note||'').match(/\b[a-z]{2,5}-(?=[a-z0-9-]*\d)[a-z0-9]+(?:-[a-z0-9]+)*\b/gi)||[]).forEach(function(i){ copiedDose[i.toLowerCase()]=1; });
+    var k=window.BLDMedRows?BLDMedRows.doseKey(r.subject_id,doseOn(r.given_on||r.given_at),r.product):'';
+    if(k&&seenDose[k]) return; if(k) seenDose[k]=1;
+    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:doseOn(r.given_on||r.given_at),product:r.product,pres:r.presentation,
       dose:r.dose_volume,band:r.weight_band,kg:r.weight_kg_used,basis:r.dosage_basis,route:r.route,
-      reason:r.reason,src:r.source,need:r.ruling_needed,note:r.note}); });
-  Object.keys(DSP).forEach(function(k){ DSP[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
+      reason:r.reason,src:r.source,need:r.ruling_needed,note:window.BLDShowNote?BLDShowNote.human(r.note):r.note}); });
+  var medType={}; (T['BLD-check_type.csv']||[]).forEach(function(t){ if(window.BLDMedRows&&BLDMedRows.isMedCheck(t)) medType[t.id]=t; });
+  (T['BLD-check_log.csv']||[]).forEach(function(r){
+    var t=medType[r.check_type_id]; if(!t) return;
+    if(r.outcome==='note'&&r.note_for_id) return;
+    if(String(t.type_key||'').toLowerCase()!=='medicine'&&(r.outcome==='not_done'||r.outcome==='part_done')) return;
+    if(copiedDose[String(r.id||'').toLowerCase()]) return;
+    if(BLDMedRows.procedureDrug(r.item,r.note)) return;
+    var on=doseOn(r.happened_at||r.taken_at), k=BLDMedRows.doseKey(r.subject_id,on,r.item);
+    if(k&&seenDose[k]) return; if(k) seenDose[k]=1;
+    if(!r.subject_id) return;
+    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:on,product:r.item||'',pres:'',dose:r.amount||'',band:'',kg:'',basis:'',route:'',
+      reason:'',src:'',need:'',note:BLDShowNote?BLDShowNote.human(r.note):r.note});
+  });
+  Object.keys(DSP).forEach(function(k){ DSP[k].sort(function(a,b){return a.on<b.on?1:(a.on>b.on?-1:0);}); });
   CD.dispense=DSP;
 
   CD.markers={}; (T['BLD-dna_marker.csv']||[]).forEach(function(r){ CD.markers[r.code]=r; });
@@ -2650,7 +2671,7 @@ function showTreats(id){
  if(!t.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(shownDogName(d))+' has no treatments recorded</h4></div>'; return; }
  var h='<div class="card"><h4>'+esc(shownDogName(d))+': treatments'+cntPill(t.length)+'</h4>'
   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
- for(var i=t.length-1;i>=0;i--){ var r=t[i];
+ for(var i=0;i<t.length;i++){ var r=t[i];
   var unk=/NOT STATED/.test(r.product||'');
   h+='<tr><td>'+esc(dmy(r.on))+'</td>'
    +'<td>'+(unk?'<span class="pill no">not stated</span>':'<b>'+esc(r.product)+'</b>'+(r.pres?'<br><span class="mut">'+esc(r.pres)+'</span>':''))+'</td>'

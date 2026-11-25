@@ -11,6 +11,7 @@
   else root.BLDJobCal = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   /* the stop-gap until the owner has calendar rows (Lisa 17 Nov 2026: health checks, bowls washed, site cleaned).
      Bedding and Toys stay on the list even when the owner has chosen the other cards, unless a row turns them off. */
@@ -78,7 +79,7 @@
       function add(id) { id = String(id || '').trim(); if (id && !skip[id]) x.dogs[id] = 1; }
       add(l.subject_id);
       String(l.covered_ids || '').split('|').forEach(add);
-      x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: l.note || '' });
+      x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: Show.human(l.note) });
     });
     return out;
   }
@@ -101,12 +102,43 @@
     var k = String((t && t.type_key) || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
     return k === 'healthcheckall' || k === 'healthcheck';
   }
+  function ageMonths(dob, today) {
+    dob = String(dob || '').slice(0, 10); today = String(today || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || !/^\d{4}-\d{2}-\d{2}$/.test(today)) return null;
+    var m = (Number(today.slice(0, 4)) - Number(dob.slice(0, 4))) * 12 + (Number(today.slice(5, 7)) - Number(dob.slice(5, 7)));
+    if (Number(today.slice(8, 10)) < Number(dob.slice(8, 10))) m--;
+    return m < 0 ? null : m;
+  }
+  /** Same puppy rule as the year print: a litter pup, a Pup, or a generated "Dam x Sire 2026 - male" name. */
+  function litterPup(dog, today) {
+    if (!dog) return false;
+    if (dog.puppy === true) return true;
+    if (/^pup/i.test(String(dog.kind || ''))) return true;
+    var name = String(dog.name || '');
+    if (/\bx\b/i.test(name) && /\b(male|female)\b/i.test(name) && /\b20\d{2}\b/.test(name)) return true;
+    if (dog.birth_litter_id || dog.birthLitter) {
+      var age = ageMonths(dog.dob, today);
+      if (age == null || age < 6) return true;
+    }
+    return false;
+  }
+  function wantsPups(t) {
+    return /pup/i.test(String((t && t.type_key) || '') + ' ' + String((t && t.label) || '') + ' ' + String((t && t.only_groups) || ''));
+  }
+  /** Dogs a per-dog card counts: the check's dogs, without litter puppies unless the check is for puppies. */
+  function countedDogs(v, t) {
+    var mine = Due.dogsFor(t, { dogs: v.dogs || [] });
+    if (wantsPups(t)) return mine;
+    return mine.filter(function (d) { return !litterPup(d, v.today); });
+  }
 
   /** One month for one job: {key, label, ym, first, need, cells:[{iso, day, state, got, need}]}. State: done, part,
       missed, due (today, not yet), future, before (before this job's daily run: not tracked here), blank (padding). */
   function month(v, key, ym) {
     var t = typeOf(v, key); if (!t) return null;
-    var perDog = Due.perDogSite(t), mine = perDog ? Due.dogsFor(t, { dogs: v.dogs || [] }) : [], need = perDog ? mine.length : 1;
+    var perDog = Due.perDogSite(t), mine = perDog ? countedDogs(v, t) : [], need = perDog ? mine.length : 1;
+    var expect = {};
+    mine.forEach(function (d) { expect[d.id] = 1; });
     /* a dog counts on a day only once it is born: a pup born mid-month does not make the days before it "part done" */
     var needOn = function (iso) { return mine.filter(function (x) { return !x.dob || String(x.dob).slice(0, 10) <= iso; }).length; };
     var d = days(v, key), first = trackedFrom(d);
@@ -115,7 +147,7 @@
     var cells = [];
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).length : x.n) : 0, want = perDog ? needOn(iso) : 1;
+      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], got = x ? (perDog ? Object.keys(x.dogs).filter(function (id) { return expect[id]; }).length : x.n) : 0, want = perDog ? needOn(iso) : 1;
       var state = iso > v.today ? 'future' : (got && (!perDog || got >= want)) ? 'done' : got ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
       cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : 0, lines: x ? x.lines : [] });
     }
@@ -226,7 +258,7 @@
   function doneFields(v, key) {
     var t = typeOf(v, key); if (!t) return null;
     var f = { check_type_id: t.id, outcome: String(t.asks_outcome).toLowerCase() === 'false' ? 'recorded' : 'ok', how_recorded: 'site_tap' };
-    if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
+    if (Due.perDogSite(t)) f.dog_ids = countedDogs(v, t).map(function (d) { return d.id; }).join('|');
     return f;
   }
 
@@ -323,7 +355,7 @@
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
     if (x.note) f.note = x.note;
     if (x.old) f.confirm_unusual = 'yes';
-    if (Due.perDogSite(t)) f.dog_ids = Due.dogsFor(t, { dogs: v.dogs || [] }).map(function (d) { return d.id; }).join('|');
+    if (Due.perDogSite(t)) f.dog_ids = countedDogs(v, t).map(function (d) { return d.id; }).join('|');
     return f;
   }
   /** A starter file: the heading row and one example row per calendar job (yesterday), to fill in and import. */

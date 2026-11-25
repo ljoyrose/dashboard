@@ -18,6 +18,7 @@
   else root.BLDYearlyPrint = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var PAGE_W = 281, PAGE_H = 194, BODY_H = 168;
@@ -303,7 +304,7 @@
     rows.forEach(function (r) { if (isNoteFor(r)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r); });
     return rows.filter(function (r) { return !isNoteFor(r); }).map(function (r) {
       var extra = (later[str(r.id)] || []).map(function (n) { return clean(n.note); }).filter(Boolean);
-      var note = [clean(r.note)].concat(extra).filter(Boolean).join(' ');
+      var note = Show.human([clean(r.note)].concat(extra).filter(Boolean).join(' '));
       var w = logWhen(r);
       return { row: r, dogs: dogsOf(r), date: w.date, time: str(r.time_given).toLowerCase() === 'false' ? '' : w.time, note: note, outcome: str(r.outcome).toLowerCase() };
     });

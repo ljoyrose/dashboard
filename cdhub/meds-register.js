@@ -14,6 +14,8 @@
   else root.BLDMedsRegister = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  var MedRows = (typeof module === 'object' && module.exports) ? require('./meds-rows.js') : ((typeof self !== 'undefined' && self.BLDMedRows) || {});
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded';
   /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows NAMED instead. */
@@ -88,16 +90,25 @@
    * which record it corrects, and the original stays. Nothing is filled in that the record does not hold.
    */
   function fromChecks(logs, types) {
-    var med = {}, unit = {};
-    (types || []).forEach(function (t) { if (str(t.type_key).toLowerCase() === 'medicine') { med[str(t.id)] = 1; unit[str(t.id)] = str(t.amount_unit); } });
+    var med = {}, unit = {}, parasite = {};
+    (types || []).forEach(function (t) {
+      if (!MedRows.isMedCheck || !MedRows.isMedCheck(t)) return;
+      med[str(t.id)] = 1; unit[str(t.id)] = str(t.amount_unit);
+      if (str(t.type_key).toLowerCase() !== 'medicine') parasite[str(t.id)] = 1;
+    });
     var mine = (logs || []).filter(function (r) { return med[str(r.check_type_id)]; }), byId = {}, later = {};
     mine.forEach(function (r) { byId[str(r.id)] = r; if (str(r.outcome) === 'note' && str(r.note_for_id)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r); });
-    return mine.filter(function (r) { return !(str(r.outcome) === 'note' && str(r.note_for_id)); }).map(function (r) {
+    return mine.filter(function (r) {
+      if (str(r.outcome) === 'note' && str(r.note_for_id)) return false;
+      if (parasite[str(r.check_type_id)] && (str(r.outcome) === 'not_done' || str(r.outcome) === 'part_done')) return false;
+      if (MedRows.procedureDrug && MedRows.procedureDrug(r.item, r.note)) return false;
+      return true;
+    }).map(function (r) {
       var out = str(r.outcome), amt = str(r.amount), u = unit[str(r.check_type_id)], o = byId[str(r.corrects_id)];
       var notes = [];
       if (out && out !== 'ok' && out !== 'done') notes.push('Job marked ' + (RESULT[out] || out) + '.');
-      if (clean(r.note)) notes.push(clean(r.note));
-      (later[str(r.id)] || []).forEach(function (n) { notes.push('Later, by ' + (who(n.taken_by) || NR) + ': ' + (clean(n.note) || NR)); });
+      if (Show.human(clean(r.note))) notes.push(Show.human(clean(r.note)));
+      (later[str(r.id)] || []).forEach(function (n) { var bit = Show.human(clean(n.note)); if (bit) notes.push('Later, by ' + (who(n.taken_by) || NR) + ': ' + bit); });
       if (str(r.corrects_id)) notes.push('Corrects the record of ' + (o ? (when({ given_at: o.happened_at || o.taken_at }).date || 'an earlier date') : 'an earlier date') + '.');
       if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
       return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
@@ -139,7 +150,7 @@
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
-      line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || NAMED;
+      line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || NAMED;
       line.missing = ['date', 'dog', 'product', 'dose'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
@@ -261,9 +272,21 @@
    * is left out rather than printed twice.
    */
   function combine(dispense, logs, types) {
-    var copied = {};
+    var copied = {}, seen = {}, out = [];
     (dispense || []).forEach(function (r) { ids(r.note).forEach(function (i) { copied[i.toLowerCase()] = 1; }); });
-    return (dispense || []).concat(fromChecks(logs, types).filter(function (j) { return !copied[String(j.id).toLowerCase()]; }));
+    (dispense || []).concat(fromChecks(logs, types).filter(function (j) { return !copied[String(j.id).toLowerCase()]; })).forEach(function (r) {
+      if (MedRows.procedureDrug && MedRows.procedureDrug(r.product || r.item, r.note)) return;
+      var day = str(r.given_at || r.given_on).slice(0, 10);
+      var k = MedRows.doseKey ? MedRows.doseKey(r.subject_id, day, r.product || r.item) : '';
+      if (k && seen[k]) return;
+      if (k) seen[k] = 1;
+      out.push(r);
+    });
+    out.sort(function (a, b) {
+      var da = str(a.given_at || a.given_on), db = str(b.given_at || b.given_on);
+      return da < db ? 1 : da > db ? -1 : (str(a.id) < str(b.id) ? -1 : 1);
+    });
+    return out;
   }
 
   return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, combine: combine, clean: clean, build: build, cell: cell, gaps: gaps,

@@ -15,6 +15,7 @@
   else root.BLDChecksRegister = factory(root.BLDDue);
 }(typeof self !== 'undefined' ? self : this, function (Due) {
   'use strict';
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded', NO_TIME = 'time not recorded';
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -104,8 +105,8 @@
       if (only && !(allowed ? allowed[str(r.check_type_id)] : str(r.check_type_id) === only)) return;
       var t = types[str(r.check_type_id)], id = str(r.id), outcome = str(r.outcome);
       var notes = (later[id] || []).slice().sort(function (a, b) { return str(a.taken_at || a.happened_at) < str(b.taken_at || b.happened_at) ? -1 : 1; })
-        .map(function (n) { return 'Later, ' + stamp(n) + (who(n.taken_by) ? ', by ' + who(n.taken_by) : '') + ': ' + (clean(n.note) || NR); });
-      var own = clean(r.note), action = '';
+        .map(function (n) { var bit = Show.human(clean(n.note)); return bit ? 'Later, ' + stamp(n) + (who(n.taken_by) ? ', by ' + who(n.taken_by) : '') + ': ' + bit : ''; }).filter(Boolean);
+      var own = Show.human(clean(r.note)), action = '';
       if (NEEDS_ACTION[outcome]) action = [own ? 'At the time: ' + own : ''].concat(notes).filter(Boolean).join(' | ');
       else if (notes.length) action = notes.join(' | ');
       var corr = [];
