@@ -1,5 +1,5 @@
 /*!
- * BLDTempJudge - one rule for judging a room temperature reading against its limit rows (Lisa 17 Nov 2026, "Temps A").
+ * BLDTempJudge - one rule for judging a room temperature reading against its limit rows (the owner 17 Nov 2026, "Temps A").
  *
  * Why: the limits sheet's own notes say
  *   - puppies under four weeks: 26-28 C is for where the puppies are (the whelping box / bed spot), not the whole room;
@@ -51,7 +51,7 @@
     if (k === 'warm') return 'over ' + (adult || band ? (adult || band).max : '') + ' °C: cooling action';
     if (k === 'spotcold') return 'bed spot below ' + (band ? band.min : '') + ' °C';
     if (k === 'spothot') return 'bed spot above ' + (band ? band.max : '') + ' °C';
-    if (k === 'nospot') return '';   // Lisa 18 Nov 2026: no "bed spot not recorded" words anywhere
+    if (k === 'nospot') return '';   // the owner 18 Nov 2026: no "bed spot not recorded" words anywhere
     return '';
   }
   return { judge: judge, isBreach: isBreach, words: words, num: num };

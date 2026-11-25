@@ -1,4 +1,4 @@
-// CD Hub Bin (Settings -> Bin), owner only, read only. OV11 for Lisa, 15 Nov 2026. Invented rows only.
+// CD Hub Bin (Settings -> Bin), owner only, read only. OV11 for the owner, 15 Nov 2026. Invented rows only.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -82,7 +82,7 @@ asOwner.describe('CD Hub Bin: owner', () => {
   });
 });
 
-// ---- Restore (Lisa 18 Nov 2026, answer A): ended rules/settings and links only; a NEW row from today; owner switch OFF by default.
+// ---- Restore (the owner 18 Nov 2026, answer A): ended rules/settings and links only; a NEW row from today; owner switch OFF by default.
 const SINK = 'https://script.google.com/macros/s/PRETENDSCRIPT/exec';
 const ON = 'r-on,ten-x,bin.restore.on,1,2020-01-01,Owner setting,,2020-01-01T00:00:00Z,sc-aaaaaa,,';
 const LIVE_COPY = 'r-5,ten-x,pretend.live_rule,7,2019-01-01,Pretend,,2019-01-01T00:00:00Z,sc-aaaaaa,2019-12-31,';

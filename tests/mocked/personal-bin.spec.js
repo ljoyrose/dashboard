@@ -100,7 +100,7 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     expect(got.length).toBe(1);
   });
 
-  test('config.js: the Personal Drive bin is live (Lisa, 13 Nov 2026)', async ({ page }) => {
+  test('config.js: the Personal Drive bin is live (the owner, 13 Nov 2026)', async ({ page }) => {
     await page.goto('./#/drives/personal-drive');
     expect(await page.evaluate(() => window.DASH_CONFIG.personalBin.dryRun)).toBe(false);
   });

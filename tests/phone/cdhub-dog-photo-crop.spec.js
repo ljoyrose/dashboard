@@ -1,4 +1,4 @@
-// Dog photo crop on a phone (Lisa, 12 Nov 2026): the crop fits the screen, a finger drag moves the picture, the
+// Dog photo crop on a phone (the owner, 12 Nov 2026): the crop fits the screen, a finger drag moves the picture, the
 // buttons are phone-sized, and Save photo sends a square JPEG within the limit. Invented dog, pretend save script.
 const { test, expect } = require('../support/test');
 const { openOneDog, recordSaves, bigPhoto, jpegSize } = require('../support/dog-photo-world');

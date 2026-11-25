@@ -99,7 +99,7 @@ test('screenshots: a health-check month, a sparse month, and a medicines month',
     const ctx = { today: today, kennel: 'Sample Kennel', printed: '15 Mar 2026', types: types, logs: logs, dogs: dogs, tables: {}, dogName: (id) => (dogs.find((d) => d.id === id) || {}).name || '' };
     const health = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:health_check_all'], today: today }, ctx).html;
     const sparse = Y.build({ period: 'month', year: 2026, month: 1, ids: ['check:parasites'], today: today }, ctx).html;
-    const lines = R.build([{ id: 'dsp', subject_id: 'd1', given_on: '2026-03-04', product: 'Sample Wormer', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-03', dog: () => ({ name: 'Ada', chip: '' }) });
+    const lines = R.build([{ id: 'dsp', subject_id: 'd1', given_on: '2026-03-04', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-03', dog: () => ({ name: 'Ada', chip: '' }) });
     const meds = R.toHtml({ kennel: 'Sample Kennel', month: '2026-03', printed: '15 Mar 2026' }, lines);
     const wrap = (inner) => '<!doctype html><html><head><meta charset="utf-8"><style>' + Y.CSS + 'body{margin:0;background:#fff}#ypReport{display:block}</style></head><body><div id="ypReport">' + inner + '</div></body></html>';
     return { health: wrap(health), sparse: wrap(sparse), meds: meds.replace(/<script[\s\S]*?<\/script>/gi, '') };

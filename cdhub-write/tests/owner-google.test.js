@@ -1,5 +1,5 @@
 'use strict';
-// Lisa 16 Nov 2026, option A: owners save with their Google sign-in (no code); staff keep codes.
+// the owner 16 Nov 2026, option A: owners save with their Google sign-in (no code); staff keep codes.
 // FAKE accounts and tokens only. Google is a stand-in (harness UrlFetchApp): tokeninfo + Drive about.
 const test = require('node:test');
 const assert = require('node:assert/strict');

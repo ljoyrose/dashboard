@@ -1,4 +1,4 @@
-// Every SOP can be recorded and printed (Lisa, 25 Nov 2026). Invented rows only.
+// Every SOP can be recorded and printed (the owner, 25 Nov 2026). Invented rows only.
 const { tabClick } = require('../support/tabs');
 const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 const R = require('../../cdhub/sop-records.js');

@@ -1,5 +1,5 @@
 // The section's view chips sit at the top with every one in sight on a phone: they wrap, never scroll sideways
-// (Lisa 15-16 Nov 2026: "Records still goes to Dogs then needs scroll"). Pretend Google and Drive only.
+// (the owner 15-16 Nov 2026: "Records still goes to Dogs then needs scroll"). Pretend Google and Drive only.
 const { test, expect } = require('../support/test');
 
 test.use({ viewport: { width: 390, height: 800 } });

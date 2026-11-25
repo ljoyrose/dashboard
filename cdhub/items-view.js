@@ -22,7 +22,7 @@
     'BLD-readings.csv', 'BLD-reading_kinds.csv', 'BLD-reading_limits.csv', 'BLD-files.csv'];
   var NEED = 'item.in_use', PLACE = 'placed_in', LINKS = 'BLD-links.csv';
   var PLACES = [PLACE, 'item_placed_in'];   // one of the two survives when STAFF and TEMPS settle the kind row
-  // order best to worst (Lisa 9 Nov): filters and sorts run All, In date ... Overdue, Archived last
+  // order best to worst (the owner 9 Nov): filters and sorts run All, In date ... Overdue, Archived last
   var RANK = { ok: 0, none: 1, soon: 2, due: 3, fail: 4, expired: 5 };
   var WORD = { ok: 'In date', none: 'No test set', soon: 'Due soon', due: 'Overdue', fail: 'Failed', expired: 'Expired' };
   var PILL = { ok: 'itm-g', none: '', soon: 'w', due: 'no', fail: 'no', expired: 'no' };
@@ -386,7 +386,7 @@
     else if (S.form === 'move') h += '<form class="itm-form" data-itm-save="move"><p class="mut">Now: ' + e(x.place || 'no room') + (x.placeRow ? ' since ' + e(v.dmy(x.placeRow.from_date)) : '') + '</p><label>Move to<select name="area_id" required>' + areaOptions(v, '', true) + '</select></label><label>From<input type="date" name="from_date" required value="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'archive') h += '<form class="itm-form" data-itm-save="archive"><label>Out of use from<input type="date" name="out_on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label><label>Why<select name="why"><option>Dead</option><option>Failed test</option><option>Replaced</option><option>Gone</option><option>Other</option></select></label><label>Note<input name="note"></label><div class="itm-btns"><button type="submit" class="btn yes">Archive</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     else if (S.form === 'edit') h += addForm(v, it);
-    // one tap for a photo and its date, any item (Lisa 18 Nov 2026); saves the file and its link only, never an item change
+    // one tap for a photo and its date, any item (the owner 18 Nov 2026); saves the file and its link only, never an item change
     else if (S.form === 'photo') h += '<form class="itm-form" data-itm-save="photo"><label>Photo<input type="file" name="file" accept="image/*" capture="environment" required></label><label>Date taken<input type="date" name="on" required value="' + e(v.today) + '" max="' + e(v.today) + '"></label><div class="itm-btns"><button type="submit" class="btn yes">Save</button><button type="button" class="btn" data-itm-form="">Cancel</button></div></form>';
     if (x.s.lines.length) {
       h += '<h3>Tests</h3><table><thead><tr><th>test</th><th>last</th><th>next</th><th></th></tr></thead><tbody>' + x.s.lines.map(function (l) {
@@ -459,7 +459,7 @@
       img.src = url;
     });
   }
-  /* Shared saves, each behind its own switch on the save script (off until Lisa's yes):
+  /* Shared saves, each behind its own switch on the save script (off until the owner's yes):
      link_add (STAFF), file_add (DOGCARD, PR 567: stores the file and writes the files row; the link is a separate
      link_add), readings (TEMPS; STAFF builds the save). Shapes as agreed with them on 14 Nov. */
   function act(v, action, fields, file, row) {
@@ -601,7 +601,7 @@
     }
   }
 
-  /** The item's latest main photo for the printed report (18 Nov 2026, Lisa: list, photo, type, expiry, then a PDF).
+  /** The item's latest main photo for the printed report (18 Nov 2026, the owner: list, photo, type, expiry, then a PDF).
       A Drive photo prints from Drive's thumbnail, as the print cards do (print.js); a web link prints as given. */
   function photoCell(v, it) {
     var pics = filesFor(v.T, 'items', it.id, ['main']), p = pics[pics.length - 1], id = p ? p.id : '', raw = p ? '' : t(it.photo);

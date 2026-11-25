@@ -1,4 +1,4 @@
-// Lisa 18 Nov 2026 ("resolve"): batch use-by dates are month-only in any trade, so the Date formats check accepts
+// the owner 18 Nov 2026 ("resolve"): batch use-by dates are month-only in any trade, so the Date formats check accepts
 // year-month (2023-03, ISO 8601) as well as full dates, in every column. Nothing is given an invented day.
 const { test, expect } = require('../support/test');
 

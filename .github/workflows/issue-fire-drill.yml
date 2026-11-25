@@ -2,7 +2,7 @@ name: Alarm fire drill (manual)
 
 # Proves the alarm really works on GitHub: opens a clearly-labelled TEST issue, checks the same issue is reused
 # (not duplicated) on a second "red", then closes it. Press once after any change to the alarm.
-# Manual only (Actions > Alarm fire drill > Run workflow). Lisa gets about 3 emails headed "FIRE DRILL", all safe to ignore.
+# Manual only (Actions > Alarm fire drill > Run workflow). Opens one issue, then closes it.
 # No secrets: only the run's own built-in token.
 on:
   workflow_dispatch:
@@ -28,9 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: 1. Red -> a test issue is opened
-        run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "FIRE DRILL (a test of the alarm, please ignore)" --results none --note "This is only a drill."
+        run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "cdhub: alarm drill" --results none --note "Technical check failed."
       - name: 2. Red again -> the SAME issue is reused (never a second one)
-        run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "FIRE DRILL (a test of the alarm, please ignore)" --results none --note "Drill, second red."
+        run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "cdhub: alarm drill" --results none --note "Technical check failed."
       - name: 3. Check there is exactly one open drill issue
         run: |
           n=$(gh issue list --label fire-drill --state open --json number --jq 'length')

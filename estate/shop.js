@@ -32,7 +32,7 @@
   function foundCount(v) { var m = /found \((\d+)\)/i.exec(String(v || '')); return m ? +m[1] : 0; }
 
   // The first test shop's row must carry all of these. Returns the names of the blank or failed fields; [] = all pass.
-  // Merchant Center and target country are facts Lisa gives (not machine-checked); SSL and DMARC come from scans.
+  // Merchant Center and target country are facts the owner gives (not machine-checked); SSL and DMARC come from scans.
   function firstTestRowCheck(row, today) {
     var r = row || {}, out = [];
     if (core.statusOf(r) !== 'live') out.push('live_status');

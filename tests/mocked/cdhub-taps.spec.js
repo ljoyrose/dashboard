@@ -127,7 +127,7 @@ test.describe('CD Hub: every small control answers a tap', () => {
 });
 
 // Found by the hover test on 20 Nov 2026 (JOB CDH-HT.1): the "choose a rule" list on Compliance was the one list on the
-// hub with no hover fill. House rule (Lisa, 12 Nov 2026): hover shows the pale grey fill, no line.
+// hub with no hover fill. House rule (the owner, 12 Nov 2026): hover shows the pale grey fill, no line.
 test('Compliance: the "choose a rule" list shows the pale grey fill on hover, and no line', async ({ page }) => {
   await signIn(page);
   await open(page, 'compliance');

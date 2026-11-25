@@ -1,4 +1,4 @@
-// Typing boxes on a phone (Lisa, 3 Nov 2026): every visible input, textarea, select and contenteditable is at least 16px on every
+// Typing boxes on a phone (the owner, 3 Nov 2026): every visible input, textarea, select and contenteditable is at least 16px on every
 // page and view, so iPhone Safari never zooms in when one is tapped (--fs-input in tokens.css, house.css section 16). Also the
 // shared search box (DashKit.search) and Studio's comment box, which only show once opened. Pretend Google, Drive and Sheets.
 // SWEEP_SHOTS=<folder> also saves 390px pictures of a focused search box and a focused comment box.

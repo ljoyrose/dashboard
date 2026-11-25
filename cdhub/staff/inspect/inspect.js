@@ -1,7 +1,7 @@
 /*!
  * Inspector page (Breed Better, spec S10). Read-only, time-boxed, no sign-in.
  *
- * The link Lisa copies from her owner screen is  .../cdhub/staff/inspect/#s=<script id>&c=<code>.
+ * The link the owner copies from her owner screen is  .../cdhub/staff/inspect/#s=<script id>&c=<code>.
  * Both sit after the #, so they are never sent to any server or kept in its logs. This page takes them,
  * clears them from the address bar at once, and keeps them in memory only: nothing goes in localStorage,
  * sessionStorage or cookies. Closing the tab forgets the link.

@@ -1,5 +1,5 @@
 /*!
- * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for Lisa, 21 Nov 2026,
+ * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for the owner, 21 Nov 2026,
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
  * says "not recorded" only for a legally required detail: the date, the dog, the medicine, the dose and who gave it.
@@ -41,7 +41,7 @@
 
   function str(v) { return String(v == null ? '' : v).trim(); }
 
-  /* No internal codes on paper (Lisa, 23 Nov 2026). A record id looks like clg-20261118-042020-vf20 or sub-7k2q9x: 2 to 5
+  /* No internal codes on paper (the owner, 23 Nov 2026). A record id looks like clg-20261118-042020-vf20 or sub-7k2q9x: 2 to 5
      letters, a hyphen, then letters and digits with at least one digit. "from <id>" is dropped whole; a bare id too. */
   var ID_SRC = '\\b[a-z]{2,5}-(?=[a-z0-9-]*\\d)[a-z0-9]+(?:-[a-z0-9]+)*\\b';
   function ids(s) { return String(s == null ? '' : s).match(new RegExp(ID_SRC, 'gi')) || []; }

@@ -1,6 +1,6 @@
-// Hub Mains (Lisa's house style, 2 Nov 2026): the checks every hub's Main must pass, shared by tests/mocked/hub-main-*.spec.js.
+// Hub Mains (the owner's house style, 2 Nov 2026): the checks every hub's Main must pass, shared by tests/mocked/hub-main-*.spec.js.
 // Main = exactly Next, Needs you (at most 5 rows, late -> today -> waiting, each with its action), then the hub's 3 numbers
-// (labels in Lisa's order, each a link to its filtered view, "–" when it cannot be read), or ONE "Nothing needs you" + the numbers.
+// (labels in the owner's order, each a link to its filtered view, "–" when it cannot be read), or ONE "Nothing needs you" + the numbers.
 const fs = require('fs');
 const path = require('path');
 const { expect } = require('@playwright/test');
@@ -90,14 +90,14 @@ async function noSideways(page) {
   expect(w, 'no sideways scroll').toBeLessThanOrEqual(0);
 }
 
-// Screenshot for Lisa (HUBMAIN_SHOTS=<folder>): <hub>-main-<width>-<scheme>.png.
+// Screenshot for the owner (HUBMAIN_SHOTS=<folder>): <hub>-main-<width>-<scheme>.png.
 async function shot(page, hub, width, scheme) {
   if (!SHOTS) return;
   fs.mkdirSync(SHOTS, { recursive: true });
   await page.screenshot({ path: path.join(SHOTS, `${hub}-main-${width}-${scheme}.png`), fullPage: true });
 }
 
-// Rows never move (Lisa, 2 Nov: "weird jumping"): each row's box and its icon (or first part) keep their place (±0.5px) on hover and
+// Rows never move (the owner, 2 Nov: "weird jumping"): each row's box and its icon (or first part) keep their place (±0.5px) on hover and
 // focus, and every row's icon starts at the same x. Also checks the left bar is a straight 3px line (no rounded "(" per row).
 async function steadyRows(page, rowSel, iconSel) {
   const rows = page.locator(rowSel);
@@ -126,8 +126,8 @@ async function steadyRows(page, rowSel, iconSel) {
   for (const x of xs) expect(Math.abs(x - xs[0]), 'every row\'s icon at the same x').toBeLessThanOrEqual(0.5);
 }
 
-// A group of numbers (Lisa, 2 Nov): same size (18px / 600) on one baseline; a late one has a rose ring sized to it, others none;
-// hover shows the pale grey fill, no line (Lisa, 12 Nov 2026); focus the 1px ink line, no fill; no layout change. links = the number
+// A group of numbers (the owner, 2 Nov): same size (18px / 600) on one baseline; a late one has a rose ring sized to it, others none;
+// hover shows the pale grey fill, no line (the owner, 12 Nov 2026); focus the 1px ink line, no fill; no layout change. links = the number
 // links, v = the number inside.
 async function numberGroup(page, links, v) {
   const els = page.locator(links);

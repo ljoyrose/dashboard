@@ -1,4 +1,4 @@
-// Fold (Lisa, 2 Nov 2026): every card or section with a heading, on every page and tab, folds down to its heading with ONE real
+// Fold (the owner, 2 Nov 2026): every card or section with a heading, on every page and tab, folds down to its heading with ONE real
 // button (the grey chevron): aria-expanded, aria-controls, Enter and Space. A fold is remembered through a reload, a folded heading
 // keeps its count ring, a phone list of more than 5 rows starts at 3 with "+N more", phone titles stop at 2 lines, and a row that
 // opens its item still does. Pretend Google and Drive only; every row is invented.
@@ -7,7 +7,7 @@ const path = require('path');
 const { test, expect } = require('../support/test');
 const { HUBS, go } = require('../support/hubs');
 
-// Pictures for Lisa only when asked: FOLD_SHOTS=<folder>.
+// Pictures for the owner only when asked: FOLD_SHOTS=<folder>.
 const SHOTS = process.env.FOLD_SHOTS || '';
 
 // Checks every fold button on the screen now: named, open, its parts real; click folds (parts hidden, heading row still shown),
@@ -220,7 +220,7 @@ test.describe('on a phone (390px)', () => {
     await expect(page.locator('button.house-fold-more')).toHaveCount(0);
   });
 
-  test('Dashboard Main at 390, open and folded (pictures for Lisa)', async ({ page, guard }) => {
+  test('Dashboard Main at 390, open and folded (pictures for the owner)', async ({ page, guard }) => {
     await HUBS.home.open(page, guard);
     await page.goto('./#/map');
     const needs = page.locator('#needsToday');

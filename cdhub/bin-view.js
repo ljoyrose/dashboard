@@ -1,9 +1,9 @@
 /*!
- * CDBin (Settings -> Bin), owner page. OV11 for Lisa, 15 Nov 2026 (answer b).
+ * CDBin (Settings -> Bin), owner page. OV11 for the owner, 15 Nov 2026 (answer b).
  * Lists every row that has ended: a to_date (or another end date) on or before today, or an archive flag. Nothing is
  * deleted anywhere, so the Bin is a view, not a store. Grouped by kind (the table), newest first, each row saying who
  * ended it, when, and why where the row holds a reason. Searchable.
- * Restore (Lisa 18 Nov 2026, answer A): ended rules/settings rows and ended links only. Never edits history: it adds a
+ * Restore (the owner 18 Nov 2026, answer A): ended rules/settings rows and ended links only. Never edits history: it adds a
  * NEW row from today, saying which Bin row it came from. Behind its own owner switch, the dated rule row
  * bin.restore.on = 1 (no row = OFF). The Bin page is the owner's, so who may restore is the owner until the Bin opens to
  * others. Codes, archived dogs and litters are not restored here (codes are the owner's; dogs/litters come later).

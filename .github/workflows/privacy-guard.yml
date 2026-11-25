@@ -88,7 +88,7 @@ jobs:
       - name: Red on main? Open or update the one issue
         if: ${{ failure() && steps.scan.outcome == 'failure' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         continue-on-error: true
-        run: node tests/support/report-issue.js --state red --label privacy-red --title-prefix "Privacy guard is red on main" --results none --note "A push to main added something private (or the PRIVACY_DENYLIST secret is missing). Open the run for file:line + rule. Do not force-push; ask Lisa."
+        run: node tests/support/report-issue.js --state red --label privacy-red --title-prefix "cdhub: privacy check failed" --results none --note "Technical check failed."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Green on main? Close the issue

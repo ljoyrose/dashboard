@@ -501,7 +501,7 @@ test('when this code cannot read past records, the list says so instead of a sil
   await expect(page.locator('[data-no-history]')).toContainText('cannot read past records');
 });
 
-// Lisa 17 Nov 2026: jobs she had saved still said Due because the records read got no answer in time (slow saves).
+// the owner 17 Nov 2026: jobs she had saved still said Due because the records read got no answer in time (slow saves).
 // That is said as "did not load in time" with Try again, never as "this code cannot read".
 test.describe('records read with no answer', () => {
   test.use({ allowedConsole: [/404|net::ERR_FAILED/] });   // the pretend "no answer" is a failed load
@@ -684,7 +684,7 @@ test('check types starting round. belong to The round and never show as jobs, no
   await expect(page.getByLabel('Job').locator('option[value="round.presence"]')).toHaveCount(0);
 });
 
-// 22 Nov 2026 (Lisa: "when you enter with entered after ensure there is a photo option so we can add the diary"):
+// 22 Nov 2026 (the owner: "when you enter with entered after ensure there is a photo option so we can add the diary"):
 // an Earlier save offers the diary page; a chosen photo is stored once and linked to the record as evidence.
 test('Earlier: after the save, "Diary page" offers a photo, kept with the record through the save script', async ({ page }) => {
   const sent = await setup(page);
@@ -718,7 +718,7 @@ test('a job done today (not Earlier) offers no diary photo', async ({ page }) =>
   await expect(page.locator('[data-diary-photo] [data-evidence]')).toHaveCount(0);
 });
 
-// Lisa 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
+// the owner 22 Nov 2026: a multi-dog job showed its ticks but no button to save them, so the card stayed "Due".
 test('a whole-site dog job: the Done N dogs button by the ticks saves the ticked dogs and the card says N of M dogs @regression', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');
@@ -752,7 +752,7 @@ test('a whole-site dog job: a refused tick save says "Not saved" with the reason
   await expect(card.locator('.done-line')).toHaveText('Not saved: None of those dogs can be covered by a whole-site tap.');
 });
 
-// Lisa 22 Nov 2026: "Bedding washed" (As needed) saved, but its card showed no tick, so a second Yes was refused as a repeat.
+// the owner 22 Nov 2026: "Bedding washed" (As needed) saved, but its card showed no tick, so a second Yes was refused as a repeat.
 test('an as-needed job shows its tick straight after a save', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#s/SITETAG2');

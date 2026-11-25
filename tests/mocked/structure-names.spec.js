@@ -16,11 +16,11 @@ const signIn = async (page) => {
 };
 
 test.describe('Structure: one name and one way back', () => {
-  test('the front page is called "Dashboard" in the title and the page name; its tab is Main (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
+  test('the front page is called "Dashboard" in the title and the page name; its tab is Main (the owner\'s tab picks, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
-    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/); // the top bar and title say "Dashboard" (Lisa, 2 Nov)
+    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/); // the top bar and title say "Dashboard" (the owner, 2 Nov)
     await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Main');
     // No visible link to #/map is named "Map" or "Home".
     const names = await page.locator('a[href="#/map"]:visible').allInnerTexts();
@@ -56,7 +56,7 @@ test.describe('Structure: one name and one way back', () => {
     expect(read('toolkit.js')).toMatch(/\['g m', 'Dashboard'/);
   });
 
-  // The top bar (Lisa's pick A, 2 Nov 2026): the way back is the Home icon, first in the bar, named "Dashboard" for screen readers.
+  // The top bar (the owner's pick A, 2 Nov 2026): the way back is the Home icon, first in the bar, named "Dashboard" for screen readers.
   for (const h of HUBS) {
     test(`${h}/ has exactly one Home icon link named "Dashboard" with class "btn back", first in the top bar`, () => {
       const s = read(h + '/index.html');

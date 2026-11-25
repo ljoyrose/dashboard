@@ -1,6 +1,6 @@
-// One page width (Lisa, 2 Nov 2026): every page uses the full window with the same side gap (--house-gutter: 24px on a laptop,
+// One page width (the owner, 2 Nov 2026): every page uses the full window with the same side gap (--house-gutter: 24px on a laptop,
 // 16px on a phone). The top bar's row, the page's frame and its widest content line up to the same edges on all 8 pages, and
-// nothing scrolls sideways. The hub's name (Lisa's pick A): centred in the bar from 768px up, the same spot on every page; on a
+// nothing scrolls sideways. The hub's name (the owner's pick A): centred in the bar from 768px up, the same spot on every page; on a
 // phone it sits left, straight after the Home icon (the Dashboard keeps an empty place the same size). It never overlaps an icon.
 // Pretend Google, Drive and Sheets; every row is invented.
 const { test, expect } = require('../support/test');

@@ -242,7 +242,7 @@ test('Stage 6: past deposit and repeat buyer from the allocation sheets, read on
   }
 });
 
-test('Stage 6: setup() on an older sheet adds only the new settings and keeps Lisa\'s values', { skip }, () => {
+test('Stage 6: setup() on an older sheet adds only the new settings and keeps the owner\'s values', { skip }, () => {
   const e = FAKE.load(src);
   e.ctx.setup();
   const st = e.book().getSheetByName('Settings');
@@ -301,9 +301,9 @@ test('Stage 8: drafts in the Drafts tab only (email + WhatsApp), none for do-not
   const n = drafts.length; e.ctx.runOnce(); assert.equal(e.tab('Drafts').length, n, 're-run adds no drafts');
 });
 
-test('Stage 8: styleSample() keeps only Lisa\'s own stripped replies in the Style tab', { skip }, () => {
+test('Stage 8: styleSample() keeps only the owner\'s own stripped replies in the Style tab', { skip }, () => {
   const gmail = [
-    // Invented sender on Lisa's domain, assembled so the privacy guard does not read it as a real address.
+    // Invented sender on the owner's domain, assembled so the privacy guard does not read it as a real address.
     { id: 'TH-S8-1', from: 'Lisa <lisa' + '@labradoodles.co.uk>', to: 'Buyerina Sample <buyer.s8@example.com>', subject: 'Re: puppy',
       body: 'Hi Buyerina,\n\nThank you so much for getting in touch, I would love to help. Have a look at https://doc.labradoodles.co.uk/breed and tell me what you are looking for. You can call me on 07700 900511.\n\nKind regards,\nLisa\n\nOn Mon, 1 Sep 2026, Buyerina wrote:\n> Do you have puppies?' },
     { id: 'TH-S8-2', from: 'Someone Else <someone@example.com>', to: 'x', subject: 'puppy', body: 'Not Lisa, long enough text to count as a reply here, really quite long indeed yes.' }
@@ -403,7 +403,7 @@ test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read o
   assert.ok(e.tab('Log').some((r) => r.step === 'deposits' && /5 deposits held, 1 balances due in 30 days/.test(r.message) && /3 paid invoices, 1 suggested, 1 refused \(amount\), 1 for nobody known/.test(r.message)));
   assert.deepEqual(e.touched, [], 'nothing but reads on the allocation sheet');
   assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Deposits').rows), /Buyer|example\.com|7700|INV-9/, 'no name, email, number or invoice number copied');
-  // Lisa taps "deposit paid" on the suggestion: it becomes held, confirmed by her, and the stage moves to deposit.
+  // the owner taps "deposit paid" on the suggestion: it becomes held, confirmed by her, and the stage moves to deposit.
   const tap = C.depositPaidRequest(e1.key, sug[0].deposit_key, '2026-10-30T09:00:00.000Z');
   files.push({ id: 'FILE-S11-3', name: tap.name, text: JSON.stringify(tap.body) });
   e.ctx.runOnce();

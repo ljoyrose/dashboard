@@ -114,7 +114,7 @@ test('people: different buyers stay apart and the person key does not depend on 
   assert.deepEqual(keys(p1), keys(p2));
 });
 
-test('merge: blanks never overwrite, Lisa\'s fields stay, stage only moves forward, earliest time kept', () => {
+test('merge: blanks never overwrite, the owner\'s fields stay, stage only moves forward, earliest time kept', () => {
   const stored = { key: 'K-1', country: 'Switzerland', stage: 'call-booked', next_step: 'Send litter photos', received_uk: '2026-10-01T09:00:00Z' };
   const incoming = { key: 'K-1', country: '', stage: 'new', next_step: 'auto', question_summary: 'Asked about sizes', received_uk: '2026-10-02T09:00:00Z' };
   const m = C.mergeRow(stored, incoming);

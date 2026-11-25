@@ -1,4 +1,4 @@
-// Size band with no weighing (OV11 for Lisa, 15 Nov 2026): breed sizes like "Mini 8-12kg" and "Lge Mini/Sml Med 12-16kg"
+// Size band with no weighing (OV11 for the owner, 15 Nov 2026): breed sizes like "Mini 8-12kg" and "Lge Mini/Sml Med 12-16kg"
 // were blank. The band is worked out from the latest weighing, else the middle of the kg range in the size cell, both
 // against the owner's size_from_kg rule rows. No rows: no band (nothing fixed in code). Invented dogs and rows only.
 const { test, expect, HUBS } = require('../fixtures/job34/load');

@@ -18,7 +18,7 @@ const noSidewaysScroll = async (page, where) => {
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
   expect(w.body, `${where}: body is ${w.body}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
 };
-const VIEWS = [['map', 'Dashboard'], ['money', 'Money'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent']]; // Money moved off Main into More (Lisa, 2 Nov)
+const VIEWS = [['map', 'Dashboard'], ['money', 'Money'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent']]; // Money moved off Main into More (the owner, 2 Nov)
 const goTab = async (page, key, title) => {
   await tabClick(page, `#mainNav a[data-nav="${key}"]`);
   await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -42,7 +42,7 @@ test.describe('Home: house look', () => {
   test('hover only shows the pale grey fill: no element grows, shrinks or moves', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    // Drives, Bin and Changes sit under More now (Lisa's tab picks, 2 Nov): the bottom-bar check uses More itself.
+    // Drives, Bin and Changes sit under More now (the owner's tab picks, 2 Nov): the bottom-bar check uses More itself.
     const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav [data-house-more]'];
     for (const sel of sels) {
       const el = page.locator(sel);
@@ -69,7 +69,7 @@ test.describe('Home: house look', () => {
     expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
   });
 
-  // Lisa's extra rules (28 Oct): 1) every pressable rests on the same clear line (warm #8A7F70 / cool #7A8692, 3:1 on the page and tints), 1px, 12px radius,
+  // the owner's extra rules (28 Oct): 1) every pressable rests on the same clear line (warm #8A7F70 / cool #7A8692, 3:1 on the page and tints), 1px, 12px radius,
   // 36px desktop, 14px/600, never starts out ink, and hover = 1px ink outline offset -1px; read-only pills have no hover.
   // 2) date pills: plain 1px ring + muted words; late = rose ring + tint; soon = amber ring + tint. 3) 13px floor, 400/600. 4) one radius.
   for (const [look, line] of [['warm', 'rgb(138, 127, 112)'], ['cool', 'rgb(122, 134, 146)']]) {
@@ -102,7 +102,7 @@ test.describe('Home: house look', () => {
         expect(bad, `${look} ${title}`).toEqual([]);
       }
       await goTab(page, 'map', 'Dashboard');
-      // Hover (Lisa, 12 Nov 2026): the pale grey fill and no line, on a button, a tile and a link card.
+      // Hover (the owner, 12 Nov 2026): the pale grey fill and no line, on a button, a tile and a link card.
       for (const sel of ['#urgentOne a.btn', 'a.hometile >> nth=0', 'a.keytile >> nth=0']) {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
@@ -119,7 +119,7 @@ test.describe('Home: house look', () => {
         const after = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
         expect(after, sel + ' changed on hover').toBe(before);
       }
-      // The Needs you pills open what they count (Lisa, 2 Nov): each is a link to Do for its group; hover = the pale grey fill,
+      // The Needs you pills open what they count (the owner, 2 Nov): each is a link to Do for its group; hover = the pale grey fill,
       // no line, urgent ones too (12 Nov 2026), never moves.
       for (const el of await page.locator('#needsSplit .cnt').all()) {
         expect(await el.evaluate((e) => e.tagName)).toBe('A');
@@ -134,7 +134,7 @@ test.describe('Home: house look', () => {
     });
   }
 
-  // House hover rule (Lisa, 12 Nov 2026, replaces 28 Oct): every control, meaning-coloured or neutral, hovers with the pale grey fill
+  // House hover rule (the owner, 12 Nov 2026, replaces 28 Oct): every control, meaning-coloured or neutral, hovers with the pale grey fill
   // (--hov) and no line; a meaning colour keeps its resting line. Checked in light and dark.
   for (const scheme of ['light', 'dark']) {
     test(`${scheme}: hover is the pale grey fill and no line, coloured and neutral controls alike (Lisa, 12 Nov 2026)`, async ({ page }) => {
@@ -171,7 +171,7 @@ test.describe('Home: house look', () => {
         expect(r.os, sel + ': no line on hover').toBe('none');
         expect(r.bg, sel + ': the pale grey fill on hover').toBe(r.hov);
       }
-      // A hub tile's links (its name and its 3 numbers): the pale grey fill on hover, no ring (Lisa, 12 Nov 2026).
+      // A hub tile's links (its name and its 3 numbers): the pale grey fill on hover, no ring (the owner, 12 Nov 2026).
       for (const sel of ['.hubtile a.hgo', '.hubtile a.hk']) {
         const el = page.locator(sel).first();
         await el.scrollIntoViewIfNeeded();
@@ -186,7 +186,7 @@ test.describe('Home: house look', () => {
         expect(r.os, sel + ': no ring on hover').toBe('none');
         expect(r.bg, sel + ': the pale grey fill on hover').toBe(r.hov);
       }
-      await goTab(page, 'money', 'Money'); // the money entity cards moved off Main into More (Lisa, 2 Nov)
+      await goTab(page, 'money', 'Money'); // the money entity cards moved off Main into More (the owner, 2 Nov)
       await run(coloured);
       await goTab(page, 'bin', 'Bin');
       const allow = page.locator('[data-action="grantwrite"]');
@@ -220,7 +220,7 @@ test.describe('Home: house look', () => {
       await goTab(page, key, title);
       const bad = await page.evaluate(() => Array.from(document.querySelectorAll('body *')).filter((e) => {
         if (e.offsetParent === null && getComputedStyle(e).position !== 'fixed') return false;
-        if (e.matches('.shape, .okring, .info, nav.main .bar, svg, svg *, .note.fail, .res.bad, .cnt, nav.main .n, nav.house-tabs .hic')) return false; // counts: their own fixed size; the tab icon ring is round (Lisa's tab picks)
+        if (e.matches('.shape, .okring, .info, nav.main .bar, svg, svg *, .note.fail, .res.bad, .cnt, nav.main .n, nav.house-tabs .hic')) return false; // counts: their own fixed size; the tab icon ring is round (the owner's tab picks)
         const c = getComputedStyle(e);
         const boxed = parseFloat(c.borderTopWidth) > 0 && c.borderTopStyle !== 'none' && c.borderTopColor !== 'rgba(0, 0, 0, 0)' && parseFloat(c.borderRightWidth) > 0;
         return boxed && c.borderTopLeftRadius !== '12px';
@@ -241,7 +241,7 @@ test.describe('Home: house look', () => {
         return { c1: probe('1', 'cnt'), c2: probe('88', 'cnt'), n1: probe('1', 'n need'), n2: probe('88', 'n need'), c3: probe('888', 'cnt wide'), n3: probe('888', 'n need wide') };
       }, font);
       for (const k of ['c1', 'c2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([30, 24, '22px', '12px']);
-      // Tab counts (Lisa's tab picks, 2 Nov) hold a 14px number (pick A): one 24 x 24 box for 1 and 2 digits, 22px line, 12px ends.
+      // Tab counts (the owner's tab picks, 2 Nov) hold a 14px number (pick A): one 24 x 24 box for 1 and 2 digits, 22px line, 12px ends.
       for (const k of ['n1', 'n2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([24, 24, '22px', '12px']);
       expect(sizes.c3[0], '3 digits may grow').toBeGreaterThan(30);
       expect(sizes.n3[0], '3 digits may grow').toBeGreaterThan(sizes.n1[0]);
@@ -255,7 +255,7 @@ test.describe('Home: house look', () => {
     await page.goto('./');
     await signIn(page);
     await page.evaluate(HELPERS);
-    expect(await page.evaluate(() => getComputedStyle(document.body).lineHeight)).toBe('22.5px'); // 15px body (Lisa's type, 2 Nov) x 1.5
+    expect(await page.evaluate(() => getComputedStyle(document.body).lineHeight)).toBe('22.5px'); // 15px body (the owner's type, 2 Nov) x 1.5
     for (const [key, title] of VIEWS) {
       await goTab(page, key, title);
       const bad = await page.evaluate(() => window.__look.visibleText().map((e) => { const c = getComputedStyle(e); return { t: e.textContent.trim().slice(0, 30), px: parseFloat(c.fontSize), w: c.fontWeight, u: c.textTransform }; })
@@ -275,7 +275,7 @@ test.describe('Home: house look', () => {
         const v = (n) => { const d = document.createElement('i'); d.style.color = root.getPropertyValue(n).trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
         const allowed = new Set([v('--ink'), v('--muted'), v('--frame-ink')]);
         const fills = new Set(['--ljr-2', '--ljr-3', '--ljr-4', '--ljr-5', '--ljr-6', '--ljr-7', '--ljr-8', '--ljr-2-solid', '--ljr-7-solid', '--ljr-8-solid', '--ljr-2-text', '--ljr-7-text'].map(v));
-        // The one exception (Lisa, 3 Nov 2026): a broken count is the black badge, its number --house-broken-ink on --house-broken-fill.
+        // The one exception (the owner, 3 Nov 2026): a broken count is the black badge, its number --house-broken-ink on --house-broken-fill.
         const badge = (e) => e.matches('.broken') && getComputedStyle(e).color === v('--house-broken-ink') && getComputedStyle(e).backgroundColor === v('--house-broken-fill');
         const words = L.visibleText().filter((e) => !allowed.has(getComputedStyle(e).color) && !badge(e)).map((e) => getComputedStyle(e).color + ' "' + e.textContent.trim().slice(0, 30) + '"');
         const solid = Array.from(document.querySelectorAll('.mtag, .cnt, .chip, .btn, nav.main .n, .stat, a.hometile, a.keytile, .ment, .banner'))
@@ -288,7 +288,7 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('dark frame top and bottom; light tab buttons; the Main tab count is a ring with no fill: rose only when one is late, else grey (Lisa\'s tab picks; sweep 3 Nov)', async ({ page }) => {
+  test('dark frame top and bottom; light tab buttons; the Main tab count is a ring with no fill: rose only when one is late, else grey (the owner\'s tab picks; sweep 3 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const head = await page.locator('header').evaluate((e) => getComputedStyle(e).backgroundColor);
@@ -301,11 +301,11 @@ test.describe('Home: house look', () => {
     if ((await n.textContent()).trim()) {
       const c = await n.evaluate((e) => { const s = getComputedStyle(e); return { b: s.borderTopWidth, bc: s.borderTopColor, bg: s.backgroundColor, h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width }; });
       expect(c.b).toBe('1px');
-      // Rose = late only (Lisa's sweep, 3 Nov 2026): a rose count is read out as "N late", so it is rose only when it says late.
+      // Rose = late only (the owner's sweep, 3 Nov 2026): a rose count is read out as "N late", so it is rose only when it says late.
       const late = await n.evaluate((e) => e.classList.contains('need'));
       expect(c.bc).toBe(late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)'); // rose ring (late) or the grey read-only ring
       await expect(page.locator('#mainNav a[data-nav="map"]')).toHaveAttribute('aria-label', late ? /late$/ : /waiting$/);
-      expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (Lisa's tab picks, 2 Nov)
+      expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (the owner's tab picks, 2 Nov)
       expect([c.h, c.w], 'tab count 24 x 24 (a 14px number, Lisa\'s pick A)').toEqual([24, 24]);
     }
   });
@@ -325,7 +325,7 @@ test.describe('Home: house look', () => {
     const split = page.locator('#needsSplit .cnt');
     const sum = (await split.allTextContents()).reduce((a, t) => a + Number(t.match(/^\d+/)[0]), 0);
     expect(sum, 'urgent + due soon + to do = Needs you').toBe(total);
-    // "+N more" is one short link to Do (Lisa, 2 Nov).
+    // "+N more" is one short link to Do (the owner, 2 Nov).
     if (total > 1) {
       const more = next.locator('a.more');
       await expect(more).toHaveText('+' + (total - 1) + ' more');
@@ -411,7 +411,7 @@ test.describe('Home: phone (390 x 844)', () => {
     }
     await goTab(page, 'map', 'Dashboard');
     const n = page.locator('#n-map');
-    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, inside the tab.
+    // the owner's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, inside the tab.
     const c = await n.evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(), i = e.parentElement.querySelector('.hic').getBoundingClientRect();
       return { pos: getComputedStyle(e).position, w: r.width, h: r.height, gap: r.left - i.right, top: r.top - i.top, inside: r.right <= t.right }; });
     expect(c.pos).toBe('absolute');
@@ -420,7 +420,7 @@ test.describe('Home: phone (390 x 844)', () => {
     expect(c.gap).toBeLessThanOrEqual(3);
     expect(Math.abs(c.top)).toBeLessThanOrEqual(2);
     expect(c.inside).toBe(true);
-    // On a phone Sign out leaves the top bar for the Look menu (Lisa's pick A, 2 Nov); both are 44px there.
+    // On a phone Sign out leaves the top bar for the Look menu (the owner's pick A, 2 Nov); both are 44px there.
     await expect(page.locator('header #signOutBtn')).toBeHidden();
     await page.locator('header #houseLookBtn').click();
     for (const sel of ['header #refreshBtn', 'header #houseLookBtn', '#houseLook [data-house-menu-signout]', '#urgentOne a.btn']) {

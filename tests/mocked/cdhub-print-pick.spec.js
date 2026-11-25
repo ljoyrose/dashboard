@@ -1,4 +1,4 @@
-// Pick which cards print (Lisa 22 Nov 2026: "can I print one specific area, item, thermometer, dog etc, or select all (with
+// Pick which cards print (the owner 22 Nov 2026: "can I print one specific area, item, thermometer, dog etc, or select all (with
 // unselect) for them all?"). After Room, Dog, Litter or Thermometer cards: one tick box per card, all ticked to start, with
 // Select all and Unselect all. Only ticked cards draw and print, only ticked cards can get a new code saved, nothing ticked
 // prints nothing, and the list itself never prints. Fake save address and invented rows only.

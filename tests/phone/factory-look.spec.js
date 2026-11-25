@@ -43,7 +43,7 @@ for (const scheme of ['light', 'dark']) {
           if (!n || !n.textContent) return;
           const nb = n.getBoundingClientRect(), lb = l.getBoundingClientRect();
           if (!(nb.right <= lb.left || nb.left >= lb.right || nb.bottom <= lb.top || nb.top >= lb.bottom)) out.push('count sits on the label: ' + l.textContent);
-          // On a phone a tab count is an 8px dot just off the icon's top-right corner (Lisa's pick b, 2 Nov).
+          // On a phone a tab count is an 8px dot just off the icon's top-right corner (the owner's pick b, 2 Nov).
           const ib = a.querySelector('.hic').getBoundingClientRect();
           if (getComputedStyle(n).position !== 'absolute' || nb.left < ib.right || nb.left - ib.right > 3 || Math.abs(nb.top - ib.top) > 2 || nb.right > ab.right) out.push('count not at the icon\'s top right: ' + l.textContent);
           if (nb.height !== 8 || nb.width !== 8) out.push('tab count ' + nb.width + 'x' + nb.height + ' (want an 8px dot): ' + l.textContent);
@@ -55,7 +55,7 @@ for (const scheme of ['light', 'dark']) {
   });
 }
 
-// One calm row on the phone (Lisa's Studio choice): Search, Factory on/off and Filter in one row; the chips wait behind Filter.
+// One calm row on the phone (the owner's Studio choice): Search, Factory on/off and Filter in one row; the chips wait behind Filter.
 test('Factory phone: Rooms opens with one calm row, the first room card within 260px of the top of the content', async ({ page, guard }) => {
   guard.world.folder(LOGS, 'AF logs (sample)');
   guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(build(Date.now())), { parents: [LOGS], mimeType: 'application/json' });

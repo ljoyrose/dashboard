@@ -1,5 +1,5 @@
 // Year report: how a reading was taken is saved, never shown; outside-limit rows are orange, never red
-// (Lisa, 11 Nov 2026). Invented rows only.
+// (the owner, 11 Nov 2026). Invented rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
