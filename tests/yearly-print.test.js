@@ -172,6 +172,156 @@ test('PR 785 year pack: chip number, registration, fit to breed, medicines, vacc
   assert.match(temps.printPath, /Temperature history/);
 });
 
+test('entry counts follow the chosen months and a missed day is not a row', () => {
+  const today = '2026-03-15';
+  const types = [
+    { id: 't-a', type_key: 'type_a', label: 'Type A', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01', group: 'Group A' },
+    { id: 't-b', type_key: 'type_b', label: 'Type B', target: 'dog', every_days: '90', effective_from: '2026-01-01', group: 'Group B' },
+    { id: 't-c', type_key: 'type_c', label: 'Type C', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01', group: 'Group A' },
+    { id: 't-m', type_key: 'medicine', label: 'Medicine given', target: 'dog', every_days: '1', effective_from: '2026-01-01' }
+  ];
+  const logs = [
+    { id: 'r1', check_type_id: 't-a', subject_id: 's1', outcome: 'ok', happened_at: '2026-03-02T09:00:00Z' },
+    { id: 'r2', check_type_id: 't-b', subject_id: 's1', outcome: 'ok', happened_at: '2026-02-11T09:00:00Z' },
+    { id: 'job-1', check_type_id: 't-m', subject_id: 's1', outcome: 'ok', happened_at: '2026-03-04T09:00:00Z', item: 'Item A' },
+    { id: 'job-2', check_type_id: 't-m', subject_id: 's1', outcome: 'ok', happened_at: '2026-03-05T09:00:00Z', item: 'Item C' }
+  ];
+  const tables = {
+    'BLD-dispense.csv': [
+      { id: 'm1', subject_id: 's1', given_on: '2026-03-04', product: 'Item A', dose_volume: '1', note: 'from job-1' },
+      { id: 'm2', subject_id: 's1', given_on: '2026-01-02', product: 'Item B', dose_volume: '1' }
+    ],
+    'BLD-weight.csv': [{ id: 'w1', subject_id: 's1', performed_on: '2026-02-05', weight_kg: '2' }],
+    'BLD-visit.csv': [
+      { id: 'v1', subject_id: 's1', performed_on: '2026-03-02', status: 'booked', reason: 'Later' },
+      { id: 'v2', subject_id: 's1', performed_on: '2026-03-03', status: 'done', reason: 'Seen' }
+    ],
+    'BLD-area_reading.csv': [
+      { id: 'a1', area_id: 'rm1', min_c: '10', max_c: '18', period_start: '2026-03-02T08:00:00Z' },
+      { id: 'a2', area_id: 'rm1', min_c: '1', max_c: '2', period_start: '2026-03-02T09:00:00Z', linked_from: 'a1' },
+      { id: 'a3', area_id: '', min_c: '1', max_c: '2', period_start: '2026-03-04T08:00:00Z' }
+    ],
+    'BLD-microchip.csv': [
+      { id: 'c1', subject_id: 's1', chip_number: '100' },
+      { id: 'c2', subject_id: 's1', chip_number: '200', registered_on: '2026-03-01' }
+    ]
+  };
+  const c = ctx({
+    today: today, types: types, logs: logs, tables: tables,
+    dogs: [{ id: 's1', name: 'One', dob: '2024-01-01', onSite: true }]
+  });
+  function at(period, month) {
+    return Y.entryCounts(c, { period: period, year: 2026, month: month, today: today });
+  }
+  const mar = at('month', 2);
+  assert.equal(mar['check:type_a'], 1);
+  assert.equal(mar['check:type_b'], 0);
+  assert.equal(mar['check:type_c'], 0);
+  assert.equal(mar.medicines, 2);
+  assert.equal(mar.weight, 0);
+  assert.equal(mar.visit, 1);
+  assert.equal(mar.area_reading, 1);
+  assert.equal(mar.microchip, 1);
+  const feb = at('month', 1);
+  assert.equal(feb['check:type_a'], 0);
+  assert.equal(feb['check:type_b'], 1);
+  assert.equal(feb.weight, 1);
+  assert.equal(feb.medicines, 0);
+  const year = at('year', 0);
+  assert.equal(year['check:type_a'], 1);
+  assert.equal(year['check:type_b'], 1);
+  assert.equal(year.medicines, 3);
+  assert.equal(year.weight, 1);
+  const future = at('month', 10);
+  assert.equal(future['check:type_a'], 0);
+  assert.equal(future.medicines, 0);
+  const via = Y.entryCounts(ctx({
+    today: today, types: [], logs: [], tables: {},
+    meds: (ym) => ({ lines: ym === '2026-03' ? [{}, {}] : [] })
+  }), { period: 'month', year: 2026, month: 2, today: today });
+  assert.equal(via.medicines, 2);
+  const html = Y.screenHtml(c);
+  assert.match(html, /id="ypAll">Select all</);
+  assert.match(html, /id="ypNone">None</);
+  assert.match(html, /id="ypEntries">Select all with entries</);
+  assert.doesNotMatch(html, /All records/);
+  assert.match(html, /data-yp-n="check:type_a"[^>]*>1</);
+  assert.match(html, /data-yp-n="check:type_b"[^>]*>0</);
+  assert.match(html, />Group A</);
+  assert.match(html, /class="btn"/);
+});
+
+test('area rows keep one active room, names stay unique, and an empty grid is one line', () => {
+  const today = '2026-03-15';
+  const types = [{ id: 't-w', type_key: 'water_bowls', label: 'Water', target: 'area', every_days: '1', effective_from: '2026-01-01' }];
+  const areas = [
+    { id: 'r1', name: 'Room A', onSite: true },
+    { id: 'r1', name: 'Room A', onSite: true },
+    { id: 'r2', name: 'Room A', onSite: true },
+    { id: 'r3', name: 'Room B', onSite: false, retired: true },
+    { id: 'r4', name: 'Hall', onSite: true, kind: 'corridor' },
+    { id: 'r5', name: 'Room C', onSite: true, empty: true },
+    { id: 'r9', name: 'Room D', onSite: false, retired: true }
+  ];
+  const tables = {
+    'BLD-requirement.csv': [
+      { need_type: 'room.in_use', target_table: 'area', target_id: 'r9', from_date: '2026-03-01', to_date: '' }
+    ]
+  };
+  const c = ctx({
+    today, types, areas, tables, dogs: [],
+    logs: [{ id: 'rw', check_type_id: 't-w', area_id: 'r1', outcome: 'ok', happened_at: '2026-03-02T09:15:00Z', taken_by: 'A B' }]
+  });
+  const src = Y.catalogue(c).find((s) => s.id === 'check:water_bowls');
+  const g = Y.gridMonth(src, '2026-03', c);
+  assert.deepEqual(g.rows.map((r) => r.name), ['Room A', 'Room A (2)', 'Room D']);
+  const built = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:water_bowls'], today: today }, c);
+  assert.match(built.html, /AB 09:15/);
+  assert.match(built.html, /Page 1 of 1/);
+  assert.match(built.html, /Room A/);
+  assert.doesNotMatch(built.html, /Hall/);
+  assert.doesNotMatch(built.html, />Room C</);
+  const blank = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:water_bowls'], today: today }, ctx({
+    today, types, dogs: [], logs: [], areas: [{ id: 'r1', name: 'Room A', onSite: true }]
+  }));
+  assert.match(blank.html, /No records in March 2026/);
+  assert.doesNotMatch(blank.html, /data-mark=/);
+  assert.match(Y.CSS, /max-height:190mm/);
+  assert.match(Y.CSS, /padding:0!important/);
+  assert.match(Y.CSS, /width:46mm/);
+  assert.match(Y.CSS, /tbody th\{[^}]*white-space:normal/);
+  assert.match(Y.CSS, /page-break-after:avoid!important/);
+});
+
+test('an all-subject grid lists only subjects on site in that month', () => {
+  const today = '2026-03-15';
+  const types = [{ id: 't-a', type_key: 'type_a', label: 'Type A', target: 'none', site_scope: 'per_dog', every_days: '1', effective_from: '2026-01-01' }];
+  const dogs = [
+    { id: 's1', name: 'One', dob: '2020-01-01', onSite: true },
+    { id: 's2', name: 'Two', dob: '2020-01-01', onSite: true }
+  ];
+  const tables = {
+    'BLD-occupancy.csv': [
+      { id: 'o1', subject_id: 's1', area_id: 'r1', moved_in: '2026-01-01' },
+      { id: 'o2', subject_id: 's2', area_id: 'r1', moved_in: '2026-01-01', moved_out: '2026-02-02' }
+    ]
+  };
+  const logs = [
+    { id: 'l1', check_type_id: 't-a', subject_id: 's1', outcome: 'ok', happened_at: '2026-03-04T08:05:00Z', taken_by: 'A B' },
+    { id: 'l2', check_type_id: 't-a', subject_id: 's2', outcome: 'ok', happened_at: '2026-03-04T08:05:00Z', taken_by: 'C D' }
+  ];
+  const c = ctx({ today, types, dogs, logs, tables, dogName: (id) => (id === 's1' ? 'One' : 'Two') });
+  const mar = Y.gridMonth(Y.catalogue(c).find((s) => s.typeKey === 'type_a'), '2026-03', c);
+  assert.deepEqual(mar.rows.map((r) => r.id), ['s1']);
+  const feb = Y.gridMonth(Y.catalogue(c).find((s) => s.typeKey === 'type_a'), '2026-02', c);
+  assert.deepEqual(feb.rows.map((r) => r.id), ['s1', 's2']);
+  const html = Y.build({ period: 'month', year: 2026, month: 2, ids: ['check:type_a'], today: today }, c).html;
+  assert.match(html, /AB 08:05/);
+  assert.match(html, /One/);
+  assert.doesNotMatch(html, /CD/);
+  assert.match(html, /Page 1 of 1/);
+});
+
 test('zoom shrinks a page that is taller than one sheet and leaves a short page alone', () => {
   const max = 194 * 96 / 25.4;
   assert.equal(Y.zoomFor(max - 10, 194), 1);

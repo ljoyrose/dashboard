@@ -193,6 +193,88 @@ test('an empty medicines month says no records and optional fields stay blank @r
   expect(html).not.toContain('not recorded</span>');
 });
 
+test('select all and select all with entries follow the period counts', async ({ page, guard }) => {
+  setFile(guard.world, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,active,effective_from,every_days,site_scope,group\n'
+    + 't-a,t,type_a,Type A,none,true,2026-01-01,1,per_dog,Group A\n'
+    + 't-b,t,type_b,Type B,dog,true,2026-01-01,90,,Group B\n');
+  setFile(guard.world, 'BLD-check_log.csv', 'id,tenant_id,check_type_id,subject_id,outcome,happened_at,taken_by,note\n'
+    + 'r1,t,t-a,s1,ok,2026-03-02T09:00:00Z,,\n'
+    + 'r2,t,t-b,s1,ok,2026-02-11T09:00:00Z,,\n');
+  setFile(guard.world, 'BLD-dispense.csv', 'id,subject_id,given_on,product,dose_volume\n'
+    + 'm1,s1,2026-03-04,Item A,1\n'
+    + 'm2,s1,2026-01-02,Item B,1\n');
+  setFile(guard.world, 'BLD-weight.csv', 'id,subject_id,performed_on,weight_kg,unit\nw1,s1,2026-02-05,2,kg\n');
+  await page.goto('cdhub/#/yearly/cal');
+  await signIn(page);
+  await expect(page.locator('#ypEntries')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#ypPrint, #ypCsv, #ypAll, #ypNone, #ypEntries')).toHaveText([
+    'Print / PDF', 'Download CSV', 'Select all', 'None', 'Select all with entries'
+  ]);
+  await expect(page.locator('#ypAll')).toHaveClass(/btn/);
+  await expect(page.locator('#ypEntries')).toHaveClass(/btn/);
+  await expect(page.locator('h3', { hasText: 'Group A' })).toBeVisible();
+  await page.locator('#ypYear').selectOption('2026');
+  await page.locator('#ypMonth').selectOption('2');
+  const box = (id) => page.locator('input[name="ypType"][value="' + id + '"]');
+  const n = (id) => page.locator('[data-yp-n="' + id + '"]');
+  await expect(n('check:type_a')).toHaveText('1');
+  await expect(n('check:type_b')).toHaveText('0');
+  await expect(n('medicines')).toHaveText('1');
+  await expect(n('weight')).toHaveText('0');
+  await page.locator('#ypEntries').click();
+  await expect(box('check:type_a')).toBeChecked();
+  await expect(box('check:type_b')).not.toBeChecked();
+  await expect(box('medicines')).toBeChecked();
+  await expect(box('weight')).not.toBeChecked();
+  await expect(page.locator('#ypMsg')).toContainText('with entries ticked');
+  await page.locator('#ypNone').click();
+  await expect(page.locator('input[name="ypType"]:checked')).toHaveCount(0);
+  await expect(page.locator('#ypMsg')).toHaveText('Nothing ticked.');
+  await page.locator('#ypAll').click();
+  const total = await page.locator('input[name="ypType"]').count();
+  await expect(page.locator('input[name="ypType"]:checked')).toHaveCount(total);
+  await expect(page.locator('#ypMsg')).toHaveText('Every type ticked.');
+  expect(total).toBeGreaterThan(2);
+  await page.locator('#ypNone').click();
+  await page.locator('#ypMonth').selectOption('1');
+  await expect(n('check:type_a')).toHaveText('0');
+  await expect(n('check:type_b')).toHaveText('1');
+  await expect(n('weight')).toHaveText('1');
+  await expect(n('medicines')).toHaveText('0');
+  await expect(box('check:type_a')).not.toBeChecked();
+  await page.locator('#ypEntries').click();
+  await expect(box('check:type_b')).toBeChecked();
+  await expect(box('check:type_a')).not.toBeChecked();
+  await expect(box('weight')).toBeChecked();
+  await expect(box('medicines')).not.toBeChecked();
+  await page.locator('#ypPeriod').selectOption('year');
+  await expect(page.locator('#ypMonth')).toBeDisabled();
+  await expect(n('check:type_a')).toHaveText('1');
+  await expect(n('check:type_b')).toHaveText('1');
+  await expect(n('medicines')).toHaveText('2');
+  await expect(n('weight')).toHaveText('1');
+  await page.locator('#ypEntries').click();
+  await expect(box('check:type_a')).toBeChecked();
+  await expect(box('check:type_b')).toBeChecked();
+  await expect(box('medicines')).toBeChecked();
+  await expect(box('weight')).toBeChecked();
+});
+
+test('two yearly sheets print as two pages @regression', async ({ page }) => {
+  const css = YPrint.CSS;
+  const clash = '@media print{@page{size:A4;margin:0}body{padding:10mm!important;box-decoration-break:clone}}';
+  const sheet = (text) => '<section class="yp-page" data-yp-page><p>' + text + '</p></section>';
+  await page.setContent('<!doctype html><html><head><style>' + clash + css + '</style></head><body class="yp-printing"><div id="ypReport">'
+    + sheet('Sheet one Room Alpha') + sheet('Sheet two Room Beta with a long label') + '</div></body></html>');
+  const pdf = await page.pdf({ printBackground: true, preferCSSPageSize: true });
+  const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  expect(pages).toBe(2);
+  await page.setContent('<!doctype html><html><head><style>' + clash + css + '</style></head><body class="yp-printing"><div id="ypReport">'
+    + '<section class="yp-page" data-yp-page><div style="height:400mm">Tall sheet</div></section></div></body></html>');
+  const tall = await page.pdf({ printBackground: true, preferCSSPageSize: true });
+  expect((tall.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length).toBe(1);
+});
+
 test('the yearly print page loads with no console errors @regression', async ({ page, guard }) => {
   const errors = [];
   page.on('pageerror', (err) => errors.push(String(err && err.message || err)));
