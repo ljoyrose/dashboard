@@ -2,8 +2,10 @@
  * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for Lisa, 21 Nov 2026,
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
- * says "not recorded" only for a legally required detail: the date, the dog, the medicine, the dose and who gave it.
+ * says "not recorded" only for a legally required detail: the date, the dog, the medicine and the dose.
+ * A blank name in Given by shows Lisa Carson while those blanks are filled in on the sheet. The sheet still keeps the name column.
  * Time, batch, expiry, route, reason and the vet instruction are left blank when the record does not hold them.
+ * Where the row was recorded (dog card or staff job) stays on the line for other code. It is not a column.
  * A column is read only by its own name (listed in FROM below); nothing is worked out from another column.
  * No licence number or staff code is in this file: the header names the kennel from the tenant row at run time.
  */
@@ -12,17 +14,20 @@
   else root.BLDMedsRegister = factory();
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  var MedRows = (typeof module === 'object' && module.exports) ? require('./meds-rows.js') : ((typeof self !== 'undefined' && self.BLDMedRows) || {});
+  var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
   var NR = 'not recorded';
-  /* Only these say "not recorded" when empty. The rest stay blank. */
-  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1, given_by: 1 };
+  /* Only these say "not recorded" when empty. The rest stay blank. A blank Given by shows NAMED instead. */
+  var REQUIRED = { date: 1, dog: 1, product: 1, dose: 1 };
+  var NAMED = 'Lisa Carson';
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   /* The register's columns, in print order: [key, heading]. */
   var COLUMNS = [
     ['date', 'Date'], ['time', 'Time'], ['dog', 'Dog'], ['chip', 'Microchip'], ['product', 'Medicine'],
     ['batch', 'Batch'], ['expiry', 'Expiry'], ['dose', 'Dose'], ['route', 'Route'], ['reason', 'Reason'],
-    ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note'], ['source', 'Recorded in']
+    ['vet', 'Vet instruction'], ['given_by', 'Given by'], ['note', 'Note']
   ];
   var SOURCE = { dispense: 'dog card', job: 'staff job' };
   var RESULT = { ok: 'done', done: 'done', concern: 'concern', not_done: 'not done', recorded: 'recorded', part_done: 'part done' };
@@ -85,16 +90,25 @@
    * which record it corrects, and the original stays. Nothing is filled in that the record does not hold.
    */
   function fromChecks(logs, types) {
-    var med = {}, unit = {};
-    (types || []).forEach(function (t) { if (str(t.type_key).toLowerCase() === 'medicine') { med[str(t.id)] = 1; unit[str(t.id)] = str(t.amount_unit); } });
+    var med = {}, unit = {}, parasite = {};
+    (types || []).forEach(function (t) {
+      if (!MedRows.isMedCheck || !MedRows.isMedCheck(t)) return;
+      med[str(t.id)] = 1; unit[str(t.id)] = str(t.amount_unit);
+      if (str(t.type_key).toLowerCase() !== 'medicine') parasite[str(t.id)] = 1;
+    });
     var mine = (logs || []).filter(function (r) { return med[str(r.check_type_id)]; }), byId = {}, later = {};
     mine.forEach(function (r) { byId[str(r.id)] = r; if (str(r.outcome) === 'note' && str(r.note_for_id)) (later[str(r.note_for_id)] = later[str(r.note_for_id)] || []).push(r); });
-    return mine.filter(function (r) { return !(str(r.outcome) === 'note' && str(r.note_for_id)); }).map(function (r) {
+    return mine.filter(function (r) {
+      if (str(r.outcome) === 'note' && str(r.note_for_id)) return false;
+      if (parasite[str(r.check_type_id)] && (str(r.outcome) === 'not_done' || str(r.outcome) === 'part_done')) return false;
+      if (MedRows.procedureDrug && MedRows.procedureDrug(r.item, r.note)) return false;
+      return true;
+    }).map(function (r) {
       var out = str(r.outcome), amt = str(r.amount), u = unit[str(r.check_type_id)], o = byId[str(r.corrects_id)];
       var notes = [];
       if (out && out !== 'ok' && out !== 'done') notes.push('Job marked ' + (RESULT[out] || out) + '.');
-      if (clean(r.note)) notes.push(clean(r.note));
-      (later[str(r.id)] || []).forEach(function (n) { notes.push('Later, by ' + (who(n.taken_by) || NR) + ': ' + (clean(n.note) || NR)); });
+      if (Show.human(clean(r.note))) notes.push(Show.human(clean(r.note)));
+      (later[str(r.id)] || []).forEach(function (n) { var bit = Show.human(clean(n.note)); if (bit) notes.push('Later, by ' + (who(n.taken_by) || NR) + ': ' + bit); });
       if (str(r.corrects_id)) notes.push('Corrects the record of ' + (o ? (when({ given_at: o.happened_at || o.taken_at }).date || 'an earlier date') : 'an earlier date') + '.');
       if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
       return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
@@ -136,8 +150,8 @@
         product: unnamed(r.product, r.ruling_needed) ? '' : str(r.product)
       };
       Object.keys(FROM).forEach(function (k) { line[k] = pick(r, FROM[k]); });
-      line.note = clean(line.note); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by);
-      line.missing = ['date', 'dog', 'product', 'dose', 'given_by'].filter(function (k) { return !line[k]; });
+      line.note = Show.human(clean(line.note)); line.reason = clean(line.reason); line.vet = clean(line.vet); line.given_by = who(line.given_by) || NAMED;
+      line.missing = ['date', 'dog', 'product', 'dose'].filter(function (k) { return !line[k]; });
       out.push(line);
     });
     out.sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : (a.id < b.id ? -1 : 1); });
@@ -209,7 +223,7 @@
       + '<h1>' + esc(title) + '</h1>'
       + '<p class="meta">' + (kennel ? '<span><b>Kennel:</b> ' + esc(kennel) + '</span>' : '<span>Set the kennel name in Settings.</span>') + '<span><b>Printed:</b> ' + esc(head.printed) + '</span>'
       + '<span><b>Entries:</b> ' + lines.length + '</span></p>'
-      + '<p class="meta">Date, dog, medicine, dose and who gave it say <i>' + NR + '</i> when the record does not hold them. Other details are left blank.</p>'
+      + '<p class="meta">Date, dog, medicine and dose say <i>' + NR + '</i> when the record does not hold them. A blank name shows ' + esc(NAMED) + '. Other details are left blank.</p>'
       + body
       + (gk.length ? '<p class="gaps"><b>Not recorded:</b> ' + gk.map(function (k) { return esc(heading(k)) + ' ' + g[k] + ' of ' + lines.length; }).join(' · ') + '</p>' : '')
       + '<p class="sign"><span>Checked by</span><span>Date</span></p></section>';
@@ -258,9 +272,21 @@
    * is left out rather than printed twice.
    */
   function combine(dispense, logs, types) {
-    var copied = {};
+    var copied = {}, seen = {}, out = [];
     (dispense || []).forEach(function (r) { ids(r.note).forEach(function (i) { copied[i.toLowerCase()] = 1; }); });
-    return (dispense || []).concat(fromChecks(logs, types).filter(function (j) { return !copied[String(j.id).toLowerCase()]; }));
+    (dispense || []).concat(fromChecks(logs, types).filter(function (j) { return !copied[String(j.id).toLowerCase()]; })).forEach(function (r) {
+      if (MedRows.procedureDrug && MedRows.procedureDrug(r.product || r.item, r.note)) return;
+      var day = str(r.given_at || r.given_on).slice(0, 10);
+      var k = MedRows.doseKey ? MedRows.doseKey(r.subject_id, day, r.product || r.item) : '';
+      if (k && seen[k]) return;
+      if (k) seen[k] = 1;
+      out.push(r);
+    });
+    out.sort(function (a, b) {
+      var da = str(a.given_at || a.given_on), db = str(b.given_at || b.given_on);
+      return da < db ? 1 : da > db ? -1 : (str(a.id) < str(b.id) ? -1 : 1);
+    });
+    return out;
   }
 
   return { NR: NR, COLUMNS: COLUMNS, FROM: FROM, months: months, fromChecks: fromChecks, combine: combine, clean: clean, build: build, cell: cell, gaps: gaps,

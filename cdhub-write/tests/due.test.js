@@ -198,6 +198,20 @@ test('part done is never counted as done', () => {
   assert.equal(D.forTarget(types, logs, {}, '2026-03-02')[0].status, 'never');
 });
 
+test('a later copy with another type key is the same check: saves stay on the original and its rows count', () => {
+  const types = [
+    T('water_bowls', 'none', '1', { id: 'cty-water_bowls-1', label: 'Water bowls washed' }),
+    { id: 'cty-water_bowls-2', type_key: 'water_bowls_2', label: 'Water bowls washed', target: 'none', every_days: '1', active: 'true', effective_from: '2026-11-22' },
+    { id: 'cty-feed', type_key: 'feeding', label: 'Feeding', target: 'none', every_days: '1', active: 'true', effective_from: '2026-01-01' },
+    { id: 'cty-feeding-2', type_key: 'feeding_2', label: 'Feeding', target: 'none', every_days: '1', active: 'true', effective_from: '2026-11-23' }
+  ];
+  assert.deepEqual(D.jobsInForce(types, '2026-11-25').map((r) => r.id).sort(), ['cty-feed', 'cty-water_bowls-1']);
+  const log = { id: 'l9', check_type_id: 'cty-water_bowls-2', outcome: 'ok', happened_at: '2026-11-25T10:00:00Z', taken_at: '2026-11-25T10:00:00Z' };
+  const r = D.forTarget(types, [log], {}, '2026-11-25').filter((x) => x.type_key === 'water_bowls')[0];
+  assert.equal(r.status, 'ok');
+  assert.equal(r.last_done, '2026-11-25');
+});
+
 test('round.* types are written by the Round itself and are never listed as jobs (15 Nov 2026)', () => {
   const keys = D.jobsInForce(TYPES.concat([T('round.presence', 'dog', '')]), '2026-10-02').map((r) => r.type_key);
   assert.ok(keys.includes('ears'));
