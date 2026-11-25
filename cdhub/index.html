@@ -4373,7 +4373,9 @@ function sinkFetch(body,url){ sinkWaiting++; var rid=body&&body.request_id||''; 
    (a round typed faster than it saves), up to 20 go together as one list save; each keeps its own request id and gets its
    own answer. A script that does not know list saves yet (before v24) answers BAD_REQUEST once, and they go one by one. */
 function sinkPump(){ if(sinkPumping) return; sinkPumping=true;
- (async function(){ while(sinkQ.length){
+ /* Wait until this turn's saves are all queued (Send now puts the whole outbox on the queue, then one list goes). */
+ Promise.resolve().then(sinkDrain); }
+async function sinkDrain(){ try { while(sinkQ.length){
   var first=sinkQ[0], group=[first];
   if(!sinkNoMany&&first.body.action==='add'){ for(var i=1;i<sinkQ.length&&group.length<20;i++){ var q=sinkQ[i]; if(q.body.action!=='add'||q.url!==first.url||q.body.code!==first.body.code||q.body.google_token!==first.body.google_token) break; group.push(q); } }
   sinkQ.splice(0,group.length);
@@ -4387,7 +4389,8 @@ function sinkPump(){ if(sinkPumping) return; sinkPumping=true;
    group.forEach(function(q){ var x=by[q.body.request_id]; q.res(!x?{ok:false,code:'NETWORK'}:x.ok?{ok:true,result:x.result}:{ok:false,code:x.code,message:x.message,fields:x.fields,duplicate_of:x.duplicate_of}); });
   } else if(j&&j.code==='BAD_REQUEST'){ sinkNoMany=true; sinkQ=group.concat(sinkQ); }   /* a script with no list save yet ('Unknown action'): nothing was saved and nothing is refused; the same entries go one by one */
   else group.forEach(function(q){ q.res(j); });
- } sinkSending=[]; sinkPumping=false; })(); }
+ }
+ } finally { sinkSending=[]; sinkPumping=false; if(sinkQ.length) sinkPump(); } }
 /* leaving the page while saves wait their turn would drop them (OV12 16 Nov 2026): the browser asks "Leave site?" first */
 window.addEventListener('beforeunload',function(e){ if(sinkWaiting>0){ e.preventDefault(); e.returnValue=''; return ''; } });
 /* Two people saving at once (Lisa 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
@@ -4469,7 +4472,9 @@ function hubDelivered(item,j){
   try{ roundRefresh(date); }catch(e){} }
  var el=document.querySelector('[data-rid="'+item.id+'"]'); if(el) showSave(el,sinkMsg(j));
 }
-/* Send every kept entry again, oldest first, one at a time. {old:true} also sends those past 5 hours. Resolves to how many are still kept. */
+/* Send every kept entry again, oldest first. They are all queued first, so Send now is one list (up to 20) rather than
+   one request per row. A script that has no list save yet (before v24) still answers once and they go one by one.
+   {old:true} also sends those past 5 hours. Resolves to how many are still kept. */
 function hubFlush(o){
  if(hubFlushing) return hubFlushing;
  if(o&&o.ask) hubStop=false;
@@ -4480,13 +4485,14 @@ function hubFlush(o){
   if(hubStop) return;
   if(!(o&&o.ask)&&!hubCanSend()) return;
   var g=await sinkGate(); if(!g.ok||hubStop) return;
-  var auth=hubAuthNow();
+  var auth=hubAuthNow(), jobs=[];
   for(var i=0;i<due.length;i++){ if(hubStop) break; var it=due[i]; if(hubInFlight[it.id]) continue;
    var b=Object.assign({},it.body,{code:g.code||''}); if(g.google) b.google_token=g.google;
-   hubInFlight[it.id]=1;
-   try{ var j=hubAnswer(it.id,await sinkFetch(b,g.url)); hubUnsure(it.id,j); if(hubSettle(it.id,j,auth)&&j&&j.ok) hubDelivered(it,j); }
+   hubInFlight[it.id]=1; jobs.push({it:it,p:sinkFetch(b,g.url)}); }
+  for(var k=0;k<jobs.length;k++){ var job=jobs[k];
+   try{ var j=hubAnswer(job.it.id,await job.p); hubUnsure(job.it.id,j); if(hubSettle(job.it.id,j,auth)&&j&&j.ok) hubDelivered(job.it,j); }
    catch(e){ hubRetry(60000); }
-   finally{ delete hubInFlight[it.id]; } }
+   finally{ delete hubInFlight[job.it.id]; } }
  })().then(function(){ hubFlushing=null; hubBoxDraw(); return hubList(HUB_BOX).length; },function(){ hubFlushing=null; return hubList(HUB_BOX).length; });
  return hubFlushing; }
 /* The line at the top of every page: what this phone still holds to send, and anything the records refused. Fewest words. */
