@@ -542,6 +542,23 @@ test('a broken wording file shows a message, not a crash', async ({ page, world 
   await openSops(page);
   await tapSop(page, 'Care Rounds');
   await expect(sopBody(page, 'Care Rounds')).toContainText('could not be read');
+  await expect(sopBody(page, 'Care Rounds')).toContainText('not JSON');
+});
+
+test('a spreadsheet wording file says it is a spreadsheet', async ({ page, world }) => {
+  world.file('sop-sheet', CARD_FILE, 'a,b\n1,2\n', { parents: [IDS.bld], driveId: 'drv-alpha1', mimeType: 'application/vnd.google-apps.spreadsheet' });
+  await openSops(page);
+  await tapSop(page, 'Care Rounds');
+  await expect(sopBody(page, 'Care Rounds')).toContainText('spreadsheet');
+  await expect(sopBody(page, 'Care Rounds')).toContainText('could not be read');
+});
+
+test('wording with a byte-order mark still opens', async ({ page, world }) => {
+  addCards(world, 'sop-cards', `\uFEFF${JSON.stringify(CARDS)}`);
+  await openSops(page);
+  await tapSop(page, 'Care Rounds');
+  await expect(sopBody(page, 'Care Rounds')).toContainText('Example intro');
+  await expect(sopBody(page, 'Care Rounds')).not.toContainText('could not be read');
 });
 
 test('phone width: an open SOP stays on the screen and every target is 44px', async ({ page, world }) => {
