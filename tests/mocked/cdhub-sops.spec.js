@@ -83,7 +83,7 @@ test('bottom bar is Main, Compliance, Records, People (menu option A); SOPs sit 
   await expect(page.locator('#nav [data-go="buyers"]')).toHaveCount(0);
   await expect(page.locator('#nav .house-more button[data-go="sops"]')).toHaveAttribute('data-slot', '4');
   await page.locator('nav.house-tabs [data-house-more]').click();
-  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Today', 'Do', 'Items', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
+  await expect(page.locator('#houseMore > :is(button, a) .htl')).toHaveText(['Today', 'Do', 'Items', 'Yearly print', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries']);
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveText('Temps');
   await tabClick(page, '#nav button[data-go="sops"]');
   await expect(page).toHaveURL(/#\/sops$/);
