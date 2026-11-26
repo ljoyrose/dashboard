@@ -144,7 +144,7 @@
     var cells = [];
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso);
+      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso, dayScope(v, t, iso));
       var mine = perDog ? dogsOn(v, t, iso) : [], want = perDog ? mine.length : times, got = 0, allow = {};
       mine.forEach(function (s) { allow[s.id] = 1; });
       if (x) {
@@ -158,6 +158,18 @@
       cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : (times > 1 ? times : 0), lines: x ? x.lines : [] });
     }
     return { key: key, label: t.label || key, ym: ym, first: first, perDog: perDog, vetCal: showsVet(t), need: need, typeId: t.id, cells: cells };
+  }
+
+  /** Dogs and litters in scope on one day, so a past day uses the band in force then. */
+  function dayScope(v, t, iso) {
+    var roster = v.subjects || v.dogs || [];
+    var opt = { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings };
+    var dogs = t && Due.subjectsFor ? Due.subjectsFor(t, roster, iso, opt) : roster;
+    var litters = (v.litters || []).filter(function (l) {
+      var b = String(l.dob || l.born_on || l.born || '').slice(0, 10);
+      return !b || b <= iso;
+    });
+    return { subjects: dogs, litters: litters, types: v.types || [] };
   }
 
   /** Photos and files linked to each record (link rows check_log -> files, any role, link not ended), keyed by record id.
@@ -270,6 +282,7 @@
   function doneFields(v, key) {
     var t = typeOf(v, key); if (!t) return null;
     var f = { check_type_id: t.id, outcome: String(t.asks_outcome).toLowerCase() === 'false' ? 'recorded' : 'ok', how_recorded: 'site_tap' };
+    if (Due.perDogSite(t)) f.dog_ids = Due.subjectsFor(t, v.subjects || v.dogs || [], v.today, { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings }).map(function (d) { return d.id; }).join('|');
     if (Due.perDogSite(t)) f.dog_ids = dogsOn(v, t, v.today).map(function (d) { return d.id; }).join('|');
     return f;
   }
@@ -285,7 +298,7 @@
     + '.jcam{position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center}.jcam svg{width:9px;height:9px}'
     + '.jvet{position:absolute;left:1px;top:1px;width:12px;height:12px;border-radius:50%;background:var(--ljr-6);color:#fff;display:flex;align-items:center;justify-content:center}.jvet svg{width:8px;height:8px}.jvet.jkey{position:static;display:inline-flex;width:16px;height:16px}'
     + '.jcal-day{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}.jcal-day ul{margin:6px 0;padding-left:18px}'
-    + '.jcal-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.jcal-pics a{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;min-height:44px;color:var(--ink)}.jcal-pics img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}'
+    + '.jcal-pics{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.jcal-pics a{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;min-height:44px;color:var(--ink)}.jcal-pics img{width:96px;height:96px;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:8px;border:1px solid var(--line)}'
     + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}'
     + '.jcal-imp{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:grid;gap:8px}.jcal-imp[hidden]{display:none}.jcal-imp-row{display:flex;gap:8px;flex-wrap:wrap}.jcal-imp-t td,.jcal-imp-t th{padding:4px 6px;text-align:left}.jcal-imp-t .warn{color:var(--ljr-3-text)}';
 

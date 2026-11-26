@@ -6,8 +6,15 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  /* Printed QR codes open the staff page on this same site (the folder above this print page). An owner rule
-     qr.base_url (https, ending in /) wins when one is in force. */
+  /* Printed QR codes open the staff page on this site, not this print page. A configured https address
+     (cdhub.publicStaffBase, ending in /) wins over that. An owner qr.base_url row in force wins over both. */
+  function staffPublicBase() {
+    var cfg = '';
+    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
+    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
+    var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  }
   function qrBase() {
     var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
     ((T && T.breeding_rule) || []).forEach(function (r) {
@@ -15,7 +22,7 @@
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(v) || (f && f > day) || (r.to_date && String(r.to_date) < day)) return;
       if (!best || f >= best.f) best = { f: f, v: v };
     });
-    return best ? best.v : new URL('../', location.href).href;
+    return best ? best.v : staffPublicBase();
   }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only
@@ -38,7 +45,7 @@
   /* Lists, read only when a card type needs them (Lisa's demo, 22 Nov 2026: the page sat on "Loading..." for minutes while
      21 script calls ran one after another). The buttons show at once; each button reads only its lists, four at a time,
      and keeps them for this visit; "as of" says when, Refresh reads again. Lists marked optional may be off for this code. */
-  var T = {}, readAt = 0;
+  var T = {}, readAt = 0, readBlock = {};
   var REQUIRED = { area: 1, subject: 1, occupancy: 1, qr_tag: 1 };
   var BASE = ['qr_tag', 'breeding_rule'], SITE = ['area', 'subject', 'occupancy', 'subject_status', 'requirement'];
   var NEEDS = {
@@ -70,8 +77,8 @@
       if (!left.length || fail) return Promise.resolve();
       var k = left.shift();
       return save.read(k).then(function (r) {
-        if (r.ok) T[k] = r.rows || [];
-        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) T[k] = [];   /* owner-only or not switched on: the card leaves those lines out */
+        if (r.ok) { T[k] = r.rows || []; readBlock[k] = ''; }
+        else if (!REQUIRED[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING' || r.code === 'FILE_NOT_ALLOWED')) { T[k] = []; readBlock[k] = r.code; }   /* owner-only or not switched on: the card leaves those lines out */
         else fail = fail || r;
         done++; if (!fail) say('Loading lists: ' + done + ' of ' + keys.length + '...');
         return worker();
@@ -92,7 +99,16 @@
     return { onSite: onSite, roomOf: roomOf };
   }
   /** A button that reads what its cards need, then draws them. */
-  function lazy(text, what, fn) { return btn(text, function () { need(what).then(function (ok) { if (ok) fn(); }); }); }
+  function markKind(b) {
+    Array.prototype.forEach.call(opts.children, function (x) {
+      if (x.classList && x.classList.contains('btn')) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+    });
+  }
+  function lazy(text, what, fn) {
+    var b = btn(text, function () { markKind(b); need(what).then(function (ok) { if (ok) fn(); }); });
+    b.setAttribute('aria-pressed', 'false');
+    return b;
+  }
   function current(kind, refId) { return BLDQrRules.tagFor(T.qr_tag, kind, refId); }
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
   var makeGen = 0, tagSave = {};
@@ -174,8 +190,11 @@
   function sizeWord(k) { return k ? (BLDCapacity.sizeLabels(T.breeding_rule || [], BLDNeeds.today())[k] || '') : ''; }
   function sizeColour(b) {
     var k = sizeKey(b), c = '';
-    (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && /^([a-z]+|#[0-9a-f]{3,6})$/i.test(r.value || '')) c = r.value; });
-    return c ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : '';
+    (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'size_colour.' + k && String(r.value || '').trim()) c = String(r.value).trim(); });
+    if (!c) c = { small: 'orange', medium: 'green', large: 'blue' }[k] || '';
+    if (!c) return '';
+    if (/^var\(/i.test(c)) return c;
+    return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c) ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : c;
   }
   /* Lisa 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
      colour (the owner's dated rule rows; the newest in force wins). No date of birth, or no rows: the size colour. */
@@ -341,7 +360,13 @@
   }
   function itemCards() {
     sheet.className = 'sheet dogs per' + per;
-    make('item', itemList(), itemCard);
+    var list = itemList();
+    if (readBlock.items || !list.length) {
+      sheet.textContent = '';
+      say(readBlock.items === 'NOT_ALLOWED' ? 'Not allowed.' : 'The item list is not switched on yet.', 'warn');
+      return;
+    }
+    make('item', list, itemCard);
     pickBox.textContent = '';
     var boxes = ITEM_COLS.map(function (c) { var on = (itemPick || itemFields('')).indexOf(c) >= 0;
       return h('label', { class: 'fpick' }, [h('input', Object.assign({ type: 'checkbox', value: c }, on ? { checked: 'checked' } : {})), ' ' + itemLabel(c)]); });
@@ -370,7 +395,7 @@
     return h('article', { class: 'dcard lcard', 'data-litter': l.id, style: col ? '--c:' + col : '' }, [
       h('div', { class: 'band' }, [h('span', { class: 'who' }, [h('b', { text: it.label })]), born ? h('small', { 'data-k': 'born' }, ['Born', h('br'), dmy(born)]) : null]),
       h('div', { class: 'dbody' }, [
-        h('div', { class: 'cside' }, [h('div', { class: 'photo none', 'data-k': 'photo' }),   // the frame, blank: no placeholder word on paper
+        h('div', { class: 'cside' }, [photoBox(dam),
           h('dl', {}, rows.map(function (r) { return h('div', { 'data-k': r[0] }, [h('dt', { text: r[0] }), h('dd', { text: r[1] })]); }))]),
         h('div', { class: 'code', html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + it.label) }),
         jobList(['litter']),
@@ -387,15 +412,50 @@
     var day = BLDNeeds.today(), acc = BLDCapacity.accessOn(T.area_access || [], areaId, day), out = { access: acc, any: false, dogs: { small: 0, medium: 0, large: 0 }, pups: [] };
     if (!acc) return out;
     var mine = (T.area_capacity || []).filter(function (r) { return r.area_id === areaId && String(r.access_type || '').toLowerCase() === acc && inForceOn(r, day); });
+    var cap = T.area_capacity || [];
+    if (!mine.length) {
+      var area = (T.area || []).filter(function (a) { return a.id === areaId; })[0] || {};
+      var m2 = parseFloat(area.area_value);
+      var space = BLDCapacity.spaceRules(T.breeding_rule || [], day);
+      if (m2 > 0 && space && space[acc]) { mine = BLDCapacity.deriveRows(areaId, m2, space).filter(function (r) { return r.access_type === acc; }); cap = mine; }
+    }
     out.any = mine.length > 0;
-    BLDCapacity.limitsOn(T.area_capacity || [], areaId, acc, day).forEach(function (l) { out.dogs[l.band] = l.n; });
+    BLDCapacity.limitsOn(cap, areaId, acc, day).forEach(function (l) { out.dogs[l.band] = l.n; });
     var pups = {};
     mine.forEach(function (r) { var k = sizeKey(r.size_band); if (k && /pups/i.test(r.size_band || '') && (!pups[k] || fromOf(r) >= pups[k].f)) pups[k] = { f: fromOf(r), n: parseInt(r.max_dogs, 10) || 0 }; });
     ['small', 'medium', 'large'].forEach(function (k) { if (pups[k] && pups[k].n > 0) out.pups.push(k); });
     return out;
   }
   var DOG = '<svg viewBox="0 0 32 24" aria-hidden="true"><path d="M3 9l3-5 2 4h9l3-6 3 3h4l2 3-3 2h-3l-1 3v9h-3l-1-6h-9l-2 6H7l1-8-3-3z"/></svg>';
-  function roomSize(a) { var v = parseFloat(a.area_value); return v > 0 ? String(v) + (a.area_unit_id === 'u-m2' || !a.area_unit_id ? ' m²' : '') : ''; }
+  function roomSize(a) { var v = parseFloat(a && a.area_value); return v > 0 ? String(v) + (a.area_unit_id === 'u-m2' || !a.area_unit_id ? ' m²' : '') : ''; }
+  /* A live read can omit area_value. The device copy keeps the last full area rows, so the size still prints. */
+  function areaFromCopy() {
+    return new Promise(function (res) {
+      if (!window.indexedDB) { res(); return; }
+      var req; try { req = indexedDB.open('cdhub-owner-copy', 1); } catch (e) { res(); return; }
+      req.onerror = function () { res(); };
+      req.onsuccess = function () {
+        var db = req.result, rows = [];
+        try {
+          var q = db.transaction('copy', 'readonly').objectStore('copy').get('last');
+          q.onsuccess = function () {
+            var t = q.result && q.result.tables && q.result.tables['BLD-area.csv'];
+            if (t) rows = t;
+            db.close();
+            (T.area || []).forEach(function (a) {
+              var c = null;
+              rows.forEach(function (r) { if (r && r.id === a.id) c = r; });
+              if (!c) return;
+              if (a.area_value == null || a.area_value === '') a.area_value = c.area_value;
+              if (!a.area_unit_id) a.area_unit_id = c.area_unit_id;
+            });
+            res();
+          };
+          q.onerror = function () { db.close(); res(); };
+        } catch (e) { try { db.close(); } catch (e2) {} res(); }
+      };
+    });
+  }
   /* the line at the foot of every room card: the owner's rule row room_card.footer, else the words on Lisa's design */
   function footer() { var v = ''; (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'room_card.footer' && inForceOn(r, BLDNeeds.today())) v = String(r.value || ''); }); return v || 'Unsure? Don’t Move. Ask.'; }
   /* Lisa's room card (18 Nov 2026): name, a colour line, Access / Room size / Mum + pups, then Small, Medium, Large
@@ -446,7 +506,7 @@
   }
   /** Every thermometer whose need rows have not all ended, A to Z by name, each with its QR card. */
   function thermoCards() {
-    sheet.className = 'sheet';
+    sheet.className = 'sheet per' + per;
     if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
     var today = BLDNeeds.today();   // a thermometer whose need rows all ended before today gets no card
     pickThen('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; })
@@ -483,15 +543,15 @@
     screen.insertBefore(asOf, msg);
     function roomItems() { return T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }); }
     opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet per' + per; make('site', [{ id: 'site', label: 'Whole site' }]); }));
-    opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; pickThen('area', roomItems(), roomCard); }));
+    opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms per' + per; areaFromCopy().then(function () { pickThen('area', roomItems(), roomCard); }); }));
     opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; pickThen('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
-        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per);
-        else if (/\bper\d\b/.test(sheet.className)) sheet.className = 'sheet per' + per; } });
+        if (/\bper\d\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
     }));
     opts.appendChild(perBox);
+    opts.appendChild(h('button', { class: 'btn', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
     opts.appendChild(lazy('Litter cards', 'litters', function () {
       var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf;
       if (!(T.litter || []).length) { sheet.className = 'sheet'; say('The litter list is not switched on yet.', 'warn'); return; }
@@ -521,10 +581,12 @@
     var sign = ''; try { sign = new URLSearchParams(location.search).get('sign') || ''; } catch (e) { /* old browser */ }
     if (sign) need('rooms').then(function (ok) {
       if (!ok) return;
-      var signRoom = T.area.filter(function (a) { return a.id === sign; })[0];
-      if (!signRoom) { say('That room is not on the list. Press Room cards to print them all.', 'warn'); return; }
-      var rooms = roomItems(); if (!rooms.some(function (r) { return r.id === signRoom.id; })) rooms.unshift({ id: signRoom.id, label: signRoom.code || signRoom.id, a: signRoom });
-      sheet.className = 'sheet rooms'; pickThen('area', rooms, roomCard, [signRoom.id]);
+      areaFromCopy().then(function () {
+        var signRoom = T.area.filter(function (a) { return a.id === sign; })[0];
+        if (!signRoom) { say('That room is not on the list. Press Room cards to print them all.', 'warn'); return; }
+        var rooms = roomItems(); if (!rooms.some(function (r) { return r.id === signRoom.id; })) rooms.unshift({ id: signRoom.id, label: signRoom.code || signRoom.id, a: signRoom });
+        sheet.className = 'sheet rooms per' + per; pickThen('area', rooms, roomCard, [signRoom.id]);
+      });
     });
   }());
 }());

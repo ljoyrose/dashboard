@@ -66,7 +66,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     }
   });
 
-  test('the selected view under More has one clean edge and the pale grey selected fill (Lisa, 12 Nov 2026); the "You are here" title has no box @regression', async ({ page }) => {
+  test('the selected view under More has one clean edge and the pale grey selected fill; the "You are here" title has no box @regression', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['bar', 'changes', 'Changes · Recent'], ['bar', 'bin', 'Bin']]) {

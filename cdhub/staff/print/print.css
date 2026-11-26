@@ -7,7 +7,8 @@
 .sheet.per1>.qcard{width:100%;max-width:none}
 @media print{
  .noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}
- .sheet{grid-template-columns:repeat(3,1fr)}
+ .sheet.per1,.sheet.per2{display:block;grid-template-columns:1fr}
+ .sheet.per4{display:block}
  .sheet.per1{grid-template-columns:1fr}
  .sheet.per1>.qcard{break-after:page;page-break-after:always;min-height:270mm;box-sizing:border-box}
  .sheet.per1>.qcard svg{width:160mm;height:160mm}
@@ -16,17 +17,18 @@
 .qcard .room{display:block;font-size:14px;font-weight:600}
 /* Lisa's "Dog Card Print-outs" v4. Size colours come from rule rows; these only turn a colour word into the print shade. */
 :root{--sz-orange:var(--ljr-3-icon);--sz-green:var(--ljr-5-icon);--sz-blue:var(--ljr-6-icon);--sz-purple:var(--ljr-7-icon)}
-.per{display:inline-flex;gap:6px}.per [aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
+.per{display:inline-flex;gap:6px}.per [aria-pressed="true"],.opts>.btn[aria-pressed="true"]{outline:2px solid currentColor;outline-offset:-2px}
 /* Lisa's dog card (18 Nov 2026). --c is the size colour from the owner's size_colour rows. */
 .sheet.dogs{display:grid;gap:10px;grid-template-columns:1fr}
-.sheet.dogs.per2,.sheet.dogs.per4{grid-template-columns:1fr 1fr}
+.sheet.dogs.per2{grid-template-columns:1fr}
+.sheet.dogs.per4{grid-template-columns:1fr 1fr}
 .dcard{--c:#57504A;background:#fff;color:#141413;border:1px solid #C7C0B4;border-radius:10px;padding:14px;break-inside:avoid;display:flex;flex-direction:column;align-items:center;gap:10px;font-family:"Lexend",system-ui,sans-serif}
-.dcard .name{margin:0;font-size:34px;line-height:1.05;text-align:center;overflow-wrap:anywhere}
+.dcard .name{margin:0;font-size:34px;line-height:1.05;text-align:center;overflow-wrap:normal;word-break:normal}
 .dcard .dtop{display:grid;grid-template-columns:1fr 46%;gap:12px;width:100%;align-items:center}
 .dcard dl{margin:0;display:grid;gap:10px}.dcard dt{color:#57504A;font-size:13px}.dcard dd{margin:0;font-weight:600;font-size:20px;display:flex;align-items:center;gap:6px}
 .dcard .sex svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
-.dcard .photo{overflow:hidden;aspect-ratio:1;border:4px solid var(--c);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#57504A}
-.dcard .photo img{width:100%;height:100%;object-fit:contain;display:block}
+.dcard .photo{overflow:hidden;aspect-ratio:1/1;width:100%;min-width:48px;height:auto;align-self:start;border:4px solid var(--c);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#57504A}
+.dcard .photo img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
 .dcard .szb{width:100%;box-sizing:border-box;background:var(--c);color:#fff;border-radius:10px;padding:8px 12px;font-size:20px;text-align:center}
 .dcard .code svg,.rcard .code svg{width:100%;max-width:300px;height:auto;display:block;margin:0 auto}
 .dcard .tag,.rcard .tag{font-size:11px;color:#57504A;text-align:center}
@@ -37,13 +39,13 @@
    (top of the tile = top of the photo, bottom of the QR = bottom of the photo), microchip across the bottom. Item cards use the
    same grid with their labelled fields in place of the tile. */
 .dcard.vcard{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"name facts" "photo size" "photo code" "chip chip";column-gap:24px;row-gap:12px;align-items:start;padding:18px 20px}
-.vcard .name{grid-area:name;margin:0;font-size:40px;font-weight:700;line-height:1.05;text-align:left;align-self:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.vcard .name{grid-area:name;margin:0;min-width:8rem;font-size:40px;font-weight:700;line-height:1.05;text-align:left;align-self:center;overflow-wrap:normal;word-break:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 .vcard .name.n2{font-size:32px}.vcard .name.n3{font-size:24px}
 .vcard .facts{grid-area:facts;margin:0;display:grid;grid-template-columns:auto auto;justify-content:space-between;gap:12px;align-self:center}
 .vcard .facts dt{color:#57504A;font-size:13px}.vcard .facts dd{margin:0;font-weight:600;font-size:22px;display:flex;align-items:center;gap:6px}
 .vcard .sex svg{width:20px;height:20px}
 .vcard .sex[aria-label="Female"]{color:color-mix(in srgb,var(--ljr-2-icon) 55%,var(--ljr-7-icon))}.vcard .sex[aria-label="Male"]{color:var(--ljr-6-icon)}
-.vcard .photo{grid-area:photo;width:100%;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:stretch}
+.vcard .photo{grid-area:photo;width:100%;min-width:88px;aspect-ratio:1/1;height:auto;box-sizing:border-box;border-width:6px;border-radius:12px;align-self:start}
 .vcard .szb{grid-area:size;display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:6px 16px 8px;border-radius:10px;box-sizing:border-box}
 .vcard .szb .lab{font-size:12px;font-weight:600;letter-spacing:.04em}.vcard .szb b{font-size:36px;line-height:1.1}
 .vcard .code{grid-area:code;align-self:end;justify-self:center;width:100%}
@@ -71,7 +73,7 @@
 .rcard .rows{display:grid;gap:6px}
 .szrow{--c:#57504A;border:3px solid var(--c);border-radius:8px;padding:2px 8px 4px;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;align-items:center;column-gap:6px}
 .szrow b{grid-column:1/-1;font-size:13px}
-.szrow .dogs{display:flex;gap:3px;flex-wrap:wrap}.szrow .dogs i svg{width:24px;height:18px;fill:var(--c);display:block}
+.szrow .dogs{display:flex;gap:3px;flex-wrap:wrap}.szrow .dogs i svg{width:24px;height:18px;display:block}.szrow .dogs i svg,.szrow .dogs i svg path{fill:var(--c);color:var(--c);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .szrow .n{font-size:24px;font-weight:600}
 .szrow.none{border-style:dashed}.szrow.none small{grid-column:1/-1;font-size:11px}
 .rcard .nolim{border:3px dashed var(--ljr-2-icon);border-radius:8px;padding:10px;font-weight:600;margin:0}
@@ -125,7 +127,7 @@
  .sheet.dogs.per2 .dcard.vcard{width:194mm;height:138mm;margin:0 -2mm;padding:4mm 6mm;column-gap:8mm;row-gap:4mm;grid-template-columns:88mm 1fr;grid-template-rows:auto 18mm 66mm auto;grid-template-areas:"name facts" "photo size" "photo code" "chip chip"}
  .sheet.dogs.per2 .dcard.vcard:nth-child(odd){border-bottom:1px dashed #57504A}
  .sheet.dogs.per2 .vcard .name{font-size:44px}.sheet.dogs.per2 .vcard .name.n2{font-size:34px}.sheet.dogs.per2 .vcard .name.n3{font-size:26px}.sheet.dogs.per2 .vcard .facts dt{font-size:13px}.sheet.dogs.per2 .vcard .facts dd{font-size:22px}
- .sheet.dogs.per2 .vcard .photo{width:88mm;height:88mm}
+ .sheet.dogs.per2 .vcard .photo{width:88mm;height:88mm;aspect-ratio:1}
  .sheet.dogs.per2 .vcard .szb{width:100%;height:18mm;padding:2mm 4mm;justify-content:center}.sheet.dogs.per2 .vcard .szb b{font-size:30px}
  .sheet.dogs.per2 .vcard .code{width:62mm;height:62mm;align-self:end;justify-self:center;overflow:visible}
  /* 62 mm of black squares; the white quiet zone spills onto the white card round it (8 mm clear above, to the tile) */
@@ -146,11 +148,22 @@
  .sheet.dogs.per2 .dcard.vcard.icard{grid-template-rows:auto minmax(18mm,1fr) 66mm;grid-template-areas:"name name" "photo facts" "photo code"}
  .sheet.dogs.per1 .dcard.vcard.icard{grid-template-rows:auto minmax(24mm,auto) 68mm;grid-template-areas:"name name" "photo facts" "photo code"}
  .sheet.dogs.per2 .vcard.icard .photo{width:88mm;height:88mm}
- /* room cards: two a sheet, one above the other, the QR as big as the room on the right allows */
- .sheet.rooms .rcard{display:inline-flex;vertical-align:top;box-sizing:border-box;width:100%;height:132mm;margin:0 0 4mm;font-size:16px;overflow:hidden;border-radius:0;border-width:0 0 1px;border-bottom-style:dashed;justify-content:space-evenly;padding:5mm 6mm}
+ /* room cards follow the same page count as the other types */
+ .sheet.rooms .rcard{display:inline-flex;vertical-align:top;box-sizing:border-box;width:100%;margin:0;font-size:16px;overflow:visible;border-radius:0;border-width:0;justify-content:flex-start;padding:5mm 6mm;break-inside:avoid}
+ .sheet.rooms.per1 .rcard{height:auto;min-height:250mm;break-after:page;page-break-after:always}
+ .sheet.rooms.per1 .rcard:last-child{break-after:auto;page-break-after:auto}
+ .sheet.rooms.per2 .rcard{height:132mm;margin:0 0 4mm;overflow:hidden;border-width:0 0 1px;border-bottom-style:dashed}
+ .sheet.rooms.per4 .rcard{width:calc(50% - 2mm);height:129mm;margin:0 0 4mm;overflow:hidden}
+ .sheet.rooms.per4 .rcard:nth-child(odd){margin-right:4mm}
+ .sheet.per2>.qcard{display:inline-block;vertical-align:top;box-sizing:border-box;width:100%;height:128mm;overflow:hidden;break-inside:avoid;margin:0 0 4mm}
+ .sheet.per2>.qcard svg{width:90mm;height:90mm}
+ .sheet.per4>.qcard{display:inline-block;vertical-align:top;box-sizing:border-box;width:calc(50% - 2mm);height:128mm;overflow:hidden;break-inside:avoid;margin:0 0 4mm}
+ .sheet.per4>.qcard svg{width:70mm;height:70mm}
+ .sheet.per4>.qcard:nth-child(odd){margin-right:4mm}
+ .sheet.per2>.qcard:last-child,.sheet.per4>.qcard:last-child{margin-bottom:0}
  .sheet.rooms .rcard .name{font-size:44px}.sheet.rooms .rcard .facts dt{font-size:13px}.sheet.rooms .rcard .facts dd{font-size:18px}.sheet.rooms .rcard .facts small{font-size:12px}
  .sheet.rooms .rcard .rbody{grid-template-columns:1fr 62mm}
- .sheet.rooms .szrow b{font-size:16px}.sheet.rooms .szrow .dogs i svg{width:32px;height:24px}.sheet.rooms .szrow .n{font-size:30px}.sheet.rooms .rcard .foot{font-size:16px}
+ .sheet.rooms .szrow b{font-size:16px}.sheet.rooms .szrow .dogs i svg{width:32px;height:24px}.sheet.rooms .szrow .dogs i svg,.sheet.rooms .szrow .dogs i svg path{fill:var(--c);-webkit-print-color-adjust:exact;print-color-adjust:exact}.sheet.rooms .szrow .n{font-size:30px}.sheet.rooms .rcard .foot{font-size:16px}
  .sheet.rooms .rcard{gap:2mm}.sheet.rooms .rcard .rows{gap:2mm}
  .sheet.rooms .rcard .tag{font-size:9px}
 }

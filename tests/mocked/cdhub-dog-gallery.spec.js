@@ -1,4 +1,4 @@
-// Main photo + gallery on the dog card (Lisa 13 Nov 2026): files rows owned through dated link rows (decision C, column role).
+// Main photo + gallery on the dog card : files rows owned through dated link rows (decision C, column role).
 // The main photo is the 'main' link in force; the old photo cell is only the fallback. Invented rows only.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
@@ -55,8 +55,8 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
   await expect(gal.locator('.gi[data-kind="upload"] a')).toHaveText('Pretend cert.pdf');
   await expect(gal.locator('.gi[data-file="fil-1"] [data-k="main"]')).toHaveText('Main');
   await expect(gal.locator('.gi[data-file="fil-2"] img.galph')).toHaveAttribute('data-photo-id', 'DRIVEoldPhoto002');   // loaded once opened
-  await expect(gal.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
-  await expect(gal.locator('details[data-k="ended"] img.galph')).not.toHaveAttribute('data-photo-id', /./);   // not loaded until opened
+  await expect(gal.locator('details[data-k="ended"]')).toHaveCount(0);   // ended photos stay in the sheet and are not listed
+  await expect(gal.locator('.gi[data-file="fil-5"]')).toHaveCount(0);
 
   // a dog with no link rows keeps its old photo cell and shows no gallery
   const p = page.locator('.dc[data-dog="sub-g2"]');

@@ -1,7 +1,9 @@
 /**
  * Dog card saves (12 Nov 2026, DRAFT): Add weight, Add vaccination, and Remove the newest vaccination.
  *
- *   action 'weighing'          adds one row to BLD-weight.csv
+ *   action 'weighing'          adds one row to BLD-weight.csv. A correction sends corrects_id and adds a new row
+ *                              pointing at the old one; the old row is never overwritten. The weight file needs a
+ *                              corrects_id column for that, and this script has to be published before it takes effect.
  *   action 'vaccination'       adds one row to BLD-vaccination.csv (one row per vaccination; a dog can have many)
  *   action 'vaccination_void'  OWNER ONLY (Lisa 17 Nov 2026: "Archive"). Hides ANY one vaccination row of the dog by filling
  *                              voided_on, voided_by. The row stays in the sheet.
@@ -96,14 +98,29 @@ function sinkWeighing_(req) {
   return sinkDogcard_(req, 'weighing', function (spec, f, who, now) {
     var errors = {}, subjectId = String(f.subject_id || '').trim();
     var on = String(f.performed_on || '').trim(), kg = String(f.weight_kg || '').trim(), bcs = String(f.body_condition_score || '').trim();
+    var corrects = String(f.corrects_id || '').trim();
     if (!isRealDate_(on)) errors.performed_on = 'Use a real date as YYYY-MM-DD.';
     else if (on > todayLondon_(now)) errors.performed_on = 'That date is in the future.';
     if (!/^\d{1,3}(\.\d{1,2})?$/.test(kg) || +kg < 0.1 || +kg > 150) errors.weight_kg = 'Type the weight in kg, e.g. 12.4';
     if (bcs && !/^[1-9]$/.test(bcs)) errors.body_condition_score = 'BCS is a whole number from 1 to 9.';
+    if (corrects && !ID_RE_.test(corrects)) errors.corrects_id = 'Say which weight this corrects.';
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     dogcardSubject_(subjectId);
-    var id = dogcardAppend_(spec, { subject_id: subjectId, performed_on: on, weight_kg: kg, unit: 'kg',
-      body_condition_score: bcs, bcs_scale: bcs ? '9' : '', source: 'CD Hub, ' + who.who });
+    if (corrects) {
+      var read = store_read_(spec.file, true), why = '';
+      if (read.header.indexOf('corrects_id') < 0) {
+        throw err_('HEADER_MISMATCH', 'BLD-weight.csv has no corrects_id column, so the correction was not saved. Add the column and try again.');
+      }
+      var orig = null;
+      read.records.forEach(function (r) { if (r.id === corrects) orig = r; });
+      if (!orig || orig.subject_id !== subjectId) why = 'That weight was not found for this dog.';
+      else if (read.records.some(function (r) { return r.corrects_id === corrects; })) why = 'That weight already has a correction. Correct the newer one instead.';
+      if (why) throw err_('INVALID', why, { fields: { corrects_id: why } });
+    }
+    var values = { subject_id: subjectId, performed_on: on, weight_kg: kg, unit: 'kg',
+      body_condition_score: bcs, bcs_scale: bcs ? '9' : '', source: 'CD Hub, ' + who.who };
+    if (corrects) values.corrects_id = corrects;
+    var id = dogcardAppend_(spec, values);
     return { status: 'saved', id: id, subject_id: subjectId };
   });
 }

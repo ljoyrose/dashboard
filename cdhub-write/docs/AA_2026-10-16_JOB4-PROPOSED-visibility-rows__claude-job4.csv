@@ -41,3 +41,5 @@ fv-p046,ten-REPLACE-ME,area_reading,taken_at,aud-admin,yes,,,PROPOSED - claude-j
 fv-p047,ten-REPLACE-ME,area_reading,taken_by,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
 fv-p048,ten-REPLACE-ME,area_reading,mitigation_note,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
 fv-p049,ten-REPLACE-ME,area_reading,*,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner: every row
+fv-p050,ten-REPLACE-ME,area,area_value,aud-admin,yes,,,,2026-11-25,room card size
+fv-p051,ten-REPLACE-ME,area,area_unit_id,aud-admin,yes,,,,2026-11-25,room card size

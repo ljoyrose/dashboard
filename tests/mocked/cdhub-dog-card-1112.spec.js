@@ -16,10 +16,10 @@ const VAX = csv(VAX_H, [
   'v2,t,sub-x1,vaccination,Pretend KC,KC,bordetella_kennel_cough;parainfluenza;canine_herpesvirus,,,2025-06-01,,,,,,,,,,Pretend,,,,',
   'v0,t,sub-x1,vaccination,Pretend Old,OLD,rabies,,,2024-01-01,,,,,,,,,,Pretend,,,2025-01-01T10:00:00+00:00,Pretend Staff']);
 
-async function open(page, guard) {
+async function open(page, guard, weight) {
   const w = guard.world;
   put(w, 'BLD-subject.csv', SUBJECT); put(w, 'BLD-subject_status.csv', STATUS);
-  put(w, 'BLD-weight.csv', WEIGHT); put(w, 'BLD-vaccination.csv', VAX);
+  put(w, 'BLD-weight.csv', weight || WEIGHT); put(w, 'BLD-vaccination.csv', VAX);
   await HUBS.cdhub.open(page, guard);
   await page.evaluate((url) => { localStorage.setItem('cdhub.sink.url', url); localStorage.setItem('cdhub.sink.code', 'pretend-code'); }, SINK);
 }
@@ -67,6 +67,46 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[0].fields).toEqual({ subject_id: 'sub-x1', performed_on: today, weight_kg: '9.25', body_condition_score: '6' });
     await expect(dog(page).locator('details.wtc [data-k="wrow"]').first()).toContainText('9.25 kg');
     await expect(dog(page).locator('[data-k="weight"]')).toContainText('9.25 kg');
+  });
+
+  test('Correct a weight: the pencil opens Add weight filled in, and the list shows the new row', async ({ page, guard }) => {
+    const corrected = csv('id,subject_id,performed_on,weight_kg,unit,body_condition_score,bcs_scale,source,corrects_id', [
+      'w1,sub-x1,2026-01-01,8.1,kg,,,Pretend source,',
+      'w2,sub-x1,2026-02-12,8.4,kg,5,9,Pretend source,',
+      'w3,sub-x1,2026-03-12,8.9,kg,,,Pretend source,',
+      'w4,sub-x1,2026-03-12,9.1,kg,6,9,Pretend source,w3']);
+    await open(page, guard, corrected);
+    await page.evaluate(() => go('dogs/sub-x1'));
+    await dog(page).locator('details.wtc > summary').click();
+    const rows = dog(page).locator('details.wtc [data-k="wrow"]');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.first()).toContainText('9.1 kg');
+    await expect(rows.first()).toContainText('BCS 6');
+    await expect(dog(page).locator('details.wtc')).not.toContainText('8.9');
+    await expect(dog(page).locator('[data-k="weight"]')).toContainText('9.1 kg');
+    const f = dog(page).locator('details.wtc form[data-weigh-form]');
+    await rows.first().locator('[data-weigh-edit]').click();
+    await expect(f.locator('.wft')).toHaveText('Correct weight');
+    await expect(f.locator('input[name=on]')).toHaveValue('2026-03-12');
+    await expect(f.locator('input[name=kg]')).toHaveValue('9.1');
+    await expect(f.locator('select[name=bcs]')).toHaveValue('6');
+    await f.locator('[data-weigh-cancel]').click();
+    await expect(f.locator('.wft')).toHaveText('Add weight');
+    await expect(f.locator('input[name=kg]')).toHaveValue('');
+    await rows.first().locator('[data-weigh-edit]').click();
+    const bodies = await saves(page);
+    await f.locator('input[name=on]').fill('2026-03-10');
+    await f.locator('input[name=kg]').fill('9.4');
+    await f.locator('select[name=bcs]').selectOption('4');
+    await f.locator('button[type=submit]').click();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0].action).toBe('weighing');
+    expect(bodies[0].fields).toEqual({ subject_id: 'sub-x1', performed_on: '2026-03-10', weight_kg: '9.4', body_condition_score: '4', corrects_id: 'w4' });
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]')).toHaveCount(3);
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]').first()).toContainText('9.4 kg');
+    await expect(dog(page).locator('details.wtc [data-k="wrow"]').first()).toContainText('BCS 4');
+    await expect(dog(page).locator('details.wtc')).not.toContainText('9.1 kg');
+    await expect(dog(page).locator('details.wtc')).not.toContainText('8.9');
   });
 
   test('an older save script says so plainly and nothing changes', async ({ page, guard }) => {
@@ -142,6 +182,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await open(page, guard);
     await page.evaluate(() => go('dogs'));
     const one = page.locator('#rows article.dc', { hasText: 'Pretend Dam One' });
+    await expect(one).toBeVisible();   // Dogs draws after its parts load
     await expect(one.locator('.nl .st')).toHaveCount(0);   // no role badge on the card: sex is the icon on the photo
     const chips = await page.locator('.sfb.st').allTextContents();
     expect(chips.map((t) => t.replace(/\s*\d+$/, '').trim())).toEqual(expect.arrayContaining(['Bitch', 'Stud']));
