@@ -13,7 +13,7 @@ function put(world, name, content) {
   const like = world.files.find((x) => x.name === 'BLD-area.csv' && !x.trashed);
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
-const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+const URL_ = 'https://example.com/exec';
 
 async function setUp(page, guard, { reply } = {}) {
   await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} }, URL_);

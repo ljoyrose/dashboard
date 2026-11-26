@@ -69,7 +69,7 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
 for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop', width: 1280, height: 800 }]) {
   test(`dog card gallery (${size.name}): photo dates follow the owner's own setting, then the everyone default; the button saves the owner's own row`, async ({ page, guard }) => {
     await page.setViewportSize({ width: size.width, height: size.height });
-    const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+    const URL_ = 'https://example.com/exec';
     await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} }, URL_);
     const sent = [];
     await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
@@ -139,7 +139,7 @@ test('a fresh load does not list ended photos on the card or in the gallery @reg
   files.push('fil-main-gone,t,photo,DRIVEmainGone01,,image/jpeg,,,' + today + ',,camera,owner,' + today + 'T12:00:00Z');
   links.push('m-gone,t,subjects,sub-g2,files,fil-main-gone,main,,,' + today + ',' + today + ',dog card,owner,' + today + 'T12:00:00Z,Removed from gallery');
   put(w, 'BLD-subject.csv', csv('id,tenant_id,name,sex,dob,kind,neuter_status,photo', [
-    'sub-g1,t,Pretend Capri,Female,2021-03-02,Breeding,entire,DRIVEended01',
+    'sub-g1,t,Dog A,Female,2021-03-02,Breeding,entire,DRIVEended01',
     'sub-g2,t,Pretend Plain,Male,2022-01-01,Stud,entire,DRIVEmainGone01']));
   put(w, 'BLD-subject_status.csv', csv('id,tenant_id,subject_id,state', ['s1,t,sub-g1,Active', 's2,t,sub-g2,Active']));
   put(w, 'BLD-files.csv', csv('id,tenant_id,kind,drive_file_id,url,mime,name,size_bytes,taken_on,sha256,source,set_by,set_on', files));

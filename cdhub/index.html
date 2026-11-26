@@ -422,7 +422,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gi .gtools{display:flex;gap:4px;flex-wrap:wrap}
 .gi .gtools .cb{font-size:var(--fs-small)}
 .gal-ended{margin-top:8px}
-/* Sort photos (Lisa 25 Nov 2026): one large photo at a time, full width, same buttons as the rest of the card. */
+/* Sort photos : one large photo at a time, full width, same buttons as the rest of the card. */
 .psort{position:fixed;inset:0;z-index:900;display:flex;align-items:stretch;justify-content:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
 .psort-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:100%;max-width:880px;max-height:calc(100dvh - 24px);display:grid;grid-template-rows:auto auto minmax(120px,1fr) auto auto;gap:10px;font-family:var(--house-font);min-height:0}
 .psort-pic{width:100%;height:100%;min-height:0;object-fit:contain;background:var(--soft);border:1px solid var(--line);border-radius:var(--radius);touch-action:pan-y}
@@ -538,7 +538,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
 /* Chip row (Lisa 15 Nov 2026): sticky under the top bar, scrolls sideways on a phone. The house chip, count and hover;
    selected = the 3px section-colour side line (.house-lbar) and a tick, no fill (Lisa 15 Nov 2026). */
-.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;flex-wrap:wrap;gap:8px;   /* every view in sight, no sideways scroll (Lisa 16 Nov 2026) */
+.hchips{position:sticky;top:var(--house-head,56px);z-index:15;display:flex;flex-wrap:wrap;gap:8px;   /* every view in sight, no sideways scroll  */
  margin:0;padding:10px 0;background:var(--bg);border-bottom:1px solid var(--line)}
 .hchips::-webkit-scrollbar{display:none}
 .hchips[hidden]{display:none}
@@ -1273,7 +1273,7 @@ function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(
  var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
  /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
  m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
-/* Newest first. The same date keeps the order the rows were read in (Lisa 25 Nov 2026). */
+/* Newest first. The same date keeps the order the rows were read in . */
 function byDateDesc(a, b){ var x=String(a.on||''), y=String(b.on||''); return x>y?-1:(x<y?1:0); }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
@@ -2843,7 +2843,7 @@ function pawDogPhoto(img){
  var paw=img.parentNode&&img.parentNode.querySelector('[data-paw]');
  if(paw) paw.classList.remove('off');
 }
-/* Gallery pictures stay small and are kept on this phone (Lisa 25 Nov 2026: grey tiles, reloaded on every tap).
+/* Gallery pictures stay small and are kept on this phone (grey tiles, reloaded on every tap).
    The grid asks Drive for a thumbnail about 200px wide, never the full file. The bytes sit in memory, in
    localStorage (the thumbnail address) and in the browser Cache, so the next tap does not download them again.
    Sort photos is the one place a full-size picture is fetched, and the next and previous ones are fetched ahead. */
@@ -2946,7 +2946,7 @@ function cardPhotoId(d,ph){
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-/* Remove, Make main and Put back (Lisa 16 Nov 2026: "some are bad so need to be able to remove"). Nothing is deleted:
+/* Remove, Make main and Put back . Nothing is deleted:
    Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
    main link (the script ends the old main one). ended = true for an item in the Ended list. */
 function galleryTools(f,main,ended){
@@ -2973,7 +2973,7 @@ function galleryItem(f,mainId,dates,ended){
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryHtml(d,ph){
- if(!ph.gallery.length) return '';   /* an ended link stays in the sheet and is not shown on the card (Lisa, 25 Nov 2026) */
+ if(!ph.gallery.length) return '';   /* an ended link stays in the sheet and is not shown on the card  */
  var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO()), photos=ph.gallery.some(function(f){ return f.kind==='photo'; });
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
   +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
@@ -2983,7 +2983,7 @@ function galleryHtml(d,ph){
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
    with the gallery still open. A photo added today can only end today (an end date cannot be before its start), so the
    end reason marks it removed and photos.js treats it as ended straight away. */
-var GAL_REMOVED='Removed from gallery', GAL_LISA='Removed by Lisa', GAL_PICK={};
+var GAL_REMOVED='Removed from gallery', GAL_EDIT='Removed in gallery edit', GAL_PICK={};
 function galleryBulkRemove(dog){
  var g=galBox(dog); if(!g) return;
  var picks=g.querySelectorAll('.gpick[aria-pressed="true"]'), n=picks.length; if(!n) return;
@@ -2994,7 +2994,7 @@ function galleryBulkRemove(dog){
   var row=links.filter(function(l){ return l.id===id; })[0];
   if(!row||String(row.to_date||'').trim()) return;
   var to=galEndDate(row);
-  row.to_date=to; row.end_reason=GAL_LISA; row._local=1; linkEndKeep(id,to,GAL_LISA);
+  row.to_date=to; row.end_reason=GAL_EDIT; row._local=1; linkEndKeep(id,to,GAL_EDIT);
   ends.push({id:id, to_date:to}); if(li) files.push(li.getAttribute('data-file'));
  });
  delete GAL_PICK[dog];
@@ -3003,11 +3003,11 @@ function galleryBulkRemove(dog){
  gallerySync(dog);   /* the chosen tiles go at once; the rest stay */
  files.forEach(function(fid){ clearCardPhoto(dog, fid); });
  var msg=g.querySelector('[data-gal-msg]'); if(msg) msg.textContent=ends.length+' saving';
- sinkSend({action:'link_end', fields:{reason:GAL_LISA, ends:ends}, request_id:sinkRid()}).then(function(j){
+ sinkSend({action:'link_end', fields:{reason:GAL_EDIT, ends:ends}, request_id:sinkRid()}).then(function(j){
   var ok=j&&j.ok&&j.result&&j.result.status==='saved';
   function say(t){ var box=galBox(dog), m=box&&box.querySelector('[data-gal-msg]'); if(m) m.textContent=t; }
   if(ok){ say('\u2713 Removed '+ends.length); return; }
-  ends.reduce(function(p,e){ return p.then(function(){ return sinkSend({action:'link_end', fields:{id:e.id, to_date:e.to_date, reason:GAL_LISA}, request_id:sinkRid()}); }); }, Promise.resolve())
+  ends.reduce(function(p,e){ return p.then(function(){ return sinkSend({action:'link_end', fields:{id:e.id, to_date:e.to_date, reason:GAL_EDIT}, request_id:sinkRid()}); }); }, Promise.resolve())
    .then(function(){ say('\u2713 Removed '+ends.length); });
  });
 }
@@ -3060,7 +3060,7 @@ function linkEndsApply(){
  });
  if(drop) linkEndsSet(o);
 }
-/* Sort photos (Lisa 25 Nov 2026). One photo at a time. Remove ends the gallery link only (the file stays).
+/* Sort photos . One photo at a time. Remove ends the gallery link only (the file stays).
    The card is not redrawn between photos: the screen changes at once and the save waits in the outbox. */
 var PHOTO_SORT=null;
 function galEndDate(row){ var day=todayLondon(), y=dayMinus(day,1); return String((row&&row.from_date)||'').slice(0,10)<=y?y:day; }
@@ -4055,7 +4055,7 @@ async function applyDogOff(dogId, msgEl){
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
-/* Present / not here is one check_log for the dog for the day (Lisa 25 Nov 2026), against cty-round_presence-1 when
+/* Present / not here is one check_log for the dog for the day , against cty-round_presence-1 when
    that row is in force, else the original Present row (round.presence or round_presence). A later round the same day,
    including a thermometer round, does not write another row: the line says Done today. Correct writes one new row
    that points at today's. No Present row: kept on this page only, and the line says so. */
@@ -4836,7 +4836,7 @@ async function sinkDrain(){ try { while(sinkQ.length){
  } finally { sinkSending=[]; sinkPumping=false; if(sinkQ.length) sinkPump(); } }
 /* leaving the page while saves wait their turn would drop them (OV12 16 Nov 2026): the browser asks "Leave site?" first */
 window.addEventListener('beforeunload',function(e){ if(sinkWaiting>0){ e.preventDefault(); e.returnValue=''; return ''; } });
-/* Two people saving at once (Lisa 16 Nov 2026): BUSY means the script wrote nothing, so the same save (same request id)
+/* Two people saving at once : BUSY means the script wrote nothing, so the same save (same request id)
    is sent again after a short random pause, up to 3 times, before the person is told. */
 function sinkFetchBusy(body,url,n){ return sinkFetchNow(body,url).then(function(j){
  if(j&&j.ok===false&&j.code==='BUSY'&&n<3) return new Promise(function(r){ setTimeout(r,1500+Math.floor(Math.random()*2500)); }).then(function(){ return sinkFetchBusy(body,url,n+1); });
@@ -5135,7 +5135,7 @@ async function roundSave(areaId,patch,msgEl,sel){
  if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){ var d=CD._byId[patch.add]; if(d) d.area_id=areaId;
   var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
   /* The room's dog list is read from the occupancy rows: add the saved move here too, so the dog shows in its new room
-     straight away and the next dog can be added (Lisa 16 Nov 2026). A queued move waits for approval and is not added. */
+     straight away and the next dog can be added . A queued move waits for approval and is not added. */
   if(r.result.status==='saved'){ var occ=T['BLD-occupancy.csv']||(T['BLD-occupancy.csv']=[]);
    var prev=window.BLDOccupancy&&BLDOccupancy.latestRow?BLDOccupancy.latestRow(occ,patch.add):null;
    occ.push({id:r.result.id||'',subject_id:patch.add,area_id:areaId,moved_in:date,moved_out:'',classification:(prev&&prev.classification)||'',off_site_kind:''}); }

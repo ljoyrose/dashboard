@@ -1,4 +1,4 @@
-// Sort photos (Lisa 25 Nov 2026): one photo at a time. Remove ends the gallery link and keeps the file.
+// Sort photos : one photo at a time. Remove ends the gallery link and keeps the file.
 // The card is not redrawn between photos; saves wait in the outbox. Invented rows only.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
@@ -10,7 +10,7 @@ function put(world, name, content) {
   const like = world.files.find((x) => x.name === 'BLD-area.csv' && !x.trashed);
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
-const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+const URL_ = 'https://example.com/exec';
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8z8DAwMDAxMDAwMAAACYABTxrpVkAAAAASUVORK5CYII=';
 
 async function setUp(page, guard, today) {

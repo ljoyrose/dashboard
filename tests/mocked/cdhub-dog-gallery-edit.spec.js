@@ -1,4 +1,4 @@
-// Dog gallery: Remove and Make main (Lisa 16 Nov 2026: "some are bad so need to be able to remove").
+// Dog gallery: Remove and Make main .
 // Nothing is deleted: Remove ends the photo's gallery link. An ended link is not shown again.
 // Make main adds a main link. Select ends several links in one save. Invented rows only; pretend save script.
 const { test, expect } = require('../support/test');
@@ -11,7 +11,7 @@ function put(world, name, content) {
   const like = world.files.find((x) => x.name === 'BLD-area.csv' && !x.trashed);
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
-const URL_ = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+const URL_ = 'https://example.com/exec';
 
 async function setUp(page, guard, today) {
   await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} }, URL_);
@@ -128,7 +128,7 @@ test('Select ticks several photos and Remove selected ends them in one save @reg
   await expect(gal.locator('details[data-k="ended"]')).toHaveCount(0);
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].action).toBe('link_end');
-  expect(sent[0].fields.reason).toBe('Removed by Lisa');
+  expect(sent[0].fields.reason).toBe('Removed in gallery edit');
   expect(sent[0].fields.ends.map((e) => e.id).sort()).toEqual(['l2', 'l3']);
 });
 

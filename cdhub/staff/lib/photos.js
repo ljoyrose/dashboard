@@ -42,8 +42,8 @@ var BLDPhotos = (function () {
       return l && sameTable(l.from_table, fromTable) && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
     });
     var main = null, gal = [], ended = [];
-    // Removed today (Lisa 16 Nov 2026): a link added today can only end today, so an end reason marks it ended at once
-    // instead of at midnight. Main uses the same rule as the gallery (Lisa 25 Nov 2026).
+    // Removed today : a link added today can only end today, so an end reason marks it ended at once
+    // instead of at midnight. Main uses the same rule as the gallery .
     function removedToday(l) { return ymd(l.to_date) === day && String(l.end_reason || '').trim() !== ''; }
     function hasEnded(l) { var t = ymd(l.to_date); return !!t && (t < day || removedToday(l)); }
     mine.forEach(function (l) {

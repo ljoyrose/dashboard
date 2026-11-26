@@ -154,7 +154,7 @@ function linkEndOne_(read, rec, idx, to, reason, stamp) {
   });
   store_replaceRow_(LINKS_.file, read.header, idx, row, read);
 }
-/* Several gallery links in one save (Lisa 25 Nov 2026): one request, the file read again between rows so each write is checked. */
+/* Several gallery links in one save : one request, the file read again between rows so each write is checked. */
 function linkEndMany_(f, who, now) {
   var list = f.ends, today = todayLondon_(now);
   if (!list || !list.length || list.length > 200) throw err_('INVALID', 'Say which photos to remove.');
