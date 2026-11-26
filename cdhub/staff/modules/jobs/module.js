@@ -30,6 +30,11 @@
   }
   function worst(list) { return list.slice().sort(byRank)[0]; }
   function isOn(r) { return String(r.active).toLowerCase() !== 'false'; }
+  function loadFail(host, h, again) {
+    host.textContent = '';
+    host.appendChild(h('p', { class: 'msg bad', role: 'status', text: 'Could not load. Check signal.' }));
+    host.appendChild(h('button', { class: 'btn', type: 'button', text: 'Try again', onclick: again }));
+  }
   /* how a late entry came in: one at a time (paper) or several days at once (bulk). Owner-only; staff never see it */
   var PAPER_HOW = 'paper', BULK_HOW = 'bulk';
   /* the photo helper the temperature round uses (one file + evidence links, through the save script), loaded when needed */
@@ -54,13 +59,40 @@
 
   function open(host, c) {
     var h = c.h, tag = c.params.tag, how = tag ? 'scanned' : 'tapped';
-    function moves() { c.go('mv/' + tag); }
+    var dead = false;
+    function moves() { dead = true; c.go('mv/' + tag); }
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
-    Promise.all([c.data(), c.readOptional('check_type'), c.readOptional('check_log'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'), c.readOptional('check_setting'),
-      tag ? c.readOptional('area_capacity') : { ok: true, rows: [] }, tag ? c.readOptional('area_access') : { ok: true, rows: [] }, tag ? c.readOptional('weight') : { ok: false, rows: [] }]).then(function (v) {
+    var slot = { log: null, cap: tag ? null : { ok: true, rows: [] }, wt: tag ? null : { ok: false, rows: [] } };
+    var logP = c.readOptional('check_log');
+    var capP = tag ? c.readOptional('area_capacity') : Promise.resolve(slot.cap);
+    var wtP = tag ? c.readOptional('weight') : Promise.resolve(slot.wt);
+    var fastP = Promise.all([c.data(), c.readOptional('check_type'), tag ? c.readOptional('qr_tag') : { ok: true, rows: [] }, tag ? c.readOptional('litter') : { ok: true, rows: [] }, c.readOptional('check_field'), c.readOptional('breeding_rule'), c.readOptional('check_setting'), tag ? c.readOptional('area_access') : { ok: true, rows: [] }]);
+    var painted = false, last = null;
+    function pack(fast) {
+      return [fast[0], fast[1], slot.log || { ok: true, rows: [], pending: true }, fast[2], fast[3], fast[4], fast[5], fast[6], slot.cap || { ok: true, rows: [], pending: true }, fast[7], slot.wt || { ok: false, rows: [], pending: true }];
+    }
+    function fail() { dead = true; loadFail(host, h, function () { open(host, c); }); }
+    function paint(fast) {
+      if (dead || !host.isConnected) return;
+      last = fast;
+      try { show(pack(fast)); }
+      catch (e) { fail(); }
+    }
+    function landed(key, r) {
+      slot[key] = r || { ok: false, rows: [], code: 'NETWORK' };
+      if (!painted || dead || !host.isConnected || !last) return;
+      if (slot.log && slot.cap && slot.wt) paint(last);
+    }
+    logP.then(function (r) { landed('log', r); }, function () { landed('log', null); });
+    capP.then(function (r) { landed('cap', r); }, function () { landed('cap', null); });
+    wtP.then(function (r) { landed('wt', r); }, function () { landed('wt', null); });
+    fastP.then(function (fast) { painted = true; paint(fast); }).catch(fail);
+    function show(v) {
       /* a visitor's records count here only when stamped counts_due true: this screen does not read the visit's grant */
+      if (dead || !host.isConnected) return;
       var d = v[0], typesRead = v[1], logs = (v[2].rows || []).filter(function (l) { return !BLDDue.visitOf(l) || String(l.counts_due).toLowerCase() === 'true'; }), tags = v[3], off = !typesRead.ok || !c.save.banner('check_log').canSave || !d.ok;
+      if (!d.ok && (d.code === 'NETWORK' || d.code === 'TIMEOUT')) { fail(); return; }
       if (off && tag) { moves(); return; }
       host.textContent = '';
       if (!d.ok) { host.appendChild(h('p', { class: 'msg bad', text: d.message })); return; }
@@ -194,7 +226,7 @@
         var slow = v[2].code === 'NETWORK' || v[2].code === 'BUSY' || v[2].code === 'TIMEOUT' || !v[2].code;
         host.appendChild(h('p', { class: 'msg warn', 'data-no-history': '1', text: slow
           ? 'The past records did not load in time, so "Due" may already be done. Try again in a minute.'
-          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask Lisa.' }));
+          : 'This code cannot read past records' + (v[2].message ? ' (' + v[2].message + ')' : '') + ', so "Due" may already be done. Ask User.' }));
         if (slow) host.appendChild(h('button', { class: 'btn quiet', type: 'button', 'data-retry-history': '1', text: 'Try again', onclick: function () { open(host, c); } }));
       }
       var status = h('p', { class: 'msg', role: 'status' }), list = h('div', { class: 'cards' }), group = '', more = false;
@@ -611,7 +643,7 @@
         if (jobs.length) list.appendChild(earlierBtn('btn quiet job-paper-btn job-earlier-all', 'Earlier: several days', catchUp));
       }
       draw();
-    });
+    }
   }
 
   /* Report anything: the owner's row with type_key "report" says it is switched on and how the note is labelled. */
@@ -620,8 +652,13 @@
     host.textContent = 'Loading...';
     BLDChecks.register(c.save);
     Promise.all([c.data(), c.readOptional('check_type')]).then(function (v) {
+      try { showReport(v); } catch (e) { loadFail(host, h, function () { openReport(host, c); }); }
+    }).catch(function () { loadFail(host, h, function () { openReport(host, c); }); });
+    function showReport(v) {
       /* the kinds of report are the owner's job rows with target "optional" (incident, accident, lost dog...): no fixed key */
-      var d = v[0], kinds = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.target === 'optional' && isOn(t); })
+      var d = v[0];
+      if (!d.ok && (d.code === 'NETWORK' || d.code === 'TIMEOUT')) { loadFail(host, h, function () { openReport(host, c); }); return; }
+      var kinds = v[1].ok ? BLDDue.jobsInForce(v[1].rows, c.today()).filter(function (t) { return t.target === 'optional' && isOn(t); })
         .sort(function (a, b) { return (a.type_key === REPORT_KEY ? -1 : b.type_key === REPORT_KEY ? 1 : 0) || String(a.label).localeCompare(String(b.label)); }) : [], type = kinds[0];
       host.textContent = '';
       if (!d.ok) { host.appendChild(h('p', { class: 'msg bad', text: d.message })); return; }
@@ -656,7 +693,7 @@
       } });
       var heading = h('h2', { text: type.label || 'Problem' });
       [heading, kind, dog, room, note, btn, msg].forEach(function (n) { if (n) host.appendChild(n); });
-    });
+    }
   }
 
   StaffPage.register({ id: 'jobs', title: 'Jobs', icon: ctx0.icons.dogs, order: 5, open: open });

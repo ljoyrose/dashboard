@@ -25,13 +25,24 @@
   }
   function setRoom(r) { try { if (r) localStorage.setItem(ROOM_KEY, JSON.stringify(r)); else localStorage.removeItem(ROOM_KEY); } catch (e) { /* the page still works for one scan */ } }
 
+  function loadFail(host, h, again) {
+    host.textContent = '';
+    host.appendChild(h('p', { class: 'msg bad', role: 'status', text: 'Could not load. Check signal.' }));
+    host.appendChild(h('button', { class: 'btn', type: 'button', text: 'Try again', onclick: again }));
+  }
   function open(host, c) {
     var h = c.h, tag = c.params.tag;
     function say(text, kind) { return h('p', { class: 'msg ' + (kind || ''), role: 'status', text: text }); }
+    function stopCam() { if (host._bldScanStop) { try { host._bldScanStop(); } catch (e) { /* camera already stopped */ } host._bldScanStop = null; } }
     host.textContent = 'Loading...';
-    Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting'), c.readOptional('weight'), c.readOptional('breeding_rule')]).then(show);
+    Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting'), c.readOptional('weight'), c.readOptional('breeding_rule')]).then(function (v) {
+      try { show(v); } catch (e) { loadFail(host, h, function () { open(host, c); }); }
+    }).catch(function () { loadFail(host, h, function () { open(host, c); }); });
+    return function () { stopCam(); };
     function show(v) {
+      stopCam();
       var d = v[0], tags = v[1], capacity = v[2].rows, access = v[3].rows, litters = v[4].rows, settings = v[5].rows;
+      if (!d.ok && (d.code === 'NETWORK' || d.code === 'TIMEOUT')) { loadFail(host, h, function () { open(host, c); }); return; }
       // size from the latest weight (the owner, 12 Nov 2026), the same rule as the dog cards. Until the save script lets
       // this page read weights, the size on the dog's record is still used.
       host.textContent = '';
@@ -79,6 +90,7 @@
         host.appendChild(h('p', { class: 'sub', text: room ? 'Scan each dog card with your camera. Each scan saves one move.' : 'Point your phone camera at a room sign, then at each dog card.' }));
         if (room) host.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Finished this room', onclick: function () { setRoom(null); c.go('home'); } }));
         if (!tags.ok) host.appendChild(say('QR codes are not switched on yet: ' + (tags.message || ''), 'warn'));
+        if (window.BLDScan) host._bldScanStop = BLDScan.mount(host, c);
       }
       if (!tag) { drawHome(); return; }
       if (!tags.ok) { host.appendChild(say('QR codes are not switched on yet: ' + (tags.message || ''), 'bad')); return; }
@@ -158,7 +170,7 @@
           h('div', { class: 'nm', text: '⚠ Over the licence limit' }),
           h('p', { text: 'Moving ' + names + ' to ' + room.label + ': ' + r.message })
         ]));
-        if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask Lisa.', 'bad')); return; }
+        if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask User.', 'bad')); return; }
         var why = h('input', { class: 'inp', type: 'text', maxlength: '500', 'aria-label': 'Why this move is needed', placeholder: 'Why is this move needed?' });
         var err = say('');
         host.appendChild(why); host.appendChild(err);
