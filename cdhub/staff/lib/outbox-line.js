@@ -20,7 +20,7 @@
 
   function mount(save, beforeEl) {
     if (!save || !save.outbox || !beforeEl || !beforeEl.parentNode) return null;
-    var doc = beforeEl.userDocument;
+    var doc = beforeEl.ownerDocument;
     if (!doc.getElementById('outbox-css')) { var st = el(doc, 'style'); st.id = 'outbox-css'; st.textContent = CSS; doc.head.appendChild(st); }
     var box = el(doc, 'div', 'outbox'); box.id = 'outbox'; box.hidden = true; box.setAttribute('role', 'status');
     beforeEl.parentNode.insertBefore(box, beforeEl);

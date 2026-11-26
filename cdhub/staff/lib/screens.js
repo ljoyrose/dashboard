@@ -52,7 +52,7 @@
   }
 
   function temperatureEntry(host, o) {
-    var doc = o.document || host.userDocument || document;
+    var doc = o.document || host.ownerDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs');
@@ -155,7 +155,7 @@
   }
 
   function staffInput(host, o) {
-    var doc = o.document || host.userDocument || document;
+    var doc = o.document || host.ownerDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs');
@@ -206,7 +206,7 @@
 
   var OFF_SITE = '__off_site__';   // the picker's Off-site choice; never saved
   function locationConfirm(host, o) {
-    var doc = o.document || host.userDocument || document;
+    var doc = o.document || host.ownerDocument || document;
     var save = o.save;
     clear(host);
     host.classList.add('bs'); host.classList.add('bs-board');

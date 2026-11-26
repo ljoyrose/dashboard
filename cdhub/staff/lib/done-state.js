@@ -32,7 +32,7 @@
   }
   function line(el) {
     var n = el.querySelector(':scope > .done-line');
-    if (!n) { n = el.userDocument.createElement('p'); n.className = 'done-line'; n.setAttribute('role', 'status'); el.appendChild(n); }
+    if (!n) { n = el.ownerDocument.createElement('p'); n.className = 'done-line'; n.setAttribute('role', 'status'); el.appendChild(n); }
     return n;
   }
   function btn(el, grey, busy) {
@@ -45,7 +45,7 @@
     var n = line(el);
     n.className = 'done-line ' + cls;
     n.innerHTML = icon ? '<span class="done-ic">' + icon + '</span>' : '';
-    var t = el.userDocument.createElement('span'); t.textContent = words; n.appendChild(t);
+    var t = el.ownerDocument.createElement('span'); t.textContent = words; n.appendChild(t);
     return n;
   }
 
@@ -54,7 +54,7 @@
     el.classList.add('is-done'); var flag = !!s && (s.outcome === 'concern' || s.outcome === 'not_done' || s.outcome === 'part_done');
     el.classList.toggle('is-concern', flag);
     var n = set(el, flag ? 'flag' : 'good', TICK, text(s));
-    if (s && s.note) { var p = el.userDocument.createElement('span'); p.className = 'done-note'; p.textContent = s.note; n.appendChild(p); }
+    if (s && s.note) { var p = el.ownerDocument.createElement('span'); p.className = 'done-note'; p.textContent = s.note; n.appendChild(p); }
     btn(el, true);
   }
   function saving(el, words) { if (!el) return; el.classList.remove('is-done', 'is-concern'); set(el, 'wait', CLOCK, words || 'Saving...'); btn(el, false, true); }

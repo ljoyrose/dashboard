@@ -87,7 +87,7 @@
     upload: SVG + '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>'
   };
   function can(c, key) {
-    return !!(c && c.save && typeof c.save.role === 'function' && c.save.role() === 'USER');
+    return !!(c && c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
   }
   /* Dates (the owner 13 Nov 2026): one format everywhere, "2 Mar 2026"; never DD/MM/YY. Stored dates stay ISO. */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

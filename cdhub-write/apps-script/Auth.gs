@@ -114,7 +114,7 @@ function authSaver_(req) {
     try { user = authUserGoogle_(tok); }
     catch (e) { if (!req.code) throw err_('GOOGLE_UNREACHABLE', 'Your Google sign-in could not be checked just now. Nothing was saved. Try again, or use your code.'); }
     if (user) return user;
-    if (!req.code) throw err_('GOOGLE_NOT_USER', 'This Google account is not on the user list. Enter your staff code. Nothing was saved.');
+    if (!req.code) throw err_('GOOGLE_NOT_OWNER', 'This Google account is not on the owner list. Enter your staff code. Nothing was saved.');
   }
   return authStaff_(req.code);
 }

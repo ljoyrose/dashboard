@@ -58,7 +58,7 @@
       var today = c.today();
       function flapOf(areaId) { return BLDCapacity.accessOn(access, areaId, today); }
       function checkRoom(areaId, ids) { return BLDCapacity.check({ areaId: areaId, access: flapOf(areaId), capacity: capacity, dogs: ids.map(fact), date: today }); }
-      var flapRoles = ((settings.filter(function (s) { return s.setting_key === 'flap.who_may_change'; }).pop() || {}).value || 'USER')
+      var flapRoles = ((settings.filter(function (s) { return s.setting_key === 'flap.who_may_change'; }).pop() || {}).value || 'OWNER')
         .split(/[\s,;]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
       var myRole = c.save && typeof c.save.role === 'function' ? String(c.save.role() || '').toUpperCase() : '';
       var mayFlap = !!myRole && flapRoles.indexOf(myRole) >= 0;
@@ -110,7 +110,7 @@
         }
         var flapNow = flapOf(areaId);
         host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, (mayFlap ? [flapBtn('free'), flapBtn('limited')]
-          : [h('p', { class: 'sub', 'data-flap-locked': '1', text: (flapNow ? 'Flap ' + flapNow + '. ' : 'Flap not set. ') + 'Ask the user to change it.' })]).concat([
+          : [h('p', { class: 'sub', 'data-flap-locked': '1', text: (flapNow ? 'Flap ' + flapNow + '. ' : 'Flap not set. ') + 'Ask the owner to change it.' })]).concat([
           h('button', { class: 'btn quiet', type: 'button', text: 'Temperature', onclick: function () { c.go('m/temperature'); } })])));
         host.appendChild(msg);
         host.appendChild(h('h3', { text: 'In this room' }));
@@ -146,7 +146,7 @@
           h('div', { class: 'nm', text: '⚠ Over the licence limit' }),
           h('p', { text: 'Moving ' + names + ' to ' + room.label + ': ' + r.message })
         ]));
-        if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask User.', 'bad')); return; }
+        if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask Lisa.', 'bad')); return; }
         var why = h('input', { class: 'inp', type: 'text', maxlength: '500', 'aria-label': 'Why this move is needed', placeholder: 'Why is this move needed?' });
         var err = say('');
         host.appendChild(why); host.appendChild(err);

@@ -76,7 +76,7 @@
 
   function mount(host, save, opts) {
     opts = opts || {};
-    var doc = host.userDocument;
+    var doc = host.ownerDocument;
     register(save);
     host.textContent = '';
     host.classList.add('bs');
@@ -99,7 +99,7 @@
   }
 
   function draw(host, save, types, areas, dogs, startKey, msg) {
-    var doc = host.userDocument, requestId = null, type = null;
+    var doc = host.ownerDocument, requestId = null, type = null;
     var form = make(doc, 'form', 'bs-card'), inputs = {}, errs = {}, rows = {};
 
     function field(name, label, control) {

@@ -66,7 +66,7 @@ for (const off of [null, 'cdhub.save.off', 'cdhub.sink.off']) {
 
 test('a Google account the save script refuses drops to the staff code, with a plain reason', async ({ page }) => {
   await signedIn(page, true);
-  await fakeScript(page, () => ({ ok: false, code: 'GOOGLE_NOT_USER', message: 'no' }));
+  await fakeScript(page, () => ({ ok: false, code: 'GOOGLE_NOT_OWNER', message: 'no' }));
   await page.goto('cdhub/staff/');
   await expect(page.getByText('This Google account is not on the user list. Type your staff code.')).toBeVisible();
   await expect(page.getByLabel('Your staff code')).toBeVisible();

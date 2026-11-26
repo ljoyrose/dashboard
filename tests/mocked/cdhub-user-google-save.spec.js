@@ -44,7 +44,7 @@ test.describe('CD Hub: user saves with Google sign-in', () => {
   test('not an user account: the hub asks for the staff code and sends again with the code only', async ({ page, guard }) => {
     await openNoCode(page, guard);
     const bodies = await saves(page, (b, n) => n === 1
-      ? { ok: false, code: 'GOOGLE_NOT_USER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }
+      ? { ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }
       : { ok: true, result: { status: 'saved', id: 'ar-2', at: '2026-11-11T09:00:00Z' } });
     await typeReading(page);
     await expect(page.locator('[data-staff-code]')).toBeVisible();

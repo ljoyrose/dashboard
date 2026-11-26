@@ -390,7 +390,7 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
   d.querySelector('#bw-on').click();
   await tick();
-  assert.match(d.querySelector('.bs-banner').textContent, /User approves each entry/);
+  assert.match(d.querySelector('.bs-banner').textContent, /approves each entry/);
   const card = d.querySelector('.bs-card[data-area="area-t1"]');
   assert.equal(card.querySelector('.bs-btn').disabled, false);
 
@@ -556,7 +556,7 @@ test('banners for the live occupancy list, the daily check log and the still-pro
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
-  assert.match(s.banner('occupancy').text, /User approves each entry/);
+  assert.match(s.banner('occupancy').text, /approves each entry/);
   assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
   assert.equal(s.banner('occupancy_check').kind, 'on');
   assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal
@@ -1097,7 +1097,7 @@ test('owner sign-in ends mid-round: every reading is kept, none refused, and all
   const f = async (url, init = {}) => {
     if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, saveEnabled: true, tables: [{ key: 'area_reading', on: true, mode: 'direct' }], proposed: [] }) };
     const b = JSON.parse(init.body); posts.push(b);
-    if (b.google_token !== 'ya29.second-sign-in' && posts.length > 1) return { json: async () => ({ ok: false, code: 'GOOGLE_NOT_USER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }) };
+    if (b.google_token !== 'ya29.second-sign-in' && posts.length > 1) return { json: async () => ({ ok: false, code: 'GOOGLE_NOT_OWNER', message: 'sign in' }) };
     saved[b.request_id] = (saved[b.request_id] || 0) + 1;
     return { json: async () => ({ ok: true, result: { status: 'saved', id: 'rdg-' + b.request_id } }) };
   };
@@ -1130,7 +1130,7 @@ test('user sign-in ended: with the shared quiet renewal on the page, waiting rea
   const local = memStore(); let tok = ''; const posts = [];
   global.window = {
     DashAuth: { valid: () => (tok ? { access_token: tok } : null) },
-    BLDSave: { refreshUserToken: async () => { tok = 'ya29.renewed'; return tok; } }
+    BLDSave: { refreshOwnerToken: async () => { tok = 'ya29.renewed'; return tok; } }
   };
   try {
     const f = async (url, init = {}) => { const b = JSON.parse(init.body); posts.push(b); return { json: async () => ({ ok: true, result: { status: 'saved' } }) }; };

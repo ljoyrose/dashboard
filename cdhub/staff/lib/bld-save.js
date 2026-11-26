@@ -22,7 +22,7 @@
   var URL_OK = /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.\-]+|macros)\/s\/[A-Za-z0-9_\-]+\/exec$/;
   var URL_KEY = 'bld.scriptUrl';
   var CODE_KEY = 'bld.staffCode';
-  var USER_SKIP_KEY = 'bld.user.skip';
+  var OWNER_SKIP_KEY = 'bld.owner.skip';
   var READ_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
   var TIMEOUT_MS = 150000;
 
@@ -93,13 +93,13 @@
   function ownerToken() {
     var g = root_(), A = g.DashAuth;
     if (!A || typeof A.valid !== 'function') return '';
-    try { if (g.sessionStorage && g.sessionStorage.getItem(USER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
+    try { if (g.sessionStorage && g.sessionStorage.getItem(OWNER_SKIP_KEY)) return ''; } catch (e) { /* no storage: carry on */ }
     var s = A.valid();
     if (!s || (A.hasScope && !A.hasScope(s, READ_SCOPE))) return '';
     return s.access_token || '';
   }
-  function userskip(on) {
-    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(USER_SKIP_KEY, '1'); else ss.removeItem(USER_SKIP_KEY); } } catch (e) { /* ignore */ }
+  function ownerSkip(on) {
+    try { var ss = root_().sessionStorage; if (ss) { if (on) ss.setItem(OWNER_SKIP_KEY, '1'); else ss.removeItem(OWNER_SKIP_KEY); } } catch (e) { /* ignore */ }
   }
 
   function create(opts) {
@@ -130,7 +130,7 @@
     function setCode(c, keepForTab) { c = String(c || '').trim(); lastRole = ''; lastName = ''; if (keepForTab !== false) put(session, CODE_KEY, c); inMemoryCode = c; if (c && typeof scheduleRetry === 'function') scheduleRetry(1000); }
     var inMemoryCode = get(session, CODE_KEY);
     function getCode() { return inMemoryCode; }
-    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : userToken);
+    var googleFn = typeof opts.google === 'function' ? opts.google : (opts.google === false ? function () { return ''; } : ownerToken);
     function hasAuth() { return !!getCode() || !!googleFn(); }
     function withGoogle(body) { var g = googleFn(); if (g) body.google_token = g; return body; }
     var lastName = '';
@@ -276,9 +276,9 @@
     var renewAt = 0;
     function quietRenew() {
       var B = root_().BLDSave;
-      if (googleFn !== userToken || !B || typeof B.refreshUserToken !== 'function' || Date.now() - renewAt < 300000 || !outboxRead().length) return;
+      if (googleFn !== ownerToken || !B || typeof B.refreshOwnerToken !== 'function' || Date.now() - renewAt < 300000 || !outboxRead().length) return;
       renewAt = Date.now();
-      try { Promise.resolve(B.refreshUserToken()).then(function (t) { if (t && hasAuth() && authNow() !== authWait) flush(); }, function () { /* stays kept */ }); }
+      try { Promise.resolve(B.refreshOwnerToken()).then(function (t) { if (t && hasAuth() && authNow() !== authWait) flush(); }, function () { /* stays kept */ }); }
       catch (e) { /* stays kept */ }
     }
     function needsSignIn() { return outboxRead().length > 0 && (!hasAuth() || authWait === authNow()); }
@@ -339,18 +339,18 @@
 
     function banner(tableKey) {
       var tb = status.tables[tableKey];
-      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. User switches it on when it is ready.' };
+      if (!scriptUrl) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
       if (status.checked && status.reachable === false) return { kind: 'off', canSave: false, text: 'Cannot reach the save service right now, so nothing can be saved. Try again in a moment.' };
       if (!status.checked) return { kind: 'checking', canSave: false, text: 'Checking whether saving is on...' };
-      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. User switches it on when it is ready.' };
+      if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
       if (tableKey && !tb && status.proposed && status.proposed.indexOf(tableKey) >= 0) {
-        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until User agrees it.' };
+        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until Lisa agrees it.' };
       }
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. User approves each entry.' };
-      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the user.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving on. Lisa approves each entry.' };
+      return { kind: 'on', canSave: true, text: 'Saving on. If one is wrong, tell the owner.' };
     }
 
     function pairLib() {
@@ -460,7 +460,7 @@
           res.ok = true;
           res.requestId = body.request_id;
           res.message = res.status === 'queued'
-            ? 'Sent. It is in the approvals queue until User approves it; then it joins the records.'
+            ? 'Sent. It is in the approvals queue until Lisa approves it; then it joins the records.'
             : 'Saved.';
           return res;
         }
@@ -504,7 +504,7 @@
      * Nothing is cached or kept: the rows live only in the page.
      */
     function read(tableKey, filter) {
-      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. User switches it on when it is ready.' });
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!hasAuth()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
@@ -596,6 +596,6 @@
     };
   }
 
-  return { create: create, TABLES: TABLES, URL_OK: URL_OK, userToken: userToken, userskip: userskip };
+  return { create: create, TABLES: TABLES, URL_OK: URL_OK, ownerToken: ownerToken, ownerSkip: ownerSkip };
 }));
 

@@ -6,4 +6,4 @@
 /tests/mocked/no-empty-trash.spec.js         @ljoyrose
 /tests/mocked/personal-and-drive-check.spec.js @ljoyrose
 /tests/mocked/codeusers.spec.js             @ljoyrose
-/.github/CODEUSERS                          @ljoyrose
+/.github/CODEOWNERS                          @ljoyrose

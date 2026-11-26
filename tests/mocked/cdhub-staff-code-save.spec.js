@@ -28,7 +28,7 @@ function rooms(world) {
 
 function answer(body) {
   if (!body.code) return body.google_token
-    ? { ok: false, code: 'GOOGLE_NOT_USER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }
+    ? { ok: false, code: 'GOOGLE_NOT_OWNER', message: 'This Google account is not on the user list. Enter your staff code. Nothing was saved.' }
     : { ok: false, code: 'NO_CODE', message: 'Enter your staff code.' };
   const who = WHO[body.code];
   if (!who) return { ok: false, code: 'BAD_CODE', message: 'That staff code was not recognised.' };

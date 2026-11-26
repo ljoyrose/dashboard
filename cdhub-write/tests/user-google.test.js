@@ -41,23 +41,23 @@ test('a Google account not on the user list, with no code, is refused and nothin
   const before = env.text('BLD-area_reading.csv');
   const r = save(env, noCode(env, { google_token: STRANGER_TOKEN }));
   assert.equal(r.ok, false);
-  assert.equal(r.code, 'GOOGLE_NOT_USER');
+  assert.equal(r.code, 'GOOGLE_NOT_OWNER');
   assert.equal(env.text('BLD-area_reading.csv'), before);
 });
 
 test('a token issued to another app is refused, even for an user email (no replay)', () => {
   const env = env0();
   const r = save(env, noCode(env, { google_token: OTHER_APP_TOKEN }));
-  assert.equal(r.code, 'GOOGLE_NOT_USER');
+  assert.equal(r.code, 'GOOGLE_NOT_OWNER');
   assert.equal(env.fetches.filter((f) => f.url.includes('drive/v3/about')).length, 0, 'Drive is not even asked');
 });
 
 test('an unknown or expired token is refused', () => {
   const env = env0();
-  assert.equal(save(env, noCode(env, { google_token: 'fake-token-not-a-real-token-000005' })).code, 'GOOGLE_NOT_USER');
+  assert.equal(save(env, noCode(env, { google_token: 'fake-token-not-a-real-token-000005' })).code, 'GOOGLE_NOT_OWNER');
   const env2 = standardEnv({ google: { tokens: { [USER_TOKEN]: { aud: HUB, email: 'user@example.test', name: 'O', expires_in: 0 } } },
     props: { MODE_area_reading: 'direct', HUB_CLIENT_ID: HUB } });
-  assert.equal(save(env2, noCode(env2, { google_token: USER_TOKEN })).code, 'GOOGLE_NOT_USER');
+  assert.equal(save(env2, noCode(env2, { google_token: USER_TOKEN })).code, 'GOOGLE_NOT_OWNER');
 });
 
 test('a staff code still works, with or without a non-user Google token alongside', () => {
