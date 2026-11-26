@@ -1,4 +1,4 @@
-// BFFs / Fren. links (Lisa 13 Nov 2026): one row per pair, read both ways, dated, kinds and words from rule rows. Invented rows.
+// BFFs / Fren. links (the owner 13 Nov 2026): one row per pair, read both ways, dated, kinds and words from rule rows. Invented rows.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';

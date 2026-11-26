@@ -1,4 +1,4 @@
-// Dated occupancy for area history (Lisa, 12 Nov 2026): a past stay shows on its dates,
+// Dated occupancy for area history (the owner, 12 Nov 2026): a past stay shows on its dates,
 // and a dog who has since left does not appear on the current list or in today's room.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -100,7 +100,7 @@ test('a leave dated after today does not hide a pup who is still here', () => {
   assert.equal(O.rowOn(extra, 'sub-pup-c1', '2026-11-25'), null);
 });
 
-// Lisa 18 Nov 2026: a room.empty need row hides a room's temperatures on the days it covers; the rows stay.
+// the owner 18 Nov 2026: a room.empty need row hides a room's temperatures on the days it covers; the rows stay.
 test('room.empty: emptyOn follows the dated row; hideEmpty blanks only covered readings and never changes the records', () => {
   const reqRows = [{ need_type: 'room.empty', target_table: 'area', target_id: 'area-x', from_date: '2025-01-01', to_date: '2025-06-30' },
     { need_type: 'room.no_dogs', target_table: 'area', target_id: 'area-corr', from_date: '2025-01-01', to_date: '' }];

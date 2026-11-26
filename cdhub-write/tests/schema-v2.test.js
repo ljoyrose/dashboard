@@ -1,6 +1,6 @@
 'use strict';
 /**
- * BLD schema v2 (15 Nov 2026, Lisa Q5, Q6, Q8): parties, products, lots, stock_movements, courses, doses, prescriptions,
+ * BLD schema v2 (15 Nov 2026, the owner Q5, Q6, Q8): parties, products, lots, stock_movements, courses, doses, prescriptions,
  * product_dose_bands, certificate_kinds, certificates. Designed only: refused today whatever the switches say. These tests
  * pin that, and check each spec does what the master says once a later decision promotes it (simulated here only).
  */

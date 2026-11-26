@@ -94,7 +94,7 @@ test.describe('Phone: Marketplace', () => {
       const small = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((b) => b.offsetParent).filter((b) => b.getBoundingClientRect().height < 44).map((b) => b.textContent.trim()));
       expect(small, `${key}: buttons under 44px`).toEqual([]);
     }
-    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, clear of the word below.
+    // the owner's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, clear of the word below.
     const n = await page.locator('#n-do').boundingBox(), tab = await page.locator('#tabs a[data-nav="do"]').boundingBox(), label = await page.locator('#tabs a[data-nav="do"] .htl').boundingBox();
     const icon = await page.locator('#tabs a[data-nav="do"] .hic').boundingBox();
     expect([n.width, n.height], 'an 8px dot').toEqual([8, 8]);

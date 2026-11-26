@@ -1,12 +1,12 @@
-// The house rules (Lisa, 28 Oct 2026), as numbers, and one in-page check that reads them back by computed style.
+// The house rules (the owner, 28 Oct 2026), as numbers, and one in-page check that reads them back by computed style.
 // Used by tests/mocked/house-look.spec.js on every hub. Plain words in every problem, so a red run says what to fix.
 //
 // The numbers here are the agreed rules themselves (not copies of tokens.css): the check would catch tokens.css drifting.
 const RULES = {
-  radius: 12, line: 1, bar: 3, marker: [3, 18], sizes: [14, 15, 18], weights: ['400', '500', '600'],   // type: Lisa, 2 Nov 2026
+  radius: 12, line: 1, bar: 3, marker: [3, 18], sizes: [14, 15, 18], weights: ['400', '500', '600'],   // type: the owner, 2 Nov 2026
   count: { w: 30, h: 24, r: 12, lh: 22, pad: 3 },
-  // A bottom tab's count (Lisa's tab picks, 2 Nov): a small ring in the tab's top-right corner, no fill, never in the flow.
-  tabCount: { w: 24, h: 24, r: 12, lh: 22, pad: 0, corner: 5 },   // 14px number (Lisa's pick A, 2 Nov)
+  // A bottom tab's count (the owner's tab picks, 2 Nov): a small ring in the tab's top-right corner, no fill, never in the flow.
+  tabCount: { w: 24, h: 24, r: 12, lh: 22, pad: 0, corner: 5 },   // 14px number (the owner's pick A, 2 Nov)
   button: { desktop: 36, phone: 44 },
   // Control line, frame top and frame bottom, per background (warm/cool) and mode (light/dark).
   press: { 'warm-light': '#8A7F70', 'cool-light': '#7A8692', 'warm-dark': '#857B6E', 'cool-dark': '#7A8691' },
@@ -43,7 +43,7 @@ function audit(o) {
   const press = hex(R.press[o.look]);
   // Status pills that are also links (dates, needs-you, stuck) keep their status ring: the ring is the information.
   const STATUS = '.date, .dpill, .datep, label.date, .need, .stuck, .alert, .stat, .late, .soon, .over, [data-house="status"]';
-  // Meaning buttons rest on their own colour line (Lisa's approved picture): yes green, no / delete rose (AI purple, off rose).
+  // Meaning buttons rest on their own colour line (the owner's approved picture): yes green, no / delete rose (AI purple, off rose).
   const MEANING = '.btn.yes, .btn.no, .btn.danger, .btn.ai, .lk.off';
   const lines = (e) => { const rg = document.createRange(); rg.selectNodeContents(e); const tops = [...rg.getClientRects()].filter((q) => q.height > 8 && q.width > 1).map((q) => q.top + q.height / 2).sort((a, b) => a - b);
     return tops.reduce((n, t, i) => n + (i && t - tops[i - 1] > 10 ? 1 : 0), tops.length ? 1 : 0); };
@@ -87,7 +87,7 @@ function audit(o) {
   // 3 type and 4 no coloured words: every element that holds words.
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || icon(e) || e.closest('#credential_picker_container, .sr')) continue;
-    // A phone's bottom-tab count is a dot with no number showing (Lisa's pick b, 2 Nov; tab-dots.spec.js pins it): not words.
+    // A phone's bottom-tab count is a dot with no number showing (the owner's pick b, 2 Nov; tab-dots.spec.js pins it): not words.
     if (innerWidth < 768 && e.matches('nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt')) continue;
     if (![...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
     const s = getComputedStyle(e);
@@ -115,7 +115,7 @@ function audit(o) {
     if (!near(bc, press, 8)) add('control line', e, hex6(bc) + ' (want ' + hex6(press) + ')');
   }
   // 7 counts: a small ringed box holding only a number, 14px. 30 x 24, radius 12, line-height 22, padding 0 3px; .wide for 3+ digits.
-  // A bottom tab's count follows R.tabCount instead (Lisa's tab picks, 2 Nov).
+  // A bottom tab's count follows R.tabCount instead (the owner's tab picks, 2 Nov).
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || e.children.length || e.matches(PRESS)) continue;
     const t = (e.textContent || '').trim(), s = getComputedStyle(e), r = e.getBoundingClientRect();
@@ -190,7 +190,7 @@ function audit(o) {
 function hoverRead(sel) {
   const e = document.querySelector(sel); if (!e) return null;
   const s = getComputedStyle(e), r = e.getBoundingClientRect();
-  // The pale grey hover fill (house.css --hov, Lisa 12 Nov 2026), read through a probe beside the element so dark mode and looks count.
+  // The pale grey hover fill (house.css --hov, the owner 12 Nov 2026), read through a probe beside the element so dark mode and looks count.
   const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; (e.parentElement || document.body).appendChild(pr);
   const hov = getComputedStyle(pr).backgroundColor; pr.remove();
   return { hov, x: r.x, y: r.y, w: r.width, h: r.height, outline: s.outlineStyle + ' ' + s.outlineWidth + ' ' + s.outlineColor, offset: s.outlineOffset, ow: s.outlineWidth, os: s.outlineStyle, oc: s.outlineColor, bg: s.backgroundColor, border: s.borderTopColor, shadow: s.boxShadow, transform: s.transform };

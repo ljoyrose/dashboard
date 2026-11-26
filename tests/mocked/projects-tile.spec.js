@@ -33,7 +33,7 @@ test.describe('Home: Projects tile numbers', () => {
     await expect(nums).toHaveText(['3 Stuck', '2 Waiting', '2 Running']);
     for (const a of await nums.all()) { await expect(a).toHaveAttribute('href', IDS.projectsHub); await expect(a).toHaveAttribute('target', '_blank'); }
     // Stuck above 0 is broken: the black badge, read out as "3 stuck"; Waiting and Running stay grey; nothing is rose (rose = late).
-    // (Lisa, 3 Nov 2026; tests/mocked/house-rose-broken.spec.js pins the colours in the light and dark looks.)
+    // (the owner, 3 Nov 2026; tests/mocked/house-rose-broken.spec.js pins the colours in the light and dark looks.)
     await expect(nums.locator('b.need')).toHaveCount(0);
     await expect(nums.nth(0).locator('b')).toHaveClass('broken');
     await expect(nums.nth(0)).toHaveAttribute('aria-label', '3 Stuck stuck, Projects');

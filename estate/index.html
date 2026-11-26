@@ -9,7 +9,7 @@
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
-     Rows are read at run time with Lisa's Google sign-in from the private RR_WEB-ESTATE sheet (DASH_CONFIG.estate.sheetId),
+     Rows are read at run time with the owner's Google sign-in from the private RR_WEB-ESTATE sheet (DASH_CONFIG.estate.sheetId),
      which the RR_WEB-ESTATE engine fills. Until that id is set the page shows invented example rows and sends nothing.
      The logic (contract, status words, counts, order, filters) is in core.js and tested in tests/estate/. -->
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
@@ -79,7 +79,7 @@
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
   .tile .k { font-size: var(--fs-small); color: var(--muted); }
   .tile .v { font-size: var(--fs-figure); font-weight: 600; align-self: flex-start; line-height: 1.3; }
-  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting.
+  /* Ringed numbers (the owner's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting.
      Every tile's number wears the box (sweep, 3 Nov: numbers side by side in one group are one size), so Live and Down match. */
   .tile .v { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
   .tile .v.red { border-color: var(--house-late); }   /* a broken count (down, email checks failing) is the black badge: ../house.css .broken */
@@ -200,7 +200,7 @@
   // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
   var EXAMPLE = [
     { key: 'example.com', kind: 'site', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://example.com', platform: 'Example builder', dns_host: 'Cloudflare', live_status: 'live', http_code: '200', ssl_expires: day(120), domain_expires: day(200), spf: 'pass', dkim: 'found', dmarc: 'none', ga4: 'found (1)', gtm: 'not found in page source', source: 'example' },
-    { key: 'shop.example.org', kind: 'shop', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://shop.example.org', platform: 'Shopify', live_status: 'live', http_code: '200', ssl_expires: day(25), ga4: 'found (1)', merchant_center: 'linked (per Lisa, not machine-checked)', feed: 'not reported', source: 'example' },
+    { key: 'shop.example.org', kind: 'shop', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://shop.example.org', platform: 'Shopify', live_status: 'live', http_code: '200', ssl_expires: day(25), ga4: 'found (1)', merchant_center: 'linked (per the owner, not machine-checked)', feed: 'not reported', source: 'example' },
     { key: 'funnels.example.net', kind: 'funnel', company: 'Example Co', brand: 'Second Brand', url_or_domain: 'https://funnels.example.net', platform: 'ClickFunnels', live_status: 'down', flag: 'TLS fail', source: 'example' },
     { key: 'app.example.test', kind: 'app', company: 'Example Ltd', client: 'Client A', url_or_domain: 'https://app.example.test', platform: 'Example app builder', live_status: 'blocked to scripts', http_code: '403', source: 'example' },
     { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
@@ -236,7 +236,7 @@
     });
   }
 
-  // Optional tabs the engine (or Lisa by hand) fills: Shops (free listings report per shop), Keywords (manual rows),
+  // Optional tabs the engine (or the owner by hand) fills: Shops (free listings report per shop), Keywords (manual rows),
   // Traffic (visits and CDN use this month, per site key). A missing or bad Traffic tab = every site "stats not connected".
   function loadExtra() {
     var o = { sheetId: ES.sheetId, token: token };
@@ -271,7 +271,7 @@
     if (view === 'shops') return list.filter(function (r) { return r.kind === 'shop' || r.kind === 'funnel' || r.kind === 'ads-account'; });
     return list;
   }
-  // Each tile opens the list of what it counts (Lisa, 2 Nov): #/<view>?show=down, kept with the filters already picked.
+  // Each tile opens the list of what it counts (the owner, 2 Nov): #/<view>?show=down, kept with the filters already picked.
   var SHOW = { live: ['Live', function (r) { return E.statusOf(r) === 'live'; }], down: ['Down', function (r) { return E.statusOf(r) === 'down'; }],
     blocked: ['Blocked to scripts', function (r) { return E.statusOf(r) === 'blocked'; }], unchecked: ['Not checked', function (r) { var s = E.statusOf(r); return s === 'not checked' || s === 'parked'; }],
     expiring: ['Expiring in 60 days', function (r) { return E.expiringSoon(r, today(), 60); }], email: ['Email checks failing', function (r) { return E.emailProblems(r).length > 0; }] };
@@ -338,7 +338,7 @@
       '</div>' + (view !== 'client' && TR.isSite(r) ? trafficBlock(r) : '') + (r.checked_uk ? '<span class="m">Checked ' + esc(r.checked_uk) + '</span>' : '') + '</div>';
   }
   // Traffic this month for one site: use against quota (number, % and bar), visits, period, source, last updated, and a
-  // details fold. No stats: "Traffic stats not connected" and the Lisa-only setup step. Free plans stay free: no upgrade words.
+  // details fold. No stats: "Traffic stats not connected" and the the owner-only setup step. Free plans stay free: no upgrade words.
   function trafficBlock(r) {
     var t = TR.trafficFor(r, extra.Traffic, today()), id = 'tr-' + String(r.key).replace(/[^a-z0-9]+/gi, '-');
     var steps = function (s) { return '<p class="lisa">Lisa-only step' + (s.property ? ' (Script Property ' + esc(s.property) + ')' : ' (typed by hand)') + '</p><ol data-tr-steps>' + s.steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>'; };
@@ -469,12 +469,12 @@
   // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
   function alertsCard(list) {
     var al = AL.alerts(list, today());
-    if (!al.length) return '';   // one empty line per view (Lisa, 2 Nov): no alerts, no Alerts card
+    if (!al.length) return '';   // one empty line per view (the owner, 2 Nov): no alerts, no Alerts card
     return '<p class="grp">Alerts<span class="sr"> · </span><span class="cnt">' + al.length + '</span></p><div class="card" data-card="alerts">' + al.map(function (a) {
       return '<div class="prop" data-alert="' + esc(a.kind) + '" data-level="' + esc(a.level) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
     }).join('') + '</div>';
   }
-  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then Down · Expiring · Live, built by DashKit.hubMain.
+  // Main (the owner's house style, 2 Nov 2026): Next, Needs you (at most 5), then Down · Expiring · Live, built by DashKit.hubMain.
   // Rows and numbers are worked out as the Dashboard's Web tile does (index.html HubRead web): down and expiring within 7 days
   // are late, the rest of Do (expiring later, blocked, email checks) waits. Numbers are "–" when the sheet is not set up or not read.
   function mainRows() {
@@ -522,7 +522,7 @@
     });
     return h;
   }
-  // DNS & Email (#/mail): one card per mail domain, faults first. Read only: the fix lines are Lisa-only DNS changes.
+  // DNS & Email (#/mail): one card per mail domain, faults first. Read only: the fix lines are the owner-only DNS changes.
   // #/mail?d=<domain> shows one domain, so the back button returns to the full list.
   var mailTabs = { 'Mail map': { state: 'unread', rows: null, problem: '' }, 'Mail switch': { state: 'unread', rows: null, problem: '' } };
   function domOf() { var m = /[?&]d=([^&]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]).toLowerCase() : ''; }
@@ -555,7 +555,7 @@
     }).join('');
   }
   // The Do tab's count: broken (black) when a site is down, a domain has expired or email checks fail (broken wins), rose when a
-  // domain expires within 7 days, otherwise grey (Lisa, 3 Nov 2026; ../toolkit.js DashKit.count). Its name says the word ("Do, 2 down").
+  // domain expires within 7 days, otherwise grey (the owner, 3 Nov 2026; ../toolkit.js DashKit.count). Its name says the word ("Do, 2 down").
   function lookBadge(list) {
     var now = today(), b = $('n-look'), n = list.filter(needsLook).length;
     var why = list.some(function (r) { return E.statusOf(r) === 'down'; }) ? 'down'

@@ -1,5 +1,5 @@
 // Money Hub on a phone (390 x 844): every view, no sideways scroll, 44px press targets, bottom tabs on screen
-// with their counts in the top-right corner (never over a label; Lisa's tab picks, 2 Nov). Pretend Google and Drive.
+// with their counts in the top-right corner (never over a label; the owner's tab picks, 2 Nov). Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 
 const VIEWS = ['now', 'money', 'dates', 'todo', 'todo/others', 'todo/closed', 'accountant', 'control', 'e/TESTCO', 'e/TESTPERS', 'register/R001'];
@@ -31,7 +31,7 @@ for (const scheme of ['light', 'dark']) {
           const nb = n.getBoundingClientRect(), lb = l.getBoundingClientRect();
           const overlap = !(nb.right <= lb.left || nb.left >= lb.right || nb.bottom <= lb.top || nb.top >= lb.bottom);
           if (overlap) out.push('count sits on the label: ' + l.textContent);
-          // On a phone a tab count is an 8px dot just off the icon's top-right corner (Lisa's pick b, 2 Nov).
+          // On a phone a tab count is an 8px dot just off the icon's top-right corner (the owner's pick b, 2 Nov).
           const ib = a.querySelector('.hic').getBoundingClientRect();
           if (getComputedStyle(n).position !== 'absolute' || nb.left < ib.right || nb.left - ib.right > 3 || Math.abs(nb.top - ib.top) > 2 || nb.right > ab.right) out.push('count not at the icon\'s top right: ' + l.textContent);
           if (nb.height !== 8 || nb.width !== 8) out.push('tab count ' + nb.width + 'x' + nb.height + ' (want an 8px dot): ' + l.textContent);

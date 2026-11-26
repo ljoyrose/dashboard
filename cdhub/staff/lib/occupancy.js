@@ -17,7 +17,7 @@
   // needs.js missing on a page: every room counts as in use (never hides a room by mistake)
   N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: ((typeof self !== 'undefined' && self.BLD_TZ) || 'Europe/London') }); } };
 
-  // Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
+  // Permanently not on site (the owner 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
   var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };
   var GONE_STATE = { sold: true, collected: true, deceased: true };
   // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
@@ -25,7 +25,7 @@
 
   /**
    * Is room `a` in use on `day`? From BLD-requirement rows (need_type room.in_use, target_table area): a room with no
-   * rows is in use; one with rows only on days a row covers (Lisa 11 Nov 2026). Rows are never deleted; a retired
+   * rows is in use; one with rows only on days a row covers (the owner 11 Nov 2026). Rows are never deleted; a retired
    * room is hidden after its last day and still shows in History.
    */
   function inUse(a, day, reqRows) { return !!a && N.coversDay(reqRows, 'room.in_use', 'area', a.id, day || N.today()); }
@@ -37,7 +37,7 @@
   function takesDogs(a, day, reqRows) { return !!a && !N.coversDay(reqRows, 'room.no_dogs', 'area', a.id, day || N.today(), { absentIs: false }); }
   /**
    * Is room `areaId` empty all day on `day`? A BLD-requirement row with need_type room.empty (target_table area), dated
-   * like every need row (Lisa 18 Nov 2026: "mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just
+   * like every need row (the owner 18 Nov 2026: "mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just
    * hide them"). No such row = not marked empty. Not the same as room.no_dogs: a corridor takes no dogs but its
    * temperatures still show.
    */
@@ -133,13 +133,13 @@
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
    * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
    */
-  /** One room name everywhere (Lisa 12 Nov 2026): the code, without a retired room's ZZ_ mark, and "Isolation" after the
+  /** One room name everywhere (the owner 12 Nov 2026): the code, without a retired room's ZZ_ mark, and "Isolation" after the
    *  isolation room (its use starts with "Isolation", e.g. H2). Matching is by id, never by this text. */
   function roomName(a) {
     var c = String((a && (a.code || a.id)) || '').replace(/^ZZ_/, '');
     return /^\s*isolation\b/i.test(String((a && a.use) || '')) && !/isolation|\biso\b/i.test(c) ? c + ' Isolation' : c;
   }
-  /** Room order (Lisa 12 Nov 2026): the area's own group_sort first, then its code in natural order (3B.4/5 before 3B.9/10).
+  /** Room order (the owner 12 Nov 2026): the area's own group_sort first, then its code in natural order (3B.4/5 before 3B.9/10).
    *  No list in code: a new group or room sorts by its row. A room with no group_sort goes last. */
   function byPlace(a, b) {
     var x = a.sort || Infinity, y = b.sort || Infinity;
@@ -187,7 +187,7 @@
   }
 
   /**
-   * Load the daily list through the script with the staff code (no Google sign-in), as far as Lisa has allowed.
+   * Load the daily list through the script with the staff code (no Google sign-in), as far as the owner has allowed.
    * @param {Object} save a BLDSave instance
    * @return {Promise<{ok:true, lookups:{areas,dogs,subjects,dogsSkipped}} | {ok:false, message}>}
    */

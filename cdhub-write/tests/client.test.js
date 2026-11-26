@@ -928,7 +928,7 @@ test('name(): the name held against this code from the last read (Welcome line);
   assert.equal(s.name(), '');
 });
 
-// Lisa 16 Nov 2026: saves sent together (the round) all hit the script at once; all but one gave up with BUSY.
+// the owner 16 Nov 2026: saves sent together (the round) all hit the script at once; all but one gave up with BUSY.
 // One device now sends its saves one at a time, and a failed save does not stop the next.
 test('saves sent together go one at a time; a failed one does not stop the next', async () => {
   let now = 0, most = 0, n = 0;
@@ -1081,7 +1081,7 @@ test('outbox: a save still being sent from this page is not sent a second time b
   assert.equal(s.outbox.count(), 0);
 });
 
-// Lisa 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
+// the owner 16 Nov 2026: two people saving at once. BUSY means nothing was written, so the same save (same request id) is
 // sent again after a pause, up to 3 times; only then is the person told.
 test('BUSY (someone else saving) is retried with the same request id and then saves', async () => {
   const sent = [];
@@ -1112,7 +1112,7 @@ test('BUSY that never clears: after 3 retries the person is told, plainly', asyn
   assert.equal(n, 4);
 });
 
-// SIGN IN AGAIN (Lisa 22 Nov 2026: owner Google sign-in; she enters every reading and maybe only one saves). A Google
+// SIGN IN AGAIN (the owner 22 Nov 2026: owner Google sign-in; she enters every reading and maybe only one saves). A Google
 // sign-in lasts about an hour. When it ends mid-round, nothing is lost or refused: every reading stays kept and goes
 // once she signs in again, each saved once.
 test('owner sign-in ends mid-round: every reading is kept, none refused, and all save once after signing in again', async () => {

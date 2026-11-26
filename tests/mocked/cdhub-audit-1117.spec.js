@@ -1,4 +1,4 @@
-// Lisa 17 Nov 2026: "a thorough test line by line of the whole hub for working and also layout and design: find and mend".
+// the owner 17 Nov 2026: "a thorough test line by line of the whole hub for working and also layout and design: find and mend".
 // One test per fault found in the audit. Pretend Google and Drive only; every row here is invented.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
@@ -217,7 +217,7 @@ test.describe('CD Hub audit 17 Nov 2026', () => {
   }
 });
 
-// Lisa 17 Nov 2026, "yes all" to the audit questions: a touch screen of any width gets the 44px phone tap size.
+// the owner 17 Nov 2026, "yes all" to the audit questions: a touch screen of any width gets the 44px phone tap size.
 test.describe('touch screen at 860px (folding phone open)', () => {
   test.use({ viewport: { width: 860, height: 900 }, hasTouch: true, isMobile: true });
   test('house buttons are 44px tall on a touch screen wider than a phone', async ({ page }) => {

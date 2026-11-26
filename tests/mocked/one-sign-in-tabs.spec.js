@@ -1,4 +1,4 @@
-// Lisa had to sign in twice: the sign-in lived in one browser tab only, so a new tab, window or the installed
+// the owner had to sign in twice: the sign-in lived in one browser tab only, so a new tab, window or the installed
 // app window started signed out. Now one sign-in (kept in this browser until it expires or you sign out)
 // covers every tab, and Money Hub and CD Hub open in their own tab with a "Dashboard" button.
 const { test, expect } = require('../support/test');
@@ -132,7 +132,7 @@ test.describe('Dashboard button (every page except home)', () => {
       const b = page.locator('#backHome');
       await expect(b).toBeVisible(); // signed out too
       await expect(b).toHaveAttribute('aria-label', 'Dashboard');
-      await expect(b).toHaveText('');   // the Home icon only (Lisa's pick A, 2 Nov)
+      await expect(b).toHaveText('');   // the Home icon only (the owner's pick A, 2 Nov)
       await expect(b.locator('svg use')).toHaveAttribute('href', '#hi-home');
       await expect(b).toHaveAttribute('href', '../');
       const box = await b.boundingBox();

@@ -1,4 +1,4 @@
-// One line, drawn inside (Lisa, 3 Nov 2026): every line is 1px and sits INSIDE the element. Hover, focus, press and selected
+// One line, drawn inside (the owner, 3 Nov 2026): every line is 1px and sits INSIDE the element. Hover, focus, press and selected
 // change the colour of the existing line, or draw a 1px line inside (outline-offset -1px). Never a second line, a 2px ring
 // or a ring outside the box, so nothing looks thicker or jumps.
 // On all 8 pages, every tab and More page, at 1280 and 390 (warm light): every interactive element is keyboard-focused

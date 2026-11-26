@@ -1,6 +1,6 @@
 name: Live check after deploy
 
-# Right after the site is published (by "Publish site (after tests)", or by the old branch publishing until Lisa switches it), open the three LIVE pages (signed out only) and check they are up.
+# Right after the site is published (by "Publish site (after tests)", or by the old branch publishing until the owner switches it), open the three LIVE pages (signed out only) and check they are up.
 # A bad merge is then noticed within minutes, not at the next Monday run.
 # It never signs in, never blocks anything, and never touches the main test suite or branch protection.
 # No secrets: it uses only the run's own built-in token to open/close one issue.
@@ -64,7 +64,7 @@ jobs:
       - name: Live site red? Open or update the one live-site issue
         if: ${{ steps.live.outcome == 'failure' }}
         continue-on-error: true
-        run: node tests/support/report-issue.js --state red --label live-site-red --title-prefix "Live site check is red" --results test-results/results.json --note "Found right after a deploy of main"
+        run: 'node tests/support/report-issue.js --state red --label live-site-red --title-prefix "cdhub: check failed" --results test-results/results.json --note "Technical check failed."'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Live site fine? Close the issue

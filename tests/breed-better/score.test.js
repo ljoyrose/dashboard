@@ -275,7 +275,7 @@ test('skip: with no record the line leaves the total (a maiden has no last litte
   assert.equal(some.points_earned, 3);
 });
 
-/* Age weighting is the breeder's own row (Lisa: an X-ray before 12 months counts half; 12 months on is final). */
+/* Age weighting is the breeder's own row (the owner: an X-ray before 12 months counts half; 12 months on is final). */
 const awSet = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { age_weight: '0-11:0.5' })] });
 const awInput = (on) => Object.assign({}, awSet, { subject: { id: 'a1', dob: '2025-03-02' }, asOf: '2026-11-01',
   evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', on), exam('e2', 'a1', 'eye', 'clear', on)] } });
@@ -297,7 +297,7 @@ test('age weight: bad rows are refused; no birth date means no weighting', () =>
   assert.equal(r.lines[1].points, 10);
 });
 
-/* Dated rules (Lisa, 12 Nov 2026): a record is graded by the rows in force on its own date. */
+/* Dated rules (the owner, 12 Nov 2026): a record is graded by the rows in force on its own date. */
 test('dated rules: an old record keeps the points of the rule in force on its date', () => {
   const set = Object.assign({}, DOG, {
     criteria: [crit('hip', 'g'), crit('eye', 'p')],

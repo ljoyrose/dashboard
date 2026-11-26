@@ -1,5 +1,5 @@
 // Web Estate traffic this month (13 Nov 2026): every site row shows use against quota (number, % and bar), visits, period,
-// source and last updated, or "stats not connected" with the Lisa-only step. Amber from 80%, red from 95%, no upgrade prompt.
+// source and last updated, or "stats not connected" with the the owner-only step. Amber from 80%, red from 95%, no upgrade prompt.
 // Pretend Google; every key and number is invented. Runs at desktop size and at 360px.
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +36,7 @@ for (const size of [{ name: 'desktop', vp: { width: 1280, height: 900 } }, { nam
   test.describe('Web Estate traffic · ' + size.name, () => {
     test.use({ viewport: size.vp });
 
-    test('ACCEPT: 80% amber, 0% ok, 96% red, and "not connected" with the Lisa-only step', async ({ page }) => {
+    test('ACCEPT: 80% amber, 0% ok, 96% red, and "not connected" with the the owner-only step', async ({ page }) => {
       const seen = await open(page, { Properties: F.values(), Traffic: TRAFFIC });
       const amber = page.locator('[data-traffic="example.com"]');
       await expect(amber).toHaveAttribute('data-level', 'amber');

@@ -1,4 +1,4 @@
-// Compliance rule defaults (Lisa 12 Nov 2026: every limit is a dated row; no row = "not set", never a quiet default).
+// Compliance rule defaults (the owner 12 Nov 2026: every limit is a dated row; no row = "not set", never a quiet default).
 // Look-back and due-soon have no fallback, the adult age is in the rule list, and the rule box is not capped at 48.
 // Invented rows only.
 const { tabClick } = require('../support/tabs');

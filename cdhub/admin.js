@@ -1,8 +1,8 @@
 /*!
- * ADMIN (More -> Admin), owner-only. Lisa, 12 Nov 2026: one visual place for every admin job.
+ * ADMIN (More -> Admin), owner-only. the owner, 12 Nov 2026: one visual place for every admin job.
  * Shown only to someone whose Google sign-in can read BLD-field_visibility.csv (staff and visitors use the staff
  * page with codes and never sign in here). Everything is READ from live rows and never sees a code; only Visits
- * (visits.js, loaded when its card opens) saves, through the save script with the owner's code: codes are made and stopped by Lisa in the Apps Script editor or on the save script's owner page.
+ * (visits.js, loaded when its card opens) saves, through the save script with the owner's code: codes are made and stopped in the Apps Script editor or on the save script's owner page.
  * No rule, limit or list of people lives here: who-sees-what comes from BLD-field_visibility + BLD-audience rows,
  * roles from BLD-role, links from BLD-inspect_link, rules from BLD-breeding_rule, record periods from
  * BLD-retention_setting. The future list (admin-future.json) is a list of jobs to build, not rules.
@@ -41,11 +41,11 @@ var AdminView = (function () {
     ['print', 'Print', 'print', 4, 'Tools'], ['rules', 'Rules & limits', 'rules', 3, 'Tools'],
     ['records', 'Records kept', 'records', 0, 'Tools'], ['checks', 'Check settings', 'check', 3, 'Tools'],
     ['health', 'System health', 'health', 5, 'Tools'],
-    ['display', 'Display', 'eye', 6, 'Tools']   // Lisa 17 Nov 2026: display choices are settings here, not buttons on cards
+    ['display', 'Display', 'eye', 6, 'Tools']   // the owner 17 Nov 2026: display choices are settings here, not buttons on cards
   ];
 
 
-  /* look: colour lives in icons and the full-height left line; hover is the pale grey fill (Lisa 11 Nov) */
+  /* look: colour lives in icons and the full-height left line; hover is the pale grey fill (the owner 11 Nov) */
   (function () {
     if (typeof document === 'undefined' || document.getElementById('adm-css')) return;
     var st = document.createElement('style'); st.id = 'adm-css';
@@ -340,7 +340,7 @@ var AdminView = (function () {
     }
     if (id === 'staff') {
       var roles = rows(T, 'BLD-role.csv').filter(function (r) { return r.code; });
-      // Lisa 16 Nov 2026: a real button to the owner page, where codes are made; the name tag (sc-...) is not the code.
+      // the owner 16 Nov 2026: a real button to the owner page, where codes are made; the name tag (sc-...) is not the code.
       return '<p class="adm-make">' + ownerPage(v, 'Make a code', 'codes') + '</p>'
         + steps(['Type their name, pick the role, press <b>Make their code</b>', 'Copy the 10-letter code from the green box. The name tag (sc-\u2026) is not the code', 'Give it to them, then <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
         + (roles.length ? '<p class="mut">Roles: ' + roles.map(function (r) { return '<b>' + v.esc(r.code) + '</b> ' + v.esc(r.name || ''); }).join(' · ') + '</p>' : '')
@@ -451,7 +451,7 @@ var AdminView = (function () {
     var groups = [], seen = {};
     CARDS.forEach(function (c) { if (!seen[c[4]]) { seen[c[4]] = 1; groups.push(c[4]); } });
     var html = '<h2 class="adm-h">' + icon('shield') + ' Settings <span class="adm-lock">Only you</span></h2>'
-      + '<p class="adm-script">' + ownerPage(v, 'Script page') + '</p>';   // Lisa 15 Nov 2026: always one tap to the owner page
+      + '<p class="adm-script">' + ownerPage(v, 'Script page') + '</p>';   // the owner 15 Nov 2026: always one tap to the owner page
     groups.forEach(function (g) {
       html += '<h3 class="adm-g">' + g + '</h3><div class="adm-grid">' + CARDS.filter(function (c) { return c[4] === g; }).map(function (c) {
         var open = S.open === c[0];
@@ -466,7 +466,7 @@ var AdminView = (function () {
   }
 
 
-  /* STAFF (More -> Staff): every staff page, so Lisa can see them all. A list of pages, not rules. Owner-only links show
+  /* STAFF (More -> Staff): every staff page, so the owner can see them all. A list of pages, not rules. Owner-only links show
      only to the owner (the same check as Admin). The staff pages open as THIS device: they need a staff or owner code here. */
   function staffPage(v) {
     var b = staffBase(), owner = on(v.T), g = function (title, items) {

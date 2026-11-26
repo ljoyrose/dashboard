@@ -3,7 +3,7 @@
  * page and the back-fill tool (cdhub-write/tools/backfill-qr-tags.js); the save script has the same rule in QrTag.gs and a
  * test checks both agree.
  *
- * Owner rule rows in BLD-breeding_rule (Lisa 15 Nov 2026), dated like every rule, newest in force wins:
+ * Owner rule rows in BLD-breeding_rule (the owner 15 Nov 2026), dated like every rule, newest in force wins:
  *   qr.on_add.<kind>            yes / no   kind = subject, area, litter, site, thermometer or item
  *   qr.on_add.item.<kind_key>   yes / no   one item type; beats qr.on_add.item
  * No row = no code.

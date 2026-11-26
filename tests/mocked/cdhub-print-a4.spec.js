@@ -49,7 +49,7 @@ test.describe('CD Hub print on A4', () => {
       await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif!important}' });
       await page.getByRole('button', { name: P.PER_LABEL[per] }).click();
       await expect(page.locator('.sheet')).toHaveClass(new RegExp('\\bper' + per + '\\b'));
-      // paper width: A4 portrait (Lisa's dog card, 18 Nov 2026: two a page one above the other, cut line between)
+      // paper width: A4 portrait (the owner's dog card, 18 Nov 2026: two a page one above the other, cut line between)
       await page.setViewportSize(P.PAPER.portrait);
       const fit = await P.cardsFit(page);
       fit.forEach((c) => {
@@ -63,7 +63,7 @@ test.describe('CD Hub print on A4', () => {
     });
   }
 
-  test('room cards print two a sheet, each whole, QR at least 50 mm (Lisa 18 Nov 2026) @regression', async ({ page }) => {
+  test('room cards print two a sheet, each whole, QR at least 50 mm (the owner 18 Nov 2026) @regression', async ({ page }) => {
     await P.openCards(page);
     // the wide fallback font (as on CI, or a printer with no web font) makes the tallest cards
     await page.addStyleTag({ content: '*{font-family:"DejaVu Sans",Verdana,sans-serif!important}' });

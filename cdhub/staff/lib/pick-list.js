@@ -1,5 +1,5 @@
 /*!
- * BLDPick - the "which cards to print" list on the print page (Lisa 22 Nov 2026: "can I print one specific area, item,
+ * BLDPick - the "which cards to print" list on the print page (the owner 22 Nov 2026: "can I print one specific area, item,
  * thermometer, dog etc, or select all (with unselect) for them all?").
  * One tick box per card, all ticked to start (or only the ids asked for), with Select all and Unselect all. It never
  * prints (class noprint) and it saves nothing: the page decides what to draw from selected(). Shared so any card kind

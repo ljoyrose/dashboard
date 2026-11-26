@@ -1,4 +1,4 @@
-// Outstanding: Done, Reassign, Snooze on every waiting row (Lisa 19 Nov 2026: "nothing to reassign or say done to take it off").
+// Outstanding: Done, Reassign, Snooze on every waiting row (the owner 19 Nov 2026: "nothing to reassign or say done to take it off").
 // Each tap adds one dated BLD-requirement row pointing at the work row; BLD-WORK is never changed. Invented rows only.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');

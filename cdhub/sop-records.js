@@ -1,5 +1,5 @@
 /*!
- * BLDSopRecords — one record and one print for every SOP on the hub (Lisa, 25 Nov 2026).
+ * BLDSopRecords — one record and one print for every SOP on the hub (the owner, 25 Nov 2026).
  *
  * A check type whose sop column matches the SOP, or whose type_key is the known name for that SOP
  * (Specs.gs, the 8 Nov and 21 Nov job lists, and the checks the hub already saves), keeps the job form.

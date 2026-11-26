@@ -1,4 +1,4 @@
-// Dog card fixes, 12 Nov 2026 (Lisa): the weight graph is back, Add weight in the weighings panel (no source column),
+// Dog card fixes, 12 Nov 2026 (the owner): the weight graph is back, Add weight in the weighings panel (no source column),
 // vaccine codes read as words, Add vaccination and Remove (newest only), status words without code letters ("Bitch",
 // not "BI Bitch"), no "Colour" word, and the microchip is a plain line. Invented dogs and rows only; pretend save script.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
@@ -40,7 +40,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await page.evaluate(() => go('dogs/sub-x1'));
     await expect(dog(page).locator('[data-k="wgraph"] svg.spk')).toHaveCount(1);   // visible without opening anything
     await expect(dog(page).locator('[data-k="wgraph"]').first()).toBeVisible();
-    await dog(page).locator('details.wtc > summary').click();   // opens in place (Lisa 15 Nov 2026), no panel at the top
+    await dog(page).locator('details.wtc > summary').click();   // opens in place (the owner 15 Nov 2026), no panel at the top
     const g = dog(page).locator('details.wtc svg.wgraph');
     await expect(g).toHaveAttribute('aria-label', 'Weight from 8.1 kg on 1 Jan 2026 to 8.9 kg on 12 Mar 2026');
     await expect(g.locator('circle')).toHaveCount(3);
@@ -131,7 +131,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     await expect(rows.nth(1).locator('[data-k="covers"]')).toHaveText('Distemper, Hepatitis (adenovirus), Parvovirus');
     await expect(rows.nth(0).locator('[data-k="covers"]')).toHaveText('Kennel cough (Bordetella), Parainfluenza, Canine herpesvirus');
     await expect(rows.nth(1).locator('[data-k="vcard"]')).toHaveAttribute('href', 'https://example.test/pretend-card.jpg');
-    for (const i of [0, 1]) {   // the owner's records: any row (Lisa 17 Nov 2026)
+    for (const i of [0, 1]) {   // the owner's records: any row (the owner 17 Nov 2026)
       await expect(rows.nth(i).locator('[data-vax-void]')).toHaveText('Archive');
       await expect(rows.nth(i).locator('[data-vax-del]')).toHaveText('Delete forever');
     }
@@ -289,7 +289,7 @@ test.describe('CD Hub dog card, 12 Nov 2026 fixes', () => {
     expect(bodies[0]).toMatchObject({ table: 'area_reading', fields: { area_id: area, min_c: '11.3', max_c: '13.2' } });
     await expect(page.locator('#rstat')).toContainText('1 with a temperature');
     await expect(page.locator('#kept-readings')).toContainText('11.3–13.2');
-    const dialogs = []; page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });   // Lisa 16 Nov: one tap, no pop-up
+    const dialogs = []; page.on('dialog', (d) => { dialogs.push(d.message()); d.dismiss(); });   // the owner 16 Nov: one tap, no pop-up
     await page.locator(`.rempty[data-area="${area}"][data-slot="pm"]`).click();
     await expect.poll(() => bodies.length).toBe(2);
     expect(bodies[1]).toMatchObject({ table: 'area_reading', fields: { area_id: area, room_empty: 'yes' } });

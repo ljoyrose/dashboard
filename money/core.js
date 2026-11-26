@@ -122,7 +122,7 @@
   var PRIORITY = { urgent: 0, high: 1, normal: 2, low: 3 };
   /** True when a register row's state is not closed, done or answered. */
   function isOpen(r) { return !/^closed|^done|^answered/i.test(r.state || ''); }
-  /** True when a register row's owner starts with Lisa. */
+  /** True when a register row's owner starts with the owner. */
   function isLisa(r) { return /^lisa\b/i.test(r.owner || ''); }
   /** True when a register row's kind is todo, question or decision. */
   function isTask(r) { return /^(todo|question|decision)$/i.test(r.kind || ''); }
@@ -141,7 +141,7 @@
     if (t.indexOf('when ') === 0) return 'waiting';
     return t || 'unknown';
   }
-  /** Open register tasks owned by Lisa, each with its ready state. Sorted ready first, then by priority, then by id. */
+  /** Open register tasks owned by the owner, each with its ready state. Sorted ready first, then by priority, then by id. */
   function yourTurn(data) {
     var all = data.register || [];
     return all.filter(function (r) { return isOpen(r) && isLisa(r) && isTask(r); }).map(function (r) {

@@ -1,5 +1,5 @@
 // Stage 12: follow-ups. Run: node --test tests/enquiries/followups.test.js
-// Invented enquiry keys only. Nobody is messaged: rows and drafts wait for Lisa, who sends and taps done.
+// Invented enquiry keys only. Nobody is messaged: rows and drafts wait for the owner, who sends and taps done.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -58,7 +58,7 @@ test('ACCEPT: snooze moves the due date', () => {
   assert.equal(C.snoozeRequest(due.followup_key, '2026-11-01T09:00:00', '2026-11-05T09:05:00.000Z').ok, false, 'a time in the past is refused');
 });
 
-test('done: the next try counts from Lisa\'s tap; after 3 tries the hub suggests lost; the waiting list repeats', () => {
+test('done: the next try counts from the owner\'s tap; after 3 tries the hub suggests lost; the waiting list repeats', () => {
   const e = [enq(6, 'replied')], v = [ev(6, 'replied', '2026-10-01T10:00:00')];
   let rows = [];
   for (let n = 1; n <= 3; n++) {

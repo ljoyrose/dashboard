@@ -1,5 +1,5 @@
 'use strict';
-// Codes vault, save-script side (Lisa 14 Nov 2026, option B). Only sealed hex is kept; a typed code is checked once and
+// Codes vault, save-script side (the owner 14 Nov 2026, option B). Only sealed hex is kept; a typed code is checked once and
 // answered match true/false only, never logged or echoed, and a miss counts towards the sign-in limit.
 const { test } = require('node:test');
 const assert = require('node:assert');

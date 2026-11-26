@@ -16,14 +16,14 @@ const BYTES = withGrowth({ marketplace: 226000, money: 201500, studio: 334100, p
 // money 201100 > 201500 (+400) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it. Measured 221465.
 // money 197700 > 201100 (+3400) on 2 Nov 2026: Hub Mains (DashKit.hubMain in toolkit.js and house.css, Main's numbers and the moved
 // sections' routes), on top of the shared tab-dots growth. Measured 221129.
-// studio 297000 > 334100 and privacy 13300 > 15000 on 2 Nov 2026: the shared bottom tab bar (Lisa's tab picks) adds the tab rules to
+// studio 297000 > 334100 and privacy 13300 > 15000 on 2 Nov 2026: the shared bottom tab bar (the owner's tab picks) adds the tab rules to
 // house.css and the tab colours to tokens.css (privacy loads both), and the tab icons and More menu to toolkit.js, on top of studio's
 // own growth since 30 Oct. Measured 334013 and 14917. Marketplace and money still fit.
-// marketplace 178600 > 197100 and money 160500 > 179700 on 2 Nov 2026: the shared top bar (Lisa's pick A) adds the Look menu and the
+// marketplace 178600 > 197100 and money 160500 > 179700 on 2 Nov 2026: the shared top bar (the owner's pick A) adds the Look menu and the
 // one icon set to toolkit.js, which every hub loads (about 7 KB), on top of their own growth since 30-31 Oct. Measured 197089 and 179634.
-// money 179700 > 197700 on 2 Nov 2026: one page width and the centred hub name (Lisa's picks) add the frame rules to house.css, the
+// money 179700 > 197700 on 2 Nov 2026: one page width and the centred hub name (the owner's picks) add the frame rules to house.css, the
 // gutter token to tokens.css and the name-centring helper to toolkit.js (about 2 KB), on top of #247's tab bar. Measured 197680.
-// marketplace 197100 > 217800 on 2 Nov 2026: one type scale (Lisa's picks: Lexend, 400/500/600, 14/15/18px) writes every size as a
+// marketplace 197100 > 217800 on 2 Nov 2026: one type scale (the owner's picks: Lexend, 400/500/600, 14/15/18px) writes every size as a
 // token and adds the type tokens to tokens.css and house.css, on top of growth since 31 Oct that was already near the +10% line.
 // Measured 217712. Money, studio and privacy still fit.
 // marketplace 217800 > 247600 on 2 Nov 2026: Product ideas (list, Add idea form, card page, board link: about 20 KB in index.html + 10 KB ideas.js)
