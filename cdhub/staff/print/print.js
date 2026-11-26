@@ -6,15 +6,15 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  var QR_ORIGIN = 'https://dashboard-eyo.pages.dev';
+  var STAFF_FALLBACK = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
   function qrBase() {
-    var origin = '', path = '', here = '';
-    try { origin = String(location.origin || ''); path = String(location.pathname || ''); } catch (e) { origin = ''; path = ''; }
-    here = origin.replace(/\/$/, '');
-    if (!/^https:\/\/([a-z0-9-]+\.)*pages\.dev$/i.test(here)) here = QR_ORIGIN;
-    var mark = '/cdhub/', i = path.indexOf(mark);
-    var prefix = here === origin.replace(/\/$/, '') && i >= 0 ? path.slice(0, i) : '';
-    return here + prefix + '/cdhub/staff/';
+    var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
+    ((T && T.breeding_rule) || []).forEach(function (r) {
+      var f = String(r.from_date || r.effective_from || ''), v = String(r.value || '').trim();
+      if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(v) || (f && f > day) || (r.to_date && String(r.to_date) < day)) return;
+      if (!best || f >= best.f) best = { f: f, v: v };
+    });
+    return best ? best.v : STAFF_FALLBACK;
   }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only

@@ -2,7 +2,7 @@ const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
-const HOST = 'dashboard-eyo.pages.dev';
+const STAFF = 'https://ljoyrose.github.io/dashboard/cdhub/staff.html';
 const LAYOUTS = ['Full A4', '2 per A4', '4 per A4'];
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
@@ -161,7 +161,7 @@ test('dog card photo is a loaded square in every layout and in print @regression
   await expect.poll(() => page.evaluate(() => window.__printed)).toBe(1);
 });
 
-test('every print QR uses the pages host @regression', async ({ page }) => {
+test('every print QR uses the staff rule or the staff page @regression', async ({ page }) => {
   await open(page);
   await page.goto('cdhub/staff/print/');
   const kinds = ['Whole-site code', 'Room cards', 'Dog cards', 'Litter cards', 'Item cards', 'Thermometer cards', 'Phone set-up QR'];
@@ -172,9 +172,8 @@ test('every print QR uses the pages host @regression', async ({ page }) => {
   const qr = await page.evaluate(() => window.__qr.slice());
   expect(qr.length).toBeGreaterThanOrEqual(kinds.length);
   for (const text of qr) {
-    const host = new URL(text).host;
-    expect(host, text).toBe(HOST);
-    expect(text).not.toContain('github.io');
+    expect(text.indexOf(STAFF + '#'), text).toBe(0);
+    expect(text).not.toContain('pages.dev');
     expect(text).not.toContain('/print/');
   }
   const marks = qr.map((t) => new URL(t).hash.split(/[=/]/)[0]);
