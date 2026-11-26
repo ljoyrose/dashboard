@@ -166,6 +166,60 @@ test.describe('CD Hub: record an SOP check', () => {
     expect(sent[1].fields.subject_id).toBeUndefined();
     expect(sent[1].fields.how_recorded).toBe('tapped');
     expect(sent[1].fields.check_type_id).toBe('t-pup');
-    await expect(body.locator('[data-sop-save="pup_microchip"]')).toHaveCount(0);
+    await expect(body.locator('[data-sop-day="pup_microchip"]')).toBeVisible();
+    await expect(body.locator('[data-sop-save="pup_microchip"]')).toHaveText('Done');
+  });
+
+  test('a Jobs row tick saves like a Board tap, and a dog job opens the chooser @regression', async ({ page, guard }) => {
+    addTable(guard.world, 'BLD-check_type.csv', csv(TYPE_H, [
+      't-bowls,t,bowls,Pretend bowls,none,true,2020-01-01,,1,,,Cleaning',
+      't-nails,t,nails,Pretend nails,dog,true,2020-01-01,,28,,,Care Check'
+    ]));
+    await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) { /* private */ } }, URL_);
+    const sent = [];
+    await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {
+      const b = JSON.parse(route.request().postData() || '{}'); sent.push(b);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'clg-' + sent.length, at: '2026-11-20T12:00:00.000Z', who: 'Test Owner' } }) });
+    });
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'compliance');
+    const bowls = page.locator('#compJobs tr[data-job="bowls"]');
+    const day = bowls.locator('[data-job-day="bowls"]');
+    await expect(day).toHaveAttribute('max', /\d{4}-\d{2}-\d{2}/);
+    const today = await day.inputValue();
+    expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    await day.fill('2026-11-20');
+    await bowls.getByRole('button', { name: 'Done: Pretend bowls' }).click();
+    await expect.poll(() => sent.length).toBe(1);
+    expect(sent[0].table).toBe('check_log');
+    expect(sent[0].action).toBe('add_site');
+    expect(sent[0].fields.how_recorded).toBe('site_tap');
+    expect(sent[0].fields.check_type_id).toBe('t-bowls');
+    expect(sent[0].fields.outcome).toBe('ok');
+    expect(sent[0].fields.happened_at).toMatch(/^2026-11-20T/);
+    expect(sent[0].fields.confirm_unusual).toBe('yes');
+    expect(sent[0].fields.subject_id).toBeUndefined();
+    expect(sent[0].fields.taken_by).toBeUndefined();
+    expect(sent[0].request_id).toMatch(/^.{8,}$/);
+    await expect(page.locator('#compJobs tr[data-job="bowls"] td[data-n="last"]')).toContainText('20 Nov 2026');
+    const nails = page.locator('#compJobs tr[data-job="nails"]');
+    const dueBefore = Number(await nails.locator('td[data-n="due"]').innerText());
+    await expect(nails.locator('[data-job-pick="nails"]')).toBeHidden();
+    await nails.getByRole('button', { name: 'Done: Pretend nails' }).click();
+    expect(sent).toHaveLength(1);
+    await expect(nails.locator('[data-job-pick="nails"]')).toBeVisible();
+    const ticks = nails.locator('[data-job-tick="nails"]');
+    expect(await ticks.count()).toBeGreaterThan(1);
+    const n = await ticks.count();
+    for (let i = 0; i < n - 1; i++) await ticks.nth(i).uncheck();
+    const kept = await ticks.nth(n - 1).inputValue();
+    await nails.getByRole('button', { name: 'Done: Pretend nails' }).click();
+    await expect.poll(() => sent.length).toBe(2);
+    expect(sent[1].action).toBe('add');
+    expect(sent[1].fields.subject_id).toBe(kept);
+    expect(sent[1].fields.how_recorded).toBe('tapped');
+    expect(sent[1].fields.check_type_id).toBe('t-nails');
+    expect(sent[1].fields.taken_by).toBeUndefined();
+    await expect(page.locator('#compJobs tr[data-job="nails"] td[data-n="due"]')).toHaveText(String(dueBefore - 1));
   });
 });

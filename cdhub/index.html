@@ -29,19 +29,13 @@
 <script src="staff/lib/links.js"></script>
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
+<script src="staff/lib/lazy.js"></script>
 <script src="sop-records.js"></script>
 <script src="job-calendar.js"></script>
 <script src="docs-view.js"></script>
-<script src="../breed-better/score.js"></script>
-<script src="../breed-better/dna-panel.js"></script>
 <script src="staff/lib/viewer-levels.js"></script>
-<script src="../breed-better/hub-view.js"></script>
-<script src="../enquiries/core.js"></script>
-<script src="../enquiries/reader.js"></script>
-<script src="../enquiries/requests.js"></script>
-<script src="../enquiries/examples.js"></script>
-<script src="enquiries-view.js"></script>
 <script src="admin.js"></script>
+<script src="staff/lib/tables.js"></script>
 <script src="items-view.js"></script>
 <script src="bin-view.js"></script>
 <script src="work-actions.js"></script>
@@ -373,9 +367,9 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc{scroll-margin-top:72px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.ph{position:relative;flex:0 0 auto;width:120px;height:120px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.ph{position:relative;flex:0 0 auto;width:120px;height:auto;aspect-ratio:1/1;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
-.ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
 .ph .off{display:none !important}
 .dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .dogphoto-btn{justify-content:center;padding:0 8px}
@@ -388,13 +382,13 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 @media(max-width:600px){
  .dc .dc-top{flex-direction:column;align-items:stretch;gap:8px;padding:12px 12px 6px}
  .dogphoto-col{width:100%}
- .ph{width:100%;height:auto;aspect-ratio:16/10;max-width:100%}
+ .ph{width:100%;height:auto;aspect-ratio:1/1;max-width:100%}
  .ph .ti{width:56px;height:56px}
  .dogphoto-btns{flex-direction:row}
  .dogphoto-btn{flex:1 1 0;width:auto}
  .dogphoto-btn[data-photo-edit]{flex:0 0 auto;padding:0 12px}
 }
-@media(min-width:601px){.ph{width:160px;height:160px}.dogphoto-col{width:160px}}
+@media(min-width:601px){.ph{width:160px;height:auto;aspect-ratio:1/1}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
 .pcrop-edit input{width:100%}
 .pcrop-size{margin:0;font-size:var(--fs-small)}
@@ -405,8 +399,8 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 /* gallery (Lisa 13 Nov 2026): small square thumbnails, files and links as plain links */
 .glist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .glist .gi{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);max-width:100%}
-.gph{position:relative;display:block;width:88px;height:88px;border-radius:8px;overflow:hidden;background:var(--line)}
-.gph img{width:100%;height:100%;object-fit:cover;display:block}
+.gph{display:block;width:88px;height:auto;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:var(--line)}
+.gph img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
 .gph img.off{visibility:hidden}
 /* × remove and ✎ edit on the photo itself (Lisa 17 Nov 2026: "still not got a x to remove a bad image") */
 .gph{position:relative}
@@ -660,7 +654,7 @@ h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
 .dc .wtc{margin:0;padding:0}
 .dc .ph{break-inside:avoid}
 #main .dc .nm{display:block;-webkit-line-clamp:unset;line-clamp:none;overflow:visible}   /* the whole name on paper, never cut to "…" */
-#main[data-view="dogs"] .dc .ph{width:30mm!important;height:30mm!important;aspect-ratio:auto}
+#main[data-view="dogs"] .dc .ph{width:30mm!important;height:auto!important;aspect-ratio:1/1!important}
 #main[data-view="dogs"] .dc .dogphoto-col{width:30mm!important}
 #main[data-view="dogs"] .dc .dc-top{flex-direction:row;align-items:flex-start}
 #main .dc button.cb[data-cabin-move]{border:0!important;padding:0!important;min-height:0!important;height:auto!important;background:none!important;font:inherit;font-weight:600;color:inherit}
@@ -756,7 +750,27 @@ var LATER={};
  'deviation','finding','governed_by','inspection','microchip_registration','outcome','reminder','verification','visit','fit_to_breed'
 ].forEach(function(t){ LATER['BLD-'+t+'.csv']=1; });
 function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTIONAL_FILES[f]=1; }
-if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
+/* LAZY: heavier parts load the first time a page that uses them opens, not on first open (OV11, 15 Nov 2026).
+   files = the tables each part reads; they must match the part's own FILES (tests/mocked/cdhub-lazy-load.spec.js checks). */
+var LAZY={
+ bb:{src:['../breed-better/score.js','../breed-better/dna-panel.js','../breed-better/hub-view.js'],ready:function(){return typeof BBHubView!=='undefined';},
+  files:['BLD-score_scheme.csv','BLD-score_band.csv','BLD-score_criterion.csv','BLD-score_point.csv','BLD-score_enrolment.csv','BLD-fit_to_breed.csv','BLD-score_judgement.csv','BLD-score_assessment.csv','BLD-grade_band.csv','BLD-viewer_level.csv','BLD-check_value.csv']},
+ enq:{src:['../enquiries/core.js','../enquiries/reader.js','../enquiries/requests.js','../enquiries/examples.js','enquiries-view.js'],ready:function(){return typeof CDEnquiries!=='undefined';},
+  files:['BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv']}
+};
+var LAZY_FOR={breed:['bb'],dogs:['bb','enq'],enquiries:['enq']};   /* the dog card shows the Breed Better section and the household line */
+var LAZY_ERR='';
+Object.keys(LAZY).forEach(function(k){ LAZY[k].files.forEach(wantLater); });
+/* The parts a view still waits for; starts loading them and opens the view again once they have run. */
+function lazyWait(id){
+ var need=(LAZY_FOR[id]||[]).filter(function(k){ return !LAZY[k].ready(); });
+ if(!need.length) return false;
+ if(LAZY_ERR){ var e=LAZY_ERR; LAZY_ERR=''; return {err:e}; }   /* shown once; the next open tries again */
+ BLDLazy.load([].concat.apply([],need.map(function(k){ return LAZY[k].src; }))).then(function(){
+  if(need.every(function(k){ return LAZY[k].ready(); })&&document.getElementById('cdWait')) go(SHOWN||'map',false);
+ },function(e){ LAZY_ERR=String(e&&e.message||e); if(document.getElementById('cdWait')) go(SHOWN||'map',false); });
+ return 'wait';
+}
 if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
 if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
@@ -798,9 +812,9 @@ function jobsV(){ var types=T['BLD-check_type.csv']||[]; if(typeof BLDSopRecords
  var day=todayISO(), occ=T['BLD-occupancy.csv']||[], st=T['BLD-subject_status.csv']||[], req=CD.req||[], subjects=CD.dogs||[];
  var dogs=subjects.filter(function(d){ return BLDDue.onSite(d, occ, st, day); });
  var areas=(CD.areas||[]).map(function(a){ return {id:a.id,code:a.code,use:a.use||'',grouping:a.grouping||'',kind:a.kind||'',retired:!BLDOccupancy.inUse(a,day,req),noDogs:BLDOccupancy.takesDogs?!BLDOccupancy.takesDogs(a,day,req):false}; });
- return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref}; }
+ return {types:types,logs:T['BLD-check_log.csv']||[],visits:T['BLD-inspect_link.csv']||[],rules:T['BLD-breeding_rule.csv']||[],settings:T['BLD-check_setting.csv']||[],dogs:dogs,subjects:subjects,occupancy:occ,statuses:st,areas:areas,litters:currentLitters(),links:T['BLD-links.csv']||[],files:T['BLD-files.csv']||[],records:{weight:T['BLD-weight.csv']||[],dispense:T['BLD-dispense.csv']||[],vaccination:T['BLD-vaccination.csv']||[],microchip:T['BLD-microchip.csv']||[]},today:day,esc:esc,dmy:ukDate,fold:compOpen,sopHref:sopHref,doneNote:COMP.doneNote||null}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
-var COMP={shut:{},asAt:''};   /* asAt: the "What was true on" date; blank = today */
+var COMP={shut:{},asAt:'',doneNote:null};   /* asAt: the "What was true on" date; blank = today. doneNote: the line after a Jobs tick */
 function compOpen(k){ return COMP.shut[k]?'':' open'; }
 function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
 function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
@@ -2701,7 +2715,7 @@ function showTreats(id){
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='';   /* MEDDOG: the dog picked from the medicine table */
+var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='', DOGQ='';   /* MEDDOG: the dog picked from the medicine table. DOGQ: a find that opens Dogs after its parts load */
 /* one size band to its colour key (small, medium, large) */
 var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against Lisa's cut-off rows. Run again after a new weight. */
@@ -5097,52 +5111,116 @@ function sopCardHtml(r){
   return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
  }).join('')+extra;
 }
-/* Record a due or never-recorded SOP check. One check_log row per dog, room or litter (litter_id, not subject_id).
-   A whole-site job about dogs is one add_site. how_recorded is tapped or site_tap, at the real time, through the same save as other checks. */
+/* One check_log save, the same fields as a tap on The Board → Jobs. The queue keeps the request id, so a retry does not save twice. */
+var SAVE_MEM={};
+function saveMem(key,sig){ var m=SAVE_MEM[key]; if(!m||m.sig!==sig) m=SAVE_MEM[key]={sig:sig,rids:[],from:0}; return m; }
+function pushCheckLog(logs, fields, res){
+ var at=res.at||fields.happened_at||new Date().toISOString(), who=res.who||'';
+ if(res.session){ logs.push({id:res.id||'',check_type_id:fields.check_type_id,subject_id:'',area_id:fields.area_id||'',covered_ids:(res.covered_ids||fields.dog_ids||''),exceptions:fields.exceptions||'',outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at||at,note:fields.note||'',taken_at:at,taken_by:who}); return; }
+ if(fields.dog_ids){ fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'job')+'-'+k),check_type_id:fields.check_type_id,subject_id:d,area_id:fields.area_id||'',outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at||at,note:fields.note||'',taken_at:at,taken_by:who}); }); return; }
+ logs.push({id:res.id||'',check_type_id:fields.check_type_id,subject_id:fields.subject_id||'',area_id:fields.area_id||'',litter_id:fields.litter_id||'',outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at||at,note:fields.note||'',item:fields.item||'',amount:fields.amount||'',taken_at:at,taken_by:who});
+}
+async function sendPlans(memKey, plans, msg){
+ var sig=JSON.stringify(plans.map(function(p){ return {a:p.action,f:p.fields}; }));
+ var mem=saveMem(memKey, sig), logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), bad='', last=null, added=0;
+ for(var i=mem.from;i<plans.length;i++){
+  var rid=mem.rids[i]||sinkRid(); mem.rids[i]=rid; mem.from=i;
+  if(msg){ msg.removeAttribute('data-saved'); msg.textContent=plans.length>1?('Saving '+(i+1)+' of '+plans.length+'\u2026'):'saving\u2026'; msg.setAttribute('data-rid', rid); }
+  var r=await sinkSend({table:'check_log',action:plans[i].action,fields:plans[i].fields,request_id:rid});
+  last=r;
+  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); if(!(r&&(r.code==='NETWORK'||r.kept))) mem.rids[i]=''; break; }
+  pushCheckLog(logs, plans[i].fields, r.result||{}); added++; mem.from=i+1;
+ }
+ if(msg){ msg.removeAttribute('data-rid'); showSave(msg, bad||sinkMsg(last||{},'')); }
+ if(!bad) delete SAVE_MEM[memKey];
+ return {ok:!bad, added:added, message:bad||(last?sinkMsg(last,''):'')};
+}
+function readExtra(root, prefix){
+ var extra={}, item=root.querySelector('[data-'+prefix+'-item]'), amount=root.querySelector('[data-'+prefix+'-amount]'), note=root.querySelector('[data-'+prefix+'-note]');
+ if(item) extra.item=item.value.trim(); if(amount) extra.amount=amount.value.trim(); if(note) extra.note=note.value.trim();
+ return extra;
+}
+/* Record a due or never-recorded SOP check. Same payload as The Board → Jobs, on the chosen day (today is the real time). */
 async function sopRecord(btn){
  var key=btn.getAttribute('data-sop-save'), box=btn.closest('[data-sop-record]'); if(!box) return;
  var msg=box.querySelector('[data-sop-msg]'), picked=[];
  var ticks=box.querySelectorAll('[data-sop-tick]');
  if(ticks.length) Array.prototype.forEach.call(ticks,function(el){ if(!el.checked) return; picked.push({kind:el.getAttribute('data-kind')||'',id:el.value||'',area_id:el.getAttribute('data-area')||''}); });
  else if(box.hasAttribute('data-one-kind')) picked.push({kind:box.getAttribute('data-one-kind'),id:box.getAttribute('data-one-id')||'',area_id:box.getAttribute('data-one-area')||''});
- var extra={}, item=box.querySelector('[data-sop-item]'), amount=box.querySelector('[data-sop-amount]'), note=box.querySelector('[data-sop-note]');
- if(item) extra.item=item.value.trim(); if(amount) extra.amount=amount.value.trim(); if(note) extra.note=note.value.trim();
- var plan=BLDJobsView.savePlans(jobsV(),key,picked,extra,new Date().toISOString());
+ var v=jobsV(), dayEl=box.querySelector('[data-sop-day]'), day=(dayEl&&dayEl.value)||v.today;
+ if(day>v.today){ if(msg) msg.textContent='Pick today or an earlier day.'; return; }
+ var plan=BLDJobsView.tapPlans(v, key, picked, readExtra(box,'sop'), day, new Date().toISOString());
  if(plan.error){ if(msg) msg.textContent=plan.error; return; }
  btn.disabled=true;
- var bad='', logs=T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[]), n=plan.plans.length;
- for(var i=0;i<n;i++){
-  var p=plan.plans[i]; if(msg) msg.textContent='Saving '+(i+1)+' of '+n+'\u2026';
-  var r=await sinkSend({table:'check_log',action:p.action,fields:p.fields});
-  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
-  var res=r.result||{}, at=res.at||p.fields.happened_at, who=res.who||'';
-  if(res.session){ logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:'',covered_ids:(res.covered_ids||p.fields.dog_ids||''),exceptions:p.fields.exceptions||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }
-  else if(p.fields.dog_ids){ p.fields.dog_ids.split('|').forEach(function(d,k){ logs.push({id:(res.ids&&res.ids[k])||((res.id||'sop')+'-'+k),check_type_id:p.fields.check_type_id,subject_id:d,outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who}); }); }
-  else logs.push({id:res.id||'',check_type_id:p.fields.check_type_id,subject_id:p.fields.subject_id||'',area_id:p.fields.area_id||'',litter_id:p.fields.litter_id||'',outcome:p.fields.outcome,how_recorded:p.fields.how_recorded,happened_at:p.fields.happened_at,taken_at:at,taken_by:who});
- }
+ var sent=await sendPlans('sop:'+key, plan.plans, msg);
  drawSops();
- if(bad){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) again.textContent=bad; }
+ if(!sent.ok){ var again=document.querySelector('[data-sop-record="'+CSS.escape(key)+'"] [data-sop-msg]'); if(again) showSave(again, sent.message); }
 }
 /* Checked today: an SOP with no check in force. The first time also adds the check_type row, then one check_log. */
 async function sopChecked(btn){
  var name=btn.getAttribute('data-sop-checked'), box=btn.closest('[data-sop-record]'); if(!box||typeof BLDSopRecords==='undefined') return;
  var msg=box.querySelector('[data-sop-msg]'), sop=(SOP.rows||[]).filter(function(r){ return r.short_name===name; })[0]||{short_name:name};
- var plan=BLDSopRecords.checkedPlan(sopCtx(), sop, new Date().toISOString());
+ var dayEl=box.querySelector('[data-sop-day]'), today=todayISO(), day=(dayEl&&dayEl.value)||today;
+ if(day>today){ if(msg) msg.textContent='Pick today or an earlier day.'; return; }
+ var now=(!day||day===today)?new Date().toISOString():(BLDJobsView.londonIso?BLDJobsView.londonIso(day,'12:00'):day+'T12:00:00.000Z');
+ var plan=BLDSopRecords.checkedPlan(sopCtx(), sop, now);
  if(plan.error){ if(msg) msg.textContent=plan.error; return; }
- btn.disabled=true; var typeId=plan.typeId||'', bad='';
- for(var i=0;i<plan.steps.length;i++){
+ if(day&&day<today) plan.steps.forEach(function(s){ if(s.table==='check_log') s.fields.confirm_unusual='yes'; });
+ btn.disabled=true; var typeId=plan.typeId||'', bad='', mem=saveMem('checked:'+name, day+'|'+plan.steps.length);
+ for(var i=mem.from;i<plan.steps.length;i++){
   var step=plan.steps[i], fields={}; Object.keys(step.fields).forEach(function(k){ fields[k]=step.fields[k]; });
   if(step.needsType) fields.check_type_id=typeId;
-  if(msg) msg.textContent='Saving '+(i+1)+' of '+plan.steps.length+'\u2026';
-  var r=await sinkSend({table:step.table,action:step.action,fields:fields});
-  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); break; }
+  var rid=mem.rids[i]||sinkRid(); mem.rids[i]=rid; mem.from=i;
+  if(msg){ msg.textContent='Saving '+(i+1)+' of '+plan.steps.length+'\u2026'; msg.setAttribute('data-rid', rid); }
+  var r=await sinkSend({table:step.table,action:step.action,fields:fields,request_id:rid});
+  if(!(r&&r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued'))){ bad=sinkMsg(r||{},''); if(!(r&&(r.code==='NETWORK'||r.kept))) mem.rids[i]=''; break; }
   var res=r.result||{};
   if(step.table==='check_type'){ typeId=res.id||typeId; (T['BLD-check_type.csv']||(T['BLD-check_type.csv']=[])).push(Object.assign({id:typeId}, fields)); }
   else (T['BLD-check_log.csv']||(T['BLD-check_log.csv']=[])).push({id:res.id||'',check_type_id:fields.check_type_id,outcome:fields.outcome,how_recorded:fields.how_recorded,happened_at:fields.happened_at,note:fields.note||'',taken_at:res.at||fields.happened_at,taken_by:res.who||''});
+  mem.from=i+1;
  }
+ if(!bad) delete SAVE_MEM['checked:'+name];
+ if(msg) msg.removeAttribute('data-rid');
  drawSops();
- if(bad){ var again=document.querySelector('[data-sop-checked="'+CSS.escape(name)+'"]'); if(again){ again.disabled=false; var m=again.parentNode.querySelector('[data-sop-msg]'); if(m) m.textContent=bad; } }
+ if(bad){ var again=document.querySelector('[data-sop-checked="'+CSS.escape(name)+'"]'); if(again){ again.disabled=false; var m=again.parentNode.querySelector('[data-sop-msg]'); if(m) showSave(m, bad); } }
 }
+/* Jobs table: a tick and a day. A dog, room or litter job opens its chooser first. The save matches a Board tap. */
+async function jobDone(btn){
+ var key=btn.getAttribute('data-job-done'), cell=btn.closest('td'); if(!cell) return;
+ var box=cell.querySelector('[data-job-box]'), pick=cell.querySelector('[data-job-pick]'), msg=cell.querySelector('[data-job-msg]');
+ if(pick&&pick.hasAttribute('hidden')){ pick.hidden=false; if(msg) msg.textContent=''; return; }
+ var picked=[];
+ if(pick) Array.prototype.forEach.call(pick.querySelectorAll('[data-job-tick]'),function(el){ if(!el.checked) return; picked.push({kind:el.getAttribute('data-kind')||'',id:el.value||'',area_id:el.getAttribute('data-area')||''}); });
+ var dayEl=box&&box.querySelector('[data-job-day]'), v=jobsV(), day=(dayEl&&dayEl.value)||v.today;
+ if(day>v.today){ if(msg) msg.textContent='Pick today or an earlier day.'; return; }
+ var plan=BLDJobsView.tapPlans(v, key, picked, pick?readExtra(pick,'job'):{}, day, new Date().toISOString());
+ if(plan.error){ if(msg) msg.textContent=plan.error; return; }
+ btn.disabled=true;
+ var sent=await sendPlans('job:'+key, plan.plans, msg);
+ if(!sent.ok&&!sent.added){ btn.disabled=false; return; }
+ COMP.doneNote={key:key, html:saveHtml(sent.message)};
+ go('compliance', false);
+ COMP.doneNote=null;
+}
+document.addEventListener('click',function(ev){
+ var all=ev.target.closest&&ev.target.closest('[data-job-all]');
+ if(all){
+  var host=all.closest('[data-job-pick]');
+  if(host) Array.prototype.forEach.call(host.querySelectorAll('[data-job-tick]'),function(el){ if(el.getAttribute('data-done')==='1') return; el.checked=true; });
+  delete SAVE_MEM['job:'+(all.getAttribute('data-job-all')||'')];
+  return;
+ }
+ var b=ev.target.closest&&ev.target.closest('[data-job-done]');
+ if(b&&!b.disabled) jobDone(b);
+});
+document.addEventListener('change',function(ev){
+ var el=ev.target;
+ if(!el||!el.getAttribute) return;
+ var job=el.getAttribute('data-job-day')||el.getAttribute('data-job-tick')||'';
+ var sop=el.getAttribute('data-sop-day')||el.getAttribute('data-sop-tick')||'';
+ if(job) delete SAVE_MEM['job:'+job];
+ if(sop) delete SAVE_MEM['sop:'+sop];
+});
 /* Print records: the yearly print for this SOP's records (loaded if it is not on the page yet).
    A SOP the yearly print does not cover falls through to this month in the Checks register. */
 /* Print records opens the print view first. The person presses Print there. It does not print the SOP list. */
@@ -5753,7 +5831,7 @@ var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],[
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve':'',
+function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve&section=inspect':'',
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,saveScore:bbSaveScore,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
 /* Breed Better enrol / un-enrol (Lisa 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
    Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
@@ -5779,9 +5857,9 @@ function bbSaveScore(f){
    points_earned:f.points_earned,points_available:f.points_available,status:'saved',calculated_at:r.at||'',replaces_id:r.replaces_id||''}); }); }
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
-if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); }
+PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']);   /* loads on first open (LAZY.bb) */
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
-if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
+PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']);   /* loads on first open (LAZY.enq) */
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Settings']);
@@ -5817,7 +5895,7 @@ function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],i
 function navHas(id){
  if(!viewOn(id)) return false;   /* switched off by the owner, or by the pack's starter */
  if(id==='temps') return true;
- if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
+ if(id==='breed') return bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
  if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
  if(id==='qrprint') return typeof AdminView!=='undefined'&&AdminView.on(T);
@@ -6007,16 +6085,17 @@ function goBody(id,push){
  document.getElementById('nav').innerHTML=navHtml();
  if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.open(sub||'home');
- /* Compliance (Lisa 22 Nov 2026): a read up to COMP_FRESH_MS old is shown at once with its "As of" time and Refresh;
-    an older one is read again first (the page waits for it, as before). Never shown without the time. */
+ /* A read up to COMP_FRESH_MS old is shown at once with its time; an older one is read again first. */
  if(LIVE_PAGES[id]&&!LOAD.copy&&!READING&&readAgeMs()>COMP_FRESH_MS&&TOKEN&&Date.now()<TOKEN_EXP){ load(); return; }
  var wait=LIVE_PAGES[id]&&LOAD.copy&&readAgeMs()>COMP_FRESH_MS?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
+ var lzErr='';
+ if(!wait){ var lz=lazyWait(id); if(lz&&lz.err){ wait='err'; lzErr='This page could not load: '+lz.err; } else if(lz) wait='loading'; }
  if(wait){
   main.innerHTML='<div class="card" id="cdWait" style="margin-top:24px"><h2 class="hx4">'+esc(label(id))+'</h2>'
-   +(wait==='err'?'<p>These records could not be read. '+esc(LOAD.laterErr||'')+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
+   +(wait==='err'?'<p>'+(lzErr?esc(lzErr):'These records could not be read. '+esc(LOAD.laterErr||''))+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
     :'<p class="mut">'+(wait==='live'?'Reading the live records. This page shows the copy on this device only when it is under 5 minutes old.':'Getting these records ready…')+'</p>')+'</div>';
   navCurrent(id);
-  chipsDraw(id); return;
+  chipsDraw(id); goPush(id,sub,full,push,prevShown,leaveY); return;   /* the wait card is a stop on Back too */
  }
  main.innerHTML=(LOAD.stale?'<p class="card acc4" role="status" style="margin-top:16px">Showing the copy on this device ('+esc(agoText(LOAD.storedAt))+'). The live read failed: '+esc(LOAD.stale)+'. <button data-reload="1">Try again</button></p>':'')+PAGES[id]();
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.bind(main, enqV());
@@ -6033,6 +6112,7 @@ function goBody(id,push){
  if(id==='compliance'&&/^ck-/.test(sub||'')) setTimeout(function(){ var r=document.getElementById(sub); if(r){ r.setAttribute('tabindex','-1'); r.focus({preventScroll:true}); if(r.scrollIntoView) r.scrollIntoView({block:'center'}); } },0);
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
+  if(DOGQ){ var qb=document.getElementById('q'); qb.value=DOGQ; DOGQ=''; setTimeout(function(){ qb.dispatchEvent(new Event('input')); },0); }
   var fst=document.getElementById('fst');
   statusList().forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
   var cs={}; CD.dogs.forEach(function(d){ if(d.colour) cs[colourLabel(d)]=d; });
@@ -6173,18 +6253,21 @@ function goBody(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;   /* breed and yearly keep the rest of the address, so Back and reload open the same view */
- if(push!==false && location.hash!=='#/'+at){
-  /* a real history entry that remembers where you came from and how far down (Back returns there) */
-  var pb=String(prevShown||'').split('/')[0];
-  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});   /* the name the menu uses */
- }
- /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
+ goPush(id,sub,full,push,prevShown,leaveY);
+ /* a record page: back to where you came from, or a way to its list when opened cold. Breed Better draws its own. */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
- Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });   /* kept words still hide what they hid */
- if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();   /* the folds (and their heading rows' height) are in place before the page goes back to where it was, so a redraw never shifts it (17 Nov 2026) */
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });
+ if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();
  window.scrollTo(0,keepY);
- var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);   /* a brick may add its own from (BB) */
+ var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);
+}
+/* History for a move. The wait card calls this too, so Back has one step per move. */
+function goPush(id,sub,full,push,prevShown,leaveY){
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;
+ if(push!==false && location.hash!=='#/'+at){
+  var pb=String(prevShown||'').split('/')[0];
+  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});
+ }
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
@@ -6265,7 +6348,7 @@ DashKit.search.register(function(q){
  var hit=DashKit.search.matches(q), out=findViews(hit), byId=CD._byId||{}, L=function(id){ return HubNav.VIEWS[id].label; };
  (CD.dogs||[]).filter(function(d){ return hit([d.name,d.id,d.chip,d.breed].join(' ')); }).slice(0,12).forEach(function(d){
   out.push({group:L('dogs'),slot:4,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
-   act:function(){ go('dogs'); var b=document.getElementById('q'); if(b){ b.value=d.name||d.id; b.dispatchEvent(new Event('input')); } focusView(); }});
+   act:function(){ DOGQ=d.name||d.id; go('dogs'); focusView(); }});   /* DOGQ: filled in once Dogs has drawn (it may first wait for its parts) */
  });
  (CD.areas||[]).filter(function(a){ return hit([a.code,a.id,a.grouping].join(' ')); }).slice(0,12).forEach(function(a){
   out.push({group:L('areas'),slot:4,title:a.code||a.id,sub:a.grouping||'',act:function(){ go('areas/'+encodeURIComponent(a.id)); focusView(); }});

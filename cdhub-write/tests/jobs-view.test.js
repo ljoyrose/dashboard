@@ -192,9 +192,12 @@ test('a dog job lists every due dog, ticked, with Mark all; an untick is left ou
   assert.deepEqual(one.plans.map((p) => p.fields.subject_id), ['d2']);
 });
 
-test('a dog already done today is not offered again', () => {
+test('a dog already done today is not ticked again, and an earlier day can still be recorded', () => {
   const v = world(job('microchip_check'), { logs: [{ id: 'l1', check_type_id: 'cty-microchip_check', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-25T09:00:00Z' }, { id: 'l2', check_type_id: 'cty-microchip_check', subject_id: 'd2', outcome: 'ok', happened_at: '2026-11-25T09:00:00Z' }] });
-  assert.doesNotMatch(V.sopHtml(v, 'Microchip Audit'), /data-sop-save=/);
+  const html = V.sopHtml(v, 'Microchip Audit');
+  assert.match(html, /data-sop-day="microchip_check"/);
+  assert.match(html, /data-sop-save="microchip_check"/);
+  assert.doesNotMatch(html, /data-sop-tick="microchip_check"[^>]*checked/);
 });
 
 test('a litter check saves litter_id and no subject_id', () => {
@@ -235,6 +238,57 @@ test('a room job and a whole-site line each name the place, and a note is requir
   const ok = V.savePlans(world(job('lost', { target: 'optional', every_days: '', note_required: 'true', sop: 'Lost Dog' })), 'lost', [{ kind: 'site' }], { note: 'Found by the gate' }, NOW);
   assert.equal(ok.plans[0].fields.note, 'Found by the gate');
   assert.equal(ok.plans[0].fields.how_recorded, 'tapped');
+});
+
+test('each Jobs row has a tick and a day that defaults to today, and a dog job keeps a chooser', () => {
+  const v = world(job('microchip_check', { label: 'Chip check' }));
+  const html = V.complianceHtml(v, () => '');
+  assert.match(html, /data-job-day="microchip_check"[^>]*max="2026-11-25"[^>]*value="2026-11-25"/);
+  assert.match(html, /data-job-done="microchip_check"[^>]*aria-label="Done: Chip check"/);
+  assert.match(html, /data-job-pick="microchip_check"[^>]*hidden/);
+  assert.match(html, /data-job-tick="microchip_check"[^>]*value="d1"[^>]*checked/);
+  assert.match(html, /data-job-all="microchip_check"/);
+  const site = world(job('bowls', { target: 'none', site_scope: 'one_line', every_days: '1', label: 'Bowls', sop: 'Cleaning' }));
+  const siteHtml = V.complianceHtml(site, () => '');
+  assert.match(siteHtml, /data-job-done="bowls"/);
+  assert.doesNotMatch(siteHtml, /data-job-pick="bowls"/);
+});
+
+test('a Jobs tick uses the Board tap: site is one add_site, a dog is one add, an earlier day is noon London', () => {
+  const siteV = world(job('bowls', { target: 'none', site_scope: 'one_line', every_days: '1', sop: 'Cleaning' }));
+  const today = V.tapPlans(siteV, 'bowls', [], {}, '2026-11-25', NOW);
+  assert.equal(today.plans.length, 1);
+  assert.equal(today.plans[0].action, 'add_site');
+  assert.equal(today.plans[0].fields.how_recorded, 'site_tap');
+  assert.equal(today.plans[0].fields.happened_at, NOW);
+  assert.equal(today.plans[0].fields.outcome, 'ok');
+  assert.equal(today.plans[0].fields.subject_id, undefined);
+  assert.equal('taken_by' in today.plans[0].fields, false);
+  const earlier = V.tapPlans(siteV, 'bowls', [], {}, '2026-11-20', NOW);
+  assert.equal(earlier.plans[0].fields.happened_at, V.londonIso('2026-11-20', '12:00'));
+  assert.equal(earlier.plans[0].fields.confirm_unusual, 'yes');
+  assert.equal(earlier.plans[0].fields.how_recorded, 'site_tap');
+  assert.equal(earlier.plans[0].action, 'add_site');
+  assert.match(V.tapPlans(siteV, 'bowls', [], {}, '2026-11-26', NOW).error, /earlier/);
+  const dog = V.tapPlans(world(job('microchip_check')), 'microchip_check', [{ kind: 'dog', id: 'd2' }], {}, '2026-11-25', NOW);
+  assert.equal(dog.plans[0].action, 'add');
+  assert.equal(dog.plans[0].fields.subject_id, 'd2');
+  assert.equal(dog.plans[0].fields.how_recorded, 'tapped');
+  assert.equal(dog.plans[0].fields.happened_at, NOW);
+  const room = V.tapPlans(world(job('daily_clean', { target: 'area', every_days: '1', sop: 'Cleaning' })), 'daily_clean', [{ kind: 'area', id: 'r1' }], {}, '2026-11-25', NOW);
+  assert.equal(room.plans[0].action, 'add');
+  assert.equal(room.plans[0].fields.area_id, 'r1');
+  assert.equal(room.plans[0].fields.how_recorded, 'tapped');
+  const litter = V.tapPlans(world(job('pup_microchip', { target: 'litter', every_days: '', label: 'Puppy chips' })), 'pup_microchip', [{ kind: 'litter', id: 'lit1' }], {}, '2026-11-25', NOW);
+  assert.equal(litter.plans[0].fields.litter_id, 'lit1');
+  assert.equal(litter.plans[0].fields.subject_id, undefined);
+  assert.equal(litter.plans[0].fields.how_recorded, 'tapped');
+  const per = V.tapPlans(world(job('health', { target: 'none', site_scope: 'per_dog', every_days: '1', sop: 'Health Check' })), 'health', [{ kind: 'dog', id: 'd1' }, { kind: 'dog', id: 'd2' }], {}, '2026-11-25', NOW);
+  assert.equal(per.plans.length, 1);
+  assert.equal(per.plans[0].action, 'add_site');
+  assert.equal(per.plans[0].fields.dog_ids, 'd1|d2');
+  assert.equal(per.plans[0].fields.how_recorded, 'site_tap');
+  assert.match(V.tapPlans(world(job('microchip_check')), 'microchip_check', [], {}, '2026-11-25', NOW).error, /Tick/);
 });
 
 test('the jobs table counts subjects on site that day, occupied rooms, and own-table last dates', () => {

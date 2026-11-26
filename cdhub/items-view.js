@@ -630,7 +630,7 @@
             + '<td>' + e(rec ? rec.values.map(function (val) { return val.label + ' ' + val.value + (val.unit ? ' ' + val.unit : '') + (val.inr === false ? ' (outside)' : ''); }).join(', ') : '') + '</td><td>' + (rec ? rec.files.map(function (f) { return '<a href="' + e(f.href) + '">' + e(f.label) + '</a>'; }).join(' ') : '') + '</td></tr>';
         }).join('');
       }).join('') + '</tbody></table>';
-    w.document.write('<!doctype html><meta charset="utf-8"><title>' + (typeof self !== 'undefined' && self.CD_DEMO ? 'DEMO ' : '') + 'Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}img.ph{width:90px;max-height:90px;object-fit:cover;display:block}tr{break-inside:avoid}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
+    w.document.write('<!doctype html><meta charset="utf-8"><title>' + (typeof self !== 'undefined' && self.CD_DEMO ? 'DEMO ' : '') + 'Items ' + e(on) + '</title><style>body{font:12px system-ui,sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid silver;padding:3px 5px;text-align:left;vertical-align:top}th{background:gainsboro}img.ph{width:90px;height:90px;aspect-ratio:1/1;object-fit:cover;object-position:center;display:block}tr{break-inside:avoid}@media print{a{color:black}}</style>' + body + '<script>setTimeout(function(){print()},300)<\/script>');
     w.document.close();
   }
 
