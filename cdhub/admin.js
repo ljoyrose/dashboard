@@ -37,7 +37,7 @@ var AdminView = (function () {
     ['codes', 'Codes', 'key', 2, 'Codes'],
     ['phone', 'Set up a phone', 'qr', 5, 'Phones'], ['saving', 'This device', 'save', 5, 'Phones'],
     ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
-    ['inspect', 'Inspector link', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
+    ['inspect', 'Inspector links', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
     ['print', 'Print', 'print', 4, 'Tools'], ['rules', 'Rules & limits', 'rules', 3, 'Tools'],
     ['records', 'Records kept', 'records', 0, 'Tools'], ['checks', 'Check settings', 'check', 3, 'Tools'],
     ['health', 'System health', 'health', 5, 'Tools'],
@@ -97,8 +97,15 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
-  /* Phone set-up QR opens the staff page on this same site. The owner's qr.base_url rule row in force wins
-     (https, ending in /), as on the print page. */
+  /* Phone set-up QR opens the staff page on this site. A configured https address
+     (cdhub.publicStaffBase, ending in /) wins over that. A qr.base_url rule row in force wins over both. */
+  function staffPublicBase() {
+    var cfg = '';
+    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
+    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
+    var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  }
   function qrBase(T, today) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
@@ -106,8 +113,9 @@ var AdminView = (function () {
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(val) || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
       if (!best || f >= best.f) best = { f: f, v: val };
     });
-    return best ? best.v : staffBase();
+    return best ? best.v : staffPublicBase();
   }
+  function hostOf(url) { return String(url || '').replace(/^https?:\/\/([^/]+).*$/, '$1'); }
   function ownerPage(v, label, section) {
     var u = scriptUrl();
     return u ? '<a class="btn" href="' + v.esc(u + '?page=approve' + (section ? '&section=' + section : '')) + '" target="_blank" rel="noopener">' + (label || 'Open owner page') + '</a>'
@@ -234,7 +242,7 @@ var AdminView = (function () {
 
   /* ---- the cards ---- */
   function body(v, id) {
-    var T = v.T, u = scriptUrl(), host = location.host, qrHost = String(qrBase(T, v.today)).replace(/^https:\/\/([^/]+).*$/, '$1');
+    var T = v.T, u = scriptUrl(), host = location.host, qrHost = hostOf(qrBase(T, v.today));
     if (id === 'codes') {
       var C = rows(T, 'BLD-code_register.csv').filter(function (r) { return r.code_id; }), byCode = {};
       C.forEach(function (r) { (byCode[r.code_id] = byCode[r.code_id] || []).push(r); });
@@ -255,7 +263,7 @@ var AdminView = (function () {
         + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + ' <a class="cb" href="' + v.esc(staffBase() + 'vault/') + '">Codes vault</a></p>'
         + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
         + '<p class="mut"><b>End</b> sets an end date. Nothing is deleted.</p>'
-        + '<p class="mut help">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
+        + '<p class="mut help">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector links</button></p>';
     }
     if (id === 'phone') {
       var link = u ? qrBase(T, v.today) + '#setup=' + encodeURIComponent(u) : '', qr = '';
@@ -310,8 +318,8 @@ var AdminView = (function () {
         var e = String(r.ends || '').slice(0, 10), live = e >= v.today;
         return '<li>' + mark(live) + ' <b>' + v.esc(r.label || r.id) + '</b> ends <span class="dpill' + (live ? '' : ' late') + '">' + v.esc(v.dmy(e)) + '</span>' + (live ? '' : ' <span class="mut">ended</span>') + '</li>';
       }).join('') + '</ul>' : '<p class="mut">No links yet.</p>') : '<p class="mut">Links not set up yet.</p>')
-        + steps(['Owner page → <b>Inspector link</b>', 'Tick the dogs and what they see', 'Send the link. It ends by itself'])
-        + '<p>' + ownerPage(v, 'Make or end a link') + '</p>' + (openN.length ? '<p class="mut">' + openN.length + ' open now.</p>' : '');
+        + steps(['Owner page → <b>Inspector links</b>', 'Tick the dogs and what they see', 'Send the link. It ends by itself'])
+        + '<p>' + ownerPage(v, 'Make or end a link', 'inspect') + '</p>' + (openN.length ? '<p class="mut">' + openN.length + ' open now.</p>' : '');
     }
     if (id === 'lost') {
       return steps(['Owner page → <b>Revoke</b> their code', 'That phone is wiped on its next use', 'New code: <button type="button" class="cb" data-adm-open="staff">Add staff</button>', 'New phone: <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
@@ -320,7 +328,7 @@ var AdminView = (function () {
     if (id === 'print') {
       return '<p><a class="btn" href="' + v.esc(staffBase() + 'print/') + '">' + icon('print') + ' Open Print</a></p>'
         + '<p class="mut help">Room cards · dog cards · litter cards · set-up QRs. Needs an owner code on this device.</p>'
-        + '<p class="mut help">QRs open <b>' + v.esc(qrHost) + '</b>, whichever address you print from.</p>';
+        + '<p class="mut help">QRs open <b>' + v.esc(qrHost) + '</b>.</p>';
     }
     if (id === 'rules') {
       var R = rows(T, 'BLD-breeding_rule.csv').filter(function (r) { return r.rule_key; }), by = {};
@@ -364,7 +372,7 @@ var AdminView = (function () {
   function sub(v, id) {
     var u = !!scriptUrl();
     if (id === 'codes') { var cr = rows(v.T, 'BLD-code_register.csv').filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }); return v.hasTable('BLD-code_register.csv') ? cr.length + ' live' : 'Who has one'; }
-    if (id === 'phone') return u ? 'Show QR · ' + v.esc(String(qrBase(v.T, v.today)).replace(/^https:\/\/([^/]+).*$/, '$1')) : 'Needs a save address';
+    if (id === 'phone') return u ? 'Show QR · ' + v.esc(hostOf(qrBase(v.T, v.today))) : 'Needs a save address';
     if (id === 'saving') return v.sinkOn() ? 'Saving on ✓' : 'Saving off';
     if (id === 'staff') { var n = rows(v.T, 'BLD-role.csv').filter(function (r) { return r.code; }).length; return n ? n + ' roles' : 'Steps'; }
     if (id === 'visitor') return 'Ends by itself';

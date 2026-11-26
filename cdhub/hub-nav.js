@@ -125,6 +125,24 @@
     return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
+  /* The save address kept in this browser, same check as Settings. Empty when none is known. */
+  function saveAddress() {
+    var store;
+    try { store = root.localStorage; } catch (e) { store = null; }
+    if (!store || !store.getItem) return '';
+    var u = '';
+    try { u = store.getItem('cdhub.sink.url') || store.getItem('bld.scriptUrl') || store.getItem('cdhub.save.url') || ''; } catch (e) { u = ''; }
+    return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
+  }
+  /* Inspector links: the owner page section, or the set-up line when this browser has no save address. */
+  function inspectItem(opts) {
+    var u = saveAddress(), icon = '<svg class="hi" width="20" height="20" aria-hidden="true" focusable="false"><use href="#hi-search"/></svg>';
+    if (u) {
+      return '<a href="' + esc(u + '?page=approve&section=inspect') + '" target="_blank" rel="noopener" data-inspect-links>' + icon + '<span class="htl">Inspector links</span></a>';
+    }
+    var setup = '<a class="cb" href="' + (opts.links === 'href' ? './index.html#/round' : '#/round') + '">Set it up</a>';
+    return '<div class="mut" data-inspect-links>' + icon + '<span class="htl">Inspector links</span> No save address in this browser. ' + setup + '</div>';
+  }
   function viewItem(id, slot, opts, has) {
     var v = VIEWS[id];
     if (!v || !has(id)) return '';
@@ -163,7 +181,7 @@
     }).join('');
     /* More: every other view of every switched-on section, in colour order, each in its section's colour
        (a view a bar tab already opens is not repeated). */
-    var items = SECTIONS.filter(function (s) { return s.id === 'main' || lay.on[s.id]; }).map(function (s) {
+    var items = inspectItem(opts) + SECTIONS.filter(function (s) { return s.id === 'main' || lay.on[s.id]; }).map(function (s) {
       return s.views.map(function (id) { return onBar[id] ? '' : viewItem(id, s.slot, opts, has); }).join('');
     }).join('');
 
