@@ -1,4 +1,4 @@
-// Dog card photo (Lisa, 13 Nov 2026): a bigger photo; Take photo (camera) or Upload photo on any device; edit
+// Dog card photo : a bigger photo; Take photo (camera) or Upload photo on any device; edit
 // (brightness, contrast) and crop before save; the page still shrinks to 800 x 800 within 350,000 characters (#500).
 // Invented dog and invented pictures only; the save script is pretend; the camera is a pretend canvas camera.
 const fs = require('fs');

@@ -61,7 +61,7 @@ test.describe('CD Hub dog photos', () => {
     await expect(broken.locator('img.dogphoto')).toBeHidden();
   });
 
-  test('the photo is a button; Take and Upload open from it and are not always on the card (Lisa, 25 Nov 2026)', async ({ page, guard }) => {
+  test('the photo is a button; Take and Upload open from it and are not always on the card', async ({ page, guard }) => {
     await openDogs(page, guard);
     const shown = card(page, 'Pretend One');
     const empty = card(page, 'Pretend Two');

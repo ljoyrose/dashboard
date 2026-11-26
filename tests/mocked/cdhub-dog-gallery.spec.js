@@ -1,4 +1,4 @@
-// Main photo + gallery on the dog card (Lisa 13 Nov 2026): files rows owned through dated link rows (decision C, column role).
+// Main photo + gallery on the dog card : files rows owned through dated link rows (decision C, column role).
 // The main photo is the 'main' link in force; the old photo cell is only the fallback. Invented rows only.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');

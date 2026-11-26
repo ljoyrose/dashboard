@@ -1,5 +1,5 @@
-// Dog gallery: Remove and Make main (Lisa 16 Nov 2026: "some are bad so need to be able to remove").
-// Nothing is deleted: Remove ends the photo's gallery link. The card does not list ended photos (Lisa, 25 Nov 2026).
+// Dog gallery: Remove and Make main .
+// Nothing is deleted: Remove ends the photo's gallery link. The card does not list ended photos .
 // Make main adds a main link. Invented rows only; pretend save script.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');

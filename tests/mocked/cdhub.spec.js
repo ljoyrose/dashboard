@@ -447,7 +447,7 @@ test.describe('CD Hub house look', () => {
     });
   }
 
-  // A row that opens wears the pale grey hover fill (Lisa, 12 Nov 2026); the controls on it keep their 1px line at 3:1 or more
+  // A row that opens wears the pale grey hover fill ; the controls on it keep their 1px line at 3:1 or more
   // against that fill, in every look (warm dark mixes less muted into --hov for this, tokens.css --house-hov-mix).
   for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
     test(`${look} ${scheme}: on a hovered row the control rings stay 3:1 against the hover fill`, async ({ page, guard }) => {
