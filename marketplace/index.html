@@ -283,12 +283,7 @@
     return '<span class="date' + (u === 'late' ? ' late' : u ? ' soon' : '') + '">Post by ' + esc(lab) + (u ? ' · ' + u : '') + '</span>'; }
   function emptyCard(title, line, extra) { return '<div class="card empty"><span class="okring" aria-hidden="true">✓</span><div><h2>' + esc(title) + '</h2>' + (line ? '<p class="what">' + esc(line) + '</p>' : '') + '</div>' + (extra || '') + '</div>'; }
   function ghead(name, n, need) { return '<div class="ghead"><p class="grp">' + esc(name) + '</p>' + (n ? '<span class="cnt' + (need ? ' need' : '') + (n > 99 ? ' wide' : '') + '">' + n + '</span>' : '') + '</div>'; }
-  // "Same item?" cards (key LINK|<other>|<eBay>): both photos side by side, big; tap one to open it full size.
-  // The second photo comes from RR_LISTINGS.csv (image_url), read once with the owner's sign-in; nothing is written to it.
-  // Who a card belongs to: a round photo per person (a Drive image named AVATAR_<name>, e.g. AVATAR_Lisa.jpg, read with the owner's
-  // sign-in, never stored in this public site), else the person's initials in their own colour. The photo is cropped to a
-  // circle on screen (centred, a little above the middle where faces usually are), so any photo size works.
-  var AVA_COL = { lisa: 1, cy: 1, g: 1, h: 1, cn: 1 }, avatars = null;   // colours: --ljr-ava-<name> in tokens.css
+  var AVA_COL = { user: 1, cy: 1, g: 1, h: 1, cn: 1 }, avatars = null;
   function loadAvatars() {
     if (avatars !== null) return; avatars = {};
     var q = "name contains 'AVATAR_' and mimeType contains 'image/' and trashed = false";
@@ -408,7 +403,7 @@
   }
 
   /* ---------- what needs the owner ---------- */
-  function owner(r) { return detail(r).owner || 'Lisa'; }
+  function owner(r) { return detail(r).owner || 'User'; }
   var SITE_NAMES = { ebay: 'eBay', vinted: 'Vinted', etsy: 'Etsy', depop: 'Depop', temu: 'Temu', facebook: 'Facebook' };
   function siteOf(r) { var p = String(detail(r).platform || '').toLowerCase(); return SITE_NAMES[p] || (p ? p.charAt(0).toUpperCase() + p.slice(1) : ''); }
   function shown(r) { return (who === 'All' || user(r) === who) && (site === 'All' || siteOf(r).toLowerCase() === site.toLowerCase()); }

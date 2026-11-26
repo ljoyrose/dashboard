@@ -41,8 +41,8 @@ test('ACCEPT: the check fails a price, a £ figure, COI, hypoallergenic alone, a
 test('ACCEPT: an invented Swiss buyer gets an official government page or "the owner to confirm"', () => {
   const d = C.buildDraft('first-abroad', { name: 'Buyer Swiss', country: 'Switzerland' });
   assert.match(d.email.text, /https:\/\/www\.gov\.uk\/taking-your-pet-abroad/);
-  assert.match(d.email.text, /Lisa to confirm/);
-  assert.match(d.whatsapp, /Lisa to confirm/);
+  assert.match(d.email.text, /User to confirm/);
+  assert.match(d.whatsapp, /User to confirm/);
   // the owner's own official page from Settings replaces the fallback; a non-government link is ignored.
   const own = C.buildDraft('first-abroad', { country: 'Switzerland', importPages: 'Switzerland=https://www.blv.admin.ch/example-page; Spain=https://example.com/rules' });
   assert.match(own.email.text, /blv\.admin\.ch/);

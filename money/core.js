@@ -111,7 +111,7 @@
   var PRIORITY = { urgent: 0, high: 1, normal: 2, low: 3 };
   function isOpen(r) { return !/^closed|^done|^answered/i.test(r.state || ''); }
   /** True when a register row's owner starts with the owner. */
-  function isLisa(r) { return /^lisa\b/i.test(r.owner || ''); }
+  function isUser(r) { return /^user\b/i.test(r.owner || ''); }
   /** True when a register row's kind is todo, question or decision. */
   function isTask(r) { return /^(todo|question|decision)$/i.test(r.kind || ''); }
   function ready(rec, all) {

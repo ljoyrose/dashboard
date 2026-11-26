@@ -297,7 +297,7 @@ test.describe('Home: house look', () => {
       expect(c.bc).toBe(late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
       await expect(page.locator('#mainNav a[data-nav="map"]')).toHaveAttribute('aria-label', late ? /late$/ : /waiting$/);
       expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (the owner's tab picks, 2 Nov)
-      expect([c.h, c.w], 'tab count 24 x 24 (a 14px number, Lisa\'s pick A)').toEqual([24, 24]);
+      expect([c.h, c.w], 'tab count 24 x 24 (a 14px number, User\'s pick A)').toEqual([24, 24]);
     }
   });
 

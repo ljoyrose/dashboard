@@ -880,7 +880,7 @@ test('reading is a separate switch from saving, and works through doPost', () =>
 });
 
 // ================================================================== OWNER EDIT: the owner overwrites a wrong entry in place (owner page only)
-const asOwner = (env) => { env.email = 'owner@example.test'; };
+const asUser = (env) => { env.email = 'user@example.test'; };
 function seedThree(env) {
   const ids = [];
   [['area-t1', '20', '22'], ['area-t2', '19', '21'], ['area-t3-1', '18', '20']].forEach(([a, mn, mx]) => {

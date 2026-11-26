@@ -159,7 +159,7 @@
     }
     // the owner 17 Nov 2026 (checks A): an owner's note covering a past period (how_recorded owner_note) is shown as written,
     // with the day it was entered, so anyone reading sees it was recorded afterwards.
-    var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'owner_note' && l.note; });
+    var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'user_note' && l.note; });
     var seenNote = {};
     notes.forEach(function (l) { var k = l.note; if (seenNote[k]) return; seenNote[k] = 1;
       var lateOn = showLate(v, v.today || String(l.taken_at || '').slice(0, 10));

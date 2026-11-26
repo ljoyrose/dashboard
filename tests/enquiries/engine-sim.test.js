@@ -292,9 +292,9 @@ test('Stage 8: drafts in the Drafts tab only (email + WhatsApp), none for do-not
 test('Stage 8: styleSample() keeps only the owner\'s own stripped replies in the Style tab', { skip }, () => {
   const gmail = [
     // Invented sender on the owner's domain, assembled so the privacy guard does not read it as a real address.
-    { id: 'TH-S8-1', from: 'Lisa <lisa' + '@labradoodles.co.uk>', to: 'Buyerina Sample <buyer.s8@example.com>', subject: 'Re: puppy',
-      body: 'Hi Buyerina,\n\nThank you so much for getting in touch, I would love to help. Have a look at https://doc.labradoodles.co.uk/breed and tell me what you are looking for. You can call me on 07700 900511.\n\nKind regards,\nLisa\n\nOn Mon, 1 Sep 2026, Buyerina wrote:\n> Do you have puppies?' },
-    { id: 'TH-S8-2', from: 'Someone Else <someone@example.com>', to: 'x', subject: 'puppy', body: 'Not Lisa, long enough text to count as a reply here, really quite long indeed yes.' }
+    { id: 'TH-S8-1', from: 'User <user' + '@labradoodles.co.uk>', to: 'Buyerina Sample <buyer.s8@example.com>', subject: 'Re: puppy',
+      body: 'Hi Buyerina,\n\nThank you so much for getting in touch, I would love to help. Have a look at https://doc.labradoodles.co.uk/breed and tell me what you are looking for. You can call me on 07700 900511.\n\nKind regards,\nUser\n\nOn Mon, 1 Sep 2026, Buyerina wrote:\n> Do you have puppies?' },
+    { id: 'TH-S8-2', from: 'Someone Else <someone@example.com>', to: 'x', subject: 'puppy', body: 'Not User, long enough text to count as a reply here, really quite long indeed yes.' }
   ];
   const e = FAKE.load(src, { gmail, dryRun: false });
   e.ctx.setup();

@@ -456,7 +456,6 @@
  *   groups: [{ id, name }]   (WHERE ladder: Group › Business (brand) › Product)
  *   assets: [{ id, accountId, title, brandIds: [id], productId, projectName, type (see TYPES), recipe, size: 'S'|'M'|'L',
  *              stage: 0-8 (0 Idea · 1 Research · 2 Recipe · 3 Spec lock · 4 Inputs · 5 Make · 6 Check · 7 Approve · 8 Operate),
- *              who: 'lisa'|'claude'|'grok'|'engine', fit: 'AUTO'|'HAND', evergreen: bool, dated: bool, eventDate: 'YYYY-MM-DD'|null,
  *              provider, cost (£), rating (0-5), reviewLink, docLink, version, priority: 'urgent'|'high'|'normal'|'low'|null,
  *              updated: ISO, flags: [string],
  *              gate: { question, at: ISO } | null   (a gate waiting on the owner: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE),
@@ -480,7 +479,6 @@
  *   gaps:   [{ capability, format|null, ratio|null, reason, assetIds: [id] }]   (no owned tool can do a kit's need: buy or approve one)
  *   failed: [{ assetId, kind }]   (requests the engine could not apply; the page clears their ✓)
  * }
- * Lists: Me = Review (stage 7) + Gates + Tasks (fit HAND, who lisa). Ideas = stage 0. Assets = 1-7. Library = 8.
  * Account: an item's accountId, else its first brand's. Account chips show only when there is more than one account.
  * Group: an item's groupId, else its first brand's. Group chips show only when more than one group has items.
  * Test items: title starting TEST- or ZZ_DELETE_, or flag 'test': hidden unless the TEST switch is on.
