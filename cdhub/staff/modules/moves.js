@@ -170,7 +170,7 @@
           h('div', { class: 'nm', text: '⚠ Over the licence limit' }),
           h('p', { text: 'Moving ' + names + ' to ' + room.label + ': ' + r.message })
         ]));
-        if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask User.', 'bad')); return; }
+        if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask the owner.', 'bad')); return; }
         var why = h('input', { class: 'inp', type: 'text', maxlength: '500', 'aria-label': 'Why this move is needed', placeholder: 'Why is this move needed?' });
         var err = say('');
         host.appendChild(why); host.appendChild(err);
