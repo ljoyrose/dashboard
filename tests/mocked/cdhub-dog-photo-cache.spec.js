@@ -26,7 +26,7 @@ test('gallery thumbs are about 200px and a remove does not download the other pi
     hits.push(route.request().url());
     return route.fulfill({ status: 200, contentType: 'image/png', body: PNG });
   });
-  await page.addInitScript(() => { try { localStorage.setItem('cdhub.sink.url', 'https://example.com/exec'); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} });
+  await page.addInitScript(() => { try { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/FAKE-TEST-ID/exec'); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} });
   await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'lnk-x' } }) }));
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
   const w = guard.world;

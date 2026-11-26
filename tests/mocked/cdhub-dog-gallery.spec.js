@@ -69,7 +69,7 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
 for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop', width: 1280, height: 800 }]) {
   test(`dog card gallery (${size.name}): photo dates follow the owner's own setting, then the everyone default; the button saves the owner's own row`, async ({ page, guard }) => {
     await page.setViewportSize({ width: size.width, height: size.height });
-    const URL_ = 'https://example.com/exec';
+    const URL_ = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
     await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} }, URL_);
     const sent = [];
     await page.route(/^https:\/\/script\.google\.com\/macros\//, (route) => {

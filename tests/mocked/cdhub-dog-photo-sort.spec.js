@@ -10,7 +10,7 @@ function put(world, name, content) {
   const like = world.files.find((x) => x.name === 'BLD-area.csv' && !x.trashed);
   world.file('fx-' + name, name, content, { parents: like.parents, driveId: like.driveId, mimeType: like.mimeType });
 }
-const URL_ = 'https://example.com/exec';
+const URL_ = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGP8z8DAwMDAxMDAwMAAACYABTxrpVkAAAAASUVORK5CYII=';
 
 async function setUp(page, guard, today) {
