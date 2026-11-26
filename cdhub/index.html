@@ -370,22 +370,23 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ph .ti{width:40px;height:40px}
 .ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
 .ph .off{display:none !important}
-.dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
-.dogphoto-btn{justify-content:center;padding:0 8px}
-/* bigger photo, then Take photo and Upload photo under it (Lisa, 13 Nov 2026: camera or upload, any device) */
-.dogphoto-col{width:120px}
-.dogphoto-btns{display:flex;flex-direction:column;gap:6px}
-.dogphoto-btn{width:100%;box-sizing:border-box;white-space:nowrap}
+.dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:120px}
+/* The photo itself is the button . Take and Upload open under it, only while that menu is open. */
+#main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd){position:absolute;inset:0;display:grid;place-items:center;width:100%;height:100%;min-height:0;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;box-shadow:none}
+#main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd):hover{background:transparent;border:0}
+.phbtn:focus-visible{outline:2px solid var(--ljr-6);outline-offset:-3px}
+.phmenu{display:flex;flex-direction:column;gap:4px}
+.phmenu[hidden]{display:none}
+.phmenu .btn{width:100%;box-sizing:border-box;justify-content:center;min-height:44px}
+.phmenu .btn:focus-within{outline:2px solid var(--ink);outline-offset:1px}
+.wedit{margin-left:auto;flex:none;min-width:44px}
 /* Tighter card, phone first (Lisa, 15 Nov 2026: "wastes space and the photo is small"): on a phone the photo is the card's
-   full width, Take photo and Upload photo sit side by side under it, then the name; on wider screens the photo is bigger. */
+   full width, then the name; on wider screens the photo is bigger. */
 @media(max-width:600px){
  .dc .dc-top{flex-direction:column;align-items:stretch;gap:8px;padding:12px 12px 6px}
  .dogphoto-col{width:100%}
  .ph{width:100%;height:auto;aspect-ratio:1/1;max-width:100%}
  .ph .ti{width:56px;height:56px}
- .dogphoto-btns{flex-direction:row}
- .dogphoto-btn{flex:1 1 0;width:auto}
- .dogphoto-btn[data-photo-edit]{flex:0 0 auto;padding:0 12px}
 }
 @media(min-width:601px){.ph{width:160px;height:auto;aspect-ratio:1/1}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
@@ -394,7 +395,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .pcam video{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid var(--line);border-radius:var(--radius);background:var(--soft)}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
-/* gallery (Lisa 13 Nov 2026): small square thumbnails, files and links as plain links */
+/* gallery : small square thumbnails, files and links as plain links */
 .glist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .glist .gi{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);max-width:100%}
 .gph{display:block;width:88px;height:auto;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:var(--line)}
@@ -419,7 +420,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .pcrop-zoom input{width:100%}
 .pcrop-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pcrop-gap{flex:1}
 @media(max-width:767px){.pcrop-btns .btn{height:var(--house-btn-phone)}}
-.ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center}
+.ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;pointer-events:none}
 .ph .gicon svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
 .ph .gicon.f{background:var(--female)}
 .ph .gicon.m{background:var(--male)}
@@ -617,7 +618,7 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
 body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 *{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
+.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.phmenu,.wedit,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
 .wrap{padding:0!important;margin:0!important;max-width:none!important}
 #main{max-width:none!important;margin:0!important;padding:0!important}
 #main [data-house-folded]>[data-fold-part]{display:revert!important}
@@ -732,7 +733,7 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 WANT.push('BLD-subject_link.csv');
-WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery (Lisa 13 Nov 2026): one file store, link rows (decision C); absent until Lisa creates them */   /* BFFs / Fren. links (Lisa 13 Nov 2026); absent until Lisa creates it */
+WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery : one file store, link rows (decision C); absent until the files exist */   /* BFFs / Fren. links ; absent until the file exists */
 var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 /* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
    screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
@@ -1273,14 +1274,14 @@ function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(
  var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
  /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
  m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
-/* Newest first. The same date keeps the order the rows were read in (Lisa 25 Nov 2026). */
+/* Newest first. The same date keeps the order the rows were read in . */
 function byDateDesc(a, b){ var x=String(a.on||''), y=String(b.on||''); return x>y?-1:(x<y?1:0); }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
   var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
       MC=idx(T['BLD-microchip.csv'],'subject_id');
-  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||''}); }); /* source column stays in the sheet, not shown (Lisa, 12 Nov 2026) */
-  Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
+  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({id:r.id||'',on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||'',corrects:r.corrects_id||''}); }); /* source column stays in the sheet, not shown  */
+  Object.keys(W).forEach(function(k){ var live=liveWeights(W[k]); live.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); W[k]=live; });
   var DSP={}, seenDose={}, copiedDose={};
   function doseOn(v){ return String(v||'').slice(0,10); }
   (T['BLD-dispense.csv']||[]).forEach(function(r){
@@ -1405,7 +1406,7 @@ function build(){
   CD.litters=T['BLD-litter.csv']||[];
   CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
-  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only (Lisa, 12 Nov 2026)
+  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
   CD._built=Date.now(); CD._needs=null;
@@ -1413,7 +1414,7 @@ function build(){
 }
 
 var TODAY=new Date();
-function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* owner screens: "2 Mar 2026" (Lisa 13 Nov 2026), one formatter: staff/lib/date-words.js */
+function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* owner screens: "2 Mar 2026" , one formatter: staff/lib/date-words.js */
 function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
 var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
@@ -1892,7 +1893,7 @@ function checks(){
      :'no bitch is over your most litters'});
  out.push({k:'breeding rules',ok:!unset.length,
    msg:unset.length? unset.length+' of 3 not set yet: '+unset.join(', ')+'. Set them on Compliance.':'all 3 set; litters and matings are checked against the version in force on their own date'});
- 
+
  var rl=roomAudit(todayISO());
  out.push({k:'room limits',ok:!rl.over.length&&!rl.unknown.length,
    msg:rl.over.length? rl.over.length+' room'+(rl.over.length===1?' is':'s are')+' over: '+rl.over.slice(0,5).map(function(x){ return x.label+' ('+x.mix+', takes '+x.alternatives+')'; }).join(', ')+(rl.over.length>5?' \u2026':'')
@@ -2419,7 +2420,7 @@ function showList(key){
   });
  });
 }
-/* Place a dog (Lisa, 12 Nov 2026): pick a cabin, check the room's limits with the dog's size from its latest weight, then
+/* Place a dog : pick a cabin, check the room's limits with the dog's size from its latest weight, then
    one move row through the save script (the same path as The round). Replaces the old "flag" (it wrote to a database
    that no longer exists) and the "not in a cabin" Save that wrote the Drive file straight from the browser. */
 function placeCell(d){
@@ -2648,7 +2649,7 @@ function pageDogs(){
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
 function ageBand(m){ if(m===null) return '__none'; return isPupM(m)?'p':(isAdultM(m)?'a':''); }
-/* Edit the card header (Lisa, 12 Nov 2026): name, sex, date of birth, colour, entire/neutered, microchip. One save,
+/* Edit the card header : name, sex, date of birth, colour, entire/neutered, microchip. One save,
    action dog_details, owner code only, behind SAVE_ENABLED and TABLE_ON_dog_details. Size comes from weight unless an owner size_override row is set. */
 function dEditForm(d){
  var cols=Object.keys(CD.colour||{}).map(function(k){ return CD.colour[k]; }).filter(function(c){ return c&&c.id; })
@@ -2667,13 +2668,28 @@ function dEditForm(d){
   +'</div><div class="dcs-row"><button type="submit" class="btn yes">Save details</button><button type="button" class="btn" data-dedit-cancel>Cancel</button></div>'
   +'<p class="mut" data-dedit-msg role="status"></p></form>';
 }
+/* A correction is a new row whose corrects_id points at the old one. The list shows only rows nothing else corrects. */
+function liveWeights(rows){ var replaced={}; (rows||[]).forEach(function(r){ if(r.corrects) replaced[r.corrects]=1; });
+ return (rows||[]).filter(function(r){ return !r.id||!replaced[r.id]; }); }
+function weighPencil(w){ if(!w||!w.id) return '';
+ return '<button type="button" class="cb wedit" data-weigh-edit aria-label="'+esc('Correct the weight on '+dmy(w.on))+'">\u270e</button>'; }
+function weighFormSet(f,w){ if(!f) return;
+ var title=f.querySelector('.wft'), dog=f.getAttribute('data-weigh-form'), name=(CD._byId[dog]&&CD._byId[dog].name)||'';
+ var sub=f.querySelector('button[type=submit]'), cancel=f.querySelector('[data-weigh-cancel]');
+ if(w){ if(title) title.textContent='Correct weight'; f.setAttribute('aria-label','Correct weight for '+name);
+  f.on.value=w.on||''; f.kg.value=w.kg!=null?String(w.kg):''; f.bcs.value=w.bcs||''; f.setAttribute('data-corrects',w.id||'');
+  if(sub) sub.textContent='Save correction'; if(cancel) cancel.hidden=false; }
+ else { if(title) title.textContent='Add weight'; f.setAttribute('aria-label','Add weight for '+name);
+  f.on.value=todayLondon(); f.kg.value=''; f.bcs.value=''; f.removeAttribute('data-corrects');
+  if(sub) sub.textContent='Add weight'; if(cancel) cancel.hidden=true; }
+ var msg=f.querySelector('[data-weigh-msg]'); if(msg) msg.textContent=''; }
 function wForm(d,inCard){   /* on the dog card the title is a label, not a heading: the Dogs page has no heading level for it */
  var opts='<option value="">\u2014</option>'; for(var b=1;b<=9;b++) opts+='<option value="'+b+'">'+b+'</option>';
- return '<form class="dcs-form wform" novalidate data-weigh-form="'+esc(d.id)+'" aria-label="'+esc('Add weight for '+(d.name||''))+'">'+(inCard?'<p class="wft">Add weight</p>':'<h4>Add weight</h4>')+'<div class="dcs-row">'
+ return '<form class="dcs-form wform" novalidate data-weigh-form="'+esc(d.id)+'" aria-label="'+esc('Add weight for '+(d.name||''))+'">'+(inCard?'<p class="wft">Add weight</p>':'<h4 class="wft">Add weight</h4>')+'<div class="dcs-row">'
   +'<label>Date<input type="date" name="on" value="'+todayLondon()+'" max="'+todayLondon()+'" required></label>'
   +'<label>kg<input type="number" name="kg" inputmode="decimal" step="0.01" min="0.1" max="150" required></label>'
   +'<label>BCS (optional)<select name="bcs" aria-label="Body condition score, 1 to 9">'+opts+'</select></label></div>'
-  +'<button type="submit">Add weight</button><p class="mut" data-weigh-msg role="status"></p></form>'; }
+  +'<div class="dcs-row"><button type="submit">Add weight</button><button type="button" data-weigh-cancel hidden>Cancel</button></div><p class="mut" data-weigh-msg role="status"></p></form>'; }
 function showWeights(id){
  var d=CD._byId[id]; if(!d) return;
  var el=document.getElementById('wpanel'); if(!el) return;
@@ -2683,7 +2699,7 @@ function showWeights(id){
   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th></tr></thead><tbody>';
  for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
   var dl=pv?(w.kg-pv.kg):null;
-  h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
+  h+='<tr data-k="wrow" data-wid="'+esc(w.id||'')+'" data-on="'+esc(w.on)+'" data-kg="'+esc(String(w.kg))+'" data-bcs="'+esc(w.bcs||'')+'"><td>'+esc(dmy(w.on))+weighPencil(w)+'</td><td><b>'+w.kg+' kg</b></td>'
    +'<td>'+(dl===null?'<span class="mut">first</span>':'<span class="'+(dl>0?'up':(dl<0?'dn':''))+'">'+(dl>0?'+':'')+dl.toFixed(1)+'</span>')+'</td>'
    +'<td>'+(w.bcs?'<span class="pill '+(w.bcs==='5'?'ok':(parseInt(w.bcs,10)>5?'w':'no'))+'">'+esc(w.bcs)+'</span>':'<span class="mut">\u2014</span>')+'</td></tr>'; }
  h+='</tbody></table></div>'+wForm(d)+'<button id="wclose" class="cb" style="margin-top:8px">close</button></div>';
@@ -2783,7 +2799,7 @@ function vaccRow(d){ var x=d.vacc||[], ax=(CD.vaxArch||{})[d.id]||[];
   +vaxForm(d)
   +'<p class="mut" data-vax-msg role="status"></p>'
   +'</div></details>'; }
-/* vaccine disease codes as words (Lisa, 12 Nov 2026). Display only: the sheet keeps its codes. */
+/* vaccine disease codes as words . Display only: the sheet keeps its codes. */
 var VAX_WORDS={distemper:'Distemper',adenovirus_ich:'Hepatitis (adenovirus)',parvovirus:'Parvovirus',leptospirosis:'Leptospirosis',
  parainfluenza:'Parainfluenza',bordetella:'Kennel cough (Bordetella)',bordetella_kennel_cough:'Kennel cough (Bordetella)',rabies:'Rabies'};
 function vaxWords(s){ return String(s||'').split(';').map(function(c){ c=c.trim(); if(!c) return '';
@@ -2811,7 +2827,7 @@ function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
   +(on?'</a>':'</span>')+'</div>'; }
 /* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
    (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
-/* BFFs / Fren. (Lisa 13 Nov 2026): dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
+/* BFFs / Fren. : dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
 function dogLinksHtml(d){
  if(typeof BLDLinks==='undefined') return '';
  var g=BLDLinks.forDog(T['BLD-subject_link.csv']||[],T['BLD-breeding_rule.csv']||[],d.id,todayISO());
@@ -2871,7 +2887,7 @@ function loadPhotoImg(img){
    dogPhotoBytes(img,id);
   }).catch(function(){ dogPhotoBytes(img,id); });
 }
-/* Main photo + gallery (Lisa 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
+/* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
 /* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
 function cardPhotoId(d,ph){
@@ -2888,7 +2904,7 @@ function cardPhotoId(d,ph){
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-/* Remove, Make main and Put back (Lisa 16 Nov 2026: "some are bad so need to be able to remove"). Nothing is deleted:
+/* Remove, Make main and Put back . Nothing is deleted:
    Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
    main link (the script ends the old main one). ended = true for an item in the Ended list. */
 function galleryTools(f,main,ended){
@@ -2914,11 +2930,10 @@ function galleryItem(f,mainId,dates,ended){
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryHtml(d,ph){
- if(!ph.gallery.length&&!ph.ended.length) return '';
+ if(!ph.gallery.length) return '';   /* ended photos stay in the sheet; the card does not list them  */
  var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates,true); }).join('')+'</ul></details>':'')
+  +'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
@@ -3049,7 +3064,9 @@ async function photoEdit(dog,fileId,msg){
   if(gl){ var y=dayMinus(day,1), to=String(gl.from_date||'').slice(0,10)<=y?y:day;
    await add('gallery');
    var e=await sinkAct('link_end',{id:gl.id,to_date:to,reason:GAL_EDITED});
-   if(!(e.ok&&e.result&&e.result.status==='saved')) throw new Error(sinkMsg(e));
+   var endedOk=e&&e.ok&&e.result&&e.result.status==='saved';
+   var endedAlready=e&&!e.ok&&e.code==='NOT_ALLOWED'&&/already ended/i.test(e.message||'');
+   if(!endedOk&&!endedAlready) throw new Error(sinkMsg(e));
    gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
  }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
@@ -3130,7 +3147,7 @@ function photoDecode(file){
  }
  return viaImg();
 }
-/* Edit before save (Lisa, 13 Nov 2026): brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
+/* Edit before save : brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
 function photoTone(g,size,br,ct){
  br=+br||0; ct=+ct||0; if(!br&&!ct) return;
  var c=ct*2, f=(259*(c+255))/(255*(259-c)), o=br*2.55, im=g.getImageData(0,0,size,size), d=im.data;
@@ -3315,10 +3332,14 @@ document.addEventListener('submit',async function(ev){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(on)||on>todayLondon()){ msg.textContent='Choose a date, today or earlier.'; return; }
   var n=parseFloat(kg); if(!(n>=0.1&&n<=150)){ msg.textContent='Type the weight in kg, e.g. 12.4'; return; }
   btn.disabled=true; msg.textContent='Saving\u2026';
-  var r=await sinkAct('weighing',{subject_id:id,performed_on:on,weight_kg:String(Math.round(n*100)/100),body_condition_score:bcs});
+  var fields={subject_id:id,performed_on:on,weight_kg:String(Math.round(n*100)/100),body_condition_score:bcs};
+  var corrects=f.getAttribute('data-corrects')||''; if(corrects) fields.corrects_id=corrects;
+  var r=await sinkAct('weighing',fields);
   btn.disabled=false;
   if(!r.ok){ showSave(msg,sinkMsg(r)); return; }
-  var d=CD._byId[id]; if(d){ d.weights.push({on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':''}); d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
+  var d=CD._byId[id]; if(d){ if(corrects) d.weights=d.weights.filter(function(w){ return w.id!==corrects; });
+   d.weights.push({id:(r.result&&r.result.id)||'',on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':'',corrects:corrects});
+   d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
   var inCard=!!f.closest('article.dc'), keepY=window.scrollY;
   drawDogs();
   if(inCard){ weighReopen(id,sinkMsg(r)); window.scrollTo(0,keepY); }   /* the redraw leaves the page where it was */
@@ -3365,6 +3386,41 @@ function weighReopen(id,text){ var c=document.querySelector('#rows article.dc[da
 function vaxReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
  var more=c.querySelector('details[data-k="more"]'), v=c.querySelector('details.vacc'); if(more) more.open=true; if(v) v.open=true;
  var m=c.querySelector('[data-vax-msg]'); if(m) showSave(m,text); }
+function closePhotoMenus(back){
+ Array.prototype.forEach.call(document.querySelectorAll('[data-photo-menu]:not([hidden])'), function(menu){
+  menu.hidden=true;
+  var b=menu.parentNode&&menu.parentNode.querySelector('[data-photo-open]');
+  if(b){ b.setAttribute('aria-expanded','false'); if(back) b.focus(); }
+ });
+}
+document.addEventListener('click',function(ev){
+ var open=ev.target.closest&&ev.target.closest('[data-photo-open]');
+ if(open){
+  var col=open.closest('.dogphoto-col'), menu=col&&col.querySelector('[data-photo-menu]');
+  var was=menu&&!menu.hidden;
+  closePhotoMenus();
+  if(menu&&!was){ menu.hidden=false; open.setAttribute('aria-expanded','true'); var first=menu.querySelector('input'); if(first) first.focus(); }
+  return;
+ }
+ if(!(ev.target.closest&&ev.target.closest('[data-photo-menu]'))) closePhotoMenus();
+});
+document.addEventListener('keydown',function(ev){
+ if(ev.key!=='Escape'||(ev.target.closest&&ev.target.closest('[role="dialog"]'))) return;
+ closePhotoMenus(true);
+});
+document.addEventListener('click',function(ev){
+ var ed=ev.target.closest&&ev.target.closest('[data-weigh-edit]');
+ if(ed){
+  var scope=ed.closest('article.dc')||ed.closest('#wpanel')||document;
+  var form=scope.querySelector('[data-weigh-form]'), row=ed.closest('[data-k="wrow"]');
+  if(form&&row){ var det=form.closest('details'); if(det) det.open=true;
+   weighFormSet(form,{id:row.getAttribute('data-wid'),on:row.getAttribute('data-on'),kg:row.getAttribute('data-kg'),bcs:row.getAttribute('data-bcs')});
+   if(form.kg) form.kg.focus(); }
+  return;
+ }
+ var cancel=ev.target.closest&&ev.target.closest('[data-weigh-cancel]');
+ if(cancel) weighFormSet(cancel.closest('form'),null);
+});
 function bindDogPhotos(){
  while(DOGPHOTO_URLS.length){ try{ URL.revokeObjectURL(DOGPHOTO_URLS.pop()); }catch(e){} }
  loadDogPhotos();
@@ -3422,18 +3478,19 @@ function drawDogs(){
   +'<div class="dc-top">'
     +'<div class="dogphoto-col">'
     +'<div class="ph">'
+      +'<button type="button" class="phbtn" data-photo-open aria-haspopup="true" aria-expanded="false" aria-label="'+esc((pic?'Photo of ':'Add a photo of ')+(d.name||'this dog'))+'">'
       +'<svg class="ti'+(pic?' off':'')+'" data-paw aria-hidden="true"><use href="#i-paw"/></svg>'
       +(pic?'<img class="dogphoto off" alt="" data-photo-id="'+esc(pic)+'" referrerpolicy="no-referrer">':'')
+      +'</button>'
       +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
     +'</div>'
-    +'<div class="dogphoto-btns" role="group" aria-label="'+esc((pic?'Change the photo of ':'Add a photo of ')+(d.name||'this dog'))+'">'
-    +'<label class="btn dogphoto-btn" data-photo-take>Take photo'
-      +'<input type="file" accept="image/*" capture="environment" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="camera">'
+    +'<div class="phmenu" data-photo-menu hidden role="group" aria-label="'+esc('Photo of '+(d.name||'this dog'))+'">'
+    +'<label class="btn" data-photo-take>Take'
+      +'<input type="file" accept="image/*" capture="environment" class="sr" aria-label="Take a photo" data-dog-photo="'+esc(d.id)+'" data-photo-src="camera">'
     +'</label>'
-    +'<label class="btn dogphoto-btn" data-photo-upload>Upload photo'
-      +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
+    +'<label class="btn" data-photo-upload>Upload'
+      +'<input type="file" accept="image/*" class="sr" aria-label="Upload a photo" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
     +'</label>'
-    +(pic?'<button type="button" class="btn dogphoto-btn" data-photo-edit="'+esc(d.id)+'" aria-label="Crop or adjust the photo of '+esc(d.name||'this dog')+'">\u270e Edit</button>':'')
     +'</div>'
     +'</div>'
     +'<div class="dc-info">'
@@ -3473,9 +3530,9 @@ function drawDogs(){
     +'</summary><div class="dcs-bd">'
       +(d.weights.length?d.weights.slice().reverse().map(function(ww,i,arr){
         var pv=arr[i+1], dl=pv?Math.round((ww.kg-pv.kg)*100)/100:null;   /* the change from the weighing before, shown in place */
-        return '<div class="dcs-row" data-k="wrow"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
+        return '<div class="dcs-row" data-k="wrow" data-wid="'+esc(ww.id||'')+'" data-on="'+esc(ww.on)+'" data-kg="'+esc(String(ww.kg))+'" data-bcs="'+esc(ww.bcs||'')+'"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
           +'<span class="'+(dl===null?'mut':(dl>0?'up':(dl<0?'dn':'mut')))+'" data-k="wchange">'+(dl===null?'first':(dl>0?'+':'')+dl.toFixed(1))+'</span>'
-          +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+'</div>';
+          +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+weighPencil(ww)+'</div>';
       }).join(''):'<span class="mut">No records</span>')
       +(d.weights.length>1?'<div class="dcs-row" style="margin-top:4px">'+wGraph(d.weights)+'</div>':'')
       +wForm(d,true)   /* Add weight opens in place (Lisa 15 Nov 2026: tapping "no weight" jumped to the top) */
@@ -3707,7 +3764,7 @@ async function applyDogOff(dogId, msgEl){
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
-/* Present / not here is one check_log for the dog for the day (Lisa 25 Nov 2026), against cty-round_presence-1 when
+/* Present / not here is one check_log for the dog for the day , against cty-round_presence-1 when
    that row is in force, else the original Present row (round.presence or round_presence). A later round the same day,
    including a thermometer round, does not write another row: the line says Done today. Correct writes one new row
    that points at today's. No Present row: kept on this page only, and the line says so. */
@@ -4547,8 +4604,9 @@ function hubRefuse(id,j){
   hubPut(HUB_REFUSED,rf.slice(-50)); }
  hubDrop(id);
 }
+function hubAlreadyEnded(j){ return !!(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')); }
 function hubSettle(id,j,auth){
- if(j&&(j.ok||j.code==='DUPLICATE')){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
+ if(j&&(j.ok||j.code==='DUPLICATE'||hubAlreadyEnded(j))){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
  if(j&&!j.ok&&hubTerminal(j)){ hubRefuse(id,j); return true; }
  if(j&&!j.ok&&HUB_SIGN_IN[j.code]){ if(auth!=null) HUB_AUTH_WAIT=auth; hubBoxDraw(); if(!hubStop) hubRetry(60000); return false; }
  if(j&&!j.ok&&j.code&&!HUB_RETRY[j.code]){ hubRefuse(id,j); return true; }
@@ -4728,7 +4786,7 @@ function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-are
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
-/* Empty cabin (Lisa, 12 Nov 2026): one area_reading row with room_empty = yes for that slot. It is the evidence (date,
+/* Empty cabin : one area_reading row with room_empty = yes for that slot. It is the evidence (date,
    slot, who: the save script stamps taken_at and taken_by), needs no temperature, and Compliance counts it as covered. */
 async function roomEmptySave(areaId,slot,msgEl,th){
  th=th||''; var date=(CD._roundDate||todayISO()), multi=roundThermos(areaId,date).length>1, sk=tSlotKey(slot,th,multi), k=roundKey(date,areaId), have=(ROUND[k]&&ROUND[k][sk])||{};

@@ -1,5 +1,5 @@
-// Dog gallery: Remove, Make main and Put back (Lisa 16 Nov 2026: "some are bad so need to be able to remove").
-// Nothing is deleted: Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link,
+// Dog gallery: Remove and Make main .
+// Nothing is deleted: Remove ends the photo's gallery link. The card does not list ended photos .
 // Make main adds a main link. Invented rows only; pretend save script.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
@@ -44,7 +44,7 @@ async function setUp(page, guard, today) {
   return { sent, gal };
 }
 
-test('Remove takes a bad photo out of the gallery at once (to Ended); Put back brings it back; nothing is deleted', async ({ page, guard }) => {
+test('Remove takes a bad photo out of the gallery at once; the card does not list it and nothing is deleted', async ({ page, guard }) => {
   const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())).catch(() => null) || new Date().toISOString().slice(0, 10);
   const { sent, gal } = await setUp(page, guard, today);
   await expect(gal.locator('> summary')).toHaveText('Photos (3)');
@@ -55,13 +55,8 @@ test('Remove takes a bad photo out of the gallery at once (to Ended); Put back b
   expect(sent[0].fields.to_date < today).toBe(true);   // an older photo ends yesterday, so it is gone from today
   const g2 = page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"]');
   await expect(g2.locator('> summary')).toHaveText('Photos (2)');
-  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
-
-  await g2.locator('details[data-k="ended"] > summary').click();
-  await g2.locator('details[data-k="ended"] [data-gal-back="fil-2"]').click();
-  await expect.poll(() => sent.length).toBe(2);
-  expect(sent[1]).toMatchObject({ action: 'link_add', fields: { from_table: 'subject', from_id: 'sub-g1', role: 'gallery', to_table: 'files', to_id: 'fil-2', from_date: today } });
-  await expect(page.locator('.dc[data-dog="sub-g1"] details[data-k="gallery"] > summary')).toHaveText('Photos (3)');
+  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
+  await expect(g2.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
 });
 
 test('a photo added today is removed at once too (end date today, marked removed)', async ({ page, guard }) => {
@@ -111,25 +106,19 @@ test('gallery: × and ✎ sit on each photo; ✎ saves an edited copy in the old
   await expect(g2.locator('[data-gal-msg]')).toHaveText('✓ Edited copy saved');
   await expect(g2.locator('> summary')).toHaveText('Photos (3)');
   await expect(g2.locator('.gi[data-file="fil-new"]')).toHaveCount(1);
-  await expect(g2.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
+  await expect(g2.locator('details[data-k="ended"]')).toHaveCount(0);
+  await expect(g2.locator('.gi[data-file="fil-2"]')).toHaveCount(0);
 });
 
-test('card: ✎ Edit on the main photo saves an edited copy that becomes the main photo; Cancel saves nothing', async ({ page, guard }) => {
+test('card: the photo menu has no Edit; the one Edit is by the name', async ({ page, guard }) => {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
-  const { sent } = await setUp(page, guard, today);
-  await driveBytes(page);
+  await setUp(page, guard, today);
   const card = page.locator('.dc[data-dog="sub-g1"]');
-  await card.locator('[data-photo-edit]').click();
-  await page.locator('[data-crop-cancel]').click();
-  await expect(page.getByRole('dialog', { name: 'Crop and edit the photo' })).toHaveCount(0);
-  expect(sent).toHaveLength(0);
-  await card.locator('[data-photo-edit]').click();
-  await page.locator('[data-crop-use]').click();
-  await expect.poll(() => sent.length).toBe(4);
-  expect(sent.map((b) => b.action)).toEqual(['file_add', 'link_add', 'link_end', 'link_add']);   // fil-1 is in the gallery and is main
-  expect(sent[3].fields).toMatchObject({ role: 'main', to_id: 'fil-new' });
-  await expect(page.locator('.dc[data-dog="sub-g1"] img.dogphoto')).toHaveAttribute('data-photo-id', 'DRIVEeditedNew9');
-  await expect(page.locator('.dc[data-dog="sub-g1"] [data-photo-msg]')).toHaveText('✓ Edited copy saved');
+  await expect(card.locator('[data-photo-edit]')).toHaveCount(0);
+  await expect(card.locator('[data-dog-edit]')).toHaveCount(1);
+  await card.locator('[data-photo-open]').click();
+  await expect(card.locator('[data-photo-menu] label')).toHaveText(['Take', 'Upload']);
+  expect(await card.locator('[data-photo-menu]').innerText()).not.toMatch(/Edit/);
 });
 
 test('a refused gallery add leaves the old photo in the gallery (17 Nov 2026: 5 photos were lost this way)', async ({ page, guard }) => {
