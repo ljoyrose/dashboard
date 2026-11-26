@@ -392,8 +392,15 @@
     var day = BLDNeeds.today(), acc = BLDCapacity.accessOn(T.area_access || [], areaId, day), out = { access: acc, any: false, dogs: { small: 0, medium: 0, large: 0 }, pups: [] };
     if (!acc) return out;
     var mine = (T.area_capacity || []).filter(function (r) { return r.area_id === areaId && String(r.access_type || '').toLowerCase() === acc && inForceOn(r, day); });
+    var cap = T.area_capacity || [];
+    if (!mine.length) {
+      var area = (T.area || []).filter(function (a) { return a.id === areaId; })[0] || {};
+      var m2 = parseFloat(area.area_value);
+      var space = BLDCapacity.spaceRules(T.breeding_rule || [], day);
+      if (m2 > 0 && space && space[acc]) { mine = BLDCapacity.deriveRows(areaId, m2, space).filter(function (r) { return r.access_type === acc; }); cap = mine; }
+    }
     out.any = mine.length > 0;
-    BLDCapacity.limitsOn(T.area_capacity || [], areaId, acc, day).forEach(function (l) { out.dogs[l.band] = l.n; });
+    BLDCapacity.limitsOn(cap, areaId, acc, day).forEach(function (l) { out.dogs[l.band] = l.n; });
     var pups = {};
     mine.forEach(function (r) { var k = sizeKey(r.size_band); if (k && /pups/i.test(r.size_band || '') && (!pups[k] || fromOf(r) >= pups[k].f)) pups[k] = { f: fromOf(r), n: parseInt(r.max_dogs, 10) || 0 }; });
     ['small', 'medium', 'large'].forEach(function (k) { if (pups[k] && pups[k].n > 0) out.pups.push(k); });
