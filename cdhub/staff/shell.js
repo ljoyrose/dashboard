@@ -77,11 +77,12 @@
     gClient = google.accounts.oauth2.initTokenClient({ client_id: CFG.clientId, scope: SCOPE,
       callback: function (resp) {
         var want = gWant; gWant = '';
+        if (want === 'renew') { gRenewDone(resp && !resp.error && google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE) ? resp : null); return; }
         if (!resp || resp.error || !google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) { if (want === 'ask') { ownerNote = 'Google sign-in did not complete.'; route(); } return; }
         DashAuth.save(resp.access_token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
         BLDSave.ownerSkip(false); ownerNote = ''; urlTried = false; dataP = null; route();
       },
-      error_callback: function () { var want = gWant; gWant = ''; if (want === 'ask') { ownerNote = 'Google sign-in did not complete. Allow pop-ups for this page and try again.'; route(); } } });
+      error_callback: function () { var want = gWant; gWant = ''; if (want === 'renew') { gRenewDone(null); return; } if (want === 'ask') { ownerNote = 'Google sign-in did not complete. Allow pop-ups for this page and try again.'; route(); } } });
     return true;
   }
   function ownerSignIn() {
@@ -89,6 +90,29 @@
     if (!gInit()) { ownerNote = 'Google sign-in is still loading. Try again in a moment.'; route(); return; }
     gWant = 'ask'; gClient.requestAccessToken({ prompt: 'select_account' });
   }
+  /* 22 Nov 2026: a renewal in the middle of a round keeps the screen as it is (no redraw, nothing typed is lost); the save
+     library waits for it (BLDSave.refreshOwnerToken) and sends the request again with the new token. */
+  var gRenewWait = [];
+  function gRenewDone(resp) {
+    if (resp) DashAuth.save(resp.access_token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
+    var w = gRenewWait; gRenewWait = []; w.forEach(function (f) { f(); });
+  }
+  function ownerRenew() {
+    return new Promise(function (done) {
+      if (storeGet(CODE_KEY) || !gInit()) { done(); return; }
+      gRenewWait.push(done);
+      if (gWant === 'renew') return;
+      gWant = 'renew';
+      try { gClient.requestAccessToken({ prompt: '' }); } catch (e) { gRenewDone(null); }
+    });
+  }
+  if (BLDSave.setOwnerRefresher) BLDSave.setOwnerRefresher(ownerRenew);
+  /* renew a little before it runs out, while the page is open, so a round never meets a run-out token */
+  setInterval(function () {
+    if (storeGet(CODE_KEY) || !window.DashAuth || !DashAuth.read) return;
+    var s = DashAuth.read();
+    if (s && s.expires_at - Date.now() < 5 * 60000 && BLDSave.refreshOwnerToken) BLDSave.refreshOwnerToken();
+  }, 60000);
   /** An owner's sign-in in this browser ran out (about an hour): renew it quietly, as CD Hub does. */
   function ownerRefresh() {
     if (!window.DashAuth || !DashAuth.expired || !DashAuth.expired() || storeGet(CODE_KEY)) return;
@@ -154,12 +178,17 @@
     (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
     return e;
   }
-  function isSetUp() { return save.getScriptUrlSet() && (!!storeGet(CODE_KEY) || !!owner()); }
+  function isSetUp() { return save.getScriptUrlSet() && (!!storeGet(CODE_KEY) || !!owner() || !!(BLDSave.ownerExpired && BLDSave.ownerExpired())); }
   function forget() { var c = storeGet(CODE_KEY); if (c && storeGet(HUB_CODE_KEY) === c) storeSet(HUB_CODE_KEY, ''); storeSet(CODE_KEY, ''); save.clearCode(); dataP = null; var me = document.getElementById('me'); if (me) me.hidden = true; }
 
   /** Any read or save answering BAD_CODE means this phone was switched off: wipe it. */
   function guard(r) {
-    if (r && r.ok === false && save.usingGoogle && save.usingGoogle() && (r.code === 'GOOGLE_NOT_OWNER' || r.code === 'NO_CODE' || r.code === 'BAD_CODE')) {
+    /* 22 Nov 2026: a run-out sign-in never switches the tab to codes. The library has already renewed it once and sent
+       again; NO_CODE here means Google could not renew it quietly, so ask to sign in again, nothing else. */
+    if (r && r.ok === false && r.code === 'NO_CODE' && !storeGet(CODE_KEY) && BLDSave.ownerExpired && BLDSave.ownerExpired()) {
+      ownerNote = 'Your Google sign-in ran out. Sign in with Google again; nothing typed is lost.'; return r;
+    }
+    if (r && r.ok === false && save.usingGoogle && save.usingGoogle() && (r.code === 'GOOGLE_NOT_OWNER' || r.code === 'BAD_CODE')) {
       // The Google sign-in was not accepted (not on the owner list, or the save script is not updated yet): use a code.
       BLDSave.ownerSkip(true); dataP = null;
       ownerNote = r.code === 'GOOGLE_NOT_OWNER' ? 'This Google account is not on the owner list. Type your staff code.' : 'The save script did not accept the Google sign-in yet. Type your staff code.';
@@ -169,15 +198,15 @@
     return r;
   }
   var rawRead = save.read, rawSubmit = save.submit;
-  save.read = function (k) { return rawRead(k).then(guard); };
+  save.read = function (k, f, o) { return rawRead(k, f, o).then(guard); };   // the filter goes through (it was dropped before 22 Nov 2026)
   save.submit = function (t, f, o) { return rawSubmit(t, f, o).then(guard); };
 
   /** Add a table the page may save to (a spec for instant checks; the script is still the judge). */
   function addTable(key, spec) { save.TABLES[key] = spec; }
 
   /** Read a list that may not be switched on yet. Never fails: {ok, rows, code, message}. */
-  function readOptional(key) {
-    return save.read(key).then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
+  function readOptional(key, filter) {
+    return save.read(key, filter).then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
   }
   /** Rooms, dogs and where they are. Loaded once; refresh() loads again after a move. */
   function data() {
@@ -190,6 +219,28 @@
     });
     return dataP;
   }
+  function refresh() { dataP = null; if (save.dropCache) save.dropCache(); return data(); }
+  /* 22 Nov 2026: a screen that waits for the records gives up after LOAD_LIMIT_MS and says so, with Try again.
+     limit(p, host, retry) resolves what p resolves, or never (null-free) once the message has replaced the screen. */
+  var LOAD_LIMIT_MS = 45000;
+  function limit(p, host, retry) {
+    return new Promise(function (resolve) {
+      var over = false;
+      var t = setTimeout(function () {
+        over = true;
+        if (!host || !host.isConnected) return;
+        host.textContent = '';
+        host.appendChild(h('p', { class: 'msg bad', role: 'status', 'data-load-timeout': '1', text: 'The records did not answer in 45 seconds. Nothing is lost. Try again.' }));
+        host.appendChild(h('button', { class: 'btn', type: 'button', 'data-load-retry': '1', text: 'Try again', onclick: function () { if (retry) retry(); else route(); } }));
+      }, LOAD_LIMIT_MS);
+      Promise.resolve(p).then(function (v) { if (over) return; clearTimeout(t); resolve(v); });
+    });
+  }
+  /** "As of" for the kept lists a screen uses: the oldest time one of them was read, or 0. */
+  function listsAt(keys) { var at = 0; (keys || []).forEach(function (k) { var x = save.keptAt ? save.keptAt(k) : 0; if (x && (!at || x < at)) at = x; }); return at; }
+  function go(path) { if (location.hash === '#' + path) route(); else location.hash = path; }
+
+  var ctx = { save: save, data: data, refresh: refresh, readOptional: readOptional, limit: limit, listsAt: listsAt, addTable: addTable, go: go, h: h, icons: ICONS, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
   function refresh() { dataP = null; dataObj = null; return data(); }
   /* Overseer 22 Nov 2026: a move showed the old room until a full reload. The loaded lists are changed in place instead. */
   var dataObj = null;
