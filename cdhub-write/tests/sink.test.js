@@ -762,6 +762,21 @@ test('a bad, missing or switched-off code gets nothing, and wrong codes are coun
   assert.equal(read(env2).code, 'BAD_CODE');
 });
 
+test('owner read of area hides area_value until that column is allowed', () => {
+  const env = withRead();
+  const base = ['id', 'code', 'grouping', 'group_sort'].map((f) => fv('area', f, 'aud-admin', 'yes')).concat([fv('area', '*', 'aud-admin', 'yes')]);
+  setVisibility(env, base);
+  let r = read(env, { table: 'area', code: env.codes.owner });
+  assert.equal(r.ok, true);
+  assert.equal(r.result.fields.indexOf('area_value'), -1);
+  assert.equal(r.result.rows[0].area_value, undefined);
+  setVisibility(env, base.concat([fv('area', 'area_value', 'aud-admin', 'yes'), fv('area', 'area_unit_id', 'aud-admin', 'yes')]));
+  r = read(env, { table: 'area', code: env.codes.owner });
+  const row = r.result.rows.filter((x) => x.id === 'area-t1')[0];
+  assert.equal(row.area_value, '10.00');
+  assert.equal(row.area_unit_id, 'u-m2');
+});
+
 test('a role sees only the columns Lisa allowed: no tenant_id, no unlisted column, nothing with a condition or redaction', () => {
   const env = withRead();
   let r = read(env, { table: 'area' });
