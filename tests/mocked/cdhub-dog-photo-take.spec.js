@@ -1,4 +1,4 @@
-// Dog card photo (the owner, 13 Nov 2026): a bigger photo; Take photo (camera) or Upload photo on any device; edit
+// Dog card photo : a bigger photo; Take photo (camera) or Upload photo on any device; edit
 // (brightness, contrast) and crop before save; the page still shrinks to 800 x 800 within 350,000 characters (#500).
 // Invented dog and invented pictures only; the save script is pretend; the camera is a pretend canvas camera.
 const fs = require('fs');
@@ -47,8 +47,9 @@ test.describe('CD Hub dog card photo: bigger, edit before save', () => {
     const box = await page.locator('#rows article.dc .ph').boundingBox();
     expect(box.width).toBeGreaterThanOrEqual(120);
     expect(Math.abs(box.width - box.height)).toBeLessThan(1);
-    // the two buttons sit under the photo, each as wide as it
-    for (const b of await page.locator('#rows article.dc label.dogphoto-btn').all()) {
+    await expect(page.locator('#rows article.dc [data-photo-menu]')).toBeHidden();
+    await page.locator('#rows article.dc [data-photo-open]').click();
+    for (const b of await page.locator('#rows article.dc [data-photo-menu] label').all()) {
       const bb = await b.boundingBox();
       expect(Math.abs(bb.width - box.width)).toBeLessThan(2);
     }
@@ -118,6 +119,7 @@ test.describe('CD Hub dog card photo: Take photo on a laptop camera', () => {
     await fakeCamera(page);
     let chooser = false;
     page.on('filechooser', () => { chooser = true; });
+    await page.locator('#rows article.dc [data-photo-open]').click();
     await page.locator('#rows article.dc label[data-photo-take]').click();
     const cam = page.locator('.pcam[role="dialog"]');
     await expect(cam.locator('h3')).toHaveText('Take a photo');
@@ -138,6 +140,7 @@ test.describe('CD Hub dog card photo: Take photo on a laptop camera', () => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     await fakeCamera(page);
+    await page.locator('#rows article.dc [data-photo-open]').click();
     await page.locator('#rows article.dc label[data-photo-take]').click();
     const cam = page.locator('.pcam[role="dialog"]');
     await expect(cam).toBeVisible();
@@ -155,6 +158,7 @@ test.describe('CD Hub dog card photo: no camera allowed', () => {
     await openOneDog(page, guard);
     const bodies = await recordSaves(page);
     await page.evaluate(() => { navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
+    await page.locator('#rows article.dc [data-photo-open]').click();
     await page.locator('#rows article.dc label[data-photo-take]').click();
     await expect(page.locator('#rows article.dc [data-photo-msg]')).toHaveText('The camera could not be opened. Allow the camera, or use Upload photo.');
     await expect(page.locator('.pcam')).toHaveCount(0);

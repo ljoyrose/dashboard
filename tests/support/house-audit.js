@@ -37,7 +37,7 @@ function audit(o) {
   const header = [...document.querySelectorAll('header')].find(seen) || null;
   const inTabs = (e) => tabbar && tabbar.contains(e);
   const PRESS = 'button, summary, select, a.btn, a.pill, a.chip, a.lk, a.tag, [role="button"], input[type="button"], input[type="submit"], label.date';
-  const controls = [...document.querySelectorAll(PRESS)].filter((e) => seen(e) && !inTabs(e) && !e.closest('.sr, [aria-hidden="true"], .gsi, #credential_picker_container') && getComputedStyle(e).display !== 'contents');
+  const controls = [...document.querySelectorAll(PRESS)].filter((e) => seen(e) && !inTabs(e) && !e.matches('.phbtn') && !e.closest('.sr, [aria-hidden="true"], .gsi, #credential_picker_container') && getComputedStyle(e).display !== 'contents');
   // A "bare" control is laid out as text: a row title you click, or a card's own title row (a summary holding a heading).
   const bare = (e) => { const s = getComputedStyle(e); if (e.matches('summary') && e.querySelector('h1, h2, h3, h4, h5')) return true; return e.matches('.ttl, [data-house="text"]') && rgb(s.backgroundColor)[3] < 0.05 && ['Top', 'Right', 'Bottom', 'Left'].every((k) => s['border' + k + 'Style'] === 'none' || px(s['border' + k + 'Width']) === 0 || rgb(s['border' + k + 'Color'])[3] < 0.05); };
   const press = hex(R.press[o.look]);

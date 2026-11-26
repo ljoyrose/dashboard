@@ -1,6 +1,6 @@
 /* CD Hub bottom bar (the owner 14 Nov 2026, menu option A). The hub and the temperature pages both render from this list.
    Bar: Main (slot 1: Today, Do, Decide) · up to 3 sections chosen per role or person · More.
-   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Records 4 (id ops; the owner named it 15 Nov 2026), People 5, Sales 6, Ideas 7; Settings 8 (holds Bin).
+   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Records 4 (id ops), People 5, Sales 6, Ideas 7; Settings 8.
    Which sections are on and which sit on the bar are owner settings: dated rule rows (breeding_rule), never fixed here.
      nav.on.<section>                  1 on, 0 off
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
@@ -34,7 +34,6 @@
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
     admin: { label: 'Settings', icon: 't-box' },
-    bin: { label: 'Bin', icon: 't-box' },
     qrprint: { label: 'Print QR cards', icon: 't-print', href: printCardsHref }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
@@ -46,7 +45,7 @@
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin', 'qrprint'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'qrprint'] }
   ];
   /* The starting layout for a new app (the owner 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
@@ -125,6 +124,24 @@
     return { tabs: tabs, on: on, set: set, first: first, start: start };
   }
 
+  /* The save address kept in this browser, same check as Settings. Empty when none is known. */
+  function saveAddress() {
+    var store;
+    try { store = root.localStorage; } catch (e) { store = null; }
+    if (!store || !store.getItem) return '';
+    var u = '';
+    try { u = store.getItem('cdhub.sink.url') || store.getItem('bld.scriptUrl') || store.getItem('cdhub.save.url') || ''; } catch (e) { u = ''; }
+    return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
+  }
+  /* Inspector links: the owner page section, or the set-up line when this browser has no save address. */
+  function inspectItem(opts) {
+    var u = saveAddress(), icon = '<svg class="hi" width="20" height="20" aria-hidden="true" focusable="false"><use href="#hi-search"/></svg>';
+    if (u) {
+      return '<a href="' + esc(u + '?page=approve&section=inspect') + '" target="_blank" rel="noopener" data-inspect-links>' + icon + '<span class="htl">Inspector links</span></a>';
+    }
+    var setup = '<a class="cb" href="' + (opts.links === 'href' ? './index.html#/round' : '#/round') + '">Set it up</a>';
+    return '<div class="mut" data-inspect-links>' + icon + '<span class="htl">Inspector links</span> No save address in this browser. ' + setup + '</div>';
+  }
   function viewItem(id, slot, opts, has) {
     var v = VIEWS[id];
     if (!v || !has(id)) return '';
@@ -141,7 +158,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin' && id !== 'qrprint'; };   /* pages without the rows (temperature history); Bin and Print QR cards are the owner's, like Settings */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'qrprint'; };   /* pages without the rows (temperature history); Print QR cards are the owner's, like Settings */
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
@@ -163,7 +180,7 @@
     }).join('');
     /* More: every other view of every switched-on section, in colour order, each in its section's colour
        (a view a bar tab already opens is not repeated). */
-    var items = SECTIONS.filter(function (s) { return s.id === 'main' || lay.on[s.id]; }).map(function (s) {
+    var items = inspectItem(opts) + SECTIONS.filter(function (s) { return s.id === 'main' || lay.on[s.id]; }).map(function (s) {
       return s.views.map(function (id) { return onBar[id] ? '' : viewItem(id, s.slot, opts, has); }).join('');
     }).join('');
 

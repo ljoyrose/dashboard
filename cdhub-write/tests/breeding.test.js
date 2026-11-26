@@ -92,6 +92,17 @@ test('breeding rules: a file without the to_date column is refused with nothing 
   assert.equal(rule(env, { rule_key: 'max_litters_per_dam', value: '4', effective_from: '2020-01-01' }).code, 'HEADER_MISMATCH');
 });
 
+test('breeding rules: times a day and feeding age bands are dated rows', () => {
+  const env = env0();
+  assert.equal(rule(env, { rule_key: 'job.times_per_day.feeding', value: '2', effective_from: '2026-01-01', source: 'test' }).ok, true);
+  assert.equal(rule(env, { rule_key: 'job.times_per_day.feeding.by_age', value: '0-10:4|11-:2', effective_from: '2026-01-01', source: 'test' }).ok, true);
+  assert.equal(rule(env, { rule_key: 'job.times_per_day.feeding.by_age', value: '0-10:3|11-:2', effective_from: '2026-06-01', source: 'test' }).ok, true);
+  const rows = recs(env);
+  assert.deepEqual(rows.map((r) => r.rule_key), ['job.times_per_day.feeding', 'job.times_per_day.feeding.by_age', 'job.times_per_day.feeding.by_age']);
+  assert.equal(rows[2].value, '0-10:3|11-:2');
+  assert.equal(rows[0].value, '2');
+});
+
 test('breeding rules: any key is a row (sweep 12 Nov 2026): size cut-offs, colours, compliance and staffing keys save', () => {
   const env = env0();
   for (const [k, v] of [['size_from_kg.medium', '10'], ['size_colour.small', 'swatch-red'], ['compliance.max_hours_alone', '4'],

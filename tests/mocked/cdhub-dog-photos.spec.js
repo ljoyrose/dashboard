@@ -61,27 +61,46 @@ test.describe('CD Hub dog photos', () => {
     await expect(broken.locator('img.dogphoto')).toBeHidden();
   });
 
-  test('each card has Take photo (camera) and Upload photo (library or files), both accepting images (the owner, 13 Nov 2026)', async ({ page, guard }) => {
+  test('the photo is a button; Take and Upload open from it and are not always on the card', async ({ page, guard }) => {
     await openDogs(page, guard);
     const shown = card(page, 'Pretend One');
     const empty = card(page, 'Pretend Two');
     for (const c of [shown, empty]) {
-      await expect(c.locator('label.dogphoto-btn')).toHaveText(['Take photo', 'Upload photo']);
+      await expect(c.locator('[data-photo-menu]')).toBeHidden();
+      await expect(c.locator('label.dogphoto-btn, [data-photo-edit]')).toHaveCount(0);
+      await expect(c.locator('[data-dog-edit]')).toHaveCount(1);
       const take = c.locator('input[data-photo-src="camera"]');
       const up = c.locator('input[data-photo-src="upload"]');
       await expect(take).toHaveAttribute('accept', 'image/*');
       await expect(up).toHaveAttribute('accept', 'image/*');
-      // Take photo opens the camera on a phone; Upload photo has no capture, so it offers the library and files
+      // Take opens the camera on a phone; Upload has no capture, so it offers the library and files
       await expect(take).toHaveAttribute('capture', 'environment');
       expect(await up.getAttribute('capture')).toBeNull();
     }
-    await expect(empty.locator('.dogphoto-btns')).toHaveAttribute('aria-label', 'Add a photo of Pretend Two');
-    await expect(shown.locator('.dogphoto-btns')).toHaveAttribute('aria-label', 'Change the photo of Pretend One');
+    await expect(empty.locator('[data-photo-open]')).toHaveAccessibleName('Add a photo of Pretend Two');
+    await expect(shown.locator('[data-photo-open]')).toHaveAccessibleName('Photo of Pretend One');
+    await empty.locator('[data-photo-open]').click();
+    await expect(empty.locator('[data-photo-menu] label')).toHaveText(['Take', 'Upload']);
+    await expect(empty.locator('input[data-photo-src="camera"]')).toHaveAccessibleName('Take a photo');
+    await expect(empty.locator('input[data-photo-src="upload"]')).toHaveAccessibleName('Upload a photo');
     const chooser = page.waitForEvent('filechooser');
     await empty.locator('label[data-photo-upload]').click();
     const opened = await chooser;
     expect(await opened.element().getAttribute('accept')).toBe('image/*');
     expect(await opened.element().getAttribute('data-dog-photo')).toBe('sub-x2');
+  });
+
+  test('keyboard: Enter on the photo opens Take and Upload, Escape closes it and returns there', async ({ page, guard }) => {
+    await openDogs(page, guard);
+    const empty = card(page, 'Pretend Two');
+    const photo = empty.locator('[data-photo-open]');
+    await photo.focus();
+    await page.keyboard.press('Enter');
+    await expect(empty.locator('[data-photo-menu]')).toBeVisible();
+    await expect(empty.locator('input[data-photo-src="camera"]')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(empty.locator('[data-photo-menu]')).toBeHidden();
+    await expect(photo).toBeFocused();
   });
 
   test('a successful upload sends the picture for that dog and the card keeps the new file id', async ({ page, guard }) => {
@@ -130,7 +149,8 @@ test.describe('CD Hub dog photos', () => {
     await expect(two.locator('img.dogphoto')).toHaveCount(0);
     await expect(two.locator('[data-paw]')).toBeVisible();
     await expect(two.locator('.nm')).toHaveText('Pretend Two');
-    await expect(two.locator('label.dogphoto-btn')).toHaveText(['Take photo', 'Upload photo']);
+    await two.locator('[data-photo-open]').click();
+    await expect(two.locator('[data-photo-menu] label')).toHaveText(['Take', 'Upload']);
     await expect(two.locator('input[data-dog-photo]').first()).toBeEnabled();
   });
 });

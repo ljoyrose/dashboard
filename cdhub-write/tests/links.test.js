@@ -68,7 +68,19 @@ test('link_add: max_per_from 1 (main) ends the old main in the same save; link_e
   const end = post(e, 'link_end', { id: b.result.id, to_date: '2026-11-12' }, e.codes.owner);
   assert.equal(end.ok, true, JSON.stringify(end));
   assert.equal(rows(e)[1][8], '2026-11-12');
-  assert.equal(post(e, 'link_end', { id: b.result.id }, e.codes.owner).code, 'NOT_ALLOWED');
+  const again = post(e, 'link_end', { id: b.result.id }, e.codes.owner);
+  assert.equal(again.ok, true, JSON.stringify(again));
+  assert.equal(again.result.already, true);
+  assert.equal(rows(e)[1][8], '2026-11-12');
+});
+
+test('link_add: subjects is the dog list in BLD-subject.csv (live photo links say subjects)', () => {
+  const e = env();
+  const r = post(e, 'link_add', { from_table: 'subjects', from_id: 'sub-test-a', to_table: 'files', to_id: 'fil-1', role: 'gallery', from_date: '2026-11-14', source: 'test' }, e.codes.owner);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(rows(e)[0][2], 'subjects');
+  assert.equal(rows(e)[0][3], 'sub-test-a');
+  assert.equal(post(e, 'link_add', { from_table: 'subjects', from_id: 'sub-missing', to_table: 'files', to_id: 'fil-1', role: 'gallery', source: 'test' }, e.codes.owner).code, 'NOT_FOUND');
 });
 
 test('link_end: an optional reason is kept in end_reason; nothing else changes', () => {

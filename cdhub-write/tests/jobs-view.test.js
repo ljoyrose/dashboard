@@ -27,6 +27,33 @@ test('a Problem-button job (target optional) shows on its SOP panel with its own
   assert.match(V.sopHtml(v, 'Lost Dog'), /<b>lost_dog<\/b><span class="mut" data-every>When it happens<\/span>[\s\S]*Problem button/);
 });
 
+test('the summary uses each age band and the highest count for food bowls', () => {
+  const types = [
+    Object.assign(T('feeding', 'dog', '1'), { sop: 'checks' }),
+    Object.assign(T('food_bowls', 'none', '1'), { sop: 'checks', site_scope: 'one_line' }),
+    Object.assign(T('water_bowls', 'none', '1'), { sop: 'checks', site_scope: 'one_line' })
+  ];
+  const rules = [
+    { rule_key: 'job.times_per_day.feeding', value: '2', effective_from: '2026-01-01' },
+    { rule_key: 'job.times_per_day.feeding.by_age', value: '0-10:4|11-:2', effective_from: '2026-01-01' }
+  ];
+  const day = '2026-03-11';
+  const line = (id, key, hh, subject) => ({ id: id, check_type_id: 'cty-' + key, subject_id: subject || '', outcome: 'ok', taken_at: day + 'T' + hh + ':00:00Z' });
+  const logs = [
+    line('fy1', 'feeding', '08', 'sub-test-a'), line('fy2', 'feeding', '12', 'sub-test-a'),
+    line('fa1', 'feeding', '08', 'sub-test-b'), line('fa2', 'feeding', '12', 'sub-test-b'),
+    line('b1', 'food_bowls', '08'), line('b2', 'food_bowls', '12'),
+    line('w1', 'water_bowls', '08')
+  ];
+  const dogs = [{ id: 'sub-test-a', dob: '2026-03-01', area_id: 'area-a' }, { id: 'sub-test-b', dob: '2020-01-01', area_id: 'area-a' }];
+  const rows = V.summary({ today: day, logs: logs, litters: [], types: types, dogs: dogs, areas: [], rules: rules, esc: (s) => String(s) });
+  const row = (k) => rows.find((r) => r.key === k);
+  assert.equal(row('feeding').due, 1);
+  assert.equal(row('feeding').ok, 1);
+  assert.equal(row('food_bowls').due, 1);
+  assert.equal(row('water_bowls').ok, 1);
+});
+
 test('the row\'s own frequency words win over words made from every_days', () => {
   const types = [Object.assign(T('water_bowls', 'area', '1'), { sop: 'Feeding', frequency: 'Daily and when dirty' })];
   const v = { today: '2026-03-02', logs: [], litters: [], types, dogs: [], areas: [{ id: 'r1' }], esc: (s) => String(s), dmy: (s) => s };

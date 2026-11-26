@@ -64,6 +64,9 @@ test('one list draws hub buttons and history links, with Temps and without Breed
     expect(html).toMatch(/href="#hi-/);
     for (const [label, href] of PRIMARY.concat(MORE)) expect(html, label).toContain('href="' + href + '"');
   }
+  expect(hist).toContain('data-inspect-links');
+  expect(hist).toContain('No save address in this browser.');
+  expect(hist).toContain('href="./index.html#/round"');
   expect(hist).toMatch(/href="\.\/history\.html"[^>]*aria-current="page"/);
   expect(hist).toMatch(/data-section="ops"[^>]*aria-current="page"/);   // Temps sits in Records
   expect(arch).not.toContain('aria-current');

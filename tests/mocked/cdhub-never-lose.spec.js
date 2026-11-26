@@ -111,6 +111,46 @@ test('a validation failure with no code is not retried; one job is one notice, w
   expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
 });
 
+test('a link the script says has already ended is not kept and is not listed as Not saved @regression', async ({ page }) => {
+  let calls = 0;
+  await page.route(SINK, async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'NOT_ALLOWED', message: 'That link has already ended.' }) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await page.evaluate((url) => { window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' }); }, SINK);
+  const j = await page.evaluate(() => sinkSend({ action: 'link_end', fields: { id: 'lnk-p0174', to_date: '2026-11-24', reason: 'Replaced by edited copy' } }));
+  expect(j.ok).toBe(false);
+  await expect(page.locator('#hub-outbox')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox.refused'))).toBeNull();
+  const seen = calls;
+  await page.waitForTimeout(1500);
+  expect(calls).toBe(seen);
+});
+
+test('a photo link the script cannot find is listed once and is not sent again @regression', async ({ page }) => {
+  let calls = 0;
+  await page.route(SINK, async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'NOT_FOUND', message: 'That record was not found, so nothing was saved.' }) });
+  });
+  await page.goto('cdhub/');
+  await page.locator('#signinbtn').click();
+  await page.evaluate((url) => { window.sinkGate = async () => ({ ok: true, url, code: 'river-staff-441' }); }, SINK);
+  await page.evaluate(() => sinkSend({ action: 'link_add', fields: { from_table: 'subjects', from_id: 'sub-asia', role: 'gallery', to_table: 'files', to_id: 'fil-new' } }));
+  const bar = page.locator('#hub-outbox');
+  await expect(bar.locator('[data-outbox-refused]')).toHaveCount(1);
+  await expect(bar.locator('[data-outbox-refused]')).toContainText('That record was not found, so nothing was saved.');
+  await expect(bar.locator('[data-outbox-refused]')).not.toContainText('Enter it again');
+  await expect(bar.locator('[data-outbox-waiting]')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('cdhub.outbox'))).toBeNull();
+  const seen = calls;
+  await page.waitForTimeout(1500);
+  expect(calls).toBe(seen);
+});
+
 test('a refusal (a check failed) is not kept: it is listed as Not saved with the reason, and OK clears it', async ({ page, guard }) => {
   rooms(guard.world);
   await page.route(SINK, async (route) => {

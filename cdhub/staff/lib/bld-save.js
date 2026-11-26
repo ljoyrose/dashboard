@@ -281,8 +281,9 @@
       put(local, REFUSED_KEY, JSON.stringify(rf.slice(-50)));
     }
     /** After an answer: saved (or already saved) and refused leave the box; anything else keeps it for another try. */
+    function alreadyEnded(j) { return !!(j && !j.ok && j.code === 'NOT_ALLOWED' && /already ended/i.test(j.message || '')); }
     function settle(id, j, auth) {
-      if (j && (j.ok || j.code === 'DUPLICATE')) { authWait = null; dropEntry(id); return true; }
+      if (j && (j.ok || j.code === 'DUPLICATE' || alreadyEnded(j))) { authWait = null; dropEntry(id); return true; }
       if (refused(j)) { refuseEntry(id, j); dropEntry(id); return true; }
       if (j && !j.ok && SIGN_IN[j.code] && auth != null) { authWait = auth; outboxNotify(); }
       scheduleRetry(60000);

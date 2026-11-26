@@ -329,8 +329,9 @@ test('the dog page has Back, Previous and Next in list order, and the logo heade
 
 test('More offers Inspector links: the owner page address from the host, or where to set it up', () => {
   View.setTab('more');
-  const on = View.page({ T: tables(), today: '2026-06-09', esc, ownerPage: 'https://script.google.com/macros/s/X/exec?page=approve' });
-  assert.match(on, /<a class="bb-dog" href="https:\/\/script\.google\.com\/macros\/s\/X\/exec\?page=approve" target="_blank" rel="noopener"><span class="bb-name">Inspector links/);
+  const enc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const on = View.page({ T: tables(), today: '2026-06-09', esc: enc, ownerPage: 'https://script.google.com/macros/s/X/exec?page=approve&section=inspect' });
+  assert.match(on, /<a class="bb-dog" href="https:\/\/script\.google\.com\/macros\/s\/X\/exec\?page=approve&amp;section=inspect" target="_blank" rel="noopener"><span class="bb-name">Inspector links/);
   const off = View.page({ T: tables(), today: '2026-06-10', esc });
   assert.match(off, /Set up saving first/);
   assert.doesNotMatch(View.page({ T: tables(), today: '2026-06-11', esc, ownerPage: 'javascript:x' }), /href="javascript/);

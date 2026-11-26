@@ -29,21 +29,14 @@
 <script src="staff/lib/links.js"></script>
 <script src="staff/lib/photos.js"></script>
 <script src="jobs-view.js"></script>
+<script src="staff/lib/lazy.js"></script>
 <script src="sop-records.js"></script>
 <script src="job-calendar.js"></script>
 <script src="docs-view.js"></script>
-<script src="../breed-better/score.js"></script>
-<script src="../breed-better/dna-panel.js"></script>
 <script src="staff/lib/viewer-levels.js"></script>
-<script src="../breed-better/hub-view.js"></script>
-<script src="../enquiries/core.js"></script>
-<script src="../enquiries/reader.js"></script>
-<script src="../enquiries/requests.js"></script>
-<script src="../enquiries/examples.js"></script>
-<script src="enquiries-view.js"></script>
 <script src="admin.js"></script>
+<script src="staff/lib/tables.js"></script>
 <script src="items-view.js"></script>
-<script src="bin-view.js"></script>
 <script src="work-actions.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -377,22 +370,23 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ph .ti{width:40px;height:40px}
 .ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
 .ph .off{display:none !important}
-.dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
-.dogphoto-btn{justify-content:center;padding:0 8px}
-/* bigger photo, then Take photo and Upload photo under it (the owner, 13 Nov 2026: camera or upload, any device) */
-.dogphoto-col{width:120px}
-.dogphoto-btns{display:flex;flex-direction:column;gap:6px}
-.dogphoto-btn{width:100%;box-sizing:border-box;white-space:nowrap}
-/* Tighter card, phone first (the owner, 15 Nov 2026: "wastes space and the photo is small"): on a phone the photo is the card's
-   full width, Take photo and Upload photo sit side by side under it, then the name; on wider screens the photo is bigger. */
+.dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch;width:120px}
+/* The photo itself is the button . Take and Upload open under it, only while that menu is open. */
+#main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd){position:absolute;inset:0;display:grid;place-items:center;width:100%;height:100%;min-height:0;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;box-shadow:none}
+#main button.phbtn:not(.tile):not(.ttl):not(.rdel):not(.jd):hover{background:transparent;border:0}
+.phbtn:focus-visible{outline:2px solid var(--ljr-6);outline-offset:-3px}
+.phmenu{display:flex;flex-direction:column;gap:4px}
+.phmenu[hidden]{display:none}
+.phmenu .btn{width:100%;box-sizing:border-box;justify-content:center;min-height:44px}
+.phmenu .btn:focus-within{outline:2px solid var(--ink);outline-offset:1px}
+.wedit{margin-left:auto;flex:none;min-width:44px}
+/* Tighter card, phone first : on a phone the photo is the card's
+   full width, then the name; on wider screens the photo is bigger. */
 @media(max-width:600px){
  .dc .dc-top{flex-direction:column;align-items:stretch;gap:8px;padding:12px 12px 6px}
  .dogphoto-col{width:100%}
  .ph{width:100%;height:auto;aspect-ratio:1/1;max-width:100%}
  .ph .ti{width:56px;height:56px}
- .dogphoto-btns{flex-direction:row}
- .dogphoto-btn{flex:1 1 0;width:auto}
- .dogphoto-btn[data-photo-edit]{flex:0 0 auto;padding:0 12px}
 }
 @media(min-width:601px){.ph{width:160px;height:auto;aspect-ratio:1/1}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
@@ -401,7 +395,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .pcam video{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border:1px solid var(--line);border-radius:var(--radius);background:var(--soft)}
 .dogphoto-msg{margin:0 12px 8px}
 .dogphoto-msg:empty{display:none}
-/* gallery (the owner 13 Nov 2026): small square thumbnails, files and links as plain links */
+/* gallery : small square thumbnails, files and links as plain links */
 .glist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .glist .gi{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);max-width:100%}
 .gph{display:block;width:88px;height:auto;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:var(--line)}
@@ -426,7 +420,7 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .pcrop-zoom input{width:100%}
 .pcrop-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pcrop-gap{flex:1}
 @media(max-width:767px){.pcrop-btns .btn{height:var(--house-btn-phone)}}
-.ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center}
+.ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;pointer-events:none}
 .ph .gicon svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
 .ph .gicon.f{background:var(--female)}
 .ph .gicon.m{background:var(--male)}
@@ -540,7 +534,6 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
 ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--fs-small)}ul.notes li{margin:2px 0}
-ul.bin-list{margin:4px 0 12px;padding-left:20px}ul.bin-list li{margin:6px 0}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
 .boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
@@ -625,7 +618,7 @@ details.allfig>summary{cursor:pointer;color:var(--muted);font-size:var(--fs-smal
 html,body{background:#fff!important;color:var(--ljr-8)!important;margin:0!important}
 body{padding:10mm!important;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 *{box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
+.top,#nav,#chips,.skip,.next,.boot,.house-fold,.fbar,#sinkcard,#wpanel:empty,.dogphoto-btn,.phmenu,.wedit,.dedit,.dogphoto-msg,[data-dog-edit-host],.dcs-form,.whor{display:none!important}
 .wrap{padding:0!important;margin:0!important;max-width:none!important}
 #main{max-width:none!important;margin:0!important;padding:0!important}
 #main [data-house-folded]>[data-fold-part]{display:revert!important}
@@ -740,7 +733,7 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 WANT.push('BLD-subject_link.csv');
-WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery (the owner 13 Nov 2026): one file store, link rows (decision C); absent until the owner creates them */   /* BFFs / Fren. links (the owner 13 Nov 2026); absent until the owner creates it */
+WANT.push('BLD-links.csv','BLD-files.csv');   /* main photo + gallery : one file store, link rows (decision C); absent until the files exist */   /* BFFs / Fren. links ; absent until the file exists */
 var OPTIONAL_FILES={'BLD-subject_link.csv':1,'BLD-links.csv':1,'BLD-files.csv':1,'BLD-area_link.csv':1,'BLD-status_label.csv':1,'BLD-inspection.csv':1,'BLD-credential.csv':1,'BLD-credential_version.csv':1,'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1,'BLD-person.csv':1,'BLD-household.csv':1,'BLD-household_member.csv':1,'BLD-subject_owner.csv':1,'BLD-sale.csv':1,'BLD-match_candidate.csv':1};
 /* LATER: tables the first screen does not need (owner speed, 13 Nov 2026). They are read straight after the first
    screen shows; a page that needs them (LATER_PAGES) says it is getting them ready until they land. */
@@ -755,7 +748,27 @@ var LATER={};
  'deviation','finding','governed_by','inspection','microchip_registration','outcome','reminder','verification','visit','fit_to_breed'
 ].forEach(function(t){ LATER['BLD-'+t+'.csv']=1; });
 function wantLater(f){ if(WANT.indexOf(f)<0){ WANT.push(f); LATER[f]=1; } OPTIONAL_FILES[f]=1; }
-if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(wantLater);
+/* LAZY: heavier parts load the first time a page that uses them opens, not on first open (OV11, 15 Nov 2026).
+   files = the tables each part reads; they must match the part's own FILES (tests/mocked/cdhub-lazy-load.spec.js checks). */
+var LAZY={
+ bb:{src:['../breed-better/score.js','../breed-better/dna-panel.js','../breed-better/hub-view.js'],ready:function(){return typeof BBHubView!=='undefined';},
+  files:['BLD-score_scheme.csv','BLD-score_band.csv','BLD-score_criterion.csv','BLD-score_point.csv','BLD-score_enrolment.csv','BLD-fit_to_breed.csv','BLD-score_judgement.csv','BLD-score_assessment.csv','BLD-grade_band.csv','BLD-viewer_level.csv','BLD-check_value.csv']},
+ enq:{src:['../enquiries/core.js','../enquiries/reader.js','../enquiries/requests.js','../enquiries/examples.js','enquiries-view.js'],ready:function(){return typeof CDEnquiries!=='undefined';},
+  files:['BLD-person.csv','BLD-household.csv','BLD-household_member.csv','BLD-subject_owner.csv','BLD-sale.csv','BLD-match_candidate.csv']}
+};
+var LAZY_FOR={breed:['bb'],dogs:['bb','enq'],enquiries:['enq']};   /* the dog card shows the Breed Better section and the household line */
+var LAZY_ERR='';
+Object.keys(LAZY).forEach(function(k){ LAZY[k].files.forEach(wantLater); });
+/* The parts a view still waits for; starts loading them and opens the view again once they have run. */
+function lazyWait(id){
+ var need=(LAZY_FOR[id]||[]).filter(function(k){ return !LAZY[k].ready(); });
+ if(!need.length) return false;
+ if(LAZY_ERR){ var e=LAZY_ERR; LAZY_ERR=''; return {err:e}; }   /* shown once; the next open tries again */
+ BLDLazy.load([].concat.apply([],need.map(function(k){ return LAZY[k].src; }))).then(function(){
+  if(need.every(function(k){ return LAZY[k].ready(); })&&document.getElementById('cdWait')) go(SHOWN||'map',false);
+ },function(e){ LAZY_ERR=String(e&&e.message||e); if(document.getElementById('cdWait')) go(SHOWN||'map',false); });
+ return 'wait';
+}
 if(typeof AdminView!=='undefined') AdminView.FILES.forEach(wantLater);   /* Admin (owner-only): admin.js */
 if(typeof CDEnquiries!=='undefined') CDEnquiries.FILES.forEach(wantLater);
 if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (owner): items-view.js, 14 Nov 2026 */
@@ -772,7 +785,7 @@ function compJobsV(){ var v=jobsV(), keys={}, ids={};
  v.types=v.types.filter(function(t){ var off=bbOnlyType(t)||!!keys[String(t.type_key||'').trim()]; if(off) ids[t.id]=1; return !off; });
  v.logs=v.logs.filter(function(r){ return !ids[r.check_type_id]; });
  return v; }
-var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
+var LATER_PAGES={items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
 /* LIVE_PAGES: Compliance ("What was true on", the inspection export) and Yearly print show a read at most COMP_FRESH_MS old, always with its "As of" time; older waits for the live read */
 var LIVE_PAGES={compliance:1,yearly:1};
 var COMP_FRESH_MS=5*60*1000;   /* Compliance shows a read at most 5 minutes old, always with its "As of" time */
@@ -1263,14 +1276,14 @@ function occLatest(rows){ var m={}; rows=rows||[]; rows.forEach(function(r){ if(
  var cur=BLDOccupancy.latestRow(rows,r.subject_id), lab=BLDOccupancy.latestRow(rows.filter(function(x){ return x.classification; }),r.subject_id);
  /* classification is the licence label, not a location: a move row leaves it blank, so it comes from the latest row that has one */
  m[r.subject_id]=lab&&!cur.classification?Object.assign({},cur,{classification:lab.classification,classification_note:lab.classification_note}):cur; }); return m; }
-/* Newest first. The same date keeps the order the rows were read in (Lisa 25 Nov 2026). */
+/* Newest first. The same date keeps the order the rows were read in . */
 function byDateDesc(a, b){ var x=String(a.on||''), y=String(b.on||''); return x>y?-1:(x<y?1:0); }
 function build(){
   var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
   var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=occLatest(T['BLD-occupancy.csv']),
       MC=idx(T['BLD-microchip.csv'],'subject_id');
-  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||''}); }); /* source column stays in the sheet, not shown (the owner, 12 Nov 2026) */
-  Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
+  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({id:r.id||'',on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||'',corrects:r.corrects_id||''}); }); /* source column stays in the sheet, not shown  */
+  Object.keys(W).forEach(function(k){ var live=liveWeights(W[k]); live.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); W[k]=live; });
   var DSP={}, seenDose={}, copiedDose={};
   function doseOn(v){ return String(v||'').slice(0,10); }
   (T['BLD-dispense.csv']||[]).forEach(function(r){
@@ -1395,7 +1408,7 @@ function build(){
   CD.litters=T['BLD-litter.csv']||[];
   CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
-  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only (the owner, 12 Nov 2026)
+  CD.dogs.forEach(function(d){ if(!d.chip && MCN[d.id]) d.chip=MCN[d.id]; });   // status comes from BLD-subject_status only
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
   CD._built=Date.now(); CD._needs=null;
@@ -1403,7 +1416,7 @@ function build(){
 }
 
 var TODAY=new Date();
-function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* owner screens: "2 Mar 2026" (the owner 13 Nov 2026), one formatter: staff/lib/date-words.js */
+function dmy(iso){ if(!iso) return ''; return /^\d{4}-\d{2}-\d{2}$/.test(iso)?BLDDates.long(iso):iso; }   /* owner screens: "2 Mar 2026" , one formatter: staff/lib/date-words.js */
 function plural(n,one,many){ return n+' '+(n===1?one:(many||one+'s')); }
 var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
@@ -1836,7 +1849,7 @@ function checks(){
  if(!rc||LOAD.copy||LOAD.stale||LOAD.later!=='ok') out.push({k:'tables',ok:true,wait:true,msg:'Checking tables\u2026'});
  else { man.forEach(function(r){ var n=rc[r.table]; if(n!=null && +n < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
-   fix:mism.length?'Rows moved to the Bin on purpose: the tables list count is old and needs updating. Not on purpose: look in the Bin.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
+   fix:mism.length?'The tables list count is old and needs updating. Ended rows stay in the sheets.':'',msg:mism.length?plural(mism.length,'table')+(mism.length===1?' has':' have')+' fewer rows than the manifest: '+mism.join(', ')
      :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')}); }
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
@@ -1882,7 +1895,7 @@ function checks(){
      :'no bitch is over your most litters'});
  out.push({k:'breeding rules',ok:!unset.length,
    msg:unset.length? unset.length+' of 3 not set yet: '+unset.join(', ')+'. Set them on Compliance.':'all 3 set; litters and matings are checked against the version in force on their own date'});
- 
+
  var rl=roomAudit(todayISO());
  out.push({k:'room limits',ok:!rl.over.length&&!rl.unknown.length,
    msg:rl.over.length? rl.over.length+' room'+(rl.over.length===1?' is':'s are')+' over: '+rl.over.slice(0,5).map(function(x){ return x.label+' ('+x.mix+', takes '+x.alternatives+')'; }).join(', ')+(rl.over.length>5?' \u2026':'')
@@ -2176,7 +2189,7 @@ function checksCard(){
    /* skip: a rule check with no rule set is not run, so it shows a grey dash, never a green tick (17 Nov 2026) */
    return '<div id="'+ckId(x.k)+'" class="mrow ckrow'+(x.wait?' wait':x.skip?' notrun':x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.skip?' notrun':x.ok?'':' bad')+'" aria-hidden="true">'+(x.wait?'\u2026':x.skip?'\u2013':x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.wait?' checking':x.skip?' not checked':x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small>'+(x.fix&&!x.ok?'<small class="help">'+esc(x.fix)+'</small>':'')+'</span>'
-    +(x.fix&&!x.ok?'<button type="button" class="btn house-open" data-go="bin">Bin</button>':'')+(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
+    +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
 
@@ -2409,7 +2422,7 @@ function showList(key){
   });
  });
 }
-/* Place a dog (the owner, 12 Nov 2026): pick a cabin, check the room's limits with the dog's size from its latest weight, then
+/* Place a dog : pick a cabin, check the room's limits with the dog's size from its latest weight, then
    one move row through the save script (the same path as The round). Replaces the old "flag" (it wrote to a database
    that no longer exists) and the "not in a cabin" Save that wrote the Drive file straight from the browser. */
 function placeCell(d){
@@ -2638,7 +2651,7 @@ function pageDogs(){
   +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
 function ageBand(m){ if(m===null) return '__none'; return isPupM(m)?'p':(isAdultM(m)?'a':''); }
-/* Edit the card header (the owner, 12 Nov 2026): name, sex, date of birth, colour, entire/neutered, microchip. One save,
+/* Edit the card header : name, sex, date of birth, colour, entire/neutered, microchip. One save,
    action dog_details, owner code only, behind SAVE_ENABLED and TABLE_ON_dog_details. Size comes from weight unless an owner size_override row is set. */
 function dEditForm(d){
  var cols=Object.keys(CD.colour||{}).map(function(k){ return CD.colour[k]; }).filter(function(c){ return c&&c.id; })
@@ -2657,13 +2670,28 @@ function dEditForm(d){
   +'</div><div class="dcs-row"><button type="submit" class="btn yes">Save details</button><button type="button" class="btn" data-dedit-cancel>Cancel</button></div>'
   +'<p class="mut" data-dedit-msg role="status"></p></form>';
 }
+/* A correction is a new row whose corrects_id points at the old one. The list shows only rows nothing else corrects. */
+function liveWeights(rows){ var replaced={}; (rows||[]).forEach(function(r){ if(r.corrects) replaced[r.corrects]=1; });
+ return (rows||[]).filter(function(r){ return !r.id||!replaced[r.id]; }); }
+function weighPencil(w){ if(!w||!w.id) return '';
+ return '<button type="button" class="cb wedit" data-weigh-edit aria-label="'+esc('Correct the weight on '+dmy(w.on))+'">\u270e</button>'; }
+function weighFormSet(f,w){ if(!f) return;
+ var title=f.querySelector('.wft'), dog=f.getAttribute('data-weigh-form'), name=(CD._byId[dog]&&CD._byId[dog].name)||'';
+ var sub=f.querySelector('button[type=submit]'), cancel=f.querySelector('[data-weigh-cancel]');
+ if(w){ if(title) title.textContent='Correct weight'; f.setAttribute('aria-label','Correct weight for '+name);
+  f.on.value=w.on||''; f.kg.value=w.kg!=null?String(w.kg):''; f.bcs.value=w.bcs||''; f.setAttribute('data-corrects',w.id||'');
+  if(sub) sub.textContent='Save correction'; if(cancel) cancel.hidden=false; }
+ else { if(title) title.textContent='Add weight'; f.setAttribute('aria-label','Add weight for '+name);
+  f.on.value=todayLondon(); f.kg.value=''; f.bcs.value=''; f.removeAttribute('data-corrects');
+  if(sub) sub.textContent='Add weight'; if(cancel) cancel.hidden=true; }
+ var msg=f.querySelector('[data-weigh-msg]'); if(msg) msg.textContent=''; }
 function wForm(d,inCard){   /* on the dog card the title is a label, not a heading: the Dogs page has no heading level for it */
  var opts='<option value="">\u2014</option>'; for(var b=1;b<=9;b++) opts+='<option value="'+b+'">'+b+'</option>';
- return '<form class="dcs-form wform" novalidate data-weigh-form="'+esc(d.id)+'" aria-label="'+esc('Add weight for '+(d.name||''))+'">'+(inCard?'<p class="wft">Add weight</p>':'<h4>Add weight</h4>')+'<div class="dcs-row">'
+ return '<form class="dcs-form wform" novalidate data-weigh-form="'+esc(d.id)+'" aria-label="'+esc('Add weight for '+(d.name||''))+'">'+(inCard?'<p class="wft">Add weight</p>':'<h4 class="wft">Add weight</h4>')+'<div class="dcs-row">'
   +'<label>Date<input type="date" name="on" value="'+todayLondon()+'" max="'+todayLondon()+'" required></label>'
   +'<label>kg<input type="number" name="kg" inputmode="decimal" step="0.01" min="0.1" max="150" required></label>'
   +'<label>BCS (optional)<select name="bcs" aria-label="Body condition score, 1 to 9">'+opts+'</select></label></div>'
-  +'<button type="submit">Add weight</button><p class="mut" data-weigh-msg role="status"></p></form>'; }
+  +'<div class="dcs-row"><button type="submit">Add weight</button><button type="button" data-weigh-cancel hidden>Cancel</button></div><p class="mut" data-weigh-msg role="status"></p></form>'; }
 function showWeights(id){
  var d=CD._byId[id]; if(!d) return;
  var el=document.getElementById('wpanel'); if(!el) return;
@@ -2673,7 +2701,7 @@ function showWeights(id){
   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th></tr></thead><tbody>';
  for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
   var dl=pv?(w.kg-pv.kg):null;
-  h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
+  h+='<tr data-k="wrow" data-wid="'+esc(w.id||'')+'" data-on="'+esc(w.on)+'" data-kg="'+esc(String(w.kg))+'" data-bcs="'+esc(w.bcs||'')+'"><td>'+esc(dmy(w.on))+weighPencil(w)+'</td><td><b>'+w.kg+' kg</b></td>'
    +'<td>'+(dl===null?'<span class="mut">first</span>':'<span class="'+(dl>0?'up':(dl<0?'dn':''))+'">'+(dl>0?'+':'')+dl.toFixed(1)+'</span>')+'</td>'
    +'<td>'+(w.bcs?'<span class="pill '+(w.bcs==='5'?'ok':(parseInt(w.bcs,10)>5?'w':'no'))+'">'+esc(w.bcs)+'</span>':'<span class="mut">\u2014</span>')+'</td></tr>'; }
  h+='</tbody></table></div>'+wForm(d)+'<button id="wclose" class="cb" style="margin-top:8px">close</button></div>';
@@ -2702,7 +2730,7 @@ function showTreats(id){
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='';   /* MEDDOG: the dog picked from the medicine table */
+var dogShown=300, unplacedShown=40, DOGFOCUS='', AREAFOCUS='', MEDDOG='', DOGQ='';   /* MEDDOG: the dog picked from the medicine table. DOGQ: a find that opens Dogs after its parts load */
 /* one size band to its colour key (small, medium, large) */
 var SIZE_WORD={small:'Small',medium:'Medium',large:'Large'};   /* only when the owner has no size_label.* rows */
 /* the one place size is worked out: the dog's latest weight against the owner's cut-off rows. Run again after a new weight. */
@@ -2773,7 +2801,7 @@ function vaccRow(d){ var x=d.vacc||[], ax=(CD.vaxArch||{})[d.id]||[];
   +vaxForm(d)
   +'<p class="mut" data-vax-msg role="status"></p>'
   +'</div></details>'; }
-/* vaccine disease codes as words (the owner, 12 Nov 2026). Display only: the sheet keeps its codes. */
+/* vaccine disease codes as words . Display only: the sheet keeps its codes. */
 var VAX_WORDS={distemper:'Distemper',adenovirus_ich:'Hepatitis (adenovirus)',parvovirus:'Parvovirus',leptospirosis:'Leptospirosis',
  parainfluenza:'Parainfluenza',bordetella:'Kennel cough (Bordetella)',bordetella_kennel_cough:'Kennel cough (Bordetella)',rabies:'Rabies'};
 function vaxWords(s){ return String(s||'').split(';').map(function(c){ c=c.trim(); if(!c) return '';
@@ -2801,7 +2829,7 @@ function litterRow(d){ var x=d.littersAsDam||[]; if(!x.length) return '';
   +(on?'</a>':'</span>')+'</div>'; }
 /* photo cell: a Drive file id, or a Drive file URL. Found by the header name on the subject file the hub already reads
    (BLD-subject.csv: a Sheet is exported as CSV, so the tab name is not used). Empty or not Drive: the paw. */
-/* BFFs / Fren. (the owner 13 Nov 2026): dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
+/* BFFs / Fren. : dated dog-to-dog link rows, words from link_kind.* rule rows (staff/lib/links.js) */
 function dogLinksHtml(d){
  if(typeof BLDLinks==='undefined') return '';
  var g=BLDLinks.forDog(T['BLD-subject_link.csv']||[],T['BLD-breeding_rule.csv']||[],d.id,todayISO());
@@ -2861,7 +2889,7 @@ function loadPhotoImg(img){
    dogPhotoBytes(img,id);
   }).catch(function(){ dogPhotoBytes(img,id); });
 }
-/* Main photo + gallery (the owner 13 Nov 2026): files rows owned through dated link rows (staff/lib/photos.js). */
+/* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
 /* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
 function cardPhotoId(d,ph){
@@ -2878,7 +2906,7 @@ function cardPhotoId(d,ph){
    as before. Sorting never changes; only the label is hidden. */
 var PHOTO_DATES_ME='photos.show_dates.owner', PHOTO_DATES_ALL='photos.show_dates';
 function photoDatesOn(iso){ var r=breedRule(PHOTO_DATES_ME,iso)||breedRule(PHOTO_DATES_ALL,iso); return !r||String(r.value)!=='0'; }
-/* Remove, Make main and Put back (the owner 16 Nov 2026: "some are bad so need to be able to remove"). Nothing is deleted:
+/* Remove, Make main and Put back . Nothing is deleted:
    Remove ends the photo's gallery link (it moves to Ended), Put back adds a new gallery link from today, Make main adds a
    main link (the script ends the old main one). ended = true for an item in the Ended list. */
 function galleryTools(f,main,ended){
@@ -2904,11 +2932,10 @@ function galleryItem(f,mainId,dates,ended){
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
 function galleryHtml(d,ph){
- if(!ph.gallery.length&&!ph.ended.length) return '';
+ if(!ph.gallery.length) return '';   /* ended photos stay in the sheet; the card does not list them  */
  var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
  return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +(ph.gallery.length?'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>':'<span class="mut">None now</span>')
-  +(ph.ended.length?'<details class="gal-ended" data-k="ended"><summary>Ended ('+ph.ended.length+')</summary><ul class="glist">'+ph.ended.map(function(f){ return galleryItem(f,'',dates,true); }).join('')+'</ul></details>':'')
+  +'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
@@ -3039,7 +3066,9 @@ async function photoEdit(dog,fileId,msg){
   if(gl){ var y=dayMinus(day,1), to=String(gl.from_date||'').slice(0,10)<=y?y:day;
    await add('gallery');
    var e=await sinkAct('link_end',{id:gl.id,to_date:to,reason:GAL_EDITED});
-   if(!(e.ok&&e.result&&e.result.status==='saved')) throw new Error(sinkMsg(e));
+   var endedOk=e&&e.ok&&e.result&&e.result.status==='saved';
+   var endedAlready=e&&!e.ok&&e.code==='NOT_ALLOWED'&&/already ended/i.test(e.message||'');
+   if(!endedOk&&!endedAlready) throw new Error(sinkMsg(e));
    gl.to_date=to; gl.end_reason=GAL_EDITED; }
   if(!fileId||(ph.main&&f&&ph.main.id===f.id)) await add('main');
  }catch(err){ done='The edited copy is saved, but it is not shown yet: '+((err&&err.message)||'try again.'); }
@@ -3120,7 +3149,7 @@ function photoDecode(file){
  }
  return viaImg();
 }
-/* Edit before save (the owner, 13 Nov 2026): brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
+/* Edit before save : brightness and contrast, -50 to +50, done on the pixels so it works in every browser. */
 function photoTone(g,size,br,ct){
  br=+br||0; ct=+ct||0; if(!br&&!ct) return;
  var c=ct*2, f=(259*(c+255))/(255*(259-c)), o=br*2.55, im=g.getImageData(0,0,size,size), d=im.data;
@@ -3305,10 +3334,14 @@ document.addEventListener('submit',async function(ev){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(on)||on>todayLondon()){ msg.textContent='Choose a date, today or earlier.'; return; }
   var n=parseFloat(kg); if(!(n>=0.1&&n<=150)){ msg.textContent='Type the weight in kg, e.g. 12.4'; return; }
   btn.disabled=true; msg.textContent='Saving\u2026';
-  var r=await sinkAct('weighing',{subject_id:id,performed_on:on,weight_kg:String(Math.round(n*100)/100),body_condition_score:bcs});
+  var fields={subject_id:id,performed_on:on,weight_kg:String(Math.round(n*100)/100),body_condition_score:bcs};
+  var corrects=f.getAttribute('data-corrects')||''; if(corrects) fields.corrects_id=corrects;
+  var r=await sinkAct('weighing',fields);
   btn.disabled=false;
   if(!r.ok){ showSave(msg,sinkMsg(r)); return; }
-  var d=CD._byId[id]; if(d){ d.weights.push({on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':''}); d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
+  var d=CD._byId[id]; if(d){ if(corrects) d.weights=d.weights.filter(function(w){ return w.id!==corrects; });
+   d.weights.push({id:(r.result&&r.result.id)||'',on:on,kg:Math.round(n*100)/100,unit:'kg',bcs:bcs,scale:bcs?'9':'',corrects:corrects});
+   d.weights.sort(function(a,b){return a.on<b.on?-1:(a.on>b.on?1:0);}); sizeFromWeight(d); }
   var inCard=!!f.closest('article.dc'), keepY=window.scrollY;
   drawDogs();
   if(inCard){ weighReopen(id,sinkMsg(r)); window.scrollTo(0,keepY); }   /* the redraw leaves the page where it was */
@@ -3355,6 +3388,41 @@ function weighReopen(id,text){ var c=document.querySelector('#rows article.dc[da
 function vaxReopen(id,text){ var c=document.querySelector('#rows article.dc[data-dog="'+id+'"]'); if(!c) return;
  var more=c.querySelector('details[data-k="more"]'), v=c.querySelector('details.vacc'); if(more) more.open=true; if(v) v.open=true;
  var m=c.querySelector('[data-vax-msg]'); if(m) showSave(m,text); }
+function closePhotoMenus(back){
+ Array.prototype.forEach.call(document.querySelectorAll('[data-photo-menu]:not([hidden])'), function(menu){
+  menu.hidden=true;
+  var b=menu.parentNode&&menu.parentNode.querySelector('[data-photo-open]');
+  if(b){ b.setAttribute('aria-expanded','false'); if(back) b.focus(); }
+ });
+}
+document.addEventListener('click',function(ev){
+ var open=ev.target.closest&&ev.target.closest('[data-photo-open]');
+ if(open){
+  var col=open.closest('.dogphoto-col'), menu=col&&col.querySelector('[data-photo-menu]');
+  var was=menu&&!menu.hidden;
+  closePhotoMenus();
+  if(menu&&!was){ menu.hidden=false; open.setAttribute('aria-expanded','true'); var first=menu.querySelector('input'); if(first) first.focus(); }
+  return;
+ }
+ if(!(ev.target.closest&&ev.target.closest('[data-photo-menu]'))) closePhotoMenus();
+});
+document.addEventListener('keydown',function(ev){
+ if(ev.key!=='Escape'||(ev.target.closest&&ev.target.closest('[role="dialog"]'))) return;
+ closePhotoMenus(true);
+});
+document.addEventListener('click',function(ev){
+ var ed=ev.target.closest&&ev.target.closest('[data-weigh-edit]');
+ if(ed){
+  var scope=ed.closest('article.dc')||ed.closest('#wpanel')||document;
+  var form=scope.querySelector('[data-weigh-form]'), row=ed.closest('[data-k="wrow"]');
+  if(form&&row){ var det=form.closest('details'); if(det) det.open=true;
+   weighFormSet(form,{id:row.getAttribute('data-wid'),on:row.getAttribute('data-on'),kg:row.getAttribute('data-kg'),bcs:row.getAttribute('data-bcs')});
+   if(form.kg) form.kg.focus(); }
+  return;
+ }
+ var cancel=ev.target.closest&&ev.target.closest('[data-weigh-cancel]');
+ if(cancel) weighFormSet(cancel.closest('form'),null);
+});
 function bindDogPhotos(){
  while(DOGPHOTO_URLS.length){ try{ URL.revokeObjectURL(DOGPHOTO_URLS.pop()); }catch(e){} }
  loadDogPhotos();
@@ -3412,18 +3480,19 @@ function drawDogs(){
   +'<div class="dc-top">'
     +'<div class="dogphoto-col">'
     +'<div class="ph">'
+      +'<button type="button" class="phbtn" data-photo-open aria-haspopup="true" aria-expanded="false" aria-label="'+esc((pic?'Photo of ':'Add a photo of ')+(d.name||'this dog'))+'">'
       +'<svg class="ti'+(pic?' off':'')+'" data-paw aria-hidden="true"><use href="#i-paw"/></svg>'
       +(pic?'<img class="dogphoto off" alt="" data-photo-id="'+esc(pic)+'" referrerpolicy="no-referrer">':'')
+      +'</button>'
       +'<span class="gicon '+gSex+'" role="img" aria-label="'+esc(gTitle)+'" title="'+esc(gTitle)+'"><svg aria-hidden="true"><use href="'+gSym+'"/></svg></span>'
     +'</div>'
-    +'<div class="dogphoto-btns" role="group" aria-label="'+esc((pic?'Change the photo of ':'Add a photo of ')+(d.name||'this dog'))+'">'
-    +'<label class="btn dogphoto-btn" data-photo-take>Take photo'
-      +'<input type="file" accept="image/*" capture="environment" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="camera">'
+    +'<div class="phmenu" data-photo-menu hidden role="group" aria-label="'+esc('Photo of '+(d.name||'this dog'))+'">'
+    +'<label class="btn" data-photo-take>Take'
+      +'<input type="file" accept="image/*" capture="environment" class="sr" aria-label="Take a photo" data-dog-photo="'+esc(d.id)+'" data-photo-src="camera">'
     +'</label>'
-    +'<label class="btn dogphoto-btn" data-photo-upload>Upload photo'
-      +'<input type="file" accept="image/*" class="sr" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
+    +'<label class="btn" data-photo-upload>Upload'
+      +'<input type="file" accept="image/*" class="sr" aria-label="Upload a photo" data-dog-photo="'+esc(d.id)+'" data-photo-src="upload">'
     +'</label>'
-    +(pic?'<button type="button" class="btn dogphoto-btn" data-photo-edit="'+esc(d.id)+'" aria-label="Crop or adjust the photo of '+esc(d.name||'this dog')+'">\u270e Edit</button>':'')
     +'</div>'
     +'</div>'
     +'<div class="dc-info">'
@@ -3463,9 +3532,9 @@ function drawDogs(){
     +'</summary><div class="dcs-bd">'
       +(d.weights.length?d.weights.slice().reverse().map(function(ww,i,arr){
         var pv=arr[i+1], dl=pv?Math.round((ww.kg-pv.kg)*100)/100:null;   /* the change from the weighing before, shown in place */
-        return '<div class="dcs-row" data-k="wrow"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
+        return '<div class="dcs-row" data-k="wrow" data-wid="'+esc(ww.id||'')+'" data-on="'+esc(ww.on)+'" data-kg="'+esc(String(ww.kg))+'" data-bcs="'+esc(ww.bcs||'')+'"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
           +'<span class="'+(dl===null?'mut':(dl>0?'up':(dl<0?'dn':'mut')))+'" data-k="wchange">'+(dl===null?'first':(dl>0?'+':'')+dl.toFixed(1))+'</span>'
-          +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+'</div>';
+          +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+weighPencil(ww)+'</div>';
       }).join(''):'<span class="mut">No records</span>')
       +(d.weights.length>1?'<div class="dcs-row" style="margin-top:4px">'+wGraph(d.weights)+'</div>':'')
       +wForm(d,true)   /* Add weight opens in place (the owner 15 Nov 2026: tapping "no weight" jumped to the top) */
@@ -3697,13 +3766,7 @@ async function applyDogOff(dogId, msgEl){
  var page=(location.hash.replace(/^#\//,'').split('/')[0]||'areas');
  go(page==='dogs'?'dogs':(page==='round'?'round':'areas'), false);
 }
-/* Present / not here is saved as a check_log row (the owner 15 Nov 2026), against the owner's check_type row with
-   type_key round.presence (in force on the round's date, never hard-coded). No such row: kept on this page only, and
-   the row says so. item = present | not here, outcome = recorded; the newest row for a dog in a room that day wins. */
-function presenceType(date){ var rows=(T['BLD-check_type.csv']||[]).filter(function(r){ return String(r.type_key||'').trim()==='round.presence'; });
- rows=BLDCapacity.inForce(rows,date,'effective_from').sort(function(a,b){ return String(a.effective_from||'').localeCompare(String(b.effective_from||'')); });
- var t=rows[rows.length-1]; return t&&String(t.active).toLowerCase()!=='false'?t:null; }
-/* Present / not here is one check_log for the dog for the day (Lisa 25 Nov 2026), against cty-round_presence-1 when
+/* Present / not here is one check_log for the dog for the day, against cty-round_presence-1 when
    that row is in force, else the original Present row (round.presence or round_presence). A later round the same day,
    including a thermometer round, does not write another row: the line says Done today. Correct writes one new row
    that points at today's. No Present row: kept on this page only, and the line says so. */
@@ -4543,8 +4606,9 @@ function hubRefuse(id,j){
   hubPut(HUB_REFUSED,rf.slice(-50)); }
  hubDrop(id);
 }
+function hubAlreadyEnded(j){ return !!(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')); }
 function hubSettle(id,j,auth){
- if(j&&(j.ok||j.code==='DUPLICATE')){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
+ if(j&&(j.ok||j.code==='DUPLICATE'||hubAlreadyEnded(j))){ HUB_AUTH_WAIT=null; hubDrop(id); return true; }
  if(j&&!j.ok&&hubTerminal(j)){ hubRefuse(id,j); return true; }
  if(j&&!j.ok&&HUB_SIGN_IN[j.code]){ if(auth!=null) HUB_AUTH_WAIT=auth; hubBoxDraw(); if(!hubStop) hubRetry(60000); return false; }
  if(j&&!j.ok&&j.code&&!HUB_RETRY[j.code]){ hubRefuse(id,j); return true; }
@@ -4724,7 +4788,7 @@ function keptRow(areaId,ps,f,r){ var rows=T['BLD-area_reading.csv']||(T['BLD-are
 function roundRefresh(date){
  var st=document.getElementById('rstat'); if(st){ var rows=liveCabins(), n=rows.filter(function(a){ var x=ROUND[roundKey(date,a.id)]||{}; return x.t_am||x.t_pm; }).length; st.textContent=rows.length+' cabins \u00b7 '+n+' with a temperature'; }
  var kr=document.getElementById('kept-readings'); if(kr) kr.outerHTML=keptReadings(date); }
-/* Empty cabin (the owner, 12 Nov 2026): one area_reading row with room_empty = yes for that slot. It is the evidence (date,
+/* Empty cabin : one area_reading row with room_empty = yes for that slot. It is the evidence (date,
    slot, who: the save script stamps taken_at and taken_by), needs no temperature, and Compliance counts it as covered. */
 async function roomEmptySave(areaId,slot,msgEl,th){
  th=th||''; var date=(CD._roundDate||todayISO()), multi=roundThermos(areaId,date).length>1, sk=tSlotKey(slot,th,multi), k=roundKey(date,areaId), have=(ROUND[k]&&ROUND[k][sk])||{};
@@ -5698,13 +5762,22 @@ function ypCtx(R){
  (CD.dogs||[]).forEach(function(d){ if(d) addDog(d.id,typeof shownDogName==='function'?shownDogName(d):d.name,d.dob,d.area_id,!!(d.area_id&&!d.off),d.kind,d.birthLitter); });
  (T['BLD-subject-Archive.csv']||[]).forEach(function(r){ addDog(r.id,r.name,r.dob,'',false,r.kind,r.birth_litter_id); });
  var areaOn={}; (CD.areas||[]).forEach(function(a){ areaOn[a.id]=1; });
- var areas=(CD.allAreas||CD.areas||[]).map(function(a){ return {id:a.id,name:a.code||a.cabin||a.name||'',onSite:!!areaOn[a.id]}; });
+ var req=CD.req||T['BLD-requirement.csv']||[], day=todayISO();
+ var areas=(CD.allAreas||CD.areas||[]).map(function(a){
+  var room=true, empty=false;
+  if(typeof isFieldsRow==='function'&&isFieldsRow(a)) room=false;
+  if(typeof BLDOccupancy!=='undefined'){
+   if(BLDOccupancy.takesDogs&&!BLDOccupancy.takesDogs(a,day,req)) room=false;
+   if(BLDOccupancy.emptyOn&&BLDOccupancy.emptyOn(a.id,day,req)) empty=true;
+  }
+  return {id:a.id,name:a.code||a.cabin||a.name||'',onSite:!!areaOn[a.id],kind:a.grouping||'',use:a.use||'',room:room,empty:empty,retired:!areaOn[a.id]};
+ });
  var items=(T['BLD-items.csv']||[]).map(function(it){ return {id:it.id,name:it.name||it.item_no||'',onSite:true}; });
  function byId(list,id){ for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i]; return null; }
  var litters=(CD.litters||[]).concat(T['BLD-litter.csv']||[]);
  var calKeys=[]; try{ if(typeof BLDJobCal!=='undefined') calKeys=BLDJobCal.chosen(jobsV()); }catch(e){ calKeys=[]; }
  return { today:todayISO(), kennel:kennelNow(), printed:dmy(todayISO())+' '+hhmmNow(), preset:YP.sub||'',
-  types:T['BLD-check_type.csv']||[], logs:T['BLD-check_log.csv']||[], tables:T, dogs:dogs, areas:areas, items:items, calKeys:calKeys,
+  types:T['BLD-check_type.csv']||[], logs:T['BLD-check_log.csv']||[], tables:T, dogs:dogs, areas:areas, items:items, calKeys:calKeys, requirements:req,
   dogName:function(id){ var d=byId(dogs,id); if(d&&d.name) return d.name; var g=regDog(id); return g&&g.name?g.name:''; },
   areaName:function(id){ var a=byId(areas,id); return a&&a.name?a.name:''; },
   itemName:function(id){ var it=byId(items,id); return it&&it.name?it.name:''; },
@@ -5733,7 +5806,33 @@ function pageYearly(){
  return html;
 }
 function ypSay(t){ var m=document.getElementById('ypMsg'); if(m) m.textContent=t; }
-function ypTick(on){ Array.prototype.forEach.call(document.querySelectorAll('input[name="ypType"]'),function(b){ b.checked=!!on; }); ypSay(on?'All records ticked.':'Nothing ticked.'); }
+function ypApplyCounts(){
+ var root=document.getElementById('main');
+ if(!root||!window.BLDYearlyPrint||!BLDYearlyPrint.entryCounts) return;
+ var choice=BLDYearlyPrint.choiceFrom(root); choice.today=todayISO();
+ var counts=BLDYearlyPrint.entryCounts(ypCtx(window.BLDMedsRegister||null), choice);
+ Array.prototype.forEach.call(root.querySelectorAll('[data-yp-n]'),function(el){
+  var n=counts[el.getAttribute('data-yp-n')]||0;
+  el.textContent=String(n);
+  if(String(n).length>2) el.classList.add('wide'); else el.classList.remove('wide');
+ });
+}
+function ypTick(mode){
+ var counts=null;
+ if(mode==='entries'&&window.BLDYearlyPrint&&BLDYearlyPrint.entryCounts){
+  var root=document.getElementById('main'), choice=BLDYearlyPrint.choiceFrom(root);
+  choice.today=todayISO();
+  counts=BLDYearlyPrint.entryCounts(ypCtx(window.BLDMedsRegister||null), choice);
+ }
+ var on=0;
+ Array.prototype.forEach.call(document.querySelectorAll('input[name="ypType"]'),function(b){
+  var tick=mode==='all'||(mode==='entries'&&!!(counts&&counts[b.value]));
+  b.checked=tick; if(tick) on++;
+ });
+ if(mode==='all') ypSay('Every type ticked.');
+ else if(!on) ypSay('Nothing ticked.');
+ else ypSay(on+' type'+(on===1?'':'s')+' with entries ticked.');
+}
 function ypGo(kind){
  var root=document.getElementById('main');
  if(!root||!window.BLDYearlyPrint){ ypSay('Getting the print ready. Press again.'); ypLib().then(function(){ if(String(SHOWN||'').split('/')[0]==='yearly') go(YP.sub?'yearly/'+YP.sub:'yearly',false); }); return; }
@@ -5766,17 +5865,22 @@ document.addEventListener('click',function(ev){
  }
  if(ev.target.closest&&ev.target.closest('#ypPrint')){ ypGo('print'); return; }
  if(ev.target.closest&&ev.target.closest('#ypCsv')){ ypGo('csv'); return; }
- if(ev.target.closest&&ev.target.closest('#ypAll')){ ypTick(true); return; }
- if(ev.target.closest&&ev.target.closest('#ypNone')){ ypTick(false); return; }
+ if(ev.target.closest&&ev.target.closest('#ypAll')){ ypTick('all'); return; }
+ if(ev.target.closest&&ev.target.closest('#ypNone')){ ypTick('none'); return; }
+ if(ev.target.closest&&ev.target.closest('#ypEntries')){ ypTick('entries'); return; }
 });
-document.addEventListener('change',function(ev){ if(ev.target&&ev.target.id==='ypPeriod'){ var month=document.getElementById('ypMonth'); if(month) month.disabled=ev.target.value==='year'; } });
+document.addEventListener('change',function(ev){
+ var id=ev.target&&ev.target.id;
+ if(id==='ypPeriod'){ var month=document.getElementById('ypMonth'); if(month) month.disabled=ev.target.value==='year'; }
+ if(id==='ypPeriod'||id==='ypMonth'||id==='ypYear') ypApplyCounts();
+});
 window.addEventListener('afterprint',function(){ document.body.classList.remove('yp-printing'); });
 var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance,yearly:pageYearly};
 var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance'],['yearly','Yearly print']];
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve':'',
+function bbV(){var u=sinkGet(SINK_URL_KEY);return {T:T,today:todayISO(),esc:esc,dogs:CD._byId||{},photoId:dogPhotoId,after:loadDogPhotos,ownerPage:SINK_RE.test(u)?u+'?page=approve&section=inspect':'',
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },enrol:bbEnrol,unenrol:bbUnenrol,setRule:bbSetRule,saveScore:bbSaveScore,refresh:function(){ go(SHOWN,false); }};}   /* ownerPage: Inspector links (BB More) */
 /* Breed Better enrol / un-enrol (the owner 15 Nov 2026): an enrolled_in link row, subject -> score_scheme, saved by link_add / link_end.
    Never deleted: un-enrol fills the link's to_date with a reason. The page's own copy is updated so it redraws without a reload. */
@@ -5802,11 +5906,11 @@ function bbSaveScore(f){
    points_earned:f.points_earned,points_available:f.points_available,status:'saved',calculated_at:r.at||'',replaces_id:r.replaces_id||''}); }); }
 /* Breed Better is the owner's: shown only to someone who can read its score files (staff cannot) */
 function bbOn(){return (T['BLD-score_scheme.csv']||[]).length>0;}
-if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); }
+PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']);   /* loads on first open (LAZY.bb) */
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
-if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
+PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']);   /* loads on first open (LAZY.enq) */
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
+function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },send:sinkSend,msg:sinkMsg,rerender:function(){ if(document.getElementById('admFuture')){ var y=window.scrollY; go('admin',false); window.scrollTo(0,y); } }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Settings']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
@@ -5816,7 +5920,6 @@ if(typeof CDItems!=='undefined'){ PAGES.items=function(){ return CDItems.page(it
 PAGES.money=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Money</h2><p class="mut">Nothing here yet.</p></section>'; };
 PAGES.ideas=function(){ return '<section class="card" style="margin-top:24px"><h2 class="hx4">Ideas</h2><p class="mut">Nothing here yet.</p></section>'; };
 SECTIONS.push(['money','Money'],['ideas','Ideas']);
-/* Bin (OV11 for the owner, 15 Nov 2026): ended and archived rows, read only, owner only (shown with Settings). bin-view.js */
 /* Outstanding: Done, Reassign, Snooze (work-actions.js). A save is remembered at once, so the row moves without a reload. */
 function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon(),rules:T['BLD-breeding_rule.csv']||[],sinkPost:sinkPost,bbSaved:bbSaved,showSave:showSave,
  canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },
@@ -5824,25 +5927,13 @@ function workV(){ return {esc:esc,dmy:ukDate,saveHtml:saveHtml,today:todayLondon
   CD.work=CDWork.apply((T['BLD-WORK.csv']||[]).filter(function(r){ return String(r.area||'').trim().toLowerCase()!=='ccp'&&!/\bnot CD Hub\b/i.test(String(r.evidence||'')); }),T['BLD-requirement.csv'],todayLondon());
   CD._needs=null; },
  redraw:function(){ go('work',false); }}; }
-function binV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,driveBin:'../index.html#/bin',showSave:showSave,
- canWrite:function(){ return SINK_RE.test(sinkGet(SINK_URL_KEY)); },restore:binRestore}; }
-/* Bin Restore (the owner 18 Nov 2026, answer A): one NEW dated row from today; the ended row stays as history. The page's
-   own copy gets the new row so it redraws without a reload. */
-function binRestore(plan){
- var send=plan.kind==='link'?sinkAct(plan.action,plan.fields):sinkPost(plan.table,plan.fields);
- return send.then(function(j){ var r=bbSaved(j), f=plan.fields;
-  if(plan.kind==='link') (T['BLD-links.csv']=T['BLD-links.csv']||[]).push({id:r.id,from_table:f.from_table,from_id:f.from_id,role:f.role,to_table:f.to_table,to_id:f.to_id,from_date:f.from_date,to_date:'',source:f.source});
-  else (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.id,rule_key:f.rule_key,value:f.value,effective_from:f.effective_from,source:f.source,to_date:''});
-  return 'Saved '+hhmmNow()+'. Restored from today.'; }); }
-if(typeof CDBin!=='undefined'){ PAGES.bin=function(){ return CDBin.page(binV()); }; SECTIONS.push(['bin','Bin']); }
-/* Which views exist on this hub for this sign-in (menu option A, the owner 14 Nov 2026). Table map and Assocs stay off the menu. */
+/* Which views exist on this hub for this sign-in. Table map and Assocs stay off the menu. */
 function viewOn(id){ return HubNav.viewOn({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),id:id}); }
 function navHas(id){
  if(!viewOn(id)) return false;   /* switched off by the owner, or by the pack's starter */
  if(id==='temps') return true;
- if(id==='breed') return typeof BBHubView!=='undefined'&&bbOn();
+ if(id==='breed') return bbOn();
  if(id==='admin') return typeof AdminView!=='undefined'&&AdminView.on(T);
- if(id==='bin') return !!PAGES.bin&&typeof AdminView!=='undefined'&&AdminView.on(T);   /* the owner's, like Settings */
  if(id==='qrprint') return typeof AdminView!=='undefined'&&AdminView.on(T);
  return !!PAGES[id];
 }
@@ -5996,9 +6087,11 @@ function go(id,push){
  finally{ go.depth--; }
 }
 function goBody(id,push){
- var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
+ var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place */
  var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=LOAD.state==='ok'?String(id||''):''; chipsDraw('');   /* a page drawn before the rows land is not kept: the start row decides once they do */
- var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
+ var full=String(id||''), qi=full.indexOf('?');
+ if(qi>0){ if(full.slice(0,qi)==='admin'&&typeof AdminView!=='undefined') AdminView.query(full.slice(qi+1)); full=full.slice(0,qi); id=full; }   /* #/admin?visit_tag= opens that visit */
+ var sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  if(id==='yearly') YP.sub=sub||'';
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
@@ -6021,6 +6114,14 @@ function goBody(id,push){
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
+ /* Lisa 20 Nov 2026: the Bin page is gone. An old #/bin address opens Settings, or Main when this sign-in has no Settings. */
+ if(id==='bin'&&LOAD.later==='wait'){ id='admin'; full='admin'; sub=null; main.setAttribute('data-view',id); }   /* Settings' rows still loading: wait; SHOWN stays #/bin, so the redraw when they land decides */
+ else if(id==='bin'){
+  var binTo=navHas('admin')?'admin':'map';
+  id=binTo; full=binTo; sub=null; SHOWN=binTo;
+  main.setAttribute('data-view',id);
+  try{ if(history.replaceState) history.replaceState(history.state||{},'','#/'+binTo); }catch(e1){}
+ }
  if(!PAGES[id]||!viewOn(id)){ var wasOff=!viewOn(id); id='map'; SHOWN='map';   /* a switched-off view's address opens Main */
   if(wasOff&&history.replaceState) history.replaceState(history.state,'','#/map'); }
  DOGFOCUS=(id==='dogs'&&sub&&!medGo)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:''; MEDDOG='';
@@ -6031,16 +6132,17 @@ function goBody(id,push){
  document.getElementById('nav').innerHTML=navHtml();
  if(id==='breed'&&sub&&typeof BBHubView!=='undefined') BBHubView.open(sub);   /* #/breed/<dog id> opens that dog */
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.open(sub||'home');
- /* Compliance (the owner 22 Nov 2026): a read up to COMP_FRESH_MS old is shown at once with its "As of" time and Refresh;
-    an older one is read again first (the page waits for it, as before). Never shown without the time. */
+ /* A read up to COMP_FRESH_MS old is shown at once with its time; an older one is read again first. */
  if(LIVE_PAGES[id]&&!LOAD.copy&&!READING&&readAgeMs()>COMP_FRESH_MS&&TOKEN&&Date.now()<TOKEN_EXP){ load(); return; }
  var wait=LIVE_PAGES[id]&&LOAD.copy&&readAgeMs()>COMP_FRESH_MS?'live':(LATER_PAGES[id]&&LOAD.later!=='ok'?LOAD.later:'');
+ var lzErr='';
+ if(!wait){ var lz=lazyWait(id); if(lz&&lz.err){ wait='err'; lzErr='This page could not load: '+lz.err; } else if(lz) wait='loading'; }
  if(wait){
   main.innerHTML='<div class="card" id="cdWait" style="margin-top:24px"><h2 class="hx4">'+esc(label(id))+'</h2>'
-   +(wait==='err'?'<p>These records could not be read. '+esc(LOAD.laterErr||'')+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
+   +(wait==='err'?'<p>'+(lzErr?esc(lzErr):'These records could not be read. '+esc(LOAD.laterErr||''))+'.</p><p class="cd-retry"><button data-reload="1">Try again</button></p>'
     :'<p class="mut">'+(wait==='live'?'Reading the live records. This page shows the copy on this device only when it is under 5 minutes old.':'Getting these records ready…')+'</p>')+'</div>';
   navCurrent(id);
-  chipsDraw(id); return;
+  chipsDraw(id); goPush(id,sub,full,push,prevShown,leaveY); return;   /* the wait card is a stop on Back too */
  }
  main.innerHTML=(LOAD.stale?'<p class="card acc4" role="status" style="margin-top:16px">Showing the copy on this device ('+esc(agoText(LOAD.storedAt))+'). The live read failed: '+esc(LOAD.stale)+'. <button data-reload="1">Try again</button></p>':'')+PAGES[id]();
  if(id==='enquiries'&&typeof CDEnquiries!=='undefined') CDEnquiries.bind(main, enqV());
@@ -6051,12 +6153,12 @@ function goBody(id,push){
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
  if(id==='admin'){ AdminView.bind(admV()); bindNavMenu(); }
- if(id==='bin') CDBin.bind(main,binV());
  if(id==='work'&&typeof CDWork!=='undefined') CDWork.bind(main,workV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
  if(id==='compliance'&&/^ck-/.test(sub||'')) setTimeout(function(){ var r=document.getElementById(sub); if(r){ r.setAttribute('tabindex','-1'); r.focus({preventScroll:true}); if(r.scrollIntoView) r.scrollIntoView({block:'center'}); } },0);
  if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
+  if(DOGQ){ var qb=document.getElementById('q'); qb.value=DOGQ; DOGQ=''; setTimeout(function(){ qb.dispatchEvent(new Event('input')); },0); }
   var fst=document.getElementById('fst');
   statusList().forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
   var cs={}; CD.dogs.forEach(function(d){ if(d.colour) cs[colourLabel(d)]=d; });
@@ -6197,18 +6299,21 @@ function goBody(id,push){
      var m2=document.querySelector('.rsave[data-area="'+sel.value+'"]')||msg;
      roundSave(sel.value,{add:el.dataset.sub},m2); }); }); });
  }
- var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;   /* breed and yearly keep the rest of the address, so Back and reload open the same view */
- if(push!==false && location.hash!=='#/'+at){
-  /* a real history entry that remembers where you came from and how far down (Back returns there) */
-  var pb=String(prevShown||'').split('/')[0];
-  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});   /* the name the menu uses */
- }
- /* a record page: "← Back to <where you came from>", or a way to its list when opened cold. Breed Better draws its own (BB). */
+ goPush(id,sub,full,push,prevShown,leaveY);
+ /* a record page: back to where you came from, or a way to its list when opened cold. Breed Better draws its own. */
  if(sub&&id!=='breed'&&!medGo) main.insertAdjacentHTML('afterbegin','<p class="hbackrow">'+HubNav.back.button({hash:'#/'+id,label:label(id)})+'</p>');
- Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });   /* kept words still hide what they hid */
- if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();   /* the folds (and their heading rows' height) are in place before the page goes back to where it was, so a redraw never shifts it (17 Nov 2026) */
+ Array.prototype.forEach.call(document.querySelectorAll('[data-find-in]'),function(b){ findApply(b.getAttribute('data-find-in')); });
+ if(window.DashKit&&DashKit.fold&&DashKit.fold.run) DashKit.fold.run();
  window.scrollTo(0,keepY);
- var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);   /* a brick may add its own from (BB) */
+ var hb=document.getElementById('hubBack'); HubNav.back.sync(hb); setTimeout(function(){ HubNav.back.sync(hb); },0);
+}
+/* History for a move. The wait card calls this too, so Back has one step per move. */
+function goPush(id,sub,full,push,prevShown,leaveY){
+ var at=sub&&(id==='today'||id==='dogs'||id==='areas'||id==='enquiries'||id==='sops'||id==='breed'||id==='yearly')?full:id;
+ if(push!==false && location.hash!=='#/'+at){
+  var pb=String(prevShown||'').split('/')[0];
+  HubNav.back.push('#/'+at,{label:pb&&PAGES[pb]?((HubNav.VIEWS[pb]||{}).label||label(pb)):'',y:leaveY,state:{id:at}});
+ }
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 document.addEventListener('click',function(e){
@@ -6289,7 +6394,7 @@ DashKit.search.register(function(q){
  var hit=DashKit.search.matches(q), out=findViews(hit), byId=CD._byId||{}, L=function(id){ return HubNav.VIEWS[id].label; };
  (CD.dogs||[]).filter(function(d){ return hit([d.name,d.id,d.chip,d.breed].join(' ')); }).slice(0,12).forEach(function(d){
   out.push({group:L('dogs'),slot:4,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
-   act:function(){ go('dogs'); var b=document.getElementById('q'); if(b){ b.value=d.name||d.id; b.dispatchEvent(new Event('input')); } focusView(); }});
+   act:function(){ DOGQ=d.name||d.id; go('dogs'); focusView(); }});   /* DOGQ: filled in once Dogs has drawn (it may first wait for its parts) */
  });
  (CD.areas||[]).filter(function(a){ return hit([a.code,a.id,a.grouping].join(' ')); }).slice(0,12).forEach(function(a){
   out.push({group:L('areas'),slot:4,title:a.code||a.id,sub:a.grouping||'',act:function(){ go('areas/'+encodeURIComponent(a.id)); focusView(); }});

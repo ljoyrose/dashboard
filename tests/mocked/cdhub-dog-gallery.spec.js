@@ -1,4 +1,4 @@
-// Main photo + gallery on the dog card (the owner 13 Nov 2026): files rows owned through dated link rows (decision C, column role).
+// Main photo + gallery on the dog card : files rows owned through dated link rows (decision C, column role).
 // The main photo is the 'main' link in force; the old photo cell is only the fallback. Invented rows only.
 const { test, expect } = require('../support/test');
 const { HUBS } = require('../support/hubs');
@@ -55,8 +55,8 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
   await expect(gal.locator('.gi[data-kind="upload"] a')).toHaveText('Pretend cert.pdf');
   await expect(gal.locator('.gi[data-file="fil-1"] [data-k="main"]')).toHaveText('Main');
   await expect(gal.locator('.gi[data-file="fil-2"] img.galph')).toHaveAttribute('data-photo-id', 'DRIVEoldPhoto002');   // loaded once opened
-  await expect(gal.locator('details[data-k="ended"] summary')).toHaveText('Ended (1)');
-  await expect(gal.locator('details[data-k="ended"] img.galph')).not.toHaveAttribute('data-photo-id', /./);   // not loaded until opened
+  await expect(gal.locator('details[data-k="ended"]')).toHaveCount(0);   // ended photos stay in the sheet and are not listed
+  await expect(gal.locator('.gi[data-file="fil-5"]')).toHaveCount(0);
 
   // a dog with no link rows keeps its old photo cell and shows no gallery
   const p = page.locator('.dc[data-dog="sub-g2"]');
@@ -64,7 +64,7 @@ test('dog card: main photo from the main link, a gallery of photos, files and li
   await expect(p.locator('details[data-k="gallery"]')).toHaveCount(0);
 });
 
-// Show photo dates (the owner 15 Nov 2026, J5): a per-person display setting. The owner's own row beats the everyone default;
+// Show photo dates (Lisa 15 Nov 2026, J5): a per-person display setting. The owner's own row beats the everyone default;
 // no row shows dates as before. The button saves the owner's own row; sorting never changes. Invented rows only.
 for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop', width: 1280, height: 800 }]) {
   test(`dog card gallery (${size.name}): photo dates follow the owner's own setting, then the everyone default; the button saves the owner's own row`, async ({ page, guard }) => {
@@ -99,7 +99,7 @@ for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop'
     await expect(items).toHaveCount(2);
     await expect(items.first()).toHaveAttribute('data-file', 'fil-1');   // order unchanged: newest first
     await expect(gal.locator('[data-k="photo-date"]')).toHaveCount(0);   // the owner's own row hides the dates
-    // the owner 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
+    // Lisa 17 Nov 2026: a setting, not a button on the dog card. The button is in Admin -> Display.
     await expect(gal.locator('[data-photo-dates]')).toHaveCount(0);
     await page.evaluate(() => go('admin'));
     await page.locator('[data-adm-open="display"]').click();

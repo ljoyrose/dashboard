@@ -28,6 +28,19 @@ function world({ owner = true, codes = CODES } = {}) {
 const asOwner = base.extend({ world: async ({}, use) => use(world()) });
 const asOther = base.extend({ world: async ({}, use) => use(world({ owner: false })) });
 const asOwnerEmpty = base.extend({ world: async ({}, use) => use(world({ codes: 'id,tenant_id,code_id,who,role,from_date,to_date,ended_by\n' })) });
+function putTable(d, name, content) {
+  const f = d.files.find((x) => x.name === name);
+  if (f) { f.content = content; f.size = String(content.length); return; }
+  d.file('adm-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+}
+function worldChecks() {
+  const d = world();
+  putTable(d, 'BLD-check_type.csv', 'id,tenant_id,type_key,label,target,active,effective_from,every_days\ncty-feed,t,feeding,Feeding,dog,true,2026-01-01,1\ncty-week,t,weekly_test,Weekly test,dog,true,2026-01-01,7\n');
+  putTable(d, 'BLD-check_setting.csv', 'id,tenant_id,type_key,record_as,every_days,frequency,session_row,from_date,to_date,source\n');
+  putTable(d, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by,to_date\n');
+  return d;
+}
+const asChecks = base.extend({ world: async ({}, use) => use(worldChecks()) });
 
 const open = async (page) => {
   await page.goto('cdhub/');
@@ -47,21 +60,25 @@ asOther.describe('CD Hub Admin: not the owner', () => {
 });
 
 asOwner.describe('CD Hub Admin: owner', () => {
-  asOwner('Admin is in More; set-up QR is one tap away and names the public staff address (Lisa 18 Nov 2026)', async ({ page }) => {
+  asOwner('Admin is in More; set-up QR is one tap away and names the staff host', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
     await expect(page.locator('#main h2')).toContainText('Settings');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(13);   // Check settings added (photo dates setting was 12)
+    await expect(page.locator('[data-adm-open]')).toHaveCount(14);   // visits card plus check settings
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
-    const staff = await page.evaluate(() => location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/');
+    const staff = await page.evaluate(() => {
+      var path = location.pathname, i = path.indexOf('/cdhub/');
+      return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+    });
     await expect(page.locator('#adm-phone')).toContainText(new URL(page.url()).host);
     await expect(page.locator('#adm-phone')).not.toContainText('github.io');
     await page.locator('[data-adm-qr]').click();
     await expect(page.locator('.adm-qr svg')).toBeVisible();
     const held = await page.evaluate(() => { const b = BLDQr.svg; let t = ''; BLDQr.svg = (x, l) => { t = x; return b(x, l); }; go('admin', false); return new Promise((r) => setTimeout(() => r(t), 300)); });
     expect(held.indexOf(staff + '#setup=')).toBe(0);
+    expect(held).not.toContain('github.io');
     expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => /code/i.test(k)).map((k) => localStorage.getItem(k)).join(''))).toBe('');
   });
 
@@ -92,9 +109,9 @@ asOwner.describe('CD Hub Admin: owner', () => {
   asOwner('the 3-year list shows, most frequent first', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
-    await expect(page.locator('#admFuture .adm-future li').first()).toContainText('Approve pending saves');
+    await expect(page.locator('#admFuture .adm-future tbody tr').first()).toContainText('Approve pending saves');
     await page.locator('[data-adm-future]').click();
-    await expect(page.locator('#admFuture .adm-future li')).toHaveCount(62);
+    await expect(page.locator('#admFuture .adm-future tbody tr')).toHaveCount(62);
   });
 
   asOwner('Codes is first: every code by name, role and dates, ended ones kept; remind means reset', async ({ page }) => {
@@ -111,12 +128,47 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await expect(c).toContainText('Remind');
   });
 
+  asOwner('Admin tables keep their column widths as rows load, show all and redraw (house-table)', async ({ page }) => {
+    await open(page);
+    await page.waitForFunction(() => window.LOAD && LOAD.later === 'ok' && !LOAD.copy);
+    await tabClick(page, '#nav button[data-go="admin"]');
+    await expect(page.locator('#admFuture .adm-future tbody tr').first()).toBeVisible();
+    const widths = () => page.locator('#admFuture table.house-table thead th').evaluateAll((hs) => hs.map((h) => Math.round(h.getBoundingClientRect().width)));
+    const before = await widths();
+    expect(before.length).toBe(3);
+    await page.locator('[data-adm-future]').click();   // 8 rows to 62
+    await expect(page.locator('#admFuture .adm-future tbody tr')).toHaveCount(62);
+    expect(await widths()).toEqual(before);
+    await page.evaluate(() => { redrawAfterRead(); });   // the redraw after the later tables land
+    await expect(page.locator('#admFuture .adm-future tbody tr').first()).toBeVisible();
+    expect(await widths()).toEqual(before);
+    // a long row cannot push the columns about
+    await page.evaluate(() => { const tb = document.querySelector('#admFuture tbody'); const tr = tb.rows[0].cloneNode(true); tr.cells[0].textContent = 'x'.repeat(300); tb.appendChild(tr); });
+    expect(await widths()).toEqual(before);
+    await page.locator('[data-adm-open="codes"]').click();
+    await expect(page.locator('#adm-codes table.house-table td[data-label="Who"]').first()).toContainText('Test Person');
+  });
+
+  asOwner('on a phone, Admin table rows read as label / value lines', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await open(page);
+    await tabClick(page, '#nav button[data-go="admin"]');
+    const row = page.locator('#admFuture .adm-future tbody tr').first();
+    await expect(row).toBeVisible();
+    expect(await page.locator('#admFuture thead').evaluate((e) => getComputedStyle(e).display)).toBe('none');
+    expect(await row.locator('td').first().evaluate((e) => [getComputedStyle(e).display, getComputedStyle(e, '::before').content])).toEqual(['grid', '"Job"']);
+    const fit = await page.locator('#admFuture .adm-future').evaluate((e) => e.scrollWidth <= e.clientWidth);
+    expect(fit).toBe(true);
+  });
+
   asOwner('Staff in More lists every staff page; owner links open Admin on the right card', async ({ page }) => {
     await open(page);
     await tabClick(page, '#nav button[data-go="staff"]');
-    for (const t of ['Board', 'Jobs', 'Scan', 'Temps', 'Where', 'This phone', 'Checks', 'Guest', 'Inspector', 'Print', 'Phone set-up', 'Codes']) {
+    for (const t of ['Board', 'Jobs', 'Scan', 'Temps', 'Where', 'This phone', 'Guest', 'Inspector', 'Print', 'Phone set-up', 'Codes']) {
       await expect(page.locator('#main a.adm-card', { hasText: t }).first()).toBeVisible();
     }
+    await expect(page.locator('#main a.adm-card', { hasText: 'Checks' })).toHaveCount(0);   // retired 22 Nov 2026: checks are on Jobs
+    await expect(page.locator('#main a[href$="checks/"]')).toHaveCount(0);
     await page.locator('#main a.adm-card', { hasText: 'Phone set-up' }).click();
     await expect(page.locator('#adm-phone')).toBeVisible();
   });
@@ -210,4 +262,44 @@ asOwner('Check settings shows the legal minimum and refuses a shorter keep perio
   await page.locator('#adm-checks [data-ck-years]').fill('4');
   await page.locator('#adm-checks [data-ck-keep]').click();
   await expect(page.locator('#adm-checks [data-ck-msg]')).toContainText('at least 6 years');
+});
+
+asChecks('Check settings saves times a day and feeding age bands as breeding rules', async ({ page }) => {
+  const url = 'https://script.google.com/macros/s/AKfyTEST_only_123/exec';
+  const sent = [];
+  await page.addInitScript((u) => { try { localStorage.setItem('cdhub.sink.url', u); } catch (e) {} }, url);
+  await page.route(url, (route) => {
+    const b = JSON.parse(route.request().postData() || '{}');
+    sent.push(b);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, result: { status: 'saved', id: 'row-test-' + sent.length } }) });
+  });
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.locator('[data-adm-open="checks"]').click();
+  const feed = page.locator('[data-ck="feeding"]');
+  await expect(feed.locator('[data-ck-times]')).toBeVisible();
+  await expect(feed.locator('[data-ck-band]')).toHaveCount(1);
+  await expect(page.locator('[data-ck="weekly_test"] [data-ck-times]')).toHaveCount(0);
+  await feed.locator('[data-ck-age-from]').fill('0');
+  await feed.locator('[data-ck-save]').click();
+  await expect(feed.locator('[data-ck-msg]')).toContainText('whole days');
+  expect(sent).toHaveLength(0);
+  await feed.locator('[data-ck-age-from]').fill('');
+  await feed.locator('[data-ck-times]').fill('2');
+  await feed.locator('[data-ck-add]').click();
+  await expect(feed.locator('[data-ck-band]')).toHaveCount(2);
+  const bands = feed.locator('[data-ck-band]');
+  await bands.nth(0).locator('[data-ck-age-from]').fill('0');
+  await bands.nth(0).locator('[data-ck-age-to]').fill('10');
+  await bands.nth(0).locator('[data-ck-meals]').fill('4');
+  await bands.nth(1).locator('[data-ck-age-from]').fill('11');
+  await bands.nth(1).locator('[data-ck-meals]').fill('2');
+  await feed.locator('[data-ck-save]').click();
+  await expect(feed.locator('[data-ck-msg]')).toHaveText('Saved.');
+  expect(sent.map((b) => b.table)).toEqual(['check_setting', 'breeding_rule', 'breeding_rule']);
+  expect(sent[0].fields.type_key).toBe('feeding');
+  expect(sent[0].fields.times_per_day).toBeUndefined();
+  expect(JSON.stringify(sent[0].fields)).not.toContain('by_age');
+  expect(sent[1].fields).toMatchObject({ rule_key: 'job.times_per_day.feeding', value: '2' });
+  expect(sent[2].fields).toMatchObject({ rule_key: 'job.times_per_day.feeding.by_age', value: '0-10:4|11-:2' });
 });
