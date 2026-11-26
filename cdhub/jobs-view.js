@@ -41,10 +41,6 @@
     add(v.areas.map(function (a) { return areaTarget(a, here); }), v.logs);
     add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
     add([{ dogs: here.map(function (d) { return dogOne(v, d); }), litters: litters }], v.logs);   // a whole-site job about subjects is done once every one on site that day has a line
-    add(here.map(function (d) { return { subject_id: d.id, everyDog: true, dogArea: d.area_id || d.areaId || '', groups: groups(d) }; }), v.logs);
-    add(v.areas.map(function (a) { return areaTarget(a, here); }), v.logs);
-    add(litters.map(function (l) { return { litter_id: l.id, born: l.dob || l.born_on || '' }; }), v.logs);   // born: for jobs due by the litter's age
-    add([{ dogs: here.map(function (d) { return dogOne(v, d); }) }], v.logs);   // a whole-site job about subjects is done once every one on site that day has a line
     /* every job in force is listed (NAV live check 21 Nov 2026), also one with nothing to count today: a litter job with no
        current litter, a Problem-button job (target optional). Its last record is still shown. */
     var keyOf = Due.familyKeyOf ? Due.familyKeyOf(v.types, v.today) : {}, lastOf = {};

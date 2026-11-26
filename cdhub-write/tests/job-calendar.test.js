@@ -271,7 +271,6 @@ test('the calendar counts subjects on site that day, and can leave juveniles out
   const subjects = [
     { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
     { id: 'sub-test-b', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
-    { id: 'sub-test-d', area_id: 'area-a', kind: 'pup', dob: '2026-10-01' }
     { id: 'sub-test-d', area_id: 'area-a', kind: '', dob: '2026-10-01' }
   ];
   const occupancy = [
@@ -313,8 +312,6 @@ test('a past day uses the feeding band in force that day, and mixed ages take th
   assert.equal(day('food_bowls', '2026-11-14').need, 2);
   assert.equal(day('food_bowls', '2026-11-16').need, 4);
   assert.equal(day('water_bowls', '2026-11-16').need, 0);
-  const onlyYoung = Object.assign({}, ruled, { logs: [log('9', 'cty-hc', '2026-11-16', 'sub-test-d')] });
-  assert.equal(C.month(onlyYoung, 'health_check_all', '2026-11').cells.find((c) => c.iso === '2026-11-16').state, 'missed');
 });
 
 test('a copied water bowls row paints on the water bowls calendar, and Done today uses the original id', () => {

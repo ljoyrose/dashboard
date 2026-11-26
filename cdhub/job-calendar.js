@@ -76,7 +76,6 @@
       String(l.exceptions || '').split('|').forEach(function (p) { var id = String(p.split(':')[0] || '').trim(); if (id) skip[id] = 1; });
       String(l.covered_ids || '').split('|').forEach(hit);
       if (l.subject_id) hit(l.subject_id);
-      x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: l.note || '' });
       x.n++; x.lines.push({ id: l.id || '', by: l.taken_by || '', at: l.happened_at || l.taken_at || '', note: Show.human(l.note) });
     });
     return out;
@@ -138,11 +137,6 @@
       missed, due (today, not yet), future, before (before this job's daily run: not tracked here), blank (padding). */
   function month(v, key, ym) {
     var t = typeOf(v, key); if (!t) return null;
-    var perDog = Due.perDogSite(t), roster = v.subjects || v.dogs || [];
-    var opt = { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings };
-    var needOn = function (iso) { return perDog ? Due.subjectsFor(t, roster, iso, opt).length : 1; };
-    var need = perDog ? needOn(v.today) : 1;
-    var d = days(v, key), first = Object.keys(d).sort()[0] || '';
     var perDog = Due.perDogSite(t), need = perDog ? dogsOn(v, t, v.today).length : 1;
     var d = days(v, key), first = trackedFrom(d);
     var y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10);
@@ -151,8 +145,6 @@
     for (var i = 0; i < lead; i++) cells.push({ state: 'blank' });
     for (var dd = 1; dd <= len; dd++) {
       var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso, dayScope(v, t, iso));
-      var mine = perDog ? Due.subjectsFor(t, roster, iso, opt) : [], want = perDog ? mine.length : times, got = 0, allow = {};
-      var iso = ym + '-' + (dd < 10 ? '0' : '') + dd, x = d[iso], times = Due.timesPerDay(v.rules || [], key, iso);
       var mine = perDog ? dogsOn(v, t, iso) : [], want = perDog ? mine.length : times, got = 0, allow = {};
       mine.forEach(function (s) { allow[s.id] = 1; });
       if (x) {
@@ -388,7 +380,6 @@
     var f = { check_type_id: t.id, outcome: x.outcome, how_recorded: 'import', happened_at: x.iso + 'T12:00:00Z' };
     if (x.note) f.note = x.note;
     if (x.old) f.confirm_unusual = 'yes';
-    if (Due.perDogSite(t)) f.dog_ids = Due.subjectsFor(t, v.subjects || v.dogs || [], x.iso, { occupancy: v.occupancy, statuses: v.statuses, rules: v.rules, settings: v.settings }).map(function (d) { return d.id; }).join('|');
     if (Due.perDogSite(t)) f.dog_ids = dogsOn(v, t, x.iso).map(function (d) { return d.id; }).join('|');
     return f;
   }
