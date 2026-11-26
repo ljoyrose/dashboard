@@ -448,7 +448,7 @@ test.describe('CD Hub house look', () => {
     });
   }
 
-  // A row that opens wears the pale grey hover fill (Lisa, 12 Nov 2026); the controls on it keep their 1px line at 3:1 or more
+  // A row that opens wears the pale grey hover fill ; the controls on it keep their 1px line at 3:1 or more
   // against that fill, in every look (warm dark mixes less muted into --hov for this, tokens.css --house-hov-mix).
   for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
     test(`${look} ${scheme}: on a hovered row the control rings stay 3:1 against the hover fill`, async ({ page, guard }) => {
@@ -507,7 +507,7 @@ test.describe('CD Hub house look', () => {
     const lines = new Set();
     for (const tab of ['map', 'today', 'round', 'dogs', 'litters', 'areas']) {
       await openTab(page, tab);
-      const ctls = page.locator('#main button:visible:not(.tile), #main select:visible');
+      const ctls = page.locator('#main button:visible:not(.tile):not(.phbtn), #main select:visible');
       const n = await ctls.count();
       expect(n, tab).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {

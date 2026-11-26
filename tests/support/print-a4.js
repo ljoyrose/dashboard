@@ -73,7 +73,7 @@ async function paperLook(page, view) {
     return {
       view: main.getAttribute('data-view'),
       bars: ['.top', '#nav'].filter((q) => shown(document.querySelector(q))),
-      controls: ['.racc', '.radd', '.rempty', '[data-here]', '#sinkcard', '.dedit', '.dogphoto-btn', '.fbar', '.dcs-form', '.next'].filter((q) => Array.from(document.querySelectorAll(q)).some(shown)),
+      controls: ['.racc', '.radd', '.rempty', '[data-here]', '#sinkcard', '.dedit', '.dogphoto-btn', '.phmenu', '.wedit', '.fbar', '.dcs-form', '.next'].filter((q) => Array.from(document.querySelectorAll(q)).some(shown)),
       whole: cards.every((c) => /avoid/.test(getComputedStyle(c).breakInside)),
       perRow: Math.max(0, ...Object.values(rows)),
       boxes: v === 'round' ? Array.from(main.querySelectorAll('.rcabins .tmp input')).filter(shown).length : 0,

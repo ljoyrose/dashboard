@@ -40,6 +40,30 @@ test('weighing: adds one row by header name; off until its switch is on; future 
   assert.equal(post(saveOff, 'weighing', { subject_id: 'sub-test-a', performed_on: '2026-01-02', weight_kg: '10' }).code, 'SAVE_OFF');
 });
 
+test('weighing correction writes a new row with corrects_id and leaves the old row unchanged', () => {
+  const e = env();
+  const weight = e.file('BLD-weight.csv')[0];
+  weight.content = WEIGHT_H + ',corrects_id\r\nwtold1,sub-test-a,2026-01-02,12.0,kg,5,9,invented,\r\n';
+  weight.sheet = undefined;
+  const r = post(e, 'weighing', { subject_id: 'sub-test-a', performed_on: '2026-01-03', weight_kg: '12.4', body_condition_score: '6', corrects_id: 'wtold1' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const lines = text(e, 'BLD-weight.csv').trim().split(/\r?\n/);
+  assert.equal(lines.length, 3);
+  assert.match(lines[1], /^wtold1,sub-test-a,2026-01-02,12\.0,/);
+  assert.match(lines[2], /12\.4,kg,6,9,/);
+  assert.match(lines[2], /wtold1$/);
+  const again = post(e, 'weighing', { subject_id: 'sub-test-a', performed_on: '2026-01-04', weight_kg: '12.5', corrects_id: 'wtold1' });
+  assert.equal(again.ok, false);
+  assert.equal(again.code, 'INVALID');
+  assert.match(again.message, /already has a correction/);
+  assert.equal(text(e, 'BLD-weight.csv').trim().split(/\r?\n/).length, 3);
+  const missing = env();
+  const no = post(missing, 'weighing', { subject_id: 'sub-test-a', performed_on: '2026-01-03', weight_kg: '12.4', corrects_id: 'wtold1' });
+  assert.equal(no.code, 'HEADER_MISMATCH');
+  assert.match(no.message, /corrects_id/);
+  assert.equal(text(missing, 'BLD-weight.csv').trim().split(/\r?\n/).length, 1);
+});
+
 test('vaccination: one row per vaccination, so a dog can have several; card link must be https', () => {
   const e = env();
   assert.equal(post(e, 'vaccination', { subject_id: 'sub-test-a', given_on: '2025-01-15', product: 'DHP', diseases_covered: 'distemper;adenovirus_ich;parvovirus', practice: 'Pretend Vets', certificate_link: 'https://example.test/card.jpg' }).ok, true);
