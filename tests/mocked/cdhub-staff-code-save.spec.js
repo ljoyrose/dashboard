@@ -262,6 +262,7 @@ test('Switch off here forgets the code and the address on this device, and the n
 
 // Persistent profile: set it, close the whole browser, open it again on the same profile. Nothing typed the second time.
 test('closing and reopening the browser keeps saving on: the panel says on and a save asks for no code @regression', async ({ browserName }, testInfo) => {
+  test.setTimeout(120_000);   // two persistent browsers; 30s is the whole test and the first launch can use it up
   test.skip(browserName !== 'chromium', 'persistent profile check runs in Chromium');
   const { chromium } = require('@playwright/test');
   const gisStub = require('../support/gis-stub');
