@@ -373,9 +373,9 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .dc{scroll-margin-top:72px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.ph{position:relative;flex:0 0 auto;width:120px;height:120px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.ph{position:relative;flex:0 0 auto;width:120px;height:auto;aspect-ratio:1/1;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
-.ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph .dogphoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
 .ph .off{display:none !important}
 .dogphoto-col{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .dogphoto-btn{justify-content:center;padding:0 8px}
@@ -388,13 +388,13 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 @media(max-width:600px){
  .dc .dc-top{flex-direction:column;align-items:stretch;gap:8px;padding:12px 12px 6px}
  .dogphoto-col{width:100%}
- .ph{width:100%;height:auto;aspect-ratio:16/10;max-width:100%}
+ .ph{width:100%;height:auto;aspect-ratio:1/1;max-width:100%}
  .ph .ti{width:56px;height:56px}
  .dogphoto-btns{flex-direction:row}
  .dogphoto-btn{flex:1 1 0;width:auto}
  .dogphoto-btn[data-photo-edit]{flex:0 0 auto;padding:0 12px}
 }
-@media(min-width:601px){.ph{width:160px;height:160px}.dogphoto-col{width:160px}}
+@media(min-width:601px){.ph{width:160px;height:auto;aspect-ratio:1/1}.dogphoto-col{width:160px}}
 .pcrop-edit{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:var(--fs-small)}
 .pcrop-edit input{width:100%}
 .pcrop-size{margin:0;font-size:var(--fs-small)}
@@ -404,8 +404,8 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 /* gallery (Lisa 13 Nov 2026): small square thumbnails, files and links as plain links */
 .glist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .glist .gi{display:flex;flex-direction:column;gap:2px;font-size:var(--fs-small);max-width:100%}
-.gph{display:block;width:88px;height:88px;border-radius:8px;overflow:hidden;background:var(--line)}
-.gph img{width:100%;height:100%;object-fit:cover;display:block}
+.gph{display:block;width:88px;height:auto;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:var(--line)}
+.gph img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
 .gph img.off{visibility:hidden}
 /* × remove and ✎ edit on the photo itself (Lisa 17 Nov 2026: "still not got a x to remove a bad image") */
 .gph{position:relative}
@@ -659,7 +659,7 @@ h2,h3,h4,summary{break-after:avoid;page-break-after:avoid}
 .dc .wtc{margin:0;padding:0}
 .dc .ph{break-inside:avoid}
 #main .dc .nm{display:block;-webkit-line-clamp:unset;line-clamp:none;overflow:visible}   /* the whole name on paper, never cut to "…" */
-#main[data-view="dogs"] .dc .ph{width:30mm!important;height:30mm!important;aspect-ratio:auto}
+#main[data-view="dogs"] .dc .ph{width:30mm!important;height:auto!important;aspect-ratio:1/1!important}
 #main[data-view="dogs"] .dc .dogphoto-col{width:30mm!important}
 #main[data-view="dogs"] .dc .dc-top{flex-direction:row;align-items:flex-start}
 #main .dc button.cb[data-cabin-move]{border:0!important;padding:0!important;min-height:0!important;height:auto!important;background:none!important;font:inherit;font-weight:600;color:inherit}

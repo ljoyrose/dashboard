@@ -437,6 +437,9 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 25 Nov 2026 | One thermometer code was drawn once for every finished pass, so the print held seven of each | "one card per ticked item for every kind and layout @regression" (tests/mocked/cdhub-print-count.spec.js) |
 | 25 Nov 2026 | A dog card name wrapped one letter at a time and the card collapsed when the photo was empty | "dog cards keep a whole word, a square photo and a size badge at every layout @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
 | 25 Nov 2026 | Item cards said 0 cards ready when the item list was empty or refused | "an empty item list warns, and item rows print a card @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
+| 25 Nov 2026 | A photo frame was wider than it was tall, and the chosen print type did not stay marked | "the chosen card type stays pressed, and photo frames stay square @regression" (tests/mocked/cdhub-print-dog-fit.spec.js) |
+| 25 Nov 2026 | Full A4 printed a three-column grid and left the card fields off the page | "each layout prints that many cards a page, and the fields are on the page @regression" (tests/mocked/cdhub-print-pages.spec.js) |
+| 25 Nov 2026 | Room card size icons printed grey, and the square metres were missing when the live row omitted them | "room card dog icons stay coloured and the room size prints from the device copy @regression" (tests/mocked/cdhub-print-room-colour.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
