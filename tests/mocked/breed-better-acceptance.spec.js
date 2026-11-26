@@ -257,7 +257,7 @@ asUser.describe('Breed Better acceptance: dog card chip', () => {
 
   // the owner, 15 Nov 2026 (later): the score shows on the card; tapping the Breed Better heading opens that dog's detail,
   // and "Back to <dog>" returns to the card.
-  asOwner('S5.3 tapping the chip opens that dog\'s Breed Better detail, and Back returns to the card', async ({ page }) => {
+  asUser('S5.3 tapping the chip opens that dog\'s Breed Better detail, and Back returns to the card', async ({ page }) => {
     await openDogs(page);
     await card(page, 'Test Dog Two').locator('.bb-chip').click();
     await expect(page.locator('#main h2')).toContainText('Breed Better');

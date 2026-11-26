@@ -212,7 +212,7 @@ asUser('Show QR: a QR drawer that cannot load says so, and Show QR tries again',
 });
 
 // the owner 15 Nov 2026: an always-visible link labelled exactly "Script page" opens the owner page.
-asOwner('Admin always shows a "Script page" link to the owner page', async ({ page }) => {
+asUser('Admin always shows a "Script page" link to the user page', async ({ page }) => {
   await open(page);
   await tabClick(page, '#nav button[data-go="admin"]');
   await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
@@ -238,7 +238,7 @@ asUser('the user page link uses the same save address as the hub save', async ({
 });
 
 // the owner 16 Nov 2026: "it says what to do but no link". Add staff opens the owner page with a real button.
-asOwner('Add staff has a Make a code button to the owner page codes section', async ({ page }) => {
+asUser('Add staff has a Make a code button to the user page codes section', async ({ page }) => {
   await open(page);
   await tabClick(page, '#nav button[data-go="admin"]');
   await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
