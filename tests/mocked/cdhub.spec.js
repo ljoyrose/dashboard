@@ -504,6 +504,12 @@ test.describe('CD Hub house look', () => {
         if (st.sel) continue;
         const where = () => el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x + scrollX, r.y + scrollY, r.width, r.height]; });
         const before = await where();
+        const where = () => el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x + scrollX, r.y + scrollY, r.width, r.height]; });   // page position, so a scroll is not a move
+        let before = await where();
+        if (before[2] === 0 && before[3] === 0) {
+          await expect.poll(where, { timeout: 3000 }).not.toEqual([0, 0, 0, 0]);
+          before = await where();
+        }
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
           return { os: s.outlineStyle, bw: s.borderTopWidth, bg: s.backgroundColor, hov }; });
