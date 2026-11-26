@@ -485,6 +485,21 @@ test('Checks records score: a check_log row carries the values typed on its form
   assert.deepEqual(r.lines.map((l) => [l.answer_then, l.date_then]), [['ok', '2026-08-13'], ['Good', '2026-09-01']]);
 });
 
+test('owner age setting: records younger than breed_better.show_from_months are left out until they reach it', () => {
+  const R = (v, from, extra) => Object.assign({ rule_key: 'breed_better.show_from_months', value: v, effective_from: from || '2026-01-01', source: 'Owner' }, extra || {});
+  const subs = [{ id: 'a1', name: 'Record A', dob: '2020-01-01' }, { id: 'a2', name: 'Record B', dob: '2026-10-15' }, { id: 'a3', name: 'NotEnrolled' }];
+  const T = (rules) => tables({ 'BLD-subject.csv': subs, 'BLD-breeding_rule.csv': rules });
+  assert.equal(View.showFromMonths(T([R('12'), R('6', '2027-06-01')]), '2026-11-18'), 12);
+  assert.equal(View.showFromMonths(T([R('12', '2026-01-01', { to_date: '2026-03-01' })]), '2026-11-18'), 0);
+  const c = View.compute({ T: T([R('12')]), today: '2026-11-18', esc });
+  assert.deepEqual(c.results.map((r) => r.name), ['Record A']);
+  assert.equal(c.enrol.a2 && c.enrol.a2.subject_id, 'a2');
+  assert.equal(View.section({ T: T([R('12')]), today: '2026-11-18', esc }, 'a2'), '');
+  assert.equal(View.chip({ T: T([R('12')]), today: '2026-11-18', esc }, 'a2'), '');
+  assert.deepEqual(View.compute({ T: T([R('12')]), today: '2027-10-15', esc }).results.map((r) => r.name).sort(), ['Record A', 'Record B']);
+  assert.equal(View.compute({ T: T([]), today: '2026-11-19', esc }).results.length, 2);
+});
+
 test('Checks records score by check type family: every version of a check type (cty-ftb-1, then -2) is read through its type_key', () => {
   const types = [{ id: 'cty-ftb-1', type_key: 'fit_to_breed' }, { id: 'cty-ftb-2', type_key: 'fit_to_breed' }, { id: 'cty-other-1', type_key: 'other' }];
   const logs = [{ id: 'c1', check_type_id: 'cty-ftb-1', subject_id: 'a1', outcome: 'ok', happened_at: '2026-08-13T12:00:00Z' },
