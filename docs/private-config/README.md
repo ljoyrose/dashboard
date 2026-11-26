@@ -72,7 +72,7 @@ It answers with counts and setting names only:
 ## Switches (in `config.js`, `privateConfig`)
 
 - `enabled: false` = never look.
-- `dryRun: true` = check only. Switching it off is Lisa's call, in its own pull request.
+- `dryRun: true` = check only. Switching it off is the owner's call, in its own pull request.
 
 ## Before any real value is removed from `config.js` (a later pull request)
 

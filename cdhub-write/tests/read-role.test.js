@@ -71,7 +71,7 @@ test('key_prefix: a list that is not understood (no dot, more than 10, an empty 
   }
 });
 
-/* Dated hiding (Lisa 15 Nov 2026, Q3): optional columns row_id, role_code, from_date, to_date, source at the end of
+/* Dated hiding (the owner 15 Nov 2026, Q3): optional columns row_id, role_code, from_date, to_date, source at the end of
    BLD-field_visibility.csv. The test clock is 15 Oct 2026 (London). Invented rows only. */
 const VIS_Q3 = 'id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason,row_id,role_code,from_date,to_date,source';
 function q3Env(extra) {

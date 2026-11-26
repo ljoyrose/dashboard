@@ -1,4 +1,4 @@
-// Show help (Lisa 18 Nov 2026, demo de-clutter): help and explanation lines are hidden, not deleted, until the person turns on
+// Show help (the owner 18 Nov 2026, demo de-clutter): help and explanation lines are hidden, not deleted, until the person turns on
 // Show help. Off by default. The hub's switch is in the Look menu; the staff page's is on This phone. One class on the page.
 const { test, expect } = require('../support/test');
 const HUB = require('../fixtures/job34/load');

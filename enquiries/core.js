@@ -229,11 +229,11 @@
   //   1. Same normalised email or same valid phone: the same person, confidence 1.
   //   2. Otherwise a full name (first + last) at least opts.nameMin (0.9) alike, and NO clash (both have a phone and
   //      the phones differ, or both have an email and the emails differ): joined, confidence = similarity x 0.88,
-  //      which is always below 0.9, so check is set and Lisa sees "check". Two people with the same first name and
+  //      which is always below 0.9, so check is set and the owner sees "check". Two people with the same first name and
   //      different phones are never joined.
   //   3. Otherwise a new person.
   // When one incoming record links two stored people (email of one, phone of another) both stay; the later one is
-  // marked check "same as <key>?" for Lisa. Returns { people: [rows to upsert], assign: { enquiry_key: person_key } }.
+  // marked check "same as <key>?" for the owner. Returns { people: [rows to upsert], assign: { enquiry_key: person_key } }.
   var CONSENT_RANK = { 'do-not-contact': 3, unsubscribed: 2, ok: 1, unknown: 0, '': 0 };
   function strongIds(p, dc) { return { em: emailKey(p.email), ph: phoneKey(p.phone_e164 || p.phone, dc) }; }
   function clash(a, b, dc) {
@@ -385,7 +385,7 @@
   }
 
   // ---- Deposits and balances report (Stage 11) ------------------------------------------------------------------
-  // Report only. Amounts come from the allocation sheets and a Xero invoice CSV EXPORT that Lisa or the Money Hub drops
+  // Report only. Amounts come from the allocation sheets and a Xero invoice CSV EXPORT that the owner or the Money Hub drops
   // into the private requests folder; nothing here makes an invoice, a payment link or a reminder, and nothing is ever
   // written to Xero, Activepieces or an allocation sheet. Amounts per person live only in the private Deposits tab.
   function money(v) {
@@ -448,7 +448,7 @@
     return out;
   }
   // Held, due and overdue totals from Deposits rows, overall and by litter. Only 'held' rows count (a suggested Xero
-  // match waits for Lisa's tap). A balance is due when the collection date falls within dueDays (30) from now and the
+  // match waits for the owner's tap). A balance is due when the collection date falls within dueDays (30) from now and the
   // balance is not paid; overdue when the collection date has passed and it is still not paid.
   function depositTotals(rows, now, opts) {
     opts = opts || {};
@@ -568,7 +568,7 @@
   }
 
   // ---- Triage and scoring (Stage 7) ----------------------------------------------------------------------------
-  // Score 0 to 100 from weights Lisa keeps in Settings (score_weights, score_bands). Every score comes with its top 3
+  // Score 0 to 100 from weights the owner keeps in Settings (score_weights, score_bands). Every score comes with its top 3
   // reasons. Sensitive things (allergies, a neurodiverse home, young children, export to a hard country) are flags
   // that are SHOWN, never scored down: the same message with or without them scores the same.
   var WEIGHTS = { timing: 20, fit: 15, deposit: 15, home: 10, uk: 10, repeat: 15, call: 15 };
@@ -630,8 +630,8 @@
     return { score: score, band: band, reasons: reasons, flags: flags, prefs: prefs };
   }
 
-  // ---- Reply drafts in Lisa's style (Stage 8) ------------------------------------------------------------------
-  // Drafts only: written to the Drafts tab and shown in copy boxes; Lisa sends every message herself. The wording
+  // ---- Reply drafts in the owner's style (Stage 8) ------------------------------------------------------------------
+  // Drafts only: written to the Drafts tab and shown in copy boxes; the owner sends every message herself. The wording
   // follows her own approved texts (sales plan Appendix A and B) until the style guide from her sent mail is approved.
   // Never a price, a £ figure, a COI value, the licence number, a puppyclassroom.com link or "hypoallergenic" without
   // "low-shedding". Every draft carries at least one info link. checkDraft() enforces all of this on every draft.
@@ -642,7 +642,7 @@
   var STOP_LINE = "If you would rather not hear from me again, reply STOP and I won't contact you again.";
   var CASES = ['first-uk', 'first-abroad', 'after-call', 'waiting-list', 'pup-offer', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close',
     'check-in', 'call-check-in', 'offer-check-in', 'waiting-check-in'];
-  // Cases the engine may pick by itself. A pup offer is Lisa's alone: it is only ever drafted when she asks for it.
+  // Cases the engine may pick by itself. A pup offer is the owner's alone: it is only ever drafted when she asks for it.
   var AUTO_CASES = ['first-uk', 'first-abroad', 'after-call', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
 
   function firstName(name) {
@@ -660,8 +660,8 @@
     if (kase === 'breeder' || kase === 'adult-dog' || out.length === 1) out.push(LINKS.health);
     return out;
   }
-  // The official page for buyers abroad: Lisa keeps a country=URL list in Settings (import_pages). With no page on
-  // file the draft points to the UK government pet travel page and says "Lisa to confirm" for the country's rules.
+  // The official page for buyers abroad: the owner keeps a country=URL list in Settings (import_pages). With no page on
+  // file the draft points to the UK government pet travel page and says "the owner to confirm" for the country's rules.
   function importLine(country, pages) {
     var map = {};
     String(pages || '').split(/[\n;]+/).forEach(function (p) {
@@ -750,7 +750,7 @@
           'The breed pages are here if useful:', '', list];
         wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
         break;
-      // Stage 12 follow-ups: short check-ins. Never a price, never a new offer (offers are Lisa's alone).
+      // Stage 12 follow-ups: short check-ins. Never a price, never a new offer (offers are the owner's alone).
       case 'check-in':
         subject = 'Just checking in';
         body = [hi, '', 'I just wanted to check my last message reached you. If you\'re still looking for a puppy I\'d love to help, and if now isn\'t the right time that\'s absolutely fine.', '',
@@ -797,7 +797,7 @@
     return why;
   }
 
-  // Lisa's own sent reply, made safe for the private Style tab: quoted text cut off, every email, phone number, money
+  // the owner's own sent reply, made safe for the private Style tab: quoted text cut off, every email, phone number, money
   // figure and reference code replaced, the greeting name and the recipient's names replaced by <name>. Returns
   // { text, greeting, sign_off, words, links } where links are page addresses only (no query strings).
   function stripForStyle(raw, opts) {
@@ -936,7 +936,7 @@
     });
     return out;
   }
-  // Flags Lisa should see. now: a time; offerDays: 3. Returns [{ litter_key, pup_ref, person_key, flag }].
+  // Flags the owner should see. now: a time; offerDays: 3. Returns [{ litter_key, pup_ref, person_key, flag }].
   function litterFlags(rows, now, offerDays) {
     rows = rows || []; offerDays = offerDays || 3;
     var t = now == null ? Date.now() : toMs(now), out = [], lists = {};
@@ -1062,7 +1062,7 @@
   }
   // FollowUps rows for every enquiry: one open row per enquiry and rule (try n), closed when the enquiry moves on,
   // suggest-lost after the last try (the waiting-list check-in repeats and is never lost). The clock starts at the
-  // stage's event (or the row's own update), or at Lisa's last "done" for the next try. A snooze moves the due time.
+  // stage's event (or the row's own update), or at the owner's last "done" for the next try. A snooze moves the due time.
   //   opts: { now, rules: followUpRules(...), quiet: '21:00-08:00' }
   function planFollowUps(enquiries, events, existing, opts) {
     opts = opts || {};
@@ -1099,7 +1099,7 @@
     }
     return out;
   }
-  // The page's follow-up taps (request-file pattern): Lisa replied herself; snooze a follow-up; done (sent), or done and lost.
+  // The page's follow-up taps (request-file pattern): the owner replied herself; snooze a follow-up; done (sent), or done and lost.
   function stamp(at) { return at.replace(/[^0-9]/g, '').slice(0, 14); }
   function repliedRequest(enquiryKey, nowIso) {
     if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
@@ -1125,14 +1125,14 @@
   var STAGES = ['new', 'replied', 'call-booked', 'call-held', 'offered', 'deposit', 'balance', 'collected', 'lost', 'parked'];
   var ADULT_STAGES = ['asked', 'details-sent', 'viewing', 'agreed', 'handed-over'];
   var CLOSED = { lost: 1, parked: 1 };
-  // The order a puppy sale really moves in: the deposit comes before a pup is offered (offers are Lisa's alone).
+  // The order a puppy sale really moves in: the deposit comes before a pup is offered (offers are the owner's alone).
   var FLOW = ['new', 'replied', 'call-booked', 'call-held', 'deposit', 'offered', 'balance', 'collected'];
   function stageRank(s) {
     var i = FLOW.indexOf(s); if (i >= 0) return i;
     i = ADULT_STAGES.indexOf(s); return i >= 0 ? i : -1;
   }
 
-  // Merge a freshly read version of a row into the stored one. Blanks never overwrite values; Lisa's own fields
+  // Merge a freshly read version of a row into the stored one. Blanks never overwrite values; the owner's own fields
   // (stage set by her tap, owner, next step, flag) are kept; the stage only moves forward unless the new one is lost or
   // parked; received_uk keeps the earliest time. Returns a new object; neither input is changed.
   var LISA_FIELDS = ['owner', 'next_step', 'next_due_uk', 'lost_reason', 'flag', 'litter_ref', 'pup_ref'];
@@ -1228,7 +1228,7 @@
     Settings: ['setting', 'value', 'note'],
     Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
     Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version'],
-    // Stage 8: Lisa's own sent replies with names, emails and numbers stripped, read by styleSample(). Private.
+    // Stage 8: the owner's own sent replies with names, emails and numbers stripped, read by styleSample(). Private.
     Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk'],
     // Stage 14: counts only, one row per month and source (and 'all'). basis: live, hubspot-history or deposit-list.
     Results: ['result_key', 'month', 'source', 'basis', 'enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances',
@@ -1600,7 +1600,7 @@
   }
 
   // ---- Add by hand ----------------------------------------------------------------------------------------------
-  // The page's "Add by hand" box: Lisa pastes a message from email, WhatsApp, Facebook, Instagram, a phone call or
+  // The page's "Add by hand" box: the owner pastes a message from email, WhatsApp, Facebook, Instagram, a phone call or
   // Pets4Homes, picks the channel and kind; the page writes ONE request file; the engine turns it into a row.
   var HAND_CHANNELS = ['email', 'whatsapp', 'facebook', 'instagram', 'phone', 'pets4homes'];
   var HAND_MAX = 5000;
@@ -1742,7 +1742,7 @@
       followups: fus, actions: acts
     };
   }
-  // The page's own copy of a tap, applied at once so Lisa sees the result; the engine makes it real from the request
+  // The page's own copy of a tap, applied at once so the owner sees the result; the engine makes it real from the request
   // file. built: what a *Request() function returned. Changes tabs in place and returns it.
   function applyRequest(tabs, built, nowIso) {
     if (!tabs || !built || !built.ok) return tabs;
@@ -1803,7 +1803,7 @@
     String(text || '').split(' | ').forEach(function (p) { var i = p.lastIndexOf(':'); if (i > 0) into[p.slice(0, i)] = (into[p.slice(0, i)] || 0) + (Number(p.slice(i + 1)) || 0); });
     return into;
   }
-  // One enquiry's furthest step (0 to 6), whether it is lost, and hours to Lisa's first reply (null if none yet).
+  // One enquiry's furthest step (0 to 6), whether it is lost, and hours to the owner's first reply (null if none yet).
   function resultOf(e, evs) {
     var adult = e.kind === 'adult-dog' || ADULT_STAGES.indexOf(e.stage) >= 0;
     var step = adult ? 0 : (STEP_OF_STAGE[e.stage] || 0), first = null;
@@ -1907,7 +1907,7 @@
   }
 
   // ---- History import (Stage 14, one-off) ---------------------------------------------------------------------
-  // Old HubSpot deals and contacts from an EXPORT CSV that Lisa drops in the private requests folder (HubSpot is never
+  // Old HubSpot deals and contacts from an EXPORT CSV that the owner drops in the private requests folder (HubSpot is never
   // written). Header names are matched loosely. Stages are mapped to the hub's; spam and test entries (junkReasons)
   // are counted as junk and left out; a contact whose email is on a deal counts once. Only rows created before
   // opts.before are counted, so nothing the live readers already hold is counted twice. Returns counts only.
@@ -1990,7 +1990,7 @@
   }
 
   // ---- Alerts (Stage 15) ---------------------------------------------------------------------------------------
-  // Things Lisa should look at, worked out from the tabs on every read. Shown on the page and listed in the run slip as
+  // Things the owner should look at, worked out from the tabs on every read. Shown on the page and listed in the run slip as
   // suggested RR_OPEN-WORK rows; nothing here (or in the engine) writes an alert anywhere. Refs only: no names, no amounts.
   // opts: { now, replyHours: 24, prepHours: 2, runHours: 3, offerDays: 3, silentDays: 14 }.
   var ALERT_KINDS = ['hot-no-reply', 'blank-run', 'contact-blocked', 'call-no-prep', 'pup-no-offer', 'balance-overdue', 'source-silent'];

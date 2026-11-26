@@ -1,4 +1,4 @@
-// Count colours (Lisa, 3 Nov 2026): grey ring = waiting, rose ring = LATE, black badge = BROKEN (a site down, a domain expired,
+// Count colours (the owner, 3 Nov 2026): grey ring = waiting, rose ring = LATE, black badge = BROKEN (a site down, a domain expired,
 // a project stuck, a data check failed, a Factory engine error). The black badge is near-black with a white number in the light
 // looks and inverted (light ink, near-black number) in the dark looks; it is the same box as the ring, so nothing shifts. The
 // screen reader hears the word ("3 stuck", "1 down", "4 failed"). One rule: toolkit.js DashKit.count. Also the shared Search
@@ -93,7 +93,7 @@ for (const scheme of ['light', 'dark']) {
 
     test('CD Hub Data checks: failed checks are the black badge, read out as "failed"', async ({ page }) => {
       await HUBS.cdhub.open(page);
-      await page.evaluate(() => { location.hash = '#/shape'; });   // Table map is off More (Lisa 13 Nov); open by link
+      await page.evaluate(() => { location.hash = '#/shape'; });   // Table map is off More (the owner 13 Nov); open by link
       const c = page.locator('#checksCard h3 .cnt');
       await expect(c).toHaveText('6');
       await expect(c).toHaveClass(/\bbroken\b/);

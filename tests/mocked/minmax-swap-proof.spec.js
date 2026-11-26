@@ -1,4 +1,4 @@
-// Proof: min/max typed the wrong way round is flagged and never saved (Lisa, 12 Nov 2026).
+// Proof: min/max typed the wrong way round is flagged and never saved (the owner, 12 Nov 2026).
 // Invented rooms and readings only. Saving is stubbed — nothing is posted to a live script.
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 const { tabClick } = require('../support/tabs');

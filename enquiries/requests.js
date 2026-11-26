@@ -29,10 +29,10 @@
   // The one-tap "call held" after a WhatsApp call (Stage 9). The engine moves the stage and makes the after-call draft.
   function callHeld(o, enquiryKey, note) { return send(o, Core.callHeldRequest(enquiryKey, null, note)); }
 
-  // Lisa's "deposit paid" tap (Stage 11). Never carries an amount; depositKey confirms a suggested Xero row.
+  // the owner's "deposit paid" tap (Stage 11). Never carries an amount; depositKey confirms a suggested Xero row.
   function depositPaid(o, enquiryKey, depositKey) { return send(o, Core.depositPaidRequest(enquiryKey, depositKey)); }
 
-  // Follow-up taps (Stage 12): Lisa replied herself; snooze to a UK time; done (sent), or done and lost.
+  // Follow-up taps (Stage 12): the owner replied herself; snooze to a UK time; done (sent), or done and lost.
   function replied(o, enquiryKey) { return send(o, Core.repliedRequest(enquiryKey)); }
   function snooze(o, followupKey, untilUk) { return send(o, Core.snoozeRequest(followupKey, untilUk)); }
   function done(o, followupKey, lost) { return send(o, Core.doneRequest(followupKey, lost)); }

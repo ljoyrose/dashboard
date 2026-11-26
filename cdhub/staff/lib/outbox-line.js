@@ -1,5 +1,5 @@
 /*
- * Never lose an entry (Lisa 17 Nov 2026; OV12 20 Nov 2026): the line above a screen that shows what this phone is
+ * Never lose an entry (the owner 17 Nov 2026; OV12 20 Nov 2026): the line above a screen that shows what this phone is
  * still holding to send, and anything the records refused.
  *   BLDOutboxLine.mount(save, beforeEl)   save = BLDSave.create(...); the line goes just before beforeEl
  * Fewest words (staff screens). The phone also sends by itself every minute; "Send now" tries at once.

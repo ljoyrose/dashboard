@@ -1,4 +1,4 @@
-// Main photo + gallery (Lisa 13 Nov 2026): files rows, ownership through dated link rows (decision C). Invented rows.
+// Main photo + gallery (the owner 13 Nov 2026): files rows, ownership through dated link rows (decision C). Invented rows.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';

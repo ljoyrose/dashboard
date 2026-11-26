@@ -1,4 +1,4 @@
-// Where is everyone? room picker (Lisa 12 Nov 2026): the room code only ("just 4A"), only sleeping rooms, meaning rooms
+// Where is everyone? room picker (the owner 12 Nov 2026): the room code only ("just 4A"), only sleeping rooms, meaning rooms
 // with room-limit rows in force today (no list in code), in place order, and Off-site as its own button. Pretend data only.
 const { test, expect } = require('../support/test');
 

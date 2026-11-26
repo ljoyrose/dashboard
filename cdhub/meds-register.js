@@ -1,5 +1,5 @@
 /*!
- * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for Lisa, 21 Nov 2026,
+ * BLDMedsRegister - the month's medicines register for an inspector: print and CSV (OVERSEER 13 for the owner, 21 Nov 2026,
  * priority 2 "legally compliant exports"). Read only: it never writes a row.
  * One line per medicine given. Every column an inspector asks for is always printed; a detail the record does not hold
  * says "not recorded" only for a legally required detail: the date, the dog, the medicine and the dose.
@@ -46,7 +46,7 @@
 
   function str(v) { return String(v == null ? '' : v).trim(); }
 
-  /* No internal codes on paper (Lisa, 23 Nov 2026). A record id looks like clg-20261118-042020-vf20 or sub-7k2q9x: 2 to 5
+  /* No internal codes on paper (the owner, 23 Nov 2026). A record id looks like clg-20261118-042020-vf20 or sub-7k2q9x: 2 to 5
      letters, a hyphen, then letters and digits with at least one digit. "from <id>" is dropped whole; a bare id too. */
   var ID_SRC = '\\b[a-z]{2,5}-(?=[a-z0-9-]*\\d)[a-z0-9]+(?:-[a-z0-9]+)*\\b';
   function ids(s) { return String(s == null ? '' : s).match(new RegExp(ID_SRC, 'gi')) || []; }
@@ -89,7 +89,7 @@
    * A note added later (note_for_id) joins its record's note; a job not done or part done says so; a correction says
    * which record it corrects, and the original stays. Nothing is filled in that the record does not hold.
    */
-  function fromChecks(logs, types) {
+  function fromChecks(logs, types, today) {
     var med = {}, unit = {}, parasite = {};
     (types || []).forEach(function (t) {
       if (!MedRows.isMedCheck || !MedRows.isMedCheck(t)) return;
@@ -102,6 +102,7 @@
       if (str(r.outcome) === 'note' && str(r.note_for_id)) return false;
       if (parasite[str(r.check_type_id)] && (str(r.outcome) === 'not_done' || str(r.outcome) === 'part_done')) return false;
       if (MedRows.procedureDrug && MedRows.procedureDrug(r.item, r.note)) return false;
+      if (MedRows.doseEnded && MedRows.doseEnded(r, today)) return false;
       return true;
     }).map(function (r) {
       var out = str(r.outcome), amt = str(r.amount), u = unit[str(r.check_type_id)], o = byId[str(r.corrects_id)];
@@ -112,8 +113,8 @@
       if (str(r.corrects_id)) notes.push('Corrects the record of ' + (o ? (when({ given_at: o.happened_at || o.taken_at }).date || 'an earlier date') : 'an earlier date') + '.');
       if (mine.some(function (c) { return str(c.corrects_id) === str(r.id); })) notes.push('Corrected by a later record.');
       return { id: str(r.id), subject_id: str(r.subject_id), given_at: str(r.happened_at) || str(r.taken_at), product: str(r.item),
-        dose_volume: amt && u && amt.indexOf(u) < 0 ? amt + ' ' + u : amt, taken_by: str(r.taken_by), note: notes.join(' '),
-        time_given: str(r.time_given), _from: 'job' };
+        dose_volume: amt && u && amt.indexOf(u) < 0 ? amt + ' ' + u : amt, taken_by: str(r.taken_by), given_by: str(r.given_by) || str(r.taken_by), note: notes.join(' '),
+        time_given: str(r.time_given), to_date: str(r.to_date), end_reason: str(r.end_reason), _from: 'job' };
     });
   }
 
@@ -271,10 +272,11 @@
    * row whose note names a job record (e.g. "from clg-...", written when it was copied) is that same dose, so the job row
    * is left out rather than printed twice.
    */
-  function combine(dispense, logs, types) {
+  function combine(dispense, logs, types, today) {
     var copied = {}, seen = {}, out = [];
     (dispense || []).forEach(function (r) { ids(r.note).forEach(function (i) { copied[i.toLowerCase()] = 1; }); });
-    (dispense || []).concat(fromChecks(logs, types).filter(function (j) { return !copied[String(j.id).toLowerCase()]; })).forEach(function (r) {
+    (dispense || []).concat(fromChecks(logs, types, today).filter(function (j) { return !copied[String(j.id).toLowerCase()]; })).forEach(function (r) {
+      if (MedRows.doseEnded && MedRows.doseEnded(r, today)) return;
       if (MedRows.procedureDrug && MedRows.procedureDrug(r.product || r.item, r.note)) return;
       var day = str(r.given_at || r.given_on).slice(0, 10);
       var k = MedRows.doseKey ? MedRows.doseKey(r.subject_id, day, r.product || r.item) : '';

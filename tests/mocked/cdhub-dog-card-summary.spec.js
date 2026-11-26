@@ -1,4 +1,4 @@
-// CD Hub dog card summary (Lisa's dog card mock-up, 7 Nov 2026): weight change, last medication date,
+// CD Hub dog card summary (the owner's dog card mock-up, 7 Nov 2026): weight change, last medication date,
 // DNA clear/carrier/affected pills, and litters as dam with a link. Invented rows only. Dates as "2 Mar 2026" (13 Nov 2026).
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 
@@ -86,7 +86,7 @@ test.describe('CD Hub dog card summary', () => {
     await expect(card.locator('[data-k="dna"] [data-dna="affected"]')).toHaveText('DM affected');
     await expect(card.locator('[data-k="litters"]')).toHaveText('2 litters · last 2 Jun 2025');
 
-    // layout A (Lisa 12 Nov 2026): weight, medications and chip show; DNA, litters and the rest sit behind More
+    // layout A (the owner 12 Nov 2026): weight, medications and chip show; DNA, litters and the rest sit behind More
     await expect(card.locator('[data-k="weight"]')).toBeVisible();
     await expect(card.locator('[data-k="meds"]')).toBeVisible();
     await expect(card.locator('.dc-sects > [data-k="chip"]')).toBeVisible();   // a plain line now, not a fold (12 Nov)
@@ -127,7 +127,7 @@ test.describe('CD Hub dog card summary', () => {
     await expect(page.locator('.sfb').first()).toBeVisible();
   });
 
-  test('size from the latest weight: Lisa\'s cut-off rows set the badge, the coloured line and the room check', async ({ page, guard }) => {
+  test('size from the latest weight: the owner\'s cut-off rows set the badge, the coloured line and the room check', async ({ page, guard }) => {
     const w = guard.world;
     const SUBJ = csv('id,tenant_id,name,sex,dob,kind,neuter_status,size_band', [
       'sub-x1,t,Pretend Dam One,Female,2021-01-01,Breeding Female,entire,10-25kg (medium)',

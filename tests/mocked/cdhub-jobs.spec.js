@@ -103,13 +103,13 @@ test.describe('CD Hub: jobs', () => {
     await tab(page, 'dogs');
     const hist = page.locator('[data-history="sub-test-dog-1"]');
     await expect(hist).toContainText('4 job records');
-    // job history sits behind More on the dog card (layout A, Lisa 12 Nov 2026)
+    // job history sits behind More on the dog card (layout A, the owner 12 Nov 2026)
     await page.locator('#rows article.dc', { has: hist }).locator('details.more > summary').click();
     await hist.locator('summary').click();
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
     await expect(hist).toContainText('6 Jan 2026');   // owner date: "2 Mar 2026"
-    // Lisa 22 Nov 2026: "entered later" words show only when the owner's row display.entered_later is on (none here)
+    // the owner 22 Nov 2026: "entered later" words show only when the owner's row display.entered_later is on (none here)
     await expect(hist).not.toContainText('entered earlier');
     await expect(hist).not.toContainText('time not given');
     await expect(hist).toContainText('Pretend morning');   // a part of the day: the owner's label for it

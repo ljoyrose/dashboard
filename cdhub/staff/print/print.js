@@ -34,7 +34,7 @@
   var msg = h('p', { class: 'msg noprint', role: 'status' });
   screen.appendChild(h('h1', { class: 'noprint', text: 'Print QR cards' }));
   var code = ''; try { code = localStorage.getItem(CODE_KEY) || ''; } catch (e) { /* no storage */ }
-  // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
+  // Board A (the owner 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
   var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
   if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
   if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: owner ? 'The save address is not on this phone yet. Open CD Hub while signed in, then open this page again. An owner is not asked for a staff code.' : 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
@@ -42,7 +42,7 @@
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pick = h('div', { class: 'pick noprint' }), pickBox = h('div', { class: 'noprint' });
   screen.appendChild(opts); screen.appendChild(pickBox); screen.appendChild(pick); screen.appendChild(msg); screen.appendChild(sheet);
-  /* Lists, read only when a card type needs them (Lisa's demo, 22 Nov 2026: the page sat on "Loading..." for minutes while
+  /* Lists, read only when a card type needs them (the owner's demo, 22 Nov 2026: the page sat on "Loading..." for minutes while
      21 script calls ran one after another). The buttons show at once; each button reads only its lists, four at a time,
      and keeps them for this visit; "as of" says when, Refresh reads again. Lists marked optional may be off for this code. */
   var T = {}, readAt = 0, readBlock = {};
@@ -54,7 +54,7 @@
     dogs: BASE.concat(SITE, ['area_capacity', 'area_access', 'weight', 'links', 'files', 'microchip', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
     litters: BASE.concat(SITE, ['litter', 'coat_colour', 'coat_pattern', 'nose_pigment', 'check_type']),
     thermo: BASE.concat(['thermometer', 'requirement', 'area']),
-    items: BASE.concat(['items', 'item_kinds', 'links', 'files'])   /* item cards (print any item, Lisa 15 Nov 2026) */
+    items: BASE.concat(['items', 'item_kinds', 'links', 'files'])   /* item cards (print any item, the owner 15 Nov 2026) */
   };
   /* a save needs the script's status (is saving on?): asked once, only when a code or thermometer is to be saved, never
      before the buttons show (the status call also runs the script's waiting room moves, which can be slow) */
@@ -119,7 +119,7 @@
     sheet.textContent = '';
     if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
-    // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
+    // 15 Nov 2026 (the owner): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
     var role = typeof save.role === 'function' ? save.role() : '';
     if (missing.length && role && role !== 'OWNER' && !(save.usingGoogle && save.usingGoogle())) {
       say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
@@ -161,7 +161,7 @@
       if (done) done();
     }());
   }
-  /* Pick which cards print (Lisa 22 Nov 2026): one tick box per card, all ticked to start (or only the ids in `only`),
+  /* Pick which cards print (the owner 22 Nov 2026): one tick box per card, all ticked to start (or only the ids in `only`),
      Select all / Unselect all. Only ticked cards are drawn and printed, and only they can get a new code saved; the list is
      locked while codes save. Nothing ticked: nothing is drawn and the page says so. Shared list: lib/pick-list.js. */
   function pickThen(kind, items, draw, only) {
@@ -173,13 +173,13 @@
     }
     show(list.selected());
   }
-  /* Lisa's "Dog Card Print-outs" layout (v4). Every value prints from rows: size colours from size_colour.* rule rows,
+  /* the owner's "Dog Card Print-outs" layout (v4). Every value prints from rows: size colours from size_colour.* rule rows,
      room limits from area_capacity for the room's current access. Nothing kennel-specific is fixed here. */
-  var per = 2;   // cards per A4: 1, 2 or 4 (Lisa's dog card, 18 Nov 2026: two per A4)
+  var per = 2;   // cards per A4: 1, 2 or 4 (the owner's dog card, 18 Nov 2026: two per A4)
   function sizeKey(b) { var m = /(small|medium|large)/i.exec(String(b || '')); return m ? m[1].toLowerCase() : ''; }
   /* the dog's size: the one shared rule with the CD Hub dog page (staff/lib/capacity.js sizeForDog): an owner
      size_override row, else the latest weighing, else the middle of the kg range in its size cell, all against the
-     owner's size_from_kg rows (Lisa 15 Nov 2026); last, a size word typed in the cell. Never any kg on the card. */
+     owner's size_from_kg rows (the owner 15 Nov 2026); last, a size word typed in the cell. Never any kg on the card. */
   function sizeOfDog(s) {
     if (!s) return '';
     var w = null;
@@ -196,7 +196,7 @@
     if (/^var\(/i.test(c)) return c;
     return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c) ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : c;
   }
-  /* Lisa 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
+  /* the owner 21 Nov 2026: a pup under puppy.under_weeks old on the print day prints in the size_colour.puppy colour, not its size
      colour (the owner's dated rule rows; the newest in force wins). No date of birth, or no rows: the size colour. */
   function colourVar(c) { return /^([a-z]+|#[0-9a-f]{3,6})$/i.test(c || '') ? 'var(--sz-' + c.replace('#', 'x') + ', ' + c + ')' : ''; }
   function isPup(s) {
@@ -208,7 +208,7 @@
   function dogColour(s, sz) { return (isPup(s) && colourVar(ruleNow('size_colour.puppy'))) || sizeColour(sz); }
   /* what a pup's Size tile says: the owner's dated puppy.size_tile row, "size" (Small/Medium/Large, the default) or "puppy" */
   function tileWord(s, sz) { return isPup(s) && /^puppy$/i.test(ruleNow('puppy.size_tile')) ? 'Puppy' : sizeWord(sz); }
-  /* one date format everywhere: 2 Mar 2026 (Lisa 13 Nov 2026; never DD/MM/YY) */
+  /* one date format everywhere: 2 Mar 2026 (the owner 13 Nov 2026; never DD/MM/YY) */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : ''; }
   function sexIcon(sex) {
@@ -218,7 +218,7 @@
   }
   function chipOf(s) { var n = ''; (T.microchip || []).forEach(function (r) { if (r.subject_id === s.id && r.chip_number) n = String(r.chip_number); });
     return n.replace(/\s+/g, '').replace(/(\d{3})(?=\d)/g, '$1 '); }
-  /* the jobs in force for this kind of card (Lisa's job rows) */
+  /* the jobs in force for this kind of card (the owner's job rows) */
   function jobsFor(kinds) { return (typeof BLDDue !== 'undefined' ? BLDDue.jobsInForce(T.check_type || [], BLDNeeds.today()) : []).filter(function (j) { return kinds.indexOf(j.target) >= 0; }); }
   function howOften(j) { var n = parseInt(j.every_days, 10); return j.frequency || (n === 1 ? 'daily' : n === 7 ? 'weekly' : n > 0 ? 'every ' + n + ' days' : 'as needed'); }
   /* Photo: the dog's photo cell holds a Drive file id (or a Drive link). The card shows Drive's own picture of it, which
@@ -236,6 +236,10 @@
     return ended ? '' : cell;
   }
   /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
+  /* the main photo is the 'main' link row in force (the owner 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
+  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
+    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  /* the owner 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
      address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
      way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */
   var DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files/';
@@ -272,7 +276,7 @@
       loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
     }
     return box; }
-  /* Lisa's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
+  /* the owner's dog card, her APPROVED v4 design (15 Nov 2026, re-confirmed 20 Nov 18:26): name large top-left with no label; Sex (with
      its sign) and Date of birth labelled top-right; the photo left in a thick frame of the size colour, fitted whole (contain);
      on the right a "Size" tile top-aligned with the photo and a 62 mm QR bottom-aligned with it; the microchip labelled across
      the bottom in groups of three. No room, access, tag text or preview labels. Two per A4 with a dashed cut line. */
@@ -308,7 +312,7 @@
       qrBox(qrBase() + '#s/' + tag, 'QR code for ' + (s.name || s.id)),
       chip ? h('div', { class: 'chipline', 'data-k': 'chip' }, [h('span', { text: 'Microchip' }), h('b', { text: chip })]) : null]);
   }
-  /* Item cards (print any item, Lisa 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields
+  /* Item cards (print any item, the owner 15 Nov 2026): one card layout for any BLD-items row, e.g. a fire extinguisher. The fields
      that print are the owner's dated rule row print.fields.item.<kind_key> or print.fields.item (column names joined by |),
      newest in force wins; without one, ITEM_FIELDS. Every value prints under its label (the owner's print.label.<column> row,
      else ITEM_LABELS); the item name is the only value with no label. A choice made here is saved as a new dated rule row. */
@@ -380,7 +384,7 @@
     });
     pickBox.appendChild(h('fieldset', { class: 'picks' }, [h('legend', { text: 'Fields on item cards' })].concat(boxes, [use, keep])));
   }
-  /* Litter card in the kennel-card style (Lisa's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
+  /* Litter card in the kennel-card style (the owner's "Dog Card Print-outs" v4): band with the dam's size colour, photo, facts, one large code */
   function litterCard(tag, it) {
     var l = it.l, dam = it.dam || {}, col = sizeColour(sizeOfDog(dam)), rows = [], born = l.born_on || l.dob || '';
     if (it.sire) rows.push(['Sire', it.sire]);
@@ -450,9 +454,9 @@
       };
     });
   }
-  /* the line at the foot of every room card: the owner's rule row room_card.footer, else the words on Lisa's design */
+  /* the line at the foot of every room card: the owner's rule row room_card.footer, else the words on the owner's design */
   function footer() { var v = ''; (T.breeding_rule || []).forEach(function (r) { if (r.rule_key === 'room_card.footer' && inForceOn(r, BLDNeeds.today())) v = String(r.value || ''); }); return v || 'Unsure? Don’t Move. Ask.'; }
-  /* Lisa's room card (18 Nov 2026): name, a colour line, Access / Room size / Mum + pups, then Small, Medium, Large
+  /* the owner's room card (18 Nov 2026): name, a colour line, Access / Room size / Mum + pups, then Small, Medium, Large
      each with a dog per place and "= n" in the size colour (none: a dashed "No large dogs"), the code, the footer. */
   function roomCard(tag, it) {
     var a = it.a || {}, lim = limitsOf(it.id), acc = lim.access;
@@ -508,7 +512,7 @@
       .sort(function (a, b) { return String(a.label).localeCompare(String(b.label), 'en', { numeric: true }); }));
   }
   /** One thermometer per place (a room or a corridor): the owner names it and picks its place; then the list shows
-      with its new QR card, ready to print (Lisa 11 Nov 2026). The hub's "+ Thermometer" opens this (?add=thermometer). */
+      with its new QR card, ready to print (the owner 11 Nov 2026). The hub's "+ Thermometer" opens this (?add=thermometer). */
   function addThermometer() {
     if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
     sheet.textContent = ''; say('');

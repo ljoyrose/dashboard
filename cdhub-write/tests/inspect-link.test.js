@@ -1,5 +1,5 @@
 'use strict';
-/** 12 Nov 2026 (BB): inspector links. Read-only, time-boxed, and they show only the dogs and fields Lisa ticked on that link. */
+/** 12 Nov 2026 (BB): inspector links. Read-only, time-boxed, and they show only the dogs and fields the owner ticked on that link. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
@@ -238,7 +238,7 @@ test('owner page: Make a link ticks the suggested set, shows the link once with 
   assert.equal($('#in-list').textContent.includes(code), false);
 });
 
-// V9 (13 Nov 2026, Lisa: "now for specific time or scheduled date time from to"): one window shape, limits from rule rows.
+// V9 (13 Nov 2026, the owner: "now for specific time or scheduled date time from to"): one window shape, limits from rule rows.
 test('window: now for N hours, until HH:MM today, or scheduled from-to; the link says "Opens ..." until then', () => {
   const env = setup();
   const H = 3600000, start = env.nowMs;

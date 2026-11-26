@@ -25,7 +25,7 @@ for every pull request (`tools/build-site/build.sh`, the same files as the GitHu
   login wall. Not changed here; test on a protected preview.
 - A private GitHub repo still builds on Cloudflare Pages (the Cloudflare GitHub app keeps its access).
 
-## Lisa's steps if A2 is chosen (bots give click-by-click notes for each)
+## the owner's steps if A2 is chosen (bots give click-by-click notes for each)
 1. Cloudflare > Workers & Pages > the dashboard project > Settings > General > switch on "Access policy". Previews are
    now behind a login. Safe today, undoable, nothing changes on the live site.
 2. Same project > Settings > Builds: limit automatic builds to the `main` branch (previews by hand only), so the 500

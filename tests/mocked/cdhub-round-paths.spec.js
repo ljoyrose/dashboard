@@ -1,4 +1,4 @@
-// Click paths Lisa walks: a medicine ask finishes on the dispense record, and every Round control does the job it names.
+// Click paths the owner walks: a medicine ask finishes on the dispense record, and every Round control does the job it names.
 // Invented rows only. Nothing here is posted to a live sheet.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
@@ -60,7 +60,7 @@ test.describe('CD Hub: a medicine ask finishes on the record', () => {
     await expect(page).not.toHaveURL(/#\/work$/);
   });
 
-  // Lisa, 12 Nov 2026: tapping a February medicine item kept returning to the same view. With one dog the page opened that
+  // the owner, 12 Nov 2026: tapping a February medicine item kept returning to the same view. With one dog the page opened that
   // dog's medicines by itself; with two or more it opened nothing and the rows in the list could not be tapped.
   test('February medicine for two dogs: tapping a row opens that dog’s medicines, it does not leave the view as it was @regression', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-WORK.csv', WORK);

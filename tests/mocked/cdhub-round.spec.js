@@ -1,6 +1,6 @@
 // The Round on the staff page (cdhub/staff: Temps, and Scan and move): every button, with the save script pretend.
 // Each save is tried three ways: the script says OK, the script cannot be reached, the script refuses the entry.
-// A card may tick only after the save reply is OK (Lisa, 12 Nov 2026, PR 473). Invented rooms and dogs only
+// A card may tick only after the save reply is OK (the owner, 12 Nov 2026, PR 473). Invented rooms and dogs only
 // (tests/fixtures/cdhub-27); the code and the save address are made up.
 const { test, expect } = require('../support/test');
 const c27 = require('../support/cdhub27');

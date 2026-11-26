@@ -1,5 +1,5 @@
 /*!
- * Photos and files for one record (Lisa 13 Nov 2026): one MAIN image plus a GALLERY that grows over the years.
+ * Photos and files for one record (the owner 13 Nov 2026): one MAIN image plus a GALLERY that grows over the years.
  * Files live in BLD-files (one row per stored file or link, never edited). What a file belongs to is a row in the one
  * link table BLD-links (decision C): from_table/from_id -> to_table 'files'/to_id, role 'gallery' or 'main',
  * from_date/to_date (blank = open, inclusive). Ending fills to_date; nothing is deleted. Words come from owner rule rows
@@ -49,6 +49,13 @@ var BLDPhotos = (function () {
         if (key === 'main') { if (!main || stamp(l) > stamp(main)) main = l; }
         else gal.push(l);
       } else if (hasEnded(l)) ended.push(l);
+      if (key === 'main') { if (on(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
+      if (key !== 'gallery') return;
+      // Removed from the gallery today (the owner 16 Nov 2026): a link added today can only end today, so an end reason marks it
+      // ended at once instead of at midnight.
+      var removedToday = ymd(l.to_date) === day && String(l.end_reason || '').trim() !== '';
+      if (on(l, day) && !removedToday) gal.push(l);
+      else if (ymd(l.to_date) && (ymd(l.to_date) < day || removedToday)) ended.push(l);
     });
     gal.sort(function (a, b) {
       var sa = String(a.sort || '').trim(), sb = String(b.sort || '').trim();

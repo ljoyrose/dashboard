@@ -1,7 +1,7 @@
 /*!
  * BLDTempImport - bring paper or spreadsheet temperature readings into BLD-area_reading (owner only).
  *
- * Lisa, 22 Nov 2026 ("yes please add now"): the round lost the readings after 14:44 (the sign-in ran out) and she has
+ * the owner, 22 Nov 2026 ("yes please add now"): the round lost the readings after 14:44 (the sign-in ran out) and she has
  * them on paper. One row per room, thermometer and slot. Columns:
  *   date        2026-11-22 or 22/11/2026
  *   room        the room's code as on the round (3A.1/2)

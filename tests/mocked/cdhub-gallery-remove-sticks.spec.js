@@ -1,4 +1,4 @@
-// Dog gallery × must stick (Lisa 22 Nov 2026, phone, Records > Dogs, two dogs side by side: "Pressing cross on image
+// Dog gallery × must stick (the owner 22 Nov 2026, phone, Records > Dogs, two dogs side by side: "Pressing cross on image
 // doesn't remove it; closes Photos and then photo still there"). The page shows this phone's copy, then reads the live
 // tables behind it; a read that lands after the save used to put the old link row back and redraw with Photos shut.
 // Here the pretend Drive never learns of the save (the worst case), the save is slow, and a live read runs during it.
@@ -101,7 +101,7 @@ test('a refused save keeps Photos open, says Not saved, and the photo stays', as
   expect(await page.evaluate(() => localStorage.getItem('cdhub.link.ends'))).toBeNull();
 });
 
-// Lisa 22 Nov 2026, after a reload: the phone showed its old copy (from before the removal), so the photo was back; a
+// the owner 22 Nov 2026, after a reload: the phone showed its old copy (from before the removal), so the photo was back; a
 // second × was refused by the save script ("That link has already ended") and looked like a failure. It is gone.
 test('× on a photo the save script says is already removed takes it away and says Saved', async ({ page, guard }) => {
   const { sent, release, gal } = await setUp(page, guard, { reply: { ok: false, code: 'NOT_ALLOWED', message: 'That link has already ended.' } });

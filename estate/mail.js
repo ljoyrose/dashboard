@@ -254,7 +254,7 @@
     return { record: ['v=spf1'].concat(terms, [all]).join(' '), dropped: dropped };
   }
 
-  // Plain-English DNS changes for Lisa to make by hand. Suggestion text only; nothing here is ever applied.
+  // Plain-English DNS changes for the owner to make by hand. Suggestion text only; nothing here is ever applied.
   function fixSuggestion(domain, result) {
     var d = String(domain || 'the domain'), r = result || {}, s = summarise(r), out = [];
     var mx = wordOf(r.mx);

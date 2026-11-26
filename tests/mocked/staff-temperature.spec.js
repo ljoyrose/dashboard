@@ -1,5 +1,5 @@
 // Temperature round on the staff page. Pretend rooms and thermometers; fake code and fake save address only.
-// Lisa, 11 Nov 2026: a thermometer that ended on 11 Nov is not in the 12 Nov round, but an earlier reading for a
+// the owner, 11 Nov 2026: a thermometer that ended on 11 Nov is not in the 12 Nov round, but an earlier reading for a
 // day it was needed (10 Nov) can still be typed on 12 Nov, and is saved for that day.
 const { test, expect } = require('../support/test');
 
@@ -17,7 +17,7 @@ const TABLES = {
     { id: 'thm-old', name: '3A.2/3', area_id: 'area-old' },
     { id: 'thm-new', name: '3A.1/2', area_id: 'area-new' }
   ],
-  // Lisa 11 Nov 2026, "A standard": when things are needed is need rows, never dates on the thing.
+  // the owner 11 Nov 2026, "A standard": when things are needed is need rows, never dates on the thing.
   requirement: [
     { id: 'req-1', need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'thm-old', from_date: '2025-01-01', to_date: '2026-11-11' },
     { id: 'req-2', need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'thm-new', from_date: '2026-11-12', to_date: '' },
@@ -63,7 +63,7 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: earlier readings are from photos
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // the owner 11 Nov: earlier readings are from photos
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
@@ -79,7 +79,7 @@ test('an earlier reading cannot be for now or later: that is the round', async (
   await expect(page.getByText('That is now or later: use the round.')).toBeVisible();
 });
 
-test('Lisa 11 Nov: how a reading was taken is saved only; the year report never shows camera, typed or photo', async ({ page }) => {
+test('the owner 11 Nov: how a reading was taken is saved only; the year report never shows camera, typed or photo', async ({ page }) => {
   TABLES.area_reading = [
     { id: 'r1', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', taken_at: '2026-11-12T08:00:00Z', min_c: '12.0', max_c: '18.0', read_method: 'camera', camera_value_changed: 'true' },
     { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T12:00:00+00:00', taken_at: '2026-11-12T15:00:00Z', min_c: '12.5', max_c: '18.5', read_method: 'typed' },
@@ -96,7 +96,7 @@ test('Lisa 11 Nov: how a reading was taken is saved only; the year report never 
   } finally { TABLES.area_reading = []; }
 });
 
-test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
+test('the owner 11 Nov: an earlier reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
   const sent = await setup(page);
   await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));   // afternoon: this morning is now a missed slot
   await page.goto('cdhub/staff/#m/temperature');
@@ -117,7 +117,7 @@ test('Lisa 11 Nov: an earlier reading outside the limit asks "What was done?", a
   expect(sent[0].fields).toMatchObject({ area_id: 'area-new', min_c: '8.5', period_start: '2026-11-12T00:00:00+00:00', mitigation_note: 'Heater on, rechecked at 12:00' });
 });
 
-// Lisa 17 Nov 2026 ("says all temps are due but I definitely put them in"): the save script reads a reading's
+// the owner 17 Nov 2026 ("says all temps are due but I definitely put them in"): the save script reads a reading's
 // period_start back as the cell shows it ("2026-11-12 00:00"), not as the page sent it; it must still count as done.
 test('a saved reading read back as "2026-11-12 00:00" shows as done, not Due', async ({ page }) => {
   const keep = TABLES.area_reading;
@@ -131,7 +131,7 @@ test('a saved reading read back as "2026-11-12 00:00" shows as done, not Due', a
   } finally { TABLES.area_reading = keep; }
 });
 
-// Room empty (Lisa 11 Nov 2026): no dog present. A flag on the slot's reading; a reading is optional with it, and an
+// Room empty (the owner 11 Nov 2026): no dog present. A flag on the slot's reading; a reading is optional with it, and an
 // outside reading in an empty room is never a non-compliance, so "What was done" is not asked.
 test('Room empty with no reading saves room_empty yes and no temperatures; no CLR step', async ({ page }) => {
   const sent = await setup(page);
@@ -201,7 +201,7 @@ test('year report: an empty room\'s outside reading is flagged "Room empty" but 
   } finally { TABLES.area_reading = []; }
 });
 
-// Links (Lisa 12 Nov 2026): the year report for a new room includes the old room linked into it, each such row
+// Links (the owner 12 Nov 2026): the year report for a new room includes the old room linked into it, each such row
 // marked "From <old room>"; the old room's own report is unchanged.
 test('year report: a new room includes readings from the old room linked into it, marked "From"', async ({ page }) => {
   TABLES.area_reading = [
@@ -224,7 +224,7 @@ test('year report: a new room includes readings from the old room linked into it
   } finally { TABLES.area_reading = []; delete TABLES.area_link; }
 });
 
-test('Lisa 12 Nov: a reading is judged by the limit row in force on its own day, never today\'s', async ({ page }) => {
+test('the owner 12 Nov: a reading is judged by the limit row in force on its own day, never today\'s', async ({ page }) => {
   const keep = { b: TABLES.temperature_band, r: TABLES.area_reading };
   TABLES.temperature_band = [
     { id: 'tb-old', band: 'Rest', min_temp: '10', max_temp: '20', from_date: '', to_date: '2026-11-11' },
@@ -259,7 +259,7 @@ test('Report and Import show for an owner code only; a staff code sees the round
   await page.goto('cdhub/staff/#m/temperature');
   await page.reload();
   await expect(page.locator('.tg-row').getByRole('button', { name: 'Import', exact: true })).toBeVisible();
-  // Lisa C (14 Nov): icon plus word, grey at rest
+  // the owner C (14 Nov): icon plus word, grey at rest
   for (const name of ['Earlier', 'Report', 'Import']) {
     const b = page.locator('.tg-row').getByRole('button', { name, exact: true });
     await expect(b.locator('.ic svg')).toHaveCount(1);

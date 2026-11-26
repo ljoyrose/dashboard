@@ -1,4 +1,4 @@
-// Owners save with their Google sign-in (Lisa 16 Nov 2026, option A): a signed-in hub sends the sign-in with the save
+// Owners save with their Google sign-in (the owner 16 Nov 2026, option A): a signed-in hub sends the sign-in with the save
 // and asks for no code. If the save script answers that this Google account is not an owner, the hub asks for the
 // staff code and sends again with the code only. Invented rooms; pretend save script; pretend Google sign-in.
 const { test, expect, HUBS } = require('../fixtures/job34/load');

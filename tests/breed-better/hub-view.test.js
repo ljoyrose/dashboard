@@ -429,7 +429,7 @@ test('a held-back record shows the word it holds ("Preliminary") on the line, wi
   assert.doesNotMatch(html, /Not accepted yet/);
 });
 
-test('with no age_group rows, the two age groups come from the existing adult-age rule (Lisa 15 Nov 2026: two in the SOP)', () => {
+test('with no age_group rows, the two age groups come from the existing adult-age rule (the owner 15 Nov 2026: two in the SOP)', () => {
   const R = (k, v, from, extra) => Object.assign({ rule_key: k, value: v, effective_from: from || '2026-01-01', source: 'SOP' }, extra || {});
   const T = { 'BLD-breeding_rule.csv': [R('dog.adult_from_months', '9', '2020-01-01'), R('dog.adult_from_months', '6', '2025-01-01'),
     R('dog.adult_from_months', '12', '2027-01-01')] };
@@ -502,7 +502,7 @@ test('Checks records score by check type family: every version of a check type (
   assert.deepEqual([run('a1'), run('a2'), run('a3') === 'pass'], ['pass', 'pass', false]);   // old version, new version, not this family
 });
 
-/* D3 (Lisa, 18 Nov 2026): the Testing label follows the scheme row's signed_off_on date */
+/* D3 (the owner, 18 Nov 2026): the Testing label follows the scheme row's signed_off_on date */
 test('Testing label: blank, not a date, or a future signed_off_on keeps it; a date on or before today removes it', () => {
   const withSign = (value) => tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', signed_off_on: value }] });
   const has = (value, today) => {

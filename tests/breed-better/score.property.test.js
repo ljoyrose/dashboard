@@ -388,7 +388,7 @@ test('@regression an unmatched gate answer is Unverified, never Fail', () => {
   assert.equal(run(set, [exam('l', 'p0', 'top', '2025-01-01')]).verdict, 'unverified');
 });
 
-/* D7 (Lisa, 18 Nov 2026): when_missing = fail is refused on every line, so a missing record can never make a Fail */
+/* D7 (the owner, 18 Nov 2026): when_missing = fail is refused on every line, so a missing record can never make a Fail */
 forAll('property: when_missing fail is refused on any line; a missing record is never a Fail', (r) => {
   const set = makeScheme(r);
   const all = set.criteria;

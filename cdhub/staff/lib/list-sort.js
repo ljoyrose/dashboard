@@ -1,5 +1,5 @@
 /*!
- * BLDSort - one sort for every list (Dogs, Items, Litters, Staff...). Lisa 15 Nov 2026: "its cross industry - will youngest
+ * BLDSort - one sort for every list (Dogs, Items, Litters, Staff...). the owner 15 Nov 2026: "its cross industry - will youngest
  * appear on fire extinguishers?" A list only offers the sorts for fields it actually holds:
  *   status -> Best to worst (All, Pass ... Fail; never Fail first)   due  -> Due soonest
  *   expires -> Expires soonest                                        made -> Newest first / Oldest first (made, bought or into use)
