@@ -30,7 +30,7 @@ async function hoverRule(page, phone) {
     const nav = [...document.querySelectorAll('nav')].find((n) => getComputedStyle(n).position === 'fixed');
     const head = document.querySelector('header');
     const all = [...document.querySelectorAll('main button, main a.btn, main a.pill, main a.chip, main summary, #view button, #view a.btn, #view a.pill, #view a.chip, #view summary')]
-      .filter((e, i, a) => a.indexOf(e) === i && seen(e) && !(nav && nav.contains(e)) && !(head && head.contains(e)) && !e.disabled && !(e.matches('summary') && e.querySelector('h1, h2, h3, h4, h5')) && !e.matches('.ttl, [data-house="text"], .on, .sel, [aria-pressed="true"], [aria-current="page"], [aria-selected="true"], [aria-expanded="true"], details[open] > summary'));
+      .filter((e, i, a) => a.indexOf(e) === i && seen(e) && !(nav && nav.contains(e)) && !(head && head.contains(e)) && !e.disabled && !e.matches('.phbtn') && !(e.matches('summary') && e.querySelector('h1, h2, h3, h4, h5')) && !e.matches('.ttl, [data-house="text"], .on, .sel, [aria-pressed="true"], [aria-current="page"], [aria-selected="true"], [aria-expanded="true"], details[open] > summary'));
     // A meaning-coloured control carries its colour in --mc (house.css) or is a yes / no / delete / AI button.
     const isMeaning = (e) => e.matches('.btn.yes, .btn.no, .btn.danger, .btn.ai') || !!getComputedStyle(e).getPropertyValue('--hmc').trim() || chroma(rgb(getComputedStyle(e).borderTopColor)) > 45;
     const neutral = all.filter((e) => !isMeaning(e)).slice(0, 3);

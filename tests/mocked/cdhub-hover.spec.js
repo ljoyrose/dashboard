@@ -26,7 +26,7 @@ function kinds() {
   document.querySelectorAll(sel).forEach((el) => {
     const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
     if (!r.width || !r.height || cs.visibility === 'hidden' || el.disabled || el.closest('[hidden], .hidden, [inert]')) return;
-    if (el.closest('nav.house-tabs, #nav') || el.matches('.skip')) return;            // bottom tabs have their own rule and test (tab-bar); the skip link is off screen until focused
+    if (el.closest('nav.house-tabs, #nav') || el.matches('.skip, .phbtn')) return;   // bottom tabs have their own rule; the photo hit target is the picture, not a lined button
     for (let d = el.parentElement; d; d = d.parentElement) if (d.tagName === 'DETAILS' && !d.open && !(el.tagName === 'SUMMARY' && el.parentElement === d)) return;
     const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter((c) => !/^(on|hidden|today|house-fold-pad|house-fold-row)$/.test(c)).slice(0, 3).join('.') : '';
     const where = el.closest('header') ? 'top bar ' : '';
