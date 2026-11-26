@@ -58,6 +58,7 @@ const openBreed = async (page) => {
   await signIn(page);
   await tabClick(page, '#nav button[data-go="breed"]');
   await expect(page.locator('#main h2')).toContainText('Breed Better');
+  await expect(page.locator('#bbRoot')).toBeVisible();   // Breed Better loads on first open (CD Hub lazy load, 15 Nov 2026)
 };
 const openDogs = async (page) => {
   await page.goto('cdhub/');

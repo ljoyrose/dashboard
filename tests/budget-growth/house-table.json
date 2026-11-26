@@ -1,0 +1,1 @@
+{"home": 1800, "cdhub": 5700, "factory": 1800, "food": 1800, "marketplace": 1800, "money": 1800, "studio": 1800, "privacy": 1800, "why": "One table look (house-table) and a steady scrollbar gutter in house.css, about 1.8 kB on every page; cdhub also loads staff/lib/tables.js (3.5 kB) and the Admin tables. PR 570."}

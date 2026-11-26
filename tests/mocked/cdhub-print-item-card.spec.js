@@ -89,7 +89,7 @@ test.describe('Print any item: the item card', () => {
     expect(made[0].fields.tag).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/);
   });
 
-  test('print: two item cards per A4, a QR of at least 60 mm, the photo fitted whole (contain)', async ({ page }) => {
+  test('print: two item cards per A4, a QR of at least 60 mm, the photo fills the square', async ({ page }) => {
     await open(page, world());
     await page.getByRole('button', { name: '2 per A4' }).click();
     await page.emulateMedia({ media: 'print' });
@@ -99,7 +99,7 @@ test.describe('Print any item: the item card', () => {
     const qr = await card(page, 'itm-1').locator('.code svg').boundingBox();
     expect(Math.min(qr.width, qr.height) / mm).toBeGreaterThanOrEqual(60);
     const fit = await page.evaluate(() => { const st = [...document.styleSheets].flatMap((s) => { try { return [...s.cssRules]; } catch (e) { return []; } }).map((r) => r.cssText).join('\n');   // a font sheet from another site cannot be read
-      return /\.dcard \.photo img\s*\{[^}]*object-fit:\s*contain/.test(st); });
+      return /\.dcard \.photo img\s*\{[^}]*object-fit:\s*cover/.test(st); });
     expect(fit).toBe(true);
     await expect(page.locator('.picks')).toBeHidden();                                    // the picker never prints
   });

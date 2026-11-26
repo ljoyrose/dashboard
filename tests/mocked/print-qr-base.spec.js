@@ -1,5 +1,5 @@
-// Printed QRs open the staff page on this same site. The owner's qr.base_url rule row (dated) wins when one is in force.
-// Invented rows only.
+// Printed QRs open the staff page on this site (or a configured https address), never a fixed host.
+// A qr.base_url rule row in force wins. Invented rows only.
 const { test, expect } = require('../support/test');
 
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
@@ -28,9 +28,13 @@ async function open(page, rules) {
   await page.goto('cdhub/staff/print/');
 }
 
-test('printed QRs open the staff page on this site', async ({ page }) => {
+test('printed QRs open the staff page on this site, not a fixed host and not the print page', async ({ page }) => {
   await open(page);
-  const staff = new URL('../', page.url()).href;
+  const staff = await page.evaluate(() => {
+    var path = location.pathname, i = path.indexOf('/cdhub/');
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  });
+  expect(staff).not.toContain('/print/');
   await page.getByRole('button', { name: 'Dog cards' }).click();
   await expect(page.locator('.dcard')).toHaveCount(1);
   await page.getByRole('button', { name: 'Room cards' }).click();
@@ -40,10 +44,16 @@ test('printed QRs open the staff page on this site', async ({ page }) => {
   expect(qr).toContain(staff + '#s/AAAAAAAA');
   expect(qr).toContain(staff + '#s/EEEEEEEE');
   expect(qr.some((t) => t.indexOf(staff + '#setup=') === 0)).toBe(true);
-  expect(qr.filter((t) => /github\.io/.test(t))).toEqual([]);
-  expect(qr.filter((t) => t.indexOf('/print/') >= 0)).toEqual([]);
-  // the address lives only inside the QR
+  expect(qr.filter((t) => /github\.io/.test(t) || t.indexOf('/print/') >= 0)).toEqual([]);
   expect(await page.locator('.sheet').innerText()).not.toMatch(/https?:|www\./);
+});
+
+test('a configured staff address wins over the host serving the page', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => { DASH_CONFIG.cdhub.publicStaffBase = 'https://example.test/staff/'; });
+  await page.getByRole('button', { name: 'Dog cards' }).click();
+  await expect(page.locator('.dcard')).toHaveCount(1);
+  expect(await page.evaluate(() => window.__qr)).toEqual(['https://example.test/staff/#s/AAAAAAAA']);
 });
 
 test('the owner\'s qr.base_url row in force wins; a future row, an ended row and a bad address do not', async ({ page }) => {
