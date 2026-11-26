@@ -226,8 +226,10 @@
   function photoId(v) { v = String(v == null ? '' : v).trim(); var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
     return m ? m[1] : (!/^https?:/i.test(v) && /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : ''); }
   /* the main photo is the 'main' link row in force (Lisa 13 Nov 2026, staff/lib/photos.js); the old photo cell until then */
-  function mainPhoto(s, table) { var m = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today()).main;
-    return (m && photoId(m.drive_file_id)) || photoId(s.photo); }
+  function mainPhoto(s, table) {
+    var rec = BLDPhotos.forRecord(T.links || [], T.files || [], T.breeding_rule || [], table || 'subjects', s.id, BLDNeeds.today());
+    return BLDPhotos.shownPhoto(rec, s.photo);
+  }
   /* Lisa 22 Nov 2026: no photo on any card. Chrome now blocks Google's cookies on other sites, so the plain Drive thumbnail
      address (which needs them) fails. With the CD Hub Google sign-in on this browser, the page asks Drive for the photo the
      way the hub does: the file's thumbnail link with that sign-in, else the picture itself. No sign-in: the plain address. */

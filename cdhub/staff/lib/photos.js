@@ -35,19 +35,26 @@ var BLDPhotos = (function () {
   function forRecord(links, files, rules, fromTable, id, day) {
     var byId = {};
     (files || []).forEach(function (f) { if (f && f.id) byId[f.id] = f; });
-    function withLink(f, l) { var o = {}; Object.keys(f).forEach(function (k) { o[k] = f[k]; }); o.link_id = l.id || ''; o.link_to_date = ymd(l.to_date); return o; }
+    function withLink(f, l) {
+      var o = {}; Object.keys(f).forEach(function (k) { o[k] = f[k]; });
+      o.link_id = l.id || ''; o.link_to_date = ymd(l.to_date); o.link_end_reason = String(l.end_reason || '').trim();
+      return o;
+    }
+    function closedNow(l, day) {
+      var t = ymd(l.to_date), why = String(l.end_reason || '').trim();
+      if (t && t < day) return true;
+      return !!(why && t && t <= day);
+    }
     var mine = (links || []).filter(function (l) {
       return l && sameTable(l.from_table, fromTable) && l.from_id === id && l.to_table === 'files' && byId[l.to_id];
     });
     var main = null, gal = [], ended = [];
     mine.forEach(function (l) {
       var key = String(l.role || '');
-      if (key === 'main') { if (on(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
+      if (key === 'main') { if (on(l, day) && !closedNow(l, day) && (!main || stamp(l) > stamp(main))) main = l; return; }
       if (key !== 'gallery') return;
-      // Removed from the gallery today (Lisa 16 Nov 2026): a link added today can only end today, so an end reason marks it
-      // ended at once instead of at midnight.
       var removedToday = ymd(l.to_date) === day && String(l.end_reason || '').trim() !== '';
-      if (on(l, day) && !removedToday) gal.push(l);
+      if (on(l, day) && !closedNow(l, day)) gal.push(l);
       else if (ymd(l.to_date) && (ymd(l.to_date) < day || removedToday)) ended.push(l);
     });
     gal.sort(function (a, b) {
@@ -60,14 +67,47 @@ var BLDPhotos = (function () {
     ended.sort(function (a, b) { return ymd(b.to_date) < ymd(a.to_date) ? -1 : ymd(b.to_date) > ymd(a.to_date) ? 1 : 0; });
     return {
       main: main ? withLink(byId[main.to_id], main) : null,
-      gallery: gal.map(function (l) { return withLink(byId[l.to_id], l); }),
+      gallery: gal.map(function (l) { return withLink(byId[l.to_id], l); }).filter(function (f) {
+        return f.kind !== 'photo' || !!fileDrive(f);
+      }),
       ended: ended.map(function (l) { return withLink(byId[l.to_id], l); }),
       galleryLabel: label(rules, 'gallery', day),
       mainLabel: label(rules, 'main', day)
     };
   }
+  function fileDrive(f) {
+    var v = String(f && typeof f === 'object' ? (f.drive_file_id || '') : (f || '')).trim();
+    var m = /\/file\/d\/([A-Za-z0-9_-]+)/.exec(v) || /[?&]id=([A-Za-z0-9_-]+)/.exec(v);
+    if (m) return m[1];
+    if (/^https?:/i.test(v)) return '';
+    return /^[A-Za-z0-9_-]{8,}$/.test(v) ? v : '';
+  }
+  function sameFile(a, b) {
+    if (!a || !b) return false;
+    if (a.id && b.id && a.id === b.id) return true;
+    var da = fileDrive(a), db = fileDrive(b);
+    return !!(da && da === db);
+  }
+  function removedFromGallery(rec, f) {
+    var ended = (rec.ended || []).some(function (x) { return sameFile(x, f); });
+    var open = (rec.gallery || []).some(function (x) { return sameFile(x, f); });
+    return ended && !open;
+  }
+  function shownPhoto(rec, cell) {
+    rec = rec || {};
+    var m = rec.main;
+    if (m && fileDrive(m) && !removedFromGallery(rec, m)) return fileDrive(m);
+    if (m && removedFromGallery(rec, m)) {
+      var g = (rec.gallery || []).filter(function (f) { return fileDrive(f) && !removedFromGallery(rec, f); })[0];
+      return g ? fileDrive(g) : '';
+    }
+    var c = fileDrive(cell);
+    if (!c) return '';
+    if (removedFromGallery(rec, { drive_file_id: c })) return '';
+    return c;
+  }
   /** A safe web address for a link file: http(s) only, else ''. */
   function safeUrl(u) { u = String(u || '').trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : ''; }
-  return { forRecord: forRecord, label: label, safeUrl: safeUrl };
+  return { forRecord: forRecord, label: label, safeUrl: safeUrl, shownPhoto: shownPhoto, fileDrive: fileDrive };
 }());
 if (typeof module !== 'undefined') module.exports = BLDPhotos;

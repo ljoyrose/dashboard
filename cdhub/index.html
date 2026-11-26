@@ -412,8 +412,11 @@ ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ct
 .gal-ended{margin-top:8px}
 /* photo crop step (12 Nov 2026): white sheet, 12px corners, 1px lines; works by touch */
 .pcrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:12px;background:color-mix(in srgb,var(--ljr-8) 55%,transparent)}
-.pcrop-in{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
-.pcrop-in h3{margin:0;font-size:var(--fs-body)}
+.pcrop-in{position:relative;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:12px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px;font-family:var(--house-font)}
+.pcrop-in h3{margin:0 40px 0 0;font-size:var(--fs-body)}
+.pcrop-x{all:unset;box-sizing:border-box;position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:var(--fs-head);line-height:1;cursor:pointer}
+.pcrop-x:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.pcrop-ask{margin:0}
 .pcrop-view{position:relative;width:100%;aspect-ratio:1/1;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;touch-action:none;cursor:grab;background:var(--soft)}
 .pcrop-view canvas{display:block;width:100%;height:100%}
 .pcrop-tip{margin:0;font-size:var(--fs-small)}
@@ -2890,14 +2893,7 @@ function loadPhotoImg(img){
 /* Main photo + gallery : files rows owned through dated link rows (staff/lib/photos.js). */
 function dogPhotos(d){ return BLDPhotos.forRecord(T['BLD-links.csv']||[],T['BLD-files.csv']||[],T['BLD-breeding_rule.csv']||[],'subject',d.id,todayISO()); }
 /* The card shows the chosen (main) photo. A photo that was removed stays off the card even if the old photo cell still names it. */
-function cardPhotoId(d,ph){
- var main=ph&&ph.main&&dogPhotoId(ph.main.drive_file_id);
- if(main) return main;
- var cell=dogPhotoId(d&&d.photo);
- if(!cell) return '';
- var ended=(ph&&ph.ended||[]).some(function(f){ return dogPhotoId(f.drive_file_id)===cell; });
- return ended?'':cell;
-}
+function cardPhotoId(d,ph){ return BLDPhotos.shownPhoto(ph||{}, d&&d.photo); }
 /* Show photo dates (Lisa 15 Nov 2026, J5): a per-person display setting, never a fixed rule. Rows in the shared settings list:
    photos.show_dates.owner = this person's own choice (the hub is the owner's page), photos.show_dates = the owner's default
    for everyone. Value 1 shows the date under each gallery photo, 0 hides it. The row in force today wins; no row = shown,
@@ -2929,11 +2925,21 @@ function galleryItem(f,mainId,dates,ended){
  if(f.kind==='photo') return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="photo"><span class="gph"><img class="galph off" alt="" data-gal-id="'+esc(id)+'" referrerpolicy="no-referrer">'+galleryPhotoMarks(f,ended)+'</span>'+cap+'</li>';
  return '<li class="gi" data-file="'+esc(f.id)+'" data-kind="upload"><a href="https://drive.google.com/file/d/'+encodeURIComponent(id)+'/view" target="_blank" rel="noopener noreferrer">'+esc(f.name||'File')+'</a> '+cap+'</li>';
 }
+function galleryLive(f){
+ if(!f) return false;
+ if(String(f.link_end_reason||'').trim()&&String(f.link_to_date||'')&&String(f.link_to_date||'')<=todayISO()) return false;
+ if(f.kind==='photo'&&!dogPhotoId(f.drive_file_id)) return false;
+ return true;
+}
 function galleryHtml(d,ph){
- if(!ph.gallery.length) return '';   /* ended photos stay in the sheet; the card does not list them  */
- var mainId=ph.main&&ph.main.id, word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
- return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+ph.gallery.length+')</span></summary><div class="dcs-bd">'
-  +'<ul class="glist">'+ph.gallery.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
+ var items=(ph.gallery||[]).filter(galleryLive);
+ if(!items.length) return '';
+ var show=BLDPhotos.shownPhoto(ph, d.photo);
+ var mainItem=items.filter(function(f){ return dogPhotoId(f.drive_file_id)===show; })[0];
+ var mainId=mainItem?mainItem.id:(ph.main&&ph.main.id);
+ var word=ph.galleryLabel||'Photos', dates=photoDatesOn(todayISO());
+ return '<details class="dcs gal" data-k="gallery" data-dog="'+esc(d.id)+'"><summary><span class="dcs-label">'+esc(word)+' ('+items.length+')</span></summary><div class="dcs-bd">'
+  +'<ul class="glist">'+items.map(function(f){ return galleryItem(f,mainId,dates); }).join('')+'</ul>'
   +'<p class="mut" data-gal-msg role="status">'+esc(GAL_MSG[d.id]||'')+'</p></div></details>';
 }
 /* Remove / Make main / Put back on a gallery photo. The page's own copy of the link rows is updated so it redraws at once
@@ -2988,21 +2994,160 @@ function linkEndsApply(){
  });
  if(drop) linkEndsSet(o);
 }
+function dogSel(dog){ return window.CSS&&CSS.escape?CSS.escape(dog):String(dog||'').replace(/"/g,''); }
+function galBox(dog){ return document.querySelector('details.gal[data-dog="'+dogSel(dog)+'"]'); }
+function cardBox(dog){ return document.querySelector('.dc[data-dog="'+dogSel(dog)+'"]'); }
+function galSay(dog, text){
+ GAL_MSG[dog]=text||'';
+ var g=galBox(dog), m=g&&g.querySelector('[data-gal-msg]');
+ if(m){ m.textContent=GAL_MSG[dog]; return; }
+ var pm=cardBox(dog); pm=pm&&pm.querySelector('[data-photo-msg]');
+ if(pm) pm.textContent=GAL_MSG[dog];
+}
+function linkEndForget(id){
+ var o=linkEndsGet(); if(o[id]){ delete o[id]; linkEndsSet(o); }
+ delete LINK_ENDS_MEM[id];
+}
+function endOpenLocal(row, to, reason){
+ if(!row||!row.id||String(row.to_date||'').trim()) return;
+ row.to_date=to; row.end_reason=reason; row._local=1;
+ linkEndKeep(row.id, to, reason);
+}
+function undoLocalEnd(id){
+ linkEndForget(id);
+ (T['BLD-links.csv']||[]).forEach(function(l){
+  if(l&&l.id===id&&l._local){ l.to_date=''; l.end_reason=''; delete l._local; }
+ });
+}
+function galRecount(g){
+ if(!g||!g.isConnected) return;
+ var n=g.querySelectorAll('.glist > .gi').length;
+ var lab=g.querySelector('summary .dcs-label');
+ if(lab) lab.textContent=String(lab.textContent||'Photos').replace(/\(\d+\)\s*$/,'('+n+')');
+ if(!n) g.remove();
+}
+function putTile(dog, html, index){
+ if(!html) return;
+ var g=galBox(dog);
+ if(!g){
+  var sect=cardBox(dog); sect=sect&&sect.querySelector('.dc-sects'); if(!sect) return;
+  var hold=document.createElement('div');
+  hold.innerHTML='<details class="dcs gal" data-k="gallery" data-dog="'+esc(dog)+'" open><summary><span class="dcs-label">Photos (0)</span></summary><div class="dcs-bd"><ul class="glist"></ul><p class="mut" data-gal-msg role="status"></p></div></details>';
+  g=hold.firstChild; sect.insertBefore(g, sect.firstChild);
+ }
+ var ul=g.querySelector('.glist'); if(!ul) return;
+ var hold2=document.createElement('div'); hold2.innerHTML=html;
+ var node=hold2.firstChild; if(!node) return;
+ var kids=ul.children;
+ if(index==null||index<0||index>=kids.length) ul.appendChild(node); else ul.insertBefore(node, kids[index]);
+ g.open=true; GAL_OPEN[dog]=1; galRecount(g);
+}
+function cardPhotoNow(dog){
+ var img=cardBox(dog); img=img&&img.querySelector('img.dogphoto');
+ return img?img.getAttribute('data-photo-id')||'':'';
+}
+function tileDrive(tile){
+ var im=tile&&tile.querySelector('img'); if(!im) return '';
+ return im.getAttribute('data-gal-id')||im.getAttribute('data-photo-id')||'';
+}
+function setCardPhoto(dog, driveId){
+ var card=cardBox(dog); if(!card) return;
+ var btn=card.querySelector('[data-photo-open]'); if(!btn) return;
+ var img=card.querySelector('img.dogphoto');
+ var paw=card.querySelector('[data-paw]');
+ if(!driveId){ if(img) img.remove(); if(paw) paw.classList.remove('off'); return; }
+ if(!img){ img=document.createElement('img'); img.className='dogphoto off'; img.alt=''; img.setAttribute('referrerpolicy','no-referrer'); btn.appendChild(img); }
+ img.setAttribute('data-photo-id', driveId);
+ img.removeAttribute('data-fallback');
+ if(paw) paw.classList.add('off');
+ var src='';
+ Array.prototype.forEach.call(card.querySelectorAll('.gi img'), function(im){
+  if(!src&&(im.getAttribute('data-gal-id')===driveId||im.getAttribute('data-photo-id')===driveId)) src=im.getAttribute('src')||'';
+ });
+ if(src){ img.src=src; showDogPhoto(img); }
+ else loadPhotoImg(img);
+}
+function markMainTile(tile){
+ if(!tile) return;
+ var tools=tile.querySelector('.gtools'); if(tools) tools.remove();
+ if(tile.querySelector('[data-k="main"]')) return;
+ var pill=document.createElement('span'); pill.className='pill'; pill.setAttribute('data-k','main'); pill.textContent='Main';
+ var date=tile.querySelector('[data-k="photo-date"]');
+ if(date) date.insertAdjacentElement('afterend', pill); else tile.appendChild(pill);
+}
+async function dropGalleryLink(dog, linkId, tile, g){
+ var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]), day=todayLondon();
+ var row=links.filter(function(l){ return l.id===linkId; })[0]||{};
+ var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;
+ var fileId=row.to_id||(tile&&tile.getAttribute('data-file'))||'';
+ var ph=dogPhotos(CD._byId[dog]||{id:dog});
+ var wasMain=!!(tile&&tile.querySelector('[data-k="main"]'))||!!(ph.main&&fileId&&ph.main.id===fileId);
+ var cardWas=cardPhotoNow(dog);
+ var html=tile?tile.outerHTML:'', index=-1, next=null, nextHtml='', nextId='';
+ if(g){
+  var tiles=g.querySelectorAll('.glist > .gi[data-kind="photo"]');
+  for(var i=0;i<tiles.length;i++){ if(tiles[i]!==tile){ next=tiles[i]; break; } }
+ }
+ if(next){ nextHtml=next.outerHTML; nextId=next.getAttribute('data-file')||''; }
+ if(tile&&tile.parentNode){ index=Array.prototype.indexOf.call(tile.parentNode.children, tile); tile.remove(); }
+ galRecount(g);
+ endOpenLocal(row, to, GAL_REMOVED);
+ var endedMains=[];
+ if(wasMain){
+  links.forEach(function(l){
+   if(l&&(l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&l.to_id===fileId&&!String(l.to_date||'').trim()){
+    endOpenLocal(l, to, GAL_REMOVED); endedMains.push(l.id);
+   }
+  });
+  if(next){ markMainTile(next); setCardPhoto(dog, tileDrive(next)); }
+  else setCardPhoto(dog, '');
+ }
+ var j=await sinkAct('link_end',{id:linkId,to_date:to,reason:GAL_REMOVED});
+ if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:linkId,already:true}};
+ if(!(j&&j.ok&&j.result&&j.result.status==='saved')){
+  undoLocalEnd(linkId);
+  endedMains.forEach(undoLocalEnd);
+  if(nextId&&nextHtml){
+   var cur=(cardBox(dog)||document).querySelector('.gi[data-file="'+nextId+'"]');
+   if(cur){ var hold=document.createElement('div'); hold.innerHTML=nextHtml; if(hold.firstChild) cur.replaceWith(hold.firstChild); }
+  }
+  putTile(dog, html, index);
+  setCardPhoto(dog, cardWas);
+  galSay(dog, 'Not saved: '+((j&&j.message)||'try again.'));
+  var g2=galBox(dog); if(g2){ g2.open=true; GAL_OPEN[dog]=1; }
+  return;
+ }
+ if(wasMain&&nextId){
+  var add=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:nextId,from_date:day,source:'CD Hub, Make main'});
+  if(add&&add.ok&&add.result&&add.result.status==='saved'){
+   links.forEach(function(l){ if((l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&!String(l.to_date||'').trim()&&l.to_id!==nextId){ var yy=dayMinus(day,1); l.to_date=yy<String(l.from_date||'')?day:yy; } });
+   links.push({id:add.result.id||'',from_table:'subject',from_id:dog,role:'main',to_table:'files',to_id:nextId,from_date:day,to_date:'',set_on:day,created_at:new Date().toISOString()});
+  }
+ } else if(wasMain){
+  for(var mi=0;mi<endedMains.length;mi++){
+   if(endedMains[mi]===linkId) continue;
+   var mj=await sinkAct('link_end',{id:endedMains[mi],to_date:to,reason:GAL_REMOVED});
+   if(mj&&!mj.ok&&mj.code==='NOT_ALLOWED'&&/already ended/i.test(mj.message||'')) mj={ok:true,result:{status:'saved'}};
+   if(!(mj&&mj.ok&&mj.result&&mj.result.status==='saved')) undoLocalEnd(endedMains[mi]);
+  }
+  var d=CD._byId[dog]; if(d) d.photo='';
+  var sub=(T['BLD-subject.csv']||[]).filter(function(s){ return s.id===dog; })[0]; if(sub) sub.photo='';
+ }
+ galSay(dog, '\u2713 Saved');
+ var g3=galBox(dog); if(g3){ g3.open=true; GAL_OPEN[dog]=1; }
+}
+function galleryRemove(b){
+ var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'';
+ return dropGalleryLink(dog, b.getAttribute('data-gal-end'), b.closest('.gi'), g);
+}
 document.addEventListener('click',async function(ev){
  var b=ev.target&&ev.target.closest?ev.target.closest('[data-gal-end],[data-gal-back],[data-gal-main]'):null; if(!b) return;
+ ev.preventDefault();
+ if(b.hasAttribute('data-gal-end')){ galleryRemove(b); return; }
  var g=b.closest('details.gal'), dog=g?g.getAttribute('data-dog'):'', msg=g&&g.querySelector('[data-gal-msg]'), day=todayLondon(), j;
  var links=T['BLD-links.csv']||(T['BLD-links.csv']=[]);
  b.disabled=true; if(msg) msg.textContent='Saving\u2026'; GAL_MSG[dog]='Saving\u2026';
- if(b.hasAttribute('data-gal-end')){
-  var id=b.getAttribute('data-gal-end'), row=links.filter(function(l){ return l.id===id; })[0]||{};
-  var y=dayMinus(day,1), to=String(row.from_date||'').slice(0,10)<=y?y:day;   /* gone from today; never before its start */
-  j=await sinkAct('link_end',{id:id,to_date:to,reason:GAL_REMOVED});
-  /* already ended (22 Nov 2026): this phone was showing an old copy, and the photo was removed before. It is gone, so
-     the screen says so instead of "Not saved". */
-  if(j&&!j.ok&&j.code==='NOT_ALLOWED'&&/already ended/i.test(j.message||'')) j={ok:true,result:{status:'saved',id:id,already:true}};
-  if(j.ok&&j.result&&j.result.status==='saved'){ row.to_date=to; row.end_reason=GAL_REMOVED; row._local=1; linkEndKeep(id,to,GAL_REMOVED); linkEndsApply();
-   await clearCardPhoto(dog, row.to_id); }
- } else {
+ {
   var fid=b.getAttribute('data-gal-back')||b.getAttribute('data-gal-main'), role=b.hasAttribute('data-gal-main')?'main':'gallery';
   j=await sinkAct('link_add',{from_table:'subject',from_id:dog,role:role,to_table:'files',to_id:fid,from_date:day,source:'CD Hub, '+(role==='main'?'Make main':'Put back')});
   if(j.ok&&j.result&&j.result.status==='saved'){
@@ -3043,9 +3188,15 @@ async function photoEdit(dog,fileId,msg){
  say('');
  var pic=await photoCrop(img,'',{canDelete:true});
  if(!pic) return;   /* Cancel: nothing is saved */
- if(pic.remove){ say('Removing the photo\u2026'); await clearCardPhoto(dog,f&&f.id); drawDogs();
-  var gone=document.querySelector('.dc[data-dog="'+dog+'"]'), gm=gone&&gone.querySelector('[data-photo-msg]');
-  if(gm) gm.textContent='Photo removed'; return; }
+ if(pic.remove){
+  var gEl=galBox(dog);
+  var btn=gEl&&f&&gEl.querySelector('.gi[data-file="'+f.id+'"] [data-gal-end]');
+  if(btn){ galleryRemove(btn); return; }
+  var gl=f?links.filter(function(l){ return (l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='gallery'&&l.to_id===f.id&&!String(l.to_date||'').trim(); })[0]:null;
+  if(gl){ dropGalleryLink(dog, gl.id, null, gEl); return; }
+  var ml=f?links.filter(function(l){ return (l.from_table==='subject'||l.from_table==='subjects')&&l.from_id===dog&&l.role==='main'&&l.to_id===f.id&&!String(l.to_date||'').trim(); })[0]:null;
+  if(ml){ dropGalleryLink(dog, ml.id, null, gEl); return; }
+  say('Not saved: try again.'); return; }
  if(pic.error){ say(pic.error); return; }
  say('Saving the edited copy\u2026');
  var j=await sinkAct('file_add',{kind:'photo',mime:pic.mime,data_base64:pic.b64,name:'edited-photo.jpg',taken_on:(f&&String(f.taken_on||'').slice(0,10))||day,source:'Edited copy'+(f?' of '+f.id:'')});
@@ -3171,13 +3322,15 @@ function photoCrop(src,was,opts){
   var box=document.createElement('div');
   box.className='pcrop'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','pcropT');
   box.innerHTML='<div class="pcrop-in"><h3 id="pcropT">Crop and edit the photo</h3>'
+   +'<button type="button" class="pcrop-x" data-crop-close aria-label="Close">\u00d7</button>'
    +'<div class="pcrop-view" data-crop-view><canvas data-crop-canvas></canvas></div>'
    +'<p class="mut pcrop-tip">Drag to move. Pinch or use the slider to zoom.</p>'
    +'<label class="pcrop-zoom"><span class="sr">Zoom</span><input type="range" min="1" max="4" step="0.01" value="1" data-crop-zoom aria-label="Zoom"></label>'
    +'<div class="pcrop-edit"><label for="pcropB">Brightness</label><input id="pcropB" type="range" min="-50" max="50" step="1" value="0" data-crop-bright>'
    +'<label for="pcropC">Contrast</label><input id="pcropC" type="range" min="-50" max="50" step="1" value="0" data-crop-contrast></div>'
    +'<p class="mut pcrop-size" data-crop-size aria-live="polite"></p>'
-   +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn no" data-crop-delete aria-label="Delete this photo">\u00d7</button>':'')
+   +(opts.canDelete?'<p class="mut pcrop-ask" data-crop-ask hidden>Remove this photo?</p>':'')
+   +'<div class="pcrop-btns">'+(opts.canDelete?'<button type="button" class="btn danger" data-crop-remove>Remove</button>':'')
    +'<button type="button" class="btn" data-crop-rotate>Rotate 90\u00b0</button><button type="button" class="btn" data-crop-reset>Reset</button><span class="pcrop-gap"></span>'
    +'<button type="button" class="btn" data-crop-cancel>Cancel</button><button type="button" class="btn yes" data-crop-use>Save</button></div></div>';
   document.body.appendChild(box);
@@ -3217,8 +3370,16 @@ function photoCrop(src,was,opts){
   document.addEventListener('keydown',key,true); window.addEventListener('resize',fit);
   box.querySelector('[data-crop-rotate]').addEventListener('click',function(){ rot=(rot+1)%4; fit(); });
   box.querySelector('[data-crop-cancel]').addEventListener('click',function(){ done(null); });
-  var delBtn=box.querySelector('[data-crop-delete]');
-  if(delBtn) delBtn.addEventListener('click',function(){ done({remove:true}); });
+  box.querySelector('[data-crop-close]').addEventListener('click',function(){ done(null); });
+  var remBtn=box.querySelector('[data-crop-remove]');
+  if(remBtn) remBtn.addEventListener('click',function(){
+   if(remBtn.getAttribute('data-crop-confirm')!=='1'){
+    remBtn.setAttribute('data-crop-confirm','1');
+    var ask=box.querySelector('[data-crop-ask]'); if(ask) ask.hidden=false;
+    return;
+   }
+   done({remove:true});
+  });
   box.querySelector('[data-crop-use]').addEventListener('click',function(){
    var b=photoSquareB64(function(g,size){ paint(g,size); tone(g,size); });
    done(b?{mime:'image/jpeg',b64:b}:{error:'That picture is too large.'}); });
