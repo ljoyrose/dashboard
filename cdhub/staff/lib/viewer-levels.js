@@ -6,7 +6,7 @@
  * Rows: optional BLD-viewer_level (viewer_type, viewer_label, level_key, level_label, shows = things joined by ';',
  * from_date, to_date). With no rows the owner's two levels are used (decided 18 Nov 2026): A records only; B records and
  * Pass / Unverified / Fail on the must-pass checks. Inspector = B; vet and another breeder = A.
- * Whatever any row says, an outside viewer never sees points, the target, ranking, notes or programme and looks answers.
+ * Whatever any row says, an outside viewer never sees points, the target, ranking, notes or programme answers.
  * Pure: no page, no network. Works in a browser (window.BLDViewerLevels) and in Node.
  */
 (function (root, factory) {
@@ -22,7 +22,7 @@
   var THING_WORDS = {
     records: 'The records ticked on the link', grades: 'Grades and dates', due_dates: 'When each check is next due',
     must_pass: 'Pass, Unverified or Fail on the must-pass checks', points: 'Points', target: 'The target', ranking: 'Ranking (best to worst)',
-    notes: 'Notes', programme: 'Programme and looks answers'
+    notes: 'Notes', programme: 'Programme answers'
   };
   /* never shown to anyone outside, whatever a row says (only the owner sees scores) */
   var NEVER = { points: 1, target: 1, ranking: 1, notes: 1, programme: 1 };
