@@ -64,7 +64,7 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
     await expect(page.locator('#main h2')).toContainText('Settings');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(13);   // Check settings added (photo dates setting was 12)
+    await expect(page.locator('[data-adm-open]')).toHaveCount(14);   // visits card plus check settings
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();

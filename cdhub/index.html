@@ -5873,7 +5873,7 @@ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','B
 function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sinkPost:sinkPost, redraw:function(){ go((location.hash||'#/enquiries/home').replace('#/',''), false); } }; }
 PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']);   /* loads on first open (LAZY.enq) */
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
-function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
+function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },send:sinkSend,msg:sinkMsg,rerender:function(){ if(document.getElementById('admFuture')){ var y=window.scrollY; go('admin',false); window.scrollTo(0,y); } }};}
 if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Settings']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
@@ -6049,9 +6049,11 @@ function go(id,push){
  finally{ go.depth--; }
 }
 function goBody(id,push){
- var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place (Lisa 15 Nov 2026) */
+ var keepY=(push===false&&SHOWN===String(id||''))?window.scrollY:0;   /* redraw of the same page keeps its place */
  var prevShown=SHOWN, leaveY=window.scrollY; pill(); SHOWN=LOAD.state==='ok'?String(id||''):''; chipsDraw('');   /* a page drawn before the rows land is not kept: the start row decides once they do */
- var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
+ var full=String(id||''), qi=full.indexOf('?');
+ if(qi>0){ if(full.slice(0,qi)==='admin'&&typeof AdminView!=='undefined') AdminView.query(full.slice(qi+1)); full=full.slice(0,qi); id=full; }   /* #/admin?visit_tag= opens that visit */
+ var sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
  if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  if(id==='yearly') YP.sub=sub||'';
  var medGo=id==='dogs' && sub && Object.prototype.hasOwnProperty.call({jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,med:0}, sub);
