@@ -24,7 +24,8 @@ test('a good private QR sets the phone up and leaves no code in the address', as
   expect(page.url()).not.toContain(CODE);
   expect(page.url()).not.toContain('join=');
   expect(await stored(page)).toEqual([CODE, SCRIPT]);
-  await expect(page.locator('a[data-link="checks"]')).toHaveAttribute('href', '../checks/');
+  await expect(page.locator('a[data-link="checks"], a[href$="checks/"]')).toHaveCount(0);   // old Checks card retired 22 Nov 2026
+  await expect(page.locator('[data-module="jobs"]')).toBeVisible();
 });
 
 // Storage tidy, stage 2 (owner 15 Nov 2026): set-up here also keeps CD Hub's copy, so both pages share one code and address.
@@ -134,14 +135,15 @@ test('a typed private set-up code follows the QR: a good code is kept, a refused
   expect(await page.locator('body').innerText()).not.toContain(CODE);
 });
 
-test('staff checks with no set-up names the hub owner and links to The Board', async ({ page }) => {
-  await page.goto('cdhub/checks/');
-  const note = page.locator('#note');
-  await expect(note).toContainText('Ask the hub owner or an admin');
-  await expect(note.getByRole('link', { name: 'The Board' })).toHaveAttribute('href', '../staff/');
-  await note.getByRole('link', { name: 'The Board' }).click();
+test('the old staff checks page says it has moved and links to staff Jobs', async ({ page }) => {
+  await page.goto('cdhub/checks/?t=feeding');
+  await expect(page.getByRole('heading', { name: 'This page has moved' })).toBeVisible();
+  await expect(page.locator('select, form, input')).toHaveCount(0);   // no check can be entered here any more
+  const go = page.getByRole('link', { name: 'Open Jobs' });
+  await expect(go).toHaveAttribute('href', '../staff/#m/jobs');
+  await go.click();
+  await expect(page).toHaveURL(/\/cdhub\/staff\/#m\/jobs$/);
   await expect(page.getByRole('heading', { name: 'Set up this phone' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Type set-up code instead' })).toBeVisible();
 });
 
 test('the print page draws the QR on screen only and keeps nothing', async ({ page }) => {
