@@ -12,7 +12,7 @@
   function dmy(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso)); return m && MON[+m[2] - 1] ? (+m[3]) + ' ' + MON[+m[2] - 1] + ' ' + m[1] : iso; }
   function dueLine(j) {
     if (j.status === 'late') return j.days_late === 1 ? '1 day late' : j.days_late + ' days late';
-    if (j.status === 'today') return j.times_per_day > 1 ? 'Due today: ' + (j.done_today || 0) + ' of ' + j.times_per_day : 'Due today';
+    if (j.status === 'today') return 'Due today';
     if (j.status === 'never') return 'Due';
     if (j.status === 'ok') return 'Next ' + dmy(j.next_due);
     return 'As needed';

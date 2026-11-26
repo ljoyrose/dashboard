@@ -665,7 +665,7 @@
         var per = dogToday[j.type_key], ids = Array.isArray(target.roomDogIds) ? target.roomDogIds : Object.keys(per);
         doneToday = ids.length ? Math.min.apply(null, ids.map(function (id) { return per[id] || 0; })) : 0;
       }
-      if (times > 1 && d && d.date === today && doneToday < times) status = 'today';   // done, but not yet as many times as today needs
+      if (times > 1 && d && d.date === today && doneToday < 1) status = 'today';
       var ages = target.litter_id && target.born ? ageDates(rules, j.type_key, today, target.born) : [];
       if (ages.length) {
         /* due by the litter's age: the latest age date up to today needs a record on or after it */

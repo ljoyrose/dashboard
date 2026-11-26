@@ -151,10 +151,9 @@
       mine.forEach(function (s) { allow[s.id] = 1; });
       if (x) {
         if (!perDog) got = x.n;
-        else if (times > 1) Object.keys(x.dogN || {}).forEach(function (id) { if (allow[id] && x.dogN[id] >= times) got++; });
         else Object.keys(x.dogs).forEach(function (id) { if (allow[id]) got++; });
       }
-      var full = perDog ? (want > 0 && got >= want) : got >= Math.max(times, 1);
+      var full = perDog ? (want > 0 && got >= want) : got >= 1;
       var noneHere = perDog && v.occupancy && want === 0;
       var state = iso > v.today ? 'future' : noneHere ? ((!first || iso < first) ? 'before' : 'done') : full ? 'done' : (got || (perDog && times > 1 && x && x.n)) ? 'part' : iso === v.today ? 'due' : (!first || iso < first) ? 'before' : 'missed';
       cells.push({ iso: iso, day: dd, state: state, got: got, need: perDog ? want : (times > 1 ? times : 0), lines: x ? x.lines : [] });
