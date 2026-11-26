@@ -33,9 +33,7 @@
     temps: { label: 'Temps', icon: 't-temp', href: './history.html' },
     staff: { label: 'Staff', icon: 't-user' },
     enquiries: { label: 'Enquiries', icon: 't-world' },
-    admin: { label: 'Settings', icon: 't-box' }
     admin: { label: 'Settings', icon: 't-box' },
-    bin: { label: 'Bin', icon: 't-box' },
     qrprint: { label: 'Print QR cards', icon: 't-print', href: printCardsHref }
   };
   /* Main, then the sections in colour order, then Settings. go = the view the tab opens. */
@@ -47,8 +45,7 @@
     { id: 'people', label: 'People', slot: '5', icon: 't-user', go: 'staff', views: ['staff'] },
     { id: 'sales', label: 'Sales', slot: '6', icon: 't-bag', go: 'enquiries', views: ['enquiries'] },
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin'] }
-    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'bin', 'qrprint'] }
+    { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'qrprint'] }
   ];
   /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
@@ -143,8 +140,7 @@
   function html(opts) {
     opts = opts || {};
     var DK = root.DashKit;
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin'; };   /* pages without the rows (temperature history); Settings is the owner's */
-    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'bin' && id !== 'qrprint'; };   /* pages without the rows (temperature history); Bin and Print QR cards are the owner's, like Settings */
+    var has = opts.has || function (id) { return id !== 'breed' && id !== 'admin' && id !== 'qrprint'; };
     var lay = opts.layout || layout({ has: has });
     var cur = opts.current ? sectionOf(opts.current) : null;
     var bar = [section('main')].concat(lay.tabs.map(section)), onBar = {};
