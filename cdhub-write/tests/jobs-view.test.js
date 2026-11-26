@@ -144,6 +144,140 @@ test('how a record was made is shown in the owner\'s words, hidden with "off", s
 
 // 22 Nov 2026 (guardrail): the "entered later" setting lives in jobs-view.js, which only the owner hub loads. Inspector
 // pages, prints, registers and exports never load it, so what they show about back-filled records cannot change with it.
+const NOW = '2026-11-25T12:00:00.000Z';
+const esc = (s) => String(s == null ? '' : s);
+const world = (type, extra) => Object.assign({
+  today: '2026-11-25', logs: [], links: [], rules: [], visits: [], esc, dmy: (s) => s,
+  dogs: [{ id: 'd1', name: 'Ada', area_id: 'r1' }, { id: 'd2', name: 'Bea', area_id: 'r1' }],
+  areas: [{ id: 'r1', code: 'H1' }, { id: 'r2', code: 'H2' }],
+  litters: [{ id: 'lit1', name: 'Litter of Ada', born_on: '2026-10-01' }],
+  types: [type],
+}, extra || {});
+const job = (key, extra) => Object.assign({ id: 'cty-' + key, type_key: key, label: key, target: 'dog', active: 'true', effective_from: '2026-01-01', sop: 'Microchip Audit', every_days: '365' }, extra || {});
+
+test('every SOP check that is due or not recorded has a record path', () => {
+  const shapes = [
+    ['dog', { target: 'dog' }],
+    ['area', { target: 'area', every_days: '1' }],
+    ['area-per-dog', { target: 'area', site_scope: 'per_dog', every_days: '1' }],
+    ['site', { target: 'none', site_scope: 'one_line', every_days: '1' }],
+    ['site-per-dog', { target: 'none', site_scope: 'per_dog', every_days: '1' }],
+    ['litter', { target: 'litter', every_days: '' }],
+    ['optional', { target: 'optional', every_days: '' }],
+    ['either', { target: 'either', every_days: '1' }],
+  ];
+  shapes.forEach((pair) => {
+    const html = V.sopHtml(world(job(pair[0], pair[1])), 'Microchip Audit');
+    assert.match(html, /data-sop-save="/, pair[0] + ' is a dead end');
+    assert.doesNotMatch(html, /time_given|how_recorded":"bulk"/, pair[0]);
+  });
+});
+
+test('a dog job lists every due dog, ticked, with Mark all; an untick is left out of the save', () => {
+  const v = world(job('microchip_check', { label: 'Microchip checked' }));
+  const html = V.sopHtml(v, 'Microchip Audit');
+  assert.match(html, /Mark all due as done today/);
+  assert.match(html, /data-sop-tick="microchip_check"[^>]*value="d1"[^>]*checked/);
+  assert.match(html, /value="d2"[^>]*checked/);
+  const all = V.savePlans(v, 'microchip_check', [{ kind: 'dog', id: 'd1' }, { kind: 'dog', id: 'd2' }], {}, NOW);
+  assert.equal(all.plans.length, 2);
+  assert.equal(all.plans[0].action, 'add');
+  assert.equal(all.plans[0].fields.subject_id, 'd1');
+  assert.equal(all.plans[0].fields.how_recorded, 'tapped');
+  assert.equal(all.plans[0].fields.happened_at, NOW);
+  assert.equal(all.plans[0].fields.litter_id, undefined);
+  assert.equal('time_given' in all.plans[0].fields, false);
+  assert.equal(all.plans[0].fields.how_recorded === 'bulk', false);
+  const one = V.savePlans(v, 'microchip_check', [{ kind: 'dog', id: 'd2' }], {}, NOW);
+  assert.deepEqual(one.plans.map((p) => p.fields.subject_id), ['d2']);
+});
+
+test('a dog already done today is not offered again', () => {
+  const v = world(job('microchip_check'), { logs: [{ id: 'l1', check_type_id: 'cty-microchip_check', subject_id: 'd1', outcome: 'ok', happened_at: '2026-11-25T09:00:00Z' }, { id: 'l2', check_type_id: 'cty-microchip_check', subject_id: 'd2', outcome: 'ok', happened_at: '2026-11-25T09:00:00Z' }] });
+  assert.doesNotMatch(V.sopHtml(v, 'Microchip Audit'), /data-sop-save=/);
+});
+
+test('a litter check saves litter_id and no subject_id', () => {
+  const v = world(job('pup_microchip', { target: 'litter', every_days: '', label: 'Puppy microchips checked' }));
+  const html = V.sopHtml(v, 'Microchip Audit');
+  assert.match(html, /data-one-kind="litter"/);
+  assert.match(html, /data-one-id="lit1"/);
+  assert.match(html, />Record</);
+  const plan = V.savePlans(v, 'pup_microchip', [{ kind: 'litter', id: 'lit1' }], {}, NOW);
+  assert.equal(plan.plans[0].action, 'add');
+  assert.equal(plan.plans[0].fields.litter_id, 'lit1');
+  assert.equal(plan.plans[0].fields.subject_id, undefined);
+  assert.equal(plan.plans[0].fields.how_recorded, 'tapped');
+  assert.equal(plan.plans[0].fields.happened_at, NOW);
+});
+
+test('a whole-site job about dogs is one site tap at the real time, not a paper catch-up', () => {
+  const v = world(job('health', { target: 'none', site_scope: 'per_dog', every_days: '1', sop: 'Health Check' }));
+  const plan = V.savePlans(v, 'health', [{ kind: 'dog', id: 'd1' }, { kind: 'dog', id: 'd2' }], {}, NOW);
+  assert.equal(plan.plans.length, 1);
+  assert.equal(plan.plans[0].action, 'add_site');
+  assert.equal(plan.plans[0].fields.how_recorded, 'site_tap');
+  assert.equal(plan.plans[0].fields.dog_ids, 'd1|d2');
+  assert.equal(plan.plans[0].fields.happened_at, NOW);
+  assert.equal('time_given' in plan.plans[0].fields, false);
+});
+
+test('a room job and a whole-site line each name the place, and a note is required when the job says so', () => {
+  const room = V.savePlans(world(job('daily_clean', { target: 'area', every_days: '1', sop: 'Cleaning' })), 'daily_clean', [{ kind: 'area', id: 'r1' }], {}, NOW);
+  assert.equal(room.plans[0].fields.area_id, 'r1');
+  assert.equal(room.plans[0].fields.subject_id, undefined);
+  assert.equal(room.plans[0].fields.how_recorded, 'tapped');
+  const site = V.savePlans(world(job('bowls', { target: 'none', site_scope: 'one_line', every_days: '1', sop: 'Cleaning' })), 'bowls', [{ kind: 'site' }], {}, NOW);
+  assert.equal(site.plans[0].action, 'add');
+  assert.equal(site.plans[0].fields.how_recorded, 'site_tap');
+  const note = V.savePlans(world(job('lost', { target: 'optional', every_days: '', note_required: 'true', sop: 'Lost Dog' })), 'lost', [{ kind: 'site' }], {}, NOW);
+  assert.match(note.error, /needed/);
+  const ok = V.savePlans(world(job('lost', { target: 'optional', every_days: '', note_required: 'true', sop: 'Lost Dog' })), 'lost', [{ kind: 'site' }], { note: 'Found by the gate' }, NOW);
+  assert.equal(ok.plans[0].fields.note, 'Found by the gate');
+  assert.equal(ok.plans[0].fields.how_recorded, 'tapped');
+});
+
+test('the jobs table counts subjects on site that day, occupied rooms, and own-table last dates', () => {
+  const subjects = [
+    { id: 'sub-test-a', area_id: 'area-a', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-b', area_id: 'area-b', kind: 'adult', dob: '2020-01-01' },
+    { id: 'sub-test-d', area_id: 'area-a', kind: 'pup', dob: '2026-10-01' }
+  ];
+  const occupancy = [
+    { subject_id: 'sub-test-a', area_id: 'area-a', moved_in: '2026-01-01' },
+    { subject_id: 'sub-test-d', area_id: 'area-a', moved_in: '2026-10-01' }
+  ];
+  const statuses = [
+    { subject_id: 'sub-test-a', state: 'active', from_date: '2020-01-01' },
+    { subject_id: 'sub-test-b', state: 'deceased', from_date: '2026-01-01' },
+    { subject_id: 'sub-test-d', state: 'active', from_date: '2026-10-01' }
+  ];
+  const types = [
+    Object.assign(T('daily_clean', 'area', '1'), { label: 'Daily clean', sop: 'Cleaning' }),
+    Object.assign(T('deep_clean', 'area', '7'), { label: 'Deep clean', sop: 'Cleaning' }),
+    Object.assign(T('health_check_all', 'none', '1'), { label: 'Health check', site_scope: 'per_dog', sop: 'Health' }),
+    Object.assign(T('weight', 'dog', '7'), { label: 'Weight', sop: 'Health' })
+  ];
+  const areas = [
+    { id: 'area-a', kind: 'room' },
+    { id: 'area-b', kind: 'field' },
+    { id: 'area-c', use: 'corridor' },
+    { id: 'area-d', retired: true }
+  ];
+  const v = {
+    today: '2026-11-16', logs: [], litters: [], types, dogs: subjects, subjects, occupancy, statuses, areas,
+    records: { weight: [{ subject_id: 'sub-test-a', performed_on: '2026-11-10' }], dispense: [], vaccination: [], microchip: [] },
+    rules: [], esc: (s) => String(s), dmy: (s) => s
+  };
+  const row = (key) => V.summary(v).find((r) => r.key === key);
+  assert.equal(row('daily_clean').due, 1);
+  assert.equal(row('deep_clean').due, 1);
+  assert.equal(row('health_check_all').due, 1);
+  assert.equal(row('weight').last_done, '2026-11-10');
+  const ruled = Object.assign({}, v, { rules: [{ rule_key: 'job.exclude_juvenile.health_check_all', value: 'on', effective_from: '2026-01-01' }], logs: [{ id: 'h1', check_type_id: 'cty-health_check_all', subject_id: 'sub-test-a', outcome: 'ok', taken_at: '2026-11-16T09:00:00Z' }] });
+  assert.equal(V.summary(ruled).find((r) => r.key === 'health_check_all').ok, 1);
+});
+
 test('only the owner hub loads jobs-view.js: inspector, print, temperature and register pages do not', () => {
   const fs = require('node:fs'), path = require('node:path');
   const root = path.join(__dirname, '..', '..', 'cdhub');

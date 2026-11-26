@@ -6,10 +6,8 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  /* Where every printed QR points (Lisa 18 Nov 2026): the public staff page, never this page's own address. Lisa and Grace
-     may print from the Cloudflare copy, which needs a Cloudflare sign-in; staff, guests, vets and inspectors scan without one.
-     The owner's rule row qr.base_url (dated, with a source) wins; this is only the starting default. */
-  var QR_BASE_START = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
+  /* Printed QR codes open the staff page on this same site (the folder above this print page). An owner rule
+     qr.base_url (https, ending in /) wins when one is in force. */
   function qrBase() {
     var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
     ((T && T.breeding_rule) || []).forEach(function (r) {
@@ -17,7 +15,7 @@
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(v) || (f && f > day) || (r.to_date && String(r.to_date) < day)) return;
       if (!best || f >= best.f) best = { f: f, v: v };
     });
-    return best ? best.v : QR_BASE_START;
+    return best ? best.v : new URL('../', location.href).href;
   }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only
@@ -32,7 +30,7 @@
   // Board A (Lisa 17 Nov 2026): an owner signed in to CD Hub on this browser needs no code; the save address CD Hub keeps is used.
   var owner = BLDSave.ownerToken ? BLDSave.ownerToken() : '';
   if (!save.getScriptUrlSet() && owner) { ['cdhub.sink.url', 'cdhub.save.url'].some(function (k) { var u = ''; try { u = localStorage.getItem(k) || ''; } catch (e) { u = ''; } return u && save.setScriptUrl(u, true).ok; }); }
-  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
+  if (!save.getScriptUrlSet() || (!code && !owner)) { screen.appendChild(h('p', { class: 'sub', text: owner ? 'The save address is not on this phone yet. Open CD Hub while signed in, then open this page again. An owner is not asked for a staff code.' : 'Sign in to CD Hub on this device as the owner (or set it up on the staff page with an owner code), then open this page again.' })); return; }
   if (code) save.setCode(code, false);
   screen.appendChild(h('p', { class: 'sub noprint', text: 'Each code holds only a random id. Printing again reuses the same codes.' }));
   var opts = h('div', { class: 'opts noprint' }), sheet = h('div', { class: 'sheet' }), pick = h('div', { class: 'pick noprint' }), pickBox = h('div', { class: 'noprint' });
@@ -80,7 +78,11 @@
       });
     }
     return Promise.all([worker(), worker(), worker(), worker()]).then(function () {
-      if (fail) { say(fail.message || 'Could not load the lists.', 'bad'); return false; }
+      if (fail) {
+        var said = fail.message || 'Could not load the lists.';
+        if (save.usingGoogle && save.usingGoogle() && (fail.code === 'NO_CODE' || /staff code/i.test(said))) said = 'Sign in again on CD Hub, then open this page. An owner is not asked for a staff code.';
+        say(said, 'bad'); return false;
+      }
       readAt = Date.now(); showAsOf(); say(''); return true;
     });
   }
@@ -93,29 +95,50 @@
   function lazy(text, what, fn) { return btn(text, function () { need(what).then(function (ok) { if (ok) fn(); }); }); }
   function current(kind, refId) { return BLDQrRules.tagFor(T.qr_tag, kind, refId); }
   function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(qrBase() + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
+  var makeGen = 0, tagSave = {};
   function make(kind, items, draw, done) {
+    var gen = ++makeGen, seenId = {}, list = [];
+    items.forEach(function (it) { if (!it || seenId[it.id]) return; seenId[it.id] = 1; list.push(it); });
+    items = list;
     sheet.textContent = '';
     if (kind !== 'item') pickBox.textContent = '';   // the item field picker shows with item cards only
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
     // 15 Nov 2026 (Lisa): printing never shows a code that is not saved. New codes need an owner code, so say so before trying.
     var role = typeof save.role === 'function' ? save.role() : '';
-    if (missing.length && role && role !== 'OWNER') {
+    if (missing.length && role && role !== 'OWNER' && !(save.usingGoogle && save.usingGoogle())) {
       say('Not printed. ' + missing.length + ' new code' + (missing.length === 1 ? '' : 's') + ' must be saved first, and only an owner code can save them. This device has a ' + role.toLowerCase() + ' code: set it up again on the staff page with your owner code.', 'bad');
       if (done) done();
       return;
     }
     (function next() {
+      if (gen !== makeGen) return;
       if (i < missing.length && !failed) {
+        var it = missing[i];
+        if (current(kind, it.id)) { i++; next(); return; }
+        var key = kind + '\0' + it.id;
+        if (tagSave[key]) { tagSave[key].then(function () { next(); }); return; }
         say('Making code ' + (i + 1) + ' of ' + missing.length + '...');
-        var tag = newTag(), it = missing[i];
-        save.submit('qr_tag', { tag: tag, kind: kind, ref_id: it.id }).then(function (r) {
-          if (r.ok) { T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); i++; } else failed = r.message;
+        var tag = newTag();
+        tagSave[key] = save.submit('qr_tag', { tag: tag, kind: kind, ref_id: it.id }).then(function (r) {
+          delete tagSave[key];
+          if (r.ok) { if (!current(kind, it.id)) T.qr_tag.push({ tag: tag, kind: kind, ref_id: it.id, active: 'true' }); }
+          if (gen !== makeGen) return;
+          if (!r.ok) failed = r.message;
+          i++;
           next();
         });
         return;
       }
+      if (gen !== makeGen) return;
+      sheet.textContent = '';
+      var seen = {};
       // only codes already saved are drawn (a code whose save failed is never shown); the rest are named as not printed
-      items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room)); });
+      items.forEach(function (it) {
+        if (seen[it.id]) return;
+        seen[it.id] = 1;
+        var t = current(kind, it.id);
+        if (t) sheet.appendChild(draw ? draw(t.tag, it) : card(t.tag, it.label, kind === 'area', it.room));
+      });
       var left = items.filter(function (it) { return !current(kind, it.id); }).length;
       say(failed ? ('Not printed: ' + left + ' card' + (left === 1 ? '' : 's') + ', because ' + failed.charAt(0).toLowerCase() + failed.slice(1) + ' ' + sheet.children.length + ' saved card' + (sheet.children.length === 1 ? ' is' : 's are') + ' below.')
         : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
@@ -128,7 +151,7 @@
   function pickThen(kind, items, draw, only) {
     var list = BLDPick.create(pick, items, { only: only, onChange: show });
     function show(sel) {
-      if (!sel.length) { sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
+      if (!sel.length) { makeGen++; sheet.textContent = ''; say('Nothing ticked, so nothing will print. Tick a card, or press Select all.', 'warn'); return; }
       list.setBusy(true);
       make(kind, sel, draw, function () { list.setBusy(false); });
     }
@@ -235,13 +258,24 @@
   }
   /* a long name steps down a size so it stays on two lines at most */
   function nameFit(name) { var n = String(name).length; return n > 28 ? ' n3' : n > 16 ? ' n2' : ''; }
+  function cardName(s) {
+    var n = s.name || s.id;
+    if (typeof BLDDisplay === 'undefined' || !BLDDisplay.marblePupName) return n;
+    var young = isPup(s) || !!s.birth_litter_id;
+    if (s.birth_litter_id && s.dob) {
+      var wk = 26, born = Date.parse(String(s.dob).slice(0, 10) + 'T12:00:00Z'), today = Date.parse(BLDNeeds.today() + 'T12:00:00Z');
+      if (!isNaN(born) && !isNaN(today) && (today - born) / 864e5 >= wk * 7) young = false;
+    }
+    if (!young) return n;
+    return BLDDisplay.marblePupName(n, '') || n;
+  }
   function dogCard(tag, it) {
-    var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || '');
+    var s = it.s, sz = sizeOfDog(s), col = dogColour(s, sz), chip = chipOf(s), f = /^f/i.test(s.sex || ''), m = /^m/i.test(s.sex || ''), nm = cardName(s);
     var facts = [];
     if (f || m) facts.push(h('div', { 'data-k': 'sex' }, [h('dt', { text: 'Sex' }), h('dd', {}, [sexIcon(s.sex), f ? 'Female' : 'Male'])]));
     if (s.dob) facts.push(h('div', { 'data-k': 'dob' }, [h('dt', { text: 'Date of birth' }), h('dd', { text: dmy(s.dob) })]));
     return h('article', { class: 'dcard vcard', 'data-dog': s.id, style: col ? '--c:' + col : '' }, [
-      h('h2', { class: 'name' + nameFit(s.name || s.id), text: s.name || s.id }),
+      h('h2', { class: 'name' + nameFit(nm), text: nm }),
       h('dl', { class: 'facts' }, facts),
       photoBox(s),
       (function (w) { return w ? h('div', { class: 'szb', 'data-size': sz || 'puppy', 'data-k': 'size' }, [h('span', { class: 'lab', text: 'Size' }), h('b', { text: w })]) : null; })(tileWord(s, sz)),
@@ -372,7 +406,8 @@
       h('p', { class: 'foot', text: footer() }),
       h('small', { class: 'tag', text: tag })]);
   }
-  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); fn(); } }); }
+  function beginPrint() { makeGen++; sheet.textContent = ''; }
+  function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: function () { BLDPick.clear(pick); beginPrint(); fn(); } }); }
   /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
   function privateQr() {
     var url = '', timer = 0; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
@@ -434,13 +469,14 @@
   (function () {
     screen.insertBefore(asOf, msg);
     function roomItems() { return T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement) && !/^ZZ_/.test(a.code || ''); }).map(function (a) { return { id: a.id, label: a.code || a.id, a: a }; }); }
-    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
+    opts.appendChild(lazy('Whole-site code', 'site', function () { sheet.className = 'sheet per' + per; make('site', [{ id: 'site', label: 'Whole site' }]); }));
     opts.appendChild(lazy('Room cards', 'rooms', function () { sheet.className = 'sheet rooms'; pickThen('area', roomItems(), roomCard); }));
     opts.appendChild(lazy('Dog cards', 'dogs', function () { var m = siteMaps(), onSite = m.onSite, roomOf = m.roomOf; sheet.className = 'sheet dogs per' + per; pickThen('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
         per = n; Array.prototype.forEach.call(perBox.children, function (b, i) { b.setAttribute('aria-pressed', String([1, 2, 4][i] === per)); });
-        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per); } });
+        if (/\bdogs\b/.test(sheet.className)) sheet.className = sheet.className.replace(/\bper\d\b/, 'per' + per);
+        else if (/\bper\d\b/.test(sheet.className)) sheet.className = 'sheet per' + per; } });
     }));
     opts.appendChild(perBox);
     opts.appendChild(lazy('Litter cards', 'litters', function () {

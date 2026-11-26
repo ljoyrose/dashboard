@@ -43,6 +43,8 @@ const NAMES = { 'sub-test-dog-1': 'Test Dog One', 'sub-test-dog-2': 'Test Dog Tw
 const subject = (r) => [NAMES[r.subject_id], NAMES[r.area_id]].filter(Boolean).join(', ') || (r.subject_id || r.area_id ? '' : 'Whole site');
 const byId = (lines, id) => lines.find((l) => l.id === id);
 
+const Rules = require('../../cdhub/check-rules.js');
+
 test.describe('Checks register: the rules', () => {
   test('months with a record, newest first; a note added later is not a record of its own', () => {
     expect(R.months(logs)).toEqual(['2026-03', '2026-02']);
@@ -103,6 +105,20 @@ test.describe('Checks register: the rules', () => {
     expect(csv).not.toMatch(/,[=+\-@][^,]/);
   });
 
+  test('a session row names every saved dog and marks the exception', () => {
+    global.BLDCheckRules = Rules;
+    const log = { id: 'sess', check_type_id: 'ct-feed', outcome: 'ok', happened_at: '2026-02-03T08:00:00Z', how_recorded: 'site_tap', covered_ids: 'sub-test-dog-1|sub-test-dog-2', exceptions: 'sub-test-dog-2:concern:limping' };
+    const lines = R.build([log], { month: '2026-02', types, dogName: (id) => NAMES[id] });
+    expect(lines.map((l) => [l.subject, l.result, l.note])).toEqual([
+      ['Test Dog One', 'done', ''],
+      ['Test Dog Two', 'concern', 'concern: limping']
+    ]);
+    const html = R.reportHtml({ kennel: 'K', month: '2026-02', printed: 'x' }, lines);
+    expect(html).toContain('Test Dog One');
+    expect(html).toContain('Test Dog Two');
+    expect(html).toContain('concern');
+  });
+
   test('print: kennel, month, every column, the gaps counted; an empty month says so', () => {
     const lines = R.build(logs, { month: '2026-02', types, subject });
     const html = R.reportHtml({ kennel: 'Sample <Kennel>', month: '2026-02', printed: 'x' }, lines);
@@ -149,6 +165,32 @@ test.describe('CD Hub: Checks register on Compliance', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
     await expect(page.locator('body')).not.toHaveClass(/ckr-printing/);
     await expect(rep).toBeHidden();   // only on paper
+  });
+
+  test('a session row prints every saved dog and the exception, and the dog card says included in the round', async ({ page, guard }) => {
+    const sess = [
+      'id,tenant_id,check_type_id,outcome,happened_at,taken_at,taken_by,how_recorded,covered_ids,exceptions',
+      'cl-s,ten-test,ct-feed,ok,2026-02-03T08:00:00Z,2026-02-03T08:00:00Z,Sample Staff A,site_tap,sub-test-dog-1|sub-test-dog-2,sub-test-dog-2:not_here'
+    ].join('\n') + '\n';
+    setFile(guard.world, 'BLD-check_type.csv', TYPES);
+    setFile(guard.world, 'BLD-check_log.csv', sess);
+    await page.addInitScript(() => { window.print = () => {}; });
+    await page.goto('cdhub/');
+    await signIn(page);
+    await tabClick(page, '#nav button[data-go="compliance"]');
+    await page.locator('#ckrMonth').selectOption('2026-02');
+    await page.waitForFunction(() => !!window.BLDChecksRegister && !!window.BLDCheckRules);
+    await page.locator('#ckrPrint').click();
+    const rep = page.locator('#ckrReport');
+    await expect(rep).toContainText('Test Dog One');
+    await expect(rep).toContainText('Test Dog Two');
+    await expect(rep).toContainText('not here');
+    await tabClick(page, '#nav button[data-go="dogs"]');
+    const one = page.locator('.dc[data-dog="sub-test-dog-1"] [data-k="round-in"]');
+    const two = page.locator('.dc[data-dog="sub-test-dog-2"] [data-k="round-in"]');
+    await expect(one).toContainText('included in the round');
+    await expect(two).toContainText('included in the round');
+    await expect(two).toContainText('not here');
   });
 
   test('a month with no checks prints a nil record', async ({ page, guard }) => {

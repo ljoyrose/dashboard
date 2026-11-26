@@ -51,17 +51,17 @@ asOwner.describe('CD Hub Admin: owner', () => {
     await open(page);
     await tabClick(page, '#nav button[data-go="admin"]');
     await expect(page.locator('#main h2')).toContainText('Settings');
-    await expect(page.locator('[data-adm-open]')).toHaveCount(12);   // Display added 17 Nov 2026 (photo dates setting)
+    await expect(page.locator('[data-adm-open]')).toHaveCount(13);   // Check settings added (photo dates setting was 12)
     await expect(page.locator('[data-adm-open]').first()).toHaveAttribute('data-adm-open', 'codes');
     await page.evaluate(() => { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/SAMPLE-fake-address/exec'); go('admin', false); });
     await page.locator('[data-adm-open="phone"]').click();
-    await expect(page.locator('#adm-phone')).toContainText('ljoyrose.github.io');   // staff phones have no Cloudflare sign-in
-    await expect(page.locator('#adm-phone')).not.toContainText(new URL(page.url()).host);
+    const staff = await page.evaluate(() => location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/');
+    await expect(page.locator('#adm-phone')).toContainText(new URL(page.url()).host);
+    await expect(page.locator('#adm-phone')).not.toContainText('github.io');
     await page.locator('[data-adm-qr]').click();
     await expect(page.locator('.adm-qr svg')).toBeVisible();
-    // the QR itself holds the public staff page, not this page's address
     const held = await page.evaluate(() => { const b = BLDQr.svg; let t = ''; BLDQr.svg = (x, l) => { t = x; return b(x, l); }; go('admin', false); return new Promise((r) => setTimeout(() => r(t), 300)); });
-    expect(held.indexOf('https://ljoyrose.github.io/dashboard/cdhub/staff/#setup=')).toBe(0);
+    expect(held.indexOf(staff + '#setup=')).toBe(0);
     expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => /code/i.test(k)).map((k) => localStorage.getItem(k)).join(''))).toBe('');
   });
 
@@ -199,4 +199,15 @@ asOwner('Add staff has a Make a code button to the owner page codes section', as
   const link = page.locator('.adm-make a', { hasText: 'Make a code' });
   await expect(link).toHaveAttribute('href', /SAMPLE-fake-address\/exec\?page=approve&section=codes$/);
   await expect(page.locator('#adm-staff')).toContainText('name tag');
+});
+
+asOwner('Check settings shows the legal minimum and refuses a shorter keep period', async ({ page }) => {
+  await open(page);
+  await tabClick(page, '#nav button[data-go="admin"]');
+  await page.locator('[data-adm-open="checks"]').click();
+  await expect(page.locator('#adm-checks')).toContainText('How long check records are kept');
+  await expect(page.locator('#adm-checks')).toContainText('Legal minimum: 6 years');
+  await page.locator('#adm-checks [data-ck-years]').fill('4');
+  await page.locator('#adm-checks [data-ck-keep]').click();
+  await expect(page.locator('#adm-checks [data-ck-msg]')).toContainText('at least 6 years');
 });
