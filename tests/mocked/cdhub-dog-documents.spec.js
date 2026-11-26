@@ -1,4 +1,4 @@
-// CD Hub dog card Documents (Lisa 17 Nov 2026): files linked from the dog show under More, labelled by BLD-doc_type rows,
+// CD Hub dog card Documents (the owner 17 Nov 2026): files linked from the dog show under More, labelled by BLD-doc_type rows,
 // newest first, each opening in Drive. Photos stay in the gallery. Invented rows only. Dates as "2 Mar 2026".
 const { test, expect, HUBS } = require('../fixtures/job34/load');
 

@@ -5,7 +5,7 @@
 //
 // Fixture, calculator, owner page, dog-card chip, missing-data, staff and inspector (S10) checks all run. The inspector
 // page is cdhub/staff/inspect/ (#441, #442); its script is mocked here with a fake id and fake code. If a test fails,
-// fix the PAGE, not the test, unless Lisa has changed the spec. Selectors: #/breed, data-bb-*, .bb-chip (breed-better/hub-view.js).
+// fix the PAGE, not the test, unless the owner has changed the spec. Selectors: #/breed, data-bb-*, .bb-chip (breed-better/hub-view.js).
 const fs = require('fs');
 const path = require('path');
 const { test: base, expect } = require('../support/test');
@@ -262,7 +262,7 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
     await expect(card(page, 'Test Dog One').locator('.bb-chip')).toContainText('Testing');
   });
 
-  // Lisa, 15 Nov 2026 (later): the score shows on the card; tapping the Breed Better heading opens that dog's detail,
+  // the owner, 15 Nov 2026 (later): the score shows on the card; tapping the Breed Better heading opens that dog's detail,
   // and "Back to <dog>" returns to the card.
   asOwner('S5.3 tapping the chip opens that dog\'s Breed Better detail, and Back returns to the card', async ({ page }) => {
     await openDogs(page);
@@ -278,7 +278,7 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
 // ---------------------------------------------------------------- missing data
 
 notEnrolled.describe('Breed Better acceptance: animal not enrolled', () => {
-  // Lisa, 15 Nov 2026: a dog that is not enrolled shows a folded "Not in Breed Better" section with Enrol, never a score
+  // the owner, 15 Nov 2026: a dog that is not enrolled shows a folded "Not in Breed Better" section with Enrol, never a score
   notEnrolled('S6.1 a dog that is not enrolled shows Not in Breed Better, no score, and is not listed', async ({ page }) => {
     await openDogs(page);
     const out = card(page, 'Test Pup One').locator('section.bb-sec');

@@ -1,5 +1,5 @@
 /*!
- * BLDAreaLink - a reading in an old room also shows for the new room it became (Lisa 12 Nov 2026, "links").
+ * BLDAreaLink - a reading in an old room also shows for the new room it became (the owner 12 Nov 2026, "links").
  * BLD-area_link rows: from_area_id, to_area_id, from_date, to_date (need-row style; blank date = open).
  * A reading on from_area_id whose day (period_start, else taken_at) is inside the row's dates also counts for
  * to_area_id. The reading itself is never changed: expand() adds copies, marked linked_from.

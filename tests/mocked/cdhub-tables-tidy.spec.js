@@ -1,4 +1,4 @@
-// Lisa 17 Nov 2026: "improve spacing and layout on all tables", and the CCP webinar item (not CD Hub) never on the hub.
+// the owner 17 Nov 2026: "improve spacing and layout on all tables", and the CCP webinar item (not CD Hub) never on the hub.
 // Invented rows only.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');

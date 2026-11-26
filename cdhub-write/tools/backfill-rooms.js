@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * backfill-rooms.js - one-off helper (Lisa 16 Oct, S02-6 B): give dogs whose room is missing a room, from Lisa's register.
+ * backfill-rooms.js - one-off helper (the owner 16 Oct, S02-6 B): give dogs whose room is missing a room, from the owner's register.
  *
  * It ONLY OUTPUTS NEW occupancy rows. It never edits, closes or removes an existing row, and it never writes to the
  * occupancy file it reads (it refuses --out when that is the same file or already exists). The new rows are for the bot to
- * append to a COPY first (docs/PRACTICE-RUN.md), and to the real file only after Lisa has looked at the report.
+ * append to a COPY first (docs/PRACTICE-RUN.md), and to the real file only after the owner has looked at the report.
  *
  * Inputs (all CSV, read-only):
- *   --register  Lisa's register: columns dog_id, room_code      (room_code is the code shown on screen, e.g. T3.1)
+ *   --register  the owner's register: columns dog_id, room_code      (room_code is the code shown on screen, e.g. T3.1)
  *   --occupancy BLD-occupancy.csv (live header: id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_out,classification,classification_note)
  *   --areas     BLD-area.csv (to turn a room code into an area id; needs columns id, code)
  *   --tenant    the tenant id to write on every new row
@@ -18,7 +18,7 @@
  * A dog gets a new row ONLY when its current row (latest moved_in, undated lowest, ties to the later row - the same rule as
  * the script and the screens) has NO room, or it has no row at all. Everything else is left alone and reported:
  *   already_there  the register agrees with the room already recorded
- *   conflict       a DIFFERENT room is already recorded: never overwritten (staff move the dog, or Lisa uses the owner edit)
+ *   conflict       a DIFFERENT room is already recorded: never overwritten (staff move the dog, or the owner uses the owner edit)
  *   gone           sold / owned_by_family / Collected / deceased: not on site
  *   unknown_room   the register's room code is not in the area list
  *   ambiguous      the register lists the dog twice with different rooms

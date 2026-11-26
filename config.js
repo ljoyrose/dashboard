@@ -19,7 +19,7 @@
     },
     // Private settings file (the loader is at the bottom of this file). After Google sign-in the dashboard looks in Drive
     // for one trusted file with this name and can use its ids and addresses in place of the ones written here.
-    // enabled false = never look. dryRun true = find and check the file but change nothing; switching it off is Lisa's call.
+    // enabled false = never look. dryRun true = find and check the file but change nothing; switching it off is the owner's call.
     // Optional: timeoutMs = how long to wait for Drive before carrying on without the file (8 seconds when not set).
     privateConfig: {
       enabled: true,
@@ -34,9 +34,9 @@
       excludedDrives: EXCLUDED,
       sharedDriveAllowIds: []
     },
-    // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until Lisa presses "Allow personal bin
+    // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until the owner presses "Allow personal bin
     // actions". A file can be binned only if it starts ZZ_DELETE_DRIVE_ and has a ledger row whose surface is `surface`.
-    // dryRun true = the page lists what would be renamed or binned and changes nothing. Lisa switched it off on 13 Nov 2026.
+    // dryRun true = the page lists what would be renamed or binned and changes nothing. the owner switched it off on 13 Nov 2026.
     // Its Rename step writes each renamed exact copy's ledger row itself (surface below), so those files become binnable.
     personalBin: {
       surface: 'drive-personal',
@@ -77,7 +77,7 @@
     },
     // Bin page Canva card (TidyUp Apps stage 1). The page never calls Canva. It reads stateFile from folderId (00 AI Commons >
     // CHANGES), written by the CANVA-BIN bot, and writes ledger slips and CANVA-BIN-REQUEST_ files there. accounts are
-    // labels only (no emails). dryRun true = the card lists and changes nothing; switching it off is Lisa's call.
+    // labels only (no emails). dryRun true = the card lists and changes nothing; switching it off is the owner's call.
     canvaBin: {
       folderId: '11J2IuEGBT6fThCFD3UCN86J_9ZbiGhrF',
       stateFile: 'CANVA-BIN-STATE.json',
@@ -98,8 +98,8 @@
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's
-    // 15-minute timer picks taps up). live: false shows the TEST stamp until Lisa switches the engine to LIVE.
-    // GA Hub (food/): Designer Dog Foods orders, GA invoices and the product list. Read with Lisa's sign-in from RR_FOOD
+    // 15-minute timer picks taps up). live: false shows the TEST stamp until the owner switches the engine to LIVE.
+    // GA Hub (food/): Designer Dog Foods orders, GA invoices and the product list. Read with the owner's sign-in from RR_FOOD
     // (RR_DDF folder), which the RR_FOOD-ENGINE Apps Script fills. The page writes only the 4 answer cells of a Cards row.
     food: {
       bookId: '1Lags6XfdNhvxwxGNgEKwfoosHr6ci9rzG-QXulgCfxU', // RR_FOOD (RR_DDF folder)
@@ -117,9 +117,9 @@
       ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
     },
-    // Tech section (Dashboard > More > Tech, TECH-HUB-1): one tile per paid tool, read with Lisa's sign-in from the same tools tab
+    // Tech section (Dashboard > More > Tech, TECH-HUB-1): one tile per paid tool, read with the owner's sign-in from the same tools tab
     // as studio.ownedTools above (no second sheet, no second id), once per page load, by header name. Until the tab has the Tech
-    // columns the page shows invented Example tiles. devHostingSlot: the Dev and hosting group's colour slot (0-8). TBC, Lisa's
+    // columns the page shows invented Example tiles. devHostingSlot: the Dev and hosting group's colour slot (0-8). TBC, the owner's
     // decision: this one value moves every Dev and hosting tile. freshDays: a row older than this shows "Not updated since".
     // requestsFolderId: where Add tech drops one TECH-ROW-REQUEST_ file for the engine to append the row. Empty = Add tech says
     // "Not saved" and sends nothing (the engine has no tech-row handler yet).
@@ -128,15 +128,15 @@
       freshDays: 35,
       requestsFolderId: ''
     },
-    // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
-    // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until Lisa installs the engine:
+    // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with the owner's sign-in; Add drops one
+    // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until the owner installs the engine:
     // until then the page shows invented example rows and sends nothing. Read only: nothing here changes DNS or a site.
     estate: {
       sheetId: '',
       requestsFolderId: '',
       live: false
     },
-    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
+    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with the owner's sign-in; the file is
     // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
     // folderId: the folder that also holds DROPBOX-TOTALS.json. Empty = invented example data with the Example tag, reads nothing.
     // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
@@ -159,7 +159,7 @@
       ideasRequestsFolderId: '1cd3vZwUYB0pNFUTQzSOMkYwuOeATG7Rv', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
       live: false
     },
-    // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with Lisa's
+    // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with the owner's
     // sign-in; a tap drops one request file into requestsFolderId. Both empty = example mode: invented rows, nothing sent.
     enquiries: {
       sheetId: '',
@@ -181,12 +181,12 @@
       webAppFile: 'BIN-GUARD-WEBAPP.json',
       webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
     },
-    // Projects Hub (Apps Script web app in the private projects-hub repo). Lisa OK'd the address here (1 Nov 2026): it
+    // Projects Hub (Apps Script web app in the private projects-hub repo). the owner OK'd the address here (1 Nov 2026): it
     // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
     // The /a/macros/puppyclassroom.com/ form makes Google use the work account (the plain form loops when Chrome's
     // first account is a personal one, 2 Nov 2026).
     // sheetId: the hub's own Sheet ("Projects Hub TEST", lisa@puppyclassroom.com). The Dashboard reads its INDEX tab with
-    // Lisa's read-only sign-in for the Projects tile's 3 numbers; it never writes. Empty = the tile shows no numbers.
+    // the owner's read-only sign-in for the Projects tile's 3 numbers; it never writes. Empty = the tile shows no numbers.
     projectsHub: {
       sheetId: '1ssFH6uTD6uEYbxio6iA3BlP9Op3l2d7MRf_ktusMcTU',
       tab: 'INDEX',

@@ -1,4 +1,4 @@
-// Breed Better on the dog card (Lisa, 12 Nov 2026): a proper section headed by the Breed Better logo, not a small grey strip.
+// Breed Better on the dog card (the owner, 12 Nov 2026): a proper section headed by the Breed Better logo, not a small grey strip.
 // Verdict and Testing badges, the score as a bar against the target, the must-pass checks one per line (Passed, Missing or
 // Failed), and a tap through to the dog's Breed Better page. Invented animals and rows only (tests/fixtures/breed-better).
 // DOGCARD_SHOTS=<folder> also saves desktop and 390px pictures of the section.

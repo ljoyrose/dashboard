@@ -246,7 +246,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(page.locator('#view-c')).not.toContainText('cold days');
   });
 
-  test('Lisa 11 Nov (A standard): a place is only due on days its need rows cover; never missed outside them', async ({ page, guard }) => {
+  test('the owner 11 Nov (A standard): a place is only due on days its need rows cover; never missed outside them', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;
@@ -269,7 +269,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round).not.toContainText('Field 1');
   });
 
-  test('Lisa 11 Nov: an earlier reading typed on a later day shows on its own day (period_start), even for an ended thermometer', async ({ page, guard }) => {
+  test('the owner 11 Nov: an earlier reading typed on a later day shows on its own day (period_start), even for an ended thermometer', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;
@@ -288,7 +288,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').dispatchEvent('change');
     await expect(round.locator('.rtile .rn')).toHaveText(['3A.2-3']);
     await expect(round.locator('.rtile').first()).toContainText('18.5');
-    await expect(page.locator('body')).not.toContainText(/camera|typed|photo/i);   // how a reading was taken is saved only (Lisa, 11 Nov)
+    await expect(page.locator('body')).not.toContainText(/camera|typed|photo/i);   // how a reading was taken is saved only (the owner, 11 Nov)
     await page.locator('#rdate').fill('2026-01-12');
     await page.locator('#rdate').dispatchEvent('change');
     await expect(round.locator('.rtile .rn')).toHaveText(['3A.1/2']);

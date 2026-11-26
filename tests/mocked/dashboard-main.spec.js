@@ -1,4 +1,4 @@
-// Dashboard Main (Lisa's house-style picks, 2 Nov 2026): one tile per hub in her order and colours, 3 labelled numbers each
+// Dashboard Main (the owner's house-style picks, 2 Nov 2026): one tile per hub in her order and colours, 3 labelled numbers each
 // (worked out the way each hub does, "–" when a hub cannot be read), the Food ✓ XML tick, Needs you (at most 5, late first),
 // no big hub buttons and no "You are here", and the Decide and Do tabs with their views. Pretend Google, Drive and Sheets only;
 // every row is invented (the hub fixtures in tests/fixtures and tests/support/hubs.js).
@@ -16,7 +16,7 @@ const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
 const CFG = (() => { const c = { window: {} }; vm.createContext(c); vm.runInContext(fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8'), c); return c.window.DASH_CONFIG; })();
 const SHOTS = process.env.MAIN_SHOTS || '';
 
-// Every number is its own link to the place in the hub where Lisa acts on it (Projects: the hub itself).
+// Every number is its own link to the place in the hub where the owner acts on it (Projects: the hub itself).
 const ROUTES = {
   projects: ['', '', ''], web: ['#/all?show=down', '#/all?show=expiring', '#/all?show=live'], money: ['#/now/over', '#/dates/soon', '#/money/biz'],
   food: ['#/orders?late', '#/invoices?unpaid', '#/orders?today'], dogs: ['#/round', '#/today/unplaced', '#/today/bitches'],
@@ -99,7 +99,7 @@ async function signIn(page, hash = '') {
 const nums = (page, hub) => page.locator('#hubTiles .hubtile[data-hub="' + hub + '"] .hk').evaluateAll((ks) => ks.map((k) => [k.getAttribute('data-k'), k.firstElementChild.textContent, k.firstElementChild.classList.contains('need')]));
 
 test.describe('Dashboard Main', () => {
-  test('tiles: Lisa\'s order, colours and links; every hub tile has 3 labelled numbers worked out as the hub does', async ({ page, guard }) => {
+  test('tiles: the owner\'s order, colours and links; every hub tile has 3 labelled numbers worked out as the hub does', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
     const tiles = page.locator('#view #hubTiles .hubtile');
@@ -315,7 +315,7 @@ test.describe('Dashboard Main', () => {
     expect(hov.bg, 'pale grey fill on hover').not.toBe('rgba(0, 0, 0, 0)');
     expect(hov.ow, 'no hover line').toBe('0px');
     for (const k of ['x', 'y', 'w', 'h']) expect(Math.abs(hov[k] - rest[k]), k).toBeLessThanOrEqual(0.5);
-    // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (Lisa, 2 Nov: the Projects tile).
+    // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (the owner, 2 Nov: the Projects tile).
     for (const hub of ['apps', 'food', 'money']) await numberGroup(page, '#hubTiles .hubtile[data-hub="' + hub + '"] a.hk', 'b');
     await page.setViewportSize({ width: 390, height: 844 });
     await steadyCards(page);
@@ -339,7 +339,7 @@ test.describe('Dashboard Main', () => {
     await seed(page, guard, { apps: false, studio: false });
     await signIn(page);
     await expect(page.locator('#key-projects')).toHaveCount(0);
-    // Main = Next, Needs you, hub tiles. Nothing else (Lisa, 2 Nov): Money and Actions minutes live in More, no footer explainer.
+    // Main = Next, Needs you, hub tiles. Nothing else (the owner, 2 Nov): Money and Actions minutes live in More, no footer explainer.
     await expect(page.locator('#view > *')).toHaveCount(3);
     expect(await page.locator('#view > *').evaluateAll((els) => els.map((e) => e.id))).toEqual(['homeTop', 'needsToday', 'hubTiles']);
     await expect(page.locator('#moneyTile, #minsCard, #pageFoot')).toHaveCount(0);

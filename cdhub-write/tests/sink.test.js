@@ -560,7 +560,7 @@ test('bad requests are not understood, not crashed on', () => {
   assert.equal(post('x'.repeat(20001)).code, 'BAD_REQUEST');
   const okRes = post(JSON.stringify(req(env)));
   assert.equal(okRes.ok, true);
-  assert.equal(okRes.result.status, 'saved');   // temperature readings go straight in (Lisa, 16 Oct)
+  assert.equal(okRes.result.status, 'saved');   // temperature readings go straight in (the owner, 16 Oct)
 });
 
 test('status check shows switches only: no codes, no ids, no data', () => {
@@ -910,7 +910,7 @@ test('reading is a separate switch from saving, and works through doPost', () =>
   assert.equal(JSON.parse(env.ctx.doGet({ parameter: {} }).getContent()).readEnabled, true);
 });
 
-// ================================================================== OWNER EDIT: Lisa overwrites a wrong entry in place (owner page only)
+// ================================================================== OWNER EDIT: the owner overwrites a wrong entry in place (owner page only)
 const asOwner = (env) => { env.email = 'owner@example.test'; };
 function seedThree(env) {
   const ids = [];
@@ -983,7 +983,7 @@ test('owner edit of an OLD row: an unchanged old period_start is not re-checked 
   assert.equal(e.ok, true);
   assert.deepEqual(Array.from(e.result.changed), ['mitigation_note']);
   assert.equal(rows(env, 'BLD-area_reading.csv')[0].period_start, ps);
-  // but a CHANGED date is checked: readings have no 7-day limit (Lisa 11 Nov 2026), only how long records are kept
+  // but a CHANGED date is checked: readings have no 7-day limit (the owner 11 Nov 2026), only how long records are kept
   const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2019-01-01T00:00:00Z' });
   assert.match(bad.fields.period_start, /kept \(6 years\)/);
   assert.equal(env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' }).ok, true);

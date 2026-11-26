@@ -17,7 +17,7 @@ const { BASE } = require('../support/site');
 const test = base.test.extend({ world: async ({}, use) => use(c27.install(buildWorld())) });
 const { expect } = base;
 
-// Lisa hid these (PR 472 unwires them). Until that lands they still open; after it they open Main. Either is accepted,
+// the owner hid these (PR 472 unwires them). Until that lands they still open; after it they open Main. Either is accepted,
 // and they are never walked, so this test gives the same answer before and after.
 const HIDDEN = ['buyers', 'shape', 'litters', 'vet'];
 const SLOTS = 16;   // the most start screens the hub may offer (today it offers fewer; the spare slots skip)
@@ -178,7 +178,7 @@ for (const view of VIEWS) {
         // MAX and MIN are the two words printed on the thermometer's own screen: staff copy them, they are not raw codes.
         wordingOk: (w) => /^bare code "(MAX|MIN)" as a label$/.test(w.type),
         typeText: '18.5',
-        // MAX and MIN are the two words printed on a max-min thermometer: the boxes carry the same words (parked for Lisa, slip decision 3)
+        // MAX and MIN are the two words printed on a max-min thermometer: the boxes carry the same words (parked for the owner, slip decision 3)
         wordingOk: (w) => /^bare code "(MAX|MIN)" as a label$/.test(w.type),
       });
       r.saves = script.sent.length;

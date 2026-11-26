@@ -1,4 +1,4 @@
-// LIVE STATE CHECK (JOB 31b). The local script check-real-state-b.js reads Lisa's downloaded Factory and Home JSON
+// LIVE STATE CHECK (JOB 31b). The local script check-real-state-b.js reads the owner's downloaded Factory and Home JSON
 // files, never on GitHub. Here it runs on the invented fixtures only.
 const fs = require('fs');
 const os = require('os');

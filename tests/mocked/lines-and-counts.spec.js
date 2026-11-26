@@ -1,12 +1,12 @@
-// Counts and colour lines (Lisa's house-style picks, 2 Nov 2026), on all 8 pages:
+// Counts and colour lines (the owner's house-style picks, 2 Nov 2026), on all 8 pages:
 //  - a ringed count is a ring only: never a fill or tint behind the number (rose ring = late, grey ring = waiting, 0 = no ring);
-// the ONE exception (Lisa, 3 Nov 2026): a BROKEN count (down, expired, stuck, failed) is the black badge, --house-broken-fill
+// the ONE exception (the owner, 3 Nov 2026): a BROKEN count (down, expired, stuck, failed) is the black badge, --house-broken-fill
 // with a --house-broken-ink number, in the same box as the ring (light ink with a near-black number in the dark looks);
 //  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with a card's corner.
 //    A Needs-you row shell is rounded (12px); its bar stays a straight 3px line, not a "(" bracket
 //    (no short stub floating in the middle, no inset shadow);
 //  - icon shades are the --ljr-N-icon tokens (slots 0 to 7, light and dark looks);
-//  - a bottom tab's count never overlaps the tab's icon, on a phone (390, a dot beside the icon's top-right corner, Lisa's pick b)
+//  - a bottom tab's count never overlaps the tab's icon, on a phone (390, a dot beside the icon's top-right corner, the owner's pick b)
 //    or a laptop (1280, the ring), and on a wide tab the icon stays centred.
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 const fs = require('fs');
@@ -131,10 +131,10 @@ for (const [hub, H] of Object.entries(ALL)) {
       });
       for (const t of m) {
         expect(t.overlap, `${t.word}: count ${t.count.map(Math.round)} clear of the icon ${t.icon.map(Math.round)}`).toBe(false);
-        // A broken count is the black badge (Lisa, 3 Nov 2026), the same size as the ring beside it: nothing shifts.
+        // A broken count is the black badge (the owner, 3 Nov 2026), the same size as the ring beside it: nothing shifts.
         if (W === 1280) expect(t.bg, `${t.word}: the count has no fill, or is the black badge when broken`).toMatch(t.broken ? /^rgb\(30, 28, 26\)$/ : /^(transparent|rgba\(0, 0, 0, 0\))$/);
         expect(t.size, `${t.word}: late, broken and waiting counts are one size`).toEqual(m[0].size);
-        // On a phone the count is a dot (Lisa's pick b, 2 Nov): filled rose (late), black (broken) or grey, beside the icon's top-right corner.
+        // On a phone the count is a dot (the owner's pick b, 2 Nov): filled rose (late), black (broken) or grey, beside the icon's top-right corner.
         if (W !== 1280) {
           expect(t.bg, `${t.word}: the dot is rose (late), black (broken) or grey (waiting)`).toBe(t.need ? 'rgb(230, 68, 61)' : t.broken ? 'rgb(30, 28, 26)' : 'rgb(138, 127, 112)');
           expect(t.count[0] - t.icon[2], `${t.word}: the dot sits right beside the icon's right edge`).toBeLessThanOrEqual(3);
@@ -148,7 +148,7 @@ for (const [hub, H] of Object.entries(ALL)) {
   }
 }
 
-test('--ljr-N-icon: one icon shade per slot 0 to 7, light and dark looks (Lisa\'s pick 3e)', async ({ page }) => {
+test('--ljr-N-icon: one icon shade per slot 0 to 7, light and dark looks (the owner\'s pick 3e)', async ({ page }) => {
   const want = {
     light: ['#93856E', 'ink', '#E0251D', '#B66A11', '#A2890B', '#428C46', '#0F82BC', '#995DCB'],
     dark: ['#93856E', '#F3EEE5', 'fill', 'fill', 'fill', 'fill', 'fill', 'fill'],

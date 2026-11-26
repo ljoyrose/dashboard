@@ -1,5 +1,5 @@
 /*!
- * Dog-to-dog links (Lisa 13 Nov 2026): "BFFs" (dogs a dog likes to sleep with) and "Fren." (dogs it does not mix with).
+ * Dog-to-dog links (the owner 13 Nov 2026): "BFFs" (dogs a dog likes to sleep with) and "Fren." (dogs it does not mix with).
  * Rows live in BLD-subject_link: subject_id, other_subject_id, kind, from_date, to_date, source. One row per pair, read
  * both ways. A row counts on a day when from_date <= day <= to_date (blank = open); ending a link sets to_date, rows are
  * never deleted. The kinds and their words are rule rows (rule_key link_kind.<kind>, value = the word shown), never fixed here.

@@ -1,5 +1,5 @@
 // node --test cdhub/staff/modules/temperature/test/
-// Lisa, 16 Nov 2026: photos are kept with a reading ONLY while the owner's dated rule row job.temps_keep_photo = yes
+// the owner, 16 Nov 2026: photos are kept with a reading ONLY while the owner's dated rule row job.temps_keep_photo = yes
 // is in force. Off by default. module.js itself still makes, keeps and sends no picture (no-image.test.mjs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,16 +1,16 @@
 /*!
- * CDWork: Done, Reassign and Snooze on every waiting row (Lisa 19 Nov 2026: "I had to put screws in but nothing to reassign
+ * CDWork: Done, Reassign and Snooze on every waiting row (the owner 19 Nov 2026: "I had to put screws in but nothing to reassign
  * or say done to take it off ... things like screws done same day as due stay there forever").
  *
  * Nothing in BLD-WORK is changed or deleted. Each tap adds one dated owner row to BLD-requirement (the shared need-row list),
  * pointing at the work row: target_table 'work', target_id the W number, from_date today, set_by and set_on stamped by the
  * save script, and a source saying what was done.
  *   work.done          the item is done from from_date: it leaves both waiting lists.
- *   work.owner.<who>   it now waits on <who> (Lisa = Waiting on you; anyone else = Waiting on me, with the name shown).
+ *   work.owner.<who>   it now waits on <who> (the owner = Waiting on you; anyone else = Waiting on me, with the name shown).
  *   work.snooze        hidden from from_date to to_date (both included), then it comes back by itself.
  * The newest row wins (set_on, then from_date). A snooze only counts while its dates cover today.
  * What Reassign and Snooze offer are owner setting rows in BLD-breeding_rule (dated, newest in force wins):
- *   work.reassign.to    e.g. Lisa|Claude|Staff
+ *   work.reassign.to    e.g. the owner|Claude|Staff
  *   work.snooze.days    e.g. 1|7|30
  * The values below are only the starting defaults.
  * Works in a browser (window.CDWork) and in Node (module.exports) so the rules can be tested.

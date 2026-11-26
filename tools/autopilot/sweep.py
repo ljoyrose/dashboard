@@ -2,7 +2,8 @@
 """PR autopilot sweep. No AI: plain rules from merge-policy.json.
 
 Reads every open PR, decides one action per PR, optionally performs the safe
-ones, and rewrites one issue ("DO: needs Lisa") listing what needs a person.
+ones, and rewrites one issue with a single technical line. No titles, names,
+or lists.
 
 Safe by default: mode "dry-run" only reports. Set mode "apply" in the policy
 (or run the workflow with apply=true) to act. Never deletes an unmerged
@@ -16,8 +17,8 @@ import sys
 
 POLICY_FILE = "merge-policy.json"
 KILL_FILE = "autopilot-off"
-ISSUE_TITLE = "DO: needs Lisa"
-ISSUE_LABEL = "do-lisa"
+ISSUE_TITLE = "cdhub: sweep status"
+ISSUE_LABEL = "do-owner"
 RED = {"FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "ACTION_REQUIRED", "ERROR"}
 
 
@@ -75,7 +76,7 @@ def classify(pr, policy, open_heads, today, auto_merge=True):
             return "WAIT", "stacked on #%s: parent not merged yet" % open_heads[base]
         return "RETARGET", "parent merged: retarget to " + policy["default_branch"]
     if pr.get("mergeable") == "CONFLICTING":
-        return "DO", "merge conflict: a bot or the Master must fix it"
+        return "DO", "merge conflict"
     state, privacy_red = check_state(pr)
     if privacy_red:
         return "DO", "privacy guard failed"
@@ -133,50 +134,9 @@ def act(action, pr, policy):
         gh(*args)
 
 
-def chrome_task(do_items):
-    lines = [
-        "TASK: Merge these PRs on GitHub in this exact order. Signed-in GitHub account: ljoyrose.",
-        "Stop and report if any step shows a conflict, a red X, or a button not described here.",
-        "Never use Squash and merge or Rebase and merge, always Create a merge commit. Do NOT click Delete branch.",
-        "If the Merge click is refused, do not stop: leave the page open ready to press, one window per PR, and tell Lisa.",
-        "",
-    ]
-    for i, (pr, _) in enumerate(do_items, 1):
-        gate = " Do NOT start this step until the previous step shows Merged." if i > 1 and pr["baseRefName"] != "main" else ""
-        lines.append("%d. Open %s . Confirm all checks are green. Press Merge pull request, then Create a merge commit, then Confirm.%s" % (i, pr["url"], gate))
-    lines.append("%d. Report one line per PR: DONE / READY for Lisa to press / STOPPED + why." % (len(do_items) + 1))
-    return "\n".join(lines)
-
-
 def build_body(rows, policy, today, applied, mode, now):
-    do = [(p, r) for (p, a, r) in rows if a == "DO"]
-    auto = [(p, a, r) for (p, a, r) in rows if a in ("MERGE", "ARM", "UPDATE", "RETARGET")]
-    wait = [(p, r) for (p, a, r) in rows if a == "WAIT"]
-    ages = [(now - dt.datetime.fromisoformat(p["createdAt"].replace("Z", "+00:00"))).days for (p, _, _) in rows]
-    exp = parse_date(policy["expires_on"]) if policy.get("expires_on") else None
-    left = (exp - today).days if exp else None
-    out = ["_Rewritten by the PR autopilot sweep. Mode: **%s**. Last run: %s UTC._" % (mode, now.strftime("%Y-%m-%d %H:%M")), ""]
-    if left is not None and left < 0:
-        out += ["**Standing approval has lapsed. Everything below needs your yes until you renew `merge-policy.json`.**", ""]
-    elif left is not None and left <= policy.get("renew_warning_days", 7):
-        out += ["**Renew standing approval (expires %s, %d days). Same wording?**" % (exp, left), ""]
-    out += ["## Needs you (%d)" % len(do)]
-    out += ["- #%d %s : %s" % (p["number"], p["title"], r) for p, r in do] or ["- nothing"]
-    out += ["", "## Done or queued by the autopilot (%d)" % len(auto)]
-    out += ["- #%d %s : %s%s" % (p["number"], a, r, "" if applied else " (dry-run, not done)") for p, a, r in auto] or ["- nothing"]
-    out += ["", "## Waiting on a parent PR (%d)" % len(wait)]
-    out += ["- #%d : %s" % (p["number"], r) for p, r in wait] or ["- nothing"]
-    out += ["", "## KPIs", "- open PRs: %d" % len(rows), "- oldest PR: %d days" % (max(ages) if ages else 0),
-            "- waiting on Lisa: %d" % len(do), "- queued by autopilot: %d" % len(auto)]
-    mergeable = [(p, r) for p, r in do if "sensitive" in r or "docs-only" in r]  # dependabot/red/conflict are never in the merge task
-    if mergeable:
-        out += ["", "## If you say OK to the sensitive / outside-scope items, paste this to Chrome", "```", chrome_task(order_pairs(mergeable)), "```"]
-    return "\n".join(out)
-
-
-def order_pairs(pairs):
-    by = {p["number"]: r for p, r in pairs}
-    return [(p, by[p["number"]]) for p in order([p for p, _ in pairs])]
+    """One technical line. Never a title, a name, or a list."""
+    return "Technical sweep finished."
 
 
 def upsert_issue(body):

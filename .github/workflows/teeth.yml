@@ -49,7 +49,7 @@ jobs:
       - name: A break went unnoticed? Open or update the one issue
         if: ${{ failure() && github.ref == 'refs/heads/main' }}
         continue-on-error: true
-        run: node tests/support/report-issue.js --state red --label teeth-red --title-prefix "Teeth check failed" --results none --note "A deliberate break was not caught. See the run summary."
+        run: 'node tests/support/report-issue.js --state red --label teeth-red --title-prefix "cdhub: teeth check failed" --results none --note "Technical check failed."'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: All caught? Close the issue

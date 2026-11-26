@@ -1,6 +1,6 @@
 'use strict';
 /**
- * v3 (Lisa's answers to slip 02): permissions, per-person overrides, owner revoke of staff codes, the one-tap
+ * v3 (the owner's answers to slip 02): permissions, per-person overrides, owner revoke of staff codes, the one-tap
  * "All the rest unmoved" log, moves queue by date, not-on-site rules. FAKE data only (tenant ten-test).
  */
 const test = require('node:test');

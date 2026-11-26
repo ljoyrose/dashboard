@@ -29,7 +29,7 @@ test.describe('One way in', () => {
     await expect(page.locator('#view .figs, #view .fig')).toHaveCount(0);
   });
 
-  test('Main holds exactly the hub tiles (Lisa\'s order, 2 Nov) and MOVE sits in More', async ({ page }) => {
+  test('Main holds exactly the hub tiles (the owner\'s order, 2 Nov) and MOVE sits in More', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#key-projects')).toHaveCount(0);
@@ -38,7 +38,7 @@ test.describe('One way in', () => {
     await expect(page.locator('#houseMore #move-link')).toHaveText('MOVE');
   });
 
-  test('the bottom bar has the agreed tabs: Main, Decide, Do, then More holding Drives, Bin, Money, Actions minutes, Tech, Changes and MOVE (Lisa\'s tab picks, 2 Nov; Tech: TECH-HUB-1)', async ({ page }) => {
+  test('the bottom bar has the agreed tabs: Main, Decide, Do, then More holding Drives, Bin, Money, Actions minutes, Tech, Changes and MOVE (the owner\'s tab picks, 2 Nov; Tech: TECH-HUB-1)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const tabs = page.locator('#mainNav a');

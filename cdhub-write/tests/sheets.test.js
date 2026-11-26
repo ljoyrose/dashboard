@@ -116,7 +116,7 @@ test('Sheet: the 7th column named variance_c in the live Sheet is accepted and f
   assert.equal(r.ok, true, JSON.stringify(r));
   const row = recs(env, 'BLD-area_reading.csv')[0];
   assert.equal(row.variance_c, 2.9);
-  assert.equal(env.rows('BLD-area_reading.csv')[0][6], 'variance_c');   // the header is left as Lisa named it
+  assert.equal(env.rows('BLD-area_reading.csv')[0][6], 'variance_c');   // the header is left as the owner named it
 });
 
 test('Sheet: a second save leaves the first row exactly as it was', () => {
@@ -234,7 +234,7 @@ test('Sheet: with the 7th column named variance_c, an owner edit keeps it exactl
   assert.equal(row.variance_c, 2);           // as the blank-named column does today: an edit does not recompute it
 });
 
-// Lisa 16 Nov 2026: saves took about 25 s on the 30,000-row temperature log and blocked anyone else saving. An append
+// the owner 16 Nov 2026: saves took about 25 s on the 30,000-row temperature log and blocked anyone else saving. An append
 // now reads the whole tab ONCE; the checks before and after writing look only at the header, the last row and the new row.
 test('Sheet: one save reads the whole tab once, not three times', () => {
   const env = sheetEnv();

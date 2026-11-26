@@ -1,4 +1,4 @@
-// Dog photo crop and shrink (Lisa, 12 Nov 2026: "That request was too large" from a phone photo). After a picture is
+// Dog photo crop and shrink (the owner, 12 Nov 2026: "That request was too large" from a phone photo). After a picture is
 // chosen a square crop opens; Save photo always sends an 800 x 800 JPEG of at most 350,000 base64 characters, never the
 // original; Cancel sends nothing; a picture this browser cannot open gets a plain message. Invented dog, pretend script.
 const fs = require('fs');
