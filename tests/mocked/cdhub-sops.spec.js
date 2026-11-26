@@ -92,7 +92,7 @@ test('bottom bar is Main, Compliance, Records, People (menu option A); SOPs sit 
 
 test('#/sops lists all 49 labels; colour and frequency filters and search work', async ({ page }) => {
   await openSops(page);
-  // Lisa's 5 Nov layout: one section per colour (in colour order), rows by how often, then name
+  // the owner's 5 Nov layout: one section per colour (in colour order), rows by how often, then name
   const COL = ['White', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'];
   const FREQ = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Ongoing', 'Per litter', 'Ad hoc', 'Breeding'];
   const ix = (l, v) => (l.indexOf(v) < 0 ? 999 : l.indexOf(v));

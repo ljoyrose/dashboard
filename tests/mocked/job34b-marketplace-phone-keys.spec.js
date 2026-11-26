@@ -72,7 +72,7 @@ test.describe('Marketplace (JOB 34b): phone 390px', () => {
   test('the one Filter button at the top of the page opens and shuts the person and site chips, and counts the filters that are on', async ({ page }) => {
     await book(page);
     await open(page, '#/do');
-    // The people row left the 56px top bar (Lisa's pick A): its Filter button sits at the top of the page, above the cards.
+    // The people row left the 56px top bar (the owner's pick A): its Filter button sits at the top of the page, above the cards.
     await expect(page.locator('header .house-fbtn, header #people')).toHaveCount(0);
     const btn = page.locator('main .house-fbtn');
     await expect(btn).toBeVisible();

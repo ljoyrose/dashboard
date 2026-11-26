@@ -136,7 +136,7 @@ test('PR 785 year pack: chip number, registration, fit to breed, medicines, vacc
   };
   const c = ctx({ tables: tables, meds: (ym) => {
     if (ym !== '2026-02') return { columns: Meds.COLUMNS, lines: [], cell: (l, k) => Meds.cell(l, k) };
-    const lines = Meds.build([{ id: 'dsp1', subject_id: 'd-ada', given_on: '2026-02-08', product: 'Sample Wormer', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: ym, dog: () => ({ name: 'Ada', chip: '' }) });
+    const lines = Meds.build([{ id: 'dsp1', subject_id: 'd-ada', given_on: '2026-02-08', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: ym, dog: () => ({ name: 'Ada', chip: '' }) });
     return { columns: Meds.COLUMNS, lines: lines, cell: (l, k) => Meds.cell(l, k) };
   } });
   const choice = { period: 'month', year: 2026, month: 1, today: TODAY };
@@ -163,10 +163,10 @@ test('PR 785 year pack: chip number, registration, fit to breed, medicines, vacc
   assert.match(grade, />A</);
   assert.match(csv('health_screen'), /,A/);
   const meds = page('medicines');
-  assert.match(meds, /Sample Wormer/);
+  assert.match(meds, /Med C/);
   assert.match(meds, /1 tablet/);
   assert.match(meds, /Sample Staff/);
-  assert.match(csv('medicines'), /Sample Wormer/);
+  assert.match(csv('medicines'), /Med C/);
   // Room temperatures keep the existing year PDF. This page still exports the readings.
   const temps = Y.catalogue(c).find((s) => s.id === 'area_reading');
   assert.match(temps.printPath, /Temperature history/);
@@ -332,7 +332,7 @@ test('zoom shrinks a page that is taller than one sheet and leaves a short page 
 });
 
 test('medicines: a year is one A4 sheet per month and keeps dose, dog and who', () => {
-  const lines = Meds.build([{ id: 'd1', subject_id: 'd-ada', given_on: '2026-02-03', product: 'Sample Wormer', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
+  const lines = Meds.build([{ id: 'd1', subject_id: 'd-ada', given_on: '2026-02-03', product: 'Med C', dose_volume: '1 tablet', given_by: 'Sample Staff' }], { month: '2026-02', dog: () => ({ name: 'Ada', chip: '' }) });
   const html = Meds.toYearHtml({ kennel: 'Sample Kennel', year: '2026', printed: '15 Mar 2026' }, [
     { month: '2026-01', lines: [] },
     { month: '2026-02', lines: lines }

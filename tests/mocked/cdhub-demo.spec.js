@@ -1,4 +1,4 @@
-// Demo mode (Lisa 22 Nov 2026: "a demo copy ... for video"; guardrails from the overseer): ?demo=1 reads only the demo
+// Demo mode (the owner 22 Nov 2026: "a demo copy ... for video"; guardrails from the overseer): ?demo=1 reads only the demo
 // folder, sends nothing anywhere, shows a DEMO banner on screen and in print, puts DEMO on exports, and cannot be reached
 // from the inspector, guest or staff pages. Invented rows only.
 const fs = require('fs');

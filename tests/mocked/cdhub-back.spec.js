@@ -1,4 +1,4 @@
-// Back works the same everywhere (Lisa 15 Nov 2026: "navigating through and back is not easy in this app").
+// Back works the same everywhere (the owner 15 Nov 2026: "navigating through and back is not easy in this app").
 const { test, expect } = require('../support/test');
 
 const signIn = async (page) => {

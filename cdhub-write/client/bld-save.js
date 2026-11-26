@@ -9,7 +9,7 @@
  * on the page and the banner says so in plain words.
  *
  * No data, codes, emails or Script URLs are stored in this file. The URL arrives at run time
- * (pasted by Lisa on a device, or read from a small Drive config file she owns).
+ * (pasted by the owner on a device, or read from a small Drive config file she owns).
  *
  * Works in a browser (window.BLDSave) and in Node (module.exports) so it can be tested.
  */
@@ -27,7 +27,7 @@
   var TIMEOUT_MS = 150000;  // live saves took 17-127 s (17 Nov 2026); a shorter wait said "could not reach" for saves that landed
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
-  var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
+  var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (the owner, 7 Nov 2026)
   var TABLES = {
     area_reading: {
       label: 'Room temperatures', file: 'BLD-area_reading.csv',
@@ -37,7 +37,7 @@
         max_c: { type: 'temp', label: 'Highest (max) C' },
         spot_c: { type: 'temp', label: 'Spot reading C' },
         mitigation_note: { type: 'text', label: 'What was done about it' },
-        room_empty: { type: 'enum', values: ['yes'], label: 'Room empty' },   // Lisa 11 Nov 2026: no dog; a reading is optional
+        room_empty: { type: 'enum', values: ['yes'], label: 'Room empty' },   // the owner 11 Nov 2026: no dog; a reading is optional
         thermometer_id: { type: 'ref', lookup: 'thermometer', ifLoaded: true, label: 'Thermometer' }   // checked only when the thermometer list is loaded
       }
     },
@@ -57,7 +57,7 @@
       }
     },
     code_vaults: {
-      // Codes vault (Lisa 14 Nov 2026): sealed in the browser (lib/code-vault.js). Hex and public ids only: never a code or the password.
+      // Codes vault (the owner 14 Nov 2026): sealed in the browser (lib/code-vault.js). Hex and public ids only: never a code or the password.
       label: 'Codes vault', file: 'BLD-code_vaults.csv',
       fields: {
         code_id: { type: 'text', required: true, label: 'Code' },
@@ -86,7 +86,7 @@
   function root_() { return (typeof window !== 'undefined') ? window : {}; }
 
   /**
-   * Board A (Lisa 17 Nov 2026): an owner uses the SAME Google sign-in as CD Hub (auth.js keeps it in this browser),
+   * Board A (the owner 17 Nov 2026): an owner uses the SAME Google sign-in as CD Hub (auth.js keeps it in this browser),
    * so no code is needed. Returns the live access token, or '' when there is none, it has expired, or this tab chose to
    * use a staff code. The save script decides who is an owner (ADMIN_EMAILS); a token alone never grants anything.
    */
@@ -167,7 +167,7 @@
         });
     }
 
-    // Saves from this device go one at a time (Lisa 16 Nov 2026: the round sent every room at once, the script lets one
+    // Saves from this device go one at a time (the owner 16 Nov 2026: the round sent every room at once, the script lets one
     // save write at a time, and the rest gave up after its wait with "Someone else is saving right now"). The time limit
     // starts when a save is actually sent, not while it waits its turn. Reads are not queued: they never wait for a save.
     // 20 Nov 2026 (OV12: a round of saves all said "Saving..." for minutes): each save can be told its place in the
@@ -197,7 +197,7 @@
       if (sending > 0) { e.preventDefault(); e.returnValue = ''; return ''; }
     });
 
-    // Two people saving at once (Lisa 16 Nov 2026): the script lets one save write at a time and answers BUSY to a save
+    // Two people saving at once (the owner 16 Nov 2026): the script lets one save write at a time and answers BUSY to a save
     // that waited too long. Nothing was written, so the same save (same request id) is sent again after a short,
     // random pause, up to BUSY_TRIES times, before the person is told.
     var BUSY_TRIES = 3;
@@ -219,7 +219,7 @@
       });
     }
 
-    /* NEVER LOSE AN ENTRY (Lisa 17 Nov 2026; OV12 20 Nov 2026: most of a temperature round was still waiting its turn
+    /* NEVER LOSE AN ENTRY (the owner 17 Nov 2026; OV12 20 Nov 2026: most of a temperature round was still waiting its turn
        when the app closed, and nothing was kept). Every save is kept on this device the moment it is pressed, before
        it waits its turn, and leaves only when the save script answers. With no answer (no signal, timeout, script busy,
        saving switched off for a moment) it stays kept and is sent again by itself with the SAME request id: soon after
@@ -235,7 +235,7 @@
     // and is tried again. No answer at all, or one with no code, counts the same. Every other answer from the script is
     // a refusal (the entry or the code is wrong): it leaves the box and is listed as "Not saved" with the reason.
     var RETRY_ON = { NETWORK: 1, UNREACHABLE: 1, BAD_ANSWER: 1, TIMEOUT: 1, BUSY: 1, CHANGED_DURING_WRITE: 1, LOG_FAILED: 1, SAVE_OFF: 1, TABLE_OFF: 1, NOT_CONFIGURED: 1, NOT_SET_UP: 1, GOOGLE_UNREACHABLE: 1, FOLDER_UNREACHABLE: 1, NO_CODE: 1 };
-    /* SIGN IN AGAIN (Lisa 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
+    /* SIGN IN AGAIN (the owner 22 Nov 2026, owner sign-in): a Google sign-in lasts about an hour. When it has ended, or the
        script says this sign-in may not save (or no one is signed in), nothing was wrong with the entry, so it is never refused for
        that: it stays kept and waits until someone signs in again or enters a code, then goes by itself. It is not sent
        again with the same sign-in. A wrong staff code is still refused and said plainly ("not recognised"). */
@@ -542,7 +542,7 @@
     function linkEnd(fields, requestId) { return act('link_end', fields, requestId); }
 
     /**
-     * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
+     * Read one list through the script, as far as the owner has allowed THIS staff code (no Google sign-in).
      * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
      * Nothing is cached or kept: the rows live only in the page.
@@ -588,7 +588,7 @@
         return r;
       };
       if (!keys.length) return Promise.resolve({ ok: true, tables: out });
-      // Speed (Lisa 13/11): the first list goes alone, so a wrong or ended code costs one try, not one per list
+      // Speed (the owner 13/11): the first list goes alone, so a wrong or ended code costs one try, not one per list
       // (each wrong try counts toward the lock-out). The rest go together; the first refusal in list order is
       // reported, exactly as when they went one after another.
       return read(keys[0]).then(function (first) {
@@ -603,7 +603,7 @@
     }
 
     /**
-     * Optional: read the Script URL from a small Drive file Lisa owns, so every signed-in device
+     * Optional: read the Script URL from a small Drive file the owner owns, so every signed-in device
      * picks it up. Uses the readonly token the page already has. The URL is checked against the
      * Google Apps Script address pattern, so a wrong or tampered file cannot send staff codes elsewhere.
      */

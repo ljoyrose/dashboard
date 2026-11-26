@@ -1,6 +1,6 @@
 # Successor job: #346 compliance display on the new history page
 
-One PR. Left open, clean and green. No merge. The merge, #378 and the org-chart questions stay with Lisa.
+One PR. Left open, clean and green. No merge. The merge, #378 and the org-chart questions stay with the owner.
 
 ## Goal
 Rebuild the indoor compliance display (the intent of closed #304) on the rebuilt history page `cdhub/history.html`, as PR #346's replacement work.
@@ -25,7 +25,7 @@ Tokens from `tokens.css` only (no raw colours), 1px inside focus (`--house-focus
 3. Privacy guard on every diff, `--staged` and `--range origin/main..HEAD` (dashboard is public: no ids, emails, client names or licence numbers).
 4. Page-size growth only via `tests/budget-growth/<name>.json`.
 5. Push with plain `git push` (never force). Commit trailers: the standard two-line Co-Authored-By and Claude-Session pair. No model name in commit or PR text.
-6. Update PR #346's description. Leave it open and confirm CI is green. Report PR link and head SHA to Lisa in short numbered lines.
+6. Update PR #346's description. Leave it open and confirm CI is green. Report PR link and head SHA to the owner in short numbered lines.
 
 ## Not yours
 Merges, #378, #377, #454, the org-chart units question, live Apps Script or sheet changes.

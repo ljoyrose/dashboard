@@ -31,14 +31,14 @@ test.describe('CD Hub: Dogs search, Clear filters and the weighings panel', () =
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'dogs');
     const wt = page.locator('.dc', { hasText: 'Test Dog One' }).locator('details.wtc').first();
-    await wt.locator('> summary').click();   // in place on the card (Lisa 15 Nov 2026), no panel at the top
+    await wt.locator('> summary').click();   // in place on the card (the owner 15 Nov 2026), no panel at the top
     await expect(page.locator('#wpanel')).toBeEmpty();
     const rows = wt.locator('[data-k="wrow"]');
     await expect(rows).toHaveCount(2);
     await expect(rows.first()).toContainText('14.6 kg');
     await expect(rows.first().locator('[data-k="wchange"]')).toHaveText('+0.4');
     await expect(rows.last().locator('[data-k="wchange"]')).toHaveText('first');
-    // the weight source column stays in the sheet but is not shown (Lisa, 12 Nov 2026)
+    // the weight source column stays in the sheet but is not shown (the owner, 12 Nov 2026)
     await expect(wt).not.toContainText('invented');
     await expect(wt.locator('form[data-weigh-form]')).toBeVisible();
   });
@@ -171,7 +171,7 @@ test.describe('CD Hub: entry boxes on The round and Areas (saving not set up, so
   });
 });
 
-test.describe('CD Hub: max lower than min = min and max typed the wrong way round (Lisa, 7 Nov 2026)', () => {
+test.describe('CD Hub: max lower than min = min and max typed the wrong way round (the owner, 7 Nov 2026)', () => {
   test('typing max below min raises a loud alert on both boxes and saves nothing; fixing it clears the alert', async ({ page, guard }) => {
     await page.addInitScript(() => { try { localStorage.setItem('cdhub.sink.url', 'https://script.google.com/macros/s/AKfyTEST_only_123/exec'); localStorage.setItem('cdhub.sink.code', 'test-code-1'); } catch (e) {} });
     const sent = [];
@@ -229,7 +229,7 @@ test.describe('CD Hub: max lower than min = min and max typed the wrong way roun
   });
 });
 
-test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and litters and matings are checked against them (Lisa, 8 Nov 2026)', () => {
+test.describe('CD Hub: breeding rules are set by the breeder on Compliance, and litters and matings are checked against them (the owner, 8 Nov 2026)', () => {
   const LIT = (rows) => 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\n' + rows.join('\n') + '\n';
   // These tests replace the rules table, so they keep the test kennel's switched-on views (Table map, Litters).
   const NAV_ON = ['nv1,ten-test,nav.view.litters,1,2020-01-01,invented,,,', 'nv3,ten-test,nav.view.shape,1,2020-01-01,invented,,,'];
@@ -452,7 +452,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(14);   // Yearly print added beside Items; Decide added in Main. Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(14);   // Yearly print added beside Items; Decide added in Main. Enquiries and Staff under More; Table map and Assocs off it (the owner 13 Nov)
   });
 
   test('after a failed read, Try again reads the folder again and the tables load', async ({ page, guard, allowedConsole }) => {
@@ -465,11 +465,11 @@ test.describe('CD Hub: slow and failed reads', () => {
     guard.world.failWith = null;
     await page.locator('#main button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(14);   // Yearly print added beside Items; Decide added in Main. Enquiries and Staff under More; Table map and Assocs off it (Lisa 13 Nov)
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(14);   // Yearly print added beside Items; Decide added in Main. Enquiries and Staff under More; Table map and Assocs off it (the owner 13 Nov)
   });
 });
 
-test.describe('CD Hub: phone top bar Look menu (it replaced the More menu, Lisa\'s pick A)', () => {
+test.describe('CD Hub: phone top bar Look menu (it replaced the More menu, the owner\'s pick A)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
   test('Look opens its menu; Escape and a tap outside both close it', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);

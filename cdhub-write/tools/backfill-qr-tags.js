@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * backfill-qr-tags.js - give existing items the QR code their type's rule says they should have (Lisa 15 Nov 2026,
+ * backfill-qr-tags.js - give existing items the QR code their type's rule says they should have (the owner 15 Nov 2026,
  * print-any-item job, Addendum 2 h). DRY RUN BY DEFAULT: it prints COUNTS ONLY (no names, no ids, no tags).
  *
  * It never writes to BLD-qr_tag or any other file it reads. With --out it writes the NEW tag rows to a NEW file
  * (refused if that file exists). A real run is: back up BLD-qr_tag (copy it, e.g. BLD-qr_tag.csv.pre-backfill-<date>.bak),
- * append the --out rows to a COPY, check the counts, and only then, with Lisa's yes, append them to the live file.
+ * append the --out rows to a COPY, check the counts, and only then, with the owner's yes, append them to the live file.
  * Running it again after that adds 0: an item that already has an active tag of its kind is never given a second one.
  *
  * Inputs (CSV, read-only):

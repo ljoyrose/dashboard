@@ -1,4 +1,4 @@
-// Print never shows a code that is not saved (Lisa, 15 Nov 2026). A staff code is told plainly that new codes need an
+// Print never shows a code that is not saved (the owner, 15 Nov 2026). A staff code is told plainly that new codes need an
 // owner code; a refused save stops the sheet. Invented rows and codes only.
 const { test, expect } = require('../fixtures/job34/load');
 

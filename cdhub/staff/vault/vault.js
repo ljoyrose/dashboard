@@ -1,5 +1,5 @@
 /*!
- * Codes vault page (Lisa 14 Nov 2026, option B). Owner-set access: can('codes.vault'), starting default role OWNER.
+ * Codes vault page (the owner 14 Nov 2026, option B). Owner-set access: can('codes.vault'), starting default role OWNER.
  * The vault password is typed here and kept only in memory while the vault is open (lib/code-vault.js). Codes are
  * sealed and opened on this device; only sealed hex and public ids go to the save script. One code shows at a time,
  * for 30 seconds; the vault locks after 1 minute without use and when the page is hidden.
@@ -102,7 +102,7 @@
     screen.innerHTML = h;
   }
 
-  /* Add existing code: Lisa or Grace types or pastes a code from her current list. The save script checks it against
+  /* Add existing code: the owner or Grace types or pastes a code from her current list. The save script checks it against
      that person's sign-in (ok or no only) before it is sealed, so a typo is never kept. */
   function addHtml(list) {
     var todo = list.filter(function (r) { return !sealedFor(r.code_id); });

@@ -1,4 +1,4 @@
-// Owner hub speed (Lisa 13 Nov 2026): first-screen tables are read first and the rest straight after;
+// Owner hub speed (the owner 13 Nov 2026): first-screen tables are read first and the rest straight after;
 // the owner's last full read is kept on this device and shown at once next time, marked "updated x min ago",
 // wiped on Sign out, on "Signed out in another tab" and when Google refuses. Compliance never shows the copy.
 const { test, expect } = require('../support/test');

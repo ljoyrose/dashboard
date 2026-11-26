@@ -1,4 +1,4 @@
-// Web Estate Hub: reads the private RR_WEB-ESTATE sheet with Lisa's Google sign-in (the same token the other pages use)
+// Web Estate Hub: reads the private RR_WEB-ESTATE sheet with the owner's Google sign-in (the same token the other pages use)
 // and checks it against the data contract in core.js before any row is shown. Read only: it never writes.
 // The sheet id comes from config.js (DASH_CONFIG.estate.sheetId). Until it is set the reader returns "not set up".
 (function (root, factory) {

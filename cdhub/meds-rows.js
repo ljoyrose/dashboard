@@ -33,5 +33,12 @@
     return str(dog) + '|' + str(on).slice(0, 10) + '|' + prod;
   }
 
-  return { isMedCheck: isMedCheck, procedureDrug: procedureDrug, doseKey: doseKey };
+  /** A dose row that has been ended: a reason, or a to_date before today. Today still counts. */
+  function doseEnded(r, today) {
+    if (str(r && r.end_reason)) return true;
+    var to = str(r && r.to_date).slice(0, 10), day = str(today).slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(to) && /^\d{4}-\d{2}-\d{2}$/.test(day) && to < day;
+  }
+
+  return { isMedCheck: isMedCheck, procedureDrug: procedureDrug, doseKey: doseKey, doseEnded: doseEnded };
 }));

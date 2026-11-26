@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 11 Nov 2026, Lisa: "each reading needs to be shown in the room but by name ... room H5/6 has 2 named thermometers".
+ * 11 Nov 2026, the owner: "each reading needs to be shown in the room but by name ... room H5/6 has 2 named thermometers".
  * area_reading.thermometer_id (optional, last column): a room with 2 thermometers takes 2 readings a slot; the
  * thermometer must be in the reading's room; blank keeps the old rule (one reading per room per slot).
  */

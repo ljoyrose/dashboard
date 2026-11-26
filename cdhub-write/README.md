@@ -8,21 +8,21 @@ A way for staff to save room temperatures and confirm where each dog is, without
 Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps Script web app
  Where is everyone? / Enter temperatures                                    |  staff code, allow-list, field checks, lock
                                                                              v
- approvals queue  BLD-_pending.csv --Lisa approves-->  BLD-occupancy.csv / BLD-area_reading.csv (one new line)
- (or straight in: temperatures and the daily check log by default; moves after the 14-day queue period, or if Lisa sets MODE_occupancy=direct)
+ approvals queue  BLD-_pending.csv --the owner approves-->  BLD-occupancy.csv / BLD-area_reading.csv (one new line)
+ (or straight in: temperatures and the daily check log by default; moves after the 14-day queue period, or if the owner sets MODE_occupancy=direct)
 
  Staff READ the lists they need with the same code:   screens -> BLDSave.read -> script read action -> only what BLD-field_visibility.csv allows
- Lisa only (her Google account, owner page):         Edit an entry -> overwrites ONE record in place, no record kept
+ the owner only (her Google account, owner page):         Edit an entry -> overwrites ONE record in place, no record kept
                                                       Staff codes -> switch a code off (kept in the list, refused at once)
 ```
 
-`drive.readonly` is only for Lisa's own sign-in. Staff never sign in to Google.
+`drive.readonly` is only for the owner's own sign-in. Staff never sign in to Google.
 
 ## What is ON and OFF
 
 | Thing | State |
 |---|---|
-| Saving (`SAVE_ENABLED`) | **OFF** until Lisa sets it |
+| Saving (`SAVE_ENABLED`) | **OFF** until the owner sets it |
 | Allow-list | **four files only**: `BLD-area_reading.csv`, `BLD-occupancy.csv` (own switch `TABLE_ON_occupancy`, off), `BLD-occupancy_check.csv` (own switch `TABLE_ON_occupancy_check`, off), `BLD-_pending.csv` |
 | Staff roster (`BLD-staff.csv`) | **proposed only**, on a separate list in the code, refused until agreed |
 | `round_event` | **retired** (kept in the code, refused) |
@@ -32,7 +32,7 @@ Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps S
 | Staff reading (`READ_ENABLED`) | **OFF**; default deny: no permission row means nothing is shown |
 | Owner edit (`OWNER_EDIT_ENABLED`) | **OFF**; owner page only; no record kept |
 | Script URL | **not set**; screens show "Saving is off" |
-| Files on Drive | nothing created or changed; Lisa creates the two new files (SETUP step 7) |
+| Files on Drive | nothing created or changed; the owner creates the two new files (SETUP step 7) |
 | Daily backup copy | optional, **OFF** (`BACKUP_ON`) |
 | Old `/cdhub/` | untouched |
 
@@ -46,7 +46,7 @@ Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps S
 - `wired/` the Bloodline patch and script (in use); `board-dropin.js` (parked, not used)
 - `tools/` `backfill-rooms.js` (one-off: new occupancy rows only, never edits)
 - `tests/` fake fixtures and the tests (run from this folder: `npm install && npm test`)
-- `docs/` SETUP.md (for Lisa), PRACTICE-RUN.md (for the bot), design note, MAP note, options note, Q&A slips, proposed permission rows (two `.csv` files, CRLF)
+- `docs/` SETUP.md (for the owner), PRACTICE-RUN.md (for the bot), design note, MAP note, options note, Q&A slips, proposed permission rows (two `.csv` files, CRLF)
 - `PROGRESS.md` what is done and what is next; `HANDOVER.md` state, decisions, ids
 
 ## Run the tests
@@ -65,4 +65,4 @@ The repo copy is in PR #10 (`cdhub-write/`). The Drive copy (folder `JOB4_CDHUB-
 
 ## Start here
 
-Lisa: `docs/SETUP.md`, then `AA_JOB4_SLIP_03.md`. The bot: `docs/PRACTICE-RUN.md`. Reviewers: `docs/AA_2026-10-15_JOB4-DESIGN-NOTE__claude-job4.md` (sections 10 and 11 are the v2 and v3 follow-ups).
+the owner: `docs/SETUP.md`, then `AA_JOB4_SLIP_03.md`. The bot: `docs/PRACTICE-RUN.md`. Reviewers: `docs/AA_2026-10-15_JOB4-DESIGN-NOTE__claude-job4.md` (sections 10 and 11 are the v2 and v3 follow-ups).

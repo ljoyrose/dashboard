@@ -1,4 +1,4 @@
-// Template marker (Lisa's Q3 = A, engine v0.2.28): every piece is a one-off unless marked. A marked piece shows a
+// Template marker (the owner's Q3 = A, engine v0.2.28): every piece is a one-off unless marked. A marked piece shows a
 // 'Template candidate' chip, is listed under Kits > Kits, and the details carry a One-off / Template toggle that sends one
 // 'set reuse' request. Client material can never be a template. Invented data only.
 // the real state renders; tabs, find bar, Review write-back with Undo, Tools warnings, phone width, dark mode, text size.

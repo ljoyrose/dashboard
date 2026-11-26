@@ -1,10 +1,10 @@
-// The style sweep (Lisa, 3 Nov 2026): one set of in-page checks, read back from the drawn page and its style sheets.
+// The style sweep (the owner, 3 Nov 2026): one set of in-page checks, read back from the drawn page and its style sheets.
 //  1 No fill on hover, focus, press or selected, anywhere except typing boxes (input, textarea, select, contenteditable) and the ONE
-//    pale grey state fill (Lisa, 12 Nov 2026: hover, tap and selected = --hov / --sel-fill; on the dark frame --frame-hov).
+//    pale grey state fill (the owner, 12 Nov 2026: hover, tap and selected = --hov / --sel-fill; on the dark frame --frame-hov).
 //  2 Numbers side by side in one group are the same size (and weight).
 //  3 No explainer lines or sub-lines that restate a label.
 //  4 Nothing moves on hover or focus.
-//  5 A rose count means late: every rose ring sits with something late, overdue, down or expired. A black count (.broken, Lisa
+//  5 A rose count means late: every rose ring sits with something late, overdue, down or expired. A black count (.broken, the owner
 //    3 Nov 2026) means broken: it sits with something down, expired, stuck or failed, and its link (if it has a label) says the word.
 // Each check returns a list of plain-words problems, so a red run says what to fix.
 
@@ -16,7 +16,7 @@ function stateRules() {
   // Typing boxes may change their background; so may an on/off switch (a form control: its track shows on or off).
   const TYPING = /(^|[\s>+~(,])(input|textarea|select)\b|\[contenteditable|::placeholder|::-webkit|::selection|\.fin\b|\.sw\b/;
   const noNot = (x) => { let y = x, z; while ((z = y.replace(/:not\([^()]*\)/g, '')) !== y) y = z; return y; };   // :not(:hover) is the resting state
-  // The one pale grey state fill (Lisa, 12 Nov 2026) is the house rule, not a fill to find.
+  // The one pale grey state fill (the owner, 12 Nov 2026) is the house rule, not a fill to find.
   const OK_BG = /^(transparent|none|inherit|initial|unset|revert|var\(--(house-)?card\)|var\(--(hov|sel-fill|frame-hov)\)|rgba\(0, 0, 0, 0\))$/;
   const out = [];
   const walk = (rules, sheet) => {
@@ -25,7 +25,7 @@ function stateRules() {
       if (!r.selectorText || !r.style) continue;
       const parts = r.selectorText.split(/,(?![^(]*\))/).map((x) => x.trim()).filter((x) => STATE.test(noNot(x)) && !TYPING.test(x));
       if (!parts.length) continue;
-      // The bar under a bottom tab is the tab's own marker (Lisa's tab picks): it widens and takes the tab colour, by design.
+      // The bar under a bottom tab is the tab's own marker (the owner's tab picks): it widens and takes the tab colour, by design.
       const sel = parts.filter((x) => !/(^|\s|>)\.bar\b/.test(x)).join(', ');
       if (!sel) continue;
       for (const prop of ['background', 'background-color', 'background-image']) {
@@ -63,7 +63,7 @@ function drawn() {
   const out = { selected: [], groups: [], explainers: [], rose: [], broken: [] };
 
   // 1 Selected things carry no fill: the same background as an unselected one beside it, or as what they sit on, or the one pale
-  //   grey selected fill (--sel-fill, Lisa 12 Nov 2026).
+  //   grey selected fill (--sel-fill, the owner 12 Nov 2026).
   const pr = document.createElement('span'); pr.style.background = 'var(--sel-fill, transparent)'; document.body.appendChild(pr);
   const selFill = getComputedStyle(pr).backgroundColor; pr.remove();
   const SEL = '[aria-pressed="true"], [aria-current="page"], [aria-current="true"], [aria-selected="true"], .on, .sel, .selected';
@@ -169,7 +169,7 @@ function lateShown(brokenToo) {
   return /(?<![a-z])(late|overdue|down|expired|past (its|their) due)(?![a-z])/i.test(v.innerText || '');
 }
 
-// Text contrast (Lisa, 3 Nov 2026): every piece of text holds 4.5:1 or better on what it actually sits on.
+// Text contrast (the owner, 3 Nov 2026): every piece of text holds 4.5:1 or better on what it actually sits on.
 // Runs in the page: walks the visible text nodes, finds the colour behind each one (up through the parents to the first
 // solid background, blending any see-through layers on the way), and returns one line per element under 4.5:1.
 // Skipped: disabled controls (WCAG excuses them), aria-hidden text (decorative), text over a picture or gradient

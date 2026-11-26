@@ -1,5 +1,5 @@
 // Factory find bar (20 Oct 2026): one bar on Me, Rooms, Decide, Do and Docs — search, app, kind, who, stage,
-// flags, sort, TEST — plus the Me tab, the app picker and the two link forms bots send Lisa.
+// flags, sort, TEST — plus the Me tab, the app picker and the two link forms bots send the owner.
 // Pretend Google and Drive only; the data is tests/fixtures/factory/state.js (invented).
 const fs = require('fs');
 const path = require('path');
@@ -87,7 +87,7 @@ test.describe('Factory find bar', () => {
     await expect(rows(page)).toHaveCount(2);
   });
 
-  test('who: Me shows only what is tagged for Lisa; Claude and Grok on Rooms', async ({ page, guard }) => {
+  test('who: Me shows only what is tagged for the owner; Claude and Grok on Rooms', async ({ page, guard }) => {
     await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await panel(page);
     await chip(page, 'who', 'me').click();
@@ -197,7 +197,7 @@ test.describe('Factory find bar', () => {
     await expect(rows(page)).toHaveCount(3);
   });
 
-  test('Me: first tab, counts what waits on Lisa across Decide and Do, newest first, by app', async ({ page, guard }) => {
+  test('Me: first tab, counts what waits on the owner across Decide and Do, newest first, by app', async ({ page, guard }) => {
     await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await expect(page.locator('nav.tabs a').first()).toHaveAttribute('data-nav', 'me');
     await expect(page.locator('#nMe')).toHaveText('7');
@@ -255,7 +255,7 @@ test.describe('Factory send gate', () => {
   const send = (st, id) => st.lists.sends.find((t) => t.id === id);
   const hm = (ts) => new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
 
-  test('all five lines present: Copy shows, with the Happy Hour reading, the after-send block and when Lisa is free', async ({ page, guard }) => {
+  test('all five lines present: Copy shows, with the Happy Hour reading, the after-send block and when the owner is free', async ({ page, guard }) => {
     await open(page, guard, '#/item/869fk9d1r');
     await expect(page.locator('[data-copy="869fk9d1r"]')).toBeVisible();
     const info = page.locator('[data-sendinfo="869fk9d1r"]');
@@ -350,7 +350,7 @@ test.describe('Factory send gate', () => {
     await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Happy Hour/);
   });
 
-  test('a leak or security send needs "Lisa available"; Lisa\'s Do lines for the app are linked', async ({ page, guard }) => {
+  test('a leak or security send needs "the owner available"; the owner\'s Do lines for the app are linked', async ({ page, guard }) => {
     await open(page, guard, '#/item/869fk9d1r', { change: (st) => {
       const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nLisa available:[^\n]*/, '');
       st.lists.work.push({ ...st.lists.work[0], id: 'wrk000009', name: 'Sample Links · Be there for the leak tests', tags: ['who-lisa', 'app-869fjxpc2'], due: null });
@@ -373,7 +373,7 @@ test.describe('Factory selected and focus lines', () => {
     await expect(tab).toHaveAttribute('data-nav', 'me');
     expect((await st(tab))[0].s).toBe('none');
     await expect(tab.locator('.bar')).toHaveCSS('width', '40px');
-    // The app chips moved with the old Main list to More > Mine (#/me/all) when Main became the hub Main (Lisa, 2 Nov).
+    // The app chips moved with the old Main list to More > Mine (#/me/all) when Main became the hub Main (the owner, 2 Nov).
     await page.locator('nav.tabs [data-house-more]').click();
     await page.locator('nav.tabs a[href="#/me/all"]').click();
     await expect(page).toHaveURL(/#\/me\/all$/);

@@ -1,4 +1,4 @@
-// Temperatures (History) page: layout, information, colour and audit rules (Lisa, 11 Nov 2026:
+// Temperatures (History) page: layout, information, colour and audit rules (the owner, 11 Nov 2026:
 // "the info i need without looking alarming"). Pretend Drive only; every row here is invented.
 // RULES is the one list later screens reuse (round, year report, prints).
 const { test, expect } = require('../support/test');
@@ -62,7 +62,7 @@ function expected() {
   const needed = { 'area-r1': ['2026-01-05', '2026-01-12'], 'area-r2': ['2026-01-05', '2026-01-12'], 'area-r3': ['2026-01-05', '2026-01-12'], 'area-r4': ['2026-01-05', '2026-01-10'] };
   let slots = 0;
   for (const [, [a, b]] of Object.entries(needed)) for (let d = 5; d <= +b.slice(8); d++) slots += (d === 12 && b === '2026-01-12') ? 1 : 2;   // today PM is due
-  // Temps A (Lisa 17 Nov 2026): below the minimum is outside; over the maximum is "warm: cooling action", not outside.
+  // Temps A (the owner 17 Nov 2026): below the minimum is outside; over the maximum is "warm: cooling action", not outside.
   const read = R.length, out = R.filter((r) => +r[3] < 10).length, warm = R.filter((r) => +r[3] >= 10 && +r[4] > 26).length;
   return { read, out, warm, miss: slots - read };
 }
@@ -135,7 +135,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
   await expect(drill.locator('#d-out')).toHaveText('5.3 / -1.9 °C, rain 0 mm');
   await expect(drill.locator('#d-out')).toHaveText(RULES.words.outsideLine);
   const lines = drill.locator('.rl');
-  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);   // Lisa 18 Nov 2026: no "(retired …)" in the calendar
+  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);   // the owner 18 Nov 2026: no "(retired …)" in the calendar
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
   for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards', 'Report']) {
@@ -282,7 +282,7 @@ test('audit: a room in use with no readings at all is listed and shows missed, n
 
 module.exports = { RULES };
 
-// Room empty (Lisa 11 Nov 2026): no dog present, a flag on the slot's reading. With no reading the slot is covered
+// Room empty (the owner 11 Nov 2026): no dog present, a flag on the slot's reading. With no reading the slot is covered
 // (never missed); outside the limit while empty is flagged "Room empty" but never counted as outside the limit.
 test('audit: Room empty is covered, never missed; an outside reading in an empty room is flagged but not counted', async ({ page, guard }) => {
   const extra = '\nrdg-e1,area-r3,2026-01-07T16:00:00Z,2026-01-07T12:00:00+00:00,,,,,stf-1,,yes'
@@ -314,7 +314,7 @@ test('audit: Room empty is covered, never missed; an outside reading in an empty
   await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));    // R3 PM 07/01, R1 and R2 AM 08/01 covered
 });
 
-// Lisa 18 Nov 2026 ("mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just hide them"): a room.empty
+// the owner 18 Nov 2026 ("mark h2 (iso) as empty since 01/01/25 ... temps can stay in records just hide them"): a room.empty
 // need row makes the room Room empty AM and PM on every day it covers. Its readings stay in the file but no figure shows,
 // nothing is outside and nothing is missed. Rule-driven: the row, never a room name in code.
 test('audit: a room marked empty by a room.empty row shows empty AM and PM, its temperatures hidden, never outside or missed', async ({ page, guard }) => {
@@ -338,7 +338,7 @@ test('audit: a room marked empty by a room.empty row shows empty AM and PM, its 
   await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.miss')).toHaveCount(0);
 });
 
-// Two named thermometers in one room (Lisa 11 Nov 2026, H5/6): one line each, "H5/6 · H5" and "H5/6 · H6", each
+// Two named thermometers in one room (the owner 11 Nov 2026, H5/6): one line each, "H5/6 · H5" and "H5/6 · H6", each
 // missed on its own. An older reading with no thermometer_id still counts for a room with only one thermometer.
 test('audit: a room with two thermometers has a line per thermometer; a blank thermometer_id counts for a one-thermometer room', async ({ page, guard }) => {
   const rooms = 'id,code,group_sort\narea-h,H5/6,1\narea-s,S1,2\n';
@@ -361,7 +361,7 @@ test('audit: a room with two thermometers has a line per thermometer; a blank th
   await expect(page.locator('#view-d .rtile', { hasText: 'S1' }).locator('.warn')).toHaveCount(0);
 });
 
-// Links (Lisa 12 Nov 2026, "I need the temps to show continuously"): BLD-area_link rows make an old room's readings
+// Links (the owner 12 Nov 2026, "I need the temps to show continuously"): BLD-area_link rows make an old room's readings
 // show for the room it became. A split room shows in both new rooms; a merged room shows the widest of its old
 // readings (lowest MIN, highest MAX), never an average. The old rooms keep their own lines; nothing is rewritten.
 test('audit: area links show old rooms\' readings in the new rooms, widest for a merged slot', async ({ page, guard }) => {
@@ -390,7 +390,7 @@ test('audit: area links show old rooms\' readings in the new rooms, widest for a
   await expect(page.locator('#view-d .rtile', { hasText: '(from' })).toHaveCount(0);
 });
 
-// Lisa 12 Nov 2026 (every limit is a dated row; overseer sweep T4): a room is judged by the band for the youngest dog in
+// the owner 12 Nov 2026 (every limit is a dated row; overseer sweep T4): a room is judged by the band for the youngest dog in
 // it that day, as the staff round and the hub do, never by the adult band alone. Invented dog and rows only.
 test('audit: a room holding a puppy under 4 weeks is judged by the puppy band that day; an adult room by the adult band', async ({ page, guard }) => {
   const bands = 'id,band,age_from_days,age_to_days,min_temp,max_temp,from_date,to_date\n'
@@ -411,12 +411,12 @@ test('audit: a room holding a puppy under 4 weeks is judged by the puppy band th
   await expect(page.locator('#livepill')).toHaveText('Up to date', LOADED);
   await page.locator('.yr-btn[data-yr="2026"]').click();
   await openDay(page, '2026-01-05');
-  // Temps A (Lisa 17 Nov 2026): R1 holds a 4-day-old puppy. The room is judged on the adult row (12.0–15.0 is in);
+  // Temps A (the owner 17 Nov 2026): R1 holds a 4-day-old puppy. The room is judged on the adult row (12.0–15.0 is in);
   // 26–28 is for the bed spot, and with no bed spot reading the slot says so - never outside.
   const r1 = page.locator('#drill .rl', { hasText: 'R1' });
   await expect(r1.locator('.warn')).toHaveCount(0);
   await expect(r1).toContainText('AM 12.0–15.0 ✓');
-  await expect(r1.locator('.cool-act')).toHaveCount(0);   // Lisa 18 Nov 2026: no "bed spot not recorded" words
+  await expect(r1.locator('.cool-act')).toHaveCount(0);   // the owner 18 Nov 2026: no "bed spot not recorded" words
   await expect(r1).not.toContainText('bed spot not recorded');
   // R2 has no dogs: the adult band, 12.0–15.0 is in
   await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓');
@@ -470,7 +470,7 @@ test('audit: a reading with max lower than min is flagged, even when both figure
   await expect(page.locator('#view-c .mitem[data-month="1"]')).toContainText('1 max lower than min');
 });
 
-// Lisa 12 Nov 2026 (t957u/t958u): July/August cells take their colour from the day's readings and the standing
+// the owner 12 Nov 2026 (t957u/t958u): July/August cells take their colour from the day's readings and the standing
 // limits (empty from_date / to_date, as on the live band table). Invented rooms and figures only. Outside the
 // limit is solid orange (.warn); a missed needed reading is an orange outline (.miss). The day panel does not
 // repeat empty "what was done" lines or "(from …)" source text.
@@ -565,7 +565,7 @@ test('audit: July and August indoor days colour from the readings; missed is an 
   const julyIn = await paint('2026-07-12');
   const bare = await dayM('2026-07-01').evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(julyIn.bg, 'an in-limit July day is not the empty-cell fill').not.toBe(bare);
-  // Lisa 17 Nov 2026: in limit is the solid green (the pale tint with a frame looked "weird"), the same colour as the legend
+  // the owner 17 Nov 2026: in limit is the solid green (the pale tint with a frame looked "weird"), the same colour as the legend
   const solid = await page.evaluate(() => { const i = document.createElement('i'); i.style.color = 'var(--ljr-5)'; document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; });
   expect(julyIn.bg).toBe(solid);
 });
@@ -665,7 +665,7 @@ test('21 Nov (Steward on #346): the outdoor calendar has an amber corner dot on 
   await expect(day(9).locator('.d-dot.idot-warn')).toHaveCount(1);
 });
 
-// Lisa 18 Nov 2026: "PDF A and B and also both month and year - all options selectable by user". Print / PDF builds the
+// the owner 18 Nov 2026: "PDF A and B and also both month and year - all options selectable by user". Print / PDF builds the
 // pages from the same day rules as the screen: B summary calendars, A room tables, for one month or a whole year.
 test('Print / PDF: summary and room table for a month, totals and outside list from the records; the year skips months not begun', async ({ page, guard }) => {
   await open(page, guard);
@@ -680,7 +680,7 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   const rep = page.locator('#report');
   await expect(rep.locator('.rp-page')).toHaveCount(2);
   await expect(rep.locator('[data-rp="summary"]')).toHaveAttribute('data-month', '2026-01');
-  await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4']);   // the page's own room names (no "(retired …)" since Lisa 18 Nov 2026)
+  await expect(rep.locator('[data-rp="table"] tbody th[rowspan]')).toHaveText(['R1', 'R2', 'R3', 'R4']);   // the page's own room names (no "(retired …)" since the owner 18 Nov 2026)
   const want = expected();
   await expect(rep.locator('[data-rp="table"] [data-rp-totals]')).toContainText(`Readings taken: ${want.read} · missed: ${want.miss} · outside the limit: ${want.out}`);
   await expect(rep.locator('.rp-out li', { hasText: 'R1' }).first()).toContainText('nothing recorded');
@@ -704,7 +704,7 @@ test('Print / PDF: summary and room table for a month, totals and outside list f
   if (process.env.RP_SAMPLE) await page.pdf({ path: process.env.RP_SAMPLE, format: 'A4', landscape: true, printBackground: true });
 });
 
-// Lisa 22 Nov 2026: "print pages for month ... fit on one page nicely for each type, particularly the tick versions".
+// the owner 22 Nov 2026: "print pages for month ... fit on one page nicely for each type, particularly the tick versions".
 // A full month for 30 rooms: the summary is one A4 sheet and the room table is one A4 sheet, checked in a real PDF.
 test('Print / PDF: a 30-room month prints the summary on one page and the room table on one page', async ({ page, guard }, info) => {
   const n = 30;

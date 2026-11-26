@@ -7,7 +7,7 @@ const { test, expect } = require('../support/test');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-// Menu option A (Lisa 14 Nov 2026): Main, the starting sections, then More with every other view in colour order.
+// Menu option A (the owner 14 Nov 2026): Main, the starting sections, then More with every other view in colour order.
 const PRIMARY = [
   ['Main', './index.html#/map'],
   ['Compliance', './index.html#/compliance'],
@@ -140,7 +140,7 @@ test('the hub More menu includes the same Temps link, and it opens the history p
   await expect(page.locator('#houseMore a[href="./history.html"]')).toHaveAttribute('aria-current', 'page');
 });
 
-// Lisa 17 Nov 2026: closing Temperatures goes back to CD Hub, never the whole dashboard. The top-right button used to
+// the owner 17 Nov 2026: closing Temperatures goes back to CD Hub, never the whole dashboard. The top-right button used to
 // be Sign out, which looked like close.
 test('history.html: the top-right button closes back to CD Hub; there is no Sign out button on this page', async ({ page }) => {
   await bar(page, 'cdhub/history.html', true);

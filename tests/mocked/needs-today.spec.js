@@ -1,5 +1,5 @@
-// "Needs you" on the Dashboard: one short list of what needs Lisa across all hubs, from data already read.
-// At most 5 rows since Dashboard Main (Lisa's pick, 2 Nov; it was 7), late first, then due soon, then waiting.
+// "Needs you" on the Dashboard: one short list of what needs the owner across all hubs, from data already read.
+// At most 5 rows since Dashboard Main (the owner's pick, 2 Nov; it was 7), late first, then due soon, then waiting.
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { IDS } = require('../support/world');
@@ -35,7 +35,7 @@ test.describe('Needs you today', () => {
     for (let i = 0; i < n; i++) await expect(rows.nth(i).locator('a')).toHaveAttribute('href', /.+/);
     const total = Number((await page.locator('#needsToday .cardhead .mtag').textContent()).match(/\d+/)[0]);
     await expect(page).toHaveTitle(new RegExp('^\\(' + total + '\\) Dashboard'));
-    // The rest open Do from one plain "+N more" link (Lisa, 2 Nov).
+    // The rest open Do from one plain "+N more" link (the owner, 2 Nov).
     if (total > 5) await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText('+' + (total - 5) + ' more');
   });
 

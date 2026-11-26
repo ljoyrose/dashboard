@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 11 Nov 2026, Lisa: "remove 7 day limit on readings". Room temperature readings (staff, owner, guest) may be typed in
+ * 11 Nov 2026, the owner: "remove 7 day limit on readings". Room temperature readings (staff, owner, guest) may be typed in
  * late, e.g. from photos, back as far as temperature records are kept (a BLD-retention_setting row, else 6 years).
  * Never a future time; read_method defaults to typed; taken_at / taken_by show when it was typed; other lists keep 7 days.
  */
@@ -87,7 +87,7 @@ test('the cap edge: back to exactly the kept years saves, a minute more is refus
   const over = send(env, env.codes.staff, { period_start: iso(sixYearsAgo - 60000) });
   assert.equal(over.code, 'INVALID'); assert.match(over.fields.period_start, /kept \(6 years\)/);
 
-  env = env0();                                                   // Lisa sets temperature records to 2 years
+  env = env0();                                                   // the owner sets temperature records to 2 years
   env.addFile('BLD-retention_setting.csv', ['id,tenant_id,section,keep_years,basis,set_by,set_on',
     `ret-1,${fx.TENANT},temperature,2,Lisa's setting,o,2026-11-11`, `ret-2,${fx.TENANT},staff,10,x,o,2026-11-11`].join('\r\n') + '\r\n');
   assert.equal(send(env, env.codes.owner, { read_method: 'photo', period_start: iso(Date.UTC(2024, 10, 12, 10, 0, 0)) }).ok, true);

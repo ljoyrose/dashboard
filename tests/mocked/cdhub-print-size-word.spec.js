@@ -1,8 +1,8 @@
-// Print card size (Lisa 15 Nov 2026): the kennel card printed the typed size cell ("Medium" over "17–22 kg"). It now
+// Print card size (the owner 15 Nov 2026): the kennel card printed the typed size cell ("Medium" over "17–22 kg"). It now
 // shows the size word only, worked out by the SAME helper as the CD Hub dog page (staff/lib/capacity.js sizeForDog):
 // owner override row, else latest weight, else the middle of a typed kg range, against the dated size_from_kg rows.
 // Cut-offs from the size_from_kg rows: small under 10 kg, medium from 10 kg, large from 25 kg, so exactly 25 kg is large
-// (live row, Lisa 12 Nov 2026, council licence: "25.0 counts as large"). Invented dogs and rows only.
+// (live row, the owner 12 Nov 2026, council licence: "25.0 counts as large"). Invented dogs and rows only.
 const { test, expect } = require('../fixtures/job34/load');
 
 const RULES = [

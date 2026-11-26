@@ -1,4 +1,4 @@
-// Keep-photo setting (Lisa 16 Nov 2026): a photo is kept with a temperature reading ONLY while the owner's dated rule
+// Keep-photo setting (the owner 16 Nov 2026): a photo is kept with a temperature reading ONLY while the owner's dated rule
 // row job.temps_keep_photo = yes is in force. Off by default. Pretend room; fake code, fake save address, fake picture.
 const { test, expect } = require('../support/test');
 
