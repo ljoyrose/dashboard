@@ -1,4 +1,4 @@
-// Temperatures month report (Lisa 20 Nov 2026): one month, all rooms or one, saved as a PDF from the browser's print.
+// Temperatures month report (the owner 20 Nov 2026): one month, all rooms or one, saved as a PDF from the browser's print.
 // Each slot is judged by the rows in force that day; the youngest dog that day (occupancy + date of birth) picks the
 // row, so a room with puppies under four weeks on a PAST day is judged on the bed spot against the puppy row.
 // Past years load. Pretend Drive only; every row here is invented.

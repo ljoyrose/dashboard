@@ -61,7 +61,7 @@ test.describe('CD Hub dog photos', () => {
     await expect(broken.locator('img.dogphoto')).toBeHidden();
   });
 
-  test('each card has Take photo (camera) and Upload photo (library or files), both accepting images (Lisa, 13 Nov 2026)', async ({ page, guard }) => {
+  test('each card has Take photo (camera) and Upload photo (library or files), both accepting images (the owner, 13 Nov 2026)', async ({ page, guard }) => {
     await openDogs(page, guard);
     const shown = card(page, 'Pretend One');
     const empty = card(page, 'Pretend Two');

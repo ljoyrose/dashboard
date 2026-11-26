@@ -299,6 +299,9 @@
     if (target.litter_id) return t === 'litter';
     if (perDogSite(job) && target.dogs) return dogsFor(job, target).length > 0;
     if (target.subject_id) return (t === 'dog' || t === 'either' || (!!target.everyDog && perDogRoom(job) && inRooms(job, target.dogArea))) && inGroups(job, target.groups);
+    /* a room job saved per dog needs a dog there: with roomDogIds given and none in the room, it is not due (the owner 20 Nov 2026:
+       isolation checks only when someone is in there) */
+    if (target.area_id && perDogRoom(job) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
     /* a room job saved per dog, and daily clean / isolation clean, need someone there that day when roomDogIds is given */
     if (target.area_id && occupiedOnly(job) && Array.isArray(target.roomDogIds) && !target.roomDogIds.length) return false;
     if (target.area_id && roomOnlyJob(job) && (target.areaRetired || target.areaNoDogs || nonRoomKind(target.areaKind) || nonRoomKind(target.areaUse) || nonRoomKind(target.areaGroup))) return false;
@@ -362,7 +365,7 @@
     return n > 0 ? n : 1;
   }
   /**
-   * Due by age (Lisa 22 Nov 2026, puppy weights): owner rule row job.by_age.<type_key>, the row in force on `day` (newest
+   * Due by age (the owner 22 Nov 2026, puppy weights): owner rule row job.by_age.<type_key>, the row in force on `day` (newest
    * effective_from wins). Its value lists ages in days from birth, split by |: "a-b:n" = every n days from age a to age b,
    * "a" = once at age a. E.g. "0-6:1|7-27:7|42|70" = daily in week 1, weekly in weeks 2 to 4, at 6 and 10 weeks.
    * Returns the due dates for a litter born on `born`, oldest first; [] with no row or no birth date.

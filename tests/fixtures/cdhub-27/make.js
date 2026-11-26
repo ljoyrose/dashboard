@@ -158,14 +158,14 @@ table('weight', 'subject_id,performed_on,weight_kg,unit,body_condition_score,bcs
 const med = [];
 let mn = 0;
 const give = (sub, on, product, dose, route, need) => med.push(['dsp-' + pad(++mn), T, sub, on, product, '', dose, '', '', '', route, 'routine', SRC, need || '', '']);
-[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((n) => give(A(n), '2026-01-10', 'Sample Wormer', '1 tablet', 'Oral'));
-[1, 2, 3, 4, 5, 6].forEach((n) => give(A(n), '2026-02-07', 'Sample Spot-on', '1 pipette', 'Topical'));
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((n) => give(A(n), '2026-01-10', 'Med C', '1 tablet', 'Oral'));
+[1, 2, 3, 4, 5, 6].forEach((n) => give(A(n), '2026-02-07', 'Med B', '1 pipette', 'Topical'));
 give(A(4), '2026-02-12', 'NOT STATED', '1 tablet', 'Oral');
 give(A(7), '2026-02-14', 'NOT STATED', '2 ml', 'Oral');
-[1, 2, 3, 4].forEach((n) => give(P(n), '2026-03-03', 'Sample Puppy Wormer', '1 ml', 'Oral'));
-give(A(9), '2026-03-04', 'Sample Wormer', '2 tablets', 'Oral');
+[1, 2, 3, 4].forEach((n) => give(P(n), '2026-03-03', 'Med A', '1 ml', 'Oral'));
+give(A(9), '2026-03-04', 'Med C', '2 tablets', 'Oral');
 table('dispense', 'id,tenant_id,subject_id,given_on,product,presentation,dose_volume,weight_band,weight_kg_used,dosage_basis,route,reason,source,ruling_needed,note', med);
-table('medicinal_product', 'id,tenant_id,name,form,source', [['mp-1', T, 'Sample Wormer', 'tablet', SRC], ['mp-2', T, 'Sample Spot-on', 'pipette', SRC], ['mp-3', T, 'Sample Puppy Wormer', 'liquid', SRC]]);
+table('medicinal_product', 'id,tenant_id,name,form,source', [['mp-1', T, 'Med C', 'tablet', SRC], ['mp-2', T, 'Med B', 'pipette', SRC], ['mp-3', T, 'Med A', 'liquid', SRC]]);
 table('stock_level', 'id,tenant_id,product_id,counted_on,quantity', [['sl-1', T, 'mp-1', '2026-03-01', 24]]);
 
 table('vaccination', 'id,tenant_id,subject_id,event_kind,product,product_shorthand,diseases_covered,batch,batch_use_by,given_on,route,administered_by,practice,titre_result,titre_lab,titre_protective,next_due_on_card,next_due_source,certificate_media_id,source,ruling_needed,note',

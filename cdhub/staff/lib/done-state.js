@@ -1,5 +1,5 @@
 /*!
- * BLDDone - one look, on every staff screen, for "the save script has this". Lisa: show a tick once received.
+ * BLDDone - one look, on every staff screen, for "the save script has this". the owner: show a tick once received.
  *   BLDDone.mark(el, {outcome, at, who, extra, note})  a tick line on the card: "Done 14:32 · Sam" (or "Concern noted", "Not done noted"),
  *                                                 and the card's main button greys (it still works, for a second time that day)
  *   BLDDone.saving(el)                            straight after the tap: "Saving..." and the button is off until the reply

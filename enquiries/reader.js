@@ -1,4 +1,4 @@
-// Puppy Enquiries Hub: reads the private RR_ENQUIRIES sheet with Lisa's Google sign-in (JOB 13 Stage 2).
+// Puppy Enquiries Hub: reads the private RR_ENQUIRIES sheet with the owner's Google sign-in (JOB 13 Stage 2).
 // PUBLIC repo: no data here. The sheet id comes from config.js (DASH_CONFIG.enquiries.sheetId); every row is read at run time.
 // One batchGet for all tabs; each tab goes through EnquiriesCore.parseTab, which refuses a tab whose header row breaks the
 // contract (fail closed: that tab gives no rows and a plain-English problem instead). Read only: this file never writes.

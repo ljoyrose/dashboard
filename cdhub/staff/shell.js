@@ -2,7 +2,7 @@
  * The Board, staff page shell. Staff: a phone is set up ONCE (the save address arrives by the owner's set-up QR, or the
  * same payload typed in, then the person types their own staff code). The code stays on that phone.
  * If the owner switches the code off, the next read or save is refused and this page wipes it and goes back to set-up.
- * Owners (Board A, Lisa 17 Nov 2026): the same Google sign-in as CD Hub, no code. The save address comes from this
+ * Owners (Board A, the owner 17 Nov 2026): the same Google sign-in as CD Hub, no code. The save address comes from this
  * browser (CD Hub keeps it) or BLD-save-webapp.json in the hub folder. The save script checks the account is an owner.
  *
  * Nothing about dogs, rooms or people is in these files. Everything is read through the save script with the code.
@@ -260,7 +260,7 @@
         status.className = 'msg';
         status.textContent = '';
         if (!String(typed || '').trim()) { status.className = 'msg bad'; status.textContent = 'Paste the set-up code.'; return; }
-        // Lisa 17 Nov 2026: a staff code typed here said "That set-up QR was not right", which read as "your code is wrong".
+        // the owner 17 Nov 2026: a staff code typed here said "That set-up QR was not right", which read as "your code is wrong".
         if (!/[#=\/]/.test(typed) && String(typed).trim().length <= 40) {
           status.className = 'msg bad';
           status.textContent = 'That looks like a staff code. This box needs the set-up link first: scan the Phone set-up QR (CD Hub, Admin, Tools, Print). Owners: use the Google button above.';
@@ -330,7 +330,7 @@
     ]));
     screen.appendChild(list);
   }
-  /* Show help (Lisa 18 Nov 2026): off unless this person turns it on. Kept with the Look on this phone ('dash-look', the same
+  /* Show help (the owner 18 Nov 2026): off unless this person turns it on. Kept with the Look on this phone ('dash-look', the same
      place the hub's Look menu keeps it); house.css hides every .help line while it is off. */
   function helpOn() { try { return (JSON.parse(localStorage.getItem('dash-look') || '{}') || {}).help === 'on'; } catch (e) { return false; } }
   function setHelp(on) {

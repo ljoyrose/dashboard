@@ -233,7 +233,7 @@ test('room signs are never made for a room whose room.in_use rows have ended', a
   await expect(page.locator('.rcard .name')).toHaveText(['T1']);
 });
 
-// Lisa 11 Nov 2026: "+ Thermometer" on the hub opens the print page straight at Add thermometer; the place list has
+// the owner 11 Nov 2026: "+ Thermometer" on the hub opens the print page straight at Add thermometer; the place list has
 // corridors as well as rooms; after the save the list shows with the new thermometer's QR card. Only an OWNER code
 // can save (the save script refuses any other); the button is on the owner's hub, never the staff page.
 test('add mode (?add=thermometer): straight to the form; corridors listed; saved thermometer joins the list with its QR card', async ({ page }) => {

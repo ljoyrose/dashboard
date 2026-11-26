@@ -31,7 +31,7 @@ function world() {
 const test = base.extend({ world: async ({}, use) => use(world()) });
 
 async function openEnquiries(page, examples = true) {
-  // the invented examples show only when this browser asks for them (Lisa 16 Nov 2026: none by default)
+  // the invented examples show only when this browser asks for them (the owner 16 Nov 2026: none by default)
   if (examples) await page.addInitScript(() => localStorage.setItem('cdhub.enquiries.examples', '1'));
   await page.goto('cdhub/');
   await page.locator('#signinbtn').click();
@@ -72,7 +72,7 @@ test.describe('CD Hub enquiries', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test('no sheet connected: "No enquiries yet", no invented rows and no TEST mark (Lisa 16 Nov 2026)', async ({ page }) => {
+  test('no sheet connected: "No enquiries yet", no invented rows and no TEST mark (the owner 16 Nov 2026)', async ({ page }) => {
     await openEnquiries(page, false);
     await expect(page.locator('[data-enq-empty]')).toContainText('No enquiries yet');
     await expect(page.locator('[data-enq]')).toHaveCount(0);

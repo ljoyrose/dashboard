@@ -82,7 +82,7 @@
   <div id="in-list"></div>
 </main>
 <script>
-  /* 15 Nov 2026: "Failed: undefined" told Lisa nothing. Google can hand back a plain string or an empty error, so say what came back. */
+  /* 15 Nov 2026: "Failed: undefined" told the owner nothing. Google can hand back a plain string or an empty error, so say what came back. */
   function whyFailed(e){ var m = e && (e.message || e.details); if (!m && typeof e === 'string') m = e; return m || 'Google gave no reason. Reload this page; if you are signed in to more than one Google account, use a window with only the owner account.'; }
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
   function load(){
@@ -123,7 +123,7 @@
 
   /* ---- staff codes: switch one off ---- */
   function scMsg(t){ document.getElementById('sc-msg').textContent=t; }
-  /* Lisa 16 Nov 2026: active codes only unless "Show switched-off and replaced" is ticked (starts off); search by name,
+  /* the owner 16 Nov 2026: active codes only unless "Show switched-off and replaced" is ticked (starts off); search by name,
      role or name tag; active first, then by name. Ended codes stay stored; they are only hidden here. */
   var scAll=[];
   function scDraw(){
@@ -282,7 +282,7 @@
   var IN_DEFAULT={subject:['name','sex','dob'],microchip:['chip_number'],health_screen:'*',fit_to_breed:'*',litter:['dob'],
     area_reading:['room','reading_type','min_c','max_c','spot_c','taken_at','in_range','mitigation_note'],   // who typed it: off unless ticked
     check_log:['job','room','dog','outcome','amount','happened_at','note']};
-  // never ticked by default on any list (Lisa can still tick them): who typed it and how, and old score, axis and body-condition (bcs) columns (DOCS, 20 Nov 2026)
+  // never ticked by default on any list (the owner can still tick them): who typed it and how, and old score, axis and body-condition (bcs) columns (DOCS, 20 Nov 2026)
   var IN_NEVER_DEFAULT=/(^taken_by$|^created_by$|^how_recorded$|^bcs$|score|axis)/;
   function inMsg(t){ document.getElementById('in-msg').textContent=t; }
   function tick(label, checked){ var l=el('label','tick'); var c=el('input'); c.type='checkbox'; c.checked=!!checked; l.appendChild(c); l.appendChild(document.createTextNode(label)); return {label:l, box:c}; }

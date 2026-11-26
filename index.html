@@ -128,7 +128,7 @@
       var decide = cs.filter(function (r) { return r.key && !/^PACK-/.test(r.key) && !r.answer && !r.applied_at; }).map(function (r) {
         return { hub: 'food', kind: detail(r).red ? 'late' : 'wait', text: r.title || r.key, href: 'food/#/home' };
       });
-      // Orders waiting for Lisa's Send tap (SEND_MODE HOLD): an open SEND- card whose order has no GA number yet (8 Nov 2026).
+      // Orders waiting for the owner's Send tap (SEND_MODE HOLD): an open SEND- card whose order has no GA number yet (8 Nov 2026).
       var hasS = {}; orders.forEach(function (o) { if (o.s_no) hasS[String(o.order_no)] = true; });
       var toSend = cs.filter(function (r) { return /^SEND-/.test(r.key || '') && !r.answer && !r.applied_at && !hasS[r.key.slice(5)]; }).length;
       return { ok: true, xml: late.length === 0 && toSend === 0, toSend: toSend, nums: [['Late', late.length, late.length > 0], ['Owe GA', '£' + owed.toFixed(2)], ['Today', placed]], needs: needs, decide: decide, todo: [], packs: cs };
@@ -312,7 +312,7 @@
   .btn.vision { border: 1px solid var(--s1-edge); background: var(--s1); font-weight: 600; }
 
   main { padding-top: 16px; padding-bottom: 32px; }
-  /* No "You are here" line on Main (Lisa's pick, 2 Nov): the page name stays for screen readers only (#hereTitle, class sr). */
+  /* No "You are here" line on Main (the owner's pick, 2 Nov): the page name stays for screen readers only (#hereTitle, class sr). */
   .here { margin: 0; }
   .here h2 { margin: 0; font-size: var(--fs-head); font-weight: 600; }
   #view { display: flex; flex-direction: column; gap: 16px; transition: opacity 150ms ease; }
@@ -456,7 +456,7 @@
   svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
   .hk { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: var(--house-btn-phone); box-sizing: border-box; padding: 2px 4px; pointer-events: auto; }
-  /* One group, one size (Lisa, 2 Nov): every number 18px / 600 on one baseline; a late one wears a rose ring sized to it, the
+  /* One group, one size (the owner, 2 Nov): every number 18px / 600 on one baseline; a late one wears a rose ring sized to it, the
      others the same box with no ring (so nothing shifts); 0 is never ringed. */
   .hk b { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent; border-radius: var(--radius);
     font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; }
@@ -465,7 +465,7 @@
   .hubtile a.xml.need { border: 1px solid var(--house-late); border-radius: 999px; padding: 0 8px; }
   .hubtile a.xml { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); font-size: var(--fs-small); font-weight: 600; padding: 0 4px; pointer-events: auto; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
-  /* Hover and press: the pale grey fill, no line (Lisa, 12 Nov 2026); nothing moves. Keyboard focus: the 1px ink line inside. */
+  /* Hover and press: the pale grey fill, no line (the owner, 12 Nov 2026); nothing moves. Keyboard focus: the 1px ink line inside. */
   .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
   .hubtile a:focus:not(:focus-visible) { outline: none; }
   @media (hover: hover) { .hubtile a:hover { background:var(--hov); } }
@@ -476,14 +476,14 @@
   .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
   .needs li.house-lbar[class], ol.hrows > li { --house-lbar-out: 0px; display: flex; gap: 8px; align-items: center; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
   ol.hrows .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  /* Projects tile: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (Lisa, 2 Nov). */
+  /* Projects tile: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (the owner, 2 Nov). */
   .hubtile[data-hub="projects"].house-lbar::before { border-left-color: transparent; background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)) border-box;
     -webkit-mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
 
-  /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
+  /* ---- Calm layer (the owner, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
   :root { --radius: 12px; }
   .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
   .subnav a { border-radius: 999px; }
@@ -498,7 +498,7 @@
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: var(--fs-small); font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
-  /* One page width everywhere (Lisa, 2 Nov): the full window, the house side gap (--house-gutter: 24px; phones 16px). */
+  /* One page width everywhere (the owner, 2 Nov): the full window, the house side gap (--house-gutter: 24px; phones 16px). */
   .wrap, .wrap.wide, .wide, .hin { max-width: none; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
 
   /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
@@ -543,7 +543,7 @@
   div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: var(--fs-small); color: var(--ink); }
   .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
   /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
-  /* Meaning buttons rest on their own colour line (Lisa's approved picture, 28 Oct): delete rose, AI purple; hover keeps it. */
+  /* Meaning buttons rest on their own colour line (the owner's approved picture, 28 Oct): delete rose, AI purple; hover keeps it. */
   .btn.danger { border-color: var(--hl); }
   .btn.danger.solid { background: var(--ljr-2-tint); color: var(--ink); border-color: var(--hl); }
   .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--hl); }
@@ -561,7 +561,7 @@
   .card.failed[class]:hover { border-left-color: var(--ljr-2); }
   .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
   /* Needs you rows never move: one left edge, one icon x and the same box at rest, on hover, focus and press.
-     The row shell is rounded (Lisa, 5 Nov); the shared .house-lbar stays a straight 3px line, not a "(" bracket.
+     The row shell is rounded (the owner, 5 Nov); the shared .house-lbar stays a straight 3px line, not a "(" bracket.
      This supersedes 2 Nov "rows are square" for the row shell only. */
   .needs li.house-lbar[class], .needs li.house-lbar[class]:hover, .needs li.house-lbar[class]:focus-within, .needs li.house-lbar[class]:active,
   ol.hrows > li, ol.hrows > li:hover, ol.hrows > li:focus-within, ol.hrows > li:active { margin: 0; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
@@ -591,7 +591,7 @@
   .btn, .subnav a, .picker select, input.find { border-color: var(--ctl); }
   .subnav a { display: inline-flex; align-items: center; }
   @media (max-width: 600px) { .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 44px; } }
-  /* Hover: the pale grey fill, no line. Selected: the same fill plus the 1px quiet grey line inside (Lisa, 12 Nov 2026). Never moves. */
+  /* Hover: the pale grey fill, no line. Selected: the same fill plus the 1px quiet grey line inside (the owner, 12 Nov 2026). Never moves. */
   .subnav a[aria-current="page"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); border-color: var(--ctl); }
   @media (hover: hover) {
     .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { background:var(--hov); }
@@ -605,7 +605,7 @@
   .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
   .ment.bad { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   /* Colour on hover only: a section's colour shows on its icon ring when pointed at. */
-  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). The screen title keeps no box. */
+  /* Keyboard focus: the 1px ink line inside (the owner, 3 Nov 2026: no exception to 1px). The screen title keeps no box. */
   html body :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
   /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
@@ -615,7 +615,7 @@
   .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
   .nextcard .actions a.more { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; border: 0; background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
-  /* Needs you and Next as hub colour cards (Lisa, 13 Nov 2026). The 12 Nov house look: no fill at rest, the pale grey fill on hover
+  /* Needs you and Next as hub colour cards (the owner, 13 Nov 2026). The 12 Nov house look: no fill at rest, the pale grey fill on hover
      and tap (house.css [data-open-row]), no hover line. The hub's colour is its 3px line and its icon only. */
   .nextcard .nexthub { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: var(--fs-small); font-weight: 600; }
   .nextcard .nexthub + .mtag { margin-left: 0; }
@@ -653,7 +653,7 @@
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
   html body nav.house-tabs .ht:focus-visible { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
-  /* House hover rule (Lisa, 12 Nov 2026, replaces 28 Oct): hover and tap = the pale grey fill, no line, for every control, meaning
+  /* House hover rule (the owner, 12 Nov 2026, replaces 28 Oct): hover and tap = the pale grey fill, no line, for every control, meaning
      colours too. Selected = the same fill plus the 1px quiet grey line inside (--sel-bd). Focus stays the 1px ink line inside. */
   .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); --hmc: var(--ljr-2); }
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
@@ -686,7 +686,7 @@
   <symbol id="i-shop" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 20V10l5 3V10l5 3V10l5 3V4h3v16z"/><path d="M7 17h2M12 17h2"/></symbol>
   <symbol id="i-studio" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></symbol>
-  <!-- Hub icons for the Main tiles, Needs you and Decide / Do (Tabler outline shapes, Lisa's picks 2 Nov). -->
+  <!-- Hub icons for the Main tiles, Needs you and Decide / Do (Tabler outline shapes, the owner's picks 2 Nov). -->
   <symbol id="h-case" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
   <symbol id="h-www" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
   <symbol id="h-money" viewBox="0 0 24 24"><path d="M16.7 8a3 3 0 0 0 -2.7 -2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1 -2.7 -2M12 3v3M12 18v3"/></symbol>
@@ -807,10 +807,10 @@
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,driveId,lastModifyingUser(displayName,emailAddress)';
   var DAY = 86400000;
   var MOVE_URL = CFG.urls.moveSheet;
-  // MOVE workbook: one link in More (the big Key projects buttons left Main, Lisa's pick 2 Nov).
+  // MOVE workbook: one link in More (the big Key projects buttons left Main, the owner's pick 2 Nov).
   (function (m) { if (m && MOVE_URL) { m.href = MOVE_URL; m.hidden = false; } })(document.getElementById('move-link'));
   // Bin guard: 00 CHECK holds what the guard took back out of a bin. This page only READS it; the changes
-  // (ZZ_DELETE, Refer to AI) happen on the guard's own Google page, signed in as Lisa, after she presses its button.
+  // (ZZ_DELETE, Refer to AI) happen on the guard's own Google page, signed in as the owner, after she presses its button.
   var BG_CFG = CFG.binGuard || {};
   var CHECK_FOLDER_ID = BG_CFG.checkFolderId;
   var BG_URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/puppyclassroom\.com\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/;
@@ -1432,7 +1432,7 @@
       encodeURIComponent(PH_TAB) + '?majorDimension=ROWS').then(function (r) { return phCounts((r && r.values) || []); });
   }
   // Same rules as the hub's own page: LIVE numbered rows only, reserved rows left out, Done and Parked are not open.
-  // Stuck = Blocked, or open with no owner. Waiting = Waiting on Lisa. Running = being worked on now.
+  // Stuck = Blocked, or open with no owner. Waiting = Waiting on the owner. Running = being worked on now.
   function phCounts(rows) {
     var head = (rows[0] || []).map(function (h) { return String(h).trim(); });
     var col = function (r, name) { var i = head.indexOf(name); return i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim(); };
@@ -1826,7 +1826,7 @@
     }));
   }
 
-  // ---- Bin actions: only from Lisa's own clicks, each behind a confirm ----
+  // ---- Bin actions: only from the owner's own clicks, each behind a confirm ----
   function requestWrite() {
     if (!auth.ready()) return;
     wantWrite = true;
@@ -2649,7 +2649,7 @@
   }
 
   // ---- Main: one tile per hub: icon, name, 3 numbers. The whole square opens that hub's Main; each number and the Food tick keep their own page. ----
-  // Order and colours are Lisa's: Projects multi-colour, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
+  // Order and colours are the owner's: Projects multi-colour, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
   var HUBS = [
     { key: 'projects', name: 'Projects', icon: 'case', line: 'var(--ljr-0)', ic: 'var(--ink)' }, // multi-colour line: see the CSS
     { key: 'web', name: 'Web', icon: 'www', slot: 2, href: 'estate/' },
@@ -2672,7 +2672,7 @@
     out.money = window.HubRead ? HubRead.money(S.money.data) : { ok: false };
     return out;
   }
-  // Every number opens the place in its hub where you act on it (Lisa, 2 Nov: every piece of info is clickable).
+  // Every number opens the place in its hub where you act on it (the owner, 2 Nov: every piece of info is clickable).
   var HUB_NUMS = {
     projects: [['Stuck', ''], ['Waiting', ''], ['Running', '']],
     // The same filtered lists each hub's own Main numbers open (Hub Mains, 2 Nov 2026).
@@ -2710,8 +2710,8 @@
     }).join('') + '</div></section>';
   }
 
-  // ---- Decide and Do (Lisa's tab plan): every hub's rows that wait on Lisa's decision (Decide) or are hers to do (Do). ----
-  // Built only from what each hub already lists: Money (register decisions / to-dos), Food (answer cards), Apps (decisions / Lisa's tasks),
+  // ---- Decide and Do (the owner's tab plan): every hub's rows that wait on the owner's decision (Decide) or are hers to do (Do). ----
+  // Built only from what each hub already lists: Money (register decisions / to-dos), Food (answer cards), Apps (decisions / the owner's tasks),
   // Marketplace (decide / do and reply cards), Studio (gates and reviews / hand tasks), Web and Dogs (Do only; they have no Decide list).
   var KIND_RANK = { late: 0, soon: 1, wait: 2 };
   function hubRows(which) {
@@ -2759,7 +2759,7 @@
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
   }
 
-  // ---- Needs you (at most 5 rows, Lisa's pick): the most urgent across all hubs, late first, then due soon, then waiting.
+  // ---- Needs you (at most 5 rows, the owner's pick): the most urgent across all hubs, late first, then due soon, then waiting.
   // Read-only: built from what this page and each hub's own lists already hold (HubRead, the script at the top). ----
   var NEEDS_MAX = 5;
   function withEnt(ent, text) { text = String(text || ''); ent = String(ent || '').split(';')[0]; return ent && text.indexOf(ent + ':') !== 0 ? ent + ': ' + text : text; }
@@ -2787,13 +2787,13 @@
     out = out.map(function (x, i) { x._i = i; return x; }).sort(function (a, b2) { return rank[a.kind] - rank[b2.kind] || a._i - b2._i; });
     return out;
   }
-  // A rose count means late (Lisa's sweep, 3 Nov 2026; read out as "N late"). A failed read or the Bin ledger is rose-lined (risk) but not late.
+  // A rose count means late (the owner's sweep, 3 Nov 2026; read out as "N late"). A failed read or the Bin ledger is rose-lined (risk) but not late.
   function isLateNeed(x) { return x.tag === 'Late'; }
   function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio|estate)\//.test(String(href || '')); }
   // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
   function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
-  // ---- Needs you as hub colour cards (Lisa, 13 Nov 2026; the 12 Nov house look: no fill at rest, pale grey on hover and tap, no line).
+  // ---- Needs you as hub colour cards (the owner, 13 Nov 2026; the 12 Nov house look: no fill at rest, pale grey on hover and tap, no line).
   // The same 5 rows as before, most urgent first, grouped by hub. A hub's card sits where its most urgent row would sit, so the
   // first card still holds the first row. The card carries the hub's 3px line, icon, name and its own count; rows inside carry
   // only their tag and text. A row with no hub (a failed read, the Bin) sits on a Dashboard card. Nothing is folded shut. ----
@@ -2822,7 +2822,7 @@
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
     h += needHubCards(items, all);
-    if (all.length > items.length) h += '<a class="needsmore" data-needs-more href="#/do">+' + (all.length - items.length) + ' more</a>'; // plain "+N more" link to Do (Lisa, 2 Nov)
+    if (all.length > items.length) h += '<a class="needsmore" data-needs-more href="#/do">+' + (all.length - items.length) + ' more</a>'; // plain "+N more" link to Do (the owner, 2 Nov)
     return h + '</section>';
   }
 
@@ -2849,7 +2849,7 @@
     if (!signedIn) return '';
     var all = needsToday(), n = all.length, reading = firstRead();
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
-    // Each pill opens Do showing exactly what it counts (Lisa, 2 Nov: every piece of info opens what it counts).
+    // Each pill opens Do showing exactly what it counts (the owner, 2 Nov: every piece of info opens what it counts).
     var split = NEED_GROUPS.map(function (g) {
       var c = all.filter(g.has).length;
       return c ? '<a class="cnt wide k-' + g.kind + '" href="#/do/' + g.key + '" data-group="' + g.key + '">' + c + ' ' + g.word + '</a>' : '';
@@ -2859,7 +2859,7 @@
     if (n) {
       var x = all[0];
       // Next: the one thing to do now, with one button. White card, 1px ink edge.
-      // Next wears its hub's colour (Lisa, 13 Nov 2026): the hub's 3px line, icon and name, like the hub cards below it.
+      // Next wears its hub's colour (the owner, 13 Nov 2026): the hub's 3px line, icon and name, like the hub cards below it.
       var nh = needHubOf(x);
       h += '<div class="card house-lbar urgent nextcard" id="urgentOne" data-hub="' + nh.key + '"' + hubStyle(nh) + '><div class="cardhead"><h3>Next</h3>' +
         '<span class="nexthub">' + hubIcon(nh) + '<span>' + esc(nh.name) + '</span></span><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
@@ -2880,7 +2880,7 @@
         '<p class="note">Read-only. The Bin asks for more only when used.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
-    return html; // Main = Next, Needs you, hub tiles. The Money and Actions minutes cards live in More (Lisa, 2 Nov).
+    return html; // Main = Next, Needs you, hub tiles. The Money and Actions minutes cards live in More (the owner, 2 Nov).
   }
 
   // Actions minutes card: private minutes used this month against the free allowance. Read only; sends nothing.
@@ -3335,7 +3335,7 @@
   // CFG.canvaBin.folderId; a design can be ticked only with a ledger row (same rule as ZZ_DELETE_ on Drive). With dryRun
   // off and after a confirm it writes (a) pending ledger rows as one SLIP_PREFIX slip (surface canva-<label>) and
   // (b) one CANVA-BIN-REQUEST_<UK time>.json per account. The bot re-reads each design live and moves it to ZZ_BIN only
-  // if the title, last-modified time and page count still match the ledger row; Lisa trashes in Canva. Contract:
+  // if the title, last-modified time and page count still match the ledger row; the owner trashes in Canva. Contract:
   // docs/CANVA-BIN.md.
   var CANVA = CFG.canvaBin || {};
   var CANVA_DRY = CANVA.dryRun !== false;

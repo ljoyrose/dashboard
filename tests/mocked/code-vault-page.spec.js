@@ -1,4 +1,4 @@
-// Codes vault page (cdhub/staff/vault/), Lisa 14 Nov 2026 option B. Pretend save script, invented password and codes only.
+// Codes vault page (cdhub/staff/vault/), the owner 14 Nov 2026 option B. Pretend save script, invented password and codes only.
 const { test, expect } = require('../support/test');
 
 test.use({ allowedConsole: [/404/] });

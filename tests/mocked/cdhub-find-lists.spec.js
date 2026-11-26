@@ -1,4 +1,4 @@
-// Find and sort on every list (Lisa 15 Nov 2026: easy to get to anything, at any number of records). Dogs, Litters, SOPs and
+// Find and sort on every list (the owner 15 Nov 2026: easy to get to anything, at any number of records). Dogs, Litters, SOPs and
 // Assocs had them; Areas and Do get them here, using the one shared sort (BLDSort). Invented rows only.
 const { test, expect } = require('../support/test');
 

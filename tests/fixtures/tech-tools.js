@@ -1,5 +1,5 @@
 // Invented sample of the tools tab with the Tech columns added (TECH-HUB-1). Fake names only (Example Tool A...), fake ids only
-// (EXAMPLE-ID-n), example.com logos (answered by the test harness). The real list lives in Lisa's private Drive sheet.
+// (EXAMPLE-ID-n), example.com logos (answered by the test harness). The real list lives in the owner's private Drive sheet.
 // The first five columns are Studio's own (the tab is extended, not copied): the tile's name comes from "tool".
 // Dates are worked out from "now" so the fresh / stale and renews-in-N-days checks never go out of date.
 const DAY = 864e5;

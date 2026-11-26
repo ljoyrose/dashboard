@@ -203,7 +203,7 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  // Lisa, 8 Nov 2026: the order row shows what was bought and has its own Send button while the SEND- card waits; after the send it says so.
+  // the owner, 8 Nov 2026: the order row shows what was bought and has its own Send button while the SEND- card waits; after the send it says so.
   test('order row: items, species and sale; Send writes the SEND- card answer; a sent order says waiting for GA', async ({ page }) => {
     const b = book(), h = b.orders[0].concat(['sent_at', 'species']), row = (no, sent) => [no, 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '1', '2026-11-07T09:00:00Z', JSON.stringify([{ code: 'AAA0012KZPSXZZZ', qty: 2 }]), 'Waiting for GA', sent, 'Dog'];
     b.orders = [h, row('9201', ''), row('9202', '2026-11-08T07:05:00Z')];
@@ -219,7 +219,7 @@ test.describe('GA Hub page', () => {
     expect(writes[0].body.values[0][0]).toBe('Send');
   });
 
-  // G1 (Lisa, 30 Oct 2026) and the quality review (12 Nov 2026): the minimum is read from MIN_PROFIT only. A blank cell is
+  // G1 (the owner, 30 Oct 2026) and the quality review (12 Nov 2026): the minimum is read from MIN_PROFIT only. A blank cell is
   // "not set": no built-in number, so nothing is flagged low.
   test('low profit: blank MIN_PROFIT shows "not set" and flags nothing; the GA page says to add it', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
@@ -266,7 +266,7 @@ test.describe('GA Hub page', () => {
     await page.locator('#refresh').click();
     await expect(page.locator('#view .tile', { hasText: 'Under £10 profit' }).locator('.v')).toHaveText('3');
   });
-  // G2 (Lisa, 30 Oct 2026): MIN_ORDERS_MONTH blank = no orders warning; set = an "Orders this month" tile, red when under it.
+  // G2 (the owner, 30 Oct 2026): MIN_ORDERS_MONTH blank = no orders warning; set = an "Orders this month" tile, red when under it.
   test('orders this month: blank MIN_ORDERS_MONTH shows no tile; set, it counts paid orders in the last 30 days (not cancelled, not older) and goes red under the aim', async ({ page }) => {
     const day = (n) => new Date(Date.now() - n * 864e5).toISOString();
     const row = (no, at, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '', '1', at, '[]', 'Waiting for GA'];
@@ -300,7 +300,7 @@ test.describe('GA Hub page', () => {
     await expect(month.locator('.v')).toHaveText('0');
     await expect(month.locator('.v')).not.toHaveClass(/red/);
   });
-  // G3 (Lisa, 30 Oct 2026): order growth leads (on Review since the Hub Mains, 2 Nov 2026). Invented orders only; nothing is written, sent or discounted.
+  // G3 (the owner, 30 Oct 2026): order growth leads (on Review since the Hub Mains, 2 Nov 2026). Invented orders only; nothing is written, sent or discounted.
   const growRow = (no, daysAgo, type, nth, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Shipped', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', type, '', String(nth || 1), new Date(Date.now() - daysAgo * 864e5).toISOString(), '[]', 'Shipped'];
   function growBook(rows, extra) { const b = book(); b.orders = [b.orders[0]].concat(rows); b.settings = b.settings.concat(extra || []); return b; }
   test('grow orders leads Review: trend on the 30 days before, repeat and subscription share, all from the Orders tab', async ({ page }) => {
@@ -372,7 +372,7 @@ test.describe('GA Hub page', () => {
     // nothing to fix
     b = growBook([growRow('9351', 1, sub), growRow('9352', 2, sub)]);
     await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
-    await expect(page.locator('#view .card.grow')).toHaveCount(0);   // one empty line per view (Lisa, 2 Nov): no gap, no Grow card
+    await expect(page.locator('#view .card.grow')).toHaveCount(0);   // one empty line per view (the owner, 2 Nov): no gap, no Grow card
   });
   test('a GA statement on file: its balance is the first tile on Invoices; Main\'s Owe GA stays the unpaid invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
@@ -519,7 +519,7 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row')).toHaveCount(1);
   });
 
-  test('Fish Treats (engine v1.14.1): a fish-only order waits as "Pack at home" until Lisa taps Packed; "No GA items" no longer claims it was packed', async ({ page }) => {
+  test('Fish Treats (engine v1.14.1): a fish-only order waits as "Pack at home" until the owner taps Packed; "No GA items" no longer claims it was packed', async ({ page }) => {
     const b = book(), blank = n => Array(n).fill('');
     b.orders.push(['9201', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'Pack at home']);
     b.orders.push(['9202', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'Packed at home']);
@@ -554,7 +554,7 @@ test.describe('GA Hub page', () => {
     await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
 
-  // Lisa, 10 Nov 2026 ("this tells me nothing"): a Send card says where the order came from, who it is for, what is in it,
+  // the owner, 10 Nov 2026 ("this tells me nothing"): a Send card says where the order came from, who it is for, what is in it,
   // the kg and GA boxes, and whether it pays against MIN_PROFIT (estimated before GA's invoice). Every row here is invented.
   test('Send card: channel, brand and affiliate; customer; food, kg and boxes; estimated profit, red under the minimum', async ({ page }) => {
     const b = book(), extra = ['partner', 'sale_ex_vat', 'other_lines', 'line_flag', 'species'], h = b.orders[0].concat(extra.filter((c) => !b.orders[0].includes(c)));
@@ -670,7 +670,7 @@ test.describe('GA Hub page', () => {
     const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(over).toBeLessThanOrEqual(0);
   });
-  // Roadmap 4 (Lisa, 10 Nov 2026): when GA changes a price, recipe/protein or data sheet, the card lists the brands that sold it
+  // Roadmap 4 (the owner, 10 Nov 2026): when GA changes a price, recipe/protein or data sheet, the card lists the brands that sold it
   // and the products it is. Price = that pack only; a product change (engine v1.17) = every pack of the recipe. Every row is invented.
   test('What changed: price and product cards list the affected brands (with order counts) and products', async ({ page }) => {
     const b = book(), h = b.orders[0].concat(['placed_at', 'shop_lines'].filter((c) => !b.orders[0].includes(c)));
@@ -696,7 +696,7 @@ test.describe('GA Hub page', () => {
 });
 
 
-// House look (LINKS-COMFORT-BRIEF v3 + Lisa's control rules, 28 Oct 2026), checked by computed style in the browser.
+// House look (LINKS-COMFORT-BRIEF v3 + the owner's control rules, 28 Oct 2026), checked by computed style in the browser.
 // audit() walks every visible element and returns plain-English problems; each test below asserts its own kind.
 const TABS = ['home', 'orders', 'invoices', 'products', 'ga'];
 function audit() {
@@ -721,8 +721,8 @@ function audit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const tabN = el.matches('nav.house-tabs .ht > .n');   // bottom-tab counts: a 24 x 24 corner ring, 12px round ends (14px number, Lisa's pick A, 2 Nov)
-    const pill = el.matches('.cnt, nav.tabs .n') && !tabN;   // count pills: 24px high with full round ends (12px; 14px number, Lisa's pick A)
+    const tabN = el.matches('nav.house-tabs .ht > .n');   // bottom-tab counts: a 24 x 24 corner ring, 12px round ends (14px number, the owner's pick A, 2 Nov)
+    const pill = el.matches('.cnt, nav.tabs .n') && !tabN;   // count pills: 24px high with full round ends (12px; 14px number, the owner's pick A)
     const tabShape = (rad === '12px' && tabN) || (rad === '50%' && el.matches('nav.house-tabs .hic')) || (rad === '2px' && el.matches('nav.house-tabs .bar'));
     if (rad !== '0px' && !tabShape && !(rad === '12px' && !pill && !tabN) && !(rad === '12px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
@@ -764,7 +764,7 @@ test.describe('GA Hub house look', () => {
     expect(blue(cool[0])).toBeGreaterThan(0); expect(blue(cool[1])).toBeGreaterThan(0);  // cool: blue over red
   });
 
-  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = the pale grey fill and no line (Lisa, 12 Nov 2026), and nothing moves', async ({ page }) => {
+  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = the pale grey fill and no line (the owner, 12 Nov 2026), and nothing moves', async ({ page }) => {
     await sheets(page, book());
     await open(page);
     for (const tab of ['home', 'orders', 'products', 'ga']) {
@@ -787,7 +787,7 @@ test.describe('GA Hub house look', () => {
         const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e); const pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove(); return { os: s.outlineStyle, bw: s.borderTopWidth, bc: s.borderTopColor, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, hov }; });
-        // Lisa (12 Nov 2026): every control hovers with the pale grey fill and no line (a selected one keeps its quiet grey line).
+        // the owner (12 Nov 2026): every control hovers with the pale grey fill and no line (a selected one keeps its quiet grey line).
         expect(hv.bw).toBe('1px');
         if (!st.pressed) expect(hv.os, `${tab}: no line on hover`).toBe('none');
         if (hv.coloured) expect(hv.bc, 'keeps its resting colour line').toBe(st.c);
@@ -855,7 +855,7 @@ test.describe('GA Hub house look', () => {
       const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth, e.matches('nav.house-tabs .ht > .n')]; }));
     let sizes = await measure();
     expect(sizes.map((x) => x[0]).sort()).toEqual(['1', '13', '2', '2']);   // product groups 2 and 1, Home 13 (two digits), Orders 2
-    // Bottom-tab counts (Home 13, Orders 2) are a corner ring (tab picks, 2 Nov) holding a 14px number (Lisa's pick A): 24 x 24 for 1 and 2
+    // Bottom-tab counts (Home 13, Orders 2) are a corner ring (tab picks, 2 Nov) holding a 14px number (the owner's pick A): 24 x 24 for 1 and 2
     // digits, 12px ends, 22px line. Every other count is the 30 x 24 pill.
     const check = (x, why) => x[7] ? (expect([x[2], x[1], x[3], x[4], x[5], x[6]], why + x[0]).toEqual([24, 24, '12px', 'center', '22px', true]))
       : expect(x.slice(1, 7), why + x[0]).toEqual([30, 24, '12px', 'center', '22px', true]);
@@ -976,7 +976,7 @@ test.describe('GA Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, and never moves the icon or word.
+    // the owner's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, and never moves the icon or word.
     const c = await page.locator('#n-home').evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(), i = e.parentElement.querySelector('.hic').getBoundingClientRect();
       return { pos: getComputedStyle(e).position, w: r.width, h: r.height, gap: r.left - i.right, top: r.top - i.top, inside: r.right <= t.right, iconMid: Math.abs((i.left + i.right) / 2 - (t.left + t.right) / 2) }; });
     expect(c.pos).toBe('absolute');
@@ -987,7 +987,7 @@ test.describe('GA Hub house look', () => {
     expect(c.inside).toBe(true);
     expect(c.iconMid, 'the icon stays centred').toBeLessThan(1);
   });
-  // Roadmap 3 (Lisa, 10 Nov 2026): a Brands view in More. Per brand: orders, sales, profit, low-profit orders against the brand's
+  // Roadmap 3 (the owner, 10 Nov 2026): a Brands view in More. Per brand: orders, sales, profit, low-profit orders against the brand's
   // own minimum (MIN_PROFIT_<BRAND>), the recipes sold and their data sheets, and the newest GA price list. Every row is invented.
   test('Brands: one block per brand with orders, sales, profit, low-profit count against MIN_PROFIT_<BRAND>, recipes and price list date', async ({ page }) => {
     const b = book(), h = b.orders[0].concat(['placed_at', 'shop_lines', 'sale_inc_vat', 'profit_est'].filter((c) => !b.orders[0].includes(c)));

@@ -1,5 +1,5 @@
 'use strict';
-// 14 Nov 2026: one readings record (Lisa READINGS = B). Item test steps (PAT) are readings rows. Invented rows only.
+// 14 Nov 2026: one readings record (the owner READINGS = B). Item test steps (PAT) are readings rows. Invented rows only.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');

@@ -5,7 +5,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
-// The Key projects buttons became the hub tiles on Main (Lisa's picks, 2 Nov 2026): her order, one tile per hub; MOVE moved to More.
+// The Key projects buttons became the hub tiles on Main (the owner's picks, 2 Nov 2026): her order, one tile per hub; MOVE moved to More.
 const TILES = [
   ['Web', 'estate/', true],
   ['Money', 'money/', true],
@@ -83,13 +83,13 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     }
 
     // Signing out removes the links again.
-    // On a phone Sign out sits inside the Look menu (the top bar, Lisa's pick A).
+    // On a phone Sign out sits inside the Look menu (the top bar, the owner's pick A).
     await page.locator('#houseLookBtn').click();
     await page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(page.locator('#hubTiles')).toHaveCount(0);
   });
 
-  // Projects Hub: a tile only for a valid Apps Script /exec address (first, Lisa's order).
+  // Projects Hub: a tile only for a valid Apps Script /exec address (first, the owner's order).
   // The addresses below are invented (EXAMPLE), never a real deployment.
   for (const [what, url, shown] of [
     ['valid /exec address', 'https://script.google.com/macros/s/EXAMPLE-PROJECTS-HUB/exec', true],

@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 8 Nov 2026: the breeder's own breeding rules (Lisa: entered by the user at setup, never hard-coded).
+ * 8 Nov 2026: the breeder's own breeding rules (the owner: entered by the user at setup, never hard-coded).
  * One row per rule version; a change is a new row from a later date; only an OWNER code may add one.
  */
 const test = require('node:test');

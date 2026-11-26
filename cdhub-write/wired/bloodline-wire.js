@@ -34,7 +34,7 @@
     document.head.appendChild(l);
   }
 
-  /** "Load the dogs" with the staff code: reads only what Lisa has allowed, no Google sign-in. */
+  /** "Load the dogs" with the staff code: reads only what the owner has allowed, no Google sign-in. */
   function loadViaScript() {
     return BLDOccupancy.loadViaScript(save).then(function (r) {
       if (!r.ok) return r;

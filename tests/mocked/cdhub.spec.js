@@ -11,7 +11,7 @@ const signIn = async (page) => {
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
 };
 
-test('dates use 3-letter months, "2 Sep 2026" never "Sept" (Lisa, 16 Nov 2026)', () => {
+test('dates use 3-letter months, "2 Sep 2026" never "Sept" (the owner, 16 Nov 2026)', () => {
   const D = require('../../cdhub/staff/lib/date-words.js');
   D.setLocale([{ language_tag: 'en-GB' }]);
   expect(D.long('2026-09-30')).toBe('30 Sep 2026');
@@ -188,7 +188,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Claude');
-    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // Lisa 17 Nov 2026: the Done list is cleared from view
+    await expect(page.locator('#main')).not.toContainText('Sample finished item');   // the owner 17 Nov 2026: the Done list is cleared from view
     await expect(page.locator('[data-work-sum]')).toContainText('done 1');
   });
 
@@ -210,7 +210,7 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('menu option A (Lisa 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('menu option A (the owner 14 Nov 2026): Main, then the starting sections Compliance, Records, People, then More with the rest in colour order; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     const bar = page.locator('#nav > button.ht[data-section]');
@@ -225,7 +225,7 @@ test.describe('CD Hub: navigation', () => {
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('Assocs and Table map are off the bar and More (Lisa 13 Nov) but still open by link', async ({ page }) => {
+  test('Assocs and Table map are off the bar and More (the owner 13 Nov) but still open by link', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('#nav [data-go="buyers"], #nav [data-go="shape"]')).toHaveCount(0);
@@ -389,7 +389,7 @@ const setRx = (world, byId) => {
 };
 const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes\n'
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
-// Gestation timings are dated rows now (Lisa 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
+// Gestation timings are dated rows now (the owner 12 Nov 2026: no hard-coded limits). Pretend values, pretend source.
 const GEST = (world) => setFile(world, 'BLD-breeding_rule.csv', 'id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by\n'
   + ['gestation.due_days,63', 'gestation.window_from_days,57', 'gestation.window_to_days,72', 'gestation.alert_from_day,50', 'nav.view.litters,1', 'nav.view.buyers,1', 'nav.view.shape,1', 'nav.view.vet,1', 'nav.view.enquiries,1']   // the views a new kennel starts with off; this kennel has them on
     .map((kv, i) => `g${i},t,${kv},2010-01-01,Pretend source,,,`).join('\n') + '\n');
@@ -418,7 +418,7 @@ function cdAudit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const okRad = rad === '0px' || rad === '12px' || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .bar')) || (rad === '50%' && el.matches('nav#nav .hic'));   // the bottom tabs (Lisa's picks, 2 Nov): a rounded line, a round count ring, the icon's round place
+    const okRad = rad === '0px' || rad === '12px' || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .bar')) || (rad === '50%' && el.matches('nav#nav .hic'));   // the bottom tabs (the owner's picks, 2 Nov): a rounded line, a round count ring, the icon's round place
     if (!okRad) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('#main button:not([disabled]), #main select, .btn, .pill, .dpill, .cnt, .achip, .sfb') && bw[0] === 1 && s.borderTopStyle !== 'none') {
@@ -447,7 +447,7 @@ test.describe('CD Hub house look', () => {
     });
   }
 
-  // A row that opens wears the pale grey hover fill (Lisa, 12 Nov 2026); the controls on it keep their 1px line at 3:1 or more
+  // A row that opens wears the pale grey hover fill (the owner, 12 Nov 2026); the controls on it keep their 1px line at 3:1 or more
   // against that fill, in every look (warm dark mixes less muted into --hov for this, tokens.css --house-hov-mix).
   for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
     test(`${look} ${scheme}: on a hovered row the control rings stay 3:1 against the hover fill`, async ({ page, guard }) => {
@@ -513,7 +513,7 @@ test.describe('CD Hub house look', () => {
         const el = ctls.nth(i);
         const st = await el.evaluate((e) => { const s = getComputedStyle(e); return { w: s.borderTopWidth, c: s.borderTopColor, r: s.borderTopLeftRadius, fs: s.fontSize, fw: s.fontWeight, h: e.getBoundingClientRect().height, bg: s.backgroundColor, sel: e.getAttribute('aria-pressed') === 'true' }; });
         expect(st.w).toBe('1px'); expect(st.r).toBe('12px'); expect(st.c).not.toBe(ink); expect(st.h).toBeGreaterThanOrEqual(36);
-        // A select is a typing box: 16px on every page so a phone never zooms in on it (Lisa, 3 Nov 2026); every other control is 14px.
+        // A select is a typing box: 16px on every page so a phone never zooms in on it (the owner, 3 Nov 2026); every other control is 14px.
         expect(st.fs).toBe((await el.evaluate((e) => e.tagName)) === 'SELECT' ? '16px' : '14px'); expect(st.fw).toBe('600');
         lines.add(st.c);
         if (st.sel) continue;
@@ -522,7 +522,7 @@ test.describe('CD Hub house look', () => {
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e), pr = document.createElement('span'); pr.style.background = 'var(--hov)'; e.parentElement.appendChild(pr); const hov = getComputedStyle(pr).backgroundColor; pr.remove();
           return { os: s.outlineStyle, bw: s.borderTopWidth, bg: s.backgroundColor, hov }; });
-        // Lisa (12 Nov 2026): "purple outline on hover/click is a lot". Every control, the fold chevron too, hovers with the pale
+        // the owner (12 Nov 2026): "purple outline on hover/click is a lot". Every control, the fold chevron too, hovers with the pale
         // grey fill and no line.
         expect({ os: hv.os, bw: hv.bw }, `${tab} control ${i}`).toEqual({ os: 'none', bw: '1px' });
         expect(hv.bg, `${tab} control ${i}: the pale grey fill on hover`).toBe(hv.hov);
@@ -540,7 +540,7 @@ test.describe('CD Hub house look', () => {
   test('read-only pills, counts and checklist marks never hover; bottom tabs have no ring, only the colour bar widens, nothing moves', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    // Main's three numbers open what they count (Lisa, 2 Nov), so they are links and do hover; see hub-main-others.spec.js.
+    // Main's three numbers open what they count (the owner, 2 Nov), so they are links and do hover; see hub-main-others.spec.js.
     await expect(page.locator('[data-hub-main] a.hm-n')).toHaveCount(3);
     // Needs you in full now sits on Do and the data checks on Tables (Hub Mains, 2 Nov 2026).
     for (const [tab, sel] of [['work', '#needsCard h3 .cnt'], ['shape', '#checksCard .mk'], ['map', '#nav .ht .n']]) {
@@ -604,7 +604,7 @@ test.describe('CD Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #chips .hchip, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    // The top bar (Lisa's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
+    // The top bar (the owner's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
     expect(Math.round((await page.locator('header').boundingBox()).height)).toBe(56);
     await expect(page.locator('#backHome')).toBeVisible();
     await expect(page.locator('#backHome')).toHaveAttribute('href', '../');
@@ -621,7 +621,7 @@ test.describe('CD Hub house look', () => {
     await expect(page.locator('header .srchbtn')).toBeVisible();
     await page.locator('header .srchbtn').click();
     await expect(page.locator('#dashSearch')).toBeVisible();
-    expect(await page.locator('#nav .ht .n').first().evaluate((e) => getComputedStyle(e).position)).toBe('absolute');   // Lisa's tab picks: the count sits in the tab's top-right corner
+    expect(await page.locator('#nav .ht .n').first().evaluate((e) => getComputedStyle(e).position)).toBe('absolute');   // the owner's tab picks: the count sits in the tab's top-right corner
   });
 });
 
@@ -641,7 +641,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await openTab(page, 'work');
     await expect(page.locator('#needsCard .mrow')).toHaveCount(7);
     await expect(page.locator('#needsCard')).toContainText('Sample item waiting on Lisa');
-    // Rose = late only (Lisa's sweep, 3 Nov 2026): the count is rose exactly when one of its rows is late.
+    // Rose = late only (the owner's sweep, 3 Nov 2026): the count is rose exactly when one of its rows is late.
     const anyLate = (await page.locator('#needsCard .mrow .ic.late').count()) > 0;
     if (anyLate) await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/); else await expect(page.locator('#needsCard h3 .cnt')).not.toHaveClass(/need/);
     await openTab(page, 'today');
@@ -651,7 +651,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await openTab(page, 'shape');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('6');
     await expect(page.locator('#checksCard .mk.bad')).toHaveCount(6);
-    // Failed checks are broken: the black badge, never rose, read out as "6 failed" (Lisa, 3 Nov 2026).
+    // Failed checks are broken: the black badge, never rose, read out as "6 failed" (the owner, 3 Nov 2026).
     await expect(page.locator('#checksCard h3 .cnt')).toHaveClass(/\bbroken\b/);
     await expect(page.locator('#checksCard h3 .cnt')).not.toHaveClass(/\bneed\b/);
     await expect(page.locator('#checksCard h3')).toContainText('6 failed');
@@ -729,7 +729,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('h1')).not.toContainText(/outdoor/i);
   });
 
-  // Lisa 11 Nov 2026: "+ Thermometer" on the owner's hub (signed in with Google) opens the owner print page at Add
+  // the owner 11 Nov 2026: "+ Thermometer" on the owner's hub (signed in with Google) opens the owner print page at Add
   // thermometer. The staff page never shows it, and only an OWNER code can save on the print page.
   test('Temperatures today has "+ Thermometer", which opens the print page in add mode', async ({ page }) => {
     await page.goto('cdhub/');
@@ -778,7 +778,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(cells.nth(0)).not.toContainText('Windy');
     await expect(cells.nth(1)).toContainText('12–18°');
     await expect(cells.nth(1)).not.toContainText('OK');
-    // Lisa, 8 Nov 2026: the rain amount in mm is removed from the week strip; the drop icon alone says it is wet.
+    // the owner, 8 Nov 2026: the rain amount in mm is removed from the week strip; the drop icon alone says it is wet.
     await expect(cells.nth(1).locator('.wr svg')).toHaveCount(1);
     await expect(cells.nth(1)).not.toContainText('mm');
     await expect(cells.nth(1)).toContainText('Windy');
@@ -866,7 +866,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
-    // Age groups come from the owner's adult-age rule (Lisa 15 Nov 2026: two in the SOP); no rule = no Age filter
+    // Age groups come from the owner's adult-age rule (the owner 15 Nov 2026: two in the SOP); no rule = no Age filter
     await expect(page.locator('#fa')).toHaveCount(0);
     await page.evaluate(() => { T['BLD-breeding_rule.csv'] = (T['BLD-breeding_rule.csv'] || []).concat([{ id: 'ad', rule_key: 'dog.adult_from_months', value: '12', effective_from: '2010-01-01', source: 'Pretend SOP' }]); });
     await openTab(page, 'round');
@@ -913,7 +913,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await signIn(page);
     await openTab(page, 'dogs');
     const card = (name) => page.locator('.dc', { has: page.locator('.nm', { hasText: name }) });
-    // Rx sits behind More (layout A, Lisa 12 Nov 2026)
+    // Rx sits behind More (layout A, the owner 12 Nov 2026)
     for (const n of ['Test Dog One', 'Test Dog Two', 'Test Pup One']) await card(n).locator('details.more > summary').click();
     const one = card('Test Dog One');
     await expect(one.locator('.wt', { hasText: 'Moxiclear' })).toContainText('6 Nov 2026');
@@ -1067,7 +1067,7 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
     CD._byId.tpup = { id: 'tpup', dob: '2026-01-01' };
     CD.dogs.push({ id: 'tpup', area_id: 'test-pup-room', dob: '2026-01-01' });
     const pup = roomBand('test-pup-room', '2026-01-10');
-    // Temps A (Lisa 17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
+    // Temps A (the owner 17 Nov 2026): the room on the adult row; the bed spot (4th value) on the puppy row
     out.pupOk = tempState('18', '22', pup, '27.0', '2026-01-10');
     out.pupRoomWarm = tempState('20', '27.5', pup, '27.0', '2026-01-10');
     out.pupCold = tempState('22', '24', pup, '24.5', '2026-01-10');

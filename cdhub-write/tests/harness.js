@@ -2,7 +2,7 @@
 /**
  * Loads the REAL Apps Script files (code/apps-script/*.gs) into a Node sandbox with a fake Drive,
  * fake properties, fake cache and a controllable clock. Nothing here touches a real Google account
- * or Lisa's files.
+ * or the owner's files.
  */
 const vm = require('node:vm');
 const fs = require('node:fs');

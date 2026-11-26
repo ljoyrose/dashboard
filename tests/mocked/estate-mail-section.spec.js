@@ -46,7 +46,7 @@ async function open(page, tabs, hash) {
 }
 
 test.describe('Web Estate DNS & Email', () => {
-  test('ACCEPT: every invented domain shows, faults first, with checks, hops, step N of 10 and the Lisa-only fix', async ({ page }) => {
+  test('ACCEPT: every invented domain shows, faults first, with checks, hops, step N of 10 and the the owner-only fix', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 });
     const seen = await open(page, { Properties: F.values(HEADER, ROWS), 'Mail map': MAP, 'Mail switch': SWITCH });
     const cards = page.locator('[data-mail-domain]');

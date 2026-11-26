@@ -1,4 +1,4 @@
-// Two named thermometers in one room (Lisa 11 Nov 2026, H5/6). Each is its own round item and reading
+// Two named thermometers in one room (the owner 11 Nov 2026, H5/6). Each is its own round item and reading
 // (area_reading.thermometer_id). A thermometer QR opens that exact thermometer, with no picking; a room QR in a room
 // with two shows both, by name. Pretend rooms and thermometers; fake code and fake save address only.
 const { test, expect } = require('../support/test');
@@ -129,7 +129,7 @@ test('round cards show due, the reading, outside the limit, or room empty', asyn
   await expect(ds('E1')).toContainText(/^Done \d\d:\d\d · Room empty$/);
 });
 
-test('Lisa 12 Nov: the card shows its tick as soon as the save reply is OK, even when CLR pressed is never tapped', async ({ page }) => {
+test('the owner 12 Nov: the card shows its tick as soon as the save reply is OK, even when CLR pressed is never tapped', async ({ page }) => {
   const sent = await setup(page, base());
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card', { hasText: 'S1' }).click();

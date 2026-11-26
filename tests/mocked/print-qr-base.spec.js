@@ -1,3 +1,6 @@
+// Printed QRs point at the public staff page (the owner 18 Nov 2026): the owner and Grace may print from the Cloudflare copy, which
+// needs a Cloudflare sign-in, but staff, guests, vets and inspectors scan without one. The QR address comes from the owner's
+// qr.base_url rule row (dated), else the starting default; never from the address of the page doing the printing.
 // Printed QRs open the staff page on this same site. The owner's qr.base_url rule row (dated) wins when one is in force.
 // Invented rows only.
 const { test, expect } = require('../support/test');
@@ -37,6 +40,11 @@ test('printed QRs open the staff page on this site', async ({ page }) => {
   await expect(page.locator('.rcard')).toHaveCount(1);
   await page.getByRole('button', { name: 'Phone set-up QR' }).click();
   const qr = await page.evaluate(() => window.__qr);
+  expect(qr).toContain(START + '#s/AAAAAAAA');
+  expect(qr).toContain(START + '#s/EEEEEEEE');
+  expect(qr.some((t) => t.indexOf(START + '#setup=') === 0)).toBe(true);
+  expect(qr.filter((t) => t.indexOf(here) === 0)).toEqual([]);
+  // no address is printed on the cards (the owner 13 Nov 2026): the address lives only inside the QR
   expect(qr).toContain(staff + '#s/AAAAAAAA');
   expect(qr).toContain(staff + '#s/EEEEEEEE');
   expect(qr.some((t) => t.indexOf(staff + '#setup=') === 0)).toBe(true);

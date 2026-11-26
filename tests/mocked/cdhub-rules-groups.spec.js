@@ -1,4 +1,4 @@
-// Rules by topic (Lisa 17 Nov 2026, option A): one foldable card per topic, short rows, source behind the (i), search and
+// Rules by topic (the owner 17 Nov 2026, option A): one foldable card per topic, short rows, source behind the (i), search and
 // "Not set only". Invented rows only.
 const { test, expect } = require('../support/test');
 

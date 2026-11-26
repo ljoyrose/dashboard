@@ -32,7 +32,7 @@
     Promise.all([c.data(), c.readOptional('qr_tag'), c.readOptional('area_capacity'), c.readOptional('area_access'), c.readOptional('litter'), c.readOptional('capacity_setting'), c.readOptional('weight'), c.readOptional('breeding_rule')]).then(show);
     function show(v) {
       var d = v[0], tags = v[1], capacity = v[2].rows, access = v[3].rows, litters = v[4].rows, settings = v[5].rows;
-      // size from the latest weight (Lisa, 12 Nov 2026), the same rule as the dog cards. Until the save script lets
+      // size from the latest weight (the owner, 12 Nov 2026), the same rule as the dog cards. Until the save script lets
       // this page read weights, the size on the dog's record is still used.
       host.textContent = '';
       if (!d.ok) { host.appendChild(say(d.message, 'bad')); return; }

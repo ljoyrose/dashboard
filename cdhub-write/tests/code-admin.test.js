@@ -116,7 +116,7 @@ test('owner page: Make their code shows it once; the copied-it button clears it;
   [...card.querySelectorAll('button')].find((b) => b.textContent === 'Give them a new code').click(); await tick();
   assert.match($('#sc-once-code').textContent, /^[A-HJ-NP-Z2-9]{10}$/);
   assert.equal(saves(e, e.codes.staff), false);
-  // Lisa 16 Nov 2026: the box names the code plainly; the list hides ended codes unless asked; search; name tag label
+  // the owner 16 Nov 2026: the box names the code plainly; the list hides ended codes unless asked; search; name tag label
   assert.match($('#sc-once').textContent, /Your code: type this/);
   $('#sc-once-hide').click(); await tick(); await tick();
   const names = () => [...$('#sc-list').children].map((c) => c.textContent);

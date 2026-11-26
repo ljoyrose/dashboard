@@ -9,7 +9,7 @@ const { tabClick } = require('../support/tabs');
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
-const CFG = ctx.window.DASH_CONFIG; // the listings id and Lisa's address come from config.js (the only place the privacy allow-list permits them)
+const CFG = ctx.window.DASH_CONFIG; // the listings id and the owner's address come from config.js (the only place the privacy allow-list permits them)
 const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const LISTINGS = new RegExp('googleapis\\.com/drive/v3/files/' + reEsc(CFG.marketplace.listingsFileId) + '\\?alt=media');
 
@@ -71,7 +71,7 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#stamp')).toHaveText('TEST');
   });
 
-  test('a tap writes only the 4 answer cells (G:J) of that row, with Lisa\'s email; Undo clears them', async ({ page, guard }) => {
+  test('a tap writes only the 4 answer cells (G:J) of that row, with the owner\'s email; Undo clears them', async ({ page, guard }) => {
     const writes = await sheets(page, sampleRows());
     await open(page, '#/do');
     await page.locator('[data-ans="MKT-1"]').click();
@@ -86,7 +86,7 @@ test.describe('Marketplace page', () => {
     expect(writes[1].range).toBe('Marketplace!G2:J2'); expect(writes[1].body.values).toEqual([['', '', '', '']]);
   });
 
-  test('if the row moved since the page read it, nothing is written and Lisa is told to refresh', async ({ page }) => {
+  test('if the row moved since the page read it, nothing is written and the owner is told to refresh', async ({ page }) => {
     const writes = await sheets(page, sampleRows(), { moved: true });
     await open(page, '#/do');
     await page.locator('[data-ans="MKT-1"]').click();
@@ -263,7 +263,7 @@ test.describe('Marketplace page', () => {
     ];
     await sheets(page, rows);
     await open(page);
-    // Lisa's tab picks (2 Nov): Main · Decide · Do · Reply · New Stock, then Insights under More.
+    // the owner's tab picks (2 Nov): Main · Decide · Do · Reply · New Stock, then Insights under More.
     await expect(page.locator('#tabs a')).toHaveText([/^Main/, /^Decide/, /^Do/, /^Reply/, /^New Stock/, /^Insights/]);
     await expect(page.locator('#tabs > a')).toHaveCount(5);
     await expect(page.locator('#tabs .house-more > a')).toHaveText([/^Insights/]);
@@ -981,7 +981,7 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
   });
 });
 
-// House look (LINKS-COMFORT-BRIEF v3 + Lisa's extra rules, 28 Oct 2026), checked by computed style in the browser.
+// House look (LINKS-COMFORT-BRIEF v3 + the owner's extra rules, 28 Oct 2026), checked by computed style in the browser.
 // Invented rows only: no buyer names, no real listings.
 function lookRows() {
   const day = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
@@ -1035,22 +1035,22 @@ function auditLook() {
     if (!el.closest('header') && !el.classList.contains('tile')) { if (s.fontSize !== '14px' || s.fontWeight !== '600') out.push(`pressable words ${s.fontSize}/${s.fontWeight}: ${name(el)}`); }
     if (box.height < (phone ? 44 : 36) - 0.5) out.push(`pressable ${box.height}px high: ${name(el)}`);
     const edge = rgb(s.borderTopColor);
-    // Yes / No rest on their own colour line (Lisa's approved picture, 28 Oct); everything else on the one control line.
+    // Yes / No rest on their own colour line (the owner's approved picture, 28 Oct); everything else on the one control line.
     if (!el.closest('header')) { if (!el.matches('.btn.yes, .btn.no')) lines.add(edge.slice(0, 3).map(Math.round).join(',')); if (same(edge, ink)) out.push(`pressable starts out ink: ${name(el)}`); }
-    // The resting line is 3:1 on what is behind it AND on the page itself (the brief; Lisa's 8A7F70 warm / 7A8692 cool).
+    // The resting line is 3:1 on what is behind it AND on the page itself (the brief; the owner's 8A7F70 warm / 7A8692 cool).
     const behind = [bgOf(el.parentElement)].concat(el.closest('header') ? [] : [rgb(getComputedStyle(document.body).backgroundColor)]);
     for (const b of behind) if (ratio(edge, b) < 3) out.push(`pressable edge ${ratio(edge, b).toFixed(2)}:1, under 3:1: ${name(el)}`);
     const bg = rgb(s.backgroundColor); if (!el.closest('header') && bg[3] > 0.5 && !matchMedia('(prefers-color-scheme: dark)').matches && lum(bg) < 0.6) out.push(`solid fill on ${name(el)}`);
   }
   if (lines.size > 1) out.push(`pressables rest on ${lines.size} different lines: ${[...lines].join(' | ')}`);
   // Read-only markers: counts, date pills, parcel numbers: never a solid colour fill (tints only).
-  const tabDot = (el) => innerWidth < 768 && el.matches('nav.house-tabs .ht > .n');   // a phone's tab count: a small status dot (Lisa's pick b, 2 Nov)
+  const tabDot = (el) => innerWidth < 768 && el.matches('nav.house-tabs .ht > .n');   // a phone's tab count: a small status dot (the owner's pick b, 2 Nov)
   for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n, .date, .pid, .needs3 .v, .ava, .okring, .stamp, .readat')].filter(vis)) {
     if (tabDot(el)) continue;
     const bg = rgb(getComputedStyle(el).backgroundColor), page = bgOf(el.parentElement);
     if (bg[3] > 0.5 && ratio(bg, page) > 1.6) out.push(`solid fill on marker ${name(el)}`);
   }
-  // Counts: one fixed size (30 x 24, radius 12, a 14px number: Lisa's pick A, 2 Nov) so 1 and 2 digits match.
+  // Counts: one fixed size (30 x 24, radius 12, a 14px number: the owner's pick A, 2 Nov) so 1 and 2 digits match.
   // Bottom-tab counts are the corner ring instead (tab picks, 2 Nov): 24 x 24, 12px ends.
   // On a phone (under 768px) the tab count is an 8px round dot instead, rose (late) or grey (waiting), no ring, no number.
   for (const el of [...document.querySelectorAll('nav.house-tabs .ht > .n')].filter(vis).filter(tabDot)) {
@@ -1072,7 +1072,7 @@ function auditLook() {
     if (el.matches('.sdot, .cdot, .ava, .okring, .h1dot, .top h1 .dot')) { if (r !== '50%' && parseFloat(r) < 4) out.push(`dot not round: ${name(el)}`); continue; }
     if (el.matches('.cnt, nav.tabs .n')) continue;
     if (el.matches('nav.tabs .bar')) continue;   // the 4px colour bar under a tab label
-    if (el.matches('nav.house-tabs .hic')) { if (r !== '50%') out.push(`tab icon ring not round: ${name(el)}`); continue; }   // the ring round a tab icon (Lisa's tab picks)
+    if (el.matches('nav.house-tabs .hic')) { if (r !== '50%') out.push(`tab icon ring not round: ${name(el)}`); continue; }   // the ring round a tab icon (the owner's tab picks)
     if (r !== '12px') out.push(`radius ${r}: ${name(el)}`);
   }
   // Thumbnails: one size, 44 x 44.
@@ -1103,7 +1103,7 @@ test.describe('Marketplace house look', () => {
     }
   }
 
-  // HOUSE HOVER RULE (Lisa, 12 Nov 2026, replaces 28 Oct): hover = the pale grey fill (--hov), no line, meaning colours too.
+  // HOUSE HOVER RULE (the owner, 12 Nov 2026, replaces 28 Oct): hover = the pale grey fill (--hov), no line, meaning colours too.
   // Selected = the same fill + a 1px quiet grey line (--sel-bd), never ink or purple. Nothing moves; read-only pills have no hover.
   const hoverLook = (el) => el.evaluate((e) => {
     const c = getComputedStyle(e), probe = (v) => { const s = document.createElement('span'); s.style.color = v; e.appendChild(s); const x = getComputedStyle(s).color; s.remove(); return x; };
@@ -1112,7 +1112,7 @@ test.describe('Marketplace house look', () => {
       hov: (() => { const s = document.createElement('span'); s.style.background = 'var(--hov)'; e.parentElement.appendChild(s); const x = getComputedStyle(s).backgroundColor; s.remove(); return x; })() };
   });
   const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
-  test('hover: neutral controls get the pale grey fill and no line (Lisa, 12 Nov 2026); nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
+  test('hover: neutral controls get the pale grey fill and no line (the owner, 12 Nov 2026); nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     for (const sel of ['#view a.btn[href*="vinted"]', '#view [data-action="pack"]', '#view .chip[data-site]:not([aria-pressed="true"])']) {
@@ -1184,7 +1184,7 @@ test.describe('Marketplace house look', () => {
     expect(wide[0]).toBeGreaterThan(two[0]);
   });
 
-  test('spacing: 12px between cards (Lisa chose 12px), 16px under a header line before its first card', async ({ page }) => {
+  test('spacing: 12px between cards (the owner chose 12px), 16px under a header line before its first card', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     const gaps = await page.evaluate(() => {

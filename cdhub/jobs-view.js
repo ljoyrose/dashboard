@@ -89,10 +89,10 @@
     return (best && String(best.value || '').trim()) || code;
   }
 
-  /** How a record was made, in the owner's words (Lisa 17 Nov 2026: "is that not for the app user to decide?"). Row
+  /** How a record was made, in the owner's words (the owner 17 Nov 2026: "is that not for the app user to decide?"). Row
       job.how.<how>.label in force that day: its value is the words; "off" hides the words. No row = the starter words.
       The record always keeps how_recorded itself: only what the screen says is the owner's choice. */
-  /* Lisa 22 Nov 2026: "the user pays for the app, it is up to them what is displayed". Whether a screen says a record
+  /* the owner 22 Nov 2026: "the user pays for the app, it is up to them what is displayed". Whether a screen says a record
      was entered later (entered earlier / imported / time not given / "(entered <date>)") is the owner's row
      display.entered_later in force that day: "on" shows it; no row or "off" hides it. The records always keep
      happened_at, taken_at, how_recorded and time_given: only what the screen says changes. */
@@ -172,7 +172,7 @@
       var inner = n ? '<span class="pill ' + cls + '">' + n + '</span>' : '<span class="mut">0</span>';
       return '<td data-n="' + k + '">' + (href ? '<a href="' + e(href) + '" aria-label="' + n + ' ' + k + ', open ' + e(r.sop) + '">' + inner + '</a>' : inner) + '</td>';
     }
-    // Lisa 17 Nov 2026 (checks A): an owner's note covering a past period (how_recorded owner_note) is shown as written,
+    // the owner 17 Nov 2026 (checks A): an owner's note covering a past period (how_recorded owner_note) is shown as written,
     // with the day it was entered, so anyone reading sees it was recorded afterwards.
     var notes = (v.logs || []).filter(function (l) { return String(l.how_recorded || '') === 'owner_note' && l.note; });
     var seenNote = {};

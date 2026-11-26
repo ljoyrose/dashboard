@@ -1,6 +1,6 @@
 'use strict';
 /**
- * QR codes made when an item is added (Lisa 15 Nov 2026, print-any-item job, Addendum 2 f-h). Invented rows only.
+ * QR codes made when an item is added (the owner 15 Nov 2026, print-any-item job, Addendum 2 f-h). Invented rows only.
  * The rule is an owner row per item type: qr.on_add.<kind> (and qr.on_add.item.<kind_key>), dated, newest in force wins.
  */
 const test = require('node:test');

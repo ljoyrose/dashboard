@@ -1,7 +1,7 @@
 // Web Estate Hub: per-site traffic this month (visits, CDN or bandwidth use against the plan's quota).
 // Pure: no network, no Drive, no DOM. The numbers live only in the private RR_WEB-ESTATE sheet, Traffic tab, filled by
-// the estate engine from read-only analytics APIs, or typed by Lisa where a host has no API. Nothing here holds a number.
-// Free plans stay free (Lisa, 13 Nov 2026): amber at 80%, red at 95% or more, plain words, no upgrade prompt or button.
+// the estate engine from read-only analytics APIs, or typed by the owner where a host has no API. Nothing here holds a number.
+// Free plans stay free (the owner, 13 Nov 2026): amber at 80%, red at 95% or more, plain words, no upgrade prompt or button.
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -74,7 +74,7 @@
     return isNaN(t) ? null : t;
   }
 
-  // ---- Lisa-only setup steps, by where the site is hosted ----
+  // ---- the owner-only setup steps, by where the site is hosted ----
   // Each names where to make a READ-ONLY token (or the manual route when the host has no API) and the Script Property
   // the estate engine reads. Tokens go in Script Properties only, never in the sheet, the repo or a chat.
   var SETUPS = [

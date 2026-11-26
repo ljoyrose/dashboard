@@ -1,6 +1,6 @@
-// Lives in estate/ only because that folder is already copied by pages.yml (a workflow file Lisa alone changes); it is the
+// Lives in estate/ only because that folder is already copied by pages.yml (a workflow file the owner alone changes); it is the
 // Personal Drive page (Drives > Personal Drive), not the Web hub. Fetched only when that page opens with bin actions allowed,
-// so no other page pays for it (Lisa, 3 Nov 2026: lazy-load before #273 merges; same pattern as estate/donq.js).
+// so no other page pays for it (the owner, 3 Nov 2026: lazy-load before #273 merges; same pattern as estate/donq.js).
 // The page (index.html) passes in what this needs through PBin.init(ctx). The personal scan state (Q), busy, the tick
 // lists and the sign-in state are read through ctx getters, because the page replaces them.
 (function (root) {
@@ -49,7 +49,7 @@
     PB_SURFACE = String(PB.surface || 'drive-personal').toLowerCase();
   };
   // ---- Personal Drive bin (TidyUp Apps 3): the same Rename and Bin steps as Work My Drive, for the personal account. ----
-  // Look-only until Lisa presses "Allow personal bin actions" (full Drive scope for the personal account, token in memory
+  // Look-only until the owner presses "Allow personal bin actions" (full Drive scope for the personal account, token in memory
   // only, cleared on sign-out). DRY_RUN (config personalBin.dryRun, default true) lists and changes nothing. A file can be
   // binned only if it starts ZZ_DELETE_DRIVE_, is a file (not a folder) in that personal My Drive, and has a ledger row
   // with surface personalBin.surface. Before each move: recheckForBin (md5 + size + not trashed), then trashOnly().
@@ -103,7 +103,7 @@
   }
   function qRefresh() { X.Q().binStatus = 'idle'; qLoadGen++; render(); loadQCandidates(); }
   function qNewName(f) { return PCP_PREFIX + f.name; }
-  // Bin list (Lisa, 13 Nov 2026): each file the Rename step just renamed was re-checked live as an exact copy (md5 + size)
+  // Bin list (the owner, 13 Nov 2026): each file the Rename step just renamed was re-checked live as an exact copy (md5 + size)
   // of a shared-drive file, so the page writes its ledger row itself: one AA_DELETE-LEDGER-ROWS_ slip per Rename press,
   // surface drive-personal, in the same CHANGES folder as the Canva card's slips (work account, write access).
   // A failed write leaves the renamed files waiting (no row, never binned); the note says so.

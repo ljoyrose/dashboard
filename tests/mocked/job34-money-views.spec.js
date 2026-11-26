@@ -103,7 +103,7 @@ test.describe('Money Hub: keyboard', () => {
     await expect(page.locator('#hereTitle')).toBeFocused();
     const seen = await tabWalk(page, 80);
     for (const t of ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More']) expect(seen.some((s) => s.startsWith(t)), t + ' reachable by Tab').toBe(true);
-    // Control sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
+    // Control sits under More (the owner's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
     expect(await tabTo(page, 'nav.main a[data-nav="control"]', 90), 'Control reachable by Tab under More').toBe(true);
     await page.keyboard.press('Escape');
     await page.locator('nav.main a[data-nav="accountant"]').focus();

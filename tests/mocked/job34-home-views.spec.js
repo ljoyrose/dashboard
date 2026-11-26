@@ -58,7 +58,7 @@ test.describe('Home: views and states', () => {
       const k = await page.evaluate(() => { const a = document.activeElement; return a ? (a.getAttribute('data-nav') || a.id || '') : ''; });
       if (['map', 'drives', 'bin', 'changes', 'refreshBtn', 'signOutBtn'].includes(k)) reached.add(k);
     }
-    // Drives, Bin and Changes sit under More (Lisa's tab picks, 2 Nov): Tab to More, Enter opens it, Tab walks its menu.
+    // Drives, Bin and Changes sit under More (the owner's tab picks, 2 Nov): Tab to More, Enter opens it, Tab walks its menu.
     for (const k of ['drives', 'bin', 'changes']) {
       await page.keyboard.press('Escape');
       await page.locator('#mainNav a[data-nav="map"]').focus();

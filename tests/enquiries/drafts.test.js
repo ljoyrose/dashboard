@@ -20,7 +20,7 @@ test('ACCEPT: every case, email and WhatsApp, passes the draft check', () => {
 });
 
 test('ACCEPT: the check fails a price, a £ figure, COI, hypoallergenic alone, a licence number, puppyclassroom.com or no link', () => {
-  const ok = 'Hi, have a look at https://doc.labradoodles.co.uk/breed. Kind regards, Lisa';
+  const ok = 'Hi, have a look at https://doc.labradoodles.co.uk/breed. Kind regards, the owner';
   assert.deepEqual(C.checkDraft(ok), []);
   const bad = [
     ['a price or money figure', ok + ' The price is 2500.'],
@@ -40,12 +40,12 @@ test('ACCEPT: the check fails a price, a £ figure, COI, hypoallergenic alone, a
   assert.ok(C.checkDraft(ok, { stop: true }).includes('no STOP line on a cold message'));
 });
 
-test('ACCEPT: an invented Swiss buyer gets an official government page or "Lisa to confirm"', () => {
+test('ACCEPT: an invented Swiss buyer gets an official government page or "the owner to confirm"', () => {
   const d = C.buildDraft('first-abroad', { name: 'Buyer Swiss', country: 'Switzerland' });
   assert.match(d.email.text, /https:\/\/www\.gov\.uk\/taking-your-pet-abroad/);
   assert.match(d.email.text, /Lisa to confirm/);
   assert.match(d.whatsapp, /Lisa to confirm/);
-  // Lisa's own official page from Settings replaces the fallback; a non-government link is ignored.
+  // the owner's own official page from Settings replaces the fallback; a non-government link is ignored.
   const own = C.buildDraft('first-abroad', { country: 'Switzerland', importPages: 'Switzerland=https://www.blv.admin.ch/example-page; Spain=https://example.com/rules' });
   assert.match(own.email.text, /blv\.admin\.ch/);
   assert.doesNotMatch(own.email.text, /Lisa to confirm/);

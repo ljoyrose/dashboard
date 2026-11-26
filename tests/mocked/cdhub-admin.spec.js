@@ -1,4 +1,4 @@
-// CD Hub Admin (More -> Admin), owner-only. Lisa 12 Nov 2026. Invented rows only.
+// CD Hub Admin (More -> Admin), owner-only. the owner 12 Nov 2026. Invented rows only.
 const { test: base, expect } = require('../support/test');
 const { buildWorld, IDS } = require('../support/world');
 const { tabClick } = require('../support/tabs');
@@ -162,7 +162,7 @@ asOwner('Show QR: a QR drawer that cannot load says so, and Show QR tries again'
   await expect(page.locator('#adm-phone .adm-qr svg')).toBeVisible();
 });
 
-// Lisa 15 Nov 2026: an always-visible link labelled exactly "Script page" opens the owner page.
+// the owner 15 Nov 2026: an always-visible link labelled exactly "Script page" opens the owner page.
 asOwner('Admin always shows a "Script page" link to the owner page', async ({ page }) => {
   await open(page);
   await tabClick(page, '#nav button[data-go="admin"]');
@@ -190,7 +190,7 @@ asOwner('the owner page link uses the same save address as the hub save', async 
   await expect(page.locator('#adm-codes a.btn[href*="page=approve"]').first()).toHaveAttribute('href', /SAMPLE-from-drive\/exec/);
 });
 
-// Lisa 16 Nov 2026: "it says what to do but no link". Add staff opens the owner page with a real button.
+// the owner 16 Nov 2026: "it says what to do but no link". Add staff opens the owner page with a real button.
 asOwner('Add staff has a Make a code button to the owner page codes section', async ({ page }) => {
   await open(page);
   await tabClick(page, '#nav button[data-go="admin"]');

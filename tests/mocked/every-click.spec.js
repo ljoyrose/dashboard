@@ -46,7 +46,7 @@ for (const [base, hashes, signBtn] of ROUTES) {
   for (const hash of hashes) {
     test(`${base}${hash}: every button, tile and link is labelled and does something`, async ({ page, context, guard }) => {
       // #/bin has the most buttons and each click reloads the page: it passes alone but can run past 240 s under a full parallel run.
-      // Money #/now and CD Hub #/map: every number and row there now opens what it counts (Lisa, 2 Nov), so they hold the most links after #/bin.
+      // Money #/now and CD Hub #/map: every number and row there now opens what it counts (the owner, 2 Nov), so they hold the most links after #/bin.
       test.setTimeout(['#/bin', '#/now', '#/map'].includes(hash) && base !== './' || hash === '#/bin' ? 480_000 : 240_000);
       guard.allowedConsole = guard.allowedConsole || [];
       // The Drive check opens the computer's folder picker; here it answers "not allowed" so the page shows its message.
@@ -86,10 +86,10 @@ for (const [base, hashes, signBtn] of ROUTES) {
           }
         }
       }
-      // Every number and row now opens what it counts (Lisa, 2 Nov), so a screen can hold several plain links to one list.
+      // Every number and row now opens what it counts (the owner, 2 Nov), so a screen can hold several plain links to one list.
       // The first is clicked and must land there; the others with the same address are the same link (each was checked above
       // to have a label and an address that loads). This keeps the crawl inside its time on slower machines.
-      // Each section's fold chevron (toolkit.js, Lisa 2 Nov) is checked where it stands, not with a reload each: a click folds
+      // Each section's fold chevron (toolkit.js, the owner 2 Nov) is checked where it stands, not with a reload each: a click folds
       // (aria-expanded false), a second opens again. Then the crawl below leaves them out.
       for (const it of items.filter((x) => x.fold)) {
         const b = page.locator(`[data-audit="${it.i}"]`);

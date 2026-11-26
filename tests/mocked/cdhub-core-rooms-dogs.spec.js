@@ -27,7 +27,7 @@ const OCC = csv('id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_ou
   'o2,t,sub-x2,ar-c,,,,Breeding Bitch,',
   'o3,t,sub-x3,,,,,Stud Boy,'
 ]);
-// Need rows (Lisa 11 Nov 2026, A standard): Room C ended long ago; Room B has a row still running; Room A has none (always in use).
+// Need rows (the owner 11 Nov 2026, A standard): Room C ended long ago; Room B has a row still running; Room A has none (always in use).
 const REQ = csv('id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on', [
   'req-1,t,room.in_use,area,ar-c,2020-01-01,2020-12-31,Pretend retirement,,',
   'req-2,t,room.in_use,area,ar-b,2020-01-01,,Pretend,,'
@@ -54,7 +54,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     put(w, 'BLD-subject_status.csv', STATUS);
     put(w, 'BLD-occupancy.csv', OCC);
     put(w, 'BLD-requirement.csv', REQ);
-    // Adult age is a dated row now (Lisa 12 Nov 2026); without it nobody is counted a puppy or an adult.
+    // Adult age is a dated row now (the owner 12 Nov 2026); without it nobody is counted a puppy or an adult.
     put(w, 'BLD-breeding_rule.csv', csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', ['a1,t,dog.adult_from_months,6,2010-01-01,Pretend law,,,']));
     w.file('bld-access-invented', 'BLD-area_access.csv', ACCESS, { parents: [IDS.bld], driveId: 'drv-alpha1' });
     await HUBS.cdhub.open(page, guard);
@@ -163,7 +163,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('#kept-readings h3')).toHaveText('Readings');
   });
 
-  test('The round: present shows pressed at once, with no redraw and no jump to the top (Lisa 15 Nov)', async ({ page, guard }) => {
+  test('The round: present shows pressed at once, with no redraw and no jump to the top (the owner 15 Nov)', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-area.csv', AREA);
     put(w, 'BLD-subject.csv', SUBJECT);
@@ -295,7 +295,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
       go('today', false);
     });
     await expect(page.locator('#main .tile', { hasText: 'staffing' })).toContainText('1 per 7 adults');
-    await expect(page.locator('#main .tile', { hasText: 'staffing' })).not.toContainText('Pretend source');   // Lisa 17 Nov 2026: no legal source on the tile
+    await expect(page.locator('#main .tile', { hasText: 'staffing' })).not.toContainText('Pretend source');   // the owner 17 Nov 2026: no legal source on the tile
     // dated rows: each day is judged by the row in force that day; a to_date ends a row
     const r = await page.evaluate(() => {
       T['BLD-breeding_rule.csv'] = [
@@ -361,7 +361,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('#rows .nm')).toHaveText('Pretend Adult One');
     const room = page.locator('#rows [data-cabin-move]');
     await expect(room).toHaveText('Room A');
-    // The cabin chip opens the move picker (Lisa 12 Nov); the room card still lists the dog.
+    // The cabin chip opens the move picker (the owner 12 Nov); the room card still lists the dog.
     await page.evaluate(() => go('areas/ar-a'));
     await expect(page.locator('#main [data-room]')).toHaveCount(1);
     await expect(page.locator('#main [data-room]')).toHaveAttribute('data-room', 'ar-a');
@@ -407,7 +407,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
     await page.getByRole('button', { name: 'Dog cards' }).click();
-    // Lisa's dog card (18 Nov 2026): name, Sex, Date of birth, photo, Size block, code, chip. No room line on it.
+    // the owner's dog card (18 Nov 2026): name, Sex, Date of birth, photo, Size block, code, chip. No room line on it.
     await expect(page.locator('.dcard .name')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
     const one = page.locator('.dcard[data-dog="d1"]');
     await expect(one.locator('[data-k="dob"] dd')).toHaveText('5 Jan 2022');
@@ -415,7 +415,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(one.locator('[data-k="sex"] dd')).toHaveText('Female');
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
     await expect(one.locator('[data-k="size"] .lab')).toHaveText('Size');
-    await expect(one.locator('[data-k="size"] b')).toHaveText('Medium');   // Lisa's v4 card: a Size tile
+    await expect(one.locator('[data-k="size"] b')).toHaveText('Medium');   // the owner's v4 card: a Size tile
     await expect(one.locator('[data-k="size"]')).toHaveAttribute('data-size', 'medium');
     await expect(page.locator('.sheet')).not.toContainText('Room C');
     await page.getByRole('button', { name: 'Room cards' }).click();

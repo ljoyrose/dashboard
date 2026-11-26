@@ -1,4 +1,4 @@
-// CD Hub house hover rule, measured (Lisa, 12 Nov 2026, PR 408): hover and tap show a PALE GREY FILL and NO line,
+// CD Hub house hover rule, measured (the owner, 12 Nov 2026, PR 408): hover and tap show a PALE GREY FILL and NO line,
 // on 12px rounded corners. Keyboard focus keeps its thin ink line. This test hovers one of every kind of control on
 // every hub screen (and inside the opened panels) and reads what the browser really draws.
 // Invented 27-animal set; pretend Google and Drive.
@@ -10,12 +10,12 @@ const { settle } = require('../support/settle');
 const test = base.test.extend({ world: async ({}, use) => use(c27.install(buildWorld())) });
 const { expect } = base;
 const HIDDEN = ['buyers', 'shape', 'litters', 'vet'];   // switched off (PR 472): not walked
-// Known and parked for Lisa (not changed here): Main's "Next" card is one big tappable card with no hover fill. Its style
+// Known and parked for the owner (not changed here): Main's "Next" card is one big tappable card with no hover fill. Its style
 // lives in the shared house.css and is the same on every hub, so changing it is her call (CDHUB-HUMAN-TEST slip, decision 2).
 const PARKED = ['section.card.hm-next[row]'];
 // Breed Better's own look (its PR of 15 Nov 2026, "house selected look"): its chips and fold lines on the dog card show a thin
 // coloured line on hover, on 8px corners, by design, and its own acceptance test holds that. Not judged by the grey-fill rule
-// here; whether Breed Better should follow the grey fill instead is parked for Lisa (CDHUB-HUMAN-TEST-2 slip, decision 2).
+// here; whether Breed Better should follow the grey fill instead is parked for the owner (CDHUB-HUMAN-TEST-2 slip, decision 2).
 const OWN_LOOK = /^(button|summary)\.bb-/;
 
 /** One of each kind of control on screen: [{ i, kind, label }], each tagged data-hv="i". Runs in the page. */
