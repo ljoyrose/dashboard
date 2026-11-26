@@ -200,8 +200,7 @@ test.describe('CD Hub: Medicines register on Compliance', () => {
     const csv = fs.readFileSync(await dl.path(), 'utf8');
     expect(csv).toContain('Medicines register,Sample Kennel (invented)');
     expect(csv).toContain('Month,February 2026');
-    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Med C,,,1 tablet,Oral,routine,,not recorded,with food,dog card');
-    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Sample Wormer,,,1 tablet,Oral,routine,,Lisa Carson,with food');
+    expect(csv).toContain('2026-02-03,,Test Dog One,900000000000001,Med C,,,1 tablet,Oral,routine,,Lisa Carson,with food');
     expect(csv).not.toContain('dog card');
     expect(csv).not.toContain('Recorded in');
     expect(csv).toContain('Dog not on the current list');

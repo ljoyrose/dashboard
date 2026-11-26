@@ -95,12 +95,15 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
-  /* The phone set-up QR opens the public staff page (the owner 18 Nov 2026: staff phones have no Cloudflare sign-in, so a QR shown
-     on the Cloudflare copy must not point at it). The owner's qr.base_url rule row in force wins (https, ending in /), as on
-     the print page; this is only the starting default. */
-  var QR_BASE_START = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
-  /* Phone set-up QR opens the staff page on this same site. The owner's qr.base_url rule row in force wins
-     (https, ending in /), as on the print page. */
+  /* Phone set-up QR opens the staff page on this site. A configured https address
+     (cdhub.publicStaffBase, ending in /) wins over that. A qr.base_url rule row in force wins over both. */
+  function staffPublicBase() {
+    var cfg = '';
+    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
+    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
+    var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  }
   function qrBase(T, today) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
@@ -108,7 +111,7 @@ var AdminView = (function () {
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(val) || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
       if (!best || f >= best.f) best = { f: f, v: val };
     });
-    return best ? best.v : staffBase();
+    return best ? best.v : staffPublicBase();
   }
   function ownerPage(v, label, section) {
     var u = scriptUrl();

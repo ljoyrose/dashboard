@@ -6,12 +6,15 @@
   'use strict';
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
-  /* Where every printed QR points (the owner 18 Nov 2026): the public staff page, never this page's own address. the owner and Grace
-     may print from the Cloudflare copy, which needs a Cloudflare sign-in; staff, guests, vets and inspectors scan without one.
-     The owner's rule row qr.base_url (dated, with a source) wins; this is only the starting default. */
-  var QR_BASE_START = 'https://ljoyrose.github.io/dashboard/cdhub/staff/';
-  /* Printed QR codes open the staff page on this same site (the folder above this print page). An owner rule
-     qr.base_url (https, ending in /) wins when one is in force. */
+  /* Printed QR codes open the staff page on this site, not this print page. A configured https address
+     (cdhub.publicStaffBase, ending in /) wins over that. An owner qr.base_url row in force wins over both. */
+  function staffPublicBase() {
+    var cfg = '';
+    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
+    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
+    var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  }
   function qrBase() {
     var day = typeof BLDNeeds !== 'undefined' ? BLDNeeds.today() : '', best = null;
     ((T && T.breeding_rule) || []).forEach(function (r) {
@@ -19,7 +22,7 @@
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(v) || (f && f > day) || (r.to_date && String(r.to_date) < day)) return;
       if (!best || f >= best.f) best = { f: f, v: v };
     });
-    return best ? best.v : new URL('../', location.href).href;
+    return best ? best.v : staffPublicBase();
   }
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer', 'item'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   save.TABLES.breeding_rule = { label: 'Owner settings', file: 'BLD-breeding_rule.csv', fields: { rule_key: { type: 'text', required: true, label: 'Setting' }, value: { type: 'text', required: true, label: 'Value' }, effective_from: { type: 'date', required: true, label: 'From' }, source: { type: 'text', label: 'Source' } } };   // item card fields choice (print.fields.item), owner only
