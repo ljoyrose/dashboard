@@ -1,4 +1,4 @@
-// Temperature readings import (Lisa 22 Nov 2026): paper or spreadsheet readings into BLD-area_reading, owner only.
+// Temperature readings import (the owner 22 Nov 2026): paper or spreadsheet readings into BLD-area_reading, owner only.
 // Pretend rooms and thermometers; fake code and fake save address only.
 const { test, expect } = require('../support/test');
 

@@ -1,4 +1,4 @@
-// Money Hub house look (LINKS-COMFORT-BRIEF v3 + Lisa's 28 Oct rules), checked by computed style on every view.
+// Money Hub house look (LINKS-COMFORT-BRIEF v3 + the owner's 28 Oct rules), checked by computed style on every view.
 // 1 everything you press: the same clear 1px line (never ink at rest), 12px corners, 36px high, 14px 600; hover = the pale grey fill, no line (12 Nov 2026), nothing moves
 // 2 every date pill: a plain 1px ring; late = rose ring + tint, soon = amber ring + tint
 // 3 no text under 13px, weights 400 and 600 only, no coloured words
@@ -53,7 +53,7 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
             const cls = e.classList;
-            // The bottom tabs follow Lisa's tab picks (2 Nov): round icon ring, 2px line, 12px-round corner counts.
+            // The bottom tabs follow the owner's tab picks (2 Nov): round icon ring, 2px line, 12px-round corner counts.
             const tabN = e.matches('nav.house-tabs .ht > .n');
             const tabShape = (r === '50%' && e.matches('nav.house-tabs .hic')) || (r === '2px' && e.matches('nav.house-tabs .bar')) || (r === '12px' && tabN);
             const ok = tabShape || (r === '12px' && !tabN) || (r === '50%' && (cls.contains('dot') || cls.contains('info')));
@@ -72,7 +72,7 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             if (!inHeader && cs.borderTopColor !== ctl) out.push('press line colour ' + cs.borderTopColor + ' (want ' + ctl + '): ' + what(e));
             if (!inHeader && cs.borderTopColor === ink) out.push('press starts out ink: ' + what(e));
           });
-          // Count pills: one fixed size so 1 and 2 digits match, a 14px number (Lisa's pick A, 2 Nov). Tab counts: the 24 x 24 corner ring.
+          // Count pills: one fixed size so 1 and 2 digits match, a 14px number (the owner's pick A, 2 Nov). Tab counts: the 24 x 24 corner ring.
           document.querySelectorAll('.cnt, nav.main .n:not(:empty)').forEach((e) => {
             if (!seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
@@ -132,9 +132,9 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
 });
 
 test.describe('Money Hub look: house hover rule (hover = selected; nothing ever moves)', () => {
-  // Lisa (12 Nov 2026): hover = the pale grey fill (--hov) and no line. Header buttons sit on the dark frame: its quiet fill
+  // the owner (12 Nov 2026): hover = the pale grey fill (--hov) and no line. Header buttons sit on the dark frame: its quiet fill
   // (--frame-hov), no line. Selected = the same fill + a 1px quiet grey line (--sel-bd).
-  // The bottom tabs are EXEMPT (Lisa's tab rule): no ring, no outline, no fill; only the colour bar above the label widens.
+  // The bottom tabs are EXEMPT (the owner's tab rule): no ring, no outline, no fill; only the colour bar above the label widens.
   const CASES = [
     ['light', 'now', 'main .btn', 'neutral'], ['light', 'todo', 'main details > summary', 'neutral'], ['light', 'money', 'a.ent', 'neutral'],
     ['light', 'todo', '.subnav a:not([aria-current])', 'neutral'], ['light', 'now', 'header .btn', 'frame'],
@@ -209,7 +209,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
       await el.scrollIntoViewIfNeeded();
       await el.hover();
       expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
-      // A pill inside a row or link that opens something takes that row's pointer (Lisa, 2 Nov: every row opens its item); a pill alone never does.
+      // A pill inside a row or link that opens something takes that row's pointer (the owner, 2 Nov: every row opens its item); a pill alone never does.
       expect(await el.evaluate((e) => getComputedStyle(e).cursor === 'pointer' && !e.closest('a[href], button, [data-open-row]')), sel).toBe(false);
     }
   });
@@ -290,7 +290,7 @@ test.describe('Money Hub look: control line and count pills hold in every look',
     });
     expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      // Every count holds a 14px number (Lisa's pick A, 2 Nov): bottom-tab counts are the 24 x 24 corner ring, the rest the 30 x 24 pill.
+      // Every count holds a 14px number (the owner's pick A, 2 Nov): bottom-tab counts are the 24 x 24 corner ring, the rest the 30 x 24 pill.
       expect(s.h, `count "${s.t}" height`).toBe(24);
       if (s.t.length <= 2) expect(s.w, `${s.tab ? 'tab ' : ''}count "${s.t}" width`).toBe(s.tab ? 24 : 30);
     }
@@ -337,7 +337,7 @@ test.describe('Money Hub: summary strip, Next card and friendly empty states', (
     intake.content = intake.content.split('\n').filter((l) => !/^I\d/.test(l)).join('\n');
     await open(page, 'light');
     await go(page, 'todo');
-    // One empty line per view (Lisa, 2 Nov): Yours with nothing ready or blocked says it once.
+    // One empty line per view (the owner, 2 Nov): Yours with nothing ready or blocked says it once.
     await expect(page.locator('#view .empty')).toHaveCount(1);
     await expect(page.locator('#view .empty').first()).toContainText('Nothing needs you');
     const ring = await page.locator('#view .empty').first().evaluate((e) => getComputedStyle(e, '::before').borderTopWidth);

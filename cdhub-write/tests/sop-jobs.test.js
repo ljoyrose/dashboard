@@ -180,7 +180,7 @@ test('only_in_areas: a room job for some rooms only; it is the last column; neve
   assert.equal(log(env, { check_type_id: any, area_id: 'area-t1' }).ok, true);
 });
 
-// ---- 4. a note added to a job already done (Lisa 13 Nov 2026: "in addition to done rather than instead")
+// ---- 4. a note added to a job already done (the owner 13 Nov 2026: "in addition to done rather than instead")
 test('note: added to a record already saved, never a duplicate and never blocking one; must point at a real, non-note record', () => {
   const env = env0();
   const id = typeId(env, 'pup_weigh', { target: 'litter' });

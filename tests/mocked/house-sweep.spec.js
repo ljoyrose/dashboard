@@ -1,12 +1,12 @@
-// The style sweep (Lisa, 3 Nov 2026) on all 8 pages, every tab and More page, at 1280 and 390, in all four looks
+// The style sweep (the owner, 3 Nov 2026) on all 8 pages, every tab and More page, at 1280 and 390, in all four looks
 // (warm and cool, light and dark):
 //  1 no background fill on hover, focus, press or selected anywhere except typing boxes and the one pale grey state fill
-//    (Lisa, 12 Nov 2026: hover and tap = --hov, selected = --sel-fill, no outline);
+//    (the owner, 12 Nov 2026: hover and tap = --hov, selected = --sel-fill, no outline);
 //  2 numbers side by side in one group are the same size;
 //  3 no explainer lines or sub-lines that restate a label;
 //  4 nothing moves on hover or focus;
 //  5 a rose count means late only (a tab's rose count is read out as "N late"); a black count means broken (down, expired, stuck,
-//    failed: Lisa, 3 Nov 2026, read out with that word); everything else is grey.
+//    failed: the owner, 3 Nov 2026, read out with that word); everything else is grey.
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 //
 // SWEEP_AUDIT=<file> adds every finding to that file (one per line) instead of failing: the before / after list in the pull request.
@@ -101,7 +101,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
           const rest = await read();
           const check = async (how) => {
             const now = await read();
-            const greyOk = how !== 'focus' && now.bg === now.hov;   // hover and press: the pale grey fill (Lisa, 12 Nov 2026)
+            const greyOk = how !== 'focus' && now.bg === now.hov;   // hover and press: the pale grey fill (the owner, 12 Nov 2026)
             if ((now.bg !== rest.bg && !greyOk) || now.img !== rest.img) bad.push(`#/${v} ${p.what}: ${how} fills (${rest.bg} > ${now.bg})`);
             if (now.box !== rest.box) bad.push(`#/${v} ${p.what}: moves on ${how} (${rest.box} > ${now.box})`);
           };

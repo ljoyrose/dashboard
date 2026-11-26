@@ -1,4 +1,4 @@
-// Lisa's APPROVED dog card, v4 (15 Nov 2026, re-confirmed 20 Nov 2026 18:26). Two cards per A4 portrait, one above the other,
+// the owner's APPROVED dog card, v4 (15 Nov 2026, re-confirmed 20 Nov 2026 18:26). Two cards per A4 portrait, one above the other,
 // a dashed cut line between, each about 194 x 138 mm. Name large top-left with no label; Sex (with its sign) and Date of birth
 // labelled top-right; the photo left in a thick frame of the size colour, fitted whole; a Size tile top-aligned with the photo;
 // a QR of 62 mm (its black squares) bottom-aligned with the photo, 8 mm clear of the tile; the microchip labelled across the

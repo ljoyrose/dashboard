@@ -1,4 +1,4 @@
-/* House look: the shared parts every hub uses (Lisa, 28 Oct 2026). ONE file; the numbers and colours come from tokens.css.
+/* House look: the shared parts every hub uses (the owner, 28 Oct 2026). ONE file; the numbers and colours come from tokens.css.
    Load order on every hub: tokens.css, then this file, then the page's own <style> (layout and anything only that page has).
    Rules: one 12px radius (dots and rings round); 1px lines, 3px left colour bars; Lexend 400/500/600 at 14 / 15 / 18px only, no coloured
    words, sentence case; one control line; buttons 36px (44px on a phone); hover and tap = a pale grey fill, no line; selected = the
@@ -16,17 +16,17 @@
   --press: var(--house-press); --ctl: var(--house-press);
   --frame: var(--house-frame); --frame-foot: var(--house-foot); --frame-ink: var(--house-frame-ink); --frame-line: var(--house-frame-line);
   --shadow: var(--house-shadow);
-  --sel-bd: var(--house-press);   /* the selected line: the quiet control grey, never ink, never purple (Lisa, 12 Nov 2026) */
+  --sel-bd: var(--house-press);   /* the selected line: the quiet control grey, never ink, never purple (the owner, 12 Nov 2026) */
   --hov: color-mix(in srgb, var(--house-muted) var(--house-hov-mix, var(--house-tint)), var(--house-card));   /* the pale grey fill for hover, tap and selected */
   --sel-fill: var(--hov);
   --frame-hov: color-mix(in srgb, var(--house-frame-ink) var(--house-tint), var(--house-frame));   /* the same quiet fill on the dark frame */
 }
-/* The "soft" look choice is grey too now (Lisa, 12 Nov 2026): purple on hover or selected is gone everywhere. */
+/* The "soft" look choice is grey too now (the owner, 12 Nov 2026): purple on hover or selected is gone everywhere. */
 :root.sel-soft { --sel-bd: var(--house-press); --sel-fill: var(--hov); }
 /* A control's meaning colour (green yes, rose no / delete, purple AI...). Set on the control itself, never inherited. */
 @property --hmc { syntax: '*'; inherits: false; }
 
-/* 1b Show help (Lisa 18 Nov 2026): help and explanation lines carry class "help" and are hidden, not deleted, until the person
+/* 1b Show help (the owner 18 Nov 2026): help and explanation lines carry class "help" and are hidden, not deleted, until the person
    turns on Show help (Look menu on the hub, This phone on the staff page). That adds one class, .show-help, to the page. */
 :root:not(.show-help) .help { display: none !important; }
 
@@ -34,7 +34,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
 h1, h2, h3, h4, h5, h6, b, strong, th, summary { font-weight: 600; }
-/* Type (Lisa, 2 Nov 2026): Lexend everywhere, 400 / 500 / 600, sizes 18 (headings, big numbers) / 15 (body) / 14 (the rest) only. */
+/* Type (the owner, 2 Nov 2026): Lexend everywhere, 400 / 500 / 600, sizes 18 (headings, big numbers) / 15 (body) / 14 (the rest) only. */
 h1, h2, h3, h4 { font-size: var(--fs-head); }
 h5, h6, small, sub, sup, table, caption, label, legend, option, optgroup { font-size: var(--fs-small); }
 sub, sup { vertical-align: baseline; }
@@ -45,7 +45,7 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
 /* 3 The frame: deep dark top bar; its buttons wear the frame's own light line. Hover and tap: a quiet frame fill (--frame-hov), no line. */
 header { background: var(--frame); color: var(--frame-ink); }
 header .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-/* 3a The top bar (Lisa's pick A, 2 Nov 2026): ONE row, --house-head high on every page, desktop and phone; it never wraps or grows.
+/* 3a The top bar (the owner's pick A, 2 Nov 2026): ONE row, --house-head high on every page, desktop and phone; it never wraps or grows.
    Left to right: Home icon (an empty place the same size on home), the hub's dot + name (centred from 768px up, see below; cut
    short with ... when there is no room), a spacer (phones), the read time
    (desktop), then icon-only buttons (Search, Refresh, Look, Sign out), each with a name for screen readers. Sign in stays a word
@@ -78,7 +78,7 @@ header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-ic
 @media (hover: hover) { header .btn.house-mitem:hover { background: var(--hov); outline: none; } }
 header [role="dialog"] :focus-visible { outline-color: var(--ink); }
 .house-phone { display: none !important; }
-/* The name's place (Lisa's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
+/* The name's place (the owner's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
    the same spot on every page whatever icons sit left and right. It takes the room between them (so it can never overlap them,
    and is cut short with ... first); toolkit.js pads its short side (--house-name-pl / -pr, used only here) so the words centre on the whole bar. On a phone it stays
    left, straight after the Home icon (or the Dashboard's empty .house-slot). */
@@ -93,7 +93,7 @@ header [role="dialog"] :focus-visible { outline-color: var(--ink); }
   .house-phone { display: flex !important; }
 }
 
-/* 3b The page frame (Lisa, 2 Nov 2026): every page uses the full window. The top bar's row and each page's frame (.house-page)
+/* 3b The page frame (the owner, 2 Nov 2026): every page uses the full window. The top bar's row and each page's frame (.house-page)
    keep the same side gap, --house-gutter (24px; 16px on a phone), so the bar, the page and the bottom tabs line up to the same
    edges on every page. Inside, grids reflow; long text may keep a sensible line length inside its card. */
 header.house-head > .house-row, .house-page.house-page { box-sizing: border-box; width: auto; max-width: none; margin-left: 0; margin-right: 0;
@@ -105,18 +105,18 @@ header.house-head > .house-row, .house-page.house-page { box-sizing: border-box;
   font-size: var(--house-press-size); font-weight: 600; color: var(--ink); cursor: pointer; text-decoration: none; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; background: var(--card); line-height: 1.2; }
 .btn[disabled], .btn:disabled { cursor: not-allowed; opacity: .55; }
-/* A touch screen of any width gets the phone tap size (Lisa 17 Nov 2026: the folding phone open is 860px wide and its buttons were 36px) */
+/* A touch screen of any width gets the phone tap size (the owner 17 Nov 2026: the folding phone open is 860px wide and its buttons were 36px) */
 @media (max-width: 600px), (pointer: coarse) {
   .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button { min-height: var(--house-btn-phone); }
 }
-/* Meaning buttons (Lisa's approved picture, 28 Oct): they REST on their own colour line with their icon in that colour
+/* Meaning buttons (the owner's approved picture, 28 Oct): they REST on their own colour line with their icon in that colour
    (yes / approve / done green; no / redo / delete rose). Hover is the same pale grey fill as every other control, with no coloured
    line (12 Nov 2026). Neutral ones rest on the one control line. --hmc is the meaning colour, set on the button itself. */
 .btn.yes { --hmc: var(--house-ok); } .btn.no, .btn.danger { --hmc: var(--house-risk); }
 .btn.yes, .btn.no, .btn.danger { border-color: var(--hmc); }
 .btn.yes > :is(.ti, svg, .icon) { color: var(--ljr-5-text); } .btn.no > :is(.ti, svg, .icon), .btn.danger > :is(.ti, svg, .icon) { color: var(--ljr-2-text); }
 
-/* 5 The hover rule (Lisa, 12 Nov 2026; replaces the 3 Nov line rule). Her words: "purple outline on hover/click is a lot".
+/* 5 The hover rule (the owner, 12 Nov 2026; replaces the 3 Nov line rule). Her words: "purple outline on hover/click is a lot".
    Hover and tap (press): a PALE GREY FILL (--hov) and NO line. Selected (on, pressed, aria-current): the same pale grey fill
    (--sel-fill) plus ONE 1px line inside in the quiet control grey (--sel-bd = --house-press), never purple, never ink. Meaning
    colours (--hmc) keep their resting line but hover is the same grey fill, no coloured line. No purple words on hover or selected,
@@ -134,7 +134,7 @@ header.house-head > .house-row, .house-page.house-page { box-sizing: border-box;
 header .btn:active { background: var(--frame-hov); }
 /* Read-only pills (counts, dates, tags, stamps) never hover. */
 .cnt:hover, .dpill:hover, .datep:hover, span.date:hover, span.pill:hover, span.tag:hover, .stamp:hover { outline: none; }
-/* Keyboard focus (Lisa, 3 Nov 2026): ONE 1px ink line inside the box (offset -1px; frame ink on the frame), never a ring outside, a 2px
+/* Keyboard focus (the owner, 3 Nov 2026): ONE 1px ink line inside the box (offset -1px; frame ink on the frame), never a ring outside, a 2px
    ring or a box-shadow, so nothing looks thicker or jumps. Never the browser blue. */
 :focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: -1px; }
 header :focus-visible { outline-color: var(--frame-ink); }
@@ -143,7 +143,7 @@ header :focus-visible { outline-color: var(--frame-ink); }
 html :is(body, #view) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]), textarea, select, [contenteditable="true"]):focus-visible { outline: none !important; border-color: var(--ink) !important; }
 html body header :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select):focus-visible { border-color: var(--frame-ink) !important; }
 
-/* 6 Bottom tabs (Lisa's picks, 2 Nov 2026): the SAME bar on every page. One row, --house-tabs-h high on a desktop and a phone, at most
+/* 6 Bottom tabs (the owner's picks, 2 Nov 2026): the SAME bar on every page. One row, --house-tabs-h high on a desktop and a phone, at most
    6 tabs, More always last (anything else goes in its menu), Main always first, Decide second where there is one. Each tab is an icon
    above one word, on a light tab on the deep frame. NO fills anywhere: not the tab, not the icon's round place.
    At rest: grey icon, no ring, a short grey line. Hover and selected are ONE movement: the icon takes the tab's colour and the line
@@ -173,7 +173,7 @@ nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--hou
 nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 nav.house-tabs .ht > .htl { --px: 4px; display: block; margin: 0 var(--px); max-width: calc(100% - 2 * var(--px)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
-/* .htl-long / .htl-short: the phone shows the short word (Lisa, 2 Nov 2026); the name keeps the long one. */
+/* .htl-long / .htl-short: the phone shows the short word (the owner, 2 Nov 2026); the name keeps the long one. */
 nav.house-tabs .ht > .htl > .htl-short { display: none; }
 nav.house-tabs .ht > .bar { position: absolute; left: 50%; bottom: 2px; margin: 0; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: 2px;
   background: var(--ljr-0); opacity: .6; transform: translateX(-50%); transition: width .15s ease-out, opacity .15s ease-out; box-shadow: none; min-width: 0; max-width: none; overflow: visible; }
@@ -199,7 +199,7 @@ nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide { width: auto; padd
 nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
 nav.house-tabs .ht > .n.broken, nav.house-tabs .ht > .cnt.broken { border-color: var(--house-broken-fill); background: var(--house-broken-fill); color: var(--house-broken-ink); }
 nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
-/* Tabs are one size (Lisa's pick b, 2 Nov 2026); a tab never widens for its count. Phone (under 768px): close to square (at most the
+/* Tabs are one size (the owner's pick b, 2 Nov 2026); a tab never widens for its count. Phone (under 768px): close to square (at most the
    bar's inner height, or the longest word's room, --house-tab-fit from toolkit.js, for every tab) and the count is a dot by the
    icon's top-right corner: rose = late, black = broken, grey = waiting, none at 0 (the tab's name says the number). */
 @media (max-width: 767.98px) {
@@ -261,7 +261,7 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
 .cnt:empty, .n:empty { display: none !important; }
 .cnt.need { border-color: var(--house-late); background: transparent; }
-/* Broken (Lisa, 3 Nov 2026; tokens.css K): the black badge, white number (inverted in the dark looks). The same box as the ring, so
+/* Broken (the owner, 3 Nov 2026; tokens.css K): the black badge, white number (inverted in the dark looks). The same box as the ring, so
    nothing shifts: only the line, fill and words change colour. The one fill a count may have. Pages: DashKit.count in toolkit.js. */
 :is(.cnt, .hm-v, .hk b, .tile .v).broken:not(#hb-a) { border-color: var(--house-broken-fill); background: var(--house-broken-fill); color: var(--house-broken-ink); }
 
@@ -275,7 +275,7 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 .card { background: var(--card); border: var(--house-line) solid var(--line); border-radius: var(--radius); padding: var(--house-pad); min-width: 0; }
 .house-stack { display: flex; flex-direction: column; gap: var(--house-gap); }
 
-/* 10 Colour bars (Lisa's pick, 2 Nov): 3px down the WHOLE left edge of a card or row, curved with the card's corner. Drawn as a left
+/* 10 Colour bars (the owner's pick, 2 Nov): 3px down the WHOLE left edge of a card or row, curved with the card's corner. Drawn as a left
    border on a layer over the card's own box (so nothing moves): it runs the full height and bends round the corners like the card does.
    --sc = the colour. --house-lbar-out = how far the layer sits over the card's own line (1px card line; 0 for a row with no side line).
    The column-title stage marker is 3 x 18. */
@@ -300,7 +300,7 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 }
 .house-frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-/* 13 Clickable info (Lisa, 2 Nov 2026): every number, card, chip and row that gives info opens what it counts. a.house-go = a number,
+/* 13 Clickable info (the owner, 2 Nov 2026): every number, card, chip and row that gives info opens what it counts. a.house-go = a number,
    summary card or heading that is itself a link. [data-open-row] = a row or card whose one .house-open control opens it; a click
    anywhere on it presses that control (toolkit.js). Hover: the pale grey fill, no line (12 Nov 2026); keyboard: the 1px ink line inside. */
 a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
@@ -313,7 +313,7 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 /* A square icon control grows to fit its word (never past its row), so the word never spills outside the page. */
 .house-noicons :is(a, button):has(> .house-iw) { width: auto; min-width: var(--house-ctl-h, 36px); max-width: 100%; padding-left: 8px; padding-right: 8px; }
 
-/* 14 Hub Main (Lisa's house style, 2 Nov 2026): every hub's Main is Next, Needs you (at most 5 rows), then the hub's 3 numbers.
+/* 14 Hub Main (the owner's house style, 2 Nov 2026): every hub's Main is Next, Needs you (at most 5 rows), then the hub's 3 numbers.
    Built by toolkit.js DashKit.hubMain, so the seven hubs look and behave the same. Next is the white card with the 1px ink edge;
    Needs you rows carry a 3px bar (rose late, amber today, grey waiting) and their action button; the numbers are 14px house counts
    (late ones wear the rose ring, the others none). */
@@ -331,7 +331,7 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .hm-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
 .hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); border-radius: var(--radius); }
-/* The row shell is rounded like a house card (Lisa, 5 Nov). The left colour bar stays a straight 3px line, not a "(" bracket.
+/* The row shell is rounded like a house card (the owner, 5 Nov). The left colour bar stays a straight 3px line, not a "(" bracket.
    This supersedes 2 Nov "rows are square" for the row shell only. Nothing moves on hover, focus or press (hover is a fill). */
 .hm-row.house-lbar::before { border-radius: 0; }
 .hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
@@ -347,7 +347,7 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .hm-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--house-gap); min-width: 0; }
 .hm-nums > :not(.hm-n) { grid-column: 1 / -1; }
 a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: var(--house-pad); color: var(--ink); text-decoration: none; min-width: 0; }
-/* One group, one size (Lisa, 2 Nov): all three numbers 18px / 600 on one baseline, each in the same box; a late one (above 0) wears a
+/* One group, one size (the owner, 2 Nov): all three numbers 18px / 600 on one baseline, each in the same box; a late one (above 0) wears a
    rose ring sized to that number, the others no ring. Hover and press: the pale grey fill, no line (12 Nov 2026). */
 .hm-v { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent;
   border-radius: var(--radius); font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
@@ -362,13 +362,13 @@ a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; 
   .hm-t { flex-basis: calc(100% - 8px); }
   .hm .btn.hm-a { min-height: 44px; }
 }
-/* On a phone, Main's row titles and Next's title stop at 2 lines with "…" (Lisa, 2 Nov 2026); the whole title stays in the link's
+/* On a phone, Main's row titles and Next's title stop at 2 lines with "…" (the owner, 2 Nov 2026); the whole title stays in the link's
    name (aria-label) and on the item it opens. */
 @media (max-width: 767.98px) {
   .hm-what > a.house-open, .hm-t > a.house-open { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 }
 
-/* 15 Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row (toolkit.js DashKit.fold adds the
+/* 15 Fold (the owner, 2 Nov 2026): every card or section with a heading folds down to its heading row (toolkit.js DashKit.fold adds the
    button after every redraw). The chevron is a grey 16px outline icon (Tabler chevron-down) in a house control (36px, 44px on a phone, the
    one 1px control line, no fill) at rest; hover and press show the pale grey fill (no line), focus the 1px ink line inside; nothing moves. Folded, it turns a
    quarter (not with reduced motion). In a flex heading row it is the row's last part; otherwise it sits over the row's right end
@@ -401,7 +401,7 @@ button.house-fold-more:not(#hf-a):not(#hf-b) { align-self: flex-start; display: 
 /* "+N more" only shows on a phone, where it is a tap: 44px tall like every other control there, the words where they were (17 Nov 2026: 25px) */
 @media (max-width: 767.98px) { button.house-fold-more:not(#hf-a):not(#hf-b) { min-height: var(--house-btn-phone); } }
 button.house-fold-more:not(#hf-a):not(#hf-b):hover, button.house-fold-more:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; }
-/* 16 Typing boxes (Lisa, 3 Nov 2026): every input, textarea, select and contenteditable is 16px (--fs-input) on every page, so a phone
+/* 16 Typing boxes (the owner, 3 Nov 2026): every input, textarea, select and contenteditable is 16px (--fs-input) on every page, so a phone
    (iPhone Safari) never zooms in when one is tapped. Only the typed words change size; nothing else does. Ticks, radios, sliders and
    buttons are not typing boxes. The :not(#ti-a):not(#ti-b) only lifts this above a page's own input rules; no element has those ids. */
 :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]),

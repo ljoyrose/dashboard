@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 11 Nov 2026, Lisa: "empty just means no dog present - they may be moving in later so reading the temp";
+ * 11 Nov 2026, the owner: "empty just means no dog present - they may be moving in later so reading the temp";
  * "empty rows marked because room was empty don't count as non compliant issues". Room empty is a flag on the slot's
  * area_reading row: the reading is optional then (both min and max, or neither), and the save never sets in_range or
  * compliant. Without the flag a reading still needs both numbers.

@@ -1,5 +1,5 @@
 /*!
- * BLDNeeds - when something is needed or in use, from BLD-requirement rows (Lisa 11 Nov 2026, "A standard").
+ * BLDNeeds - when something is needed or in use, from BLD-requirement rows (the owner 11 Nov 2026, "A standard").
  * Things (room, dog, thermometer, person) never carry dates. A need row does: need_type (e.g. reading.temperature,
  * room.in_use), target_table, target_id, from_date, to_date (both inclusive, YYYY-MM-DD; a blank to_date = no end).
  * A target with NO rows of that need_type is open (always needed or in use). A target with rows is needed or in use

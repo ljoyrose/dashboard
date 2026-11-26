@@ -1,5 +1,5 @@
 'use strict';
-/** Daily records calendars (Lisa 17 Nov 2026): green when done, part done shows how many dogs, missed only after the job's
+/** Daily records calendars (the owner 17 Nov 2026): green when done, part done shows how many dogs, missed only after the job's
  *  first record; which jobs show is the owner's compliance.calendar.<job> rows. Invented rows only. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -92,7 +92,7 @@ test('a day with records opens who and when, notes, and its photos; a day with a
   assert.match(html, /1FAKEPDFIDFORTESTS0000000000000b\/view"[^>]*data-jcal-photo[^>]*><span>certificate<\/span>/);   // a PDF: a link, no picture
 });
 
-// Lisa 22 Nov 2026: "Cross reference the dogs vet visit dates": a vet day shows on the health-check calendar, never as a check.
+// the owner 22 Nov 2026: "Cross reference the dogs vet visit dates": a vet day shows on the health-check calendar, never as a check.
 test('a vet visit shows on the per-dog calendar day (marker and details), not on one-line jobs, and never counts as a check', () => {
   const v = Object.assign(base([log('1', 'cty-hc', '2026-11-10', 'd1'), log('2', 'cty-hc', '2026-11-10', 'd2'), log('3', 'cty-fb', '2026-11-10')]), {
     dmy: (s) => s, dogNames: { d1: 'Pretend Dog' },
@@ -202,7 +202,7 @@ test('one session row marks every listed dog done, and an exception stays outsta
   assert.equal(day.state, 'part');
 });
 
-// Lisa 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
+// the owner 22 Nov 2026 ("A"): import past daily records from a spreadsheet. Every row is checked; only ready rows save, marked import.
 test('import: rows are checked (date, job by name or key, outcome, future, repeat, already done) before anything saves', () => {
   const v = base([log('1', 'cty-fb', '2026-11-10')]);
   const rows = C.parseImport(v, 'date,job,outcome,note\r\n'
@@ -231,7 +231,7 @@ test('import: rows are checked (date, job by name or key, outcome, future, repea
   assert.match(tpl, /^date,job,outcome,note\r\n2026-11-16,"Health check: all dogs",done,/);
 });
 
-// Lisa 22 Nov 2026: a Numbers export puts the table name ("Csv", "daily-records") above the heading row. It is left out.
+// the owner 22 Nov 2026: a Numbers export puts the table name ("Csv", "daily-records") above the heading row. It is left out.
 test('import: title lines above the heading row are left out, never shown as a row', () => {
   const v = base([]);
   const rows = C.parseImport(v, 'daily-records\r\nCsv,,,\r\ndate,job,outcome,note\r\n2026-11-09,Food bowls washed,done,\r\n');
@@ -240,7 +240,7 @@ test('import: title lines above the heading row are left out, never shown as a r
   assert.equal(rows[0].line, 1);
 });
 
-// Lisa 22 Nov 2026: "Imported 1 of 16", the rest refused as "more than 7 days ago. Save anyway?". The owner has seen every
+// the owner 22 Nov 2026: "Imported 1 of 16", the rest refused as "more than 7 days ago. Save anyway?". The owner has seen every
 // date before pressing Import, so a row older than 7 days is sent with the save-anyway answer; a recent row is not.
 test('import: a part-done day is not "already recorded"; a fully done day is, and is not sent', () => {
   const v = base([log('1', 'cty-hc', '2026-11-15', 'd1'), log('2', 'cty-hc', '2026-11-16', 'd1'), log('3', 'cty-hc', '2026-11-16', 'd2')]);

@@ -1,5 +1,5 @@
 /*!
- * BLDJobCal - one month calendar per daily job (Lisa 17 Nov 2026: "make a calendar view which will help the user, simple
+ * BLDJobCal - one month calendar per daily job (the owner 17 Nov 2026: "make a calendar view which will help the user, simple
  * to use and log all done so staff or user say done then it shows as green"). The same look as the Temperatures page:
  * green with a tick = done that day, orange frame = missed, part done = orange frame with how many. Which jobs have a
  * calendar, and in what order, is the owner's: rows compliance.calendar.<type_key> (value = place 1, 2, 3...; 0 or off =
@@ -13,6 +13,8 @@
   'use strict';
   var Show = (typeof module === 'object' && module.exports) ? require('./staff/lib/show-note.js') : ((typeof self !== 'undefined' && self.BLDShowNote) || { human: function (s) { return String(s || ''); } });
 
+  /* the stop-gap until the owner has calendar rows (the owner 17 Nov 2026: health checks, bowls washed, site cleaned) */
+  var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean'];
   /* the stop-gap until the owner has calendar rows (Lisa 17 Nov 2026: health checks, bowls washed, site cleaned).
      Bedding and Toys stay on the list even when the owner has chosen the other cards, unless a row turns them off. */
   var STARTER = ['health_check_all', 'food_bowls', 'water_bowls', 'whole_site_clean', 'bedding', 'toys'];
@@ -302,7 +304,7 @@
     + '.jd i{font-style:normal;color:var(--muted)}.jd.part i,.jd.missed i,.jd.due i{color:var(--ink);font-weight:700}.jcal-key{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.jcal-key .jd{width:18px;height:18px;aspect-ratio:auto}'
     + '.jcal-imp{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;display:grid;gap:8px}.jcal-imp[hidden]{display:none}.jcal-imp-row{display:flex;gap:8px;flex-wrap:wrap}.jcal-imp-t td,.jcal-imp-t th{padding:4px 6px;text-align:left}.jcal-imp-t .warn{color:var(--ljr-3-text)}';
 
-  /* Import (Lisa 22 Nov 2026, "A"): past daily records from a spreadsheet, one row per job and day. Columns: date, job,
+  /* Import (the owner 22 Nov 2026, "A"): past daily records from a spreadsheet, one row per job and day. Columns: date, job,
      outcome (optional: done / concern / not done; blank = done), note (optional). The job is its key or its name as on
      the calendar. Every row is checked first and shown; only the person's press saves, one row at a time, each marked
      "imported" (how_recorded import), so the record always says it was entered afterwards from another source. */
@@ -352,7 +354,7 @@
     Object.keys(types).forEach(function (k) { byName[k.toLowerCase()] = k; byName[String(types[k].label || '').toLowerCase()] = k; });
     var rows = csvRows(text), out = [], seen = {};
     // The heading row (date, job, ...) may sit under a title line: Numbers puts the table name above it ("daily-records",
-    // "Csv"; Lisa 22 Nov 2026). Everything above the heading row is left out; no heading row = every row is data.
+    // "Csv"; the owner 22 Nov 2026). Everything above the heading row is left out; no heading row = every row is data.
     for (var h = 0; h < Math.min(rows.length, 5); h++) {
       var cells = rows[h].map(function (c) { return String(c).trim().toLowerCase(); });
       if (cells.indexOf('date') >= 0 && cells.indexOf('job') >= 0) { rows = rows.slice(h + 1); break; }
@@ -368,7 +370,7 @@
       else if (oc === 'ok' && dayFullyDone(v, key, iso)) x.why = 'already recorded';
       else { x.ok = true; seen[key + '|' + iso] = 1; }
       // Older than 7 days: the save script asks "Save anyway?" for a typed record. Here the owner has seen every date in
-      // this list before pressing Import, so Import is that "save anyway" (Lisa 22 Nov 2026: 15 of 16 rows were refused).
+      // this list before pressing Import, so Import is that "save anyway" (the owner 22 Nov 2026: 15 of 16 rows were refused).
       x.old = !!(x.ok && (Date.parse(v.today + 'T00:00:00Z') - Date.parse(iso + 'T00:00:00Z')) / 864e5 >= 7);
       out.push(x);
     });

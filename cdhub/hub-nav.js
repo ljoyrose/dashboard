@@ -1,6 +1,6 @@
-/* CD Hub bottom bar (Lisa 14 Nov 2026, menu option A). The hub and the temperature pages both render from this list.
+/* CD Hub bottom bar (the owner 14 Nov 2026, menu option A). The hub and the temperature pages both render from this list.
    Bar: Main (slot 1: Today, Do, Decide) · up to 3 sections chosen per role or person · More.
-   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Records 4 (id ops; Lisa named it 15 Nov 2026), People 5, Sales 6, Ideas 7; Settings 8.
+   Sections in colour order (tokens.css LJR7 slots): Compliance 2, Money 3, Records 4 (id ops), People 5, Sales 6, Ideas 7; Settings 8.
    Which sections are on and which sit on the bar are owner settings: dated rule rows (breeding_rule), never fixed here.
      nav.on.<section>                  1 on, 0 off
      nav.tab.<ROLE>.<section>          position 1-3 on the bar for that role (e.g. OWNER)
@@ -9,9 +9,9 @@
      nav.view.<view>                   1 on, 0 off: one view inside a section (starter: Assocs, Table map, Litters, Vet, Enquiries off)
      nav.first.<ROLE>.<section>        which view the section opens on: its place in the chip row (1 = first)
      nav.first.person.<person_id>.<section>   the same for one person; wins over the role
-     nav.home.<ROLE>.<card>            Main's cards (Lisa 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
+     nav.home.<ROLE>.<card>            Main's cards (the owner 15 Nov 2026: each person builds their own home): place 1, 2, 3...; 0 = taken off
      nav.home.person.<person_id>.<card>   the same for one person; wins over the role. No rows = the pack's starter cards.
-   Chips (Lisa 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
+   Chips (the owner 15 Nov 2026): every section shows all its views as chips at the top, with counts. They replace the
    "Next: X" buttons at the foot of the page, so any view is one tap away at any number of records.
    No nav rows: the app's starting layout (STARTER), reported as not set so Settings can say so. */
 (function (root) {
@@ -47,9 +47,9 @@
     { id: 'ideas', label: 'Ideas', slot: '7', icon: 't-line', go: 'ideas', views: [] },
     { id: 'settings', label: 'Settings', slot: '8', icon: 't-box', go: 'admin', views: ['admin', 'qrprint'] }
   ];
-  /* The starting layout for a new app (Lisa 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
+  /* The starting layout for a new app (the owner 14 Nov): Main · Compliance · Records · People · More. Proposed default, not a rule. */
   var STARTER = { on: { compliance: 1, ops: 1, people: 1, sales: 1 }, tabs: ['compliance', 'ops', 'people'] };
-  /* Views a pack starts with switched off (Lisa approved 13 Nov 2026, PR 472: hide Assocs, the Table map and Litters; the vet
+  /* Views a pack starts with switched off (the owner approved 13 Nov 2026, PR 472: hide Assocs, the Table map and Litters; the vet
      link stays off). An owner switches one back on with a dated row nav.view.<id> = 1 (0 = off). Hidden views are off every
      menu, chip row, Find and Main card, and their addresses open Main. Their pages and data stay. */
   var STARTER_OFF = { buyers: 1, shape: 1, litters: 1, vet: 1, enquiries: 1 };
@@ -114,7 +114,7 @@
       var live = s.views.filter(has), v = r && live[r.value - 1];
       if (v) first[s.id] = v;
     });
-    /* The view the hub opens on with no address (Lisa 18 Nov 2026 demo: the owner lands on Records). A dated row
+    /* The view the hub opens on with no address (the owner 18 Nov 2026 demo: the owner lands on Records). A dated row
        nav.start.person.<id> or nav.start.<role> = the section's slot number (1 Main, 2 Compliance, 4 Records ...). No row: Main. */
     var start = '', sr = (o.person && rows['nav.start.person.' + o.person]) || (o.role && rows['nav.start.' + o.role]);
     SECTIONS.forEach(function (s) {
@@ -197,7 +197,7 @@
     var live = s.views.filter(function (id) { return VIEWS[id] && has(id); });
     if (live.length < 2) return '';
     return live.map(function (id) {
-      /* the house chip (house.css 4, 5) and house count (.cnt; 0 writes nothing). Selected (Lisa 15 Nov 2026): the 3px section-colour
+      /* the house chip (house.css 4, 5) and house count (.cnt; 0 writes nothing). Selected (the owner 15 Nov 2026): the 3px section-colour
          side line (.house-lbar, --sc from data-slot) and a tick; no fill. */
       var v = VIEWS[id], n = opts.counts && opts.counts[id], on = opts.current === id, href = viewHref(v);
       var cls = 'chip hchip' + (on ? ' house-lbar' : ''), cur = on ? ' aria-current="page"' : '';
@@ -208,7 +208,7 @@
     }).join('');
   }
 
-  /* Back (Lisa 15 Nov 2026: "navigating through and back is not easy"). One helper for the whole hub and its bricks:
+  /* Back (the owner 15 Nov 2026: "navigating through and back is not easy"). One helper for the whole hub and its bricks:
      every move into a record or view is a real history entry, so the phone's Back works, and the entry remembers where
      you came from (its address, its name, how far down you were). Shape: history.state.from = {hash, label, y, id}. */
   var back = {

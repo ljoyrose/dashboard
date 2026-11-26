@@ -1,4 +1,4 @@
-// Guest page hides a room whose room.in_use need rows have ended (Lisa 11 Nov 2026, "A standard"). Fake guest code and fake save address only.
+// Guest page hides a room whose room.in_use need rows have ended (the owner 11 Nov 2026, "A standard"). Fake guest code and fake save address only.
 const { test, expect } = require('../support/test');
 
 test.use({ allowedConsole: [/404/] });

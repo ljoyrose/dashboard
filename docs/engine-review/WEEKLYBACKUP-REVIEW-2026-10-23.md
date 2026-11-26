@@ -18,7 +18,7 @@ The backup folder (beside AF-ENGINE; the FOLDER_BACKUP setting itself was not re
 4. No record of what it trashed: the BACKUP sheet logs what was made, not what was removed.
 
 ## Safe change proposal (keeps everything until reviewed) — NOT applied
-Default is keep. Trimming happens only when Lisa sets SETTINGS `BACKUP_TRIM` = `YES`; until then the run only writes what it *would* trash to the BACKUP sheet.
+Default is keep. Trimming happens only when the owner sets SETTINGS `BACKUP_TRIM` = `YES`; until then the run only writes what it *would* trash to the BACKUP sheet.
 
 ```js
   // keep everything unless BACKUP_TRIM = YES; never trash while this run's 3 files are missing

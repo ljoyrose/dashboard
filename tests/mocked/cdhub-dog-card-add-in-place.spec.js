@@ -1,4 +1,4 @@
-// Dog card "no …" lines open their add form in place (Lisa 15 Nov 2026): tapping "no weight" on a pup jumped to the top
+// Dog card "no …" lines open their add form in place (the owner 15 Nov 2026): tapping "no weight" on a pup jumped to the top
 // of the page. Now the weight section opens with Add weight inside the card, a save shows the tick there and the new
 // weight shows at once; "no chip recorded" opens Edit at the microchip box. Invented rows only.
 const { test, expect } = require('../support/test');

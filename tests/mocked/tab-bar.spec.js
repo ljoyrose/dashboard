@@ -1,9 +1,9 @@
-// The bottom tab bar (Lisa's picks, 2 Nov 2026): the SAME bar on all 8 pages, at 1280 and at 390.
+// The bottom tab bar (the owner's picks, 2 Nov 2026): the SAME bar on all 8 pages, at 1280 and at 390.
 // One row, 70px high, at most 6 tabs, Main first, Decide second where a hub has it, More always last (the other views sit in its
 // menu). Each tab is an icon above one word (or two capitalised words), a real link or button with a name. At rest: grey icon,
 // no ring, no fill, a short grey line. Hover and selected: the icon takes the tab's colour and the line widens; the 1px ring round
 // the icon shows only on hover, focus and press. Counts: top-right corner, ring only, no fill (on a phone: a rose or grey dot by
-// the icon, Lisa's pick b). Nothing scrolls sideways.
+// the icon, the owner's pick b). Nothing scrolls sideways.
 // Pretend Google, Drive and Sheets; every row is invented.
 const { test, expect } = require('../support/test');
 const { HUBS, setLook } = require('../support/hubs');
@@ -19,19 +19,19 @@ const ALL = {
     },
   },
 };
-// What each hub's bar shows, in order, and what sits under More (Lisa's picks; the first is Main, More is always last).
+// What each hub's bar shows, in order, and what sits under More (the owner's picks; the first is Main, More is always last).
 const PLAN = {
   home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Tech', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; Tech (TECH-HUB-1); MOVE is a link out (new tab)
   money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], phone: ['Main', 'Money', 'Do', 'Dates', 'Acct', 'More'], more: ['Control'] },
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
-  factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Yearly print', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (Lisa 14 Nov 2026)
+  factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (the owner, 2 Nov)
+  cdhub: { tabs: ['Main', 'Compliance', 'Records', 'People', 'More'], more: ['Today', 'Do', 'Items', 'Yearly print', 'Litters', 'Areas', 'The round', 'SOPs', 'Temps', 'Enquiries'] }, // menu option A (the owner 14 Nov 2026)
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'Brands', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'DNS & Email', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov); DNS & Email: JOB 6.3 (12 Nov)
 };
-// phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
-// Each tab's colour (Lisa's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).
+// phone: the words a phone shows where the owner chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
+// Each tab's colour (the owner's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).
 const SLOT = { Main: '1', Decide: '2', Do: '4', More: '0', Orders: '4', SOPs: '6' };
 const TRANSPARENT = /^(transparent|rgba\(0, 0, 0, 0\))$/;
 
@@ -87,7 +87,7 @@ for (const [hub, H] of Object.entries(ALL)) {
         expect(Math.abs(t.height - m.tabs[0].height), `${t.word} same height as the others`).toBeLessThan(1);
         expect(Math.abs(t.top - m.tabs[0].top), `${t.word} on the one row`).toBeLessThan(1);
         expect(t.iconAbove, `${t.word}: the icon sits above the word`).toBe(true);
-        // Lisa (2 Nov): the icon's ring needs clear space above it, at least 6px below the tab's top edge.
+        // the owner (2 Nov): the icon's ring needs clear space above it, at least 6px below the tab's top edge.
         expect(t.ringGap, `${t.word}: at least 6px between the tab's top and the icon ring`).toBeGreaterThanOrEqual(6);
         expect(t.labelFits, `${t.word}: the word is not cut short`).toBe(true);
         expect(t.labelLines, `${t.word}: the word stays on one line`).toBe(1);
@@ -105,7 +105,7 @@ for (const [hub, H] of Object.entries(ALL)) {
           expect(t.barW, `${t.word}: selected = the long line`).toBeCloseTo(40, 0);
         }
         if (t.count && W > 600) {
-          // Broken (down, expired, stuck, failed: Lisa, 3 Nov 2026) is the one filled count: the black badge with a white number.
+          // Broken (down, expired, stuck, failed: the owner, 3 Nov 2026) is the one filled count: the black badge with a white number.
           if (t.count.broken) expect([t.count.bg, t.count.ring, t.count.ink], `${t.word}: broken = the black badge`).toEqual(['rgb(30, 28, 26)', 'rgb(30, 28, 26)', 'rgb(255, 255, 255)']);
           else expect(t.count.bg, `${t.word}: the count has no fill`).toMatch(TRANSPARENT);
           expect(t.count.right, `${t.word}: the count sits in the top-right corner`).toBeLessThan(5);
@@ -113,7 +113,7 @@ for (const [hub, H] of Object.entries(ALL)) {
           expect(t.count.overLabel, `${t.word}: the count never covers the word`).toBe(false);
           if (!t.count.broken) expect(t.count.ring, `${t.word}: rose ring = late or due today, grey ring = waiting`).toBe(t.count.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
         } else if (t.count) {
-          // On a phone the count is a dot (Lisa's pick b, 2 Nov): a rose or grey fill, no ring, beside the icon's top-right corner.
+          // On a phone the count is a dot (the owner's pick b, 2 Nov): a rose or grey fill, no ring, beside the icon's top-right corner.
           expect(t.count.bg, `${t.word}: rose dot = late or due today, black dot = broken, grey dot = waiting`).toBe(t.count.need ? 'rgb(230, 68, 61)' : t.count.broken ? 'rgb(30, 28, 26)' : 'rgb(138, 127, 112)');
           expect(t.count.ringW, `${t.word}: a dot, no ring`).toBe('0px');
           expect(t.count.w, `${t.word}: an 8px dot`).toBe(8);
@@ -218,7 +218,7 @@ test('keyboard: every tab is reachable with Tab, shows a visible focus ring, and
   await expect(dates).toBeFocused();
   const f = await dates.evaluate((e) => ({ o: getComputedStyle(e).outlineStyle, w: getComputedStyle(e).outlineWidth, off: getComputedStyle(e).outlineOffset, ring: getComputedStyle(e.querySelector('.hic')).borderTopColor }));
   expect(f.o).toBe('solid');
-  expect(f.w).toBe('1px');   // one 1px line inside (Lisa, 3 Nov 2026)
+  expect(f.w).toBe('1px');   // one 1px line inside (the owner, 3 Nov 2026)
   expect(f.off).toBe('-1px');
   expect(f.ring).not.toMatch(TRANSPARENT);
   await page.keyboard.press('Enter');

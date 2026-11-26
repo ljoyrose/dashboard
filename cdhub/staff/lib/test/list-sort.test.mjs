@@ -1,4 +1,4 @@
-// BLDSort (Lisa 15 Nov 2026: a list offers only the sorts it has fields for; best to worst by default). Invented rows only.
+// BLDSort (the owner 15 Nov 2026: a list offers only the sorts it has fields for; best to worst by default). Invented rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';

@@ -12,7 +12,7 @@ Sheets) **live in the browser**, with the viewer's own Google sign-in. Nothing p
 
 | Hub | Folder | Reads | Writes (only on a click) | Published by `pages.yml` |
 |---|---|---|---|---|
-| Home (Lisa Dashboard) | `index.html` | Shared-drive listings, Changes, Bin, Money tile (via `money/core.js`), Dropbox totals file | Rename to a `ZZ_DELETE_` name; move to bin (`trashed=true`). Never empties a bin | Yes |
+| Home (the owner Dashboard) | `index.html` | Shared-drive listings, Changes, Bin, Money tile (via `money/core.js`), Dropbox totals file | Rename to a `ZZ_DELETE_` name; move to bin (`trashed=true`). Never empties a bin | Yes |
 | CD Hub | `cdhub/` | `BLD-*.csv` tables in one Drive folder | None (saving is off) | Yes |
 | Money Hub | `money/` (+ `money/core.js`) | `MON-*.csv` index files and per-entity ledgers | None (saving is off) | Yes |
 | Studio | `studio/` | `studio-state.json`; Owned Tools sheet tab | One request file per click into the requests folder (an Apps Script applies it); Undo trashes it | Yes |
@@ -62,7 +62,7 @@ App and idea names on any hub appear in docs only as aliases (APP-A, APP-B ...).
 
 | Piece | Where it runs |
 |---|---|
-| Studio / Factory engines, bin guard | Google Apps Script on Lisa's account. Code is on Drive, **not** in this public repo. |
+| Studio / Factory engines, bin guard | Google Apps Script on the owner's account. Code is on Drive, **not** in this public repo. |
 | Tests, gate, privacy guard | GitHub Actions on push and pull request, or by hand in a session. See [RUNBOOK.md](RUNBOOK.md). |
 
 ## Data in and out (names only)

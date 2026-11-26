@@ -1,4 +1,4 @@
-// Studio › Tools › Owned tools (30 Oct 2026): the list of tools Lisa owns, read from the Owned Tools tab of her Drive sheet.
+// Studio › Tools › Owned tools (30 Oct 2026): the list of tools the owner owns, read from the Owned Tools tab of her Drive sheet.
 // Read only after Google sign-in; no tool data is written in the repo. Pretend Google only; the rows are the invented
 // sample in tests/fixtures/owned-tools.json (answered by tests/support/test.js).
 const fs = require('fs');

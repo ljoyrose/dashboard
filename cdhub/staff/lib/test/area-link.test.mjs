@@ -1,4 +1,4 @@
-// BLDAreaLink (Lisa 12 Nov 2026: old rooms link to the new rooms so temperatures show continuously). Invented rows only.
+// BLDAreaLink (the owner 12 Nov 2026: old rooms link to the new rooms so temperatures show continuously). Invented rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';

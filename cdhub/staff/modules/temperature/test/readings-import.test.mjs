@@ -1,5 +1,5 @@
 // node --test cdhub/staff/modules/temperature/test/
-// Lisa, 22 Nov 2026: paper or spreadsheet readings into BLD-area_reading. Every row checked and shown; saved only on the
+// the owner, 22 Nov 2026: paper or spreadsheet readings into BLD-area_reading. Every row checked and shown; saved only on the
 // press; a slot already filled is skipped; a past or unusual row sends the script's "save anyway". Pretend rooms only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

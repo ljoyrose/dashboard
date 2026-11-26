@@ -8,7 +8,7 @@
   var JITTER_MS = 250;
   var BUSY_TEXT = 'Google is busy. Wait a minute, then try again.';
 
-  // ---- Count colours (Lisa, 3 Nov 2026): the ONE rule, used by every page (tokens.css index: Counts).
+  // ---- Count colours (the owner, 3 Nov 2026): the ONE rule, used by every page (tokens.css index: Counts).
   //   grey ring ............ waiting, to-do, the Bin (the default)
   //   rose ring (.need) .... LATE: late, overdue (--house-late)
   //   black badge (.broken)  BROKEN: a site down, a domain expired, a project stuck, a check failed, an engine error
@@ -70,12 +70,12 @@
     r.classList.toggle('look-cool', o.bg === 'cool');
     r.classList.toggle('sel-soft', o.sel === 'soft');
     if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
-    r.classList.toggle('show-help', o.help === 'on');   // Show help (Lisa 18 Nov 2026): off unless this person turns it on
+    r.classList.toggle('show-help', o.help === 'on');   // Show help (the owner 18 Nov 2026): off unless this person turns it on
   }
   applyLook();
   if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') { applyLook(); syncLookMenu(); } });
 
-  // ---- The top bar's one icon set (Lisa's pick A, 2 Nov): 24px outline icons, stroke 2 (Tabler shapes), as one hidden sprite.
+  // ---- The top bar's one icon set (the owner's pick A, 2 Nov): 24px outline icons, stroke 2 (Tabler shapes), as one hidden sprite.
   // Pages draw <svg aria-hidden="true"><use href="#hi-NAME"/></svg>; the sprite is added once, at the top of <body>.
   var ICONS = {
     home: '<path d="M5 12H3l9-9 9 9h-2"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
@@ -86,7 +86,7 @@
     plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
     filter: '<path d="M4 6h16M7 12h10M10 18h4"/>', // the Filter button of a find bar (Dashboard Tech, TECH-HUB-1)
     apps: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path d="M14 7h6M17 4v6"/>',
-    // The bottom tabs' icons (Lisa's picks, 2 Nov): <span class="hic"><svg class="hi"><use href="#hi-t-NAME"/></svg></span>.
+    // The bottom tabs' icons (the owner's picks, 2 Nov): <span class="hic"><svg class="hi"><use href="#hi-t-NAME"/></svg></span>.
     't-main': '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
     't-do': '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3l5-6"/>',
     't-decide': '<path d="M12 4v16M6 8h12M6 8l-3 6h6zM18 8l-3 6h6z"/>',
@@ -111,7 +111,7 @@
     's-clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
     's-repeat': '<path d="M4 12v-3a3 3 0 0 1 3-3h13m-3-3l3 3l-3 3"/><path d="M20 12v3a3 3 0 0 1-3 3h-13m3 3l-3-3l3-3"/>',
     's-send': '<path d="M10 14l11-11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1-1 0l-3.5-7l-7-3.5a.55 .55 0 0 1 0-1l18-6.5"/>',
-    // The fold chevron on every section heading (Lisa, 2 Nov): Tabler chevron-down, grey; it turns a quarter when the section is folded.
+    // The fold chevron on every section heading (the owner, 2 Nov): Tabler chevron-down, grey; it turns a quarter when the section is folded.
     chev: '<path d="M6 9l6 6l6-6"/>'
   };
   function addIcons() {
@@ -132,12 +132,12 @@
     else { if (b.textContent !== 'Sign in' || b.querySelector('svg')) b.textContent = 'Sign in'; b.removeAttribute('aria-label'); b.removeAttribute('title'); }
   }
 
-  // ---- Look button + menu on every page (Lisa, 2 Nov): pages place <span class="lookwrap" data-house-look></span> in the top bar.
+  // ---- Look button + menu on every page (the owner, 2 Nov): pages place <span class="lookwrap" data-house-look></span> in the top bar.
   // The menu offers what applyLook supports and saves it in 'dash-look', merged, so Studio's own keys (words, text, space) stay.
   // On a phone it also shows the read time and a Sign out item that presses the page's own Sign out (both leave the bar there).
   var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
     ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]],
-    // Show help (Lisa 18 Nov 2026): help and explanation lines (class "help") are hidden, not deleted, until this is on.
+    // Show help (the owner 18 Nov 2026): help and explanation lines (class "help") are hidden, not deleted, until this is on.
     ['help', 'Help', [['off', 'Hidden'], ['on', 'Show help']]]];
   function readLook() { var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; } return typeof o === 'object' ? o : {}; }
   function lookVal(o, row) { return row[2].some(function (x) { return x[0] === o[row[0]]; }) ? o[row[0]] : row[2][0][0]; }
@@ -204,7 +204,7 @@
     root.document.addEventListener('keydown', function (e) { var p = lookParts(); if (e.key === 'Escape' && p.m && !p.m.hidden) { e.preventDefault(); showHouseLook(false, true); } });
   }
 
-  // ---- Top bar: the hub's name in the middle (Lisa's pick A, 2 Nov). From 768px up, house.css gives the name all the room between
+  // ---- Top bar: the hub's name in the middle (the owner's pick A, 2 Nov). From 768px up, house.css gives the name all the room between
   // the left and right icons (so it never overlaps them); this pads its shorter side so the words centre on the whole bar, the same
   // spot on every page. The padding never squeezes the name below 120px (or its own width): past that it moves aside, then cuts with ...
   // On a phone the name stays left after the Home icon: house.css uses the padding only from 768px up, so a resize never overflows.
@@ -240,7 +240,7 @@
     if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchName); else watchName();
   }
 
-  // ---- Bottom tabs: the More menu (Lisa's picks, 2 Nov). Pages write the bar (house.css section 6); More is a button with
+  // ---- Bottom tabs: the More menu (the owner's picks, 2 Nov). Pages write the bar (house.css section 6); More is a button with
   // data-house-more and aria-controls naming its menu. One click opens or shuts it; choosing a view, a click outside, Esc or a new
   // address shuts it (Esc puts the focus back on More). Delegated, so it keeps working when a page redraws its bar.
   function moreMenu(b) { return b && root.document.getElementById(b.getAttribute('aria-controls') || ''); }
@@ -424,7 +424,7 @@
   }
   if (root.document) { if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchIconFont); else watchIconFont(); }
 
-  // ---- Clickable info (Lisa, 2 Nov 2026: "anywhere you give info should be clickable to get it") ----
+  // ---- Clickable info (the owner, 2 Nov 2026: "anywhere you give info should be clickable to get it") ----
   // A row or card marked data-open-row opens what it shows: a click anywhere on it (its chips, pills, numbers, words) presses its one
   // .house-open link or button. Its own buttons and links still do their own thing. Keyboard: the .house-open control is the tab stop.
   if (root.document) root.document.addEventListener('click', function (e) {
@@ -435,7 +435,7 @@
     var o = r.querySelector('.house-open'); if (o) o.click();
   });
 
-  // ---- Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row, on every page and tab.
+  // ---- Fold (the owner, 2 Nov 2026): every card or section with a heading folds down to its heading row, on every page and tab.
   // One enhancer, run after every redraw (a MutationObserver on <body>), so no page writes its own: a .card or <section> whose first
   // part is an h2 / h3 (or a heading row holding one) gets ONE real button, the grey chevron, with aria-expanded and aria-controls.
   // Tapping the heading row (not a link or button in it) or the chevron folds and opens; Enter and Space work on the chevron.
@@ -706,7 +706,7 @@
   /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
-  // ---- Hub Main (Lisa's house style, 2 Nov 2026): EVERY hub's Main is exactly three parts, in this order:
+  // ---- Hub Main (the owner's house style, 2 Nov 2026): EVERY hub's Main is exactly three parts, in this order:
   // 1 Next: the one most urgent thing, its action one tap away. 2 Needs you: at most 5 rows from the hub's Do and Decide,
   // late first (rose), then due today, then waiting; "+N more" opens Do. Every row carries its action.
   // 3 The hub's 3 numbers (the same ones its Dashboard tile shows), each a link to its filtered list; "–" when it cannot be read.

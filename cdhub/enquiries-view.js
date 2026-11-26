@@ -20,7 +20,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  /* "2 Mar 2026": the one formatter, staff/lib/date-words.js (Lisa 13 Nov 2026) */
+  /* "2 Mar 2026": the one formatter, staff/lib/date-words.js (the owner 13 Nov 2026) */
   function dmy(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t(iso));
     return m ? root.BLDDates.long(m[0]) : '';
@@ -96,7 +96,7 @@
   function ensureTabs() {
     var c = cfg();
     state.example = !t(c.sheetId);
-    /* Lisa 16 Nov 2026 ("A"): no sheet connected = no enquiries, never the invented examples. The examples show only
+    /* the owner 16 Nov 2026 ("A"): no sheet connected = no enquiries, never the invented examples. The examples show only
        when this browser asks for them (localStorage cdhub.enquiries.examples = 1), for a demo or a test. */
     state.demo = state.example && showExamples();
     if (state.demo) { state.tabs = Examples.build(); return; }
@@ -142,7 +142,7 @@
       }).join('') + '</select></label></div>';
   }
 
-  /** The buyer's name for a card (Lisa 17 Nov 2026, "yes all"): known-as, else full name, from the People tab; '' when none. */
+  /** The buyer's name for a card (the owner 17 Nov 2026, "yes all"): known-as, else full name, from the People tab; '' when none. */
   function buyerName(e) {
     var p = ((state.tabs && state.tabs.People) || []).filter(function (x) { return e && x.person_key && x.person_key === e.person_key; })[0];
     return p ? t(p.known_as || p.full_name || p.name) : '';

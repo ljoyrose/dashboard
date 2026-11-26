@@ -1,5 +1,5 @@
 'use strict';
-// Record-to-record links (14 Nov 2026, Lisa decision C). Invented records only.
+// Record-to-record links (14 Nov 2026, the owner decision C). Invented records only.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { standardEnv } = require('./harness');

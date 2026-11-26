@@ -1,4 +1,4 @@
-// Lisa 16 Nov 2026: the round sent every room's save at once. The save script lets one save write at a time, so the
+// the owner 16 Nov 2026: the round sent every room's save at once. The save script lets one save write at a time, so the
 // rest waited, gave up and said "Someone else is saving right now". Saves from one device now go one at a time.
 // Invented addresses and rows only.
 const { test, expect } = require('../support/test');

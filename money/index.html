@@ -22,7 +22,7 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
 <style>
-  /* House look (Lisa, 28 Oct 2026). Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule
+  /* House look (the owner, 28 Oct 2026). Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule
      come from ../tokens.css (numbers and colours, once) through ../house.css (the shared parts), the same on every hub.
      The page follows Studio's Look ('dash-look', applied by ../toolkit.js). Only Money's own names live here: meaning rings
      and tints (3:1 or better on a card; words stay ink) and the section colours. */
@@ -129,7 +129,7 @@
   .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   a.sum { color: inherit; text-decoration: none; }
   .sum { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 12px; min-width: 0; box-shadow: var(--shadow); }
-  /* The summary rings (Lisa's pick A, 2 Nov): a 14px number, the same size as the words beside it, in the house count box.
+  /* The summary rings (the owner's pick A, 2 Nov): a 14px number, the same size as the words beside it, in the house count box.
      Ring only, no fill: rose = overdue, grey = waiting. */
   .sum .num { box-sizing: border-box; font-size: var(--fs-small); font-weight: 600; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh);
     padding: 0 var(--house-count-pad); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--house-count-r); border: 1px solid var(--house-ring);
@@ -400,7 +400,7 @@
       one('need', need, 'Needs you') + one('over', over, 'Overdue') + '</div>';
   }
   function head(word, href, n, need, extra) { return '<div class="cardhead"><h3><a class="house-go" href="' + href + '" aria-label="' + word + (n != null ? ': ' + n : '') + '. Open the list">' + word + '</a></h3>' + (n != null ? '<a class="house-go" href="' + href + '" aria-label="' + word + ': ' + n + '. Open the list">' + cnt(n, need) + '</a>' : '') + (extra || '') + '</div>'; }
-  // Main (Lisa's house style, 2 Nov 2026): exactly Next, Needs you (at most 5) and Money's 3 numbers, the same ones its
+  // Main (the owner's house style, 2 Nov 2026): exactly Next, Needs you (at most 5) and Money's 3 numbers, the same ones its
   // Dashboard tile shows (../index.html HubRead.money): Overdue · Due Soon · Cash. Built by ../toolkit.js DashKit.hubMain.
   // Everything that used to sit here lives on its tab: the On track / Needs you / Overdue trio and Money by entity on Money,
   // the overdue and 14-day dates on Dates, the full Needs you list and Your turn on Do (To-do).
@@ -454,7 +454,7 @@
     return DashKit.hubMain({ hub: 'money', error: err, nums: [{ label: 'Overdue', value: null, href: '#/now/over' }, { label: 'Due Soon', value: null, href: '#/dates/soon' }, { label: 'Cash', value: null, href: '#/money/biz' }], doHref: '#/todo' }) +
       '<div data-hm-allow><button class="btn" type="button" data-action="refresh">Try again</button></div>';
   }
-  // What a Now number counts, as its own list: #/now/need, #/now/over, #/now/all (Lisa, 2 Nov: every number opens what it counts).
+  // What a Now number counts, as its own list: #/now/need, #/now/over, #/now/all (the owner, 2 Nov: every number opens what it counts).
   function viewNowList(k) {
     var items = M.needsNow(R.data, R.money, R.today), l = k === 'over' ? items.filter(isOverdue) : k === 'need' ? items.filter(function (i) { return !isOverdue(i); }) : items;
     var word = k === 'over' ? 'Overdue' : 'Needs you';
@@ -661,7 +661,7 @@
       // Every Needs you item (Main shows the first 5), moved here from Main (Hub Mains, 2 Nov 2026).
       if (nn.length) h += '<section class="card now ' + (nn.some(function (i) { return i.level === 'risk'; }) ? 'c-risk' : 'c-ok') + '" data-needs-all>' + head('Needs you', '#/now/all', nn.length, nn.some(isOverdue)) + listWithMore(nn, NOW_SHOW, itemLi, 'todo-needs') + '</section>';
       var rdy = t.filter(function (x) { return x.ready === 'ready'; }), blk = t.filter(function (x) { return x.ready !== 'ready'; });
-      // One empty line per view (Lisa, 2 Nov): empty sections are not drawn.
+      // One empty line per view (the owner, 2 Nov): empty sections are not drawn.
       h += t.length ? (rdy.length ? wrap('Ready now', 'c-ops', rdy, 8) : '') + (blk.length ? wrap('Blocked', 'c-mute', blk, 5) : '') : nn.length ? '' : '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
     } else if (sub === 'others') {
       h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
@@ -768,7 +768,7 @@
     if (!ok) { ['nNow', 'nMoney', 'nDates', 'nTodo', 'nAcct', 'nControl'].forEach(function (id) { set(id, 0); }); return; }
     var over = M.overdueDates(R.data, R.today).length, soon = M.dueWithin(R.data, R.today, 14).length;
     var fc = M.fileChecks(R), bad = fc.filter(function (f) { return f.state === 'fail'; }).length;
-    // Rose = late only (Lisa's sweep, 3 Nov 2026; a rose count is read out as "N late"): Now is rose when one is overdue.
+    // Rose = late only (the owner's sweep, 3 Nov 2026; a rose count is read out as "N late"): Now is rose when one is overdue.
     var now = M.needsNow(R.data, R.money, R.today);
     set('nNow', now.length, now.some(isOverdue));
     set('nMoney', 0);

@@ -10,7 +10,7 @@
  * - Words match the round: "AM 12.0–15.0 ✓", "AM Outside 8.5–15.0", "AM empty", "AM due", "AM missed".
  *   state is 'in' | 'out' | 'nolimit' | 'empty' | 'due' | 'missed' for the caller's colour (never a fill).
  * - The limit comes from temperature_band rows only (min_temp/max_temp or min_c/max_c), never typed here, and only
- *   rows in force on the day count (from_date blank or <= day, to_date blank or >= day; Lisa 12 Nov 2026). Two in
+ *   rows in force on the day count (from_date blank or <= day, to_date blank or >= day; the owner 12 Nov 2026). Two in
  *   force: the later from_date wins.
  *   Rows with ages need opts.youngestDays (the youngest dog in the room today); without it, an age-banded
  *   limit is null with source 'by age'.
