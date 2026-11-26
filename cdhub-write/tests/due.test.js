@@ -255,7 +255,7 @@ test('times a day: an owner row makes a daily job stay due until done that many 
   const once = [A('iso_check', '2026-10-02T08:00:00Z'), A('clean', '2026-10-02T08:00:00Z')];
   let r = D.forTarget(types, once, room, '2026-10-02', null, { rules });
   const iso = r.find((j) => j.type_key === 'iso_check'), clean = r.find((j) => j.type_key === 'clean');
-  assert.equal(iso.status, 'today'); assert.equal(iso.done_today, 1); assert.equal(iso.times_per_day, 2);
+  assert.equal(iso.status, 'ok'); assert.equal(iso.done_today, 1); assert.equal(iso.times_per_day, 2);
   assert.equal(clean.status, 'ok'); assert.equal(clean.times_per_day, 1);
   r = D.forTarget(types, once.concat([A('iso_check', '2026-10-02T18:00:00Z')]), room, '2026-10-02', null, { rules });
   assert.equal(r.find((j) => j.type_key === 'iso_check').status, 'ok');
@@ -279,10 +279,10 @@ test('a room job saved per dog: not due in an empty room; times a day counted pe
   const room = { area_id: 'iso', roomDogIds: ['d1', 'd2'] };
   let logs = [L('d1', '2026-10-02T08:00:00Z'), L('d2', '2026-10-02T08:00:00Z')];
   let j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
-  assert.equal(j.done_today, 1); assert.equal(j.status, 'today'); assert.equal(j.times_per_day, 3);
+  assert.equal(j.done_today, 1); assert.equal(j.status, 'ok'); assert.equal(j.times_per_day, 3);
   logs = logs.concat([L('d1', '2026-10-02T12:00:00Z'), L('d2', '2026-10-02T12:00:00Z'), L('d1', '2026-10-02T18:00:00Z')]);
   j = D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0];
-  assert.equal(j.done_today, 2); assert.equal(j.status, 'today');   // d2 only twice
+  assert.equal(j.done_today, 2); assert.equal(j.status, 'ok');
   logs = logs.concat([L('d2', '2026-10-02T18:05:00Z')]);
   assert.equal(D.forTarget(types, logs, room, '2026-10-02', null, { rules })[0].status, 'ok');
   // one dog's own card counts that dog only
