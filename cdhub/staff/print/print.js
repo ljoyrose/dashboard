@@ -267,12 +267,17 @@
       .catch(bytes);
   }
   /* the photo as saved (the hub's crop step saves a square); printing never crops it again: it is fitted whole (contain).
-     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper) */
+     No photo, or one that fails to load: the size-colour frame stays and is left blank (no placeholder word on paper).
+     A saved turn (photo.rotate.<file>) is drawn on top; the stored picture never changes. */
   function photoBox(s, table) {
     var id = mainPhoto(s, table), box = h('div', { class: 'photo' + (id ? '' : ' none'), 'data-k': 'photo' });
+    var deg = id && typeof BLDPhotos !== 'undefined' && BLDPhotos.rotation ? BLDPhotos.rotation(T.files || [], T.breeding_rule || [], id, BLDNeeds.today()) : 0;
     if (id) {
-      var img = h('img', { alt: '', referrerpolicy: 'no-referrer' });
+      var img = h('img', { alt: '', referrerpolicy: 'no-referrer', 'data-rot': String(deg) });
       box.appendChild(img);
+      img.addEventListener('load', function () {
+        if (deg && BLDPhotos.turnStyle) { box.style.position = 'relative'; img.style.cssText = BLDPhotos.turnStyle(deg, box.clientWidth, box.clientHeight); }
+      });
       loadPhoto(img, id, function () { box.textContent = ''; box.classList.add('none'); });
     }
     return box; }
