@@ -1,4 +1,4 @@
-// Print opens at once (Lisa's demo, 22 Nov 2026: "Loading..." for over 2 minutes while 21 script calls ran one after
+// Print opens at once (the owner's demo, 22 Nov 2026: "Loading..." for over 2 minutes while 21 script calls ran one after
 // another). The buttons show before any list is read; a card type reads only its lists, four at a time, once per visit;
 // "Lists as of" with Refresh. Invented rows and codes only.
 const { test, expect } = require('../fixtures/job34/load');

@@ -1,4 +1,4 @@
-// Studio Main (Lisa's house style, 2 Nov 2026): exactly Next, Needs you (at most 5 rows from Decide and Do, late > today >
+// Studio Main (the owner's house style, 2 Nov 2026): exactly Next, Needs you (at most 5 rows from Decide and Do, late > today >
 // waiting, each with its action), then Approve · Due Today · Sold, each a link to its list; "–" when Studio cannot be read
 // (Sold is always "–": the state keeps running sales totals, never dated sales); ONE "Nothing needs you" when nothing does.
 // Pretend Google and Drive only; the state is tests/fixtures/studio/state.js (invented).

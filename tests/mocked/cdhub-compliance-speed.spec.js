@@ -1,4 +1,4 @@
-// Compliance speed (Lisa 22 Nov 2026: "opens very slowly, unusable").
+// Compliance speed (the owner 22 Nov 2026: "opens very slowly, unusable").
 // - Every file is read through ONE queue (READ_AT_ONCE at a time): the later files start while first-screen files are still reading.
 // - A file whose Drive modifiedTime is unchanged since the last read on this device is not read again (the folder list is always live).
 // - Compliance shows a read up to 5 minutes old at once, always with "As of <time>" and Refresh; older waits for the live read.

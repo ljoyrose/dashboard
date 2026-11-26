@@ -106,7 +106,7 @@ test.describe('Home sign-in: the paths around the button', () => {
     await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/drives/, async (route) => { await held; return route.fallback(); });
     await page.locator('#refreshBtn').click();
     await expect(page.locator('#refreshBtn')).toBeDisabled();
-    // The top bar's Refresh is an icon (Lisa's pick A): its name stays "Refresh"; the read time says what is happening.
+    // The top bar's Refresh is an icon (the owner's pick A): its name stays "Refresh"; the read time says what is happening.
     await expect(page.locator('#refreshBtn')).toHaveAccessibleName('Refresh');
     await expect(page.locator('#refreshBtn')).toHaveText('');
     await expect(page.locator('#readStamp')).toHaveText('Reading…');

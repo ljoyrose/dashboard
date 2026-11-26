@@ -1,4 +1,4 @@
-// Board A (Lisa 17 Nov 2026): an owner opens The Board with the same Google sign-in as CD Hub, no code.
+// Board A (the owner 17 Nov 2026): an owner opens The Board with the same Google sign-in as CD Hub, no code.
 // Pretend Google and a pretend save script only. The token, address and names here are invented.
 const { test, expect } = require('../support/test');
 

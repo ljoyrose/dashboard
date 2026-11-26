@@ -3,9 +3,9 @@
  * compliance audit both use this file, so they always give the same answer.
  *
  * Every limit comes from the owner's own rows (BLD-area_capacity: area_id, access_type, size_band, max_dogs).
- * A room's rows are ALTERNATIVES, not an allowance per size (Lisa, 8 Nov 2026): "3 small or 2 medium" means one or
+ * A room's rows are ALTERNATIVES, not an allowance per size (the owner, 8 Nov 2026): "3 small or 2 medium" means one or
  * the other, so 1 medium and 2 small is over. Every dog must fit the alternative for its size, so the room is held to
- * the alternative of its largest dog. Being under is fine (Lisa, 8 Nov 2026): 1 medium and 1 small fits "2 medium".
+ * the alternative of its largest dog. Being under is fine (the owner, 8 Nov 2026): 1 medium and 1 small fits "2 medium".
  * A puppy with its dam in the same room is not counted; the dam then uses the "+ pups" alternative.
  */
 (function (root, factory) {
@@ -24,7 +24,7 @@
   function band(s) { var w = word(s); return w ? w + (/pups/i.test(String(s)) ? '+pups' : '') : ''; }
 
   /**
-   * The rows in force on a date (the dated-limits rule, Lisa 12 Nov 2026; same wording as SOPS's breedRule and the save script):
+   * The rows in force on a date (the dated-limits rule, the owner 12 Nov 2026; same wording as SOPS's breedRule and the save script):
    * a row is in force when from <= date <= to_date. Dates compare on their first 10 characters (YYYY-MM-DD), so a datetime
    * such as taken_at works; to_date is inclusive; a blank or unreadable from or to counts as open. No date: every row, as before.
    * fromKey is the row's start column ('from_date' for area_capacity, 'effective_from' for breeding_rule). Never throws.
@@ -37,9 +37,9 @@
     return rows.filter(function (r) { var f = ymd(r && r[fromKey]), t = ymd(r && r.to_date); return (!f || f <= d) && (!t || d <= t); });
   }
   /**
-   * Size from weight (Lisa's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
+   * Size from weight (the owner's dog card mock-up, 7 Nov 2026). The cut-offs are the owner's rows in BLD-breeding_rule,
    * never fixed here: size_from_kg.medium = the weight (kg) at which a dog counts as medium, size_from_kg.large = the
-   * weight from which a dog counts as large (Lisa 20 Nov 2026: "25kg and above" is large, as the live row says). A row needs a value and a source; the newest row in force on `today` wins.
+   * weight from which a dog counts as large (the owner 20 Nov 2026: "25kg and above" is large, as the live row says). A row needs a value and a source; the newest row in force on `today` wins.
    * Returns null unless both are set and medium < large, so a half-set pair never sorts a dog.
    */
   function sizeCutoffs(rules, today) {
@@ -55,7 +55,7 @@
     return { medium: got.medium.kg, large: got.large.kg, source: got.medium.source === got.large.source ? got.medium.source : got.medium.source + '; ' + got.large.source };
   }
   /** 'small' | 'medium' | 'large' for a weight, or '' when there is no weight or no cut-offs. Each cut-off starts its size
-   * (live row size_from_kg.large, Lisa 12 Nov 2026, council licence: "25.0 counts as large"). */
+   * (live row size_from_kg.large, the owner 12 Nov 2026, council licence: "25.0 counts as large"). */
   function sizeFromKg(kg, cut) {
     kg = parseFloat(kg); if (!cut || isNaN(kg) || kg <= 0) return '';
     return kg >= cut.large ? 'large' : (kg >= cut.medium ? 'medium' : 'small');
@@ -63,7 +63,7 @@
 
   /**
    * Midpoint of a kg range typed in a size cell, e.g. "Mini 8-12kg" gives 10 and "Lge Mini/Sml Med 12-16kg" gives 14
-   * (Lisa 15 Nov 2026: with no weighing, use the breed size range midpoint). NaN when the text has no "a-b kg" range.
+   * (the owner 15 Nov 2026: with no weighing, use the breed size range midpoint). NaN when the text has no "a-b kg" range.
    */
   function rangeMidKg(text) {
     var m = /(\d+(?:[.,]\d+)?)\s*(?:-|\u2013|to)\s*(\d+(?:[.,]\d+)?)\s*kg/i.exec(String(text == null ? '' : text));
@@ -96,7 +96,7 @@
     return /^(small|medium|large)$/.test(hit || '') ? hit : '';
   }
   /**
-   * One dog's size: the ONE rule for the CD Hub dog page and the print cards (Lisa 15 Nov 2026), so they never differ.
+   * One dog's size: the ONE rule for the CD Hub dog page and the print cards (the owner 15 Nov 2026), so they never differ.
    * 1. an owner size_override row; 2. the latest weight against the size_from_kg rows in force on `today`;
    * 3. no weighing: the middle of the kg range typed in the size cell (#653). Never a fixed default.
    * o = { id, kg: latest weight, sizeText: the typed size cell, rules: breeding_rule rows, today: YYYY-MM-DD, cut: optional }.
@@ -192,7 +192,7 @@
     return rows.filter(function (r) { return ymd(r.from_date) === top[String(r.access_type).toLowerCase() + '|' + band(r.size_band)]; });
   }
   /**
-   * SPACE RULES (Lisa 17 Nov 2026: "should be calculated automatically"; "it should be in compliance rules already").
+   * SPACE RULES (the owner 17 Nov 2026: "should be calculated automatically"; "it should be in compliance rules already").
    * The poster's table is already dated rows in BLD-breeding_rule (set 11 Nov 2026): rule_key
    * space.<free|limited>.adult.<small|medium|large>.<number of dogs> = m² needed, and
    * space.<free|limited>.mum_with_pups.<size>.1 = m² needed for a mum with her litter. Nothing about the figures is coded here.
@@ -260,7 +260,7 @@
     }
     if (!o.access) res.notes.push('The flap is not set for this room, so the stricter limit is used.');
     if (o.access && derivedFor.indexOf(String(o.access).toLowerCase()) >= 0) res.notes.push('Limits for ' + o.access + ' access worked out from the room size (' + o.m2 + ' m²) and the space rules.');
-    // Lisa 17 Nov 2026 (3A.1/2): the flap was set to one way but the limits are only recorded for the other. Say so.
+    // the owner 17 Nov 2026 (3A.1/2): the flap was set to one way but the limits are only recorded for the other. Say so.
     else if (!rows.some(function (r) { return String(r.access_type).toLowerCase() === String(o.access).toLowerCase(); })) {
       var have = rows.map(function (r) { return String(r.access_type).toLowerCase(); }).filter(function (v, i, a) { return v && a.indexOf(v) === i; });
       res.notes.push('The flap is set to ' + o.access + ' access, but this room only has limits for ' + have.join(' and ') + ' access.');
@@ -315,7 +315,7 @@
   }
   /**
    * fact(id) -> {id, size, damId} for check(), the same on every screen (Move dogs, the room's jobs). Size from the latest
-   * weight with the owner's cut-off rows when weights can be read (Lisa, 12 Nov 2026), else the size on the dog's record.
+   * weight with the owner's cut-off rows when weights can be read (the owner, 12 Nov 2026), else the size on the dog's record.
    * o: {subjects, litters, weights, weightsRead, rules, today}
    */
   function facts(o) {

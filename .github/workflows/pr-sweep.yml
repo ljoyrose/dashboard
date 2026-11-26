@@ -1,9 +1,9 @@
 name: PR autopilot sweep
 
-# Daily, no AI. Reads open PRs, applies merge-policy.json, rewrites the
-# "DO: needs Lisa" issue. Dry-run unless the policy says apply or this
-# workflow is run by hand with apply ticked. Kill switch: add a file named
-# autopilot-off at the repo root.
+# Daily, no AI. Reads open PRs, applies merge-policy.json, rewrites one
+# issue with a single technical line. Dry-run unless the policy says apply
+# or this workflow is run by hand with apply ticked. Kill switch: add a file
+# named autopilot-off at the repo root.
 
 on:
   schedule:

@@ -23,7 +23,7 @@ const DRY = process.argv.includes('--dry-run');
 const COUNTS = DRY || process.argv.includes('--counts'); // counts only: no file or column names printed
 const say = (line) => { if (!COUNTS) console.log(line); };
 
-/** --dry-run: a throwaway folder holding the invented fixtures under the names Lisa's downloads would have. */
+/** --dry-run: a throwaway folder holding the invented fixtures under the names the owner's downloads would have. */
 function dryFolder() {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'job31-dry-'));
   const csv = (rows) => rows.map((r) => r.map((c) => (/[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : String(c))).join(',')).join('\n') + '\n';

@@ -1,4 +1,4 @@
-// Every piece of info opens what it counts, and every job carries the way to do it (Lisa, 2 Nov 2026).
+// Every piece of info opens what it counts, and every job carries the way to do it (the owner, 2 Nov 2026).
 // On each hub's Main and Do / Decide views: every number, summary card, tile and row is a link or a button, or sits in a row
 // whose one "open" control (.house-open) the whole row opens (toolkit.js). Sample clicks land on the right filtered list.
 // An empty view says so once. No visible button is blank (no words and no icon), even when the icon font cannot load.
@@ -156,7 +156,7 @@ test.describe('Clickable info: a sample of clicks land on the right filtered lis
   });
 });
 
-test.describe('Action always actionable: every row asking Lisa to act carries the way to do it', () => {
+test.describe('Action always actionable: every row asking the owner to act carries the way to do it', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
   const noAction = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(s)].filter((r) => r.offsetParent && !r.matches('a[href], button') && !r.querySelector('a[href], button')).map((r) => r.textContent.trim().slice(0, 50)), sel);
 

@@ -8,7 +8,7 @@
 <meta name="build" content="ljr-food-2026-10-28-v8">
 <title>GA Hub</title>
 <!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
-     The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
+     The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with the owner's Google sign-in
      from the RR_FOOD workbook, which the RR_FOOD-ENGINE Apps Script fills. A tap writes ONLY the 4 answer cells (G:J) of one
      Cards row (H is the optional note); the engine applies it after 10 minutes. A note with no answer appends one row on
      the Comments tab. Same shapes and tabs bar as Marketplace. -->
@@ -83,7 +83,7 @@
   a.tile { border-color: var(--ctl); }   /* a tile you can press rests on the control line */
   .tile .k { font-size: var(--fs-small); color: var(--muted); }
   .tile .v { font-size: var(--fs-figure); font-weight: 600; overflow-wrap: anywhere; align-self: flex-start; line-height: 1.3; }
-  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  /* Ringed numbers (the owner's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
   .tile .v.red { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-late); }
   .tile .datep { align-self: flex-start; }
   /* A date pill: its RING shows urgency (rose = late, amber = soon). The words stay ink. */
@@ -92,7 +92,7 @@
   /* Cards: a name line (dot + what kind), then the title (2 lines, then …). */
   .card { display: flex; flex-direction: column; gap: 12px; } /* the house card (../house.css): 1px line, 12px inside */
   .card.next { border-color: var(--ink); }
-  /* Main's ✓ XML tick (Lisa, 2 Nov): every order reached GA. A plain link under the 3 numbers. */
+  /* Main's ✓ XML tick (the owner, 2 Nov): every order reached GA. A plain link under the 3 numbers. */
   .hm-xml.need { border: 1px solid var(--house-late); border-radius: 999px; padding: 0 8px; text-decoration: none; }
   .hm-xml { justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; color: var(--ink); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }   /* Next: the one thing to do now; white with a 1px ink edge */
   .bline { display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
@@ -321,8 +321,8 @@
   function shopLink(o) { var shop = setting('SHOPIFY_STORE');
     return shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">' + DashKit.icon('t-bag') + 'Shopify</a>' : ''; }
   function shopAdmin(where) { var shop = setting('SHOPIFY_STORE'); return shop ? 'https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/' + where : ''; }
-  // Grow orders (Lisa, 30 Oct 2026): the Home leads with order growth. All from the Orders tab at run time; nothing here
-  // sends, emails, discounts or changes a price. Any reminder or offer is Lisa's own draft in Shopify.
+  // Grow orders (the owner, 30 Oct 2026): the Home leads with order growth. All from the Orders tab at run time; nothing here
+  // sends, emails, discounts or changes a price. Any reminder or offer is the owner's own draft in Shopify.
   function growth() {
     var last = ordersBetween(0, 30), prev = ordersBetween(30, 60), due = num(setting('REORDER_DUE_DAYS')) || 35;
     var pct = function (n) { return last.length ? Math.round(n * 100 / last.length) : 0; };
@@ -333,7 +333,7 @@
     return { last: last.length, prev: prev.length, repeat: pct(repeat), subs: pct(subs), oneOff: last.length - subs, reorder: reorder, due: due };
   }
   // Engine v1.15.3 writes customer_key (a one-way code, never the email) and species on each order. An order counts as
-  // "due" only if it is that customer's latest order for that species; one without a key is kept, as before (Lisa, 8 Nov 2026).
+  // "due" only if it is that customer's latest order for that species; one without a key is kept, as before (the owner, 8 Nov 2026).
   function latestFor(o) {
     if (!o.customer_key) return true;
     var sp = String(o.species || ''), t = Date.parse(o.placed_at);
@@ -348,7 +348,7 @@
       { n: g.reorder.length, name: 'Due to reorder', h: g.reorder.length + ' one-off order' + (g.reorder.length === 1 ? ' is' : 's are') + ' due a reorder', what: 'Paid over ' + g.due + ' days ago. Check each in Shopify (they may have ordered again) and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
       { n: g.subs < 50 ? g.oneOff : 0, name: 'Few subscriptions', h: 'Only ' + g.subs + '% of orders are subscriptions', what: g.oneOff + ' one-off order' + (g.oneOff === 1 ? '' : 's') + ' in the last 30 days. Draft a subscribe offer for Lisa to check; no discount is set from here.', href: shopAdmin('customers'), btn: 'Open Shopify customers' }
     ].filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
-    if (!gaps.length) return '';   // one empty line per view (Lisa, 2 Nov): no gap, no card
+    if (!gaps.length) return '';   // one empty line per view (the owner, 2 Nov): no gap, no card
     var x = gaps[0];
     return '<div class="card grow"><p class="bline"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>Grow orders: ' + esc(x.name) + '</p><h2>' + esc(x.h) + '</h2><p class="what">' + esc(x.what) + '</p>' +
       (x.act ? '<div class="acts"><button class="btn main" type="button" data-action="' + x.act + '">' + esc(x.btn) + '</button></div>'
@@ -360,8 +360,8 @@
       '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 && g.last > 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
       '<a class="tile" href="#/orders" aria-label="Repeat orders ' + g.repeat + '% from customers on their 2nd order or more. Open Orders"><span class="k">Repeat orders</span> <span class="v">' + g.repeat + '%</span> <span class="m">from customers on their 2nd order or more</span></a>' +
       '<a class="tile" href="#/orders?sub"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
-      // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
-      // A 0 never shows the red ring (house rule, Lisa 22 Nov 2026); the words still say "down n".
+      // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (the owner, 30 Oct 2026); set = red when the last 30 days are under it.
+      // A 0 never shows the red ring (house rule, the owner 22 Nov 2026); the words still say "down n".
       (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last > 0 && g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
     h += growCard(g);
     if (g.reorder.length) h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
@@ -378,7 +378,7 @@
   function inDays(ymd) { var d = daysTo(ymd); return d === null ? '' : d < 0 ? (-d) + ' day' + (d === -1 ? '' : 's') + ' late' : d === 0 ? 'today' : d === 1 ? 'tomorrow' : 'in ' + d + ' days'; }
   function wide(n) { return n >= 100 ? ' wide' : ''; }   // count pills: 1-2 digits keep the exact 30px box, 3+ digits grow
   function needsLook(o) { return !!(CHECK[o.check] && CHECK[o.check][1]); }
-  // Send cards (Lisa, 10 Nov 2026: "this tells me nothing"). Everything needed to decide Send without leaving the card, read
+  // Send cards (the owner, 10 Nov 2026: "this tells me nothing"). Everything needed to decide Send without leaving the card, read
   // from the Orders row, Products, Codes and Settings: where the order came from (channel, brand, affiliate), who it is for (new or
   // returning customer, one-off or subscription, dog or cat), what is in it (food or treats, names, kg, GA boxes, pallet over
   // MAX_ORDER_WEIGHT_KG) and whether it pays (profit against MIN_PROFIT). Before GA's invoice the profit is an estimate, made the
@@ -473,7 +473,7 @@
       '<div class="acts"><button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.yes) + '">' + esc(s.yes) + '</button>' +
       (s.no ? '<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.no) + '">' + esc(s.no) + '</button>' : '') + '</div></div>';
   }
-  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers, the same as the Dashboard's Food tile
+  // Main (the owner's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers, the same as the Dashboard's Food tile
   // (../index.html HubRead food): Late = orders Not at GA, Owe GA = unpaid GA invoices, Today = orders placed today (UK), and the
   // "✓ XML" tick when no order is Not at GA. Low profit stays off Main (a weekly or monthly review: Orders > Low profit, and Review).
   function ukToday(t) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(t || new Date()); }
@@ -498,13 +498,13 @@
       { label: 'Owe GA', value: loaded ? '£' + owed.toFixed(2) : null, href: '#/invoices?unpaid', aria: loaded ? 'Owe GA: £' + owed.toFixed(2) + '. Open the unpaid invoices' : '' },
       { label: 'Today', value: loaded ? data.orders.filter(placedToday).length : null, href: '#/orders?today', aria: loaded ? 'Today: ' + data.orders.filter(placedToday).length + ' orders placed today. Open them' : '' }];
     var hasS = {}; data.orders.forEach(function (o) { if (o.s_no) hasS[String(o.order_no)] = true; });
-    var toSend = waiting().filter(function (r) { return /^SEND-/.test(r.key) && !hasS[r.key.slice(5)]; }).length;   // waiting for Lisa's Send tap (8 Nov 2026)
+    var toSend = waiting().filter(function (r) { return /^SEND-/.test(r.key) && !hasS[r.key.slice(5)]; }).length;   // waiting for the owner's Send tap (8 Nov 2026)
     var xml = loaded && !late && !toSend ? '<a class="hm-xml" data-xml href="#/orders?ga" aria-label="✓ XML: every order reached GA. Open Not at GA yet">✓ XML</a>'
       : loaded && toSend ? '<a class="hm-xml need" data-send href="#/do" aria-label="' + toSend + ' order' + (toSend > 1 ? 's' : '') + ' waiting for your Send tap. Open them">' + toSend + ' to send</a>' : '';
     return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
   }
-  // Do (More): every card waiting on Lisa, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
-  // Do filters (roadmap 1, 10 Nov 2026): one chip per channel and per brand among the order cards waiting, so Lisa can work one
+  // Do (More): every card waiting on the owner, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
+  // Do filters (roadmap 1, 10 Nov 2026): one chip per channel and per brand among the order cards waiting, so the owner can work one
   // shop or one white-label brand at a time. Shown only when there are 2 or more to choose between. Cards with no order (price
   // lists, checks) show under All only.
   var dfilter = 'all';
@@ -530,7 +530,7 @@
     h += doChips(w); var shown = w.filter(dMatch);
     return h + (shown.length ? shown.map(function (r) { return cardHtml(r); }).join('') : '<div class="card">' + empty('Nothing for this one', 'Tap All to see every card.') + '</div>');
   }
-  // Brands (roadmap 3, 10 Nov 2026): one card per brand (Codes tab, plus any brand on an order) so Lisa sees which brand pays.
+  // Brands (roadmap 3, 10 Nov 2026): one card per brand (Codes tab, plus any brand on an order) so the owner sees which brand pays.
   // Orders, sales (inc VAT) and profit (ex VAT, after all costs) for the last 30 days and all time; low-profit orders against the
   // brand's own minimum (MIN_PROFIT_<BRAND>, then MIN_PROFIT, else not set; the order's own min_profit from engine v1.16 wins);
   // the recipes sold under the brand with how many have a GA data sheet linked; the newest GA price list (GA's list covers every brand).
@@ -577,7 +577,7 @@
   var CHECK = { 'Matched': ['Matched with GA', '', 's-check'], 'Shipped': ['Shipped by GA', '', 't-truck'], 'Waiting for GA': ['Waiting for GA', '', 's-clock'], 'At GA': ['At GA (confirmed)', '', 's-check'], 'At GA, not shipped': ['At GA but not shipped', 'no', 's-alert'], 'Not at GA': ['Not at GA: check the Portal', 'no', 's-x'],
     'Items differ': ['GA sent different items', 'no', 's-alert'], 'Not in Shopify': ['Not in Shopify: check the reference', 'no', 's-alert'], 'No GA items': ['No GA items: see its card', '', 't-box'], 'Pack at home': ['Pack at home: tap Packed once posted', '', 'home'], 'Packed at home': ['Packed at home', '', 'home'], 'Cancelled': ['Cancelled', '', 's-x'],
     'Replacement': ['Replacement, sent again', '', 's-repeat'], 'Split box': ['Extra box of the same order', '', 't-box'] };
-  // The order row says what was bought and where its XML send stands (Lisa, 8 Nov 2026): Send button while the SEND- card waits, then sent / waiting for GA.
+  // The order row says what was bought and where its XML send stands (the owner, 8 Nov 2026): Send button while the SEND- card waits, then sent / waiting for GA.
   function orderItems(o) { var l; try { l = JSON.parse(o.shop_lines || '[]'); } catch (e) { l = []; }
     return l.map(function (x) { var p = data.products.filter(function (q) { return q.full_ga_code === x.code; })[0]; return x.qty + ' × ' + (p ? (p.ddf_name || p.recipe) + ' ' + p.pack : x.code); }).join(', '); }
   function sendState(o) { if (o.s_no) return ''; var c = find('SEND-' + o.order_no), at = String(o.sent_at || '');
@@ -718,7 +718,7 @@
     DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    // Rose = late only (Lisa's sweep, 3 Nov 2026; read out as "N late").
+    // Rose = late only (the owner's sweep, 3 Nov 2026; read out as "N late").
     var mr = loaded ? mainRows() : [], n = mr.length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100); $('n-home').classList.toggle('need', mr.some(function (r) { return r.kind === 'late'; }));
     var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100); $('n-orders').classList.toggle('need', lateOrders().length > 0);   // orders that need a look, on every page
     $('stamp').textContent = F && F.live ? '' : 'TEST';

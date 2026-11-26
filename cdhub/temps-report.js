@@ -1,5 +1,5 @@
 /*!
- * Temperatures report: "Print / Save as PDF" (Lisa 18 Nov 2026: "PDF A and B and also both month and year - all options
+ * Temperatures report: "Print / Save as PDF" (the owner 18 Nov 2026: "PDF A and B and also both month and year - all options
  * selectable by user"). The person picks the period (one month, or a whole year) and what goes in:
  *   B  Summary: one small calendar per room, a day green when every slot was read inside its limit, solid orange when a
  *      reading was outside, an orange frame when a slot was missed. No numbers: the month at a glance.
@@ -14,7 +14,7 @@
   var MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var READ = { in: 1, out: 1, nolimit: 1, eout: 1, swap: 1, warm: 1, nospot: 1 };
 
-  /* 22 Nov 2026 (Lisa: "fit on one page nicely for each type, particularly the tick versions"): every page is one A4
+  /* 22 Nov 2026 (the owner: "fit on one page nicely for each type, particularly the tick versions"): every page is one A4
      landscape sheet. The page area is 281 x 194 mm (8 mm margins); the summary picks how many calendars go across so the
      rows fit, the table sizes its text to the days and rooms, and fit() shrinks any page that would still run over. */
   var PAGE_W = 281, PAGE_H = 194, BODY_H = 170;   // mm; BODY_H leaves room for the title, key, totals and signature line

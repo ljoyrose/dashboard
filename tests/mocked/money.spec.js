@@ -35,8 +35,8 @@ test.describe('Money Hub: loads', () => {
   });
 });
 
-test.describe('Money Hub: sign-in (mocked) and the Lisa gate', () => {
-  test('Lisa\'s account: reads the index files and ledgers, read-only, then shows the hub', async ({ page, guard }) => {
+test.describe('Money Hub: sign-in (mocked) and the the owner gate', () => {
+  test('the owner\'s account: reads the index files and ledgers, read-only, then shows the hub', async ({ page, guard }) => {
     await page.goto('money/');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Now');
@@ -47,7 +47,7 @@ test.describe('Money Hub: sign-in (mocked) and the Lisa gate', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
-  test('the sign-in asks for Lisa\'s account by name (login hint)', async ({ page }) => {
+  test('the sign-in asks for the owner\'s account by name (login hint)', async ({ page }) => {
     await page.goto('money/');
     await signIn(page);
     const req = await page.evaluate(() => window.__GIS_LAST_REQUEST);
@@ -243,7 +243,7 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('Statements to drop');
   });
 
-  test('every panel says when it was read (no "From file" footer: Lisa, 2 Nov)', async ({ page }) => {
+  test('every panel says when it was read (no "From file" footer: the owner, 2 Nov)', async ({ page }) => {
     await page.goto('money/#/dates');
     await signIn(page);
     await expect(page.locator('#view .source')).toContainText(/data as of \d/);

@@ -32,7 +32,7 @@
     });
     return readerP;
   }
-  // Keep-photo setting (Lisa 16 Nov 2026): evidence.js is loaded only when the owner's job.temps_keep_photo row exists.
+  // Keep-photo setting (the owner 16 Nov 2026): evidence.js is loaded only when the owner's job.temps_keep_photo row exists.
   var evidenceP = null;
   function loadEvidence() {
     if (window.BLDTempEvidence) return Promise.resolve(window.BLDTempEvidence);
@@ -43,7 +43,7 @@
     });
     return evidenceP;
   }
-  // Readings import (Lisa 22 Nov 2026): readings-import.js is loaded only when the owner opens it.
+  // Readings import (the owner 22 Nov 2026): readings-import.js is loaded only when the owner opens it.
   var importP = null;
   function loadImport() {
     if (window.BLDTempImport) return Promise.resolve(window.BLDTempImport);
@@ -102,7 +102,7 @@
     var am = key === 'am';
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: dateIso, periodStart: londonIso(dateIso, am ? '00' : '12'), past: true };
   }
-  /* Button icons (Lisa C, 14 Nov 2026): icon plus word, Tabler outline, grey at rest (.ic). */
+  /* Button icons (the owner C, 14 Nov 2026): icon plus word, Tabler outline, grey at rest (.ic). */
   var SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
   var ICON = {
     plus: SVG + '<path d="M12 5v14M5 12h14"/></svg>',
@@ -115,7 +115,7 @@
   function can(c, key) {
     return !!(c && c.save && typeof c.save.role === 'function' && c.save.role() === 'OWNER');
   }
-  /* Dates (Lisa 13 Nov 2026): one format everywhere, "2 Mar 2026"; never DD/MM/YY. Stored dates stay ISO. */
+  /* Dates (the owner 13 Nov 2026): one format everywhere, "2 Mar 2026"; never DD/MM/YY. Stored dates stay ISO. */
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   function dayWords(iso) { iso = String(iso || ''); if (!/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso; return parseInt(iso.slice(8, 10), 10) + ' ' + MON[parseInt(iso.slice(5, 7), 10) - 1] + ' ' + iso.slice(0, 4); }
   function monthWords(ym) { return /^\d{4}-\d{2}/.test(ym) ? MON[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4) : ym; }
@@ -130,7 +130,7 @@
     var r = remembered(ROOM_KEY);
     return r ? { areaId: r.areaId, at: r.at } : null;
   }
-  /* One round item per thermometer (Lisa 11 Nov 2026: H5/6 is one room with 2 named thermometers). An item's key is its
+  /* One round item per thermometer (the owner 11 Nov 2026: H5/6 is one room with 2 named thermometers). An item's key is its
      thermometer id, or the room id when there are no thermometer rows. */
   function itemKey(a) { return a.thermometerId || a.id; }
   /* Which item a saved reading covers: its thermometer_id; with none (older rows), the room's only thermometer. */
@@ -151,7 +151,7 @@
   /* The round is the thermometer rows (BLD-thermometer: name, area_id), never a coded list: a room with no
      thermometer (a field) is not on it, a corridor is its own place, and a place with two thermometers lists both,
      each by name ("H5/6 · H5"), each with its own reading (thermometer_id). When something is
-     needed comes only from BLD-requirement rows through the shared lib (Lisa 11 Nov 2026, "A standard"):
+     needed comes only from BLD-requirement rows through the shared lib (the owner 11 Nov 2026, "A standard"):
      BLDOccupancy.inUse (room.in_use) and BLDThermometer.neededOn (reading.temperature), both via BLDNeeds.coversDay.
      With no thermometer rows yet, every room in use that day is listed. */
   function roomInUse(a, day, req) {
@@ -197,7 +197,7 @@
    * optional area_id for a room of its own). The youngest dog in the room picks the band; a row for this room beats
    * a row for every room. {min, max, label} or {reason}.
    */
-  /** Lisa 12 Nov 2026: every limit is a dated row. A row is in force on a day when from_date is blank or on/before it
+  /** the owner 12 Nov 2026: every limit is a dated row. A row is in force on a day when from_date is blank or on/before it
    *  and to_date is blank or on/after it (YYYY-MM-DD, both ends count; a missing column is blank). The same reading
    *  as BLDCapacity.inForce and Sink.gs rowsInForce_. A past reading is judged by the rows in force on its own day. */
   function bandsOn(bands, day) { return window.BLDCapacity.inForce(bands || [], day); }   // the shared rule (capacity.js)
@@ -220,7 +220,7 @@
     // this room's row first, then the narrowest age, then the later from_date (two rows in force: the newer wins)
     fits.sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || (num(b.age_from_days) || 0) - (num(a.age_from_days) || 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); });
     var f = fits[0];
-    // Temps A (Lisa 17 Nov 2026): the room itself is judged on the open-ended (adult) row; a puppy row (with an upper
+    // Temps A (the owner 17 Nov 2026): the room itself is judged on the open-ended (adult) row; a puppy row (with an upper
     // age) is for the bed spot. Shared rule: staff/lib/temp-judge.js.
     var adult = bands.filter(function (b) { return (!b.area_id || b.area_id === areaId) && num(b.age_to_days) === null && num(b.min_temp) !== null && num(b.max_temp) !== null; })
       .sort(function (a, b) { return (b.area_id ? 1 : 0) - (a.area_id ? 1 : 0) || String(b.from_date || '').localeCompare(String(a.from_date || '')); })[0];
@@ -309,7 +309,7 @@
   /**
    * o: save, table ('area_reading' | 'guest_reading'), area {id,label}, limit {min,max,label}|{reason}, guest, onDone,
    *    dogsHere (dogs recorded in the room, for the Room empty warning)
-   * Room empty (Lisa 11 Nov 2026): a flag on the slot's reading, meaning no dog present. A reading is optional with it;
+   * Room empty (the owner 11 Nov 2026): a flag on the slot's reading, meaning no dog present. A reading is optional with it;
    * a reading outside the limit in an empty room is flagged "Room empty" and never counted as non-compliant, so no
    * "What was done" is asked. Staff only (area_reading), never guests.
    */
@@ -400,7 +400,7 @@
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
       if (o.area.thermometerId && table === 'area_reading') f.thermometer_id = o.area.thermometerId;
-      // An earlier reading is typed from a photo: saved as 'photo' (Lisa 11 Nov 2026), never shown.
+      // An earlier reading is typed from a photo: saved as 'photo' (the owner 11 Nov 2026), never shown.
       if (!none) { f.max_c = mx; f.min_c = mn; f.read_method = cam ? 'camera' : past ? 'photo' : 'typed'; }
       if (empty) f.room_empty = 'yes';
       if (cam && !none) f.camera_value_changed = (cam.max !== mx || cam.min !== mn) ? 'true' : 'false';
@@ -434,7 +434,7 @@
           setMsg(msg, (r.code === 'DUPLICATE' ? 'Already saved for this ' + slot.label.toLowerCase() + '.' : r.message) + extra, 'bad'); return;
         }
         form.hidden = true; camBox.textContent = ''; camMsg.textContent = '';
-        // Lisa 12 Nov 2026: the item shows its tick as soon as the save reply is OK, even if CLR pressed / Done is never tapped
+        // the owner 12 Nov 2026: the item shows its tick as soon as the save reply is OK, even if CLR pressed / Done is never tapped
         if (o.onSaved) o.onSaved(f);
         var clrHint = past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' });
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
@@ -462,7 +462,7 @@
     return L && links && links.length ? L.expand(rows || [], links) : (rows || []).slice();
   }
   /* ------------------------------------------------------------------ add earlier reading (a past day) */
-  /* Lisa, 11 Nov 2026: entry is never closed. An earlier reading can be typed later for any past slot, for every
+  /* the owner, 11 Nov 2026: entry is never closed. An earlier reading can be typed later for any past slot, for every
      thermometer needed that day (BLDThermometer.neededList), retired ones included. The round itself only shows
      today's. Saved with that slot's period_start, so History and the year report put it on the right day. */
   function backfill(host, o) {
@@ -547,7 +547,7 @@
           h('div', { class: 'nm', text: (done && !shared ? '✓ ' : '') + a.label }),
           scanned || (st && !shared) ? h('div', { class: 'ds' + (st && st.out ? ' tg-warn' : ''), text: [scanned ? 'You scanned this' : '', st && !shared ? st.text : ''].filter(Boolean).join(' · ') }) : null
         ]);
-        // Lisa 12 Nov 2026: every save shows the shared tick (BLDDone, staff/lib/done-state.js): "Done 09:14 · 12.0–15.0".
+        // the owner 12 Nov 2026: every save shows the shared tick (BLDDone, staff/lib/done-state.js): "Done 09:14 · 12.0–15.0".
         // An outside reading is flagged (the shared "concern" look), never a plain green tick.
         if (shared) D.mark(card, { outcome: st && st.out ? 'concern' : 'ok', at: done.taken_at || done._saved_at || '', extra: st ? st.text : '' });
         cards.appendChild(card);
@@ -555,7 +555,7 @@
       host.appendChild(cards);
       if (o.tools) host.appendChild(o.tools());
       // A thermometer QR opens that thermometer; a room QR opens the room only when it has one thermometer, else both
-      // are listed first, by name, for staff to pick (Lisa 11 Nov 2026).
+      // are listed first, by name, for staff to pick (the owner 11 Nov 2026).
       var mine = here ? o.areas.filter(isHere) : [];
       if (o.autoOpen && mine.length === 1) { o.autoOpen = false; if (!(o.done && o.done[itemKey(mine[0])])) open(mine[0]); }
     }
@@ -648,7 +648,7 @@
   }
 
   /* ------------------------------------------------------------------ readings import (owner) */
-  /* Lisa 22 Nov 2026: paper or spreadsheet readings into the temperature list. Check every row, show it, save only on
+  /* the owner 22 Nov 2026: paper or spreadsheet readings into the temperature list. Check every row, show it, save only on
      the press, one row at a time as the round saves (readings-import.js has the rules). */
   function readingsImport(host, c, areas, thermos, readings) {
     host.textContent = '';
@@ -803,7 +803,7 @@
       rows.forEach(function (r) {
         tb.appendChild(h('tr', { class: r.breach || r.flag ? 'tg-br' : '' }, [
           h('td', { text: dayWords(r.date) }), h('td', { text: r.slot }), h('td', { text: r.min === null ? '' : r.min.toFixed(1) }), h('td', { text: r.max === null ? '' : r.max.toFixed(1) }),
-          h('td', { text: r.spot }), h('td', { text: r.note })   // neither how nor who/when is shown (Lisa, 11 Nov; who is on hold)
+          h('td', { text: r.spot }), h('td', { text: r.note })   // neither how nor who/when is shown (the owner, 11 Nov; who is on hold)
         ]));
       });
       out.appendChild(h('h3', { text: 'Every reading' }));
@@ -816,7 +816,7 @@
       if (swapped) { r.flag = true; r.note = [r.note, 'max lower than min'].filter(Boolean).join(' · '); }
       if (r.kind !== 'staff') return;
       var outside = (lo !== null && r.min !== null && r.min < lo) || (hi !== null && r.max !== null && r.max > hi);
-      // Room empty (Lisa 11 Nov 2026): an outside reading is flagged with the caveat, never counted as outside the limit.
+      // Room empty (the owner 11 Nov 2026): an outside reading is flagged with the caveat, never counted as outside the limit.
       if (r.empty) { r.flag = !!(r.flag || outside); r.breach = false; return; }
       r.breach = hadNote || outside;
     }
@@ -829,7 +829,7 @@
     staff.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
       if (r.area_id !== areaId || at.slice(0, 4) !== year || r.corrects_id) return;
-      // Lisa, 11 Nov 2026: how a reading was taken (read_method, camera_value_changed) is saved only, never shown.
+      // the owner, 11 Nov 2026: how a reading was taken (read_method, camera_value_changed) is saved only, never shown.
       var empty = String(r.room_empty || '').toLowerCase() === 'yes';
       out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', empty: empty,
         note: [empty ? 'Room empty' : '', r.linked_from ? 'From ' + codeOf(r.linked_from) : '', r.mitigation_note || ''].filter(Boolean).join(' · ') });
@@ -896,7 +896,7 @@
         : d.areas.map(function (a) { return { id: a.id, code: a.label, label: a.label, sort: a.sort }; });
       var bands = v[1].ok ? v[1].rows : [];
       var rules = v[5] && v[5].ok ? v[5].rows : [];   // owner rule rows staff may read (job.*): job.temps_keep_photo
-      var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (Lisa 12 Nov 2026): an old room's readings also count for the room it became
+      var links = v[4] && v[4].ok ? v[4].rows : [];   // BLD-area_link (the owner 12 Nov 2026): an old room's readings also count for the room it became
       var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = doneFor(v[2].ok ? v[2].rows : [], round, slot.periodStart);
       // Who may open Report or Import is an owner setting (permission keys temps.year_report,

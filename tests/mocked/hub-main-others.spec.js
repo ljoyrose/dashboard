@@ -1,6 +1,6 @@
-// Hub Mains (Lisa's house style, 2 Nov 2026) for Money, Dogs (CD Hub), Food (GA Hub), Marketplace and Web (Estate). Apps and Studio
+// Hub Mains (the owner's house style, 2 Nov 2026) for Money, Dogs (CD Hub), Food (GA Hub), Marketplace and Web (Estate). Apps and Studio
 // have their own files (hub-main-factory / hub-main-studio). Each Main is exactly Next, Needs you (at most 5, late > today > waiting,
-// each row with its action), then the hub's 3 numbers in Lisa's order as links to their filtered lists; "–" when the read fails;
+// each row with its action), then the hub's 3 numbers in the owner's order as links to their filtered lists; "–" when the read fails;
 // ONE "Nothing needs you" when nothing waits; no sideways scroll at 390. Pretend Google, Drive and Sheets; every row is invented.
 const fs = require('fs');
 const path = require('path');
@@ -119,7 +119,7 @@ test.describe('Hub Mains when the read fails: "–", never invented numbers', ()
   });
 });
 
-test.describe('Hub Mains when nothing needs Lisa: ONE "Nothing needs you", the numbers stay', () => {
+test.describe('Hub Mains when nothing needs the owner: ONE "Nothing needs you", the numbers stay', () => {
   test('Food: no open cards and no order Not at GA (the ✓ XML tick shows)', async ({ page }) => {
     const b = foodBook();
     b.orders[2][26] = 'Matched';

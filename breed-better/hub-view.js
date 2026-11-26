@@ -2,7 +2,7 @@
  * Breed Better in CD Hub: reads rule rows and draws scores. It writes nothing and holds no animal data.
  * Everything specific to a species, breed or scheme comes from rows. Needs BreedBetterScore (score.js).
  * Scores are worked out when the page loads and carry a Testing label until the owner signs the scoring off
- * (a date in BLD-score_scheme.signed_off_on, on or before today: D3, Lisa 18 Nov 2026).
+ * (a date in BLD-score_scheme.signed_off_on, on or before today: D3, the owner 18 Nov 2026).
  *
  * Screens (the owner's design, 13 Nov 2026): five tabs at the bottom, always shown: Score, Evidence, Dogs, Calendar, More.
  * Each tab has its own address under #/breed (#/breed/calendar, #/breed/score.<animal id> ...), so Back and reload work.
@@ -45,7 +45,7 @@
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
   function isDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(t(v)); }
-  /* D3 (Lisa, 18 Nov 2026): the Testing label stays until the scheme row's signed_off_on holds a date (YYYY-MM-DD) on or
+  /* D3 (the owner, 18 Nov 2026): the Testing label stays until the scheme row's signed_off_on holds a date (YYYY-MM-DD) on or
      before today. Blank, not a date, or a future date keeps the label. Signing off is that one cell; clearing it brings the label back. */
   function signedOff(r, today) { var d = t(r && r.signed_off_on); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= t(today); }
   var TESTING = '<span class="bb-v bb-test" title="Trial scores, not yet signed off">Testing</span>';
@@ -96,7 +96,7 @@
     return out;
   }
 
-  /* Enrolments (Lisa, 15 Nov 2026): the older score_enrolment rows, read as they are, and enrolled_in link rows
+  /* Enrolments (the owner, 15 Nov 2026): the older score_enrolment rows, read as they are, and enrolled_in link rows
      (subject -> score_scheme, any course or certification later). Each from its from date to its to date, both inclusive. */
   function enrolments(T) {
     var out = [];
@@ -328,11 +328,11 @@
     var m = (b[1] - a[1]) * 12 + (b[2] - a[2]) - (Number(b[3]) < Number(a[3]) ? 1 : 0);
     return m < 0 ? null : m;
   }
-  /* Age groups (Lisa's mock-up; OV11, 15 Nov 2026): owner rows in the shared rule list, never fixed. For each group key,
+  /* Age groups (the owner's mock-up; OV11, 15 Nov 2026): owner rows in the shared rule list, never fixed. For each group key,
      age_group.<key>.from_months, age_group.<key>.to_months and age_group.<key>.label, each dated (effective_from, to_date)
      with a source. A group needs from_months; to_months blank = no upper end; an animal is in it when
      from_months <= age in whole months < to_months. No rows: no filter. */
-  /* Lisa, 15 Nov 2026: "there are only 2 in sops". With no age_group rows, the two groups come from the owner's existing
+  /* the owner, 15 Nov 2026: "there are only 2 in sops". With no age_group rows, the two groups come from the owner's existing
      rule "Age a dog counts as an adult" (dog.adult_from_months, the row in force today): Puppy under it, Adult from it.
      Nothing new is seeded; no rule either = no filter. */
   function adultGroups(T, today) {
@@ -878,7 +878,7 @@
           + '<span class="bb-acts">' + enrolBtn(v, c, x.id) + '</span></div>';
       }).join('') : '<p class="mut">None.</p>');
   }
-  /* Owner setting (Lisa, 15 Nov 2026): enrol young of an enrolled parent from their birth date. One dated rule row in the
+  /* Owner setting (the owner, 15 Nov 2026): enrol young of an enrolled parent from their birth date. One dated rule row in the
      link-kind family (agreed with STAFF, 15 Nov 2026), the same for any scheme, course or certification:
      link_kind.enrolled_in.inherit_at_birth = a pipe list of scheme ids, or * for all; "none" = none. No row = off.
      The save script copies the parent's open links of this kind when a birth is recorded; this page only shows and changes it. */
@@ -1081,7 +1081,7 @@
       '.bb-lab input,.bb-lab select{min-height:44px;width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;background:var(--card);color:var(--ink);font-size:var(--fs-input,16px)}',
       '.bb-f,.bb-dog,.bb-src,.bb-chip{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}',
       '.bb-f{min-height:44px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;font-weight:500}',
-      /* the house selected look (Lisa, 15 Nov 2026). #main #bbRoot outranks the hub's own grey button hover, which still fills */
+      /* the house selected look (the owner, 15 Nov 2026). #main #bbRoot outranks the hub's own grey button hover, which still fills */
       '.bb-f:hover,.bb-dog:hover,.bb-src:hover,.bb-chip:hover,.bb-f:active,.bb-dog:active,.bb-src:active,.bb-chip:active,'
         + '#main #bbRoot .bb-f:hover,#main #bbRoot .bb-dog:hover,#main #bbRoot .bb-src:hover,#main #bbRoot .bb-tab:hover,#main #bbRoot .bb-f:active,#main #bbRoot .bb-dog:active'
         + '{background:var(--card);outline:1px solid var(--hc,var(--v,var(--ink)));outline-offset:-1px}',
@@ -1217,7 +1217,7 @@
     var esc = v.esc, all = r.points_available || 0, hasT = r.target !== '' && r.target !== undefined;
     var pc = all ? Math.min(100, 100 * r.points_earned / all) : 0, tp = hasT && all ? Math.min(100, 100 * r.target / all) : null;
     var gates = r.lines.filter(function (l) { return l.kind === 'gate'; });
-    /* Lisa, 15 Nov 2026 (later): the score is a normal part of the card and always shows; the must-pass list is folded
+    /* the owner, 15 Nov 2026 (later): the score is a normal part of the card and always shows; the must-pass list is folded
        behind one line ("3 missing"), as it may grow long; open or folded is remembered per dog on this device.
        A tap on the heading opens this dog's Breed Better entry; "Back to <dog>" there returns to this card. */
     var cnt = { fail: 0, unverified: 0, pass: 0 }, k = verdictOf(r);
@@ -1254,7 +1254,7 @@
     });
   }
 
-  /* Back to where Lisa came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
+  /* Back to where the owner came from (15 Nov 2026): a tap on a dog card's Breed Better heading keeps that card and its place.
      The hub pushes a real history entry for #/breed (HubNav.back, NAV #610), so the phone's Back works too; this button
      is HubNav's own "\u2190 Back to <dog>" (data-hub-back: HubNav steps back). Only a dog card sets the dog (from.id);
      the hub's menu leaves it blank, so no button then. A cold link has no entry and shows none. */
@@ -1294,7 +1294,7 @@
     }, 0);
   }
 
-  /* ---- Enrol and un-enrol on every animal's card (Lisa, 15 Nov 2026). Saves go through the host: v.canWrite(),
+  /* ---- Enrol and un-enrol on every animal's card (the owner, 15 Nov 2026). Saves go through the host: v.canWrite(),
      v.enrol(subjectId, schemeId, fromDate), v.unenrol(enrolment, reason, toDate), then v.refresh(). Nothing is deleted:
      un-enrol fills the enrolment's to date with a reason; the animal moves to the Archive, where Enrol brings it back. ---- */
   var enrolMsg = {};
@@ -1362,7 +1362,7 @@
       + '<button type="button" class="bb-f" data-bb-unenrol-go="' + esc(id) + '">Un-enrol</button><button type="button" class="bb-f" data-bb-unenrol-x="1">Cancel</button></span>' + msgHtml(id);
   }
   var NOSAVE = 'Saving is not set up yet.';
-  /* ---- Saved dated scores (15 Nov 2026, OV11 for Lisa; draft Stage 4 names). Scores are still worked out on load;
+  /* ---- Saved dated scores (15 Nov 2026, OV11 for the owner; draft Stage 4 names). Scores are still worked out on load;
      Save score keeps what this page says today, so a later rule or record change never rewrites the past. ---- */
   function scoreFields(r) {
     return { subject_id: r.subject_id, scheme_id: r.scheme_id, period: r.as_of, verdict: verdictOf(r),

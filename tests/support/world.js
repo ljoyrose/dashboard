@@ -113,7 +113,7 @@ function addMoneyHub(d) {
   ledger('pers', 'fx-folder-testpers', ['BALANCES.csv', 'CASHFLOW.csv', 'FORECAST.csv', 'MONTHLY.csv', 'OUTGOINGS-NEXT.csv', 'RECURRING.csv']);
 }
 
-/** Everything, signed in as `email`. Lisa's address is the Money Hub gate (read from the page code). */
+/** Everything, signed in as `email`. the owner's address is the Money Hub gate (read from the page code). */
 function buildWorld({ email = IDS.moneyOwner, bld = {}, main = true, cd = true, money = true } = {}) {
   const d = new FakeDrive({ email });
   if (main) addMainDashboard(d);

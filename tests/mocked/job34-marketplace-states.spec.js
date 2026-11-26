@@ -29,7 +29,7 @@ const ROUND = [
 test.describe('Marketplace (JOB 34)', () => {
   test('Sign out in the header: back to the sign-in card; tabs, Refresh and the read time go', async ({ page }) => {
     await HUBS.marketplace.open(page);
-    // Signed in, the one header button is the Sign out icon: named for screen readers, no words on screen (Lisa's pick A).
+    // Signed in, the one header button is the Sign out icon: named for screen readers, no words on screen (the owner's pick A).
     await expect(page.locator('#signin')).toHaveAccessibleName('Sign out');
     await expect(page.locator('#signin')).toHaveText('');
     await page.locator('#signin').click();
@@ -183,7 +183,7 @@ test.describe('Marketplace (JOB 34)', () => {
     for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Decide', 'Do ', 'Reply', 'New Stock', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
-    // Insights sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
+    // Insights sits under More (the owner's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
     expect(await tabTo(page, 'nav.tabs a[data-nav="insights"]', 70), 'Tab reaches Insights under More').toBe(true);
   });
 });

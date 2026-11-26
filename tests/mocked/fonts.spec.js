@@ -1,9 +1,9 @@
-// Type on every page (Lisa's picks, 2 Nov 2026): ONE font, Lexend, everywhere (buttons, inputs, tables, menus and pills too);
+// Type on every page (the owner's picks, 2 Nov 2026): ONE font, Lexend, everywhere (buttons, inputs, tables, menus and pills too);
 // three weights only, 400 / 500 / 600; and only these sizes, as tokens in tokens.css:
 //   18px headings (h1-h4, card titles), big numbers and the hub name in the top bar (a number is never bigger than a heading)
 //   15px body text
 //   14px labels, tabs, counts, pills, tags, notes, meta lines, table text and menu items; nothing anywhere under 14px
-// Ringed numbers (Lisa's pick A) are 14px, the same as the words beside them: the house counts, the bottom-tab counts and
+// Ringed numbers (the owner's pick A) are 14px, the same as the words beside them: the house counts, the bottom-tab counts and
 // Money's summary rings, each in one box that fits 14px (1 and 2 digits the same width), ring only, no fill.
 // Read back by computed style on all 8 pages at 1280 and 390, signed in with invented data, on a few views and the open
 // More and Look menus. Pretend Google, Drive and Sheets only.
@@ -49,7 +49,7 @@ function readType({ sizes, weights }) {
   let n = 0;
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || icon(e) || e.closest('#credential_picker_container, .sr')) continue;
-    // A phone's bottom-tab count is a dot with no number showing (Lisa's pick b; tab-dots.spec.js pins it): not words.
+    // A phone's bottom-tab count is a dot with no number showing (the owner's pick b; tab-dots.spec.js pins it): not words.
     if (innerWidth < 768 && e.matches('nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt')) continue;
     if (![...e.childNodes].some((x) => x.nodeType === 3 && x.textContent.trim())) continue;
     n++;
@@ -79,7 +79,7 @@ function readType({ sizes, weights }) {
     const r = box.getBoundingClientRect();
     if (r.width > 80 || r.height > 60) continue; // a card with a number in it, not a ring
     const px = parseFloat(s.fontSize);
-    // A number in a group of 3 (a hub Main's or a Dashboard tile's numbers) is 18px like its neighbours, ringed or not (Lisa, 2 Nov:
+    // A number in a group of 3 (a hub Main's or a Dashboard tile's numbers) is 18px like its neighbours, ringed or not (the owner, 2 Nov:
     // "sizes in one group must match"); its ring is sized to it, so it is checked here and not with the 14px count rings.
     if (box.matches('.hm-v, .hk b')) { if (px !== 18) bad.add('group number ' + px + 'px: ' + name(e)); continue; }
     if (px !== 14) bad.add('ringed number ' + px + 'px: ' + name(e));
@@ -88,7 +88,7 @@ function readType({ sizes, weights }) {
   return { bad: [...bad], n, rings };
 }
 
-test.describe('Type: one font, three weights, sizes 14 / 15 / 18 only (Lisa, 2 Nov 2026)', () => {
+test.describe('Type: one font, three weights, sizes 14 / 15 / 18 only (the owner, 2 Nov 2026)', () => {
   test('tokens.css holds the four type tokens once; the shared files use them', () => {
     const tok = fs.readFileSync(path.join(ROOT, 'tokens.css'), 'utf8');
     for (const v of ['--fs-head: 18px', '--fs-figure: 18px', '--fs-body: 15px', '--fs-small: 14px', '--house-min: 14px']) expect(tok, 'tokens.css ' + v).toContain(v);

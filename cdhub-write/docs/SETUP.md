@@ -1,4 +1,4 @@
-# SETUP - turning on staff saving, the daily location check and staff reading (for Lisa)
+# SETUP - turning on staff saving, the daily location check and staff reading (for the owner)
 
 **What this does.** Staff use screens in Bloodline (CD Hub): **Where is everyone?** (the daily check of which room each dog is in: tap **Moved** for the dogs that moved, then one **All the rest unmoved**) and **Enter temperatures**. A small Google program (an "Apps Script") adds each entry as one new line at the bottom of a file in your BLD-app-tables folder. Staff can never change or delete a line that is already there. Only you can, from your own approvals page (section G).
 

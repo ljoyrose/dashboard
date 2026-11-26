@@ -9,7 +9,7 @@ What the hub does today: it only ANSWERS existing cards (writes cells G:J of a r
 
 **Route (smallest safe): one request file, like the Factory hub's New idea.**
 
-1. Add idea form checks its fields, then writes ONE file `MKT-IDEA-REQ-<id>.json` into a Drive folder (`marketplace.ideasRequestsFolderId` in `config.js`, empty until Lisa sets it).
+1. Add idea form checks its fields, then writes ONE file `MKT-IDEA-REQ-<id>.json` into a Drive folder (`marketplace.ideasRequestsFolderId` in `config.js`, empty until the owner sets it).
 2. The engine (about every 10 minutes) reads new request files and appends ONE row, then marks the file done. Same key twice = no second row.
 3. In the same run the engine creates ONE item on the Infinity board "Marketplace - Product ideas" and writes its link into the card's `infinity_item`. The board id lives in the engine's own settings, never in this repo.
 4. The card appears under New stock > Ideas.
@@ -48,7 +48,7 @@ Consequence to know: until A exists, a sent request just sits in the folder. The
 | gate | 0..3 | required |
 | verdict | "" / go / maybe / no | required |
 | intake | object | required: link, barcode, price_seen, where_seen, image_link, own_audience_fit, note |
-| classification_assumed | true/false | true until Lisa corrects the classification |
+| classification_assumed | true/false | true until the owner corrects the classification |
 | gate1, gate2, gate3 | object | free-form results of each later gate (sourcing, test plan, launch); shown as headed lists |
 | classification | object | product_type physical/digital; buyer b2c/b2b; branding white_label/own_brand/supplier_brand/resell; fulfilment hold_stock/dropship/made_to_order/digital; source maker/wholesaler/distributor/licence |
 | margin_est | object | worst, expected, best: pence per unit, or null |
@@ -63,7 +63,7 @@ Consequence to know: until A exists, a sent request just sits in the folder. The
 
 Go to New stock needs: verdict go, `unit_inc_p`, `profit_p`, `supplier` (`goReady()`).
 
-## 4. Answers Lisa gives on an idea card
+## 4. Answers the owner gives on an idea card
 
 `Go` (note `to=newstock`), `Maybe`, `No` (note = why, required). Same cells as every card (G:J). `Investigate` is NOT an answer (one answer per row): it is a separate request, proposed in stage 3. Engine support for these on section `idea` is open question 2 in the slip.
 

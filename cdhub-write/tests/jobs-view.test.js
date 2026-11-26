@@ -112,7 +112,7 @@ test('a record\'s linked file (e.g. a vet certificate) opens from the history; e
   assert.deepEqual(rows[1].files, []);
   const html = V.historyHtml(Object.assign({ esc: (s) => String(s), dmy: (s) => s }, v), { subject_id: 'd1' }, '');
   assert.match(html, /href="https:\/\/drive\.google\.com\/file\/d\/1FAKEFILEIDFORTESTS00000000000aa\/view"[^>]*data-record-file[^>]*>certificate<\/a>/);
-  // Lisa 22 Nov 2026: whether "entered later" shows is the owner's row display.entered_later; none = hidden
+  // the owner 22 Nov 2026: whether "entered later" shows is the owner's row display.entered_later; none = hidden
   assert.doesNotMatch(html, /time not given|imported|entered earlier/);
   const on = Object.assign({ esc: (s) => String(s), dmy: (s) => s }, v, { rules: [{ rule_key: 'display.entered_later', value: 'on', effective_from: '2026-01-01' }] });
   const shown = V.historyHtml(on, { subject_id: 'd1' }, '');
@@ -156,7 +156,7 @@ test('an owner note covering a past period shows once on the Jobs card, with the
   assert.match(on, /entered 2026-11-17 by Pat/);
 });
 
-// Lisa 17 Nov 2026 ("is that not for the app user to decide? Its their app"): the words for how a record was made are
+// the owner 17 Nov 2026 ("is that not for the app user to decide? Its their app"): the words for how a record was made are
 // the owner's rows job.how.<how>.label; "off" hides them; no row = the starter words. The record keeps how_recorded.
 test('how a record was made is shown in the owner\'s words, hidden with "off", starter words with no row', () => {
   const rule = (how, value, from) => ({ rule_key: 'job.how.' + how + '.label', value, effective_from: from || '2026-01-01' });

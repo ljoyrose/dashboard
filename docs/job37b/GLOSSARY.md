@@ -5,7 +5,7 @@
 | Term | Meaning |
 |---|---|
 | Hub | One page of the site with its own folder: Home, CD Hub, Money Hub, Studio, Factory, Food hub, Marketplace, Web Estate. |
-| Home | The root page `index.html` (title "Lisa Dashboard"): Map, Drive, Bin, Changes and the hub links. |
+| Home | The root page `index.html` (title "the owner Dashboard"): Map, Drive, Bin, Changes and the hub links. |
 | Map | Home's first screen: "Needs you", tiles and Key projects & docs. |
 | `DASH_CONFIG` | The settings object set by `config.js`. The only place Drive ids may live. |
 | `DashAuth` | The one shared sign-in (`auth.js`), stored under one localStorage key for every tab. |
@@ -25,7 +25,7 @@
 | PC-Personal | Home section (`#/personal`) matching personal-Drive files to shared-drive copies by MD5 and size. |
 | Drive check | Home section (`#/usb`) hashing a local folder in the browser to see what is already in shared drives. |
 | Request file | A small file a hub writes into a requests folder on a click; an Apps Script engine applies it. Undo trashes it before the engine runs. |
-| Engine | An Apps Script on Lisa's account that writes a hub's state file and applies request files (Studio, Factory). Not in this repo. |
+| Engine | An Apps Script on the owner's account that writes a hub's state file and applies request files (Studio, Factory). Not in this repo. |
 | State file | The JSON a hub reads on load (`studio-state.json`, `af-state.json`). Missing means example data and writes off. |
 | Example data | Built-in invented data a hub shows when its state file is not there yet. Nothing is sent. |
 | Look | The Look menu (mode, tone), stored in `dash-look` and applied by `DashKit.applyLook`. |

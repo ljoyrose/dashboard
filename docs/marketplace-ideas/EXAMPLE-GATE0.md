@@ -2,7 +2,7 @@
 
 Every name, price and supplier here is INVENTED (SAMPLE). It shows what the investigator writes back for one idea after Gate 0. A test checks the JSON below against the contract.
 
-**Lisa gave:** the name "SAMPLE bamboo pet brush", a price she saw (£4.50), where (a SAMPLE shop), a note "customers ask for eco brushes".
+**the owner gave:** the name "SAMPLE bamboo pet brush", a price she saw (£4.50), where (a SAMPLE shop), a note "customers ask for eco brushes".
 
 ## The result file the investigator writes
 
@@ -50,7 +50,7 @@ Every name, price and supplier here is INVENTED (SAMPLE). It shows what the inve
 }
 ```
 
-## What Lisa sees on the card page
+## What the owner sees on the card page
 
 1. **Verdict:** Maybe. Gate 0, screening.
 2. **Why (two lines):** It looks sellable to your puppy and grooming buyers as an add-on. The profit only works if the trade price is under about £2.80, and nobody has said what it is.
