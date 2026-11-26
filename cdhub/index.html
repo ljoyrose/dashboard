@@ -765,6 +765,14 @@ if(typeof CDItems!=='undefined') CDItems.FILES.forEach(wantLater);   /* Items (o
 wantLater('BLD-subject-Archive.csv');
 wantLater('BLD-litter-Archive.csv');   /* Lisa 17 Nov 2026: old litters (paper books) kept as history, so their vet visits resolve */
 wantLater('BLD-rule_group.csv');   /* rules B: the owner's rule groups (17 Nov 2026); absent until created, then the stop-gap groups are used */
+/* A check type is left off Compliance when its row says so: group "Breed Better", or a note that starts
+   "Breed Better:". Every version of that type_key is left off, with its records. Other pages still read the rows. */
+function bbOnlyType(t){ return !!t&&(String(t.group||'').trim().toLowerCase()==='breed better'||/^\s*breed better\s*:/i.test(String(t.note||''))); }
+function compJobsV(){ var v=jobsV(), keys={}, ids={};
+ v.types.forEach(function(t){ if(bbOnlyType(t)&&String(t.type_key||'').trim()) keys[String(t.type_key).trim()]=1; });
+ v.types=v.types.filter(function(t){ var off=bbOnlyType(t)||!!keys[String(t.type_key||'').trim()]; if(off) ids[t.id]=1; return !off; });
+ v.logs=v.logs.filter(function(r){ return !ids[r.check_type_id]; });
+ return v; }
 var LATER_PAGES={bin:1,items:1,dogs:1,work:1,buyers:1,shape:1,compliance:1,breed:1,enquiries:1,admin:1,staff:1,yearly:1};
 /* LIVE_PAGES: Compliance ("What was true on", the inspection export) and Yearly print show a read at most COMP_FRESH_MS old, always with its "As of" time; older waits for the live read */
 var LIVE_PAGES={compliance:1,yearly:1};
@@ -5339,7 +5347,7 @@ function loadCalPhotos(){
    .catch(function(){ img.remove(); });
  });
 }
-function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=jobsV(); v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
+function jobCalHtml(){ if(typeof BLDJobCal==='undefined') return ''; var v=compJobsV(); v.calOpen=JCAL.open||null; v.vetVisits=T['BLD-visit.csv']||[]; v.dogNames={}; (T['BLD-subject.csv']||[]).forEach(function(r){ v.dogNames[r.id]=r.name; }); return BLDJobCal.html(v,JCAL.ym||v.today.slice(0,7),true); }
 function importFailText(r){
  var errs=r&&r.fields;
  if(errs&&typeof errs==='object'&&!Array.isArray(errs)){
@@ -5415,11 +5423,12 @@ document.addEventListener('click',async function(ev){
    checks-register.js is fetched when Compliance opens (not on first load). Every month from the first record to this one
    is offered, a month with none too, so its nil record can be printed. Printing is inside this page, as Temperatures. */
 function compChecksRegHtml(){
- var rows=(T['BLD-check_log.csv']||[]).filter(function(r){ return !(r.outcome==='note'&&r.note_for_id); }), ms={}, now=todayISO().slice(0,7);
+ var jobs=compJobsV();
+ var rows=jobs.logs.filter(function(r){ return !(r.outcome==='note'&&r.note_for_id); }), ms={}, now=todayISO().slice(0,7);
  rows.forEach(function(r){ var m=/^(\d{4}-\d{2})/.exec(String(r.happened_at||r.taken_at||'')); if(m) ms[m[1]]=(ms[m[1]]||0)+1; });
  var keys=Object.keys(ms).sort(), y=Number(now.slice(0,4)), m=Number(now.slice(5)), list=[], k=now, first=keys[0]&&keys[0]<now?keys[0]:now;
  while(list.length<600){ list.push(k); if(k<=first) break; m-=1; if(m<1){ m=12; y-=1; } k=y+'-'+(m<10?'0':'')+m; }
- var types=(function(){ var rows=T['BLD-check_type.csv']||[];
+ var types=(function(){ var rows=jobs.types;
   if(window.BLDDue&&BLDDue.families) return BLDDue.families(rows).map(function(g){ return (BLDDue.mainOf&&BLDDue.mainOf(g,todayISO()))||g[0]; }).filter(function(t){ return t&&t.id&&t.label; });
   return rows.filter(function(t){ return t.id&&t.label; }); })();
  return compFold('compChecksReg','checksreg','Checks register','<p class="mut help">One month of check records, for an inspector. Every column is printed; a detail the record does not hold says “not recorded”. A corrected record stays, with its correction on its own line.</p>'
@@ -5476,8 +5485,8 @@ function pageCompliance(){
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes" data-calm="off">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +(cl.length?'<ul class="ctl" data-k="closed">'+cl.map(function(x){ return '<li data-room="'+esc(x.areaId)+'" data-state="'+(x.dogs?'bad':(x.shut?'shut':'open'))+'">'+(x.dogs?'<span class="pill no">in use</span> ':'')+'<b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'<br><span class="mut">Rule: closed while '+esc(x.whenLabel)+' is in use, from '+esc(dmy(x.from))+(x.src&&hideSource(x.src)?' ('+esc(hideSource(x.src))+')':'')+'</span></li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
+ h+=BLDJobsView.complianceHtml(compJobsV(),cntPill);
  h+=compTempsHtml()+compMedsHtml()+compChecksRegHtml();
- h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  if(typeof CDItems!=='undefined') h+=CDItems.complianceHtml(itmV(),compOpen,COMP.asAt||todayISO());   /* Items: in date / due soon / overdue per kind (14 Nov 2026) */
  h+=compRulesHtml(today);
  h+=compFold('compAdd','add','Add a rule or a change',''
@@ -5775,7 +5784,7 @@ function enqV(){ return { T:T, token:(typeof TOKEN!=='undefined'?TOKEN:''), sink
 if(typeof CDEnquiries!=='undefined'){ PAGES.enquiries=function(){ return CDEnquiries.page(enqV()); }; SECTIONS.push(['enquiries','Enquiries']); }
 /* Admin is the owner's: shown only to a sign-in that can read the permission rows (admin.js) */
 function admV(){return {T:T,today:todayISO(),esc:esc,dmy:dmy,sinkOn:sinkOn,photoDates:function(){ return photoDatesOn(todayISO()); },hasTable:hasTable,load:LOAD,want:WANT,save:function(table,fields){ return sinkPost(table,fields); },rerender:function(){ if(document.getElementById('admFuture')) go('admin',false); }};}
-if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV());}; SECTIONS.push(['admin','Settings']);   /* the tab says Settings; the page and its chip say the same (17 Nov 2026) */
+if(typeof AdminView!=='undefined'){ PAGES.admin=function(){return AdminView.page(admV())+navMenuCard();}; SECTIONS.push(['admin','Settings']);
  PAGES.staff=function(){return AdminView.staffPage(admV());}; SECTIONS.push(['staff','Staff']); }
 /* Items (ITEMS, 14 Nov 2026): the owner's item list, tests, readings, evidence and reports. Sits in Compliance. */
 function itmV(){ return {T:T,today:todayISO(),esc:esc,dmy:ukDate,sinkSend:sinkSend,sinkPost:sinkPost,redraw:function(){ go('items',false); }}; }
@@ -5816,6 +5825,60 @@ function navHas(id){
 }
 /* The bar for this sign-in: owner setting rows (nav.*) in force today; none = the starting layout. The hub is the owner's page. */
 function navLayout(){ return HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER',has:navHas}); }
+/* Settings, Menu (menu PR 3): which sections are on and which sit on the bar, as owner-setting rows (nav.on.*, nav.tab.OWNER.*),
+   in force from today. Nothing is deleted: a change is a newer row. No rows: the starting layout, said so. */
+function navPickable(){ return HubNav.SECTIONS.filter(function(s){ return s.id!=='main'&&s.id!=='settings'; }); }
+function navMenuSet(){
+ var iso=todayISO();
+ return (T['BLD-breeding_rule.csv']||[]).some(function(r){
+  var k=String(r&&r.rule_key||''), f=String(r&&r.effective_from||'').slice(0,10), t=String(r&&r.to_date||'').slice(0,10);
+  if(k.indexOf('nav.on.')!==0&&k.indexOf('nav.tab.')!==0) return false;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(f)) return false;
+  if(iso&&(f>iso||(/^\d{4}-\d{2}-\d{2}$/.test(t)&&iso>t))) return false;
+  return true;
+ });
+}
+function navMenuCard(){
+ var any=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'});
+ var h='<section class="card" id="navMenu" style="margin-top:24px"><h3 class="hx4">Menu</h3>'
+  +'<p class="mut">'+(navMenuSet()?'Your menu, in force from the dates saved.':'Starting layout, not set.')+' Main is always first and More always last; up to 3 sections sit between.</p>'
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>Section</th><th>On</th><th>On the bar</th></tr></thead><tbody>'
+  +navPickable().map(function(sc){ var pos=any.tabs.indexOf(sc.id)+1;
+    return '<tr data-nav="'+sc.id+'"><td><b>'+esc(sc.label)+'</b></td>'
+     +'<td><input type="checkbox" id="navOn-'+sc.id+'" aria-label="'+esc(sc.label)+' on"'+(any.on[sc.id]?' checked':'')+'></td>'
+     +'<td><select id="navTab-'+sc.id+'" aria-label="'+esc(sc.label)+' on the bar"><option value="0">Under More</option>'
+     +[1,2,3].map(function(n){ return '<option value="'+n+'"'+(pos===n?' selected':'')+'>Place '+n+'</option>'; }).join('')+'</select></td></tr>'; }).join('')
+  +'</tbody></table></div><div class="frow"><button type="button" class="btn" id="navSave">Save menu</button> <span class="mut" id="navMsg" role="status"></span></div></section>';
+ return h;
+}
+function bindNavMenu(){
+ var b=document.getElementById('navSave'); if(!b) return;
+ b.addEventListener('click',async function(){
+  var msg=document.getElementById('navMsg'), want={on:{},tab:{}}, used={}, bad='';
+  navPickable().forEach(function(sc){
+   want.on[sc.id]=document.getElementById('navOn-'+sc.id).checked?1:0;
+   var t=+document.getElementById('navTab-'+sc.id).value; want.tab[sc.id]=t;
+   if(t&&!want.on[sc.id]) bad=bad||sc.label+' is on the bar but switched off.';
+   if(t&&used[t]) bad=bad||'Two sections share place '+t+'.';
+   used[t]=1; });
+  if(bad){ msg.textContent=bad; return; }
+  var now=HubNav.layout({rows:T['BLD-breeding_rule.csv']||[],iso:todayISO(),role:'OWNER'}), from=todayLondon(), src='CD Hub Settings, Menu', posts=[];
+  navPickable().forEach(function(sc){
+   if(want.on[sc.id]!==(now.on[sc.id]?1:0)) posts.push(['nav.on.'+sc.id,want.on[sc.id]]);
+   if(want.tab[sc.id]!==now.tabs.indexOf(sc.id)+1||!now.set) posts.push(['nav.tab.OWNER.'+sc.id,want.tab[sc.id]]); });   /* the bar is saved whole: a partial set would drop the rest */
+  if(posts.some(function(x){ return x[0].indexOf('nav.tab.')===0; })) navPickable().forEach(function(sc){ var k='nav.tab.OWNER.'+sc.id;
+   if(!posts.some(function(x){ return x[0]===k; })) posts.push([k,want.tab[sc.id]]); });
+  if(!posts.length){ msg.textContent='Nothing changed.'; return; }
+  b.disabled=true; msg.textContent='saving…';
+  for(var i=0;i<posts.length;i++){
+   var r=await sinkPost('breeding_rule',{rule_key:posts[i][0],value:String(posts[i][1]),effective_from:from,source:src});
+   if(!(r.ok&&r.result&&r.result.status==='saved')){ b.disabled=false; showSave(msg,sinkMsg(r)); return; }
+   (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.result.id||'',rule_key:posts[i][0],value:String(posts[i][1]),effective_from:from,source:src,set_at:r.result.at||''});
+  }
+  CD._built=(CD._built||0)+1; go('admin',false);
+  showSave(document.getElementById('navMsg'),'Saved '+hhmmNow());
+ });
+}
 function navHtml(){
  /* The Main tab adds up its views' counts. Today's needs already hold every item waiting on Lisa, so Do adds nothing here
     (17 Nov 2026: one waiting item made the tab say 8 while Needs you said 7). The Do chip keeps its own count. */
@@ -5963,7 +6026,7 @@ function goBody(id,push){
  levelHeadings(main);
  chipsDraw(id);
  if(id==='compliance') bindCompliance();
- if(id==='admin') AdminView.bind(admV());
+ if(id==='admin'){ AdminView.bind(admV()); bindNavMenu(); }
  if(id==='bin') CDBin.bind(main,binV());
  if(id==='work'&&typeof CDWork!=='undefined') CDWork.bind(main,workV());
  if(id==='items'&&typeof CDItems!=='undefined'&&!main.dataset.itmBound){ main.dataset.itmBound='1'; CDItems.bind(main, itmV); }
