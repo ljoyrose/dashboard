@@ -79,7 +79,7 @@ asOwner.describe('owner: Bin is gone', () => {
     await expect(page).toHaveURL(/#\/admin$/);
     await expect(page.locator('#main')).toHaveAttribute('data-view', 'admin');
     await expect(page.locator('#main h2')).toContainText('Settings');
-    await expect(page.locator('#chips')).toBeHidden();
+    await expect(page.locator('#chips').getByText('Bin')).toHaveCount(0);
     await expect(page.locator('#nav [data-go="admin"]')).toHaveAttribute('aria-current', 'page');
     await noBin(page);
     await page.goBack();

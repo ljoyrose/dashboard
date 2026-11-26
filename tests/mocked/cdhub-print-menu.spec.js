@@ -34,7 +34,8 @@ asOn('print link uses the menu markup and opens the print page', async ({ page }
   await expect(item).toHaveAttribute('data-slot', '8');
   expect(await page.evaluate(() => !!document.getElementById('hi-t-print'))).toBe(true);
   const labels = await page.locator('#houseMore > :is(a, button) .htl').allTextContents();
-  expect(labels.slice(-3)).toEqual(['Settings', 'Bin', 'Print QR cards']);
+  expect(labels).not.toContain('Bin');
+  expect(labels.slice(-2)).toEqual(['Settings', 'Print QR cards']);
   const href = await item.getAttribute('href');
   expect(href).toBe(await page.evaluate(() => location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/print/'));
   await page.locator('#nav button[data-go="staff"]').click();
