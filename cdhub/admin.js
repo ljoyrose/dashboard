@@ -37,7 +37,7 @@ var AdminView = (function () {
     ['codes', 'Codes', 'key', 2, 'Codes'],
     ['phone', 'Set up a phone', 'qr', 5, 'Phones'], ['saving', 'This device', 'save', 5, 'Phones'],
     ['staff', 'Add staff', 'staff', 5, 'People'], ['visitor', 'Add visitor', 'visitor', 6, 'People'],
-    ['inspect', 'Inspector link', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
+    ['inspect', 'Inspector links', 'inspect', 7, 'People'], ['lost', 'Lost phone / code', 'lost', 2, 'People'],
     ['print', 'Print', 'print', 4, 'Tools'], ['rules', 'Rules & limits', 'rules', 3, 'Tools'],
     ['records', 'Records kept', 'records', 0, 'Tools'], ['checks', 'Check settings', 'check', 3, 'Tools'],
     ['health', 'System health', 'health', 5, 'Tools'],
@@ -75,6 +75,8 @@ var AdminView = (function () {
       '.adm-key{display:flex;align-items:center;gap:4px;flex-wrap:wrap;color:var(--muted);font-size:var(--fs-small)}.adm-key .ti{width:16px;height:16px}',
       '.adm-why{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}.adm-why ul{margin:6px 0 0;padding-left:18px}.adm-why li{margin:3px 0}',
       '.adm-later{margin-top:8px}',
+      '.adm-codes,.adm-future{margin:0 0 10px}',
+      '.adm-map table.house-table th,.adm-map table.house-table td{text-align:center}.adm-map table.house-table tbody th{text-align:left}',
       '.adm-future{list-style:none;margin:0;padding:0}.adm-future li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}.adm-future li:last-child{border:0}',
       '.adm-future span{flex:1}.adm-future em{font-style:normal;color:var(--muted);font-size:var(--fs-small)}',
       '.adm-set{border-top:1px solid var(--line);padding:10px 0}.adm-set:first-of-type{border-top:0}',
@@ -95,8 +97,15 @@ var AdminView = (function () {
     return /^https:\/\/script\.google\.com\/(a\/macros\/[A-Za-z0-9.-]+|macros)\/s\/[A-Za-z0-9_-]+\/exec$/.test(u) ? u : '';
   }
   function staffBase() { return location.origin + location.pathname.replace(/[^/]*$/, '') + 'staff/'; }
-  /* Phone set-up QR opens the staff page on this same site. The owner's qr.base_url rule row in force wins
-     (https, ending in /), as on the print page. */
+  /* Phone set-up QR opens the staff page on this site. A configured https address
+     (cdhub.publicStaffBase, ending in /) wins over that. A qr.base_url rule row in force wins over both. */
+  function staffPublicBase() {
+    var cfg = '';
+    try { cfg = (typeof DASH_CONFIG !== 'undefined' && DASH_CONFIG.cdhub && DASH_CONFIG.cdhub.publicStaffBase) || ''; } catch (e) { cfg = ''; }
+    if (/^https:\/\/[^\s#?]+\/$/.test(cfg)) return cfg;
+    var path = String(location.pathname || '/'), mark = '/cdhub/', i = path.indexOf(mark);
+    return location.origin + (i >= 0 ? path.slice(0, i) : '') + '/cdhub/staff/';
+  }
   function qrBase(T, today) {
     var best = null;
     rows(T, 'BLD-breeding_rule.csv').forEach(function (r) {
@@ -104,8 +113,9 @@ var AdminView = (function () {
       if (r.rule_key !== 'qr.base_url' || !/^https:\/\/[^\s#?]+\/$/.test(val) || (f && f > today) || (r.to_date && String(r.to_date) < today)) return;
       if (!best || f >= best.f) best = { f: f, v: val };
     });
-    return best ? best.v : staffBase();
+    return best ? best.v : staffPublicBase();
   }
+  function hostOf(url) { return String(url || '').replace(/^https?:\/\/([^/]+).*$/, '$1'); }
   function ownerPage(v, label, section) {
     var u = scriptUrl();
     return u ? '<a class="btn" href="' + v.esc(u + '?page=approve' + (section ? '&section=' + section : '')) + '" target="_blank" rel="noopener">' + (label || 'Open owner page') + '</a>'
@@ -147,7 +157,7 @@ var AdminView = (function () {
   function mapHtml(v) {
     var m = access(v.T, v.today), live = m.auds.filter(function (a) { return a.live; }), later = m.auds.filter(function (a) { return !a.live; });
     var grid = function (auds) {
-      return '<div class="scroll adm-map" tabindex="0" role="group" aria-label="Who sees what, scroll sideways for more"><table><thead><tr><th>List</th>'
+      return '<div class="scroll adm-map" tabindex="0" role="group" aria-label="Who sees what, scroll sideways for more"><table class="house-table"><thead><tr><th data-w="12">List</th>'
         + auds.map(function (a) { return '<th><button type="button" class="adm-aud' + (S.aud === a.id ? ' sel' : '') + '" data-adm-aud="' + v.esc(a.id) + '">' + v.esc(audName(v.T, a.id)) + '</button></th>'; }).join('')
         + '</tr></thead><tbody>' + m.tables.filter(function (t) { return auds.some(function (a) { return m.cell[t + '|' + a.id]; }); }).map(function (t) {
           return '<tr><th scope="row">' + v.esc(tblName(t)) + '</th>' + auds.map(function (a) {
@@ -232,7 +242,7 @@ var AdminView = (function () {
 
   /* ---- the cards ---- */
   function body(v, id) {
-    var T = v.T, u = scriptUrl(), host = location.host, qrHost = String(qrBase(T, v.today)).replace(/^https:\/\/([^/]+).*$/, '$1');
+    var T = v.T, u = scriptUrl(), host = location.host, qrHost = hostOf(qrBase(T, v.today));
     if (id === 'codes') {
       var C = rows(T, 'BLD-code_register.csv').filter(function (r) { return r.code_id; }), byCode = {};
       C.forEach(function (r) { (byCode[r.code_id] = byCode[r.code_id] || []).push(r); });
@@ -242,17 +252,18 @@ var AdminView = (function () {
         return { r: last, live: live, n: sp.length };
       }).sort(function (a, b) { return (b.live - a.live) || (String(a.r.who) < String(b.r.who) ? -1 : 1); });
       var roleName = {}; rows(T, 'BLD-role.csv').forEach(function (r) { if (r.code) roleName[r.code] = r.name || r.code; });
-      return (v.hasTable('BLD-code_register.csv') ? (list.length ? '<ul class="adm-list adm-codes">' + list.map(function (x) {
+      return (v.hasTable('BLD-code_register.csv') ? (list.length ? '<div class="scroll adm-codes" tabindex="0" role="group" aria-label="Codes"><table class="house-table"><thead><tr>'
+        + '<th data-w="3"><span class="sr">live</span></th><th data-w="12">Who</th><th data-w="8">Role</th><th data-w="8">From</th><th data-w="8">To</th><th data-w="10">Code</th></tr></thead><tbody>' + list.map(function (x) {
         var r = x.r;
-        return '<li>' + mark(x.live) + ' <b>' + v.esc(r.who || r.code_id) + '</b> <span class="pill">' + v.esc(roleName[r.role] || r.role || '') + '</span>'
-          + ' <span class="dpill">' + v.esc(v.dmy(String(r.from_date || '').slice(0, 10))) + '</span>\u2013' + (r.to_date ? '<span class="dpill' + (x.live ? '' : ' late') + '">' + v.esc(v.dmy(String(r.to_date).slice(0, 10))) + '</span>' : 'now')
-          + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') + ' <span class="mut">' + v.esc(r.code_id) + '</span></li>';
-      }).join('') + '</ul>' : '<p class="mut">Empty. On the owner page press <b>Fill the code register</b> once; your codes then list here.</p>')
+        return '<tr><td>' + mark(x.live) + '</td><td><b>' + v.esc(r.who || r.code_id) + '</b></td><td>' + v.esc(roleName[r.role] || r.role || '') + '</td>'
+          + '<td>' + v.esc(v.dmy(String(r.from_date || '').slice(0, 10))) + '</td><td>' + (r.to_date ? v.esc(v.dmy(String(r.to_date).slice(0, 10))) + (x.live ? '' : ' <span class="mut">ended' + (r.ended_by ? ', ' + v.esc(r.ended_by) : '') + '</span>') : 'now') + '</td>'
+          + '<td class="mut">' + v.esc(r.code_id) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<p class="mut">Empty. On the owner page press <b>Fill the code register</b> once; your codes then list here.</p>')
         : '<p class="mut">The list shows here after the next save-script update. Until then it is on the owner page.</p>')
         + '<p>' + ownerPage(v, 'New \u00b7 rename \u00b7 end \u00b7 reset', 'codes') + ' <a class="cb" href="' + v.esc(staffBase() + 'vault/') + '">Codes vault</a></p>'
         + '<p class="mut"><b>Remind</b> = reset: codes are kept scrambled, so no one can see an old one, not even you. Reset gives a new code; their access stays.</p>'
         + '<p class="mut"><b>End</b> sets an end date. Nothing is deleted.</p>'
-        + '<p class="mut help">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector link</button></p>';
+        + '<p class="mut help">Codes appear only on your screen, once. Vet: a code with role VET. Inspector: <button type="button" class="cb" data-adm-open="inspect">Inspector links</button></p>';
     }
     if (id === 'phone') {
       var link = u ? qrBase(T, v.today) + '#setup=' + encodeURIComponent(u) : '', qr = '';
@@ -307,8 +318,8 @@ var AdminView = (function () {
         var e = String(r.ends || '').slice(0, 10), live = e >= v.today;
         return '<li>' + mark(live) + ' <b>' + v.esc(r.label || r.id) + '</b> ends <span class="dpill' + (live ? '' : ' late') + '">' + v.esc(v.dmy(e)) + '</span>' + (live ? '' : ' <span class="mut">ended</span>') + '</li>';
       }).join('') + '</ul>' : '<p class="mut">No links yet.</p>') : '<p class="mut">Links not set up yet.</p>')
-        + steps(['Owner page → <b>Inspector link</b>', 'Tick the dogs and what they see', 'Send the link. It ends by itself'])
-        + '<p>' + ownerPage(v, 'Make or end a link') + '</p>' + (openN.length ? '<p class="mut">' + openN.length + ' open now.</p>' : '');
+        + steps(['Owner page → <b>Inspector links</b>', 'Tick the dogs and what they see', 'Send the link. It ends by itself'])
+        + '<p>' + ownerPage(v, 'Make or end a link', 'inspect') + '</p>' + (openN.length ? '<p class="mut">' + openN.length + ' open now.</p>' : '');
     }
     if (id === 'lost') {
       return steps(['Owner page → <b>Revoke</b> their code', 'That phone is wiped on its next use', 'New code: <button type="button" class="cb" data-adm-open="staff">Add staff</button>', 'New phone: <button type="button" class="cb" data-adm-open="phone">Set up a phone</button>'])
@@ -317,7 +328,7 @@ var AdminView = (function () {
     if (id === 'print') {
       return '<p><a class="btn" href="' + v.esc(staffBase() + 'print/') + '">' + icon('print') + ' Open Print</a></p>'
         + '<p class="mut help">Room cards · dog cards · litter cards · set-up QRs. Needs an owner code on this device.</p>'
-        + '<p class="mut help">QRs open <b>' + v.esc(qrHost) + '</b>, whichever address you print from.</p>';
+        + '<p class="mut help">QRs open <b>' + v.esc(qrHost) + '</b>.</p>';
     }
     if (id === 'rules') {
       var R = rows(T, 'BLD-breeding_rule.csv').filter(function (r) { return r.rule_key; }), by = {};
@@ -361,7 +372,7 @@ var AdminView = (function () {
   function sub(v, id) {
     var u = !!scriptUrl();
     if (id === 'codes') { var cr = rows(v.T, 'BLD-code_register.csv').filter(function (r) { return r.code_id && (!r.to_date || r.to_date >= v.today); }); return v.hasTable('BLD-code_register.csv') ? cr.length + ' live' : 'Who has one'; }
-    if (id === 'phone') return u ? 'Show QR · ' + v.esc(String(qrBase(v.T, v.today)).replace(/^https:\/\/([^/]+).*$/, '$1')) : 'Needs a save address';
+    if (id === 'phone') return u ? 'Show QR · ' + v.esc(hostOf(qrBase(v.T, v.today))) : 'Needs a save address';
     if (id === 'saving') return v.sinkOn() ? 'Saving on ✓' : 'Saving off';
     if (id === 'staff') { var n = rows(v.T, 'BLD-role.csv').filter(function (r) { return r.code; }).length; return n ? n + ' roles' : 'Steps'; }
     if (id === 'visitor') return 'Ends by itself';
@@ -387,10 +398,10 @@ var AdminView = (function () {
     var tag = function (e) { return e === 'yes' ? '<span class="adm-ok">✓ here</span>' : (e === 'part' ? '<span class="pill">part</span>' : '<span class="mut">coming</span>'); };
     return '<section class="card adm-line l0" id="admFuture"><details class="compfold" data-adm-fold="future"' + (S.futureShut ? '' : ' open') + '><summary><h3>' + icon('future', 'c0') + 'Next 3 years' + (J.length ? ' <span class="cnt wide">' + J.length + '</span>' : '') + '</h3></summary>'
       + (S.futureErr ? '<p class="mut">' + v.esc(S.futureErr) + '</p>' : (!J.length ? '<p class="mut">Loading…</p>'
-        : '<ul class="adm-future">' + shown.map(function (j) {
-          return '<li><span>' + v.esc(j.job) + '</span><em>' + v.esc(j.often) + '</em>' + tag(j.exists) + '</li>';
-        }).join('') + '</ul>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
-      + '<p class="mut help">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
+        : '<div class="scroll adm-future" tabindex="0" role="group" aria-label="Next 3 years"><table class="house-table"><thead><tr><th data-w="20">Job</th><th data-w="9">How often</th><th data-w="7">Here</th></tr></thead><tbody>' + shown.map(function (j) {
+          return '<tr><td>' + v.esc(j.job) + '</td><td class="mut">' + v.esc(j.often) + '</td><td>' + tag(j.exists) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' + (J.length > 8 ? '<p><button type="button" class="cb" data-adm-future="1">' + (S.futureAll ? 'Show fewer' : 'Show all ' + J.length) + '</button></p>' : '')))
+      + '<p class="mut">Most often first. Laws to check are on each job’s card when it is built.</p></details></section>';
   }
 
   function page(v) {
