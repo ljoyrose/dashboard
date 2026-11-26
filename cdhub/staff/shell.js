@@ -325,9 +325,7 @@
         h('div', { class: 'nm' }, [h('span', { class: 'ic', html: m.icon || ICONS.dogs }), m.title])
       ]));
     });
-    list.appendChild(h('a', { class: 'card go', href: '../checks/', 'data-link': 'checks' }, [
-      h('div', { class: 'nm' }, [h('span', { class: 'ic', html: ICONS.dogs }), 'Checks'])
-    ]));
+    /* The old Checks card is gone (22 Nov 2026): daily checks are on Jobs. ../checks/ now says "This page has moved". */
     screen.appendChild(list);
   }
   /* Show help (Lisa 18 Nov 2026): off unless this person turns it on. Kept with the Look on this phone ('dash-look', the same

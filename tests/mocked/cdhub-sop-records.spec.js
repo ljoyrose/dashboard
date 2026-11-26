@@ -51,6 +51,8 @@ test('a blank SOP column still belongs to the known check, and Checked today is 
   const bare = R.extraHtml({ today: '2026-11-25', types: [] }, { short_name: 'Licence Display' });
   expect(bare).toContain('data-sop-checked="Licence Display"');
   expect(bare).toContain('>Checked today<');
+  expect(bare).toContain('data-sop-day="sop_licence_display"');
+  expect(bare).toContain('value="2026-11-25"');
   expect(R.audit([{ short_name: 'Licence Display' }])[0].record).toContain('display');
 });
 
