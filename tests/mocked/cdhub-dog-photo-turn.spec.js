@@ -44,6 +44,8 @@ for (const size of [{ name: 'phone', width: 390, height: 844 }, { name: 'laptop'
     await expect(img).toHaveAttribute('data-rot', '90');   // the saved turn, read from the rule row
     await expect(img).toBeVisible();
     await expect.poll(() => img.evaluate((e) => e.style.transform)).toContain('rotate(90deg)');
+    await card.locator('[data-photo-open]').click();
+    await expect(card.locator('[data-photo-menu]')).toBeVisible();
     const save = card.locator('[data-turn-save]');
     await expect(save).toBeHidden();
     for (const b of await card.locator('[data-turn]').all()) {
@@ -93,6 +95,7 @@ test('dog card: a second turn saved the same day is refused with a plain message
   await HUBS.cdhub.open(page, guard);
   await page.evaluate(() => go('dogs'));
   const card = page.locator('.dc[data-dog="sub-t1"]');
+  await card.locator('[data-photo-open]').click();
   await card.locator('[data-turn="1"]').click();
   await card.locator('[data-turn-save]').click();
   await expect(card.locator('[data-photo-msg]')).toHaveText('Already turned today. Try again tomorrow.');

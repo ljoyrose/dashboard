@@ -57,8 +57,22 @@ function linkMay_(kind, who) {
   return may.indexOf(who.role) >= 0 || (who.id && may.indexOf('person:' + who.id) >= 0);
 }
 
+/** Dog rows live in BLD-subject.csv. Older pages and the saved link rows say subjects. Either name is that file. */
+function linkSameTable_(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a === b) return true;
+  return (a === 'subject' && b === 'subjects') || (a === 'subjects' && b === 'subject') || (a === 'file' && b === 'files') || (a === 'files' && b === 'file');
+}
+function linkTableAllowed_(list, table) { return list.some(function (x) { return linkSameTable_(x, table); }); }
+function linkTableFile_(table) {
+  var t = String(table || '');
+  if (t === 'subjects') t = 'subject';
+  else if (t === 'file') t = 'files';
+  return 'BLD-' + t + '.csv';
+}
+
 function linkRecordExists_(table, id) {
-  var read = store_read_('BLD-' + table + '.csv', false), tenant = prop_(BLD.PROP.TENANT_ID);
+  var read = store_read_(linkTableFile_(table), false), tenant = prop_(BLD.PROP.TENANT_ID);
   if (!read) return false;
   return read.records.some(function (r) { return r.id === id && (!tenant || !r.tenant_id || r.tenant_id === tenant); });
 }
@@ -106,8 +120,8 @@ function sinkLinkAdd_(req) {
     if (Object.keys(errors).length) throw err_('INVALID', 'Please check the highlighted fields.', { fields: errors });
     if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
     var fts = linkPipes_(kind.from_tables), tts = linkPipes_(kind.to_tables);
-    if (fts.length && fts.indexOf(ft) < 0) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { from_table: 'This kind of link cannot start from ' + ft + '.' } });
-    if (tts.length && tts.indexOf(tt) < 0) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_table: 'This kind of link cannot go to ' + tt + '.' } });
+    if (fts.length && !linkTableAllowed_(fts, ft)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { from_table: 'This kind of link cannot start from ' + ft + '.' } });
+    if (tts.length && !linkTableAllowed_(tts, tt)) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_table: 'This kind of link cannot go to ' + tt + '.' } });
     if (!linkRecordExists_(ft, fid) || !linkRecordExists_(tt, tid)) throw err_('NOT_FOUND', 'That record was not found, so nothing was saved.');
 
     var read = linksRead_(), mine = function (r) { return !tenant || !r.tenant_id || r.tenant_id === tenant; };
@@ -157,7 +171,8 @@ function sinkLinkEnd_(req) {
     if (idx < 0) throw err_('NOT_FOUND', 'That link was not found.');
     var rec = read.records[idx], kind = linkKindsInForce_(today)[rec.role] || {};
     if (!linkMay_(kind, who)) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask the owner.');
-    if (String(rec.to_date || '')) throw err_('NOT_ALLOWED', 'That link has already ended.');
+    // Already ended: the link is in the state this save wanted. Say saved so the phone stops and does not send it again.
+    if (String(rec.to_date || '')) return { status: 'saved', id: rowId, ended: String(rec.to_date), already: true };
     if (to < String(rec.from_date || '')) throw err_('INVALID', 'Please check the highlighted fields.', { fields: { to_date: 'The end date cannot be before the start date.' } });
     var stamp = linksUtc_(now);
     var row = read.header.map(function (h) {
